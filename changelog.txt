@@ -1,3 +1,3 @@
 REVISION HISTORY
 
-0.1 (IP) -
+0.1 (IP) - Early setup of class BioSim

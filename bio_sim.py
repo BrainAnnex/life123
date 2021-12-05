@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class BioSim:
 
     def initialize_universe(self, n_cells: int, n_species: int):
