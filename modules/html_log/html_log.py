@@ -1,6 +1,7 @@
 import os.path                  # To check if a file exists
 import re                       # Used to strip off HTML
 from datetime import datetime
+import json
 
 
 
@@ -87,6 +88,28 @@ class HtmlLog:
 
         print(f"Output will be logged into the file '{cls.log_filename}'")
 
+        head = '''
+        <head>  
+            <meta charset="UTF-8">
+            <title>Log</title>
+        
+            <script src="https://d3js.org/d3.v7.min.js" defer></script>  
+             
+            <style type="text/css">
+                svg.container {
+                    width: 250px;
+                    height: 200px;
+                    border: 1px solid #720570;
+                }
+        
+                rect.bar {
+                    fill: #720570;
+                }
+            </style>
+        </head>
+        '''
+        cls._write_to_file(head, newline=False)
+
         cls.config_lock = True       # This intercepts and prevents additional calls to this method in the same run
 
 
@@ -111,7 +134,7 @@ class HtmlLog:
         :param also_print:      Only applicable if `plain` is blank.  Flag indicating whether to also print an HTML-stripped version of msg
 
         :param blanks_before:   Number of blank lines to precede the output with
-        :param newline:         Flag indicating whether the output should be terminated by a newline
+        :param newline:         Flag indicating whether the output should be terminated by a newline (a <br> in the HTML version)
         :param blanks_after:    Number of blank lines to place after the output
 
         :param style:           Name of a function (or list/tuple of function names) to apply to the message string prior to sending it to HTML logs.
@@ -202,6 +225,40 @@ class HtmlLog:
             cls.write(msg, plain=plain_message)
         else:
             cls.write(msg)
+
+
+
+    @classmethod
+    def export_plot(cls, class_name, js_file, data):
+        """
+
+        :param class_name:
+        :param js_file:
+        :param data:
+        :return:
+        """
+        js_include = f"<script src='{js_file}' defer></script>"
+        cls.write(js_include)
+
+        html = f"<svg class='{class_name}'></svg>"
+        cls.write(html)
+
+        json_str = json.dumps(data, indent=4)     # Without an indent value, the whole string is in one line
+        #js_data = f'<script>var json_data = {json_str}; \n var data = JSON.parse(myJSON);</script>'
+        #cls.write(js_data)
+
+        cls._write_to_file("<script>\n", newline=False)
+
+        js_data = "var json_data = '"
+        cls.write(js_data, newline=False)
+
+        json.dump(data, cls.file_handler)
+
+        #js_data = '; var data = JSON.parse(json_data);</script>'
+        #cls.write(js_data)
+
+        js_data = "';\nvar DATA_1 = JSON.parse(json_data);\n</script>\n"
+        cls._write_to_file(js_data, newline=False)
 
 
 
