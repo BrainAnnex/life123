@@ -521,7 +521,8 @@ class old_log:      ###  DEPRECATED  ###
         Register the start of a related group of logs (such as a listing),
         with an optional message placed at the top as a group header.
         A dashed line (in text mode) or gray DIV box (in HTML mode) is used to contain the log entries inside the group.
-        A "Skip to end" link will appear just above the box in HTML mode.  WARNING: the links will work correctly only if there is a single "run" in the file
+        A "Skip to end" link will appear just above the box in HTML mode.
+        WARNING: the links will work correctly only if there is a single "run" in the file
         IMPORTANT: At the end, make sure to call endLogGroup()
 
         :param msg:             Optional message, as a header for the group

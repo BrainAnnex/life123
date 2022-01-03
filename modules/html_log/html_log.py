@@ -187,71 +187,121 @@ class HtmlLog:
 
 
     @classmethod
-    def separator(cls, caption = "") -> None:
+    def separator(cls, caption = "", also_print=False) -> None:
         """
         Append to the appropriate logs a separator line and an optional caption
 
         :param caption:     Optional caption string after the separator line
+        :param also_print:  Flag indicating whether to also print a text version
         :return:            None
         """
         msg = "<hr>\n" + cls.bold(caption)
-        plain_message = "------------------------------------------------------------------------------------------------------------\n" + caption
-        cls.write(msg, plain=plain_message)
+        if also_print or cls.ALSO_PRINT:
+            plain_message = "------------------------------------------------------------------------------------------------------------\n" \
+                            + caption
+            cls.write(msg, plain=plain_message)
+        else:
+            cls.write(msg)
 
 
 
     ##########################################   Styling : HTML FORMATTING FUNCTIONS  ##########################################
 
     @staticmethod
-    def bold(s: str):
+    def bold(s: str) -> str:
         # EXAMPLE:  to use this as an argument to write(),
         #           pass a parameter such as style=HtmlLog.bold   , or   style=[HtmlLog.bold, HtmlLog.red]
         return "<b>" + s + "</b>"
 
     @staticmethod
-    def italic(s: str):
+    def italic(s: str) -> str:
         return "<i>" + s + "</i>"
 
     @staticmethod
-    def h1(s: str):
+    def h1(s: str) -> str:
         return "<h1>" + s + "</h1>"
 
     @staticmethod
-    def h2(s: str):
+    def h2(s: str) -> str:
         return "<h2>" + s + "</h2>"
 
     @staticmethod
-    def h3(s: str):
+    def h3(s: str) -> str:
         return "<h3>" + s + "</h3>"
 
     @staticmethod
-    def gray(s: str):
+    def gray(s: str) -> str:
         return "<span style='color:gray'>" + s + "</span>"
 
     @staticmethod
-    def red(s: str):
+    def red(s: str) -> str:
         return "<span style='color:red'>" + s + "</span>"
 
     @staticmethod
-    def green(s: str):
+    def green(s: str) -> str:
         return "<span style='color:green'>" + s + "</span>"
 
     @staticmethod
-    def blue(s: str):
+    def blue(s: str) -> str:
         return "<span style='color:blue'>" + s + "</span>"
 
     @staticmethod
-    def color(s: str, color_value):
+    def color(s: str, color_value) -> str:
         # Note that this function takes a 2nd argument
         return f"<span style='color:{color_value}'>" + s + "</span>"
 
     @staticmethod
-    def reverse(s: str):
+    def reverse(s: str) -> str:
         return "<span style='color:white; background-color:black'>" + s + "</span>"
 
 
 
-##########################################   Low-level logging (handlers for the logging)   ##########################################
+    @staticmethod
+    def html_indent(indent: int) -> str:
+        """
+        Compose and return a SPAN html element to create a left indentation by the specified value (expressed in "ch" units)
+        :param indent:  In "ch" units (the width of the zero character "0")
+        :return:        A string with the HTML code for the formatted element
+        """
+        return f"<span style='padding-left:{indent}ch'>&nbsp;</span>"
+
+
+
+    @staticmethod
+    def link(name: str, url: str, new_window=True) -> str:
+        """
+
+        :param name:
+        :param url:
+        :param new_window:
+        :return:
+        """
+        if new_window:
+            return f"<a href ='{url}' target='_blank'>{name}</a>"
+        else:
+            return f"<a href ='{url}'>{name}</a>"
+
+
+    @staticmethod
+    def button_post(text: str, url: str, post_data: str) -> str:
+        """
+
+        :param text:
+        :param url:
+        :param post_data: TODO: it currently cannot have double quotes
+        :return:
+        """
+        return f'''
+        <form method="POST" action='{url}'>
+        <input type="submit" value="{text}">
+        <input type="hidden" name="post_data" value="{post_data}">
+        </form>
+        '''
+
+
+
+
+    ##########################################   Low-level logging (handlers for the logging)   ##########################################
 
     @classmethod
     def _write_to_file(cls, msg: str, blanks_before = 0, newline = True, blanks_after = 0) -> None:
