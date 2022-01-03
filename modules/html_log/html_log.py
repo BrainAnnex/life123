@@ -93,7 +93,7 @@ class HtmlLog:
             <meta charset="UTF-8">
             <title>Log</title>
         
-            <script src="https://d3js.org/d3.v7.min.js" defer></script>  
+            <script src="https://d3js.org/d3.v7.min.js" ></script>  
              
             <style type="text/css">
                 svg.container {
@@ -229,35 +229,30 @@ class HtmlLog:
 
 
     @classmethod
-    def export_plot(cls, class_name, js_file, data):
+    def export_plot(cls, data, svg_id, js_file, js_func) -> None:
         """
 
-        :param class_name:
-        :param js_file:
         :param data:
-        :return:
+        :param svg_id:
+        :param js_file:
+        :param js_func:
+        :return:        None
         """
-        js_include = f"<script src='{js_file}' defer></script>"
-        cls.write(js_include)
+        cls._external_js_file(js_file, defer=False)
 
-        html = f"<svg class='{class_name}'></svg>"
+        html = f"<svg id='{svg_id}'></svg>"
         cls.write(html)
 
-        json_str = json.dumps(data, indent=4)     # Without an indent value, the whole string is in one line
-        #js_data = f'<script>var json_data = {json_str}; \n var data = JSON.parse(myJSON);</script>'
-        #cls.write(js_data)
+        #json_str = json.dumps(data, indent=4)     # Without an indent value, the whole string is in one line
 
-        cls._write_to_file("<script>\n", newline=False)
+        cls._write_to_file("<script defer>\n", newline=False)
 
         js_data = "var json_data = '"
-        cls.write(js_data, newline=False)
+        cls._write_to_file(js_data, newline=False)
 
         json.dump(data, cls.file_handler)
 
-        #js_data = '; var data = JSON.parse(json_data);</script>'
-        #cls.write(js_data)
-
-        js_data = "';\nvar DATA_1 = JSON.parse(json_data);\n</script>\n"
+        js_data = f"';\nvar DATA_1 = JSON.parse(json_data);\n{js_func}(\"{svg_id}\", DATA_1);\n</script>\n"
         cls._write_to_file(js_data, newline=False)
 
 
@@ -356,6 +351,25 @@ class HtmlLog:
         '''
 
 
+    ##########################################
+    #           JavaScript support           #
+    ##########################################
+
+    @classmethod
+    def _external_js_file(cls, filename: str, defer=False):
+        """
+
+        :param filename:
+        :param defer:
+        :return:
+        """
+        if defer:
+            code = f"<script src='{filename}' defer></script>"
+        else:
+            code = f"<script src='{filename}'></script>"
+
+        cls._write_to_file(code + "\n", newline=False)
+
 
 
     ##########################################   Low-level logging (handlers for the logging)   ##########################################
@@ -363,11 +377,11 @@ class HtmlLog:
     @classmethod
     def _write_to_file(cls, msg: str, blanks_before = 0, newline = True, blanks_after = 0) -> None:
         """
-        Write the given message into the file managed by the File Handler stored in the class property "file_handler"
+        Write the given message into the HTML file managed by the File Handler stored in the class property "file_handler"
 
         :param msg:             String to write to the designated log file
         :param blanks_before:   Number of blank lines to precede the output with
-        :param newline:         Flag indicating whether the output should be terminated by a newline
+        :param newline:         Flag indicating whether the output should be terminated by a newline ("<br>\n")
         :param blanks_after:    Number of blank lines to place after the output
         :return:                None
         """

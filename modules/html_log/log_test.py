@@ -40,11 +40,12 @@ my_data = [
     {"id": 'd4', "index": 3, "value": 6, "region":'Germany'}
 ]
 
-handler = "D3_test1.js"
+handler_file = "D3_test1.js"
+handler_func = "draw_barchart"
 
-class_name = "svg1"
+svg_id = "svg1"
 
-log.export_plot(class_name=class_name, js_file=handler, data=my_data)
+log.export_plot(data=my_data, svg_id=svg_id, js_file=handler_file, js_func=handler_func)
 
 
 
