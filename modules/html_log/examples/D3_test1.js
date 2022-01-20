@@ -1,3 +1,5 @@
+// A simple D3-based function to draw a bar chart
+
 function draw_barchart(svg_id, dt)
 {
     console.log("Inside draw_barchart")
@@ -16,6 +18,4 @@ function draw_barchart(svg_id, dt)
         .attr('height', dt => (dt.value * 15))
         .attr('x', dt => 8 + (dt.index * 60))
         .attr('y', dt => 200 - (dt.value * 15));
-    /*
-    */
 }

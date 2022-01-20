@@ -1,7 +1,8 @@
-from html_log import HtmlLog as log
+from modules.html_log.html_log import HtmlLog as log
+
 print(log.LOG_FILENAME_BASE)
 
-import log_test2
+import log_setup    # File that sets up some parameters of the logging
 
 #log.config(filename="another catchy name.htm")
 
@@ -17,7 +18,7 @@ log.new_run()
 
 print(log.LOG_FILENAME_BASE)
 
-log_test2.ClassTwo.class2_method1()
+log_setup.ClassTwo.class2_method1()
 
 log.write("Alles ist gut!")
 

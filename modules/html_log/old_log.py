@@ -12,7 +12,7 @@ import html
 from datetime import datetime
 
 
-class old_log:      ###  DEPRECATED  ###
+class old_log:      #####  DEPRECATED  #####
     """
     Multi-output channel logging, with optional over-riding directives to include or suppress logging.
     It provides class methods and class properties.

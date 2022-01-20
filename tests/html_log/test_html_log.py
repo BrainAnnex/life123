@@ -4,7 +4,7 @@ import os
 
 
 def test_next_available_file():
-    # Get rid of test log files
+    # Get rid of test log files that might linger around from earlier tests
     for i in range(3):  # 0 thru 2, inclusive
         filename = f"test{i+1}.htm"
         if os.path.exists(filename):

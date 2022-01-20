@@ -33,7 +33,7 @@ class HtmlLog:
     MAX_LOG_FILE_NUMBER = 100       # The max number of log files to create (if SEPARATE_LOGS is True);
                                     #   if the number is exceed, the logs are appended to a file with an "_overflow" suffix in the name
 
-    ALSO_PRINT = True               # If True, anything sent to the log will out be sent to stdout
+    ALSO_PRINT = True               # Default about whether to also send log to stdout
     EXTRA_HANDLERS = []             # NOT IN CURRENT USE.  List of functions to invoke with after sending anything to the log
 
 
@@ -53,7 +53,7 @@ class HtmlLog:
         :param max_files:
         :return:                None
         """
-        assert not cls.config_lock, "the config() method can only be invoked once per run"
+        assert not cls.config_lock, "the config() method can only be invoked ONCE per run"
 
         # Change whatever configuration variables are being passed, if any
         if filename:
@@ -86,7 +86,7 @@ class HtmlLog:
                 cls.file_handler = open(cls.log_filename, "a")     # Create a new file, to append to
 
 
-        print(f"Output will be logged into the file '{cls.log_filename}'")
+        print(f"-> Output will be LOGGED into the file '{cls.log_filename}'")
 
         head = '''
         <head>  
@@ -114,24 +114,30 @@ class HtmlLog:
 
 
 
-    #########################################
-    #            PRIMARY METHOD             #
-    #########################################
+    ###############################################
+    #               PRIMARY METHOD                #
+    ###############################################
+
     @classmethod
-    def write(cls, msg: str, plain="", also_print=False,
+    def write(cls, msg: str, plain="", also_print=ALSO_PRINT,
+              indent = 0,
               blanks_before = 0, newline = True, blanks_after = 0,
               style = None):
         """
 
         :param msg:             A string (possibly with HTML markup - but NOT recommended),
                                 or object that can be sent as input to the str() function,
-                                to be sent out to the specified log(s) and/or to printed (newline automatically added by default)
+                                to be sent out to the log, and possibly also printed
+                                (newline automatically added by default)
 
         ALL THE FOLLOWING ARGUMENTS ARE OPTIONAL
         :param plain:           A plain-text version (possibly blank) of the `msg` argument.
                                 If an empty string, then the value in the `msg` argument is used,
                                 after stripping off any HTML that might be present
-        :param also_print:      Only applicable if `plain` is blank.  Flag indicating whether to also print an HTML-stripped version of msg
+        :param also_print:      Only applicable if `plain` is blank.
+                                Flag indicating whether to also print an HTML-stripped version of msg
+
+        :param indent:          Integer indicating the number of blank spaces (or HTML left indent) to prefix to the message being output
 
         :param blanks_before:   Number of blank lines to precede the output with
         :param newline:         Flag indicating whether the output should be terminated by a newline (a <br> in the HTML version)
@@ -141,6 +147,7 @@ class HtmlLog:
                                 Example:  HtmlLog.bold   , or   [HtmlLog.italic, HtmlLog.red]
         :return:
         """
+
         # Check if the configuration was run
         if not cls.file_handler:
             cls.config()            # Set up the default configuration
@@ -149,14 +156,20 @@ class HtmlLog:
 
 
         # Determine if something should also be sent to the standard output
-        if plain or also_print or cls.ALSO_PRINT:
+        if plain or also_print:
             if not plain:
                 # If no plain-message version was provided, make it equal to the message string,
                 # stripped on any HTML that might be present
                 plain = cls.strip_html(msg)
 
+            # Take care of indent, if applicable
+            if indent > 0:
+                indent_str = " " * indent        # Repeat a blank character the specified number of times
+                plain =  indent_str + plain
+
             # Dispatch the request to the handler for the standard output
             cls._write_to_console(plain, blanks_before=blanks_before, newline=newline, blanks_after=blanks_after)
+
 
         # The remainder of the function is for processing the HTML logging
 
@@ -165,13 +178,16 @@ class HtmlLog:
 
         # Apply any requested HTML formatting to the HTML version of the message
         if style is not None:
-            #if isinstance(style, list):
             if type(style) == list or type(style) == tuple:
                 # If multiple style functions were passed (e.g., one for boldface and one for color), apply each in turn
                 for fn in style:
                     msg = fn(msg)
             else:
                 msg = style(msg)    # A single style function is applied
+
+        # Take care of indent, if applicable
+        if indent > 0:
+            msg = cls.html_indent(indent) + msg
 
         # Dispatch the request to the handler for the HTML file output
         cls._write_to_file(msg, blanks_before=blanks_before, newline=newline, blanks_after=blanks_after)
@@ -210,7 +226,7 @@ class HtmlLog:
 
 
     @classmethod
-    def separator(cls, caption = "", also_print=False) -> None:
+    def separator(cls, caption = "", also_print=ALSO_PRINT) -> None:
         """
         Append to the appropriate logs a separator line and an optional caption
 
@@ -219,7 +235,7 @@ class HtmlLog:
         :return:            None
         """
         msg = "<hr>\n" + cls.bold(caption)
-        if also_print or cls.ALSO_PRINT:
+        if also_print:
             plain_message = "------------------------------------------------------------------------------------------------------------\n" \
                             + caption
             cls.write(msg, plain=plain_message)
@@ -311,7 +327,9 @@ class HtmlLog:
     @staticmethod
     def html_indent(indent: int) -> str:
         """
-        Compose and return a SPAN html element to create a left indentation by the specified value (expressed in "ch" units)
+        Compose and return a SPAN html element to create a left indentation
+        by the specified value (expressed in "ch" units)
+
         :param indent:  In "ch" units (the width of the zero character "0")
         :return:        A string with the HTML code for the formatted element
         """
