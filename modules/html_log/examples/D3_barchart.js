@@ -1,6 +1,9 @@
 // A simple D3-based function to draw a bar chart
 
 function draw_barchart(svg_id, dt)
+/*  Expects a svg tag
+    svg_id: the name of the ID of the SVG element to place the plot into
+ */
 {
     console.log("Inside draw_barchart")
 

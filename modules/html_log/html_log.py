@@ -36,6 +36,9 @@ class HtmlLog:
     ALSO_PRINT = True               # Default about whether to also send log to stdout
     EXTRA_HANDLERS = []             # NOT IN CURRENT USE.  List of functions to invoke with after sending anything to the log
 
+    use_D3 = False
+
+
 
 
     #########################################
@@ -43,7 +46,8 @@ class HtmlLog:
     #########################################
 
     @classmethod
-    def config(cls, filename=None, multiple=None, overwrite=None, max_files=None) -> None:
+    def config(cls, filename=None, multiple=None, overwrite=None, max_files=None,
+                    css=None, use_D3=False) -> None:
         """
         Roughly, the counterpart of basicConfig in the default Python logger
 
@@ -88,26 +92,23 @@ class HtmlLog:
 
         print(f"-> Output will be LOGGED into the file '{cls.log_filename}'")
 
-        head = '''
-        <head>  
-            <meta charset="UTF-8">
-            <title>Log</title>
-        
-            <script src="https://d3js.org/d3.v7.min.js" ></script>  
-             
-            <style type="text/css">
-                svg.container {
-                    width: 250px;
-                    height: 200px;
-                    border: 1px solid #720570;
-                }
-        
-                rect.bar {
-                    fill: #720570;
-                }
-            </style>
-        </head>
-        '''
+        # Prepare the header
+        css_line = f'<link type="text/css" rel="stylesheet" href="{css}">' if css else ""
+        js_line = '<script src="https://d3js.org/d3.v7.min.js" ></script>' if use_D3 else ""
+
+        cls.use_D3 = use_D3
+
+        head = f'''<!DOCTYPE html>
+<html lang="en">
+    <head>  
+        <meta charset="UTF-8">
+        <title>Log</title>
+        {js_line}
+        {css_line}  
+    </head>
+    
+    <body>\n'''
+
         cls._write_to_file(head, newline=False)
 
         cls.config_lock = True       # This intercepts and prevents additional calls to this method in the same run
@@ -245,31 +246,43 @@ class HtmlLog:
 
 
     @classmethod
-    def export_plot(cls, data, svg_id, js_file, js_func) -> None:
+    def export_plot(cls, data, svg_id, js_file, js_func, D3_tag="svg") -> None:
         """
 
         :param data:
         :param svg_id:
         :param js_file:
         :param js_func:
+        :param D3_tag:  The tag of the container that D3 reaches into.
+                        Typically, "svg" or "div"
         :return:        None
         """
+        if not cls.use_D3:
+            cls.write("ERROR: In order to utilize D3 plots, the  use_D3=True  option must be used in the call to config()", style=cls.red)
+            return
+
+        cls._html_comment(f"Start of D3 plot (id `{svg_id}`)")
+
         cls._external_js_file(js_file, defer=False)
 
-        html = f"<svg id='{svg_id}'></svg>"
-        cls.write(html)
+        html = f"<{D3_tag} id='{svg_id}'></{D3_tag}>\n"
+        cls._write_to_file(html, newline=False)
 
-        #json_str = json.dumps(data, indent=4)     # Without an indent value, the whole string is in one line
-
+        # Start of JS script
         cls._write_to_file("<script defer>\n", newline=False)
 
         js_data = "var json_data = '"
         cls._write_to_file(js_data, newline=False)
 
-        json.dump(data, cls.file_handler)
+        json.dump(data, cls.file_handler)           # Convert the date to JS, and write it to the log file
+        #json_str = json.dumps(data, indent=4)     # Without an indent value, the whole string is in one line
 
-        js_data = f"';\nvar DATA_1 = JSON.parse(json_data);\n{js_func}(\"{svg_id}\", DATA_1);\n</script>\n"
+        js_data = f"';\nvar DATA_1 = JSON.parse(json_data);\n{js_func}(\"{svg_id}\", DATA_1);\n</script>"
         cls._write_to_file(js_data, newline=False)
+        # End of JS script
+
+        cls._html_comment("End of D3 plot")
+
 
 
 
@@ -369,6 +382,7 @@ class HtmlLog:
         '''
 
 
+
     ##########################################
     #           JavaScript support           #
     ##########################################
@@ -387,6 +401,7 @@ class HtmlLog:
             code = f"<script src='{filename}'></script>"
 
         cls._write_to_file(code + "\n", newline=False)
+
 
 
 
@@ -441,7 +456,19 @@ class HtmlLog:
 
 
 
-##########################################   Utilities   ##########################################
+    ##########################################   Utilities   ##########################################
+
+    @classmethod
+    def _html_comment(cls, text: str):
+        """
+        Write to the log an HTML comment (meant for readability), on a separate line
+
+        :param text:
+        :return:
+        """
+        cls._write_to_file(f"\n<!-- {text} -->\n", newline=False)
+
+
 
     @classmethod
     def strip_html(cls, html_str) -> str:

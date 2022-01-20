@@ -131,3 +131,4 @@ dmypy.json
 /.idea
 
 # Project-specific
+modules/html_log/examples/logs/

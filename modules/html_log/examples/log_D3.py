@@ -1,38 +1,13 @@
 from modules.html_log.html_log import HtmlLog as log
 
-print(log.LOG_FILENAME_BASE)
-
-import log_setup    # File that sets up some parameters of the logging
-
-#log.config(filename="another catchy name.htm")
-
-class ClassOne:
-    @staticmethod
-    def class1_method1(s):
-        log.write("Inside class1_method1()")
-        log.write(f"payload: {s}")
-
-####################################################
+log.config(filename="logs/test_with_D3.htm", overwrite=True, use_D3=True, css="../D3_barchart.css")
 
 log.new_run()
 
-print(log.LOG_FILENAME_BASE)
 
-log_setup.ClassTwo.class2_method1()
+###################   1st plot   ##########################
 
-log.write("Alles ist gut!")
-
-ClassOne.class1_method1("my 5th round of data")
-
-log.separator("And, in summary:")
-
-#log.write("Wunderbar!", style=[log.italic, log.blue])
-log.write("Wunderbar!", style=log.reverse)
-
-#log.config(filename="another catchy name.htm")
-
-
-log.separator("Time for the plot:")
+log.write("Time to do a plot:", style=log.h1)
 
 my_data = [
     {"id": 'd1', "index": 0, "value": 10, "region":'USA'},
@@ -41,13 +16,38 @@ my_data = [
     {"id": 'd4', "index": 3, "value": 6, "region":'Germany'}
 ]
 
-handler_file = "D3_test1.js"
+handler_file = "../D3_barchart.js"
 handler_func = "draw_barchart"
 
-svg_id = "svg1"
+svg_id = "svg1"     # ID to use for the <SVG element>
 
 log.export_plot(data=my_data, svg_id=svg_id, js_file=handler_file, js_func=handler_func)
 
 
+###################   2nd plot   ##########################
 
-exit(4)
+log.write("A repeat of the same plot:", style=log.h2, blanks_before=2)
+
+svg_id = "svg2"     # ID to use for the <SVG element>
+
+log.export_plot(data=my_data, svg_id=svg_id, js_file=handler_file, js_func=handler_func)
+
+
+###################   3rd plot   ##########################
+
+my_heatmap_data = [
+    { "group": "A", "variable": "v1", "value": "30" },
+    { "group": "A", "variable": "v2", "value": "95" },
+    { "group": "B", "variable": "v1", "value": "37" },
+    { "group": "B", "variable": "v2", "value": "50" },
+    { "group": "C", "variable": "v1", "value": "96" },
+    { "group": "C", "variable": "v2", "value": "13" }
+]
+
+log.write("And now, a heatmap:", style=log.h2, blanks_before=2)
+
+handler_file = "../D3_heatmap.js"
+handler_func = "draw_heatmap"
+svg_id = "svg3"                      # ID to use for the <DIV element>
+
+log.export_plot(data=my_heatmap_data, svg_id=svg_id, js_file=handler_file, js_func=handler_func, D3_tag="div")
