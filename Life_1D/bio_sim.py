@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class BioSim:
+class BioSim1D:
     """
     Note: for at least the time being, this class doesn't get instantiated
     """

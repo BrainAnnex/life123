@@ -37,6 +37,7 @@ class HtmlLog:
     EXTRA_HANDLERS = []             # NOT IN CURRENT USE.  List of functions to invoke with after sending anything to the log
 
     use_D3 = False
+    use_Vue= False
 
 
 
@@ -47,7 +48,7 @@ class HtmlLog:
 
     @classmethod
     def config(cls, filename=None, multiple=None, overwrite=None, max_files=None,
-                    css=None, use_D3=False) -> None:
+                    css=None, js=None, use_D3=False, use_Vue=False) -> None:
         """
         Roughly, the counterpart of basicConfig in the default Python logger
 
@@ -55,7 +56,11 @@ class HtmlLog:
         :param multiple:
         :param overwrite:
         :param max_files:
-        :return:                None
+        :param css:         String, or list of strings, with name(s) of CSS files to include
+        :param js:          Name of extra JavaScript file to include
+        :param use_D3:      Flag indicating whether D3 will be used
+        :param use_Vue:     Flag indicating whether Vue will be used
+        :return:            None
         """
         assert not cls.config_lock, "the config() method can only be invoked ONCE per run"
 
@@ -93,23 +98,42 @@ class HtmlLog:
         print(f"-> Output will be LOGGED into the file '{cls.log_filename}'")
 
         # Prepare the header
-        css_line = f'<link type="text/css" rel="stylesheet" href="{css}">' if css else ""
-        js_line = '<script src="https://d3js.org/d3.v7.min.js" ></script>' if use_D3 else ""
+        if not css:
+            css_line = ""
+        elif type(css) == str:
+            css_line = f'    <link type="text/css" rel="stylesheet" href="{css}">'
+        elif type(css) == list:
+            css_list = [f'    <link type="text/css" rel="stylesheet" href="{css_file}">'
+                            for css_file in css]
+            css_line = "\n".join(css_list)
+        else:
+            raise Exception("Argument css, if passed, must be a string or list of strings")
+
+        if use_Vue:
+            js_line = '<script src="../../../Vue2_lib/vue2.js"></script>    <!-- Vue.js (version 2) -->'
+        elif use_D3:
+            js_line = '<script src="https://d3js.org/d3.v7.min.js" ></script>'
+        else:
+            js_line = ''
+
+        if js:
+            js_line += f'\n    <script src="{js}" ></script>'
 
         cls.use_D3 = use_D3
+        cls.use_Vue = use_Vue
 
         head = f'''<!DOCTYPE html>
 <html lang="en">
-    <head>  
-        <meta charset="UTF-8">
-        <title>Log</title>
-        {js_line}
-        {css_line}  
-    </head>
-    
-    <body>\n'''
+<head>  
+    <meta charset="UTF-8">
+    <title>Log</title>
+    {js_line}
+{css_line}  
+</head>
 
-        cls._write_to_file(head, newline=False)
+<body>\n'''
+
+        cls._write_to_file(head)
 
         cls.config_lock = True       # This intercepts and prevents additional calls to this method in the same run
 
@@ -195,6 +219,7 @@ class HtmlLog:
 
 
 
+
     ##########################################
     #           HIGH-LEVEL LOGGING           #
     ##########################################
@@ -266,22 +291,123 @@ class HtmlLog:
         cls._external_js_file(js_file, defer=False)
 
         html = f"<{D3_tag} id='{svg_id}'></{D3_tag}>\n"
-        cls._write_to_file(html, newline=False)
+        cls._write_to_file(html)
 
         # Start of JS script
-        cls._write_to_file("<script defer>\n", newline=False)
+        cls._write_to_file("<script defer>\n")
 
-        js_data = "var json_data = '"
-        cls._write_to_file(js_data, newline=False)
+        js_data = "var json_data = '"       # Note the opening single quote...
+        cls._write_to_file(js_data)
 
         json.dump(data, cls.file_handler)           # Convert the date to JS, and write it to the log file
         #json_str = json.dumps(data, indent=4)     # Without an indent value, the whole string is in one line
 
         js_data = f"';\nvar DATA_1 = JSON.parse(json_data);\n{js_func}(\"{svg_id}\", DATA_1);\n</script>"
-        cls._write_to_file(js_data, newline=False)
+        cls._write_to_file(js_data)
         # End of JS script
 
         cls._html_comment("End of D3 plot")
+
+
+
+    @classmethod
+    def export_plot_Vue(cls, data, component_name, component_file, vue_id="vue-root") -> None:
+        """
+
+        :param data:
+        :param vue_id:  String wih the unique ID to use for the <DIV> containing the Vue component
+
+        :return:        None
+        """
+        if not cls.use_Vue:
+            cls.write("ERROR: In order to utilize Vue, the  use_Vue=True  option must be used in the call to config()", style=cls.red)
+            return
+
+        cls._write_to_file(f'\n\n<div id="{vue_id}">   <!-- Container for VUE COMPONENTS below : ROOT element -->\n')
+
+        component_call = f'''
+    <{component_name} {cls._pass_props(data)}
+    >        
+    </{component_name}>
+'''
+
+        cls._write_to_file(component_call)
+
+        cls._write_to_file('\n</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->\n')
+
+        html = f'''
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="{component_file}"></script>
+'''
+        cls._write_to_file(html)
+
+        if cls.use_D3:
+            cls._write_to_file('<script src="https://d3js.org/d3.v7.min.js" ></script>\n')
+
+        instantiate_vue = f'''
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({{
+    el: '#{vue_id}',
+
+    data: {{
+        {cls._convert_data(data)}
+    }}
+
+}});
+</script>
+
+'''
+        cls._write_to_file(instantiate_vue, newline=False)
+
+
+    @staticmethod
+    def _pass_props(data: dict) -> str:
+        """
+        Prepare a string that goes inside the Vue component call
+
+        :param data:
+        :return:
+        """
+        if data is None:
+            return ""
+
+        s = ""
+        for key in data:
+            s +=  f'\n        v-bind:{key}="JSON.parse({key}_json)"'
+
+        return s
+
+
+    @staticmethod
+    def _convert_data(data: dict) -> str:
+        """
+        Prepare a string that goes inside the "data:" section of the Vue element instantiation.
+
+        EXAMPLE:  { "outer_radius": 200, "width": True, "a": [1, 'yes'] , "b": {"x": 8, "y": False}, "c": "it's \"almost\" true" }
+            gives:
+                outer_radius_json: 200,
+                width_json: true,
+                a_json: [1, "yes"],
+                b_json: {"x": 8, "y": false},
+                c_json: "it's \"almost\" true"
+
+        :param data:    A python dictionary
+        :return:
+        """
+        if data is None:
+            return ""
+
+        l = [f"{key}_json: '{json.dumps(value)}'"
+                        for (key, value) in data.items()]   # Notice the "_json" suffix added to keys
+                                                            # and the values converted to JSON and placed in single quotes
+        #print(l)
+        res = ",\n".join(l)
+        return res
+
 
 
 
@@ -408,9 +534,10 @@ class HtmlLog:
     ##########################################   Low-level logging (handlers for the logging)   ##########################################
 
     @classmethod
-    def _write_to_file(cls, msg: str, blanks_before = 0, newline = True, blanks_after = 0) -> None:
+    def _write_to_file(cls, msg: str, blanks_before = 0, newline = False, blanks_after = 0) -> None:
         """
-        Write the given message into the HTML file managed by the File Handler stored in the class property "file_handler"
+        Write the given message (containing text and/or HTML code) into the file managed by the File Handler
+        that is stored in the class property "file_handler"
 
         :param msg:             String to write to the designated log file
         :param blanks_before:   Number of blank lines to precede the output with

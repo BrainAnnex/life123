@@ -1,3 +1,5 @@
+# Examples of creating a log with D3 graphics
+
 from modules.html_log.html_log import HtmlLog as log
 
 log.config(filename="logs/test_with_D3.htm", overwrite=True, use_D3=True, css="../D3_barchart.css")
@@ -7,7 +9,7 @@ log.new_run()
 
 ###################   1st plot   ##########################
 
-log.write("Time to do a plot:", style=log.h1)
+log.write("Time to do a D3.js plot:", style=log.h1)
 
 my_data = [
     {"id": 'd1', "index": 0, "value": 10, "region":'USA'},
