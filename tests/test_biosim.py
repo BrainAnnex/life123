@@ -1,122 +1,151 @@
 import numpy as np
 import pytest
-from Life_1D.bio_sim import BioSim1D
+from life_1D.bio_sim_1d import BioSim1D as bio
 
 
 def test_initialize_universe():
-    BioSim1D.initialize_universe(n_cells=10, n_species=1)
+    bio.initialize_universe(n_cells=10, n_species=1)
 
-    assert BioSim1D.n_cells == 10
-    assert BioSim1D.n_species == 1
+    assert bio.n_cells == 10
+    assert bio.n_species == 1
 
-    print(BioSim1D.univ)
+    print(bio.univ)
+
+    expected = np.zeros((1, 10), dtype=float)
+    assert np.allclose(bio.univ, expected)
+
+    # New test
+    bio.initialize_universe(n_cells=15, n_species=3)
+    print(bio.univ)
+    expected = np.zeros((3,15), dtype=float)
+    assert np.allclose(bio.univ, expected)
 
 
 
 def test_set_diffusion_rates():
-    BioSim1D.initialize_universe(n_cells=5, n_species=1)
-    BioSim1D.set_diffusion_rates([.2])
+    bio.initialize_universe(n_cells=5, n_species=1)
+    bio.set_diffusion_rates([.2])
+    print(bio.diffusion_rates)
+    assert np.allclose(bio.diffusion_rates, [.2])
+
+    # New test
+    bio.initialize_universe(n_cells=25, n_species=4)
+    bio.set_diffusion_rates([.1, .7, .2, .4])
+    print(bio.diffusion_rates)
+    assert np.allclose(bio.diffusion_rates, [.1, .7, .2, .4])
 
 
 
 def test_set_uniform_concentration():
-    BioSim1D.initialize_universe(n_cells=5, n_species=1)
-    BioSim1D.set_uniform_concentration(c=0.1)
+    bio.initialize_universe(n_cells=8, n_species=1)
+    bio.set_uniform_concentration(species_index=0, c=0.3)
+    print(bio.univ)
+    expected = np.full(8, 0.3, dtype=float)
+    assert np.allclose(bio.univ[0], expected)
 
-    print(BioSim1D.univ)
+    # New test
+    bio.initialize_universe(n_cells=15, n_species=3)
+    bio.set_uniform_concentration(species_index=0, c=10.)
+    bio.set_uniform_concentration(species_index=1, c=11.)
+    bio.set_uniform_concentration(species_index=2, c=12.)
+    print(bio.univ)
+    assert np.allclose(bio.univ[0], np.full(15, 10., dtype=float))
+    assert np.allclose(bio.univ[1], np.full(15, 11., dtype=float))
+    assert np.allclose(bio.univ[2], np.full(15, 12., dtype=float))
+
 
 
 def test_inject_conc_to_cell():
-    BioSim1D.initialize_universe(n_cells=5, n_species=1)
+    bio.initialize_universe(n_cells=5, n_species=1)
 
     with pytest.raises(Exception):
         # cell_index out-of-bounds
-        BioSim1D.inject_conc_to_cell(cell_index=5, delta_conc=10.)
+        bio.inject_conc_to_cell(cell_index=5, species_index=0, delta_conc=10.)
 
-    BioSim1D.inject_conc_to_cell(cell_index=1, delta_conc=10.)
+    bio.inject_conc_to_cell(cell_index=1, species_index=0, delta_conc=10.)
 
-    print(BioSim1D.univ)
+    print(bio.univ)
 
 
 
 def test_diffuse_step_single_species():
-    BioSim1D.initialize_universe(n_cells=5, n_species=1)
-    BioSim1D.set_uniform_concentration(c=1.0)
+    bio.initialize_universe(n_cells=5, n_species=1)
+    bio.set_uniform_concentration(c=1.0)
     with pytest.raises(Exception):
-        BioSim1D.diffuse_step_single_species()    # Must set the diffusion rates first
+        bio.diffuse_step_single_species()    # Must set the diffusion rates first
 
-    BioSim1D.set_diffusion_rates([10.])
+    bio.set_diffusion_rates([10.])
 
-    old_univ = BioSim1D.univ
-    result = BioSim1D.diffuse_step_single_species()
-    print(BioSim1D.univ)
+    old_univ = bio.univ
+    result = bio.diffuse_step_single_species()
+    print(bio.univ)
     assert np.allclose(old_univ, result)    # Diffusing a uniform distribution won't change it
 
 
 def test_diffuse_step_single_species_2():
-    BioSim1D.initialize_universe(n_cells=2, n_species=1)
+    bio.initialize_universe(n_cells=2, n_species=1)
 
-    BioSim1D.inject_conc_to_cell(cell_index=0, delta_conc=10.)
-    print(BioSim1D.univ)
+    bio.inject_conc_to_cell(cell_index=0, delta_conc=10.)
+    print(bio.univ)
 
-    BioSim1D.set_diffusion_rates([1.])
+    bio.set_diffusion_rates([1.])
 
-    BioSim1D.diffuse_step_single_species(time_fraction=.5)
-    print(BioSim1D.univ)
+    bio.diffuse_step_single_species(time_fraction=.5)
+    print(bio.univ)
 
-    BioSim1D.diffuse_step_single_species(time_fraction=.5)
-    print(BioSim1D.univ)
+    bio.diffuse_step_single_species(time_fraction=.5)
+    print(bio.univ)
 
 
 def test_diffuse_step_single_species_3():
-    BioSim1D.initialize_universe(n_cells=2, n_species=1)
+    bio.initialize_universe(n_cells=2, n_species=1)
 
-    BioSim1D.inject_conc_to_cell(cell_index=0, delta_conc=10.)
-    print(BioSim1D.univ)
+    bio.inject_conc_to_cell(cell_index=0, delta_conc=10.)
+    print(bio.univ)
 
-    BioSim1D.set_diffusion_rates([1.])
+    bio.set_diffusion_rates([1.])
 
     for i in range(4):
-        BioSim1D.diffuse_step_single_species(time_fraction=.4)
+        bio.diffuse_step_single_species(time_fraction=.4)
         print(f"At end of step {i+1}:")
-        print(BioSim1D.univ)
+        print(bio.univ)
 
 def test_diffuse_step_single_species_4():
-    BioSim1D.initialize_universe(n_cells=3, n_species=1)
+    bio.initialize_universe(n_cells=3, n_species=1)
 
-    BioSim1D.inject_conc_to_cell(cell_index=1, delta_conc=10.)
-    print(BioSim1D.univ)
+    bio.inject_conc_to_cell(cell_index=1, delta_conc=10.)
+    print(bio.univ)
 
-    BioSim1D.set_diffusion_rates([.5])
+    bio.set_diffusion_rates([.5])
 
     for i in range(4):
-        BioSim1D.diffuse_step_single_species(time_fraction=0.6666)
+        bio.diffuse_step_single_species(time_fraction=0.6666)
         print(f"At end of step {i+1}:")
-        print(BioSim1D.univ)
+        print(bio.univ)
 
 def test_diffuse_step_single_species_5():
-    BioSim1D.initialize_universe(n_cells=5, n_species=1)
+    bio.initialize_universe(n_cells=5, n_species=1)
 
-    BioSim1D.inject_conc_to_cell(cell_index=0, delta_conc=10.)
-    print(BioSim1D.univ)
+    bio.inject_conc_to_cell(cell_index=0, delta_conc=10.)
+    print(bio.univ)
 
-    BioSim1D.set_diffusion_rates([.5])
+    bio.set_diffusion_rates([.5])
 
     for i in range(20):
-        BioSim1D.diffuse_step_single_species(time_fraction=0.6666)
+        bio.diffuse_step_single_species(time_fraction=0.6666)
         print(f"At end of step {i+1}:")
-        print(BioSim1D.univ)
+        print(bio.univ)
 
 
 
 def test_diffuse_step_single_species_6():
     # Exploring effect of time resolution on accuracy
-    BioSim1D.initialize_universe(n_cells=10, n_species=1)
+    bio.initialize_universe(n_cells=10, n_species=1)
 
-    BioSim1D.inject_conc_to_cell(cell_index=2, delta_conc=10.)
-    print(BioSim1D.univ)
+    bio.inject_conc_to_cell(cell_index=2, delta_conc=10.)
+    print(bio.univ)
 
-    BioSim1D.set_diffusion_rates([0.1])
+    bio.set_diffusion_rates([0.1])
 
     # The time advance (tf * n_steps) always remains constant at 33.3
     # TODO: provide a function that accepts the time advance and n_steps, and determines tf
@@ -125,92 +154,92 @@ def test_diffuse_step_single_species_6():
     n_steps = 10
     tf = 3.33
     for i in range(n_steps):
-        BioSim1D.diffuse_step_single_species(time_fraction=tf)
+        bio.diffuse_step_single_species(time_fraction=tf)
         #print(f"At end of step {i+1}:")
 
     print(f"At end of {n_steps} steps of size {tf}:")
-    print(BioSim1D.univ)
+    print(bio.univ)
 
 
-    BioSim1D.initialize_universe(n_cells=10, n_species=1)
-    BioSim1D.inject_conc_to_cell(cell_index=2, delta_conc=10.)
+    bio.initialize_universe(n_cells=10, n_species=1)
+    bio.inject_conc_to_cell(cell_index=2, delta_conc=10.)
     #print(BioSim.univ)
     n_steps = 20
     tf = 3.33/2
     for i in range(n_steps):
-        BioSim1D.diffuse_step_single_species(time_fraction=tf)
+        bio.diffuse_step_single_species(time_fraction=tf)
 
     print(f"At end of {n_steps} steps of size {tf}:")
-    print(BioSim1D.univ)
+    print(bio.univ)
 
 
-    BioSim1D.initialize_universe(n_cells=10, n_species=1)
-    BioSim1D.inject_conc_to_cell(cell_index=2, delta_conc=10.)
+    bio.initialize_universe(n_cells=10, n_species=1)
+    bio.inject_conc_to_cell(cell_index=2, delta_conc=10.)
     #print(BioSim.univ)
     n_steps = 30
     tf = 3.33/3
     for i in range(n_steps):
-        BioSim1D.diffuse_step_single_species(time_fraction=tf)
+        bio.diffuse_step_single_species(time_fraction=tf)
 
     print(f"At end of {n_steps} steps of size {tf}:")
-    print(BioSim1D.univ)
+    print(bio.univ)
 
 
-    BioSim1D.initialize_universe(n_cells=10, n_species=1)
-    BioSim1D.inject_conc_to_cell(cell_index=2, delta_conc=10.)
+    bio.initialize_universe(n_cells=10, n_species=1)
+    bio.inject_conc_to_cell(cell_index=2, delta_conc=10.)
     #print(BioSim.univ)
     n_steps = 50
     tf = 3.33/5
     for i in range(n_steps):
-        BioSim1D.diffuse_step_single_species(time_fraction=tf)
+        bio.diffuse_step_single_species(time_fraction=tf)
 
     print(f"At end of {n_steps} steps of size {tf}:")
-    print(BioSim1D.univ)
+    print(bio.univ)
 
 
-    BioSim1D.initialize_universe(n_cells=10, n_species=1)
-    BioSim1D.inject_conc_to_cell(cell_index=2, delta_conc=10.)
+    bio.initialize_universe(n_cells=10, n_species=1)
+    bio.inject_conc_to_cell(cell_index=2, delta_conc=10.)
     #print(BioSim.univ)
     n_steps = 100
     tf = 3.33/10
     for i in range(n_steps):
-        BioSim1D.diffuse_step_single_species(time_fraction=tf)
+        bio.diffuse_step_single_species(time_fraction=tf)
 
     print(f"At end of {n_steps} steps of size {tf}:")
-    print(BioSim1D.univ)
+    print(bio.univ)
 
 
-    BioSim1D.initialize_universe(n_cells=10, n_species=1)
-    BioSim1D.inject_conc_to_cell(cell_index=2, delta_conc=10.)
+    bio.initialize_universe(n_cells=10, n_species=1)
+    bio.inject_conc_to_cell(cell_index=2, delta_conc=10.)
     #print(BioSim.univ)
     n_steps = 1000
     tf = 3.33/100
     for i in range(n_steps):
-        BioSim1D.diffuse_step_single_species(time_fraction=tf)
+        bio.diffuse_step_single_species(time_fraction=tf)
 
     print(f"At end of {n_steps} steps of size {tf}:")
-    print(BioSim1D.univ)
+    print(bio.univ)
 
 
-    BioSim1D.initialize_universe(n_cells=10, n_species=1)
-    BioSim1D.inject_conc_to_cell(cell_index=2, delta_conc=10.)
+    bio.initialize_universe(n_cells=10, n_species=1)
+    bio.inject_conc_to_cell(cell_index=2, delta_conc=10.)
     #print(BioSim.univ)
     n_steps = 10000
     tf = 3.33/1000
     for i in range(n_steps):
-        BioSim1D.diffuse_step_single_species(time_fraction=tf)
+        bio.diffuse_step_single_species(time_fraction=tf)
 
     print(f"At end of {n_steps} steps of size {tf}:")
-    print(BioSim1D.univ)
+    print(bio.univ)
 
 
-    BioSim1D.initialize_universe(n_cells=10, n_species=1)
-    BioSim1D.inject_conc_to_cell(cell_index=2, delta_conc=10.)
+    bio.initialize_universe(n_cells=10, n_species=1)
+    bio.inject_conc_to_cell(cell_index=2, delta_conc=10.)
     #print(BioSim.univ)
     n_steps = 100000
     tf = 3.33/10000
     for i in range(n_steps):
-        BioSim1D.diffuse_step_single_species(time_fraction=tf)
+        bio.diffuse_step_single_species(time_fraction=tf)
 
     print(f"At end of {n_steps} steps of size {tf}:")
-    print(BioSim1D.univ)
+    print(bio.univ)
