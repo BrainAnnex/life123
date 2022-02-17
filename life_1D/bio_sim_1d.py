@@ -8,11 +8,11 @@ class BioSim1D:
 
     # Class variables
     n_cells = 0         # Number of spacial compartments (bins) used in the simulation
-                        #   For now fixed; in later iterations, it will be adjustable
 
     n_species = 1       # The number of (non-water) chemical species
 
-    univ = None         # NumPy array of dimension (n_species x n_cells).  Each row represents a species
+    univ = None         # NumPy array of dimension (n_species x n_cells).
+                        # Each row represents a species
 
     diffusion_rates = None  # NumPy array of diffusion rates for the various species
 
@@ -22,14 +22,15 @@ class BioSim1D:
     def initialize_universe(cls, n_cells: int, n_species: int) -> None:
         """
 
-        :param n_cells:     The number of spacial compartments to use in the simulation
+        :param n_cells:     The number of compartments (bins) to use in the simulation
         :param n_species:   The number of (non-water) chemical species.  It must be at least 1
         :return:            None
         """
         assert n_cells >= 1, "The number of cells must be at least 1"
-        cls.n_cells = n_cells
-
         assert n_species >= 1, "The number of (non-water) chemical species must be at least 1"
+
+
+        cls.n_cells = n_cells
         cls.n_species = n_species
 
         cls.univ = np.zeros((n_species, n_cells), dtype=float)
@@ -39,50 +40,77 @@ class BioSim1D:
     @classmethod
     def set_diffusion_rates(cls, diff_list: list) -> None:
         """
-        Set the diffusion rates of all the chemical species
+        Set the diffusion rates of all the chemical species at once
 
         :param diff_list:   List of diffusion rates, in index order
         :return:            None
         """
-        assert cls.n_cells > 0, "Must first call initialize_universe()"
+        assert cls.n_species > 0, "Must first call initialize_universe()"
         assert len(diff_list) == cls.n_species, \
-            "The number of items in the diffusion list must equal the registered number of species"
+                "The number of items in the diffusion list must equal the registered number of species"
         cls.diffusion_rates = np.array(diff_list, dtype=float)
 
 
 
     @classmethod
-    def set_uniform_concentration(cls, species_index: int, c: float) -> None:
+    def set_uniform_concentration(cls, species_index: int, conc: float) -> None:
         """
         Assign the given concentration to all the cells of the specified species (identified by its index).
         Any previous values get over-written
 
         :param species_index:   Zero-based index to identify a specific chemical species
-        :param c:               The desired value of chemical concentration for the above species
+        :param conc:            The desired value of chemical concentration for the above species
         :return:                None
         """
         assert (species_index >= 0) and (species_index < cls.n_species), \
                     f"The species_index must be an integer between 0 and {cls.n_species - 1}"
 
-        assert c >= 0., "The concentration must be a positive number or zero"
+        assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
 
-        cls.univ[species_index] = np.full(cls.n_cells, c, dtype=float)
+        cls.univ[species_index] = np.full(cls.n_cells, conc, dtype=float)
+
 
 
     @classmethod
-    def inject_conc_to_cell(cls, cell_index: int, species_index: int, delta_conc: float) -> None:
+    def set_conc_of_cell(cls, cell_index: int, species_index: int, conc: float) -> None:
         """
-        Add the requested concentration to the cell with the given index, for the specifiec species
+        Assign the requested concentration value to the cell with the given index, for the specified species
+
+        :param cell_index:      The zero-based bin number of the desired cell
+        :param species_index:   Zero-based index to identify a specific chemical species
+        :param conc:            The desired concentration value to assign to the specified location
+        :return:                None
+        """
+        assert cell_index < cls.n_cells, f"The requested cell index ({cell_index}) must be in the range [0 - {cls.n_cells - 1}]"
+
+        assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
+
+        cls.univ[species_index, cell_index] = conc
+
+
+
+    @classmethod
+    def inject_conc_to_cell(cls, cell_index: int, species_index: int, delta_conc: float, zero_clip = True) -> None:
+        """
+        Add the requested concentration to the cell with the given index, for the specified species
 
         :param cell_index:      The zero-based bin number of the desired cell
         :param species_index:   Zero-based index to identify a specific chemical species
         :param delta_conc:      The concentration to add to the specified location
+        :param zero_clip:       If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
+                                otherwise, an Exception will be raised
         :return:                None
         """
-        assert cell_index < cls.n_cells, "The requested index exceeds the max possible value"
+        assert cell_index < cls.n_cells, f"The requested cell index ({cell_index}) must be in the range [0 - {cls.n_cells - 1}]"
 
+        if (cls.univ[species_index, cell_index] + delta_conc) < 0. :
+            if zero_clip:
+                cls.univ[species_index, cell_index] = 0
+            else:
+                raise Exception("The requested concentration change would result in a negative final value")
+
+        # Normal scenario, not leading to negative values for the final concentration
         cls.univ[species_index, cell_index] += delta_conc
-
 
 
 

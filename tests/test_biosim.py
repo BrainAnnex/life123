@@ -38,16 +38,16 @@ def test_set_diffusion_rates():
 
 def test_set_uniform_concentration():
     bio.initialize_universe(n_cells=8, n_species=1)
-    bio.set_uniform_concentration(species_index=0, c=0.3)
+    bio.set_uniform_concentration(species_index=0, conc=0.3)
     print(bio.univ)
     expected = np.full(8, 0.3, dtype=float)
     assert np.allclose(bio.univ[0], expected)
 
     # New test
     bio.initialize_universe(n_cells=15, n_species=3)
-    bio.set_uniform_concentration(species_index=0, c=10.)
-    bio.set_uniform_concentration(species_index=1, c=11.)
-    bio.set_uniform_concentration(species_index=2, c=12.)
+    bio.set_uniform_concentration(species_index=0, conc=10.)
+    bio.set_uniform_concentration(species_index=1, conc=11.)
+    bio.set_uniform_concentration(species_index=2, conc=12.)
     print(bio.univ)
     assert np.allclose(bio.univ[0], np.full(15, 10., dtype=float))
     assert np.allclose(bio.univ[1], np.full(15, 11., dtype=float))
@@ -70,7 +70,7 @@ def test_inject_conc_to_cell():
 
 def test_diffuse_step_single_species():
     bio.initialize_universe(n_cells=5, n_species=1)
-    bio.set_uniform_concentration(c=1.0)
+    bio.set_uniform_concentration(conc=1.0)
     with pytest.raises(Exception):
         bio.diffuse_step_single_species()    # Must set the diffusion rates first
 
@@ -85,7 +85,7 @@ def test_diffuse_step_single_species():
 def test_diffuse_step_single_species_2():
     bio.initialize_universe(n_cells=2, n_species=1)
 
-    bio.inject_conc_to_cell(cell_index=0, delta_conc=10.)
+    bio.inject_conc_to_cell(cell_index=0, species_index=0, delta_conc=10.)
     print(bio.univ)
 
     bio.set_diffusion_rates([1.])
