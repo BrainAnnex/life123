@@ -15,7 +15,7 @@ class HtmlLog:
     #####################
 
     config_lock = False             # Lock to prevent multiple calls to the config() method
-    log_filename = ""               # Including paths and automatically-generated numerical suffixes (eg, "log8.htm"), if applicable
+    log_fullname = ""               # Including paths and, if applicable, automatically-generated numerical suffixes (eg, "D:/Docs/log8.htm")
     file_handler = None             # To write into the log file
 
 
@@ -32,9 +32,10 @@ class HtmlLog:
 
     MAX_LOG_FILE_NUMBER = 100       # The max number of log files to create (if SEPARATE_LOGS is True);
                                     #   if the number is exceed, the logs are appended to a file with an "_overflow" suffix in the name
+                                    # TODO: is this really needed/useful??
 
-    ALSO_PRINT = True               # Default about whether to also send log to stdout
-    EXTRA_HANDLERS = []             # NOT IN CURRENT USE.  List of functions to invoke with after sending anything to the log
+    ALSO_PRINT = True               # Default about whether to also send plain-text version of the log messages to stdout
+    EXTRA_HANDLERS = []             # NOT IN CURRENT USE.  List of functions to invoke after sending anything to the log
 
     use_D3 = False
     use_Vue= False
@@ -50,19 +51,29 @@ class HtmlLog:
     def config(cls, filename=None, multiple=None, overwrite=None, max_files=None,
                     css=None, js=None, use_D3=False, use_Vue=False) -> None:
         """
+        It can only be called once in a run.
+        If desired, it can be done explicitly - and should be done so if the Class defaults need to be changed;
+        if not done explicitly, it'll be done automatically if calling any method in this library.
+
         Roughly, the counterpart of basicConfig in the default Python logger
 
-        :param filename:
-        :param multiple:
+        # ARGUMENTS OPTIONALLY USED TO CHANGE THE CLASS DEFAULTS
+        :param filename:    Name for the log file (if using just 1 file), or basename (if using multiple log files);
+                                EXAMPLE: "log.htm"
+        :param multiple:    Flag indicating whether each run's output should go into a separate file (consecutively numbered);
+                                if False, a single file is used
         :param overwrite:
         :param max_files:
+
+        # ARGUMENTS OPTIONALLY USED TO PASS STYLING/JAVASCRIPT/GRAPHING PARAMETER
         :param css:         String, or list of strings, with name(s) of CSS files to include
         :param js:          Name of extra JavaScript file to include
         :param use_D3:      Flag indicating whether D3 will be used
         :param use_Vue:     Flag indicating whether Vue will be used
+
         :return:            None
         """
-        assert not cls.config_lock, "the config() method can only be invoked ONCE per run"
+        assert not cls.config_lock, "The config() method can only be invoked ONCE per run"
 
         # Change whatever configuration variables are being passed, if any
         if filename:
@@ -82,20 +93,20 @@ class HtmlLog:
         #       and create a file handle to write into it
         if cls.SEPARATE_LOGS:   # Create new files, with an auto-increment in the filename.  Example: "log8.htm"
             # Retrieve the first available filename
-            cls.log_filename = cls._next_available_filename(cls.LOG_DIRECTORY + cls.LOG_FILENAME_BASE,
+            cls.log_fullname = cls._next_available_filename(cls.LOG_DIRECTORY + cls.LOG_FILENAME_BASE,
                                                             cls.MAX_LOG_FILE_NUMBER)
-            cls.file_handler = open(cls.log_filename, "a")  # Create a new file, to write to
+            cls.file_handler = open(cls.log_fullname, "a")  # Create a new file, to write to
                                                             # (the append part is only relevant if we reach the max # of files)
 
         else:                   # Using a single log file
-            cls.log_filename = cls.LOG_DIRECTORY + cls.LOG_FILENAME_BASE
+            cls.log_fullname = cls.LOG_DIRECTORY + cls.LOG_FILENAME_BASE
             if cls.OVERWRITE_SINGLE_LOG:
-                cls.file_handler = open(cls.log_filename, "w")     # Create a new file, to write into: over-written if present
+                cls.file_handler = open(cls.log_fullname, "w")     # Create a new file, to write into: over-written if present
             else:
-                cls.file_handler = open(cls.log_filename, "a")     # Create a new file, to append to
+                cls.file_handler = open(cls.log_fullname, "a")     # Create a new file, to append to
 
 
-        print(f"-> Output will be LOGGED into the file '{cls.log_filename}'")
+        print(f"-> Output will be LOGGED into the file '{cls.log_fullname}'")
 
         # Prepare the header
         if not css:
@@ -110,7 +121,7 @@ class HtmlLog:
             raise Exception("Argument css, if passed, must be a string or list of strings")
 
         if use_Vue:
-            js_line = '<script src="../../../Vue2_lib/vue2.js"></script>    <!-- Vue.js (version 2) -->'
+            js_line = '<script src="../../../Vue2_lib/vue2.js"></script>'
         elif use_D3:
             js_line = '<script src="https://d3js.org/d3.v7.min.js" ></script>'
         else:
@@ -136,6 +147,7 @@ class HtmlLog:
         cls._write_to_file(head)
 
         cls.config_lock = True       # This intercepts and prevents additional calls to this method in the same run
+
 
 
 
@@ -315,6 +327,8 @@ class HtmlLog:
         """
 
         :param data:
+        :param component_name:
+        :param component_file:
         :param vue_id:  String wih the unique ID to use for the <DIV> containing the Vue component
 
         :return:        None
@@ -516,6 +530,8 @@ new Vue({{
     @classmethod
     def _external_js_file(cls, filename: str, defer=False):
         """
+        Write into the log file the necessary HTML code to include
+        the given JavaScript file
 
         :param filename:
         :param defer:
@@ -583,17 +599,18 @@ new Vue({{
 
 
 
+
     ##########################################   Utilities   ##########################################
 
     @classmethod
-    def _html_comment(cls, text: str):
+    def _html_comment(cls, comment: str):
         """
         Write to the log an HTML comment (meant for readability), on a separate line
 
-        :param text:
+        :param comment: string with the body of the comment.  EXAMPLE: "Start of data table"
         :return:
         """
-        cls._write_to_file(f"\n<!-- {text} -->\n", newline=False)
+        cls._write_to_file(f"\n<!-- {comment} -->\n", newline=False)
 
 
 
@@ -601,7 +618,10 @@ new Vue({{
     def strip_html(cls, html_str) -> str:
         """
         A light-duty HTML stripper that preserves newlines.
-        EXAMPLE: "An <b>important</b> list:<br>A<br>B" results in "An important list:\nA\nB"
+        EXAMPLE:    "An <b>important</b> list:<br>A<br>B"
+                    results in
+                    "An important list:\nA\nB"
+
         :param html_str:
         :return:
         """
@@ -625,7 +645,7 @@ new Vue({{
             given "myfile", it might return "myfile1" or "myfile3" or "myfile_overflow"
 
         :param filename_stem:   A filename with or without a path.  If no path is given, the current directory is understood
-        :param max_index:       The maximum number of individual file we want
+        :param max_index:       The maximum number of individual file we want.  TODO: maybe not needed, and could just be zapped
         :return:                The modified filename, with either a numeric index or "_overflow" added at the end
                                 (file suffices such as ".htm" aren't modified if present)
         """

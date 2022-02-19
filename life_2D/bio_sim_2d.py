@@ -6,7 +6,9 @@ class BioSim2D:
     Note: for at least the time being, this class doesn't get instantiated
     """
 
-    # Class variables
+    #####################
+    #  Class variables  #
+    #####################
 
     n_cells_x = 0       # Number of x-direction spacial compartments (bins) used in the simulation
     n_cells_y = 0       # Number of y-direction spacial compartments (bins) used in the simulation
@@ -17,6 +19,12 @@ class BioSim2D:
                         # Each plane represents a species
 
     diffusion_rates = None  # NumPy array of diffusion rates for the various species
+
+    sealed = True       # If True, no exchange with the outside; if False, immersed in a "bath"
+
+    # Only applicable if "sealed" is False:
+    bath_concentrations = None      # A NumPy array for each species
+    container_diffusion = None      # A NumPy array for each species: diffusion rate in/out of the container
 
 
 

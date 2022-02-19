@@ -6,15 +6,25 @@ class BioSim1D:
     Note: for at least the time being, this class doesn't get instantiated
     """
 
-    # Class variables
+    #####################
+    #  Class variables  #
+    #####################
+
     n_cells = 0         # Number of spacial compartments (bins) used in the simulation
 
     n_species = 1       # The number of (non-water) chemical species
 
-    univ = None         # NumPy array of dimension (n_species x n_cells).
+    univ = None         # "Universe"/Container/System
+                        # NumPy array of dimension (n_species x n_cells).
                         # Each row represents a species
 
     diffusion_rates = None  # NumPy array of diffusion rates for the various species
+
+    sealed = True       # If True, no exchange with the outside; if False, immersed in a "bath"
+
+    # Only applicable if "sealed" is False:
+    bath_concentrations = None      # A NumPy array for each species
+    container_diffusion = None      # A NumPy array for each species: diffusion rate in/out of the container
 
 
 

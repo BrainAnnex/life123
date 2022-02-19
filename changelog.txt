@@ -1,4 +1,0 @@
-REVISION HISTORY
-
-0.1 (IP) - Early setup of class BioSim1D, NumPy and PyTest.
-           Html logger, adapted from Project Valrese
