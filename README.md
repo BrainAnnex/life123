@@ -1,7 +1,11 @@
-# life1D
-Modeling of pseudo-1D biological systems.  First of a triad: 1, 2 and 3D
+# life123
+Quantitative modeling of biological systems in 1, 2 and 3D
 
-(Upcoming website: https://life1D.org)
+Including diffusion, reactions and compartments.
+
+Currently in early Alpha.
+
+(Upcoming website: https://life123.science)
 
 ## Fundamental Goals
 1. Realistic biological simulations, for the advancement of medicine
@@ -11,8 +15,8 @@ Modeling of pseudo-1D biological systems.  First of a triad: 1, 2 and 3D
 4. Investigate potential paths for the emergence of life on Earth and on Exoplanets
 
 ## Broad Strategies
-* Aim big, for a simulation scale that may be impractical now... but reach a ready state
-for advances in computing capabilities - and in particular GPU computing, and possibly
+* Aim big, for a simulation scale that may be impractical now... but be in a *ready state*
+for upcoming advances in computing capabilities - and in particular GPU computing, and possibly
   the upcoming Photonics Computing GPU accelerators
 
 * A "bottom up" approach, starting with a minimalist pseudo 1D scenario, later advancing to 2D
