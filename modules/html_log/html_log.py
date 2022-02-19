@@ -30,10 +30,6 @@ class HtmlLog:
     OVERWRITE_SINGLE_LOG = False    # Only applicable if SEPARATE_LOGS is False; otherwise, it's ignored;
                                     #   in scenarios where a single log file is used, determines if multiple runs over-write or append
 
-    MAX_LOG_FILE_NUMBER = 100       # The max number of log files to create (if SEPARATE_LOGS is True);
-                                    #   if the number is exceed, the logs are appended to a file with an "_overflow" suffix in the name
-                                    # TODO: is this really needed/useful??
-
     ALSO_PRINT = True               # Default about whether to also send plain-text version of the log messages to stdout
     EXTRA_HANDLERS = []             # NOT IN CURRENT USE.  List of functions to invoke after sending anything to the log
 
@@ -85,16 +81,13 @@ class HtmlLog:
         if overwrite:
             cls.OVERWRITE_SINGLE_LOG = overwrite
 
-        if max_files:
-            cls.MAX_LOG_FILE_NUMBER = max_files
 
 
         # Generate, if applicable, a new name for the log file (applicable in the case of multiple logs),
         #       and create a file handle to write into it
         if cls.SEPARATE_LOGS:   # Create new files, with an auto-increment in the filename.  Example: "log8.htm"
             # Retrieve the first available filename
-            cls.log_fullname = cls._next_available_filename(cls.LOG_DIRECTORY + cls.LOG_FILENAME_BASE,
-                                                            cls.MAX_LOG_FILE_NUMBER)
+            cls.log_fullname = cls._next_available_filename(cls.LOG_DIRECTORY + cls.LOG_FILENAME_BASE)
             cls.file_handler = open(cls.log_fullname, "a")  # Create a new file, to write to
                                                             # (the append part is only relevant if we reach the max # of files)
 
@@ -634,18 +627,18 @@ new Vue({{
 
 
     @classmethod
-    def _next_available_filename(cls, filename_stem: str, max_index: int) -> str:
+    def _next_available_filename(cls, filename_stem: str) -> str:
         """
-        Given a particular file name (referred to as "stem", because we'll be added a numeric index),
+        Given a particular file name (referred to as "stem", because we'll be suffixing a numeric index),
         locate the first index such that no file with that name is present in the same directory as the original file.
-        If the index would exceed the specified max, use the string "_overflow" in lieu of a numeric index.
+
         EXAMPLES:
-            given "test.htm", it might return "test1.htm" or "test12.htm" or "test_overflow.htm"
-            given "/my_path/test.htm", it might return "/my_path/test1.htm" or "/my_path/test12.htm" or "/my_path/test_overflow.htm"
-            given "myfile", it might return "myfile1" or "myfile3" or "myfile_overflow"
+            given "test.htm", it might return "test1.htm" or "test23.htm"
+            given "/my_path/test.htm", it might return "/my_path/test1.htm" or "/my_path/test34.htm"
+            given "myfile", it might return "myfile1" or "myfile8"
 
         :param filename_stem:   A filename with or without a path.  If no path is given, the current directory is understood
-        :param max_index:       The maximum number of individual file we want.  TODO: maybe not needed, and could just be zapped
+
         :return:                The modified filename, with either a numeric index or "_overflow" added at the end
                                 (file suffices such as ".htm" aren't modified if present)
         """
@@ -660,15 +653,9 @@ new Vue({{
 
         while os.path.exists(filename):
             index += 1      # Keep increasing the index in the filename, until an unused filename is found
-            if index > max_index:
-                break
-
             filename = basename + str(index) + suffix
 
-        if index > max_index:
-            filename = basename + "_overflow" + suffix
-            print(f"Exceeded the maximum number of allowable log files ({max_index}).  From now on, using the file '{filename}'")
-        else:
-            filename = basename + str(index) + suffix
+
+        filename = basename + str(index) + suffix
 
         return filename
