@@ -9,14 +9,14 @@ def test_initialize_universe():
     assert bio.n_cells == 10
     assert bio.n_species == 1
 
-    print(bio.univ)
+    bio.describe_state()
 
     expected = np.zeros((1, 10), dtype=float)
     assert np.allclose(bio.univ, expected)
 
     # New test
     bio.initialize_universe(n_cells=15, n_species=3)
-    print(bio.univ)
+    bio.describe_state()
     expected = np.zeros((3,15), dtype=float)
     assert np.allclose(bio.univ, expected)
 
@@ -25,13 +25,13 @@ def test_initialize_universe():
 def test_set_diffusion_rates():
     bio.initialize_universe(n_cells=5, n_species=1)
     bio.set_diffusion_rates([.2])
-    print(bio.diffusion_rates)
+    print("diffusion_rates: ", bio.diffusion_rates)
     assert np.allclose(bio.diffusion_rates, [.2])
 
     # New test
     bio.initialize_universe(n_cells=25, n_species=4)
     bio.set_diffusion_rates([.1, .7, .2, .4])
-    print(bio.diffusion_rates)
+    print("diffusion_rates: ", bio.diffusion_rates)
     assert np.allclose(bio.diffusion_rates, [.1, .7, .2, .4])
 
 
@@ -39,7 +39,7 @@ def test_set_diffusion_rates():
 def test_set_uniform_concentration():
     bio.initialize_universe(n_cells=8, n_species=1)
     bio.set_uniform_concentration(species_index=0, conc=0.3)
-    print(bio.univ)
+    bio.describe_state()
     expected = np.full(8, 0.3, dtype=float)
     assert np.allclose(bio.univ[0], expected)
 
@@ -48,7 +48,7 @@ def test_set_uniform_concentration():
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=11.)
     bio.set_uniform_concentration(species_index=2, conc=12.)
-    print(bio.univ)
+    bio.describe_state()
     assert np.allclose(bio.univ[0], np.full(15, 10., dtype=float))
     assert np.allclose(bio.univ[1], np.full(15, 11., dtype=float))
     assert np.allclose(bio.univ[2], np.full(15, 12., dtype=float))
@@ -59,27 +59,32 @@ def test_inject_conc_to_cell():
     bio.initialize_universe(n_cells=5, n_species=1)
 
     with pytest.raises(Exception):
-        # cell_index out-of-bounds
+        # cell_index out of bounds
         bio.inject_conc_to_cell(cell_index=5, species_index=0, delta_conc=10.)
+
+    with pytest.raises(Exception):
+        # species_index out of bounds
+        bio.inject_conc_to_cell(cell_index=5, species_index=1, delta_conc=10.)
 
     bio.inject_conc_to_cell(cell_index=1, species_index=0, delta_conc=10.)
 
-    print(bio.univ)
+    bio.describe_state()
 
 
 
 def test_diffuse_step_single_species():
     bio.initialize_universe(n_cells=5, n_species=1)
-    bio.set_uniform_concentration(conc=1.0)
+    bio.set_uniform_concentration(species_index=0, conc=1.0)
     with pytest.raises(Exception):
         bio.diffuse_step_single_species()    # Must set the diffusion rates first
 
     bio.set_diffusion_rates([10.])
 
     old_univ = bio.univ
-    result = bio.diffuse_step_single_species()
-    print(bio.univ)
+    result = bio.diffuse_step_single_species(time_fraction=0.01)
+    bio.describe_state()
     assert np.allclose(old_univ, result)    # Diffusing a uniform distribution won't change it
+
 
 
 def test_diffuse_step_single_species_2():

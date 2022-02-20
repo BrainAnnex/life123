@@ -545,8 +545,8 @@ new Vue({{
     @classmethod
     def _write_to_file(cls, msg: str, blanks_before = 0, newline = False, blanks_after = 0) -> None:
         """
-        Write the given message (containing text and/or HTML code) into the file managed by the File Handler
-        that is stored in the class property "file_handler"
+        Write the given message (containing text and/or HTML code) into the file managed by
+        the File Handler stored in the class property "file_handler"
 
         :param msg:             String to write to the designated log file
         :param blanks_before:   Number of blank lines to precede the output with
@@ -652,6 +652,7 @@ new Vue({{
         filename = basename + str(index) + suffix
 
         while os.path.exists(filename):
+            print(f"`{filename}` already exists")
             index += 1      # Keep increasing the index in the filename, until an unused filename is found
             filename = basename + str(index) + suffix
 

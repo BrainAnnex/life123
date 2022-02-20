@@ -48,6 +48,19 @@ class BioSim1D:
 
 
     @classmethod
+    def describe_state(cls) -> None:
+        """
+        A simple printout of the state of the system, for now useful only for small systems
+
+        :return:
+        """
+        if cls.n_species == 1:
+            print(f"{cls.n_cells} cells and 1 species: ", cls.univ)
+        else:
+            print(f"{cls.n_cells} cells and {cls.n_species} species:\n", cls.univ)
+
+
+    @classmethod
     def set_diffusion_rates(cls, diff_list: list) -> None:
         """
         Set the diffusion rates of all the chemical species at once
@@ -130,7 +143,7 @@ class BioSim1D:
     @classmethod
     def diffuse_step_single_species(cls, species_index=0, time_fraction=1.0):
         """
-        Diffuse the specified single species, for 1 time step
+        Diffuse the specified single species, for the specified fraction of 1 time step
 
         :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
         :param time_fraction:   Fractional time step
