@@ -26,6 +26,8 @@ class BioSim1D:
     bath_concentrations = None      # A NumPy array for each species
     container_diffusion = None      # A NumPy array for each species: diffusion rate in/out of the container
 
+    time_step_threshold = 0.33333    # See explanation in file overly_large_single_timesteps.py
+
 
 
     @classmethod
@@ -141,50 +143,80 @@ class BioSim1D:
     ####    PERFORM DIFFUSION    ####
 
     @classmethod
-    def diffuse_step_single_species(cls, species_index=0, time_fraction=1.0):
+    def is_excessive(cls, time_step, diff_rate) -> bool:
         """
-        Diffuse the specified single species, for the specified fraction of 1 time step
+        Use a loose heuristic to determine if the requested time step is too long,
+        given the diffusion rate
+
+        :param time_step:
+        :param diff_rate:
+        :return:
+        """
+        value = time_step * diff_rate
+
+
+        if value > cls.time_step_threshold:
+            return True
+        else:
+            return False
+
+
+    @classmethod
+    def max_time_step(cls, diff_rate) -> float:
+        """
+
+        :param diff_rate:
+        :return:
+        """
+        return cls.time_step_threshold/diff_rate
+
+
+
+    @classmethod
+    def diffuse_step_single_species(cls, species_index=0, time_step=1.0) -> None:
+        """
+        Diffuse the specified single species, for the specified time step.
+        We're assuming an isolated environment, with nothing diffusing thru the "walls"
 
         :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
-        :param time_fraction:   Fractional time step
-        :return:                A NumPy array of floats
+        :param time_step:       Time step
+        :return:                None
         """
-        assert species_index == 0, "Index must be zero: for now, only 1 chemical species is implemented"
-        assert cls.diffusion_rates is not None, "The diffusion rate not set yet"
+        #assert species_index == 0, "Index must be zero: for now, only 1 chemical species is implemented"
+        assert cls.diffusion_rates is not None, "Must first set the diffusion rates"
         assert cls.n_cells > 0, "Must first set the number of cells"
+        assert cls.sealed == True, "For now, there's no provision for exchange with the outside"
 
         if cls.n_cells == 1:
-            return cls.univ     # There's nothing to do in the case of just 1 cell!
+            return                  # There's nothing to do in the case of just 1 cell!
 
         diff = cls.diffusion_rates[species_index]   # The diffusion rate of the specified single species
 
-        effective_diff = diff * time_fraction
-
-        assert effective_diff <= 0.3333, f"Excessive large time_fraction. Should be <= {0.3333/diff}"
-                                            # A value of 0.5 would be such that 2 adjacent cells - in the
-                                            # absence of other neighbors - would equilibrate in concentration.
-                                            # A value of 1/3 would be such that 3 adjacent cells - in the
-                                            # absence of other neighbors - would equilibrate in concentration.
-
-        initial_conc = cls.univ
-        new_conc = np.zeros(cls.n_cells, dtype=float)
-        max_bin_number = cls.n_cells - 1     # Bin numbers range from 0 to max_bin_number
+        assert not cls.is_excessive(time_step, diff), f"Excessive large time_fraction. Should be < {cls.max_time_step(diff)}"
 
 
-        # Carry out a convolution operation with a tile of size 3.
-        # TODO: try a convolution in place, to avoid creating a new NumPy array
-        for i in range(cls.n_cells):
-            #print(f"Processing i={i}")
+        max_bin_number = cls.n_cells - 1     # Bin numbers range from 0 to max_bin_number, inclusive
 
-            if i == 0 :                 # Special case for the first bin (no left neighbor)
-                new_conc[i] += initial_conc[i] + effective_diff * (initial_conc[i + 1] - initial_conc[i])
-            elif i == max_bin_number :  # Special case for the last bin (no right neighbor)
-                new_conc[i] += initial_conc[i] + effective_diff * (initial_conc[max_bin_number - 1] - initial_conc[max_bin_number])
+
+        # Carry out a convolution operation in place, with a tile of size 3 (or 2 if only 2 bins)
+
+        effective_diff = diff * time_step
+
+        print(f"Handling species # {species_index}")
+        prev_conc = 0   # Not necessary; just to stop complaints from the code analyzer
+        for i in range(cls.n_cells):    # Bin number, ranging from 0 to max_bin_number, inclusive
+            print(f"Processing bin number {i}")
+            current_conc = cls.univ[species_index , i]
+
+            if i == 0 :                     # Special case for the first bin (no left neighbor)
+                cls.univ[species_index , i] +=  \
+                                effective_diff * (cls.univ[species_index , i + 1] - current_conc)
+            elif i == max_bin_number :      # Special case for the last bin (no right neighbor)
+                cls.univ[species_index , i] += \
+                                effective_diff * (prev_conc - current_conc)
             else:
-                new_conc[i] += initial_conc[i] \
-                               + effective_diff * (initial_conc[i + 1] - initial_conc[i]) \
-                               + effective_diff * (initial_conc[i - 1] - initial_conc[i])
+                cls.univ[species_index , i] +=  \
+                                 effective_diff * (cls.univ[species_index , i + 1] - current_conc) \
+                               + effective_diff * (prev_conc - current_conc)
 
-        cls.univ = new_conc
-
-        return new_conc
+            prev_conc = current_conc
