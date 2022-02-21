@@ -38,7 +38,7 @@ class BioSim1D:
         :param n_species:   The number of (non-water) chemical species.  It must be at least 1
         :return:            None
         """
-        assert n_cells >= 1, "The number of cells must be at least 1"
+        assert n_cells >= 1, "The number of bins must be at least 1"
         assert n_species >= 1, "The number of (non-water) chemical species must be at least 1"
 
 
@@ -50,16 +50,24 @@ class BioSim1D:
 
 
     @classmethod
-    def describe_state(cls) -> None:
+    def describe_state(cls, show_diff=False) -> None:
         """
         A simple printout of the state of the system, for now useful only for small systems
 
         :return:
         """
-        if cls.n_species == 1:
-            print(f"{cls.n_cells} cells and 1 species: ", cls.univ)
+        if show_diff:
+            if cls.diffusion_rates is None:
+                print("Diffusion rates not yet set!")
+            else:
+                print(f"{cls.n_cells} bins and {cls.n_species} species:")
+                for species in range(cls.n_species):
+                    print(f"Species {species}. Diff rate: {cls.diffusion_rates[species]}. Conc: ", cls.univ[species])
         else:
-            print(f"{cls.n_cells} cells and {cls.n_species} species:\n", cls.univ)
+            if cls.n_species == 1:
+                print(f"{cls.n_cells} bins and 1 species: ", cls.univ)
+            else:
+                print(f"{cls.n_cells} bins and {cls.n_species} species:\n", cls.univ)
 
 
     @classmethod
@@ -97,45 +105,60 @@ class BioSim1D:
 
 
     @classmethod
-    def set_conc_of_cell(cls, cell_index: int, species_index: int, conc: float) -> None:
+    def set_bin_conc(cls, bin: int, species_index: int, conc: float) -> None:
         """
         Assign the requested concentration value to the cell with the given index, for the specified species
 
-        :param cell_index:      The zero-based bin number of the desired cell
+        :param bin:             The zero-based bin number of the desired cell
         :param species_index:   Zero-based index to identify a specific chemical species
         :param conc:            The desired concentration value to assign to the specified location
         :return:                None
         """
-        assert cell_index < cls.n_cells, f"The requested cell index ({cell_index}) must be in the range [0 - {cls.n_cells - 1}]"
+        assert bin < cls.n_cells, f"The requested cell index ({bin}) must be in the range [0 - {cls.n_cells - 1}]"
+        assert species_index < cls.n_species, f"The requested species index ({bin}) must be in the range [0 - {cls.n_species - 1}]"
 
         assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
 
-        cls.univ[species_index, cell_index] = conc
+        cls.univ[species_index, bin] = conc
+
+
+    @classmethod
+    def set_species_conc(cls, species_index: int, conc_list: list) -> None:
+        """
+        Assign the requested concentration value to the cell with the given index, for the specified species
+
+        :param species_index:   Zero-based index to identify a specific chemical species
+        :param conc_list:            The desired concentration value to assign to the specified location
+        :return:                None
+        """
+        assert species_index < cls.n_species, f"The requested species index ({bin}) must be in the range [0 - {cls.n_species - 1}]"
+
+        cls.univ[species_index] = conc_list
 
 
 
     @classmethod
-    def inject_conc_to_cell(cls, cell_index: int, species_index: int, delta_conc: float, zero_clip = True) -> None:
+    def inject_conc_to_cell(cls, bin: int, species_index: int, delta_conc: float, zero_clip = True) -> None:
         """
         Add the requested concentration to the cell with the given index, for the specified species
 
-        :param cell_index:      The zero-based bin number of the desired cell
+        :param bin:      The zero-based bin number of the desired cell
         :param species_index:   Zero-based index to identify a specific chemical species
         :param delta_conc:      The concentration to add to the specified location
         :param zero_clip:       If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
                                 otherwise, an Exception will be raised
         :return:                None
         """
-        assert cell_index < cls.n_cells, f"The requested cell index ({cell_index}) must be in the range [0 - {cls.n_cells - 1}]"
+        assert bin < cls.n_cells, f"The requested cell index ({bin}) must be in the range [0 - {cls.n_cells - 1}]"
 
-        if (cls.univ[species_index, cell_index] + delta_conc) < 0. :
+        if (cls.univ[species_index, bin] + delta_conc) < 0. :
             if zero_clip:
-                cls.univ[species_index, cell_index] = 0
+                cls.univ[species_index, bin] = 0
             else:
                 raise Exception("The requested concentration change would result in a negative final value")
 
         # Normal scenario, not leading to negative values for the final concentration
-        cls.univ[species_index, cell_index] += delta_conc
+        cls.univ[species_index, bin] += delta_conc
 
 
 
@@ -173,18 +196,32 @@ class BioSim1D:
 
 
     @classmethod
-    def diffuse_step_single_species(cls, species_index=0, time_step=1.0) -> None:
+    def diffuse_step(cls, time_step) -> None:
+        """
+        Diffuse all the species by the given time step
+
+        :param time_step:   Time step over which to carry out the diffusion.
+                            If too large, an Exception will be raised.
+        :return:            None
+        """
+        # TODO: parallelize the independent computations
+        for species_index in range(cls.n_species):
+            cls.diffuse_step_single_species(time_step, species_index=species_index)
+
+
+    @classmethod
+    def diffuse_step_single_species(cls, time_step, species_index=0) -> None:
         """
         Diffuse the specified single species, for the specified time step.
         We're assuming an isolated environment, with nothing diffusing thru the "walls"
 
+        :param time_step:       Time step over which to carry out the diffusion.
+                                If too large, an Exception will be raised.
         :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
-        :param time_step:       Time step
         :return:                None
         """
-        #assert species_index == 0, "Index must be zero: for now, only 1 chemical species is implemented"
-        assert cls.diffusion_rates is not None, "Must first set the diffusion rates"
         assert cls.n_cells > 0, "Must first set the number of cells"
+        assert cls.diffusion_rates is not None, "Must first set the diffusion rates"
         assert cls.sealed == True, "For now, there's no provision for exchange with the outside"
 
         if cls.n_cells == 1:
@@ -202,10 +239,11 @@ class BioSim1D:
 
         effective_diff = diff * time_step
 
-        print(f"Handling species # {species_index}")
+        #print(f"Diffusing species # {species_index}")
         prev_conc = 0   # Not necessary; just to stop complaints from the code analyzer
+
         for i in range(cls.n_cells):    # Bin number, ranging from 0 to max_bin_number, inclusive
-            print(f"Processing bin number {i}")
+            #print(f"Processing bin number {i}")
             current_conc = cls.univ[species_index , i]
 
             if i == 0 :                     # Special case for the first bin (no left neighbor)
