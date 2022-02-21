@@ -10,12 +10,12 @@ class BioSim1D:
     #  Class variables  #
     #####################
 
-    n_cells = 0         # Number of spacial compartments (bins) used in the simulation
+    n_bins = 0          # Number of spacial compartments (bins) used in the simulation
 
     n_species = 1       # The number of (non-water) chemical species
 
     univ = None         # "Universe"/Container/System
-                        # NumPy array of dimension (n_species x n_cells).
+                        # NumPy array of dimension: (n_species x n_cells).
                         # Each row represents a species
 
     diffusion_rates = None  # NumPy array of diffusion rates for the various species
@@ -26,26 +26,30 @@ class BioSim1D:
     bath_concentrations = None      # A NumPy array for each species
     container_diffusion = None      # A NumPy array for each species: diffusion rate in/out of the container
 
-    time_step_threshold = 0.33333    # See explanation in file overly_large_single_timesteps.py
+    time_step_threshold = 0.33333   # This is used to set an Upper Bound on the single time steps
+                                    # in the diffusion process.
+                                    # See explanation in file overly_large_single_timesteps.py
 
 
 
     @classmethod
-    def initialize_universe(cls, n_cells: int, n_species: int) -> None:
+    def initialize_universe(cls, n_bins: int, n_species: int) -> None:
         """
+        Initialize the entire system, EXCEPT the diffusion rates.  TODO: offer the option to do here
+        All concentrations set to zero.
 
-        :param n_cells:     The number of compartments (bins) to use in the simulation
+        :param n_bins:      The number of compartments (bins) to use in the simulation
         :param n_species:   The number of (non-water) chemical species.  It must be at least 1
         :return:            None
         """
-        assert n_cells >= 1, "The number of bins must be at least 1"
+        assert n_bins >= 1, "The number of bins must be at least 1"
         assert n_species >= 1, "The number of (non-water) chemical species must be at least 1"
 
-
-        cls.n_cells = n_cells
+        cls.n_bins = n_bins
         cls.n_species = n_species
 
-        cls.univ = np.zeros((n_species, n_cells), dtype=float)
+        cls.univ = np.zeros((n_species, n_bins), dtype=float)
+        cls.diffusion_rates = None
 
 
 
@@ -59,15 +63,16 @@ class BioSim1D:
         if show_diff:
             if cls.diffusion_rates is None:
                 print("Diffusion rates not yet set!")
-            else:
-                print(f"{cls.n_cells} bins and {cls.n_species} species:")
+                cls.describe_state(show_diff=False)
+            else  :
                 for species in range(cls.n_species):
                     print(f"Species {species}. Diff rate: {cls.diffusion_rates[species]}. Conc: ", cls.univ[species])
+
         else:
             if cls.n_species == 1:
-                print(f"{cls.n_cells} bins and 1 species: ", cls.univ)
+                print(f"{cls.n_bins} bins and 1 species: ", cls.univ)
             else:
-                print(f"{cls.n_cells} bins and {cls.n_species} species:\n", cls.univ)
+                print(f"{cls.n_bins} bins and {cls.n_species} species:\n", cls.univ)
 
 
     @classmethod
@@ -100,7 +105,7 @@ class BioSim1D:
 
         assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
 
-        cls.univ[species_index] = np.full(cls.n_cells, conc, dtype=float)
+        cls.univ[species_index] = np.full(cls.n_bins, conc, dtype=float)
 
 
 
@@ -114,7 +119,7 @@ class BioSim1D:
         :param conc:            The desired concentration value to assign to the specified location
         :return:                None
         """
-        assert bin < cls.n_cells, f"The requested cell index ({bin}) must be in the range [0 - {cls.n_cells - 1}]"
+        assert bin < cls.n_bins, f"The requested cell index ({bin}) must be in the range [0 - {cls.n_bins - 1}]"
         assert species_index < cls.n_species, f"The requested species index ({bin}) must be in the range [0 - {cls.n_species - 1}]"
 
         assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
@@ -149,7 +154,7 @@ class BioSim1D:
                                 otherwise, an Exception will be raised
         :return:                None
         """
-        assert bin < cls.n_cells, f"The requested cell index ({bin}) must be in the range [0 - {cls.n_cells - 1}]"
+        assert bin < cls.n_bins, f"The requested cell index ({bin}) must be in the range [0 - {cls.n_bins - 1}]"
 
         if (cls.univ[species_index, bin] + delta_conc) < 0. :
             if zero_clip:
@@ -220,11 +225,12 @@ class BioSim1D:
         :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
         :return:                None
         """
-        assert cls.n_cells > 0, "Must first set the number of cells"
+        assert cls.univ is not None, "Must first initialize the system"
+        assert cls.n_bins > 0, "Must first set the number of bins"
         assert cls.diffusion_rates is not None, "Must first set the diffusion rates"
         assert cls.sealed == True, "For now, there's no provision for exchange with the outside"
 
-        if cls.n_cells == 1:
+        if cls.n_bins == 1:
             return                  # There's nothing to do in the case of just 1 cell!
 
         diff = cls.diffusion_rates[species_index]   # The diffusion rate of the specified single species
@@ -232,7 +238,7 @@ class BioSim1D:
         assert not cls.is_excessive(time_step, diff), f"Excessive large time_fraction. Should be < {cls.max_time_step(diff)}"
 
 
-        max_bin_number = cls.n_cells - 1     # Bin numbers range from 0 to max_bin_number, inclusive
+        max_bin_number = cls.n_bins - 1     # Bin numbers range from 0 to max_bin_number, inclusive
 
 
         # Carry out a convolution operation in place, with a tile of size 3 (or 2 if only 2 bins)
@@ -242,7 +248,7 @@ class BioSim1D:
         #print(f"Diffusing species # {species_index}")
         prev_conc = 0   # Not necessary; just to stop complaints from the code analyzer
 
-        for i in range(cls.n_cells):    # Bin number, ranging from 0 to max_bin_number, inclusive
+        for i in range(cls.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
             #print(f"Processing bin number {i}")
             current_conc = cls.univ[species_index , i]
 

@@ -4,9 +4,9 @@ from life_1D.bio_sim_1d import BioSim1D as bio
 
 
 def test_initialize_universe():
-    bio.initialize_universe(n_cells=10, n_species=1)
+    bio.initialize_universe(n_bins=10, n_species=1)
 
-    assert bio.n_cells == 10
+    assert bio.n_bins == 10
     assert bio.n_species == 1
 
     bio.describe_state()
@@ -15,7 +15,7 @@ def test_initialize_universe():
     assert np.allclose(bio.univ, expected)
 
     # New test
-    bio.initialize_universe(n_cells=15, n_species=3)
+    bio.initialize_universe(n_bins=15, n_species=3)
     bio.describe_state()
     expected = np.zeros((3,15), dtype=float)
     assert np.allclose(bio.univ, expected)
@@ -23,13 +23,13 @@ def test_initialize_universe():
 
 
 def test_set_diffusion_rates():
-    bio.initialize_universe(n_cells=5, n_species=1)
+    bio.initialize_universe(n_bins=5, n_species=1)
     bio.set_diffusion_rates([.2])
     print("diffusion_rates: ", bio.diffusion_rates)
     assert np.allclose(bio.diffusion_rates, [.2])
 
     # New test
-    bio.initialize_universe(n_cells=25, n_species=4)
+    bio.initialize_universe(n_bins=25, n_species=4)
     bio.set_diffusion_rates([.1, .7, .2, .4])
     print("diffusion_rates: ", bio.diffusion_rates)
     assert np.allclose(bio.diffusion_rates, [.1, .7, .2, .4])
@@ -37,14 +37,14 @@ def test_set_diffusion_rates():
 
 
 def test_set_uniform_concentration():
-    bio.initialize_universe(n_cells=8, n_species=1)
+    bio.initialize_universe(n_bins=8, n_species=1)
     bio.set_uniform_concentration(species_index=0, conc=0.3)
     bio.describe_state()
     expected = np.full(8, 0.3, dtype=float)
     assert np.allclose(bio.univ[0], expected)
 
     # New test
-    bio.initialize_universe(n_cells=15, n_species=3)
+    bio.initialize_universe(n_bins=15, n_species=3)
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=11.)
     bio.set_uniform_concentration(species_index=2, conc=12.)
@@ -56,7 +56,7 @@ def test_set_uniform_concentration():
 
 
 def test_inject_conc_to_cell():
-    bio.initialize_universe(n_cells=5, n_species=1)
+    bio.initialize_universe(n_bins=5, n_species=1)
 
     with pytest.raises(Exception):
         # cell_index out of bounds
@@ -75,7 +75,7 @@ def test_inject_conc_to_cell():
 #########   TESTS OF DIFFUSION    #########
 
 def test_diffuse_step_single_species_1():
-    bio.initialize_universe(n_cells=2, n_species=1)
+    bio.initialize_universe(n_bins=2, n_species=1)
 
     bio.inject_conc_to_cell(bin=0, species_index=0, delta_conc=100.)
     bio.describe_state()
@@ -98,8 +98,8 @@ def test_diffuse_step_single_species_1():
 
 
 
-def test_diffuse_step_single_species2():
-    bio.initialize_universe(n_cells=1, n_species=1)
+def test_diffuse_step_single_species_2():
+    bio.initialize_universe(n_bins=1, n_species=1)
     bio.set_uniform_concentration(species_index=0, conc=8.0)
     with pytest.raises(Exception):
         bio.diffuse_step_single_species(time_step=.001)    # Must set the diffusion rates first
@@ -113,11 +113,12 @@ def test_diffuse_step_single_species2():
 
 
 
-def test_diffuse_step_single_species3():
+def test_diffuse_step_single_species_3():
+    bio.univ = None
     with pytest.raises(Exception):
         bio.diffuse_step_single_species(time_step=.001)    # Must first initialize the system
 
-    bio.initialize_universe(n_cells=5, n_species=2)
+    bio.initialize_universe(n_bins=5, n_species=2)
 
     bio.set_uniform_concentration(species_index=0, conc=22.2)
     bio.set_uniform_concentration(species_index=1, conc=66.6)
@@ -138,8 +139,112 @@ def test_diffuse_step_single_species3():
 
 
 
+def test_diffuse_step_single_species_4():
+    # Multiple diffusion steps, with 2 bins
+    bio.initialize_universe(n_bins=2, n_species=1)
+
+    bio.inject_conc_to_cell(bin=0, species_index=0, delta_conc=10.)
+    bio.set_diffusion_rates([1.])
+    bio.describe_state(show_diff=True)
+    """
+    2 bins and 1 species:
+    Species 0. Diff rate: 1.0. Conc:  [10.  0.]
+    """
+
+    for i in range(4):
+        bio.diffuse_step_single_species(time_step=.3)
+        print(f"At end of step {i+1}:")
+        bio.describe_state()
+
+    assert np.allclose(bio.univ[0], [5.128, 4.872])
+
+
+
+def test_diffuse_step_single_species_5():
+    # Multiple diffusion steps, with 3 bins, and a large time step
+    bio.initialize_universe(n_bins=3, n_species=1)
+
+    bio.inject_conc_to_cell(bin=1, species_index=0, delta_conc=10.)
+    bio.set_diffusion_rates([.5])
+    bio.describe_state(show_diff=True)
+
+    # The time step is so large that the system immediately equilibrates
+    print("The default max allowed time step is: ", bio.max_time_step(.5))
+    for i in range(3):
+        bio.diffuse_step_single_species(time_step=0.6666)
+        print(f"At end of step {i+1}:")
+        print(bio.univ)
+
+    assert np.allclose(bio.univ[0], np.full(3, 3.3333333, dtype=float))
+
+
+
+def test_diffuse_step_single_species_6():
+    # Multiple diffusion steps, with 5 bins, and a large time step
+    bio.initialize_universe(n_bins=5, n_species=1)
+
+    bio.inject_conc_to_cell(bin=0, species_index=0, delta_conc=10.)
+    bio.set_diffusion_rates([.5])
+    bio.describe_state(show_diff=True)
+
+    print("The default max allowed time step is: ", bio.max_time_step(.5))
+    for i in range(20):
+        bio.diffuse_step_single_species(time_step=0.6666)
+        print(f"At end of step {i+1}:")
+        print(bio.univ[0])
+
+    assert np.allclose(bio.univ[0], [2.23752027, 2.14678423, 1.99998594, 1.85320708, 1.76250248])
+
+
+def test_diffuse_step_single_species_7():
+    # Multiple diffusion steps, with 5 bins,
+    # 1/2 the time step of the previous test, and double the duration
+    bio.initialize_universe(n_bins=5, n_species=1)
+
+    bio.inject_conc_to_cell(bin=0, species_index=0, delta_conc=10.)
+    bio.set_diffusion_rates([.5])
+    bio.describe_state(show_diff=True)
+
+    for i in range(20*2):
+        bio.diffuse_step_single_species(time_step=0.6666/2)
+        if i<10 or i >35:
+            print(f"At end of step {i+1}:")
+            print(bio.univ[0])
+
+    assert np.allclose(bio.univ[0], [2.26063875, 2.16100935, 1.99990821, 1.83893393, 1.73950977])
+
+
+
+def test_diffuse_step_single_species_8():
+    # Many diffusion steps that the system equilibrates, no matter the starting point
+    bio.initialize_universe(n_bins=15, n_species=1)
+
+    np.random.seed(18)
+    bio.set_species_conc(species_index=0, conc_list= 100*np.random.rand(15))
+    bio.set_diffusion_rates([.3])
+    print()
+    bio.describe_state(show_diff=True)
+
+    avg_conc = sum(bio.univ[0]) / 15.
+    print("Avg of concentrations: ", avg_conc)
+
+    for i in range(2000):
+        bio.diffuse_step_single_species(time_step=1)
+        if i<4:
+            print(f"At end of step {i+1}:")
+            print(bio.univ[0])
+
+    print(f"At end of ALL steps:")
+    print(bio.univ[0])
+    # With such a large number of steps, all concentrations will
+    # equilibrate to their average
+    assert np.allclose(bio.univ[0], np.full(15, avg_conc, dtype=float))
+
+
+
+
 def test_diffuse_step_1():
-    bio.initialize_universe(n_cells=3, n_species=2)
+    bio.initialize_universe(n_bins=3, n_species=2)
 
     with pytest.raises(Exception):
         bio.set_bin_conc(bin=3, species_index=0, conc=100.) # Bin number out of range
@@ -167,155 +272,3 @@ def test_diffuse_step_1():
      [12. 24. 44.]]
     """
     assert np.allclose(bio.univ, [[ 5., 90.,  5.] , [12., 24., 44.]])
-
-
-
-
-######### TODO: fix all the tests below
-
-def test_diffuse_step_single_species_3x():   # TODO: fix
-    bio.initialize_universe(n_cells=2, n_species=1)
-
-    bio.inject_conc_to_cell(bin=0, species_index=0, delta_conc=10.)
-    print(bio.univ)
-
-    bio.set_diffusion_rates([1.])
-
-    for i in range(4):
-        bio.diffuse_step_single_species(time_step=.4)
-        print(f"At end of step {i+1}:")
-        print(bio.univ)
-
-def test_diffuse_step_single_species_4x():   # TODO: fix
-    bio.initialize_universe(n_cells=3, n_species=1)
-
-    bio.inject_conc_to_cell(bin=1, species_index=0, delta_conc=10.)
-    print(bio.univ)
-
-    bio.set_diffusion_rates([.5])
-
-    for i in range(4):
-        bio.diffuse_step_single_species(time_step=0.6666)
-        print(f"At end of step {i+1}:")
-        print(bio.univ)
-
-def test_diffuse_step_single_species_5():   # TODO: fix
-    bio.initialize_universe(n_cells=5, n_species=1)
-
-    bio.inject_conc_to_cell(bin=0, species_index=0, delta_conc=10.)
-    print(bio.univ)
-
-    bio.set_diffusion_rates([.5])
-
-    for i in range(20):
-        bio.diffuse_step_single_species(time_step=0.6666)
-        print(f"At end of step {i+1}:")
-        print(bio.univ)
-
-
-
-def test_diffuse_step_single_species_6():   # TODO: fix
-    # Exploring effect of time resolution on accuracy
-    bio.initialize_universe(n_cells=10, n_species=1)
-
-    bio.inject_conc_to_cell(bin=2, species_index=0, delta_conc=10.)
-    print(bio.univ)
-
-    bio.set_diffusion_rates([0.1])
-
-    # The time advance (tf * n_steps) always remains constant at 33.3
-    # TODO: provide a function that accepts the time advance and n_steps, and determines tf
-    # TODO: provide a function that accepts the time advance and tf, and determines n_steps
-
-    n_steps = 10
-    tf = 3.33
-    for i in range(n_steps):
-        bio.diffuse_step_single_species(time_step=tf)
-        #print(f"At end of step {i+1}:")
-
-    print(f"At end of {n_steps} steps of size {tf}:")
-    print(bio.univ)
-
-
-    bio.initialize_universe(n_cells=10, n_species=1)
-    bio.inject_conc_to_cell(bin=2, species_index=0, delta_conc=10.)
-    #print(BioSim.univ)
-    n_steps = 20
-    tf = 3.33/2
-    for i in range(n_steps):
-        bio.diffuse_step_single_species(time_step=tf)
-
-    print(f"At end of {n_steps} steps of size {tf}:")
-    print(bio.univ)
-
-
-    bio.initialize_universe(n_cells=10, n_species=1)
-    bio.inject_conc_to_cell(bin=2, species_index=0, delta_conc=10.)
-    #print(BioSim.univ)
-    n_steps = 30
-    tf = 3.33/3
-    for i in range(n_steps):
-        bio.diffuse_step_single_species(time_step=tf)
-
-    print(f"At end of {n_steps} steps of size {tf}:")
-    print(bio.univ)
-
-
-    bio.initialize_universe(n_cells=10, n_species=1)
-    bio.inject_conc_to_cell(bin=2, species_index=0, delta_conc=10.)
-    #print(BioSim.univ)
-    n_steps = 50
-    tf = 3.33/5
-    for i in range(n_steps):
-        bio.diffuse_step_single_species(time_step=tf)
-
-    print(f"At end of {n_steps} steps of size {tf}:")
-    print(bio.univ)
-
-
-    bio.initialize_universe(n_cells=10, n_species=1)
-    bio.inject_conc_to_cell(bin=2, species_index=0, delta_conc=10.)
-    #print(BioSim.univ)
-    n_steps = 100
-    tf = 3.33/10
-    for i in range(n_steps):
-        bio.diffuse_step_single_species(time_step=tf)
-
-    print(f"At end of {n_steps} steps of size {tf}:")
-    print(bio.univ)
-
-
-    bio.initialize_universe(n_cells=10, n_species=1)
-    bio.inject_conc_to_cell(bin=2, species_index=0, delta_conc=10.)
-    #print(BioSim.univ)
-    n_steps = 1000
-    tf = 3.33/100
-    for i in range(n_steps):
-        bio.diffuse_step_single_species(time_step=tf)
-
-    print(f"At end of {n_steps} steps of size {tf}:")
-    print(bio.univ)
-
-
-    bio.initialize_universe(n_cells=10, n_species=1)
-    bio.inject_conc_to_cell(bin=2, species_index=0, delta_conc=10.)
-    #print(BioSim.univ)
-    n_steps = 10000
-    tf = 3.33/1000
-    for i in range(n_steps):
-        bio.diffuse_step_single_species(time_step=tf)
-
-    print(f"At end of {n_steps} steps of size {tf}:")
-    print(bio.univ)
-
-
-    bio.initialize_universe(n_cells=10, n_species=1)
-    bio.inject_conc_to_cell(bin=2, species_index=0, delta_conc=10.)
-    #print(BioSim.univ)
-    n_steps = 100000
-    tf = 3.33/10000
-    for i in range(n_steps):
-        bio.diffuse_step_single_species(time_step=tf)
-
-    print(f"At end of {n_steps} steps of size {tf}:")
-    print(bio.univ)

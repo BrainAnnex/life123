@@ -22,7 +22,7 @@ from life_1D.bio_sim_1d import BioSim1D as bio
 ###########################
 # Simulate a 2-bin system
 ###########################
-bio.initialize_universe(n_cells=2, n_species=1)
+bio.initialize_universe(n_bins=2, n_species=1)
 bio.inject_conc_to_cell(bin=0, delta_conc=100., species_index=0)
 bio.describe_state()
 # 2 cells and 1 species:  [[100.   0.]]
@@ -42,7 +42,7 @@ print(bio.univ)     # [[50. 50.]]  : the two bins have equilibrated!
 # Simulate a 3-bin system
 # with an excessive single time step
 ######################################
-bio.initialize_universe(n_cells=3, n_species=1)
+bio.initialize_universe(n_bins=3, n_species=1)
 bio.inject_conc_to_cell(bin=1, delta_conc=100., species_index=0)
 bio.describe_state()
 #3 bins and 1 species:   [[  0. 100.   0.]]
@@ -62,7 +62,7 @@ print(bio.univ)     # [[50.  0. 50.]] : the diffusion has over-shot equilibrium!
 # Re-Simulate the 3-bin system,
 # with a somewhat smaller single time step
 #############################################
-bio.initialize_universe(n_cells=3, n_species=1)
+bio.initialize_universe(n_bins=3, n_species=1)
 bio.inject_conc_to_cell(bin=1, delta_conc=100., species_index=0)
 bio.describe_state()
 #3 bins and 1 species:   [[  0. 100.   0.]]
