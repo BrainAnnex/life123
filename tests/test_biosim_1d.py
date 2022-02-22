@@ -72,7 +72,7 @@ def test_inject_conc_to_cell():
 
 
 
-#########   TESTS OF DIFFUSION    #########
+#########   TESTS OF DIFFUSION : single species, one step    #########
 
 def test_diffuse_step_single_species_1():
     bio.initialize_universe(n_bins=2, n_species=1)
@@ -242,6 +242,7 @@ def test_diffuse_step_single_species_8():
 
 
 
+#########   TESTS OF DIFFUSION : all species, one step    #########
 
 def test_diffuse_step_1():
     bio.initialize_universe(n_bins=3, n_species=2)
@@ -249,7 +250,7 @@ def test_diffuse_step_1():
     with pytest.raises(Exception):
         bio.set_bin_conc(bin=3, species_index=0, conc=100.) # Bin number out of range
 
-    bio.set_bin_conc(bin=1, species_index=0, conc=100.)
+    bio.set_bin_conc(species_index=0, bin=1, conc=100.)
 
     with pytest.raises(Exception):
         bio.set_species_conc(species_index=2, conc_list=[10, 20, 50])   # species_index out of range
@@ -272,3 +273,63 @@ def test_diffuse_step_1():
      [12. 24. 44.]]
     """
     assert np.allclose(bio.univ, [[ 5., 90.,  5.] , [12., 24., 44.]])
+
+
+
+#########   TESTS OF DIFFUSION : all species, multiple steps    #########
+
+def test_diffuse():
+    bio.initialize_universe(n_bins=3, n_species=2)
+    bio.set_bin_conc(species_index=0, bin=1, conc=100.)
+    bio.set_species_conc(species_index=1, conc_list=[10, 20, 50])
+    bio.set_diffusion_rates([5., 20.])
+    bio.describe_state(show_diff=True)
+    """
+    Species 0. Diff rate: 5.0. Conc:  [  0. 100.   0.]
+    Species 1. Diff rate: 20.0. Conc:  [10. 20. 50.]   
+    """
+
+    with pytest.raises(Exception):
+        bio.diffuse()               # Is not passing any arguments
+
+    with pytest.raises(Exception):
+        bio.diffuse(time_duration = 5)      # Is not passing enough arguments
+
+    with pytest.raises(Exception):
+        bio.diffuse(time_step = 0.2)        # Is not passing enough arguments
+
+    with pytest.raises(Exception):
+        bio.diffuse(n_steps=3)              # Is not passing enough arguments
+
+    with pytest.raises(Exception):
+        bio.diffuse(time_duration = 5, time_step = 0.2, n_steps=3)  # Too many args
+
+
+    # Do 1 step
+    bio.diffuse(time_step = 0.01, n_steps = 1)
+    bio.describe_state(concise=True)
+    """
+    DIFFUSION STEP 0:
+    [[95.  5.  0.]
+     [12. 24. 44.]]
+    """
+    assert np.allclose(bio.univ, [[ 5., 90.,  5.] , [12., 24., 44.]])
+
+    # Repeat 1 step
+    bio.diffuse(time_step = 0.01, n_steps = 1)
+    bio.describe_state(concise=True)
+    """
+    DIFFUSION STEP 0:
+    [[ 9.25 81.5   9.25]
+     [14.4  25.6  40.  ]]
+    """
+    assert np.allclose(bio.univ, [[ 9.25, 81.5,  9.25] , [14.4,  25.6, 40.]])
+
+
+    # Reset the system
+    bio.set_species_conc(species_index=0, conc_list=[0, 100, 0])
+    bio.set_species_conc(species_index=1, conc_list=[10, 20, 50])
+    bio.describe_state()
+    # Re-take the 2 steps
+    bio.diffuse(time_step = 0.01, n_steps = 2)
+    assert np.allclose(bio.univ, [[ 9.25, 81.5,  9.25] , [14.4,  25.6, 40.]])

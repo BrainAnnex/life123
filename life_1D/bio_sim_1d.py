@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 
 class BioSim1D:
@@ -54,10 +55,11 @@ class BioSim1D:
 
 
     @classmethod
-    def describe_state(cls, show_diff=False) -> None:
+    def describe_state(cls, show_diff=False, concise=False) -> None:
         """
         A simple printout of the state of the system, for now useful only for small systems
 
+        :param concise: Only applicable if show_diff is False
         :return:
         """
         if show_diff:
@@ -69,10 +71,14 @@ class BioSim1D:
                     print(f"Species {species}. Diff rate: {cls.diffusion_rates[species]}. Conc: ", cls.univ[species])
 
         else:
-            if cls.n_species == 1:
-                print(f"{cls.n_bins} bins and 1 species: ", cls.univ)
+            if concise:
+                print(cls.univ)
             else:
-                print(f"{cls.n_bins} bins and {cls.n_species} species:\n", cls.univ)
+                if cls.n_species == 1:
+                    print(f"{cls.n_bins} bins and 1 species: ", cls.univ)
+                else:
+                    print(f"{cls.n_bins} bins and {cls.n_species} species:\n", cls.univ)
+
 
 
     @classmethod
@@ -197,6 +203,34 @@ class BioSim1D:
         :return:
         """
         return cls.time_step_threshold/diff_rate
+
+
+
+    @classmethod
+    def diffuse(cls, time_duration=None, time_step=None, n_steps=None) -> None:
+        """
+        Uniform-step diffusion, until reach, or just exceeding, the desired time duration.
+
+        :param time_duration:
+        :param time_step:
+        :param n_steps:
+        :return:                None
+        """
+        assert (not time_duration or not time_step or not n_steps), \
+                        "Cannot specify all 3 arguments: time_duration, time_step, n_steps"
+
+        assert (time_duration and time_step) or (time_duration and n_steps) or (time_step and n_steps), \
+                        "Must provide exactly 2 arguments from:  time_duration, time_step, n_steps"
+
+        if not time_step:
+            time_step = time_duration / n_steps
+
+        if not n_steps:
+            n_steps = math.ceil(time_duration / time_step)
+
+        for i in range(n_steps):
+            print(f"DIFFUSION STEP {i}:")
+            cls.diffuse_step(time_step)
 
 
 
