@@ -123,7 +123,7 @@ def test_diffuse_step_single_species_3():
     bio.set_uniform_concentration(species_index=0, conc=22.2)
     bio.set_uniform_concentration(species_index=1, conc=66.6)
     bio.set_diffusion_rates([2.78, 3.14])
-    bio.describe_state(show_diff=True)
+    bio.describe_state(show_diffusion_rates=True)
     """
     5 bins and 2 species:
     Species 0. Diff rate: 2.78. Conc:  [22.2 22.2 22.2 22.2 22.2]
@@ -145,7 +145,7 @@ def test_diffuse_step_single_species_4():
 
     bio.inject_conc_to_cell(bin=0, species_index=0, delta_conc=10.)
     bio.set_diffusion_rates([1.])
-    bio.describe_state(show_diff=True)
+    bio.describe_state(show_diffusion_rates=True)
     """
     2 bins and 1 species:
     Species 0. Diff rate: 1.0. Conc:  [10.  0.]
@@ -166,7 +166,7 @@ def test_diffuse_step_single_species_5():
 
     bio.inject_conc_to_cell(bin=1, species_index=0, delta_conc=10.)
     bio.set_diffusion_rates([.5])
-    bio.describe_state(show_diff=True)
+    bio.describe_state(show_diffusion_rates=True)
 
     # The time step is so large that the system immediately equilibrates
     print("The default max allowed time step is: ", bio.max_time_step(.5))
@@ -185,7 +185,7 @@ def test_diffuse_step_single_species_6():
 
     bio.inject_conc_to_cell(bin=0, species_index=0, delta_conc=10.)
     bio.set_diffusion_rates([.5])
-    bio.describe_state(show_diff=True)
+    bio.describe_state(show_diffusion_rates=True)
 
     print("The default max allowed time step is: ", bio.max_time_step(.5))
     for i in range(20):
@@ -203,7 +203,7 @@ def test_diffuse_step_single_species_7():
 
     bio.inject_conc_to_cell(bin=0, species_index=0, delta_conc=10.)
     bio.set_diffusion_rates([.5])
-    bio.describe_state(show_diff=True)
+    bio.describe_state(show_diffusion_rates=True)
 
     for i in range(20*2):
         bio.diffuse_step_single_species(time_step=0.6666/2)
@@ -223,7 +223,7 @@ def test_diffuse_step_single_species_8():
     bio.set_species_conc(species_index=0, conc_list= 100*np.random.rand(15))
     bio.set_diffusion_rates([.3])
     print()
-    bio.describe_state(show_diff=True)
+    bio.describe_state(show_diffusion_rates=True)
 
     avg_conc = sum(bio.univ[0]) / 15.
     print("Avg of concentrations: ", avg_conc)
@@ -258,7 +258,7 @@ def test_diffuse_step_1():
     bio.set_species_conc(species_index=1, conc_list=[10, 20, 50])
 
     bio.set_diffusion_rates([5., 20.])
-    bio.describe_state(show_diff=True)
+    bio.describe_state(show_diffusion_rates=True)
     """
     3 bins and 2 species:
     Species 0. Diff rate: 5.0. Conc:  [  0. 100.   0.]
@@ -283,7 +283,7 @@ def test_diffuse():
     bio.set_bin_conc(species_index=0, bin=1, conc=100.)
     bio.set_species_conc(species_index=1, conc_list=[10, 20, 50])
     bio.set_diffusion_rates([5., 20.])
-    bio.describe_state(show_diff=True)
+    bio.describe_state(show_diffusion_rates=True)
     """
     Species 0. Diff rate: 5.0. Conc:  [  0. 100.   0.]
     Species 1. Diff rate: 20.0. Conc:  [10. 20. 50.]   

@@ -55,17 +55,19 @@ class BioSim1D:
 
 
     @classmethod
-    def describe_state(cls, show_diff=False, concise=False) -> None:
+    def describe_state(cls, show_diffusion_rates=False, concise=False) -> None:
         """
         A simple printout of the state of the system, for now useful only for small systems
 
-        :param concise: Only applicable if show_diff is False
+        :param show_diffusion_rates:
+        :param concise: Only applicable if show_diff is False.
+                        If True, don't include a header with the number of bins and number of species
         :return:
         """
-        if show_diff:
+        if show_diffusion_rates:
             if cls.diffusion_rates is None:
                 print("Diffusion rates not yet set!")
-                cls.describe_state(show_diff=False)
+                cls.describe_state(show_diffusion_rates=False)
             else  :
                 for species in range(cls.n_species):
                     print(f"Species {species}. Diff rate: {cls.diffusion_rates[species]}. Conc: ", cls.univ[species])
@@ -207,13 +209,14 @@ class BioSim1D:
 
 
     @classmethod
-    def diffuse(cls, time_duration=None, time_step=None, n_steps=None) -> None:
+    def diffuse(cls, time_duration=None, time_step=None, n_steps=None, verbose=False) -> None:
         """
         Uniform-step diffusion, until reach, or just exceeding, the desired time duration.
 
         :param time_duration:
         :param time_step:
         :param n_steps:
+        :param verbose:
         :return:                None
         """
         assert (not time_duration or not time_step or not n_steps), \
@@ -229,8 +232,17 @@ class BioSim1D:
             n_steps = math.ceil(time_duration / time_step)
 
         for i in range(n_steps):
-            print(f"DIFFUSION STEP {i}:")
+            if verbose:
+                if (i < 2) or (i >= n_steps-2):
+                    print(f"    Performing diffusion step {i}...")
+                elif i == 2:
+                    print("    ...")
+
             cls.diffuse_step(time_step)
+
+        if verbose:
+            print(f"\nSystem at time {time_duration}, at end of {n_steps} steps of size {time_step}:")
+            cls.describe_state(concise=True)
 
 
 
@@ -246,6 +258,7 @@ class BioSim1D:
         # TODO: parallelize the independent computations
         for species_index in range(cls.n_species):
             cls.diffuse_step_single_species(time_step, species_index=species_index)
+
 
 
     @classmethod
