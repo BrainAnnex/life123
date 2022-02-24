@@ -2,6 +2,7 @@ import numpy as np
 import math
 
 
+
 class BioSim1D:
     """
     Note: for at least the time being, this class doesn't get instantiated
@@ -209,7 +210,7 @@ class BioSim1D:
 
 
     @classmethod
-    def diffuse(cls, time_duration=None, time_step=None, n_steps=None, verbose=False) -> None:
+    def diffuse(cls, time_duration=None, time_step=None, n_steps=None, verbose=False) -> dict:
         """
         Uniform-step diffusion, until reach, or just exceeding, the desired time duration.
 
@@ -217,7 +218,7 @@ class BioSim1D:
         :param time_step:
         :param n_steps:
         :param verbose:
-        :return:                None
+        :return:                A dictionary with data about the status of the operation
         """
         assert (not time_duration or not time_step or not n_steps), \
                         "Cannot specify all 3 arguments: time_duration, time_step, n_steps"
@@ -241,8 +242,12 @@ class BioSim1D:
             cls.diffuse_step(time_step)
 
         if verbose:
-            print(f"\nSystem at time {time_duration}, at end of {n_steps} steps of size {time_step}:")
+            print(f"\nSystem after Delta time {time_duration}, at end of {n_steps} steps of size {time_step}:")
             cls.describe_state(concise=True)
+            print()
+
+        status = {"steps": n_steps}
+        return status
 
 
 
