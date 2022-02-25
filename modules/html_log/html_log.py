@@ -44,8 +44,8 @@ class HtmlLog:
     #########################################
 
     @classmethod
-    def config(cls, filename=None, multiple=None, overwrite=None, max_files=None,
-                    css=None, js=None, use_D3=False, use_Vue=False) -> None:
+    def config(cls, filename=None, multiple=None, overwrite=None,
+                    css=None, js=None, use_D3=False, Vue_lib=False) -> None:
         """
         It can only be called once in a run.
         If desired, it can be done explicitly - and should be done so if the Class defaults need to be changed;
@@ -59,13 +59,13 @@ class HtmlLog:
         :param multiple:    Flag indicating whether each run's output should go into a separate file (consecutively numbered);
                                 if False, a single file is used
         :param overwrite:
-        :param max_files:
 
         # ARGUMENTS OPTIONALLY USED TO PASS STYLING/JAVASCRIPT/GRAPHING PARAMETER
         :param css:         String, or list of strings, with name(s) of CSS files to include
         :param js:          Name of extra JavaScript file to include
-        :param use_D3:      Flag indicating whether D3 will be used
-        :param use_Vue:     Flag indicating whether Vue will be used
+        :param use_D3:      Flag indicating whether D3 will be used.  If True,
+                                https://d3js.org/d3.v7.min.js will be included
+        :param Vue_lib:     Full name of js file with desired Vue library
 
         :return:            None
         """
@@ -113,12 +113,15 @@ class HtmlLog:
         else:
             raise Exception("Argument css, if passed, must be a string or list of strings")
 
-        if use_Vue:
-            js_line = '<script src="../../../Vue2_lib/vue2.js"></script>'
-        elif use_D3:
-            js_line = '<script src="https://d3js.org/d3.v7.min.js" ></script>'
-        else:
-            js_line = ''
+        js_line = ''
+
+        use_Vue = False
+        if Vue_lib:
+            js_line += f'\n    <script src="{Vue_lib}"></script>'
+            use_Vue = True
+
+        if use_D3:
+            js_line += '\n    <script src="https://d3js.org/d3.v7.min.js"></script>'
 
         if js:
             js_line += f'\n    <script src="{js}" ></script>'
@@ -272,6 +275,19 @@ class HtmlLog:
             cls.write(msg, plain=plain_message)
         else:
             cls.write(msg)
+
+
+
+    @classmethod
+    def blank_line(cls, n_blanks = 1) -> None:
+        """
+        Append the specified number of blank lines to the logs
+
+        :param n_blanks:    Desired number of blank lines
+        :return:            None
+        """
+
+        cls.write("", "", blanks_after = n_blanks)
 
 
 

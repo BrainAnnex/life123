@@ -1,11 +1,14 @@
 # Examples of creating a log with D3 graphics in a Vue environment
 
+
 from modules.html_log.html_log import HtmlLog as log
 
 log.config(filename="logs/test_with_D3_plus_Vue.htm", overwrite=True,
-           use_D3=True, use_Vue=True,
+           use_D3=True,
+           Vue_lib = "../../../Vue2_lib/vue2.js",
            css=["../D3_interactive_star.css", "../D3_heatmap.css"],
            js="../../../SVG_helper/svg_helper.js")
+# Note: paths are from the location of THE LOG FILE
 
 log.new_run()
 
