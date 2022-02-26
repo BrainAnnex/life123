@@ -3,7 +3,7 @@ from modules.html_log.html_log import HtmlLog as log
 
 print("Prior to any setup, the (default) name for the log file is: ", log.LOG_FILENAME_BASE)
 
-log.config(filename="logs/my_test2.htm", overwrite=True)
+log.config(filename="logs/my_test2.htm", mode='overwrite')
 
 print("After setup, the name for the log file is: ", log.LOG_FILENAME_BASE)
 

@@ -22,7 +22,7 @@ bio.describe_state(show_diffusion_rates=True)
 
 
 
-log.config(filename="../logs/reach_equilibrium.htm", overwrite=True,
+log.config(filename="../logs/reach_equilibrium.htm", mode='overwrite',
            use_D3=True,
            Vue_lib = "../../../modules/Vue2_lib/vue2.js",
            js = "../../../modules/SVG_helper/svg_helper.js",
@@ -48,8 +48,6 @@ log.blank_line()
 
 # EXAMPLE OF DATA VISUALIZATION WITH A HEATMAP (with arbitrary data, hardwired below)
 
-vue_id = "vue-root-1"     # Unique ID to use for the <DIV> containing the Vue component
-
 all_data = {
     "my_groups": ["A", "B", "C"],
     "my_vars": ["v1", "v2"],
@@ -68,7 +66,7 @@ all_data = {
     "margins": {"top": 30, "right": 30, "bottom": 30, "left": 30}
 }
 
-log.export_plot_Vue(data=all_data, vue_id=vue_id,
+log.export_plot_Vue(data=all_data,
                     component_name="vue-heatmap-9",
                     component_file="../../../modules/visualization/vue_components/heatmap9.js")
 
@@ -77,8 +75,6 @@ log.export_plot_Vue(data=all_data, vue_id=vue_id,
 ###################   A repeat of the same type of plot, with different data  ###########################
 
 log.write("A repeat of the plot:", style=log.h1, newline=False)
-
-vue_id = "vue-root-2"     # Unique ID to use for the <DIV> containing the Vue component
 
 
 my_groups = [str(i) for i in range(bio.n_bins)]
@@ -100,6 +96,6 @@ all_data = {
     "margins": {"top": 30, "right": 30, "bottom": 30, "left": 30}
 }
 
-log.export_plot_Vue(data=all_data, vue_id=vue_id,
+log.export_plot_Vue(data=all_data,
                     component_name="vue-heatmap-9",
                     component_file="../../../modules/visualization/vue_components/heatmap9.js")

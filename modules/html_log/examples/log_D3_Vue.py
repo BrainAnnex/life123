@@ -3,7 +3,7 @@
 
 from modules.html_log.html_log import HtmlLog as log
 
-log.config(filename="logs/test_with_D3_plus_Vue.htm", overwrite=True,
+log.config(filename="logs/test_with_D3_plus_Vue.htm", mode='overwrite',
            use_D3=True,
            Vue_lib = "../../../Vue2_lib/vue2.js",
            css=["../D3_interactive_star.css", "../D3_heatmap.css"],
@@ -17,9 +17,7 @@ log.new_run()
 
 log.write("Time to do a D3 plot with Vue:", style=log.h1, newline=False)
 
-vue_id = "vue-root-1"     # Unique ID to use for the <DIV> containing the Vue component
-
-log.export_plot_Vue(data=None, vue_id=vue_id,
+log.export_plot_Vue(data=None,
                     component_name="vue-interactive-star", component_file="../Vue_components/interactive_star.js")
 
 
@@ -27,19 +25,15 @@ log.export_plot_Vue(data=None, vue_id=vue_id,
 
 log.write("A repeat of the same plot:", style=log.h1, newline=False)
 
-vue_id = "vue-root-2"     # Unique ID to use for the <DIV> containing the Vue component
-
 my_data = {"outer_radius": 23}
 
-log.export_plot_Vue(data=my_data, vue_id=vue_id,
+log.export_plot_Vue(data=my_data,
                     component_name="vue-interactive-star", component_file="../Vue_components/interactive_star.js")
 
 
 ########################   Yet another D3 Plot with Vue  ###############################
 
 log.write("Another D3 plot with Vue:", style=log.h1, newline=False)
-
-vue_id = "vue-root-3"     # Unique ID to use for the <DIV> containing the Vue component
 
 all_data = {
                 "my_groups": ["A", "B", "C"],
@@ -57,5 +51,5 @@ all_data = {
                 "margins": {"top": 30, "right": 30, "bottom": 30, "left": 30}
             }
 
-log.export_plot_Vue(data=all_data, vue_id=vue_id,
+log.export_plot_Vue(data=all_data,
                     component_name="vue-heatmap-8", component_file="../Vue_components/heatmap8.js")

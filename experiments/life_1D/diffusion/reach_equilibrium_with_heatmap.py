@@ -23,7 +23,7 @@ bio.describe_state(show_diffusion_rates=True)
 
 
 
-log.config(filename="../logs/reach_equilibrium.htm", overwrite=True,
+log.config(filename="../logs/reach_equilibrium.htm", mode='overwrite',
            use_D3=True,
            Vue_lib = "../../../modules/Vue2_lib/vue2.js",
            js = "../../../modules/SVG_helper/svg_helper.js",
@@ -31,14 +31,17 @@ log.config(filename="../logs/reach_equilibrium.htm", overwrite=True,
 # Note: paths are from the location of THE LOG FILE
 
 
-log.write("Dtime=10, with time steps of 0.1 ...", blanks_before=2)
+log.write("1-D diffusion of a single species, with Diffusion rate 0.1.  Delta Time = 10, and time steps of 0.1", blanks_before=2)
 
 
 
-def visualize_state(i, total_time):
-    log.write(f"Time : {total_time}", style=log.h1, newline=False)
+def visualize_state(time: float) -> None:
+    """
 
-    vue_id = f"vue-root-{i}"     # Unique ID to use for the <DIV> containing the Vue component
+    :param time:
+    :return:
+    """
+    log.write(f"Time : {time}", style=log.h1, newline=False)
 
     my_groups = [str(i) for i in range(bio.n_bins)]
     print()
@@ -55,11 +58,11 @@ def visualize_state(i, total_time):
         "range_min": 0,
         "range_max": 10,
         "outer_width": 850,
-        "outer_height": 250,
-        "margins": {"top": 30, "right": 30, "bottom": 30, "left": 30}
+        "outer_height": 50,
+        "margins": {"top": 10, "right": 30, "bottom": 18, "left": 30}
     }
 
-    log.export_plot_Vue(data=all_data, vue_id=vue_id,
+    log.export_plot_Vue(data=all_data,
                         component_name="vue-heatmap-9",
                         component_file="../../../modules/visualization/vue_components/heatmap9.js")
 
@@ -68,21 +71,18 @@ def visualize_state(i, total_time):
 #############################################
 
 
-
+delta_time = 10.
 
 total_time = 0.
 
-visualize_state("START", total_time)
+visualize_state(total_time)
 
-for i in range(2):
-    delta_time = 10.
+for i in range(50):
     status = bio.diffuse(time_duration=delta_time, time_step=0.1)
     total_time += delta_time
-    log.write(f"After Delta time {delta_time}.  TOTAL TIME {total_time}  ({status['steps']} steps taken):",
-              blanks_before=1)
+
+    print(f"\nAfter Delta time {delta_time}.  TOTAL TIME {total_time}  ({status['steps']} steps taken):")
     bio.describe_state(concise=True)
-    visualize_state(i, total_time)
 
-
-log.blank_line()
-
+    if i<3 or i>=49:
+        visualize_state(total_time)

@@ -2,7 +2,7 @@
 from modules.html_log.html_log import HtmlLog as log
 
 
-log.config(filename="logs/my_test3.htm", overwrite=True)
+log.config(filename="logs/my_test3.htm", mode='overwrite')
 
 
 ####################################################

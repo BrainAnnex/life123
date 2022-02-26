@@ -2,7 +2,7 @@
 
 from modules.html_log.html_log import HtmlLog as log
 
-log.config(filename="logs/test_with_D3.htm", overwrite=True, use_D3=True, css="../D3_barchart.css")
+log.config(filename="logs/test_with_D3.htm", mode='overwrite', use_D3=True, css="../D3_barchart.css")
 
 log.new_run()
 

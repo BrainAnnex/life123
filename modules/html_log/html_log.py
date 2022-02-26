@@ -35,7 +35,8 @@ class HtmlLog:
 
     use_D3 = False
     use_Vue= False
-
+    VUE_COUNT = 1               # Auto-increment unique number for possible multiple Vue apps on the same page;
+                                #   each <DIV> containing the Vue component will have an ID of the form "vue-root-VUE_ID"
 
 
 
@@ -44,7 +45,7 @@ class HtmlLog:
     #########################################
 
     @classmethod
-    def config(cls, filename=None, multiple=None, overwrite=None,
+    def config(cls, filename=None, mode=None,
                     css=None, js=None, use_D3=False, Vue_lib=False) -> None:
         """
         It can only be called once in a run.
@@ -56,18 +57,19 @@ class HtmlLog:
         # ARGUMENTS OPTIONALLY USED TO CHANGE THE CLASS DEFAULTS
         :param filename:    Name for the log file (if using just 1 file), or basename (if using multiple log files);
                                 EXAMPLE: "log.htm"
-        :param multiple:    Flag indicating whether each run's output should go into a separate file (consecutively numbered);
-                                if False, a single file is used
-        :param overwrite:   Applicable only if the "multiple" arg, above, is False.
-                                Flag indicating whether to over-write the log file, if it already exists;
-                                if False, any new log is appended if the file already exists, or created if not present
+
+        :param mode:        Must be one of:
+                                "append"    - if the log file exists, append to it; otherwise, create it (AVOID if using Vue)
+                                "overwrite" - if the log file exists, first clear it; otherwise, create it
+                                "multiple"  - each run's output should go into a separate file (consecutively numbered)
 
         # ARGUMENTS OPTIONALLY USED TO PASS STYLING/JAVASCRIPT/GRAPHING PARAMETER
         :param css:         String, or list of strings, with name(s) of CSS files to include
         :param js:          Name of extra JavaScript file to include
         :param use_D3:      Flag indicating whether D3 will be used.  If True,
                                 https://d3js.org/d3.v7.min.js will be included
-        :param Vue_lib:     Full name of js file with desired Vue library
+        :param Vue_lib:     Full name of js file that contains the desired version of the Vue library.
+                                NOTE: at present, use of Vue isn't compatible with the "append" mode
 
         :return:            None
         """
@@ -77,12 +79,16 @@ class HtmlLog:
         if filename:
             cls.LOG_FILENAME_BASE = filename
 
-        if multiple:
-            cls.SEPARATE_LOGS = multiple
-
-        if overwrite:
-            cls.OVERWRITE_SINGLE_LOG = overwrite
-
+        if mode == "multiple":
+            cls.SEPARATE_LOGS = True
+        elif mode == "overwrite":
+            cls.SEPARATE_LOGS = False
+            cls.OVERWRITE_SINGLE_LOG = True
+        elif mode == "append":
+            cls.SEPARATE_LOGS = False
+            cls.OVERWRITE_SINGLE_LOG = False
+        elif mode is not None:
+            raise Exception(f"The `mode` argument, if used, must be one of : 'multiple' , 'overwrite' , 'append'. The value passed was `{mode}`")
 
 
         # Generate, if applicable, a new name for the log file (applicable in the case of multiple logs),
@@ -119,6 +125,9 @@ class HtmlLog:
 
         use_Vue = False
         if Vue_lib:
+            if not cls.SEPARATE_LOGS and not cls.OVERWRITE_SINGLE_LOG:
+                raise Exception("At present, Vue cannot be used in the 'append' mode: use mode='overwrite' or mode='multiple'")
+
             js_line += f'\n    <script src="{Vue_lib}"></script>'
             use_Vue = True
 
@@ -334,13 +343,12 @@ class HtmlLog:
 
 
     @classmethod
-    def export_plot_Vue(cls, data, component_name, component_file, vue_id="vue-root") -> None:
+    def export_plot_Vue(cls, data, component_name, component_file) -> None:
         """
 
         :param data:
         :param component_name:
         :param component_file:
-        :param vue_id:  String wih the unique ID to use for the <DIV> containing the Vue component
 
         :return:        None
         """
@@ -348,13 +356,14 @@ class HtmlLog:
             cls.write("ERROR: In order to utilize Vue, the  use_Vue=True  option must be used in the call to config()", style=cls.red)
             return
 
+        vue_id = f"vue-root-{cls.VUE_COUNT}"
         cls._write_to_file(f'\n\n<div id="{vue_id}">   <!-- Container for VUE COMPONENTS below : ROOT element -->\n')
 
         component_call = f'''
     <{component_name} {cls._pass_props(data)}
     >        
     </{component_name}>
-'''
+    '''
 
         cls._write_to_file(component_call)
 
@@ -386,7 +395,10 @@ new Vue({{
 </script>
 
 '''
+        cls.VUE_COUNT += 1     # Auto-increment the ID to use for possible multiple Vue apps on the same page
+
         cls._write_to_file(instantiate_vue, newline=False)
+
 
 
     @staticmethod
