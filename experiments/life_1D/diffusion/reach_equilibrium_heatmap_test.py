@@ -1,6 +1,5 @@
 """
-Exploring reaching equilibrium, first on a shorter timescale and then a longer one (but
-both with identical time steps.)
+This is primarily a test of the heatmap module, in the context of a system moving towards equilibrium.
 
 The system starts out with a pulse in bin 2 (the 3rd bin from the left)
 
@@ -47,7 +46,7 @@ for i in range(2):
 log.blank_line()
 
 
-# DATA VISUALIZATION WITH A HEATMAP
+# EXAMPLE OF DATA VISUALIZATION WITH A HEATMAP (with arbitrary data, hardwired below)
 
 vue_id = "vue-root-1"     # Unique ID to use for the <DIV> containing the Vue component
 

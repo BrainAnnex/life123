@@ -58,7 +58,9 @@ class HtmlLog:
                                 EXAMPLE: "log.htm"
         :param multiple:    Flag indicating whether each run's output should go into a separate file (consecutively numbered);
                                 if False, a single file is used
-        :param overwrite:
+        :param overwrite:   Applicable only if the "multiple" arg, above, is False.
+                                Flag indicating whether to over-write the log file, if it already exists;
+                                if False, any new log is appended if the file already exists, or created if not present
 
         # ARGUMENTS OPTIONALLY USED TO PASS STYLING/JAVASCRIPT/GRAPHING PARAMETER
         :param css:         String, or list of strings, with name(s) of CSS files to include
