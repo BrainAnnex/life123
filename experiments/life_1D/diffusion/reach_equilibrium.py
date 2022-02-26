@@ -14,7 +14,7 @@ from life_1D.bio_sim_1d import BioSim1D as bio
 bio.initialize_universe(n_bins=10, n_species=1)
 
 bio.set_uniform_concentration(species_index=0, conc=0.)
-bio.inject_conc_to_cell(bin=2, species_index=0, delta_conc=10.)
+bio.inject_conc_to_cell(species_index=0, bin=2, delta_conc=10.)
 
 bio.set_diffusion_rates([0.1])
 
@@ -37,7 +37,7 @@ print("\n\nREPEATING to LONGER time scales.  Dtime=100, again with time steps of
 
 # Reset the concentrations
 bio.set_uniform_concentration(species_index=0, conc=0.)
-bio.inject_conc_to_cell(bin=2, species_index=0, delta_conc=10.)
+bio.inject_conc_to_cell(species_index=0, bin=2, delta_conc=10.)
 
 total_time = 0.
 for i in range(20):

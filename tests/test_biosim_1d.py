@@ -41,7 +41,7 @@ def test_set_uniform_concentration():
     bio.set_uniform_concentration(species_index=0, conc=0.3)
     bio.describe_state()
     expected = np.full(8, 0.3, dtype=float)
-    assert np.allclose(bio.univ[0], expected)
+    assert np.allclose(bio.lookup_species(0), expected)
 
     # New test
     bio.initialize_universe(n_bins=15, n_species=3)
@@ -49,9 +49,9 @@ def test_set_uniform_concentration():
     bio.set_uniform_concentration(species_index=1, conc=11.)
     bio.set_uniform_concentration(species_index=2, conc=12.)
     bio.describe_state()
-    assert np.allclose(bio.univ[0], np.full(15, 10., dtype=float))
-    assert np.allclose(bio.univ[1], np.full(15, 11., dtype=float))
-    assert np.allclose(bio.univ[2], np.full(15, 12., dtype=float))
+    assert np.allclose(bio.lookup_species(0), np.full(15, 10., dtype=float))
+    assert np.allclose(bio.lookup_species(1), np.full(15, 11., dtype=float))
+    assert np.allclose(bio.lookup_species(2), np.full(15, 12., dtype=float))
 
 
 
@@ -89,12 +89,12 @@ def test_diffuse_step_single_species_1():
     # Diffuse by a single step
     bio.diffuse_step_single_species(time_step=0.02)
     print(bio.univ)
-    assert np.allclose(bio.univ[0], [80, 20])
+    assert np.allclose(bio.lookup_species(0), [80, 20])
 
     # Another single step
     bio.diffuse_step_single_species(time_step=0.01)
     print(bio.univ)
-    assert np.allclose(bio.univ[0], [74, 26])
+    assert np.allclose(bio.lookup_species(0), [74, 26])
 
 
 
@@ -109,7 +109,7 @@ def test_diffuse_step_single_species_2():
 
     bio.diffuse_step_single_species(time_step=3)    # With just 1 bin, nothing happens
     bio.describe_state()
-    assert np.allclose(bio.univ[0], [8])
+    assert np.allclose(bio.lookup_species(0), [8])
 
 
 
@@ -134,8 +134,8 @@ def test_diffuse_step_single_species_3():
     bio.diffuse_step_single_species(time_step=0.08, species_index=0)
     bio.diffuse_step_single_species(time_step=0.08, species_index=1)
 
-    assert np.allclose(bio.univ[0], np.full(5, 22.2, dtype=float))
-    assert np.allclose(bio.univ[1], np.full(5, 66.6, dtype=float))
+    assert np.allclose(bio.lookup_species(0), np.full(5, 22.2, dtype=float))
+    assert np.allclose(bio.lookup_species(1), np.full(5, 66.6, dtype=float))
 
 
 
@@ -156,7 +156,7 @@ def test_diffuse_step_single_species_4():
         print(f"At end of step {i+1}:")
         bio.describe_state()
 
-    assert np.allclose(bio.univ[0], [5.128, 4.872])
+    assert np.allclose(bio.lookup_species(0), [5.128, 4.872])
 
 
 
@@ -175,7 +175,7 @@ def test_diffuse_step_single_species_5():
         print(f"At end of step {i+1}:")
         print(bio.univ)
 
-    assert np.allclose(bio.univ[0], np.full(3, 3.3333333, dtype=float))
+    assert np.allclose(bio.lookup_species(0), np.full(3, 3.3333333, dtype=float))
 
 
 
@@ -191,9 +191,9 @@ def test_diffuse_step_single_species_6():
     for i in range(20):
         bio.diffuse_step_single_species(time_step=0.6666)
         print(f"At end of step {i+1}:")
-        print(bio.univ[0])
+        print(bio.lookup_species(0))
 
-    assert np.allclose(bio.univ[0], [2.23752027, 2.14678423, 1.99998594, 1.85320708, 1.76250248])
+    assert np.allclose(bio.lookup_species(0), [2.23752027, 2.14678423, 1.99998594, 1.85320708, 1.76250248])
 
 
 def test_diffuse_step_single_species_7():
@@ -209,9 +209,9 @@ def test_diffuse_step_single_species_7():
         bio.diffuse_step_single_species(time_step=0.6666/2)
         if i<10 or i >35:
             print(f"At end of step {i+1}:")
-            print(bio.univ[0])
+            print(bio.lookup_species(0))
 
-    assert np.allclose(bio.univ[0], [2.26063875, 2.16100935, 1.99990821, 1.83893393, 1.73950977])
+    assert np.allclose(bio.lookup_species(0), [2.26063875, 2.16100935, 1.99990821, 1.83893393, 1.73950977])
 
 
 
@@ -225,20 +225,20 @@ def test_diffuse_step_single_species_8():
     print()
     bio.describe_state(show_diffusion_rates=True)
 
-    avg_conc = sum(bio.univ[0]) / 15.
+    avg_conc = sum(bio.lookup_species(0)) / 15.
     print("Avg of concentrations: ", avg_conc)
 
     for i in range(2000):
         bio.diffuse_step_single_species(time_step=1)
         if i<4:
             print(f"At end of step {i+1}:")
-            print(bio.univ[0])
+            print(bio.lookup_species(0))
 
     print(f"At end of ALL steps:")
-    print(bio.univ[0])
+    print(bio.lookup_species(0))
     # With such a large number of steps, all concentrations will
     # equilibrate to their average
-    assert np.allclose(bio.univ[0], np.full(15, avg_conc, dtype=float))
+    assert np.allclose(bio.lookup_species(0), np.full(15, avg_conc, dtype=float))
 
 
 
@@ -278,7 +278,7 @@ def test_diffuse_step_1():
 
 #########   TESTS OF DIFFUSION : all species, multiple steps    #########
 
-def test_diffuse():
+def test_diffuse_1():
     bio.initialize_universe(n_bins=3, n_species=2)
     bio.set_bin_conc(species_index=0, bin=1, conc=100.)
     bio.set_species_conc(species_index=1, conc_list=[10, 20, 50])
@@ -333,3 +333,19 @@ def test_diffuse():
     # Re-take the 2 steps
     bio.diffuse(time_step = 0.01, n_steps = 2)
     assert np.allclose(bio.univ, [[ 9.25, 81.5,  9.25] , [14.4,  25.6, 40.]])
+
+
+
+def test_diffuse_2():
+    # Diffuse 1 species almost to equilibrium, starting from a single concentration pulse
+    bio.initialize_universe(n_bins=10, n_species=1)
+
+    bio.set_uniform_concentration(species_index=0, conc=0.)
+    bio.inject_conc_to_cell(species_index=0, bin=2, delta_conc=10.)
+    bio.set_diffusion_rates([0.1])
+
+    status = bio.diffuse(time_duration=800, time_step=0.1)
+    assert status['steps'] == 8000
+    assert np.allclose(bio.lookup_species(0),
+                                [1.00055275, 1.00049864, 1.00039572, 1.00025407, 1.00008755, 0.99991245,
+                                 0.99974593, 0.99960428, 0.99950136, 0.99944725])

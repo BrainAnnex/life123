@@ -1,5 +1,6 @@
 import numpy as np
 import math
+from modules.html_log.html_log import HtmlLog as log
 
 
 
@@ -52,6 +53,19 @@ class BioSim1D:
 
         cls.univ = np.zeros((n_species, n_bins), dtype=float)
         cls.diffusion_rates = None
+
+
+
+    @classmethod
+    def lookup_species(cls, index: int) -> np.array:
+        """
+        Return the array of concentration values for the single specified species
+
+        :param index:
+        :return:
+        """
+        assert 0 <= index < cls.n_species, f"The species index must be in the range [0-{cls.n_species - 1}]"
+        return cls.univ[index]
 
 
 
@@ -176,8 +190,11 @@ class BioSim1D:
 
 
 
-
-    ####    PERFORM DIFFUSION    ####
+    #########################################################################
+    #                                                                       #
+    #                        PERFORM DIFFUSION                              #
+    #                                                                       #
+    #########################################################################
 
     @classmethod
     def is_excessive(cls, time_step, diff_rate) -> bool:
@@ -316,3 +333,49 @@ class BioSim1D:
                                + effective_diff * (prev_conc - current_conc)
 
             prev_conc = current_conc
+
+
+
+
+    #########################################################################
+    #                                                                       #
+    #                           VISUALIZATION                               #
+    #                                                                       #
+    #########################################################################
+
+    @classmethod
+    def single_species_heatmap(cls, species_index: int, heatmap_pars: dict, header=None) -> None:
+        """
+        Send to the log a heatmap representation of the concentrations of
+        the specified species
+
+        :param species_index:   Index identifying the species of interest
+        :param heatmap_pars:    A dictionary of parameters for the heatmap
+        :param header:          Optional string to display just above the heatmap
+        :return:
+        """
+        if header:
+            log.write(f"{header}", style=log.h1, newline=False)
+
+        my_groups = [str(i) for i in range(cls.n_bins)]
+        #print()
+        #print(my_groups)
+
+        my_data = [{"group": str(i), "variable": "Mol 0", "value": str(cls.univ[species_index, i])}
+                   for i in range(cls.n_bins)]
+        #print(my_data)
+
+        all_data = {
+            "my_groups": my_groups,
+            "my_vars": [f"Mol {species_index}"],
+            "my_data": my_data,
+            "range_min": heatmap_pars["range"][0],
+            "range_max": heatmap_pars["range"][1],
+            "outer_width": heatmap_pars["outer_width"],
+            "outer_height": heatmap_pars["outer_height"],
+            "margins": heatmap_pars["margins"]
+        }
+
+        log.export_plot_Vue(data=all_data,
+                            component_name="vue-heatmap-9",
+                            component_file="../../../modules/visualization/vue_components/heatmap9.js")

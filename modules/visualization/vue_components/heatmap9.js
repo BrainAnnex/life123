@@ -5,6 +5,7 @@ Vue.component('vue-heatmap-9',
     {
         props: ['my_groups', 'my_vars', 'my_data', 'range_min', 'range_max', 'outer_width', 'outer_height', 'margins'],
         /*
+            my_data:    array of objects with 3 keys ('group', 'variable' and 'value')
          */
 
         template: `
@@ -107,9 +108,9 @@ Vue.component('vue-heatmap-9',
                 EXAMPLES:  0 |-> "rgb(255, 255, 255)"  , 10 |-> "rgb(240, 247, 246)" , 100 |-> "rgb(105, 179, 162)"
              */
             {
-                const f = d3.scaleLinear()
+                const f = d3.scaleLog()
                     .domain([this.min_val, this.max_val])
-                    .range(["white", "black"]);   // Maps 0 to white, and 100 to "#69b3a2" (medium green)
+                    .range(["white", "black"]);   // Maps 0 to white, and 100 to black
 
                 return f;   // f is a function
             },

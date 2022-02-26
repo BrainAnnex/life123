@@ -1,10 +1,7 @@
 """
-Exploring reaching equilibrium, first on a shorter timescale and then a longer one (but
-both with identical time steps.)
+Exploring reaching equilibrium, including a heatmap depiction of some of the steps.
 
 The system starts out with a pulse in bin 2 (the 3rd bin from the left)
-
-Notice the diffusing pulse "bouncing" off the left wall after total time 30
 """
 
 from life_1D.bio_sim_1d import BioSim1D as bio
@@ -15,7 +12,7 @@ from modules.html_log.html_log import HtmlLog as log
 bio.initialize_universe(n_bins=10, n_species=1)
 
 bio.set_uniform_concentration(species_index=0, conc=0.)
-bio.inject_conc_to_cell(bin=2, species_index=0, delta_conc=10.)
+bio.inject_conc_to_cell(species_index=0, bin=2, delta_conc=10.)
 
 bio.set_diffusion_rates([0.1])
 
@@ -31,12 +28,15 @@ log.config(filename="../logs/reach_equilibrium.htm", mode='overwrite',
 # Note: paths are from the location of THE LOG FILE
 
 
-log.write("1-D diffusion of a single species, with Diffusion rate 0.1.  Delta Time = 10, and time steps of 0.1", blanks_before=2)
+log.write("1-D diffusion to equilibrium of a single species, with Diffusion rate 0.1. Time steps of 0.1",
+          style=log.bold, blanks_before=2)
+log.write("Heatmap with log scale in domain [0.5-10]", style=log.color, style_par='#BBB')
 
 
 
 def visualize_state(time: float) -> None:
     """
+    NOTE: a related function is now available as a method of BioSim1D
 
     :param time:
     :return:
@@ -84,5 +84,5 @@ for i in range(50):
     print(f"\nAfter Delta time {delta_time}.  TOTAL TIME {total_time}  ({status['steps']} steps taken):")
     bio.describe_state(concise=True)
 
-    if i<3 or i>=49:
+    if i<2 or i==6 or i>=49:
         visualize_state(total_time)

@@ -166,7 +166,7 @@ class HtmlLog:
     def write(cls, msg: str, plain="", also_print=ALSO_PRINT,
               indent = 0,
               blanks_before = 0, newline = True, blanks_after = 0,
-              style = None):
+              style = None, style_par = None):
         """
 
         :param msg:             A string (possibly with HTML markup - but NOT recommended),
@@ -226,8 +226,13 @@ class HtmlLog:
                 # If multiple style functions were passed (e.g., one for boldface and one for color), apply each in turn
                 for fn in style:
                     msg = fn(msg)
-            else:
-                msg = style(msg)    # A single style function is applied
+
+            else:   # A single style function is applied
+                if style_par:
+                    msg = style(msg, style_par)
+                else:
+                    msg = style(msg)
+
 
         # Take care of indent, if applicable
         if indent > 0:
@@ -454,7 +459,7 @@ new Vue({{
     @staticmethod
     def bold(s: str) -> str:
         # EXAMPLE:  to use this as an argument to write(),
-        #           pass a parameter such as style=HtmlLog.bold   , or   style=[HtmlLog.bold, HtmlLog.red]
+        #           pass a parameter such as  style=HtmlLog.bold   , or   style=[HtmlLog.bold, HtmlLog.red]
         return "<b>" + s + "</b>"
 
     @staticmethod
@@ -491,7 +496,9 @@ new Vue({{
 
     @staticmethod
     def color(s: str, color_value) -> str:
-        # Note that this function takes a 2nd argument
+        # Note that this function takes a 2nd argument, which requires use of style_par argument.
+        # EXAMPLES of usage:    style=HtmlLog.color, style_par='gray'
+        #                       style=HtmlLog.color, style_par='#DDD'
         return f"<span style='color:{color_value}'>" + s + "</span>"
 
     @staticmethod
