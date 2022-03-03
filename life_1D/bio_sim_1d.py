@@ -21,7 +21,11 @@ class BioSim1D:
                         # NumPy array of dimension: (n_species x n_cells).
                         # Each row represents a species
 
+
+    # TODO: the next two items should be common to 1D, 2D and 3D
     diffusion_rates = None  # NumPy array of diffusion rates for the various species
+    names = None            # List of the names of the various species
+
 
     sealed = True       # If True, no exchange with the outside; if False, immersed in a "bath"
 
@@ -32,6 +36,8 @@ class BioSim1D:
     time_step_threshold = 0.33333   # This is used to set an Upper Bound on the single time steps
                                     # in the diffusion process.
                                     # See explanation in file overly_large_single_timesteps.py
+
+    all_reactions = None             # Object of class "Reactions"      # TODO: add a setter method
 
 
 
@@ -52,7 +58,51 @@ class BioSim1D:
         cls.n_species = n_species
 
         cls.univ = np.zeros((n_species, n_bins), dtype=float)
+
         cls.diffusion_rates = None
+        cls.names = None
+
+
+
+    @classmethod
+    def set_diffusion_rates(cls, diff_list: list) -> None:      # TODO: this should be common to 1D, 2D and 3D
+        """
+        Set the diffusion rates of all the chemical species at once
+
+        :param diff_list:   List of diffusion rates, in index order
+        :return:            None
+        """
+        assert cls.n_species > 0, "Must first call initialize_universe()"
+        assert len(diff_list) == cls.n_species, \
+                "The number of items in the diffusion list must equal the registered number of species"
+        cls.diffusion_rates = np.array(diff_list, dtype=float)
+
+
+
+    @classmethod
+    def set_names(cls, name_list)  -> None:                   # TODO: this should be common to 1D, 2D and 3D
+        """
+        Set the names of all the chemical species
+
+        :param name_list:   List of the names of the chemical species, in index order
+        :return:            None
+        """
+        assert cls.n_species > 0, "Must first call initialize_universe()"
+        assert len(name_list) == cls.n_species, \
+                "The number of items in the list of name must equal the registered number of species"
+        cls.names = name_list
+
+
+    @classmethod
+    def get_name(cls, species_index: int) -> str:
+        """
+        Return the name of the species with the given index.
+        If no name was assigned, return an empty string.
+
+        :param species_index:
+        :return:
+        """
+        return cls.names.get(species_index, "")
 
 
 
@@ -84,8 +134,11 @@ class BioSim1D:
                 print("Diffusion rates not yet set!")
                 cls.describe_state(show_diffusion_rates=False)
             else  :
-                for species in range(cls.n_species):
-                    print(f"Species {species}. Diff rate: {cls.diffusion_rates[species]}. Conc: ", cls.univ[species])
+                for species_index in range(cls.n_species):
+                    name = cls.get_name(species_index)
+                    if name:
+                        name = f" ({name})"
+                    print(f"Species {species_index}{name}. Diff rate: {cls.diffusion_rates[species_index]}. Conc: ", cls.univ[species_index])
 
         else:
             if concise:
@@ -98,20 +151,12 @@ class BioSim1D:
 
 
 
-    @classmethod
-    def set_diffusion_rates(cls, diff_list: list) -> None:
-        """
-        Set the diffusion rates of all the chemical species at once
 
-        :param diff_list:   List of diffusion rates, in index order
-        :return:            None
-        """
-        assert cls.n_species > 0, "Must first call initialize_universe()"
-        assert len(diff_list) == cls.n_species, \
-                "The number of items in the diffusion list must equal the registered number of species"
-        cls.diffusion_rates = np.array(diff_list, dtype=float)
-
-
+    #########################################################################
+    #                                                                       #
+    #                     SET/MODIFY CONCENTRATIONS                         #
+    #                                                                       #
+    #########################################################################
 
     @classmethod
     def set_uniform_concentration(cls, species_index: int, conc: float) -> None:
@@ -284,7 +329,7 @@ class BioSim1D:
 
 
     @classmethod
-    def diffuse_step_single_species(cls, time_step, species_index=0) -> None:
+    def diffuse_step_single_species(cls, time_step: float, species_index=0) -> None:
         """
         Diffuse the specified single species, for the specified time step.
         We're assuming an isolated environment, with nothing diffusing thru the "walls"
@@ -333,6 +378,68 @@ class BioSim1D:
                                + effective_diff * (prev_conc - current_conc)
 
             prev_conc = current_conc
+
+
+
+    #########################################################################
+    #                                                                       #
+    #                               REACTIONS                               #
+    #                                                                       #
+    #########################################################################
+
+    @classmethod
+    def reaction_step(cls, time_step: float) -> None:
+        """
+
+        :param time_step:
+        :return:
+        """
+
+        number_reactions = cls.all_reactions.number_of_reactions()
+
+
+        for i in range(number_reactions):
+            print(f"Evaluating reaction number {i}")
+            reactants = cls.all_reactions.get_reactants(i)
+            products = cls.all_reactions.get_products(i)
+            fwd_rate = cls.all_reactions.get_forward_rate(i)
+            back_rate = cls.all_reactions.get_back_rate(i)
+
+            for bin_n in range(cls.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
+                #print(f"    processing the reaction in bin number {bin_n}")
+                delta_fwd = time_step * fwd_rate
+                for r in reactants:
+                    species_index, stoichiometry = r
+                    conc = cls.univ[species_index , bin_n]
+                    delta_fwd *= conc ** stoichiometry      # Raise to power
+
+                delta_back = time_step * back_rate
+                for p in products:
+                    species_index, stoichiometry = p
+                    conc = cls.univ[species_index , bin_n]
+                    delta_back *= conc ** stoichiometry     # Raise to power
+
+                print(f"    delta_fwd: {delta_fwd} | delta_back: {delta_back}")
+
+                # Adjust the concentrations based on the forward reaction;
+                #   the reactants decrease and the products increase
+                for r in reactants:
+                    species_index, stoichiometry = r
+                    cls.univ[species_index , bin_n] -= delta_fwd * stoichiometry
+
+                for p in products:
+                    species_index, stoichiometry = p
+                    cls.univ[species_index , bin_n] += delta_fwd * stoichiometry
+
+                # Adjust the concentrations based on the back reaction;
+                #   the reactants increase and the products decrease
+                for r in reactants:
+                    species_index, stoichiometry = r
+                    cls.univ[species_index , bin_n] += delta_back * stoichiometry
+
+                for p in products:
+                    species_index, stoichiometry = p
+                    cls.univ[species_index , bin_n] -= delta_back * stoichiometry
 
 
 
