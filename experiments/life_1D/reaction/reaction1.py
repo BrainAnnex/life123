@@ -24,7 +24,8 @@ bio.describe_state(show_diffusion_rates=True)
 
 rxn = Reactions()
 
-rxn.add_reaction(reactants=[(0, 1)], products=[(1, 1)], forward_rate=3., back_rate=2.)  # A -> B
+# Reaction A -> B , with 1st-order kinetics in both directions
+rxn.add_reaction(reactants=[(1,0,1)], products=[(1,1,1)], forward_rate=3., back_rate=2.)
 
 bio.all_reactions = rxn
 

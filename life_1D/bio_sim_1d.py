@@ -100,9 +100,13 @@ class BioSim1D:
         If no name was assigned, return an empty string.
 
         :param species_index:
-        :return:
+        :return:                The name of the species with the given index if present,
+                                    or an empty string if not
         """
-        return cls.names.get(species_index, "")
+        try:
+            return cls.names[species_index]
+        except Exception as ex:
+            return ""
 
 
 
@@ -398,6 +402,7 @@ class BioSim1D:
         number_reactions = cls.all_reactions.number_of_reactions()
 
 
+        # TODO: loop over the bins FIRST!
         for i in range(number_reactions):
             print(f"Evaluating reaction number {i}")
             reactants = cls.all_reactions.get_reactants(i)
@@ -409,36 +414,36 @@ class BioSim1D:
                 #print(f"    processing the reaction in bin number {bin_n}")
                 delta_fwd = time_step * fwd_rate
                 for r in reactants:
-                    species_index, stoichiometry = r
+                    stoichiometry, species_index, order = r
                     conc = cls.univ[species_index , bin_n]
-                    delta_fwd *= conc ** stoichiometry      # Raise to power
+                    delta_fwd *= conc ** order      # Raise to power
 
                 delta_back = time_step * back_rate
                 for p in products:
-                    species_index, stoichiometry = p
+                    stoichiometry, species_index, order = p
                     conc = cls.univ[species_index , bin_n]
-                    delta_back *= conc ** stoichiometry     # Raise to power
+                    delta_back *= conc ** order     # Raise to power
 
                 print(f"    delta_fwd: {delta_fwd} | delta_back: {delta_back}")
 
                 # Adjust the concentrations based on the forward reaction;
                 #   the reactants decrease and the products increase
                 for r in reactants:
-                    species_index, stoichiometry = r
+                    stoichiometry, species_index, order = r
                     cls.univ[species_index , bin_n] -= delta_fwd * stoichiometry
 
                 for p in products:
-                    species_index, stoichiometry = p
+                    stoichiometry, species_index, order = p
                     cls.univ[species_index , bin_n] += delta_fwd * stoichiometry
 
                 # Adjust the concentrations based on the back reaction;
                 #   the reactants increase and the products decrease
                 for r in reactants:
-                    species_index, stoichiometry = r
+                    stoichiometry, species_index, order = r
                     cls.univ[species_index , bin_n] += delta_back * stoichiometry
 
                 for p in products:
-                    species_index, stoichiometry = p
+                    stoichiometry, species_index, order = p
                     cls.univ[species_index , bin_n] -= delta_back * stoichiometry
 
 
