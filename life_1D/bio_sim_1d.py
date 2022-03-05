@@ -394,6 +394,8 @@ class BioSim1D:
     @classmethod
     def reaction_step(cls, time_step: float) -> None:
         """
+        For each bin, process all the reactions in it - based on the initial concentrations,
+        which are used as the basis for all the reactions.
 
         :param time_step:
         :return:
@@ -401,6 +403,83 @@ class BioSim1D:
 
         number_reactions = cls.all_reactions.number_of_reactions()
 
+        # For each bin
+        for bin_n in range(cls.n_bins):     # Bin number, ranging from 0 to max_bin_number, inclusive
+            #print(f"    processing the reaction in bin number {bin_n}")
+
+            delta_fwd_list = []             # It will have 1 entry per reaction
+            delta_back_list = []            # It will have 1 entry per reaction
+
+            # For each reaction, compute the forward and back rates
+            for i in range(number_reactions):
+                print(f"Evaluating the rates for reaction number {i}")
+
+                # TODO: turn into a more efficient single step, as as:
+                #(reactants, products, fwd_rate, back_rate) = cls.all_reactions.unpack_reaction(i)
+                reactants = cls.all_reactions.get_reactants(i)
+                products = cls.all_reactions.get_products(i)
+                fwd_rate = cls.all_reactions.get_forward_rate(i)
+                back_rate = cls.all_reactions.get_back_rate(i)
+
+                delta_fwd = time_step * fwd_rate    # TODO: save, to avoid re-computing at each bin
+                for r in reactants:
+                    stoichiometry, species_index, order = r
+                    conc = cls.univ[species_index , bin_n]
+                    delta_fwd *= conc ** order      # Raise to power
+
+                delta_back = time_step * back_rate   # TODO: save, to avoid re-computing at each bin
+                for p in products:
+                    stoichiometry, species_index, order = p
+                    conc = cls.univ[species_index , bin_n]
+                    delta_back *= conc ** order     # Raise to power
+
+                print(f"    delta_fwd: {delta_fwd} | delta_back: {delta_back}")
+                delta_fwd_list.append(delta_fwd)
+                delta_back_list.append(delta_back)
+
+
+            print(f"    delta_fwd_list: {delta_fwd_list} | delta_back_list: {delta_back_list}")
+
+            # For each reaction, adjust the concentrations of the reactants and products
+            for i in range(number_reactions):
+                print(f"Adjusting the species concentrations based on reaction number {i}")
+
+                # TODO: turn into a more efficient single step, as as:
+                #(reactants, products) = cls.all_reactions.unpack_terms(i)
+                reactants = cls.all_reactions.get_reactants(i)
+                products = cls.all_reactions.get_products(i)
+
+                # Adjust the concentrations based on the forward reaction:
+                #   the reactants decrease and the products increase
+                for r in reactants:
+                    stoichiometry, species_index, order = r
+                    cls.univ[species_index , bin_n] -= delta_fwd_list[i] * stoichiometry
+
+                for p in products:
+                    stoichiometry, species_index, order = p
+                    cls.univ[species_index , bin_n] += delta_fwd_list[i] * stoichiometry
+
+                # Adjust the concentrations based on the back reaction;
+                #   the reactants increase and the products decrease
+                for r in reactants:
+                    stoichiometry, species_index, order = r
+                    cls.univ[species_index , bin_n] += delta_back_list[i] * stoichiometry
+
+                for p in products:
+                    stoichiometry, species_index, order = p
+                    cls.univ[species_index , bin_n] -= delta_back_list[i] * stoichiometry
+
+
+
+    @classmethod
+    def reaction_step_old(cls, time_step: float) -> None:
+        """
+
+        :param time_step:
+        :return:
+        """
+
+        number_reactions = cls.all_reactions.number_of_reactions()
 
         # TODO: loop over the bins FIRST!
         for i in range(number_reactions):
