@@ -5,6 +5,7 @@ In the examples below, the time advance always remains constant,
 but the number of steps used to arrive there vary
 """
 
+from modules.chemicals.chemicals import Chemicals as chem
 from life_1D.bio_sim_1d import BioSim1D as bio
 
 
@@ -15,10 +16,8 @@ def set_initial_condition():
 
 
 
-
-bio.initialize_universe(n_bins=10, n_species=1)
-
-bio.set_diffusion_rates([0.1])
+chem_data = chem(diffusion_rates=[0.1])
+bio.initialize_universe(n_bins=10, chem_data=chem_data)
 
 set_initial_condition()
 

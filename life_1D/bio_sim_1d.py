@@ -3,7 +3,6 @@ import math
 from modules.html_log.html_log import HtmlLog as log
 
 
-
 class BioSim1D:
     """
     Note: for at least the time being, this class doesn't get instantiated
@@ -17,14 +16,11 @@ class BioSim1D:
 
     n_species = 1       # The number of (non-water) chemical species
 
+    chem_data = None    # Object with info on the individual chemicals, incl. their names
+
     univ = None         # "Universe"/Container/System
                         # NumPy array of dimension: (n_species x n_cells).
                         # Each row represents a species
-
-
-    # TODO: the next two items should be common to 1D, 2D and 3D
-    diffusion_rates = None  # NumPy array of diffusion rates for the various species
-    names = None            # List of the names of the various species
 
 
     sealed = True       # If True, no exchange with the outside; if False, immersed in a "bath"
@@ -42,71 +38,25 @@ class BioSim1D:
 
 
     @classmethod
-    def initialize_universe(cls, n_bins: int, n_species: int) -> None:
+    def initialize_universe(cls, n_bins: int, chem_data) -> None:
         """
-        Initialize the entire system, EXCEPT the diffusion rates.  TODO: offer the option to do here
-        All concentrations set to zero.
+        Initialize all concentrations to zero.
 
         :param n_bins:      The number of compartments (bins) to use in the simulation
-        :param n_species:   The number of (non-water) chemical species.  It must be at least 1
+        :param chem_data:
         :return:            None
         """
         assert n_bins >= 1, "The number of bins must be at least 1"
-        assert n_species >= 1, "The number of (non-water) chemical species must be at least 1"
+        assert chem_data.n_species >= 1, "The number chemical species set in the `chem_data` object must be at least 1"
 
         cls.n_bins = n_bins
-        cls.n_species = n_species
+        cls.n_species = chem_data.n_species
 
-        cls.univ = np.zeros((n_species, n_bins), dtype=float)
+        cls.univ = np.zeros((cls.n_species, n_bins), dtype=float)
 
         cls.diffusion_rates = None
         cls.names = None
-
-
-
-    @classmethod
-    def set_diffusion_rates(cls, diff_list: list) -> None:      # TODO: this should be common to 1D, 2D and 3D
-        """
-        Set the diffusion rates of all the chemical species at once
-
-        :param diff_list:   List of diffusion rates, in index order
-        :return:            None
-        """
-        assert cls.n_species > 0, "Must first call initialize_universe()"
-        assert len(diff_list) == cls.n_species, \
-                "The number of items in the diffusion list must equal the registered number of species"
-        cls.diffusion_rates = np.array(diff_list, dtype=float)
-
-
-
-    @classmethod
-    def set_names(cls, name_list)  -> None:                   # TODO: this should be common to 1D, 2D and 3D
-        """
-        Set the names of all the chemical species
-
-        :param name_list:   List of the names of the chemical species, in index order
-        :return:            None
-        """
-        assert cls.n_species > 0, "Must first call initialize_universe()"
-        assert len(name_list) == cls.n_species, \
-                "The number of items in the list of name must equal the registered number of species"
-        cls.names = name_list
-
-
-    @classmethod
-    def get_name(cls, species_index: int) -> str:
-        """
-        Return the name of the species with the given index.
-        If no name was assigned, return an empty string.
-
-        :param species_index:
-        :return:                The name of the species with the given index if present,
-                                    or an empty string if not
-        """
-        try:
-            return cls.names[species_index]
-        except Exception as ex:
-            return ""
+        cls.chem_data = chem_data
 
 
 
@@ -134,15 +84,16 @@ class BioSim1D:
         :return:
         """
         if show_diffusion_rates:
-            if cls.diffusion_rates is None:
+            if cls.chem_data.diffusion_rates is None:
                 print("Diffusion rates not yet set!")
                 cls.describe_state(show_diffusion_rates=False)
             else  :
                 for species_index in range(cls.n_species):
-                    name = cls.get_name(species_index)
+                    name = cls.chem_data.get_name(species_index)
                     if name:
                         name = f" ({name})"
-                    print(f"Species {species_index}{name}. Diff rate: {cls.diffusion_rates[species_index]}. Conc: ", cls.univ[species_index])
+
+                    print(f"Species {species_index}{name}. Diff rate: {cls.chem_data.diffusion_rates[species_index]}. Conc: ", cls.univ[species_index])
 
         else:
             if concise:
@@ -236,6 +187,7 @@ class BioSim1D:
 
         # Normal scenario, not leading to negative values for the final concentration
         cls.univ[species_index, bin] += delta_conc
+
 
 
 
@@ -345,13 +297,13 @@ class BioSim1D:
         """
         assert cls.univ is not None, "Must first initialize the system"
         assert cls.n_bins > 0, "Must first set the number of bins"
-        assert cls.diffusion_rates is not None, "Must first set the diffusion rates"
+        assert cls.chem_data.diffusion_rates is not None, "Must first set the diffusion rates"
         assert cls.sealed == True, "For now, there's no provision for exchange with the outside"
 
         if cls.n_bins == 1:
             return                  # There's nothing to do in the case of just 1 cell!
 
-        diff = cls.diffusion_rates[species_index]   # The diffusion rate of the specified single species
+        diff = cls.chem_data.diffusion_rates[species_index]   # The diffusion rate of the specified single species
 
         assert not cls.is_excessive(time_step, diff), f"Excessive large time_fraction. Should be < {cls.max_time_step(diff)}"
 
@@ -397,6 +349,8 @@ class BioSim1D:
         For each bin, process all the reactions in it - based on the initial concentrations,
         which are used as the basis for all the reactions.
 
+        TODO: parallelize the computation over the separate bins
+
         :param time_step:
         :return:
         """
@@ -407,10 +361,9 @@ class BioSim1D:
         for bin_n in range(cls.n_bins):     # Bin number, ranging from 0 to max_bin_number, inclusive
             #print(f"    processing the reaction in bin number {bin_n}")
 
+            # For each reaction, compute the forward and back rates.  TODO: turn into a separate method
             delta_fwd_list = []             # It will have 1 entry per reaction
             delta_back_list = []            # It will have 1 entry per reaction
-
-            # For each reaction, compute the forward and back rates
             for i in range(number_reactions):
                 print(f"Evaluating the rates for reaction number {i}")
 
@@ -419,9 +372,9 @@ class BioSim1D:
                 reactants = cls.all_reactions.get_reactants(i)
                 products = cls.all_reactions.get_products(i)
                 fwd_rate = cls.all_reactions.get_forward_rate(i)
-                back_rate = cls.all_reactions.get_back_rate(i)
+                back_rate = cls.all_reactions.get_reverse_rate(i)
 
-                delta_fwd = time_step * fwd_rate    # TODO: save, to avoid re-computing at each bin
+                delta_fwd = time_step * fwd_rate     # TODO: save, to avoid re-computing at each bin
                 for r in reactants:
                     stoichiometry, species_index, order = r
                     conc = cls.univ[species_index , bin_n]
@@ -474,20 +427,20 @@ class BioSim1D:
     @classmethod
     def reaction_step_old(cls, time_step: float) -> None:
         """
-
+        NOTE: THIS WILL NOT WORK CORRECTLY FOR MULTIPLE REACTIONS, but should be correctable if adding an array of DELTA_conc
         :param time_step:
         :return:
         """
 
         number_reactions = cls.all_reactions.number_of_reactions()
 
-        # TODO: loop over the bins FIRST!
+        # TODO: loop over the bins FIRST!  -> Done in new reaction_step()
         for i in range(number_reactions):
             print(f"Evaluating reaction number {i}")
             reactants = cls.all_reactions.get_reactants(i)
             products = cls.all_reactions.get_products(i)
             fwd_rate = cls.all_reactions.get_forward_rate(i)
-            back_rate = cls.all_reactions.get_back_rate(i)
+            back_rate = cls.all_reactions.get_reverse_rate(i)
 
             for bin_n in range(cls.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
                 #print(f"    processing the reaction in bin number {bin_n}")
