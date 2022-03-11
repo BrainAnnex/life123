@@ -35,6 +35,8 @@ class BioSim1D:
 
     all_reactions = None             # Object of class "Reactions"      # TODO: add a setter method
 
+    verbose = False
+
 
 
     @classmethod
@@ -344,83 +346,112 @@ class BioSim1D:
     #########################################################################
 
     @classmethod
-    def reaction_step(cls, time_step: float) -> None:
+    def reaction_step(cls, delta_time: float) -> None:
         """
         For each bin, process all the reactions in it - based on the initial concentrations,
         which are used as the basis for all the reactions.
 
         TODO: parallelize the computation over the separate bins
 
-        :param time_step:
+        :param delta_time:
         :return:
         """
-
         number_reactions = cls.all_reactions.number_of_reactions()
 
         # For each bin
         for bin_n in range(cls.n_bins):     # Bin number, ranging from 0 to max_bin_number, inclusive
-            #print(f"    processing the reaction in bin number {bin_n}")
+            if cls.verbose:
+                print(f"Processing the reaction in bin number {bin_n}")
 
-            # For each reaction, compute the forward and back rates.  TODO: turn into a separate method
-            delta_fwd_list = []             # It will have 1 entry per reaction
-            delta_back_list = []            # It will have 1 entry per reaction
-            for i in range(number_reactions):
-                print(f"Evaluating the rates for reaction number {i}")
-
-                # TODO: turn into a more efficient single step, as as:
-                #(reactants, products, fwd_rate, back_rate) = cls.all_reactions.unpack_reaction(i)
-                reactants = cls.all_reactions.get_reactants(i)
-                products = cls.all_reactions.get_products(i)
-                fwd_rate = cls.all_reactions.get_forward_rate(i)
-                back_rate = cls.all_reactions.get_reverse_rate(i)
-
-                delta_fwd = time_step * fwd_rate     # TODO: save, to avoid re-computing at each bin
-                for r in reactants:
-                    stoichiometry, species_index, order = r
-                    conc = cls.univ[species_index , bin_n]
-                    delta_fwd *= conc ** order      # Raise to power
-
-                delta_back = time_step * back_rate   # TODO: save, to avoid re-computing at each bin
-                for p in products:
-                    stoichiometry, species_index, order = p
-                    conc = cls.univ[species_index , bin_n]
-                    delta_back *= conc ** order     # Raise to power
-
-                print(f"    delta_fwd: {delta_fwd} | delta_back: {delta_back}")
-                delta_fwd_list.append(delta_fwd)
-                delta_back_list.append(delta_back)
+            cls.single_bin_reaction_step(bin_n, delta_time, number_reactions)
 
 
+
+    @classmethod
+    def single_bin_reaction_step(cls, bin_n: int, delta_time: float, number_reactions: int) -> None:
+        """
+
+        :param bin_n:
+        :param delta_time:
+        :param number_reactions:
+        :return:                    None
+        """
+
+        # Compute the forward and back rates of all the reactions
+        delta_fwd_list, delta_back_list = cls.compute_rates(bin_n, delta_time, number_reactions)
+        if cls.verbose:
             print(f"    delta_fwd_list: {delta_fwd_list} | delta_back_list: {delta_back_list}")
 
-            # For each reaction, adjust the concentrations of the reactants and products
-            for i in range(number_reactions):
-                print(f"Adjusting the species concentrations based on reaction number {i}")
 
-                # TODO: turn into a more efficient single step, as as:
-                #(reactants, products) = cls.all_reactions.unpack_terms(i)
-                reactants = cls.all_reactions.get_reactants(i)
-                products = cls.all_reactions.get_products(i)
+        # For each reaction, adjust the concentrations of the reactants and products,
+        # based on the forward and back rates of the reaction
+        for i in range(number_reactions):
+            if cls.verbose:
+                print(f"    adjusting the species concentrations based on reaction number {i}")
 
-                # Adjust the concentrations based on the forward reaction:
-                #   the reactants decrease and the products increase
-                for r in reactants:
-                    stoichiometry, species_index, order = r
-                    cls.univ[species_index , bin_n] -= delta_fwd_list[i] * stoichiometry
+            # TODO: turn into a more efficient single step, as as:
+            #(reactants, products) = cls.all_reactions.unpack_terms(i)
+            reactants = cls.all_reactions.get_reactants(i)
+            products = cls.all_reactions.get_products(i)
 
-                for p in products:
-                    stoichiometry, species_index, order = p
-                    cls.univ[species_index , bin_n] += delta_fwd_list[i] * stoichiometry
+            # Adjust the concentrations
 
-                # Adjust the concentrations based on the back reaction;
-                #   the reactants increase and the products decrease
-                for r in reactants:
-                    stoichiometry, species_index, order = r
-                    cls.univ[species_index , bin_n] += delta_back_list[i] * stoichiometry
+            #   The reactants decrease based on the forward reaction,
+            #             and increase based on the reverse reaction
+            for r in reactants:
+                stoichiometry, species_index, order = r
+                cls.univ[species_index , bin_n] += stoichiometry * (- delta_fwd_list[i] + delta_back_list[i])
 
-                for p in products:
-                    stoichiometry, species_index, order = p
-                    cls.univ[species_index , bin_n] -= delta_back_list[i] * stoichiometry
+            #   The products increase based on the forward reaction,
+            #             and decrease based on the reverse reaction
+            for p in products:
+                stoichiometry, species_index, order = p
+                cls.univ[species_index , bin_n] += stoichiometry * (delta_fwd_list[i] - delta_back_list[i])
+
+
+
+    @classmethod
+    def compute_rates(cls, bin_n: int, delta_time: float, number_reactions: int) -> (list, list):
+        """
+        For each of the reactions, compute its forward and back rates
+
+        :param bin_n:
+        :param delta_time:
+        :param number_reactions:
+        :return:                A pair of lists (List of forward rates, List of reverse rates);
+                                    each list has 1 entry per reaction, in the index order of the reactions
+        """
+        delta_fwd_list = []             # It will have 1 entry per reaction
+        delta_back_list = []            # It will have 1 entry per reaction
+        for i in range(number_reactions):
+            if cls.verbose:
+                print(f"    evaluating the rates for reaction number {i}")
+
+            # TODO: turn into a more efficient single step, as as:
+            #(reactants, products, fwd_rate_coeff, back_rate_coeff) = cls.all_reactions.unpack_reaction(i)
+            reactants = cls.all_reactions.get_reactants(i)
+            products = cls.all_reactions.get_products(i)
+            fwd_rate_coeff = cls.all_reactions.get_forward_rate(i)
+            back_rate_coeff = cls.all_reactions.get_reverse_rate(i)
+
+            delta_fwd = delta_time * fwd_rate_coeff         # TODO: save, to avoid re-computing at each bin
+            for r in reactants:
+                stoichiometry, species_index, order = r
+                conc = cls.univ[species_index , bin_n]      # TODO: make more general for 2D and 3D
+                delta_fwd *= conc ** order      # Raise to power
+
+            delta_back = delta_time * back_rate_coeff       # TODO: save, to avoid re-computing at each bin
+            for p in products:
+                stoichiometry, species_index, order = p
+                conc = cls.univ[species_index , bin_n]      # TODO: make more general for 2D and 3D
+                delta_back *= conc ** order     # Raise to power
+
+            #print(f"    delta_fwd: {delta_fwd} | delta_back: {delta_back}")
+            delta_fwd_list.append(delta_fwd)
+            delta_back_list.append(delta_back)
+
+        return( (delta_fwd_list, delta_back_list) )
+
 
 
 
