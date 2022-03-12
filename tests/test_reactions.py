@@ -78,6 +78,7 @@ def test_add_reaction(rxn):
 
 
 def test_reaction_step(rxn):
+    # Based on experiment "reaction1"
     chem_data = chem(diffusion_rates=[0.1, 0.2], names=["A", "B"])
     bio.initialize_universe(n_bins=3, chem_data=chem_data)
 
@@ -107,6 +108,7 @@ def test_reaction_step(rxn):
 
 
 def test_reaction(rxn):
+    # Based on experiment "reaction2"
     chem_data = chem(diffusion_rates=[0.1, 0.2], names=["A", "B"])
 
     rxn = Reactions(chem_data)
@@ -115,7 +117,7 @@ def test_reaction(rxn):
     rxn.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
     assert rxn.number_of_reactions() == 1
 
-    bio.initialize_universe(n_bins=3, chem_data=chem_data, reactions=rxn)
+    bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
@@ -123,3 +125,4 @@ def test_reaction(rxn):
     # Large number of steps
     bio.react(time_step=0.1, n_steps=15)
     assert np.allclose(bio.univ, [[14.54545455] , [36.36363636]])
+    assert bio.n_bins == 1

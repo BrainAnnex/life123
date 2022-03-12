@@ -79,6 +79,11 @@ class BioSim1D:
         return cls.univ[index]
 
 
+    @classmethod
+    def bin_concentration(cls, bin_address, species_index):
+        return cls.univ[species_index, bin_address]
+
+
 
     @classmethod
     def describe_state(cls, show_diffusion_rates=False, concise=False) -> None:
@@ -423,7 +428,7 @@ class BioSim1D:
         :return:                    None
         """
 
-        # Compute the forward and back rates of all the reactions
+        # Compute the forward and back conversions of all the reactions
         delta_fwd_list, delta_back_list = cls.compute_rates(bin_n, delta_time, number_reactions)
         if cls.verbose:
             print(f"    delta_fwd_list: {delta_fwd_list} | delta_back_list: {delta_back_list}")
@@ -447,25 +452,31 @@ class BioSim1D:
             for r in reactants:
                 stoichiometry, species_index, order = r
                 cls.univ[species_index , bin_n] += stoichiometry * (- delta_fwd_list[i] + delta_back_list[i])
+                if cls.univ[species_index , bin_n] < 0:
+                    raise Exception(f"The given time interval ({delta_time}) leads to negative concentrations in reactions: make it smaller!")
 
             #   The products increase based on the forward reaction,
             #             and decrease based on the reverse reaction
             for p in products:
                 stoichiometry, species_index, order = p
                 cls.univ[species_index , bin_n] += stoichiometry * (delta_fwd_list[i] - delta_back_list[i])
+                if cls.univ[species_index , bin_n] < 0:
+                    raise Exception(f"The given time interval ({delta_time}) leads to negative concentrations in reactions: make it smaller!")
+                    # TODO: there's no way to recover from this!  Need to switch to a system where the original concentrations are saved!
 
 
 
     @classmethod
     def compute_rates(cls, bin_n: int, delta_time: float, number_reactions: int) -> (list, list):
         """
-        For each of the reactions, compute its forward and back rates
+        For each of the reactions, compute its forward and back rates, multiplied by delta_time
 
         :param bin_n:
         :param delta_time:
         :param number_reactions:
-        :return:                A pair of lists (List of forward rates, List of reverse rates);
+        :return:                A pair of lists (List of forward conversions, List of reverse conversions);
                                     each list has 1 entry per reaction, in the index order of the reactions
+                                TODO: simply return the list of their differences!
         """
         delta_fwd_list = []             # It will have 1 entry per reaction
         delta_back_list = []            # It will have 1 entry per reaction

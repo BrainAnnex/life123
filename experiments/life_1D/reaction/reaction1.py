@@ -1,6 +1,7 @@
 """
 A simple A <-> B reaction between 2 species with initial uniform concentrations,
-taken to equilibrium.  Diffusion (non-applicable) disregarded
+with 1st-order kinetics in both directions, taken to equilibrium.
+Diffusion (non-applicable) not done
 """
 
 from modules.chemicals.chemicals import Chemicals as chem
@@ -12,7 +13,7 @@ from modules.html_log.html_log import HtmlLog as log
 
 
 # Initialize the system
-chem_data = chem(diffusion_rates=[0.1, 0.2], names=["A", "B"])
+chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])  # NOTE: diffusion_rates not used for now
 bio.initialize_universe(n_bins=3, chem_data=chem_data)
 
 bio.set_uniform_concentration(species_index=0, conc=10.)
@@ -54,10 +55,15 @@ for i in range(10):
 
 bio.describe_state()
 
-# As expected by the 3/2 ratio of forward/reverse rates (and the 1st order reactions),
+# Consistent with the 3/2 ratio of forward/reverse rates (and the 1st order reactions),
 # the systems settles in the following equilibrium:
 """
 3 bins and 2 species:
  [[23.99316406 23.99316406 23.99316406]
  [36.00683594 36.00683594 36.00683594]]
 """
+
+A_eq = bio.bin_concentration(0, 0)
+B_eq = bio.bin_concentration(0, 1)
+print(f"Ratio of equilibrium concentrations: {B_eq / A_eq}")
+print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")

@@ -1,5 +1,5 @@
 """
-A one-bin A <-> 3B reaction, with 1st-order kinetics in both directions,
+A one-bin 2A <-> 3B reaction, with 1st-order kinetics in both directions,
 taken to equilibrium
 """
 
@@ -17,7 +17,7 @@ chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])  # NOTE: diffusio
 rxn = Reactions(chem_data)
 
 # Reaction A -> 3B , with 1st-order kinetics in both directions
-rxn.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
+rxn.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
 
 bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
 
@@ -38,13 +38,13 @@ bio.reaction_step(0.1)
 bio.describe_state()
 """
 1 bins and 2 species:
- [[15.]
+ [[20.]
  [35.]]
 """
 
 
 # Numerous more steps
-bio.react(time_step=0.1, n_steps=10)
+bio.react(time_step=0.1, n_steps=100)
 
 bio.describe_state()
 
@@ -52,8 +52,8 @@ bio.describe_state()
 # the systems settles in the following equilibrium:
 """
 1 bins and 2 species:
- [[14.54545455]
- [36.36363636]]
+ [[16.25]
+ [40.625]]
 """
 
 A_eq = bio.bin_concentration(0, 0)
