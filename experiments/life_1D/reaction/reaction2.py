@@ -12,28 +12,24 @@ from modules.html_log.html_log import HtmlLog as log
 
 # Initialize the system
 chem_data = chem(diffusion_rates=[0.1, 0.2], names=["A", "B"])
-bio.initialize_universe(n_bins=1, chem_data=chem_data)
-
-bio.set_uniform_concentration(species_index=0, conc=10.)
-bio.set_uniform_concentration(species_index=1, conc=50.)
-
-bio.describe_state(show_diffusion_rates=True)
-
 
 rxn = Reactions(chem_data)
 
 # Reaction A -> 3B , with 1st-order kinetics in both directions
 rxn.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
 
-bio.all_reactions = rxn
+bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
 
+bio.set_uniform_concentration(species_index=0, conc=10.)
+bio.set_uniform_concentration(species_index=1, conc=50.)
 
-print("Number of reactions: ", rxn.number_of_reactions())
-
-for i in range(rxn.number_of_reactions()):
-    print(f"{i}: {rxn.get_reactants(i)} <-> {rxn.get_products(i)}   ; Fwd: {rxn.get_forward_rate(i)} / Back: {rxn.get_reverse_rate(i)}")
+bio.describe_state(show_diffusion_rates=True)
 
 rxn.describe_reactions()
+
+# Low-level view of the reactions data
+for i in range(rxn.number_of_reactions()):
+    print(f"{i}: {rxn.get_reactants(i)} <-> {rxn.get_products(i)}   ; Fwd: {rxn.get_forward_rate(i)} / Back: {rxn.get_reverse_rate(i)}")
 
 
 # First step
@@ -47,8 +43,7 @@ bio.describe_state()
 
 
 # Numerous more steps
-for i in range(20):
-    bio.reaction_step(0.1)
+bio.react(time_step=0.1, n_steps=10)
 
 bio.describe_state()
 

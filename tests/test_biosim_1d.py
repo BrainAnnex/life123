@@ -1,5 +1,5 @@
-import numpy as np
 import pytest
+import numpy as np
 from life_1D.bio_sim_1d import BioSim1D as bio
 from modules.reactions.reactions import Reactions
 from modules.chemicals.chemicals import Chemicals as chem

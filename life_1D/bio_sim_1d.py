@@ -40,12 +40,14 @@ class BioSim1D:
 
 
     @classmethod
-    def initialize_universe(cls, n_bins: int, chem_data) -> None:
+    def initialize_universe(cls, n_bins: int, chem_data, reactions=None) -> None:
         """
         Initialize all concentrations to zero.
 
         :param n_bins:      The number of compartments (bins) to use in the simulation
         :param chem_data:
+        :param reactions:   (OPTIONAL) Object of class "Reactions".  It may also be set later
+
         :return:            None
         """
         assert n_bins >= 1, "The number of bins must be at least 1"
@@ -59,6 +61,9 @@ class BioSim1D:
         cls.diffusion_rates = None
         cls.names = None
         cls.chem_data = chem_data
+
+        if reactions:
+            cls.all_reactions = reactions
 
 
 
@@ -232,7 +237,7 @@ class BioSim1D:
     @classmethod
     def diffuse(cls, time_duration=None, time_step=None, n_steps=None, verbose=False) -> dict:
         """
-        Uniform-step diffusion, until reach, or just exceeding, the desired time duration.
+        Uniform-step diffusion, until reaching, or just exceeding, the desired time duration.
 
         :param time_duration:
         :param time_step:
@@ -240,6 +245,7 @@ class BioSim1D:
         :param verbose:
         :return:                A dictionary with data about the status of the operation
         """
+        # TODO: factor out this part, in common to diffuse() and react()
         assert (not time_duration or not time_step or not n_steps), \
                         "Cannot specify all 3 arguments: time_duration, time_step, n_steps"
 
@@ -344,6 +350,46 @@ class BioSim1D:
     #                               REACTIONS                               #
     #                                                                       #
     #########################################################################
+
+    @classmethod
+    def set_reactions(cls, reactions) -> None:
+        """
+        Register the given set of reactions.
+        Anything previously registered, will be over-written.
+
+        :param reactions:   Object of class "Reactions"
+        :return:
+        """
+        cls.all_reactions = reactions
+
+
+
+    @classmethod
+    def react(cls, time_duration=None, time_step=None, n_steps=None) -> None:
+        """
+
+        :param time_duration:
+        :param time_step:
+        :param n_steps:
+        :return:                None
+        """
+        # TODO: factor out this part, in common to diffuse() and react()
+        assert (not time_duration or not time_step or not n_steps), \
+            "Cannot specify all 3 arguments: time_duration, time_step, n_steps"
+
+        assert (time_duration and time_step) or (time_duration and n_steps) or (time_step and n_steps), \
+            "Must provide exactly 2 arguments from:  time_duration, time_step, n_steps"
+
+        if not time_step:
+            time_step = time_duration / n_steps
+
+        if not n_steps:
+            n_steps = math.ceil(time_duration / time_step)
+
+        for i in range(n_steps):
+            cls.reaction_step(time_step)
+
+
 
     @classmethod
     def reaction_step(cls, delta_time: float) -> None:

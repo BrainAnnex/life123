@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
 from life_1D.bio_sim_1d import BioSim1D as bio
@@ -73,3 +74,52 @@ def test_add_reaction(rxn):
     assert rxn_list[1] == '1: 2 B <-> 5 C  (Rf = 9.0 / Rb = 7.0)'
     assert rxn_list[2] == '2: 2 D <-> C  (Rf = 11.0 / Rb = 13.0)'
     assert rxn_list[3] == '3: A + 2 B <-> 3 C + D  (Rf = 5.0 / Rb = 1.0)'
+
+
+
+def test_reaction_step(rxn):
+    chem_data = chem(diffusion_rates=[0.1, 0.2], names=["A", "B"])
+    bio.initialize_universe(n_bins=3, chem_data=chem_data)
+
+    bio.set_uniform_concentration(species_index=0, conc=10.)
+    bio.set_uniform_concentration(species_index=1, conc=50.)
+
+    rxn = Reactions(chem_data)
+
+    # Reaction A -> B , with 1st-order kinetics in both directions
+    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    bio.set_reactions(rxn)
+
+    assert rxn.number_of_reactions() == 1
+
+    # First step
+    bio.reaction_step(0.1)
+    assert np.allclose(bio.univ, [[ 17., 17., 17.] , [43., 43., 43.]])
+
+    # Numerous more steps
+    for i in range(10):
+        bio.reaction_step(0.1)
+
+    assert np.allclose(bio.univ,
+                       [[ 23.99316406, 23.99316406, 23.99316406] ,
+                        [ 36.00683594, 36.00683594, 36.00683594]])
+
+
+
+def test_reaction(rxn):
+    chem_data = chem(diffusion_rates=[0.1, 0.2], names=["A", "B"])
+
+    rxn = Reactions(chem_data)
+
+    # Reaction A -> 3B , with 1st-order kinetics in both directions
+    rxn.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
+    assert rxn.number_of_reactions() == 1
+
+    bio.initialize_universe(n_bins=3, chem_data=chem_data, reactions=rxn)
+
+    bio.set_uniform_concentration(species_index=0, conc=10.)
+    bio.set_uniform_concentration(species_index=1, conc=50.)
+
+    # Large number of steps
+    bio.react(time_step=0.1, n_steps=15)
+    assert np.allclose(bio.univ, [[14.54545455] , [36.36363636]])

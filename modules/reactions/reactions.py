@@ -92,6 +92,7 @@ class Reactions:
         :param concise:
         :return:
         """
+        print("Number of reactions: ", self.number_of_reactions())
         out = []
         for i, rxn in enumerate(self.reaction_list):
             left = self.standard_form(rxn["reactants"])
