@@ -84,6 +84,16 @@ class Reactions:
 
 
 
+    def clear_reactions(self) -> None:
+        """
+        Get rid of all reactions; start again with "an empty slate" (but still with reference
+        to the same "Chemicals" object)
+        :return:
+        """
+        self.reaction_list = []
+
+
+
     def describe_reactions(self, concise=False) -> list:
         """
         Print out and return a listing with a friendly form of all the reactions

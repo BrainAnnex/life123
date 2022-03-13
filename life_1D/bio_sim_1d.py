@@ -143,6 +143,21 @@ class BioSim1D:
         cls.univ[species_index] = np.full(cls.n_bins, conc, dtype=float)
 
 
+    @classmethod
+    def set_all_uniform_concentrations(cls, conc_list: [float]) -> None:
+        """
+        Set the concentrations of all species at once, uniformly across all bins
+        :param conc_list:
+        :return:
+        """
+        if cls.chem_data.n_species:
+            assert len(conc_list) == cls.chem_data.n_species, \
+                f"The argument to 'set_all_uniform_concentrations()' must be a list of size {cls.chem_data.n_species}"
+
+        for i, conc in enumerate(conc_list):
+            cls.set_uniform_concentration(species_index=i, conc=conc)
+
+
 
     @classmethod
     def set_bin_conc(cls, bin: int, species_index: int, conc: float) -> None:

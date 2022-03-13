@@ -16,7 +16,7 @@ chem_data = chem(diffusion_rates=[0.1, 0.1, 0.1], names=["A", "B", "C"])    # NO
 
 rxn = Reactions(chem_data)
 
-# Reaction A -> 3B , with 1st-order kinetics in both directions
+# Reaction A + B <-> C , with 1st-order kinetics for each species
 rxn.add_reaction(reactants=[("A") , ("B")], products=[("C")],
                  forward_rate=5., reverse_rate=2.)
 
@@ -35,7 +35,7 @@ for i in range(rxn.number_of_reactions()):
     print(f"{i}: {rxn.get_reactants(i)} <-> {rxn.get_products(i)}   ; Fwd: {rxn.get_forward_rate(i)} / Back: {rxn.get_reverse_rate(i)}")
 
 
-bio.verbose = True
+#bio.verbose = True
 
 # First step
 bio.reaction_step(0.002)
@@ -56,10 +56,12 @@ bio.describe_state()
 # Consistent with the 5/2 ratio of forward/reverse rates (and the 1st order reactions),
 # the systems settles in the following equilibrium:
 """
-1 bins and 2 species:
- [[16.25]
- [40.625]]
+1 bins and 3 species:
+ [[ 0.29487741]
+ [40.29487741]
+ [29.70512259]]
 """
+# Note: "A" is largely the limiting reagent
 
 A_eq = bio.bin_concentration(0, 0)
 B_eq = bio.bin_concentration(0, 1)

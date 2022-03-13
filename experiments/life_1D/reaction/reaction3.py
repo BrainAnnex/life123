@@ -16,7 +16,7 @@ chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])  # NOTE: diffusio
 
 rxn = Reactions(chem_data)
 
-# Reaction A -> 3B , with 1st-order kinetics in both directions
+# Reaction 2A <-> 3B , with 1st-order kinetics in both directions
 rxn.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
 
 bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
