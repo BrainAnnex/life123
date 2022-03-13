@@ -1,4 +1,4 @@
-"""     TODO: verify
+"""
 A one-bin 2A <-> B reaction, comparing 1st-order and 2nd-order kinetics in forward direction;
 reverse direction 1-st order
 """
@@ -96,3 +96,8 @@ bio.describe_state()
  [[1.51554944]
  [5.74222528]]
 """
+
+A_eq = bio.bin_concentration(0, 0)
+B_eq = bio.bin_concentration(0, 1)
+print(f"Ratio of equilibrium concentrations ((B_eq) / (A_eq **2)) : {(B_eq) / (A_eq **2)}")
+print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
