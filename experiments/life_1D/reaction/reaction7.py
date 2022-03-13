@@ -65,7 +65,7 @@ print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_rever
 print("\nSTARTING OVER, this time with 2nd-order kinetics in the forward reaction")
 rxn.clear_reactions()
 
-# Reaction  2A <-> B , now with 2nd-order kinetics in the forward directions
+# Reaction  2A <-> B , now with 2nd-order kinetics in the forward direction
 rxn.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
 
 bio.set_all_uniform_concentrations( [3., 5.] )

@@ -34,12 +34,50 @@ for i in range(rxn.number_of_reactions()):
 
 
 # First step
-bio.reaction_step(0.02)
+bio.react(time_step=0.00002, n_steps=1000)
 bio.describe_state()
 """
-1 bins and 2 species:
- [[2.8]
- [5.1]]
+1 bins and 5 species:
+ [[1.54 ]
+ [3.54 ]
+ [2.404]
+ [0.344]
+ [0.156]]
+ 
+vs.
+ [[1.819395  ]
+ [3.819395  ]
+ [2.10707348]
+ [0.32646848]
+ [0.17353152]]
+ 
+vs.
+ [[1.90738687]
+ [3.90738687]
+ [2.01639306]
+ [0.32377993]
+ [0.17622007]]
+ 
+vs.
+ [[1.96490304]
+ [3.96490304]
+ [1.95778584]
+ [0.32268888]
+ [0.17731112]]
+ 
+vs.
+ [[1.97663547]
+ [3.97663547]
+ [1.94589685]
+ [0.32253232]
+ [0.17746768]]
+ 
+vs.
+ [[1.97765931]
+ [3.97765931]
+ [1.94486042]
+ [0.32251973]
+ [0.17748027]]
 """
 
 
@@ -51,9 +89,12 @@ bio.describe_state()
 # Consistent with the 5/2 ratio of forward/reverse rates (and the 1st order reactions),
 # the systems settles in the following equilibrium:
 """
-1 bins and 2 species:
- [[2.16928427]
- [5.41535786]]
+1 bins and 5 species:
+ [[0.50508029]
+ [2.50508029]
+ [3.16316668]
+ [0.06824696]
+ [0.43175304]]
 """
 
 A_eq = bio.bin_concentration(0, 0)

@@ -234,3 +234,29 @@ def test_reaction_6(rxn):
                                   [7.39430896],
                                   [3.79573172]])
     assert bio.n_bins == 1
+
+
+def test_reaction_7(rxn):
+    # Based on experiment "reaction7"
+    chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
+
+    rxn = Reactions(chem_data)
+
+    # Reaction  2A <-> B , with 2nd-order kinetics in forward reaction, and 1st-order in reverse
+    rxn.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
+    assert rxn.number_of_reactions() == 1
+
+    bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
+
+    bio.set_all_uniform_concentrations( [3., 5.] )
+
+    # First step
+    bio.reaction_step(0.02)
+    assert np.allclose(bio.univ, [[1.6],
+                                  [5.7]])
+
+    # Numerous more steps
+    bio.react(time_step=0.02, n_steps=20)
+    assert np.allclose(bio.univ, [[1.51554944],
+                                  [5.74222528]])
+    assert bio.n_bins == 1
