@@ -133,3 +133,4 @@ dmypy.json
 # Project-specific
 modules/html_log/examples/logs/
 experiments/life_1D/logs/
+life_1D/extras.py

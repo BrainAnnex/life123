@@ -16,7 +16,7 @@ chem_data = chem(diffusion_rates=[.1, .1, .1, .1, .1], names=["A", "B", "C", "D"
 
 rxn = Reactions(chem_data)
 
-# Reaction  2A <-> B , for now with 1st-order kinetics in both directions
+# Reactions A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species
 rxn.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=5., reverse_rate=2.)
 rxn.add_reaction(reactants=["C", "D"], products=["E"], forward_rate=8., reverse_rate=4.)
 
@@ -34,60 +34,32 @@ for i in range(rxn.number_of_reactions()):
 
 
 # First step
-bio.react(time_step=0.00002, n_steps=1000)
+bio.reaction_step(0.01)
 bio.describe_state()
 """
 1 bins and 5 species:
- [[1.54 ]
- [3.54 ]
- [2.404]
- [0.344]
- [0.156]]
- 
-vs.
+ [[2.27 ]
+ [4.27 ]
+ [1.702]
+ [0.372]
+ [0.128]]
+"""
+
+# 2nd step
+bio.reaction_step(0.01)
+bio.describe_state()
+"""
+1 bins and 5 species:
  [[1.819395  ]
  [3.819395  ]
  [2.10707348]
  [0.32646848]
  [0.17353152]]
- 
-vs.
- [[1.90738687]
- [3.90738687]
- [2.01639306]
- [0.32377993]
- [0.17622007]]
- 
-vs.
- [[1.96490304]
- [3.96490304]
- [1.95778584]
- [0.32268888]
- [0.17731112]]
- 
-vs.
- [[1.97663547]
- [3.97663547]
- [1.94589685]
- [0.32253232]
- [0.17746768]]
- 
-vs.
- [[1.97765931]
- [3.97765931]
- [1.94486042]
- [0.32251973]
- [0.17748027]]
 """
 
-
 # Numerous more steps
-bio.react(time_step=0.02, n_steps=50)
-
+bio.react(time_step=0.01, n_steps=200)
 bio.describe_state()
-
-# Consistent with the 5/2 ratio of forward/reverse rates (and the 1st order reactions),
-# the systems settles in the following equilibrium:
 """
 1 bins and 5 species:
  [[0.50508029]
@@ -97,10 +69,21 @@ bio.describe_state()
  [0.43175304]]
 """
 
+
+# Do a consistent check with the equilibrium concentrations:
+
 A_eq = bio.bin_concentration(0, 0)
 B_eq = bio.bin_concentration(0, 1)
 C_eq = bio.bin_concentration(0, 2)
 D_eq = bio.bin_concentration(0, 3)
 E_eq = bio.bin_concentration(0, 4)
-print(f"Ratio of equilibrium concentrations: {B_eq / A_eq}")
-print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
+
+Rf0 = rxn.get_forward_rate(0)
+Rb0 = rxn.get_reverse_rate(0)
+
+Rf1 = rxn.get_forward_rate(1)
+Rb1 = rxn.get_reverse_rate(1)
+
+equil = -(Rf0 * A_eq * B_eq - Rf1 * C_eq * D_eq) + (Rb0 * C_eq - Rb1 * E_eq)
+
+print("\nAt equilibrium: ", equil, " (this should be close to 0 at equilibrium)")

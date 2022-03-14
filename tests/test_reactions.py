@@ -260,3 +260,44 @@ def test_reaction_7(rxn):
     assert np.allclose(bio.univ, [[1.51554944],
                                   [5.74222528]])
     assert bio.n_bins == 1
+
+
+def test_reaction_8(rxn):
+    # Based on experiment "reaction8"
+    chem_data = chem(diffusion_rates=[.1, .1, .1, .1, .1], names=["A", "B", "C", "D", "E"])   # NOTE: diffusion_rates not used
+
+    rxn = Reactions(chem_data)
+
+    # Reactions A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species
+    rxn.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=5., reverse_rate=2.)
+    rxn.add_reaction(reactants=["C", "D"], products=["E"], forward_rate=8., reverse_rate=4.)
+    assert rxn.number_of_reactions() == 2
+
+    bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
+
+    bio.set_all_uniform_concentrations( [3., 5., 1., 0.4, 0.1] )
+
+    # First step
+    bio.reaction_step(0.01)
+    assert np.allclose(bio.univ, [[2.27 ],
+                                  [4.27 ],
+                                  [1.702],
+                                  [0.372],
+                                  [0.128]])
+
+    # 2nd step
+    bio.reaction_step(0.01)
+    assert np.allclose(bio.univ, [[1.819395  ],
+                                  [3.819395  ],
+                                  [2.10707348],
+                                  [0.32646848],
+                                  [0.17353152]])
+
+    # Numerous more steps
+    bio.react(time_step=0.01, n_steps=200)
+    assert np.allclose(bio.univ, [[0.50508029],
+                                  [2.50508029],
+                                  [3.16316668],
+                                  [0.06824696],
+                                  [0.43175304]])
+    assert bio.n_bins == 1

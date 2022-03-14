@@ -407,40 +407,53 @@ class BioSim1D:
             n_steps = math.ceil(time_duration / time_step)
 
         for i in range(n_steps):
-            cls.reaction_step(time_step)
+            cls.reaction_step(time_step)    # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
 
 
 
     @classmethod
     def reaction_step(cls, delta_time: float) -> None:
         """
-        For each bin, process all the reactions in it - based on the initial concentrations,
+        For each bin, process all the reactions in it - based on the INITIAL concentrations (prior to this reaction step),
         which are used as the basis for all the reactions.
+        IMPORTANT: the concentrations in the system only get changed at the very end of this call;
+                    in case of any Exception, the state of the system is still valid, as of the time before this call
 
         TODO: parallelize the computation over the separate bins
+        TODO: explore looping over reactions first, and then over bins
 
         :param delta_time:
         :return:
         """
         number_reactions = cls.all_reactions.number_of_reactions()
 
+        cumulative_increments = np.zeros((cls.n_species, cls.n_bins), dtype=float)  # A clone of the system state shape, with all zeros
+
         # For each bin
         for bin_n in range(cls.n_bins):     # Bin number, ranging from 0 to max_bin_number, inclusive
             if cls.verbose:
                 print(f"Processing the reaction in bin number {bin_n}")
 
-            cls.single_bin_reaction_step(bin_n, delta_time, number_reactions)
+            increment_vector = cls.single_bin_reaction_step(bin_n, delta_time, number_reactions)    # The Delta-conc for each species, for bin number bin_n
 
+            for species_index in range(cls.n_species):
+                cumulative_increments[species_index , bin_n] = increment_vector[species_index]
+
+        # Update the concentrations from the buffered increments
+        for species_index in range(cls.n_species):
+            cls.univ[species_index] += cumulative_increments[species_index]
 
 
     @classmethod
-    def single_bin_reaction_step(cls, bin_n: int, delta_time: float, number_reactions: int) -> None:
+    def single_bin_reaction_step(cls, bin_n: int, delta_time: float, number_reactions: int):
         """
+        For the given bin, process all the reactions in it - based on the INITIAL concentrations (prior to this reaction step),
+        which are used as the basis for all the reactions.
 
         :param bin_n:
         :param delta_time:
         :param number_reactions:
-        :return:                    None
+        :return:                    The increment vector for all the chemical species concentrations for this bin
         """
 
         # Compute the forward and back conversions of all the reactions
@@ -448,6 +461,8 @@ class BioSim1D:
         if cls.verbose:
             print(f"    delta_fwd_list: {delta_fwd_list} | delta_back_list: {delta_back_list}")
 
+
+        increment_vector = np.zeros((cls.n_species, 1), dtype=float)
 
         # For each reaction, adjust the concentrations of the reactants and products,
         # based on the forward and back rates of the reaction
@@ -466,25 +481,35 @@ class BioSim1D:
             #             and increase based on the reverse reaction
             for r in reactants:
                 stoichiometry, species_index, order = r
-                cls.univ[species_index , bin_n] += stoichiometry * (- delta_fwd_list[i] + delta_back_list[i])
-                if cls.univ[species_index , bin_n] < 0:
+                increment_vector[species_index] += stoichiometry * (- delta_fwd_list[i] + delta_back_list[i])
+
+                if (cls.univ[species_index , bin_n] + increment_vector[species_index]) < 0:
                     raise Exception(f"The given time interval ({delta_time}) leads to negative concentrations in reactions: make it smaller!")
+
+                #cls.univ[species_index , bin_n] += increment_vector[species_index]
+
 
             #   The products increase based on the forward reaction,
             #             and decrease based on the reverse reaction
             for p in products:
                 stoichiometry, species_index, order = p
-                cls.univ[species_index , bin_n] += stoichiometry * (delta_fwd_list[i] - delta_back_list[i])
-                if cls.univ[species_index , bin_n] < 0:
+                increment_vector[species_index] += stoichiometry * (delta_fwd_list[i] - delta_back_list[i])
+
+                if (cls.univ[species_index , bin_n] + increment_vector[species_index]) < 0:
                     raise Exception(f"The given time interval ({delta_time}) leads to negative concentrations in reactions: make it smaller!")
-                    # TODO: there's no way to recover from this!  Need to switch to a system where the original concentrations are saved!
+
+                #cls.univ[species_index , bin_n] += increment_vector[species_index]
+
+        # END for
+
+        return increment_vector
 
 
 
     @classmethod
     def compute_rates(cls, bin_n: int, delta_time: float, number_reactions: int) -> (list, list):
         """
-        For each of the reactions, compute its forward and back rates, multiplied by delta_time
+        For each of the reactions, compute its forward and back "contributions" (rates, multiplied by delta_time)
 
         :param bin_n:
         :param delta_time:
@@ -492,6 +517,7 @@ class BioSim1D:
         :return:                A pair of lists (List of forward conversions, List of reverse conversions);
                                     each list has 1 entry per reaction, in the index order of the reactions
                                 TODO: simply return the list of their differences!
+                                TODO: also, make a note of large relative increments (to guide future time-step choices)
         """
         delta_fwd_list = []             # It will have 1 entry per reaction
         delta_back_list = []            # It will have 1 entry per reaction
@@ -523,63 +549,6 @@ class BioSim1D:
             delta_back_list.append(delta_back)
 
         return( (delta_fwd_list, delta_back_list) )
-
-
-
-
-    @classmethod
-    def reaction_step_old(cls, time_step: float) -> None:
-        """
-        NOTE: THIS WILL NOT WORK CORRECTLY FOR MULTIPLE REACTIONS, but should be correctable if adding an array of DELTA_conc
-        :param time_step:
-        :return:
-        """
-
-        number_reactions = cls.all_reactions.number_of_reactions()
-
-        # TODO: loop over the bins FIRST!  -> Done in new reaction_step()
-        for i in range(number_reactions):
-            print(f"Evaluating reaction number {i}")
-            reactants = cls.all_reactions.get_reactants(i)
-            products = cls.all_reactions.get_products(i)
-            fwd_rate = cls.all_reactions.get_forward_rate(i)
-            back_rate = cls.all_reactions.get_reverse_rate(i)
-
-            for bin_n in range(cls.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
-                #print(f"    processing the reaction in bin number {bin_n}")
-                delta_fwd = time_step * fwd_rate
-                for r in reactants:
-                    stoichiometry, species_index, order = r
-                    conc = cls.univ[species_index , bin_n]
-                    delta_fwd *= conc ** order      # Raise to power
-
-                delta_back = time_step * back_rate
-                for p in products:
-                    stoichiometry, species_index, order = p
-                    conc = cls.univ[species_index , bin_n]
-                    delta_back *= conc ** order     # Raise to power
-
-                print(f"    delta_fwd: {delta_fwd} | delta_back: {delta_back}")
-
-                # Adjust the concentrations based on the forward reaction;
-                #   the reactants decrease and the products increase
-                for r in reactants:
-                    stoichiometry, species_index, order = r
-                    cls.univ[species_index , bin_n] -= delta_fwd * stoichiometry
-
-                for p in products:
-                    stoichiometry, species_index, order = p
-                    cls.univ[species_index , bin_n] += delta_fwd * stoichiometry
-
-                # Adjust the concentrations based on the back reaction;
-                #   the reactants increase and the products decrease
-                for r in reactants:
-                    stoichiometry, species_index, order = r
-                    cls.univ[species_index , bin_n] += delta_back * stoichiometry
-
-                for p in products:
-                    stoichiometry, species_index, order = p
-                    cls.univ[species_index , bin_n] -= delta_back * stoichiometry
 
 
 
