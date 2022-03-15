@@ -95,12 +95,26 @@ def test_diffuse_step_single_species_1():
         bio.diffuse_step_single_species(time_step=0.034)
 
     # Diffuse by a single step
-    bio.diffuse_step_single_species(time_step=0.02)
+    increment_vector = bio.diffuse_step_single_species(time_step=0.02)
+    print("Increment vector is: ", increment_vector)
+    assert np.allclose(increment_vector, [-20., 20.])
+
+
+def test_diffuse_step_single_species_1b():
+    chem_data = chem(diffusion_rates=[10.])
+
+    bio.initialize_universe(n_bins=2, chem_data=chem_data)
+
+    bio.inject_conc_to_cell(bin=0, species_index=0, delta_conc=100.)
+    bio.describe_state()
+
+    # Diffuse by a single step
+    bio.diffuse_step(time_step=0.02)
     print(bio.univ)
     assert np.allclose(bio.lookup_species(0), [80, 20])
 
     # Another single step
-    bio.diffuse_step_single_species(time_step=0.01)
+    bio.diffuse_step(time_step=0.01)
     print(bio.univ)
     assert np.allclose(bio.lookup_species(0), [74, 26])
 
@@ -116,7 +130,20 @@ def test_diffuse_step_single_species_2():
     chem_data.set_diffusion_rates([20.])
     bio.describe_state()    # 1 bins and 1 species:  [[8.]]
 
-    bio.diffuse_step_single_species(time_step=3)    # With just 1 bin, nothing happens
+    increment_vector = bio.diffuse_step_single_species(time_step=3)    # With just 1 bin, nothing happens
+    print("Increment vector is: ", increment_vector)
+    assert np.allclose(increment_vector, [0.])
+
+
+def test_diffuse_step_single_species_2b():
+    chem_data = chem(n_species=1)
+    bio.initialize_universe(n_bins=1, chem_data=chem_data)
+    bio.set_uniform_concentration(species_index=0, conc=8.0)
+
+    chem_data.set_diffusion_rates([20.])
+    bio.describe_state()    # 1 bins and 1 species:  [[8.]]
+
+    bio.diffuse_step(time_step=3)    # With just 1 bin, nothing happens
     bio.describe_state()
     assert np.allclose(bio.lookup_species(0), [8])
 
@@ -141,15 +168,14 @@ def test_diffuse_step_single_species_3():
     """
 
     # Diffusing a uniform distribution won't change it
-    bio.diffuse_step_single_species(time_step=0.08, species_index=0)
-    bio.diffuse_step_single_species(time_step=0.08, species_index=1)
+    bio.diffuse_step(time_step=0.08)
 
     assert np.allclose(bio.lookup_species(0), np.full(5, 22.2, dtype=float))
     assert np.allclose(bio.lookup_species(1), np.full(5, 66.6, dtype=float))
 
 
 
-def test_diffuse_step_single_species_4():
+def test_diffuse_step_4():
     # Multiple diffusion steps, with 2 bins
     chem_data = chem(diffusion_rates=[1.])
     bio.initialize_universe(n_bins=2, chem_data=chem_data)
@@ -162,7 +188,7 @@ def test_diffuse_step_single_species_4():
     """
 
     for i in range(4):
-        bio.diffuse_step_single_species(time_step=.3)
+        bio.diffuse_step(time_step=.3)
         print(f"At end of step {i+1}:")
         bio.describe_state()
 
@@ -170,7 +196,7 @@ def test_diffuse_step_single_species_4():
 
 
 
-def test_diffuse_step_single_species_5():
+def test_diffuse_step_5():
     # Multiple diffusion steps, with 3 bins, and a large time step
     chem_data = chem(diffusion_rates=[.5])
     bio.initialize_universe(n_bins=3, chem_data=chem_data)
@@ -181,7 +207,7 @@ def test_diffuse_step_single_species_5():
     # The time step is so large that the system immediately equilibrates
     print("The default max allowed time step is: ", bio.max_time_step(.5))
     for i in range(3):
-        bio.diffuse_step_single_species(time_step=0.6666)
+        bio.diffuse_step(time_step=0.6666)
         print(f"At end of step {i+1}:")
         print(bio.univ)
 
@@ -189,7 +215,7 @@ def test_diffuse_step_single_species_5():
 
 
 
-def test_diffuse_step_single_species_6():
+def test_diffuse_step_6():
     # Multiple diffusion steps, with 5 bins, and a large time step
     chem_data = chem(diffusion_rates=[.5])
     bio.initialize_universe(n_bins=5, chem_data=chem_data)
@@ -199,7 +225,7 @@ def test_diffuse_step_single_species_6():
 
     print("The default max allowed time step is: ", bio.max_time_step(.5))
     for i in range(20):
-        bio.diffuse_step_single_species(time_step=0.6666)
+        bio.diffuse_step(time_step=0.6666)
         print(f"At end of step {i+1}:")
         print(bio.lookup_species(0))
 
@@ -207,7 +233,7 @@ def test_diffuse_step_single_species_6():
 
 
 
-def test_diffuse_step_single_species_7():
+def test_diffuse_step_7():
     # Multiple diffusion steps, with 5 bins,
     # 1/2 the time step of the previous test, and double the duration
     chem_data = chem(diffusion_rates=[.5])
@@ -217,7 +243,7 @@ def test_diffuse_step_single_species_7():
     bio.describe_state(show_diffusion_rates=True)
 
     for i in range(20*2):
-        bio.diffuse_step_single_species(time_step=0.6666/2)
+        bio.diffuse_step(time_step=0.6666/2)
         if i<10 or i >35:
             print(f"At end of step {i+1}:")
             print(bio.lookup_species(0))
@@ -226,7 +252,7 @@ def test_diffuse_step_single_species_7():
 
 
 
-def test_diffuse_step_single_species_8():
+def test_diffuse_step_8():
     # Many diffusion steps that the system equilibrates, no matter the starting point
     chem_data = chem(diffusion_rates=[.3])
     bio.initialize_universe(n_bins=15, chem_data=chem_data)
@@ -240,7 +266,7 @@ def test_diffuse_step_single_species_8():
     print("Avg of concentrations: ", avg_conc)
 
     for i in range(2000):
-        bio.diffuse_step_single_species(time_step=1)
+        bio.diffuse_step(time_step=1)
         if i<4:
             print(f"At end of step {i+1}:")
             print(bio.lookup_species(0))

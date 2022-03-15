@@ -2,7 +2,8 @@
 
 class Reactions:
     """
-    Data about all applicable reactions
+    Data about all applicable reactions,
+    including stoichiometry, reaction rates and reaction orders
     """
 
     def __init__(self, chem_data):

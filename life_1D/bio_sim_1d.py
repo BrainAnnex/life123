@@ -22,6 +22,8 @@ class BioSim1D:
                         # NumPy array of dimension: (n_species x n_cells).
                         # Each row represents a species
 
+    delta_diffusion = None  # Buffer for the concentration changes from diffusion step (n_species x n_cells)
+    delta_reactions = None  # Buffer for the concentration changes from reactions step (n_species x n_cells)
 
     sealed = True       # If True, no exchange with the outside; if False, immersed in a "bath"
 
@@ -38,6 +40,12 @@ class BioSim1D:
     verbose = False
 
 
+
+    #########################################################################
+    #                                                                       #
+    #                               SYSTEM-WIDE                             #
+    #                                                                       #
+    #########################################################################
 
     @classmethod
     def initialize_universe(cls, n_bins: int, chem_data, reactions=None) -> None:
@@ -220,7 +228,7 @@ class BioSim1D:
 
     #########################################################################
     #                                                                       #
-    #                        PERFORM DIFFUSION                              #
+    #                               DIFFUSION                               #
     #                                                                       #
     #########################################################################
 
@@ -236,7 +244,6 @@ class BioSim1D:
         """
         value = time_step * diff_rate
 
-
         if value > cls.time_step_threshold:
             return True
         else:
@@ -246,7 +253,7 @@ class BioSim1D:
     @classmethod
     def max_time_step(cls, diff_rate) -> float:
         """
-
+        Determine a reasonable upper bound on the time step, for the given diffusion rate
         :param diff_rate:
         :return:
         """
@@ -300,68 +307,80 @@ class BioSim1D:
     @classmethod
     def diffuse_step(cls, time_step) -> None:
         """
-        Diffuse all the species by the given time step
+        Diffuse all the species by the given time step.
+        Clear and compute the delta_diffusion array.
 
         :param time_step:   Time step over which to carry out the diffusion.
                             If too large, an Exception will be raised.
         :return:            None
         """
         # TODO: parallelize the independent computations
+
+        cls.delta_diffusion = np.zeros((cls.n_species, cls.n_bins), dtype=float)
+
         for species_index in range(cls.n_species):
-            cls.diffuse_step_single_species(time_step, species_index=species_index)
+
+            increment_vector = cls.diffuse_step_single_species(time_step, species_index=species_index)
+            #print("Increment vector is: ", increment_vector)
+
+            # For each bin, update the concentrations from the buffered increments
+            for i in range(cls.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
+                cls.univ[species_index , i] += increment_vector[i]  # TODO: move to calling function
+                cls.delta_diffusion[species_index , i] += increment_vector[i]
 
 
 
     @classmethod
-    def diffuse_step_single_species(cls, time_step: float, species_index=0) -> None:
+    def diffuse_step_single_species(cls, time_step: float, species_index=0):
         """
-        Diffuse the specified single species, for the specified time step.
+        Diffuse the specified single species, for the specified time step, across all bins,
+        and return an array of the changes in concentration for the given species across all bins.
+        IMPORTANT: the actual concentrations are NOT changed.
+
         We're assuming an isolated environment, with nothing diffusing thru the "walls"
 
         :param time_step:       Time step over which to carry out the diffusion.
                                 If too large, an Exception will be raised.
         :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
-        :return:                None
+        :return:                A Numpy array with the change in concentration for the given species across all bins
         """
         assert cls.univ is not None, "Must first initialize the system"
         assert cls.n_bins > 0, "Must first set the number of bins"
         assert cls.chem_data.diffusion_rates is not None, "Must first set the diffusion rates"
         assert cls.sealed == True, "For now, there's no provision for exchange with the outside"
 
+        increment_vector = np.zeros(cls.n_bins, dtype=float)   # One element per bin
+
         if cls.n_bins == 1:
-            return                  # There's nothing to do in the case of just 1 cell!
+            return increment_vector                 # There's nothing to do in the case of just 1 cell!
 
         diff = cls.chem_data.diffusion_rates[species_index]   # The diffusion rate of the specified single species
 
         assert not cls.is_excessive(time_step, diff), f"Excessive large time_fraction. Should be < {cls.max_time_step(diff)}"
 
 
+        # Carry out a convolution operation, with a tile of size 3 (or 2 if only 2 bins)
+        #print(f"Diffusing species # {species_index}")
+
         max_bin_number = cls.n_bins - 1     # Bin numbers range from 0 to max_bin_number, inclusive
 
-
-        # Carry out a convolution operation in place, with a tile of size 3 (or 2 if only 2 bins)
-
         effective_diff = diff * time_step
-
-        #print(f"Diffusing species # {species_index}")
-        prev_conc = 0   # Not necessary; just to stop complaints from the code analyzer
 
         for i in range(cls.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
             #print(f"Processing bin number {i}")
             current_conc = cls.univ[species_index , i]
 
             if i == 0 :                     # Special case for the first bin (no left neighbor)
-                cls.univ[species_index , i] +=  \
-                                effective_diff * (cls.univ[species_index , i + 1] - current_conc)
+                increment_vector[i] = effective_diff * (cls.univ[species_index , i + 1] - current_conc)
             elif i == max_bin_number :      # Special case for the last bin (no right neighbor)
-                cls.univ[species_index , i] += \
-                                effective_diff * (prev_conc - current_conc)
+                increment_vector[i] = effective_diff * (cls.univ[species_index , i - 1] - current_conc)
             else:
-                cls.univ[species_index , i] +=  \
-                                 effective_diff * (cls.univ[species_index , i + 1] - current_conc) \
-                               + effective_diff * (prev_conc - current_conc)
+                increment_vector[i] = effective_diff * \
+                                        (  cls.univ[species_index , i + 1]  -  current_conc
+                                         + cls.univ[species_index , i - 1]  -  current_conc  )
 
-            prev_conc = current_conc
+        return increment_vector
+
 
 
 
@@ -416,6 +435,7 @@ class BioSim1D:
         """
         For each bin, process all the reactions in it - based on the INITIAL concentrations (prior to this reaction step),
         which are used as the basis for all the reactions.
+        Clear and compute the delta_reactions array.
         IMPORTANT: the concentrations in the system only get changed at the very end of this call;
                     in case of any Exception, the state of the system is still valid, as of the time before this call
 
@@ -428,6 +448,7 @@ class BioSim1D:
         number_reactions = cls.all_reactions.number_of_reactions()
 
         cumulative_increments = np.zeros((cls.n_species, cls.n_bins), dtype=float)  # A clone of the system state shape, with all zeros
+        cls.delta_reactions = np.zeros((cls.n_species, cls.n_bins), dtype=float)
 
         # For each bin
         for bin_n in range(cls.n_bins):     # Bin number, ranging from 0 to max_bin_number, inclusive
@@ -439,9 +460,11 @@ class BioSim1D:
             for species_index in range(cls.n_species):
                 cumulative_increments[species_index , bin_n] = increment_vector[species_index]
 
-        # Update the concentrations from the buffered increments
+        # For each species, update the concentrations from the buffered increments
         for species_index in range(cls.n_species):
-            cls.univ[species_index] += cumulative_increments[species_index]
+            cls.univ[species_index] += cumulative_increments[species_index]  # TODO: move to calling function
+            cls.delta_reactions[species_index] += cumulative_increments[species_index]
+
 
 
     @classmethod
@@ -462,7 +485,7 @@ class BioSim1D:
             print(f"    delta_fwd_list: {delta_fwd_list} | delta_back_list: {delta_back_list}")
 
 
-        increment_vector = np.zeros((cls.n_species, 1), dtype=float)
+        increment_vector = np.zeros((cls.n_species, 1), dtype=float)       # One element per species
 
         # For each reaction, adjust the concentrations of the reactants and products,
         # based on the forward and back rates of the reaction
