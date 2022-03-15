@@ -110,7 +110,7 @@ def test_reaction_step_1b(rxn):
 
     rxn = Reactions(chem_data)
 
-    # Reaction A -> B , with 1st-order kinetics in both directions
+    # Reaction A <-> B , with 1st-order kinetics in both directions
     rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
     bio.set_reactions(rxn)
 
