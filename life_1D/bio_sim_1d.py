@@ -426,7 +426,8 @@ class BioSim1D:
             n_steps = math.ceil(time_duration / time_step)
 
         for i in range(n_steps):
-            cls.reaction_step(time_step)    # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
+            cls.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
+            cls.univ += cls.delta_reactions     # Matrix operation
 
 
 
@@ -447,7 +448,6 @@ class BioSim1D:
         """
         number_reactions = cls.all_reactions.number_of_reactions()
 
-        cumulative_increments = np.zeros((cls.n_species, cls.n_bins), dtype=float)  # A clone of the system state shape, with all zeros
         cls.delta_reactions = np.zeros((cls.n_species, cls.n_bins), dtype=float)
 
         # For each bin
@@ -455,15 +455,13 @@ class BioSim1D:
             if cls.verbose:
                 print(f"Processing the reaction in bin number {bin_n}")
 
-            increment_vector = cls.single_bin_reaction_step(bin_n, delta_time, number_reactions)    # The Delta-conc for each species, for bin number bin_n
+            # Obtain the Delta-conc for each species, for bin number bin_n
+            increment_vector = cls.single_bin_reaction_step(bin_n, delta_time, number_reactions)
 
-            for species_index in range(cls.n_species):
-                cumulative_increments[species_index , bin_n] = increment_vector[species_index]
+            # Replace the "bin_n" column of the cls.delta_reactions matrix with the contents of the vector increment_vector
+            cls.delta_reactions[:, bin_n] = increment_vector.transpose()
 
-        # For each species, update the concentrations from the buffered increments
-        for species_index in range(cls.n_species):
-            cls.univ[species_index] += cumulative_increments[species_index]  # TODO: move to calling function
-            cls.delta_reactions[species_index] += cumulative_increments[species_index]
+        #print(cls.delta_reactions)
 
 
 

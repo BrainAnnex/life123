@@ -386,37 +386,3 @@ def test_diffuse_2():
     assert np.allclose(bio.lookup_species(0),
                                 [1.00055275, 1.00049864, 1.00039572, 1.00025407, 1.00008755, 0.99991245,
                                  0.99974593, 0.99960428, 0.99950136, 0.99944725])
-
-
-
-def test_reaction_step():
-    """
-    A reaction between 2 species with initial uniform concentrations,
-    taken to equilibrium.  Diffusion (non-applicable) disregarded
-    """
-    chem_data = chem(diffusion_rates=[0.1, 0.2], names=["A", "B"])
-    bio.initialize_universe(n_bins=3, chem_data=chem_data)
-
-    bio.set_uniform_concentration(species_index=0, conc=10.)
-    bio.set_uniform_concentration(species_index=1, conc=50.)
-
-
-    rxn = Reactions(chem_data)
-
-    # Reaction A -> B , with 1st-order kinetics in both directions
-    #rxn.add_reaction(reactants=[(1,0,1)], products=[(1,1,1)], forward_rate=3., back_rate=2.)
-    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)    # TODO: finish implementing, and test
-
-    bio.all_reactions = rxn
-
-    assert rxn.number_of_reactions() == 1
-
-    assert rxn.describe_reactions() == ["0: A <-> B  (Rf = 3.0 / Rb = 2.0)"]
-
-
-    for i in range(20):
-        bio.reaction_step(0.1)
-
-    bio.describe_state()
-
-    assert np.allclose(bio.univ, [[ 24., 24., 24.] , [36., 36., 36.]])
