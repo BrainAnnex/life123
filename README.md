@@ -19,5 +19,5 @@ Including diffusion, reactions, membranes and compartments.
 ## Details
 [More information](https://julianspolymathexplorations.blogspot.com/2022/03/life123-systems-biology-modeling.html)
 
-[Website](https://life123.science)
+
 
