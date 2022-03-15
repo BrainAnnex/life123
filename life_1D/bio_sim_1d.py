@@ -293,6 +293,7 @@ class BioSim1D:
                     print("    ...")
 
             cls.diffuse_step(time_step)
+            cls.univ += cls.delta_diffusion     # Matrix operation
 
         if verbose:
             print(f"\nSystem after Delta time {time_duration}, at end of {n_steps} steps of size {time_step}:")
@@ -307,8 +308,8 @@ class BioSim1D:
     @classmethod
     def diffuse_step(cls, time_step) -> None:
         """
-        Diffuse all the species by the given time step.
-        Clear and compute the delta_diffusion array.
+        Diffuse all the species by the given time step:
+        clear and compute the delta_diffusion array.
 
         :param time_step:   Time step over which to carry out the diffusion.
                             If too large, an Exception will be raised.
@@ -324,9 +325,7 @@ class BioSim1D:
             #print("Increment vector is: ", increment_vector)
 
             # For each bin, update the concentrations from the buffered increments
-            for i in range(cls.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
-                cls.univ[species_index , i] += increment_vector[i]  # TODO: move to calling function
-                cls.delta_diffusion[species_index , i] += increment_vector[i]
+            cls.delta_diffusion[species_index] = increment_vector      # Vector operation to a row of the matrix delta_diffusion
 
 
 
