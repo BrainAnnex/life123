@@ -205,7 +205,7 @@ class BioSim1D:
         """
         Add the requested concentration to the cell with the given index, for the specified species
 
-        :param bin:      The zero-based bin number of the desired cell
+        :param bin:             The zero-based bin number of the desired cell
         :param species_index:   Zero-based index to identify a specific chemical species
         :param delta_conc:      The concentration to add to the specified location
         :param zero_clip:       If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
@@ -569,6 +569,47 @@ class BioSim1D:
             delta_back_list.append(delta_back)
 
         return( (delta_fwd_list, delta_back_list) )
+
+
+
+    #########################################################################
+    #                                                                       #
+    #                         REACTION-DIFFUSION                            #
+    #                                                                       #
+    #########################################################################
+
+    @classmethod
+    def react_diffuse(cls, time_duration=None, time_step=None, n_steps=None) -> None:
+        """
+        It expects 2 of the arguments:  time_duration, time_step, n_steps
+        Perform a series of reaction and diffusion time steps.
+
+        :param time_duration:   The overall time advance (i.e. time_step * n_steps)
+        :param time_step:       The size of each time step
+        :param n_steps:         The desired number of steps
+        :return:                None
+        """
+
+        assert (not time_duration or not time_step or not n_steps), \
+            "Cannot specify all 3 arguments: time_duration, time_step, n_steps"
+
+        assert (time_duration and time_step) or (time_duration and n_steps) or (time_step and n_steps), \
+            "Must provide exactly 2 arguments from:  time_duration, time_step, n_steps"
+
+        if not time_step:
+            time_step = time_duration / n_steps
+
+        if not n_steps:
+            n_steps = math.ceil(time_duration / time_step)
+
+        for i in range(n_steps):
+            # TODO: split off the reaction step and the diffusion step to 2 different computing cores
+            cls.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
+            cls.diffuse_step(time_step)
+            # Merge into the concentrations of the various bins/chemical species pairs,
+            # the increments concentrations computed separately by the reaction and the diffusion steps
+            cls.univ += cls.delta_reactions     # Matrix operation
+            cls.univ += cls.delta_diffusion     # Matrix operation
 
 
 

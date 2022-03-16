@@ -15,9 +15,27 @@ Including diffusion, reactions, membranes and compartments.
 5. Investigate potential paths for the emergence of life on Earth and on Exoplanets
 6. A community effort bringing together biologists, system biologists, programmers, machine-learning specialists, biochemists, power-computing engineers, doctors, data scientists, members of the public willing to share computing resources, etc.
 
+## Components
+* life_1D
+* life_2D
+* life_3D
+
+*Common modules:*
+
+* chemicals
+* heuristics
+* html_log
+* reactions
+* SVG_helper
+* visualization
+* Vue2_lib
+
+*Unit Testing (pytest):*
+* tests
 
 ## Details
 [More information](https://julianspolymathexplorations.blogspot.com/2022/03/life123-systems-biology-modeling.html)
 
-
+## How to Use
+See the annotated examples in the [experiments](https://github.com/BrainAnnex/life123/tree/main/experiments/life_1D) folder
 
