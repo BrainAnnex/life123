@@ -1,4 +1,4 @@
-### VERSION 5.0-beta2 in-progress
+### VERSION 5.0-beta2
 
 
 # Life123
