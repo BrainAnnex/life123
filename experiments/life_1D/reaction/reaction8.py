@@ -1,4 +1,4 @@
-"""     TODO: verify
+"""
 Two coupled reactions:  A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species,
 taken to equilibrium
 """

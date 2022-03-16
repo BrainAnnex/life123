@@ -100,6 +100,7 @@ def test_diffuse_step_single_species_1():
     assert np.allclose(increment_vector, [-20., 20.])
 
 
+
 def test_diffuse_step_single_species_1b():
     chem_data = chem(diffusion_rates=[10.])
 
@@ -109,12 +110,12 @@ def test_diffuse_step_single_species_1b():
     bio.describe_state()
 
     # Diffuse by a single step
-    bio.diffuse_step(time_step=0.02)
+    bio.diffuse(time_step=0.02, n_steps=1)
     print(bio.univ)
     assert np.allclose(bio.lookup_species(0), [80, 20])
 
     # Another single step
-    bio.diffuse_step(time_step=0.01)
+    bio.diffuse(time_step=0.01, n_steps=1)
     print(bio.univ)
     assert np.allclose(bio.lookup_species(0), [74, 26])
 
@@ -135,6 +136,7 @@ def test_diffuse_step_single_species_2():
     assert np.allclose(increment_vector, [0.])
 
 
+
 def test_diffuse_step_single_species_2b():
     chem_data = chem(n_species=1)
     bio.initialize_universe(n_bins=1, chem_data=chem_data)
@@ -143,7 +145,7 @@ def test_diffuse_step_single_species_2b():
     chem_data.set_diffusion_rates([20.])
     bio.describe_state()    # 1 bins and 1 species:  [[8.]]
 
-    bio.diffuse_step(time_step=3)    # With just 1 bin, nothing happens
+    bio.diffuse(time_step=3, n_steps=1)    # With just 1 bin, nothing happens
     bio.describe_state()
     assert np.allclose(bio.lookup_species(0), [8])
 
@@ -168,7 +170,7 @@ def test_diffuse_step_single_species_3():
     """
 
     # Diffusing a uniform distribution won't change it
-    bio.diffuse_step(time_step=0.08)
+    bio.diffuse(time_step=0.08, n_steps=1)
 
     assert np.allclose(bio.lookup_species(0), np.full(5, 22.2, dtype=float))
     assert np.allclose(bio.lookup_species(1), np.full(5, 66.6, dtype=float))
@@ -189,6 +191,7 @@ def test_diffuse_step_4():
 
     for i in range(4):
         bio.diffuse_step(time_step=.3)
+        bio.univ += bio.delta_diffusion
         print(f"At end of step {i+1}:")
         bio.describe_state()
 
@@ -208,6 +211,7 @@ def test_diffuse_step_5():
     print("The default max allowed time step is: ", bio.max_time_step(.5))
     for i in range(3):
         bio.diffuse_step(time_step=0.6666)
+        bio.univ += bio.delta_diffusion
         print(f"At end of step {i+1}:")
         print(bio.univ)
 
@@ -226,6 +230,7 @@ def test_diffuse_step_6():
     print("The default max allowed time step is: ", bio.max_time_step(.5))
     for i in range(20):
         bio.diffuse_step(time_step=0.6666)
+        bio.univ += bio.delta_diffusion
         print(f"At end of step {i+1}:")
         print(bio.lookup_species(0))
 
@@ -244,6 +249,7 @@ def test_diffuse_step_7():
 
     for i in range(20*2):
         bio.diffuse_step(time_step=0.6666/2)
+        bio.univ += bio.delta_diffusion
         if i<10 or i >35:
             print(f"At end of step {i+1}:")
             print(bio.lookup_species(0))
@@ -267,6 +273,7 @@ def test_diffuse_step_8():
 
     for i in range(2000):
         bio.diffuse_step(time_step=1)
+        bio.univ += bio.delta_diffusion
         if i<4:
             print(f"At end of step {i+1}:")
             print(bio.lookup_species(0))
@@ -303,6 +310,7 @@ def test_diffuse_step_1():
     """
 
     bio.diffuse_step(0.01)
+    bio.univ += bio.delta_diffusion
     bio.describe_state()
     """
     3 bins and 2 species:
@@ -386,37 +394,3 @@ def test_diffuse_2():
     assert np.allclose(bio.lookup_species(0),
                                 [1.00055275, 1.00049864, 1.00039572, 1.00025407, 1.00008755, 0.99991245,
                                  0.99974593, 0.99960428, 0.99950136, 0.99944725])
-
-
-
-def test_reaction_step():
-    """
-    A reaction between 2 species with initial uniform concentrations,
-    taken to equilibrium.  Diffusion (non-applicable) disregarded
-    """
-    chem_data = chem(diffusion_rates=[0.1, 0.2], names=["A", "B"])
-    bio.initialize_universe(n_bins=3, chem_data=chem_data)
-
-    bio.set_uniform_concentration(species_index=0, conc=10.)
-    bio.set_uniform_concentration(species_index=1, conc=50.)
-
-
-    rxn = Reactions(chem_data)
-
-    # Reaction A -> B , with 1st-order kinetics in both directions
-    #rxn.add_reaction(reactants=[(1,0,1)], products=[(1,1,1)], forward_rate=3., back_rate=2.)
-    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)    # TODO: finish implementing, and test
-
-    bio.all_reactions = rxn
-
-    assert rxn.number_of_reactions() == 1
-
-    assert rxn.describe_reactions() == ["0: A <-> B  (Rf = 3.0 / Rb = 2.0)"]
-
-
-    for i in range(20):
-        bio.reaction_step(0.1)
-
-    bio.describe_state()
-
-    assert np.allclose(bio.univ, [[ 24., 24., 24.] , [36., 36., 36.]])

@@ -205,7 +205,7 @@ class BioSim1D:
         """
         Add the requested concentration to the cell with the given index, for the specified species
 
-        :param bin:      The zero-based bin number of the desired cell
+        :param bin:             The zero-based bin number of the desired cell
         :param species_index:   Zero-based index to identify a specific chemical species
         :param delta_conc:      The concentration to add to the specified location
         :param zero_clip:       If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
@@ -293,6 +293,7 @@ class BioSim1D:
                     print("    ...")
 
             cls.diffuse_step(time_step)
+            cls.univ += cls.delta_diffusion     # Matrix operation
 
         if verbose:
             print(f"\nSystem after Delta time {time_duration}, at end of {n_steps} steps of size {time_step}:")
@@ -307,8 +308,8 @@ class BioSim1D:
     @classmethod
     def diffuse_step(cls, time_step) -> None:
         """
-        Diffuse all the species by the given time step.
-        Clear and compute the delta_diffusion array.
+        Diffuse all the species by the given time step:
+        clear and compute the delta_diffusion array.
 
         :param time_step:   Time step over which to carry out the diffusion.
                             If too large, an Exception will be raised.
@@ -324,9 +325,7 @@ class BioSim1D:
             #print("Increment vector is: ", increment_vector)
 
             # For each bin, update the concentrations from the buffered increments
-            for i in range(cls.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
-                cls.univ[species_index , i] += increment_vector[i]  # TODO: move to calling function
-                cls.delta_diffusion[species_index , i] += increment_vector[i]
+            cls.delta_diffusion[species_index] = increment_vector      # Vector operation to a row of the matrix delta_diffusion
 
 
 
@@ -426,7 +425,8 @@ class BioSim1D:
             n_steps = math.ceil(time_duration / time_step)
 
         for i in range(n_steps):
-            cls.reaction_step(time_step)    # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
+            cls.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
+            cls.univ += cls.delta_reactions     # Matrix operation
 
 
 
@@ -447,7 +447,6 @@ class BioSim1D:
         """
         number_reactions = cls.all_reactions.number_of_reactions()
 
-        cumulative_increments = np.zeros((cls.n_species, cls.n_bins), dtype=float)  # A clone of the system state shape, with all zeros
         cls.delta_reactions = np.zeros((cls.n_species, cls.n_bins), dtype=float)
 
         # For each bin
@@ -455,15 +454,13 @@ class BioSim1D:
             if cls.verbose:
                 print(f"Processing the reaction in bin number {bin_n}")
 
-            increment_vector = cls.single_bin_reaction_step(bin_n, delta_time, number_reactions)    # The Delta-conc for each species, for bin number bin_n
+            # Obtain the Delta-conc for each species, for bin number bin_n
+            increment_vector = cls.single_bin_reaction_step(bin_n, delta_time, number_reactions)
 
-            for species_index in range(cls.n_species):
-                cumulative_increments[species_index , bin_n] = increment_vector[species_index]
+            # Replace the "bin_n" column of the cls.delta_reactions matrix with the contents of the vector increment_vector
+            cls.delta_reactions[:, bin_n] = increment_vector.transpose()
 
-        # For each species, update the concentrations from the buffered increments
-        for species_index in range(cls.n_species):
-            cls.univ[species_index] += cumulative_increments[species_index]  # TODO: move to calling function
-            cls.delta_reactions[species_index] += cumulative_increments[species_index]
+        #print(cls.delta_reactions)
 
 
 
@@ -572,6 +569,47 @@ class BioSim1D:
             delta_back_list.append(delta_back)
 
         return( (delta_fwd_list, delta_back_list) )
+
+
+
+    #########################################################################
+    #                                                                       #
+    #                         REACTION-DIFFUSION                            #
+    #                                                                       #
+    #########################################################################
+
+    @classmethod
+    def react_diffuse(cls, time_duration=None, time_step=None, n_steps=None) -> None:
+        """
+        It expects 2 of the arguments:  time_duration, time_step, n_steps
+        Perform a series of reaction and diffusion time steps.
+
+        :param time_duration:   The overall time advance (i.e. time_step * n_steps)
+        :param time_step:       The size of each time step
+        :param n_steps:         The desired number of steps
+        :return:                None
+        """
+
+        assert (not time_duration or not time_step or not n_steps), \
+            "Cannot specify all 3 arguments: time_duration, time_step, n_steps"
+
+        assert (time_duration and time_step) or (time_duration and n_steps) or (time_step and n_steps), \
+            "Must provide exactly 2 arguments from:  time_duration, time_step, n_steps"
+
+        if not time_step:
+            time_step = time_duration / n_steps
+
+        if not n_steps:
+            n_steps = math.ceil(time_duration / time_step)
+
+        for i in range(n_steps):
+            # TODO: split off the reaction step and the diffusion step to 2 different computing cores
+            cls.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
+            cls.diffuse_step(time_step)
+            # Merge into the concentrations of the various bins/chemical species pairs,
+            # the increments concentrations computed separately by the reaction and the diffusion steps
+            cls.univ += cls.delta_reactions     # Matrix operation
+            cls.univ += cls.delta_diffusion     # Matrix operation
 
 
 
