@@ -12,12 +12,12 @@ from modules.html_log.html_log import HtmlLog as log
 
 # Initialize the system
 chem_data = chem(diffusion_rates=[0.1])
-bio.initialize_universe(n_bins=9, chem_data=chem_data)
+bio.initialize_system(n_bins=9, chem_data=chem_data)
 
 bio.set_uniform_concentration(species_index=0, conc=0.)
 
-bio.inject_conc_to_cell(species_index=0, bin=2, delta_conc=10.)
-bio.inject_conc_to_cell(species_index=0, bin=6, delta_conc=10.)
+bio.inject_conc_to_bin(species_index=0, bin=2, delta_conc=10.)
+bio.inject_conc_to_bin(species_index=0, bin=6, delta_conc=10.)
 
 bio.describe_state(show_diffusion_rates=True)
 

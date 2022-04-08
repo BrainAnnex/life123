@@ -19,7 +19,7 @@ rxn = Reactions(chem_data)
 # Reactions A + B <-> C , with 1st-order kinetics for each species
 rxn.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=20., reverse_rate=2.)
 
-bio.initialize_universe(n_bins=7, chem_data=chem_data, reactions=rxn)
+bio.initialize_system(n_bins=7, chem_data=chem_data, reactions=rxn)
 
 bio.set_bin_conc(bin=0, species_index=0, conc=20.)
 bio.set_bin_conc(bin=6, species_index=1, conc=20.)

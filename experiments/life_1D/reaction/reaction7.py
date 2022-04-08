@@ -19,7 +19,7 @@ rxn = Reactions(chem_data)
 # Reaction  2A <-> B , for now with 1st-order kinetics in both directions
 rxn.add_reaction(reactants=[(2, "A")], products=["B"], forward_rate=5., reverse_rate=2.)
 
-bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
+bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
 
 bio.set_all_uniform_concentrations( [3., 5.] )
 

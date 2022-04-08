@@ -12,10 +12,10 @@ from modules.html_log.html_log import HtmlLog as log
 
 
 chem_data = chem(diffusion_rates=[0.1])
-bio.initialize_universe(n_bins=10, chem_data=chem_data)
+bio.initialize_system(n_bins=10, chem_data=chem_data)
 
 bio.set_uniform_concentration(species_index=0, conc=0.)
-bio.inject_conc_to_cell(bin=2, species_index=0, delta_conc=10.)
+bio.inject_conc_to_bin(bin=2, species_index=0, delta_conc=10.)
 
 bio.describe_state(show_diffusion_rates=True)
 
@@ -80,7 +80,7 @@ my_groups = [str(i) for i in range(bio.n_bins)]
 print()
 print(my_groups)
 
-my_data = [{"group": str(i), "variable": "Mol 0", "value": str(bio.univ[0, i])}
+my_data = [{"group": str(i), "variable": "Mol 0", "value": str(bio.system[0, i])}
            for i in range(bio.n_bins)]
 print(my_data)
 

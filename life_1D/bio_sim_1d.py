@@ -18,9 +18,12 @@ class BioSim1D:
 
     chem_data = None    # Object with info on the individual chemicals, incl. their names
 
-    univ = None         # "Universe"/Container/System
+    system = None       # Concentration data in the System we're simulating, for all the chemicals
                         # NumPy array of dimension: (n_species x n_cells).
                         # Each row represents a species
+
+    system_earlier = None   # NOT IN CURRENT USE.  Envisioned for simulations where the past 2 time states are used
+                            # to compute the state at the next time step
 
     delta_diffusion = None  # Buffer for the concentration changes from diffusion step (n_species x n_cells)
     delta_reactions = None  # Buffer for the concentration changes from reactions step (n_species x n_cells)
@@ -43,36 +46,9 @@ class BioSim1D:
 
     #########################################################################
     #                                                                       #
-    #                               SYSTEM-WIDE                             #
+    #                              TO VIEW                                  #
     #                                                                       #
     #########################################################################
-
-    @classmethod
-    def initialize_universe(cls, n_bins: int, chem_data, reactions=None) -> None:
-        """
-        Initialize all concentrations to zero.
-
-        :param n_bins:      The number of compartments (bins) to use in the simulation
-        :param chem_data:
-        :param reactions:   (OPTIONAL) Object of class "Reactions".  It may also be set later
-
-        :return:            None
-        """
-        assert n_bins >= 1, "The number of bins must be at least 1"
-        assert chem_data.n_species >= 1, "The number chemical species set in the `chem_data` object must be at least 1"
-
-        cls.n_bins = n_bins
-        cls.n_species = chem_data.n_species
-
-        cls.univ = np.zeros((cls.n_species, n_bins), dtype=float)
-
-        cls.diffusion_rates = None
-        cls.names = None
-        cls.chem_data = chem_data
-
-        if reactions:
-            cls.all_reactions = reactions
-
 
 
     @classmethod
@@ -84,12 +60,19 @@ class BioSim1D:
         :return:
         """
         assert 0 <= index < cls.n_species, f"The species index must be in the range [0-{cls.n_species - 1}]"
-        return cls.univ[index]
+        return cls.system[index]
 
 
     @classmethod
-    def bin_concentration(cls, bin_address, species_index):
-        return cls.univ[species_index, bin_address]
+    def bin_concentration(cls, bin_address: int, species_index: int):
+        """
+        Return the concentration at the requested bin of the specified species
+
+        :param bin_address:
+        :param species_index:
+        :return:
+        """
+        return cls.system[species_index, bin_address]
 
 
 
@@ -113,16 +96,16 @@ class BioSim1D:
                     if name:
                         name = f" ({name})"
 
-                    print(f"Species {species_index}{name}. Diff rate: {cls.chem_data.diffusion_rates[species_index]}. Conc: ", cls.univ[species_index])
+                    print(f"Species {species_index}{name}. Diff rate: {cls.chem_data.diffusion_rates[species_index]}. Conc: ", cls.system[species_index])
 
         else:
             if concise:
-                print(cls.univ)
+                print(cls.system)
             else:
                 if cls.n_species == 1:
-                    print(f"{cls.n_bins} bins and 1 species: ", cls.univ)
+                    print(f"{cls.n_bins} bins and 1 species: ", cls.system)
                 else:
-                    print(f"{cls.n_bins} bins and {cls.n_species} species:\n", cls.univ)
+                    print(f"{cls.n_bins} bins and {cls.n_species} species:\n", cls.system)
 
 
 
@@ -132,6 +115,49 @@ class BioSim1D:
     #                     SET/MODIFY CONCENTRATIONS                         #
     #                                                                       #
     #########################################################################
+
+    @classmethod
+    def initialize_system(cls, n_bins: int, chem_data, reactions=None) -> None:
+        """
+        Initialize all concentrations to zero.
+
+        TODO: maybe allow optionally passing n_species in lieu of chem_data,
+              and let it create and return the "Chemicals" object in that case
+
+        :param n_bins:      The number of compartments (bins) to use in the simulation
+        :param chem_data:   An object of class "Chemicals"
+        :param reactions:   (OPTIONAL) Object of class "Reactions".  It may also be set later
+
+        :return:            None
+        """
+        assert n_bins >= 1, "The number of bins must be at least 1"
+        assert chem_data.n_species >= 1, "The number chemical species set in the `chem_data` object must be at least 1"
+
+        cls.n_bins = n_bins
+        cls.n_species = chem_data.n_species
+
+        cls.system = np.zeros((cls.n_species, n_bins), dtype=float)
+
+        cls.diffusion_rates = None
+        cls.names = None
+        cls.chem_data = chem_data
+
+        if reactions:
+            cls.all_reactions = reactions
+
+
+    @classmethod
+    def replace_system(cls, new_state: np.array) -> None:
+        """
+        Replace the System's internal state
+
+        :param new_state:
+        :return:
+        """
+        cls.system = new_state
+        cls.n_species, cls.n_bins =  new_state.shape
+
+
 
     @classmethod
     def set_uniform_concentration(cls, species_index: int, conc: float) -> None:
@@ -148,7 +174,7 @@ class BioSim1D:
 
         assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
 
-        cls.univ[species_index] = np.full(cls.n_bins, conc, dtype=float)
+        cls.system[species_index] = np.full(cls.n_bins, conc, dtype=float)
 
 
     @classmethod
@@ -182,13 +208,13 @@ class BioSim1D:
 
         assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
 
-        cls.univ[species_index, bin] = conc
+        cls.system[species_index, bin] = conc
 
 
     @classmethod
     def set_species_conc(cls, species_index: int, conc_list: list) -> None:
         """
-        Assign the requested concentration value to the cell with the given index, for the specified species
+        Assign the requested list of concentration values to all the bins, in order, for the specified species
 
         :param species_index:   Zero-based index to identify a specific chemical species
         :param conc_list:            The desired concentration value to assign to the specified location
@@ -196,12 +222,12 @@ class BioSim1D:
         """
         assert species_index < cls.n_species, f"The requested species index ({bin}) must be in the range [0 - {cls.n_species - 1}]"
 
-        cls.univ[species_index] = conc_list
+        cls.system[species_index] = conc_list
 
 
 
     @classmethod
-    def inject_conc_to_cell(cls, bin: int, species_index: int, delta_conc: float, zero_clip = True) -> None:
+    def inject_conc_to_bin(cls, bin: int, species_index: int, delta_conc: float, zero_clip = True) -> None:
         """
         Add the requested concentration to the cell with the given index, for the specified species
 
@@ -214,15 +240,69 @@ class BioSim1D:
         """
         assert bin < cls.n_bins, f"The requested cell index ({bin}) must be in the range [0 - {cls.n_bins - 1}]"
 
-        if (cls.univ[species_index, bin] + delta_conc) < 0. :
+        if (cls.system[species_index, bin] + delta_conc) < 0. :
             if zero_clip:
-                cls.univ[species_index, bin] = 0
+                cls.system[species_index, bin] = 0
             else:
                 raise Exception("The requested concentration change would result in a negative final value")
 
         # Normal scenario, not leading to negative values for the final concentration
-        cls.univ[species_index, bin] += delta_conc
+        cls.system[species_index, bin] += delta_conc
 
+
+
+    @classmethod
+    def increase_spacial_resolution(cls, factor:int) -> np.array:
+        """
+        Increase the spacial resolution of the system by cloning and repeating
+        each bin, by the specified number of times
+
+        EXAMPLE: if the system is
+                        [[11. 12. 13.]
+                         [ 5. 15. 25.]]
+                and factor=2, then the result will be
+                        [[11. 11. 12. 12. 13. 13.]
+                         [ 5.  5. 15. 15. 25. 25.]]
+
+        :param factor:  Number of bins into which to split each bin (replicating their concentration values)
+        :return:        The derived system state
+        """
+        assert type(factor) == int, "The argument `factor` must be an integer"
+        return np.repeat(cls.system, factor, axis=1)
+
+
+    @classmethod
+    def decrease_spacial_resolution(cls, factor:int) -> np.array:
+        """
+
+        TODO: eliminate the restriction that the number of bins must be a multiple of factor
+
+        EXAMPLE: if the system is
+                        [[10., 20., 30., 40., 50., 60.]
+                         [ 2., 8.,   5., 15., 4.,   2.]]
+                and factor=2, then the result will be
+                        [[15., 35., 55.]
+                         [ 5., 10.,  3.]]
+
+        :param factor:
+        :return:
+        """
+        assert type(factor) == int, "The argument `factor` must be an integer"
+        assert cls.n_bins % factor == 0, f"The number of bins (currently {cls.n_bins}) must be a multiple of the requested scaling factor"
+
+        reduced_n_bins = int(cls.n_bins / factor)
+        # The result matrix will have the same number of chemical species, but fewer bins
+        result = np.zeros((cls.n_species, reduced_n_bins), dtype=float)
+
+        for i in range(reduced_n_bins):
+            start_col = factor * i      # The start column will initially be 0, and will get incremented by factor
+            col_group = cls.system[ : , start_col:start_col+factor] # Extract a submatrix containing the number of columns specified by "factor",
+                                                                    # starting with the column specified by start_col
+            compressed_col_group = np.sum(col_group, axis=1, keepdims=True) / factor    # Create a single column that is the average of the columns in the group
+            result[:, [i]] = compressed_col_group                                       # Store the newly-computed column of averages in the appropriate place
+                                                                                        # in the result matrix
+
+        return result
 
 
 
@@ -293,7 +373,7 @@ class BioSim1D:
                     print("    ...")
 
             cls.diffuse_step(time_step)
-            cls.univ += cls.delta_diffusion     # Matrix operation
+            cls.system += cls.delta_diffusion     # Matrix operation
 
         if verbose:
             print(f"\nSystem after Delta time {time_duration}, at end of {n_steps} steps of size {time_step}:")
@@ -338,12 +418,16 @@ class BioSim1D:
 
         We're assuming an isolated environment, with nothing diffusing thru the "walls"
 
+        EXPLANATION:  https://life123.science/diffusion
+
+        TODO: allow to specify the Delta_x (for now, taken to always be 1)
+
         :param time_step:       Time step over which to carry out the diffusion.
                                 If too large, an Exception will be raised.
         :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
         :return:                A Numpy array with the change in concentration for the given species across all bins
         """
-        assert cls.univ is not None, "Must first initialize the system"
+        assert cls.system is not None, "Must first initialize the system"
         assert cls.n_bins > 0, "Must first set the number of bins"
         assert cls.chem_data.diffusion_rates is not None, "Must first set the diffusion rates"
         assert cls.sealed == True, "For now, there's no provision for exchange with the outside"
@@ -367,16 +451,16 @@ class BioSim1D:
 
         for i in range(cls.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
             #print(f"Processing bin number {i}")
-            current_conc = cls.univ[species_index , i]
+            current_conc = cls.system[species_index , i]
 
             if i == 0 :                     # Special case for the first bin (no left neighbor)
-                increment_vector[i] = effective_diff * (cls.univ[species_index , i + 1] - current_conc)
+                increment_vector[i] = effective_diff * (cls.system[species_index , 1] - current_conc)
             elif i == max_bin_number :      # Special case for the last bin (no right neighbor)
-                increment_vector[i] = effective_diff * (cls.univ[species_index , i - 1] - current_conc)
+                increment_vector[i] = effective_diff * (cls.system[species_index , i - 1] - current_conc)
             else:
                 increment_vector[i] = effective_diff * \
-                                        (  cls.univ[species_index , i + 1]  -  current_conc
-                                         + cls.univ[species_index , i - 1]  -  current_conc  )
+                                        (cls.system[species_index , i + 1] - current_conc
+                                         + cls.system[species_index , i - 1] - current_conc)
 
         return increment_vector
 
@@ -426,7 +510,7 @@ class BioSim1D:
 
         for i in range(n_steps):
             cls.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
-            cls.univ += cls.delta_reactions     # Matrix operation
+            cls.system += cls.delta_reactions     # Matrix operation
 
 
 
@@ -503,7 +587,7 @@ class BioSim1D:
                 stoichiometry, species_index, order = r
                 increment_vector[species_index] += stoichiometry * (- delta_fwd_list[i] + delta_back_list[i])
 
-                if (cls.univ[species_index , bin_n] + increment_vector[species_index]) < 0:
+                if (cls.system[species_index , bin_n] + increment_vector[species_index]) < 0:
                     raise Exception(f"The given time interval ({delta_time}) leads to negative concentrations in reactions: make it smaller!")
 
                 #cls.univ[species_index , bin_n] += increment_vector[species_index]
@@ -515,7 +599,7 @@ class BioSim1D:
                 stoichiometry, species_index, order = p
                 increment_vector[species_index] += stoichiometry * (delta_fwd_list[i] - delta_back_list[i])
 
-                if (cls.univ[species_index , bin_n] + increment_vector[species_index]) < 0:
+                if (cls.system[species_index , bin_n] + increment_vector[species_index]) < 0:
                     raise Exception(f"The given time interval ({delta_time}) leads to negative concentrations in reactions: make it smaller!")
 
                 #cls.univ[species_index , bin_n] += increment_vector[species_index]
@@ -555,13 +639,13 @@ class BioSim1D:
             delta_fwd = delta_time * fwd_rate_coeff         # TODO: save, to avoid re-computing at each bin
             for r in reactants:
                 stoichiometry, species_index, order = r
-                conc = cls.univ[species_index , bin_n]      # TODO: make more general for 2D and 3D
+                conc = cls.system[species_index , bin_n]      # TODO: make more general for 2D and 3D
                 delta_fwd *= conc ** order      # Raise to power
 
             delta_back = delta_time * back_rate_coeff       # TODO: save, to avoid re-computing at each bin
             for p in products:
                 stoichiometry, species_index, order = p
-                conc = cls.univ[species_index , bin_n]      # TODO: make more general for 2D and 3D
+                conc = cls.system[species_index , bin_n]      # TODO: make more general for 2D and 3D
                 delta_back *= conc ** order     # Raise to power
 
             #print(f"    delta_fwd: {delta_fwd} | delta_back: {delta_back}")
@@ -608,8 +692,8 @@ class BioSim1D:
             cls.diffuse_step(time_step)
             # Merge into the concentrations of the various bins/chemical species pairs,
             # the increments concentrations computed separately by the reaction and the diffusion steps
-            cls.univ += cls.delta_reactions     # Matrix operation
-            cls.univ += cls.delta_diffusion     # Matrix operation
+            cls.system += cls.delta_reactions     # Matrix operation
+            cls.system += cls.delta_diffusion     # Matrix operation
 
 
 
@@ -638,7 +722,7 @@ class BioSim1D:
         #print()
         #print(my_groups)
 
-        my_data = [{"group": str(i), "variable": "Mol 0", "value": str(cls.univ[species_index, i])}
+        my_data = [{"group": str(i), "variable": "Mol 0", "value": str(cls.system[species_index, i])}
                    for i in range(cls.n_bins)]
         #print(my_data)
 
