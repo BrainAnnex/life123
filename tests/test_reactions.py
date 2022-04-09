@@ -12,7 +12,7 @@ def rxn():
     chem_data = chem()
     chem_data.set_names(["A", "B", "C", "D", "E", "F"])
 
-    bio.initialize_universe(n_bins=10, chem_data=chem_data)
+    bio.initialize_system(n_bins=10, chem_data=chem_data)
 
     rnx_obj = Reactions(chem_data)
     yield rnx_obj
@@ -80,7 +80,7 @@ def test_add_reaction(rxn):
 def test_reaction_step_1(rxn):
     # Based on experiment "reaction1"
     chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
-    bio.initialize_universe(n_bins=3, chem_data=chem_data)
+    bio.initialize_system(n_bins=3, chem_data=chem_data)
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
@@ -92,7 +92,7 @@ def test_reaction_step_1(rxn):
     bio.set_reactions(rxn)
 
     assert rxn.number_of_reactions() == 1
-    assert np.allclose(bio.univ, [[ 10., 10., 10.] , [50., 50., 50.]])
+    assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
 
     # Just the first step, with the lower-level call to reaction_step()
     bio.reaction_step(0.1)
@@ -103,7 +103,7 @@ def test_reaction_step_1(rxn):
 def test_reaction_step_1b(rxn):
     # Based on experiment "reaction1"
     chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
-    bio.initialize_universe(n_bins=3, chem_data=chem_data)
+    bio.initialize_system(n_bins=3, chem_data=chem_data)
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
@@ -116,25 +116,25 @@ def test_reaction_step_1b(rxn):
 
     assert rxn.number_of_reactions() == 1
     assert rxn.describe_reactions() == ["0: A <-> B  (Rf = 3.0 / Rb = 2.0)"]
-    assert np.allclose(bio.univ, [[ 10., 10., 10.] , [50., 50., 50.]])
+    assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
 
     # First step
     bio.react(time_step=0.1, n_steps=1)
     assert np.allclose(bio.delta_reactions, [[ 7., 7., 7.] , [-7., -7., -7.]])
-    assert np.allclose(bio.univ, [[ 17., 17., 17.] , [43., 43., 43.]])
+    assert np.allclose(bio.system, [[17., 17., 17.] , [43., 43., 43.]])
 
     # More steps
     for i in range(10):
         bio.reaction_step(0.1)
-        bio.univ += bio.delta_reactions     # Matrix operation
+        bio.system += bio.delta_reactions     # Matrix operation
 
-    assert np.allclose(bio.univ,
+    assert np.allclose(bio.system,
                        [[ 23.99316406, 23.99316406, 23.99316406] ,
                         [ 36.00683594, 36.00683594, 36.00683594]])
 
     # Taken to equilibrium
     bio.react(time_step=0.1, n_steps=20)
-    assert np.allclose(bio.univ, [[ 24., 24., 24.] , [36., 36., 36.]])
+    assert np.allclose(bio.system, [[24., 24., 24.] , [36., 36., 36.]])
 
 
 
@@ -148,14 +148,14 @@ def test_react_2(rxn):
     rxn.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
     assert rxn.number_of_reactions() == 1
 
-    bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
 
     # Large number of steps
     bio.react(time_step=0.1, n_steps=15)
-    assert np.allclose(bio.univ, [[14.54545455] , [36.36363636]])
+    assert np.allclose(bio.system, [[14.54545455] , [36.36363636]])
     assert bio.n_bins == 1
 
 
@@ -170,18 +170,18 @@ def test_react_3(rxn):
     rxn.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
     assert rxn.number_of_reactions() == 1
 
-    bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
 
     # First step
     bio.react(time_step=0.1, n_steps=1)
-    assert np.allclose(bio.univ, [[20.] , [35.]])
+    assert np.allclose(bio.system, [[20.] , [35.]])
 
     # Large number of steps
     bio.react(time_step=0.1, n_steps=100)
-    assert np.allclose(bio.univ, [[16.25] , [40.625]])
+    assert np.allclose(bio.system, [[16.25] , [40.625]])
     assert bio.n_bins == 1
 
 
@@ -197,7 +197,7 @@ def test_react_4(rxn):
                      forward_rate=5., reverse_rate=2.)
     assert rxn.number_of_reactions() == 1
 
-    bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
@@ -205,11 +205,11 @@ def test_react_4(rxn):
 
     # First step
     bio.react(time_step=0.002, n_steps=1)
-    assert np.allclose(bio.univ, [[ 5.08], [45.08], [24.92]])
+    assert np.allclose(bio.system, [[5.08], [45.08], [24.92]])
 
     # Large number of steps
     bio.react(time_step=0.002, n_steps=40)
-    assert np.allclose(bio.univ, [[ 0.29487741], [40.29487741], [29.70512259]])
+    assert np.allclose(bio.system, [[0.29487741], [40.29487741], [29.70512259]])
     assert bio.n_bins == 1
 
 
@@ -224,17 +224,17 @@ def test_react_5(rxn):
                      forward_rate=5., reverse_rate=2.)
     assert rxn.number_of_reactions() == 1
 
-    bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_all_uniform_concentrations( [4., 7., 2.] )
 
     # First step
     bio.react(time_step=.2, n_steps=1)
-    assert np.allclose(bio.univ, [[5.6], [3.8], [0.4]])
+    assert np.allclose(bio.system, [[5.6], [3.8], [0.4]])
 
     # Numerous more steps
     bio.react(time_step=.05, n_steps=30)
-    assert np.allclose(bio.univ, [[4.31058733], [6.37882534], [1.68941267]])
+    assert np.allclose(bio.system, [[4.31058733], [6.37882534], [1.68941267]])
     assert bio.n_bins == 1
 
 
@@ -250,23 +250,23 @@ def test_react_6(rxn):
                      forward_rate=5., reverse_rate=2.)
     assert rxn.number_of_reactions() == 1
 
-    bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_all_uniform_concentrations( [4., 7., 5., 2.] )
 
     # First step
     bio.react(time_step=0.001, n_steps=1)
-    assert np.allclose(bio.univ, [[3.76],
-                                  [6.4 ],
-                                  [5.48],
-                                  [2.36]])
+    assert np.allclose(bio.system, [[3.76],
+                                    [6.4 ],
+                                    [5.48],
+                                    [2.36]])
 
     # Numerous more steps
     bio.react(time_step=0.001, n_steps=40)
-    assert np.allclose(bio.univ, [[2.80284552],
-                                  [4.00711381],
-                                  [7.39430896],
-                                  [3.79573172]])
+    assert np.allclose(bio.system, [[2.80284552],
+                                    [4.00711381],
+                                    [7.39430896],
+                                    [3.79573172]])
     assert bio.n_bins == 1
 
 
@@ -281,19 +281,19 @@ def test_react_7(rxn):
     rxn.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
     assert rxn.number_of_reactions() == 1
 
-    bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_all_uniform_concentrations( [3., 5.] )
 
     # First step
     bio.react(time_step=0.02, n_steps=1)
-    assert np.allclose(bio.univ, [[1.6],
-                                  [5.7]])
+    assert np.allclose(bio.system, [[1.6],
+                                    [5.7]])
 
     # Numerous more steps
     bio.react(time_step=0.02, n_steps=20)
-    assert np.allclose(bio.univ, [[1.51554944],
-                                  [5.74222528]])
+    assert np.allclose(bio.system, [[1.51554944],
+                                    [5.74222528]])
     assert bio.n_bins == 1
 
 
@@ -309,31 +309,31 @@ def test_react_8(rxn):
     rxn.add_reaction(reactants=["C", "D"], products=["E"], forward_rate=8., reverse_rate=4.)
     assert rxn.number_of_reactions() == 2
 
-    bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_all_uniform_concentrations( [3., 5., 1., 0.4, 0.1] )
 
     # First step
     bio.react(time_step=0.01, n_steps=1)
-    assert np.allclose(bio.univ, [[2.27 ],
-                                  [4.27 ],
-                                  [1.702],
-                                  [0.372],
-                                  [0.128]])
+    assert np.allclose(bio.system, [[2.27],
+                                    [4.27 ],
+                                    [1.702],
+                                    [0.372],
+                                    [0.128]])
 
     # 2nd step
     bio.react(time_step=0.01, n_steps=1)
-    assert np.allclose(bio.univ, [[1.819395  ],
-                                  [3.819395  ],
-                                  [2.10707348],
-                                  [0.32646848],
-                                  [0.17353152]])
+    assert np.allclose(bio.system, [[1.819395],
+                                    [3.819395  ],
+                                    [2.10707348],
+                                    [0.32646848],
+                                    [0.17353152]])
 
     # Numerous more steps
     bio.react(time_step=0.01, n_steps=200)
-    assert np.allclose(bio.univ, [[0.50508029],
-                                  [2.50508029],
-                                  [3.16316668],
-                                  [0.06824696],
-                                  [0.43175304]])
+    assert np.allclose(bio.system, [[0.50508029],
+                                    [2.50508029],
+                                    [3.16316668],
+                                    [0.06824696],
+                                    [0.43175304]])
     assert bio.n_bins == 1

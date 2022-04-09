@@ -15,7 +15,8 @@ class BioSim2D:
 
     n_species = 1       # The number of (non-water) chemical species
 
-    univ = None         # NumPy array of dimension (n_species x n_cells_x x n_cells_y)
+    system = None       # Concentration data in the System we're simulating, for all the chemicals
+                        # NumPy array of dimension (n_species x n_cells_x x n_cells_y)
                         # Each plane represents a species
 
     diffusion_rates = None  # NumPy array of diffusion rates for the various species
@@ -28,8 +29,14 @@ class BioSim2D:
 
 
 
+    #########################################################################
+    #                                                                       #
+    #                     SET/MODIFY CONCENTRATIONS                         #
+    #                                                                       #
+    #########################################################################
+
     @classmethod
-    def initialize_universe(cls, n_cells: (int, int), n_species: int) -> None:
+    def initialize_system(cls, n_cells: (int, int), n_species: int) -> None:
         """
 
         :param n_cells:     The number of compartments (bins) to use in the simulation,
@@ -46,7 +53,7 @@ class BioSim2D:
         cls.n_cells_y = n_cells_y
         cls.n_species = n_species
 
-        cls.univ = np.zeros((n_cells_y, n_cells_x, n_species), dtype=float)
+        cls.system = np.zeros((n_cells_y, n_cells_x, n_species), dtype=float)
 
 
 
@@ -58,7 +65,7 @@ class BioSim2D:
         :param diff_list:   List of diffusion rates, in index order
         :return:            None
         """
-        assert cls.n_species > 0, "Must first call initialize_universe()"
+        assert cls.n_species > 0, "Must first call initialize_system()"
         assert len(diff_list) == cls.n_species, \
             "The number of items in the diffusion list must equal the registered number of species"
         cls.diffusion_rates = np.array(diff_list, dtype=float)

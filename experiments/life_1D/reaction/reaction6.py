@@ -20,7 +20,7 @@ rxn = Reactions(chem_data)
 rxn.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
                  forward_rate=5., reverse_rate=2.)
 
-bio.initialize_universe(n_bins=1, chem_data=chem_data, reactions=rxn)
+bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
 
 bio.set_all_uniform_concentrations( [4., 7., 5., 2.] )
 

@@ -9,7 +9,7 @@ class Chemicals:
     def __init__(self, n_species=0, diffusion_rates=None, names=None):
         """
 
-        :param n_species:
+        :param n_species:       The number of chemicals - exclusive of water
         :param diffusion_rates:
         :param names:
         """

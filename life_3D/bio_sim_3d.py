@@ -16,8 +16,8 @@ class BioSim3D:
 
     n_species = 1       # The number of (non-water) chemical species
 
-    univ = None         # NumPy array of dimension (n_species x n_cells_x x n_cells_y x n_cells_z)
-    # Each block represents a species
+    system = None       # NumPy array of dimension (n_species x n_cells_x x n_cells_y x n_cells_z)
+                        # Each block represents a species
 
     diffusion_rates = None  # NumPy array of diffusion rates for the various species
 
@@ -29,8 +29,14 @@ class BioSim3D:
 
 
 
+    #########################################################################
+    #                                                                       #
+    #                     SET/MODIFY CONCENTRATIONS                         #
+    #                                                                       #
+    #########################################################################
+
     @classmethod
-    def initialize_universe(cls, n_cells: (int, int, int), n_species: int) -> None:
+    def initialize_system(cls, n_cells: (int, int, int), n_species: int) -> None:
         """
 
         :param n_cells:     The number of compartments (bins) to use in the simulation,
@@ -38,4 +44,15 @@ class BioSim3D:
         :param n_species:   The number of (non-water) chemical species.  It must be at least 1
         :return:            None
         """
-        pass
+        (n_cells_x, n_cells_y, n_cells_z) = n_cells
+        assert n_cells_x >= 1, "The number of cells must be at least 1 in any dimension"
+        assert n_cells_y >= 1, "The number of cells must be at least 1 in any dimension"
+        assert n_cells_z >= 1, "The number of cells must be at least 1 in any dimension"
+        assert n_species >= 1, "The number of (non-water) chemical species must be at least 1"
+
+        cls.n_cells_x = n_cells_x
+        cls.n_cells_y = n_cells_y
+        cls.n_cells_z = n_cells_z
+        cls.n_species = n_species
+
+        cls.system = np.zeros((n_cells_z, n_cells_y, n_cells_x, n_species), dtype=float)

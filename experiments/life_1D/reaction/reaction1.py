@@ -14,7 +14,7 @@ from modules.html_log.html_log import HtmlLog as log
 
 # Initialize the system
 chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])  # NOTE: diffusion_rates not used for now
-bio.initialize_universe(n_bins=3, chem_data=chem_data)
+bio.initialize_system(n_bins=3, chem_data=chem_data)
 
 bio.set_uniform_concentration(species_index=0, conc=10.)
 bio.set_uniform_concentration(species_index=1, conc=50.)
