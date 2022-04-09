@@ -155,7 +155,7 @@ class BioSim1D:
         :return:
         """
         cls.system = new_state
-        cls.n_species, cls.n_bins =  new_state.shape
+        cls.n_species, cls.n_bins = new_state.shape     # Extract from the new state
 
 
 
