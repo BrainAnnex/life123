@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>  
+    <meta charset="UTF-8">
+    <title>Log</title>
+    
+    <script src="../../../modules/Vue2_lib/vue2.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../../../modules/SVG_helper/svg_helper.js" ></script>
+    <link type="text/css" rel="stylesheet" href="../../../modules/visualization/D3_heatmap.css">  
+</head>
+
+<body>
+<br>
+<br>
+<b>1-D diffusion to equilibrium of a single species, with Diffusion rate 0.1. Time steps of 0.1</b><br>
+<span style='color:#BBB'>Heatmap with log scale in domain [1.5, 3.5]</span><br>
+<h1>Time 0.0</h1>
+
+<div id="vue-root-1">   <!-- Container for VUE COMPONENTS below : ROOT element -->
+
+    <vue-heatmap-9 
+        v-bind:my_groups="JSON.parse(my_groups_json)"
+        v-bind:my_vars="JSON.parse(my_vars_json)"
+        v-bind:my_data="JSON.parse(my_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-9>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-1',
+
+    data: {
+        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8"]',
+my_vars_json: '["Mol 0"]',
+my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "0.0"}, {"group": "1", "variable": "Mol 0", "value": "0.0"}, {"group": "2", "variable": "Mol 0", "value": "10.0"}, {"group": "3", "variable": "Mol 0", "value": "0.0"}, {"group": "4", "variable": "Mol 0", "value": "0.0"}, {"group": "5", "variable": "Mol 0", "value": "0.0"}, {"group": "6", "variable": "Mol 0", "value": "10.0"}, {"group": "7", "variable": "Mol 0", "value": "0.0"}, {"group": "8", "variable": "Mol 0", "value": "0.0"}]',
+range_min_json: '1.5',
+range_max_json: '3.5',
+outer_width_json: '850',
+outer_height_json: '50',
+margins_json: '{"top": 10, "right": 30, "bottom": 18, "left": 30}'
+    }
+
+});
+</script>
+
+<h1>Time 3.0</h1>
+
+<div id="vue-root-2">   <!-- Container for VUE COMPONENTS below : ROOT element -->
+
+    <vue-heatmap-9 
+        v-bind:my_groups="JSON.parse(my_groups_json)"
+        v-bind:my_vars="JSON.parse(my_vars_json)"
+        v-bind:my_data="JSON.parse(my_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-9>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-2',
+
+    data: {
+        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8"]',
+my_vars_json: '["Mol 0"]',
+my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "0.2775745068156102"}, {"group": "1", "variable": "Mol 0", "value": "1.74303540697427"}, {"group": "2", "variable": "Mol 0", "value": "5.960509831179085"}, {"group": "3", "variable": "Mol 0", "value": "1.7652725571491619"}, {"group": "4", "variable": "Mol 0", "value": "0.5072153957637419"}, {"group": "5", "variable": "Mol 0", "value": "1.7652725571491619"}, {"group": "6", "variable": "Mol 0", "value": "5.960509831179085"}, {"group": "7", "variable": "Mol 0", "value": "1.74303540697427"}, {"group": "8", "variable": "Mol 0", "value": "0.2775745068156102"}]',
+range_min_json: '1.5',
+range_max_json: '3.5',
+outer_width_json: '850',
+outer_height_json: '50',
+margins_json: '{"top": 10, "right": 30, "bottom": 18, "left": 30}'
+    }
+
+});
+</script>
+
+<h1>Time 6.0</h1>
+
+<div id="vue-root-3">   <!-- Container for VUE COMPONENTS below : ROOT element -->
+
+    <vue-heatmap-9 
+        v-bind:my_groups="JSON.parse(my_groups_json)"
+        v-bind:my_vars="JSON.parse(my_vars_json)"
+        v-bind:my_data="JSON.parse(my_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-9>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-3',
+
+    data: {
+        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8"]',
+my_vars_json: '["Mol 0"]',
+my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "0.7315276477799334"}, {"group": "1", "variable": "Mol 0", "value": "2.183415297774347"}, {"group": "2", "variable": "Mol 0", "value": "4.188771841425626"}, {"group": "3", "variable": "Mol 0", "value": "2.282389407533029"}, {"group": "4", "variable": "Mol 0", "value": "1.2277916109741278"}, {"group": "5", "variable": "Mol 0", "value": "2.282389407533029"}, {"group": "6", "variable": "Mol 0", "value": "4.188771841425626"}, {"group": "7", "variable": "Mol 0", "value": "2.183415297774347"}, {"group": "8", "variable": "Mol 0", "value": "0.7315276477799334"}]',
+range_min_json: '1.5',
+range_max_json: '3.5',
+outer_width_json: '850',
+outer_height_json: '50',
+margins_json: '{"top": 10, "right": 30, "bottom": 18, "left": 30}'
+    }
+
+});
+</script>
+
+<h1>Time 9.0</h1>
+
+<div id="vue-root-4">   <!-- Container for VUE COMPONENTS below : ROOT element -->
+
+    <vue-heatmap-9 
+        v-bind:my_groups="JSON.parse(my_groups_json)"
+        v-bind:my_vars="JSON.parse(my_vars_json)"
+        v-bind:my_data="JSON.parse(my_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-9>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-4',
+
+    data: {
+        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8"]',
+my_vars_json: '["Mol 0"]',
+my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "1.1212019561403928"}, {"group": "1", "variable": "Mol 0", "value": "2.2435538778986284"}, {"group": "2", "variable": "Mol 0", "value": "3.3316456129371836"}, {"group": "3", "variable": "Mol 0", "value": "2.4287678007441973"}, {"group": "4", "variable": "Mol 0", "value": "1.749661504559193"}, {"group": "5", "variable": "Mol 0", "value": "2.4287678007441973"}, {"group": "6", "variable": "Mol 0", "value": "3.3316456129371836"}, {"group": "7", "variable": "Mol 0", "value": "2.2435538778986284"}, {"group": "8", "variable": "Mol 0", "value": "1.1212019561403928"}]',
+range_min_json: '1.5',
+range_max_json: '3.5',
+outer_width_json: '850',
+outer_height_json: '50',
+margins_json: '{"top": 10, "right": 30, "bottom": 18, "left": 30}'
+    }
+
+});
+</script>
+
+<h1>Time 12.0</h1>
+
+<div id="vue-root-5">   <!-- Container for VUE COMPONENTS below : ROOT element -->
+
+    <vue-heatmap-9 
+        v-bind:my_groups="JSON.parse(my_groups_json)"
+        v-bind:my_vars="JSON.parse(my_vars_json)"
+        v-bind:my_data="JSON.parse(my_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-9>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-5',
+
+    data: {
+        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8"]',
+my_vars_json: '["Mol 0"]',
+my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "1.409926415329593"}, {"group": "1", "variable": "Mol 0", "value": "2.2128581268552696"}, {"group": "2", "variable": "Mol 0", "value": "2.8811282129149904"}, {"group": "3", "variable": "Mol 0", "value": "2.4618079877614654"}, {"group": "4", "variable": "Mol 0", "value": "2.0685585142773593"}, {"group": "5", "variable": "Mol 0", "value": "2.4618079877614654"}, {"group": "6", "variable": "Mol 0", "value": "2.8811282129149904"}, {"group": "7", "variable": "Mol 0", "value": "2.2128581268552696"}, {"group": "8", "variable": "Mol 0", "value": "1.409926415329593"}]',
+range_min_json: '1.5',
+range_max_json: '3.5',
+outer_width_json: '850',
+outer_height_json: '50',
+margins_json: '{"top": 10, "right": 30, "bottom": 18, "left": 30}'
+    }
+
+});
+</script>
+
+<h1>Time 15.0</h1>
+
+<div id="vue-root-6">   <!-- Container for VUE COMPONENTS below : ROOT element -->
+
+    <vue-heatmap-9 
+        v-bind:my_groups="JSON.parse(my_groups_json)"
+        v-bind:my_vars="JSON.parse(my_vars_json)"
+        v-bind:my_data="JSON.parse(my_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-9>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-6',
+
+    data: {
+        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8"]',
+my_vars_json: '["Mol 0"]',
+my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "1.613758038392865"}, {"group": "1", "variable": "Mol 0", "value": "2.175172822053204"}, {"group": "2", "variable": "Mol 0", "value": "2.6291807177573876"}, {"group": "3", "variable": "Mol 0", "value": "2.4582930954812934"}, {"group": "4", "variable": "Mol 0", "value": "2.2471906526304966"}, {"group": "5", "variable": "Mol 0", "value": "2.4582930954812934"}, {"group": "6", "variable": "Mol 0", "value": "2.6291807177573876"}, {"group": "7", "variable": "Mol 0", "value": "2.175172822053204"}, {"group": "8", "variable": "Mol 0", "value": "1.613758038392865"}]',
+range_min_json: '1.5',
+range_max_json: '3.5',
+outer_width_json: '850',
+outer_height_json: '50',
+margins_json: '{"top": 10, "right": 30, "bottom": 18, "left": 30}'
+    }
+
+});
+</script>
+
+<h1>Time 18.0</h1>
+
+<div id="vue-root-7">   <!-- Container for VUE COMPONENTS below : ROOT element -->
+
+    <vue-heatmap-9 
+        v-bind:my_groups="JSON.parse(my_groups_json)"
+        v-bind:my_vars="JSON.parse(my_vars_json)"
+        v-bind:my_data="JSON.parse(my_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-9>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-7',
+
+    data: {
+        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8"]',
+my_vars_json: '["Mol 0"]',
+my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "1.7562206924203536"}, {"group": "1", "variable": "Mol 0", "value": "2.1497123376842286"}, {"group": "2", "variable": "Mol 0", "value": "2.482006103989057"}, {"group": "3", "variable": "Mol 0", "value": "2.442300753753672"}, {"group": "4", "variable": "Mol 0", "value": "2.3395202243053688"}, {"group": "5", "variable": "Mol 0", "value": "2.442300753753672"}, {"group": "6", "variable": "Mol 0", "value": "2.482006103989057"}, {"group": "7", "variable": "Mol 0", "value": "2.1497123376842286"}, {"group": "8", "variable": "Mol 0", "value": "1.7562206924203536"}]',
+range_min_json: '1.5',
+range_max_json: '3.5',
+outer_width_json: '850',
+outer_height_json: '50',
+margins_json: '{"top": 10, "right": 30, "bottom": 18, "left": 30}'
+    }
+
+});
+</script>
+
+<h1>Time 21.0</h1>
+
+<div id="vue-root-8">   <!-- Container for VUE COMPONENTS below : ROOT element -->
+
+    <vue-heatmap-9 
+        v-bind:my_groups="JSON.parse(my_groups_json)"
+        v-bind:my_vars="JSON.parse(my_vars_json)"
+        v-bind:my_data="JSON.parse(my_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-9>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-8',
+
+    data: {
+        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8"]',
+my_vars_json: '["Mol 0"]',
+my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "1.8567286969212466"}, {"group": "1", "variable": "Mol 0", "value": "2.1370599245060213"}, {"group": "2", "variable": "Mol 0", "value": "2.39331754309645"}, {"group": "3", "variable": "Mol 0", "value": "2.4221787389072844"}, {"group": "4", "variable": "Mol 0", "value": "2.3814301931379864"}, {"group": "5", "variable": "Mol 0", "value": "2.4221787389072844"}, {"group": "6", "variable": "Mol 0", "value": "2.39331754309645"}, {"group": "7", "variable": "Mol 0", "value": "2.1370599245060213"}, {"group": "8", "variable": "Mol 0", "value": "1.8567286969212466"}]',
+range_min_json: '1.5',
+range_max_json: '3.5',
+outer_width_json: '850',
+outer_height_json: '50',
+margins_json: '{"top": 10, "right": 30, "bottom": 18, "left": 30}'
+    }
+
+});
+</script>
+
+<h1>Time 24.0</h1>
+
+<div id="vue-root-9">   <!-- Container for VUE COMPONENTS below : ROOT element -->
+
+    <vue-heatmap-9 
+        v-bind:my_groups="JSON.parse(my_groups_json)"
+        v-bind:my_vars="JSON.parse(my_vars_json)"
+        v-bind:my_data="JSON.parse(my_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-9>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-9',
+
+    data: {
+        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8"]',
+my_vars_json: '["Mol 0"]',
+my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "1.9290904512096514"}, {"group": "1", "variable": "Mol 0", "value": "2.1336687072235554"}, {"group": "2", "variable": "Mol 0", "value": "2.338549909758913"}, {"group": "3", "variable": "Mol 0", "value": "2.401255228202855"}, {"group": "4", "variable": "Mol 0", "value": "2.394871407210042"}, {"group": "5", "variable": "Mol 0", "value": "2.401255228202855"}, {"group": "6", "variable": "Mol 0", "value": "2.338549909758913"}, {"group": "7", "variable": "Mol 0", "value": "2.1336687072235554"}, {"group": "8", "variable": "Mol 0", "value": "1.9290904512096514"}]',
+range_min_json: '1.5',
+range_max_json: '3.5',
+outer_width_json: '850',
+outer_height_json: '50',
+margins_json: '{"top": 10, "right": 30, "bottom": 18, "left": 30}'
+    }
+
+});
+</script>
+
+<h1>Time 27.0</h1>
+
+<div id="vue-root-10">   <!-- Container for VUE COMPONENTS below : ROOT element -->
+
+    <vue-heatmap-9 
+        v-bind:my_groups="JSON.parse(my_groups_json)"
+        v-bind:my_vars="JSON.parse(my_vars_json)"
+        v-bind:my_data="JSON.parse(my_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-9>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-10',
+
+    data: {
+        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8"]',
+my_vars_json: '["Mol 0"]',
+my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "1.9825614542113417"}, {"group": "1", "variable": "Mol 0", "value": "2.136027137891997"}, {"group": "2", "variable": "Mol 0", "value": "2.3039703943224974"}, {"group": "3", "variable": "Mol 0", "value": "2.381028631812468"}, {"group": "4", "variable": "Mol 0", "value": "2.392824763523386"}, {"group": "5", "variable": "Mol 0", "value": "2.381028631812468"}, {"group": "6", "variable": "Mol 0", "value": "2.3039703943224974"}, {"group": "7", "variable": "Mol 0", "value": "2.136027137891997"}, {"group": "8", "variable": "Mol 0", "value": "1.9825614542113417"}]',
+range_min_json: '1.5',
+range_max_json: '3.5',
+outer_width_json: '850',
+outer_height_json: '50',
+margins_json: '{"top": 10, "right": 30, "bottom": 18, "left": 30}'
+    }
+
+});
+</script>
+
+<h1>Time 30.0</h1>
+
+<div id="vue-root-11">   <!-- Container for VUE COMPONENTS below : ROOT element -->
+
+    <vue-heatmap-9 
+        v-bind:my_groups="JSON.parse(my_groups_json)"
+        v-bind:my_vars="JSON.parse(my_vars_json)"
+        v-bind:my_data="JSON.parse(my_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-9>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-11',
+
+    data: {
+        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8"]',
+my_vars_json: '["Mol 0"]',
+my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "2.0231929040522125"}, {"group": "1", "variable": "Mol 0", "value": "2.1415564318810665"}, {"group": "2", "variable": "Mol 0", "value": "2.281632091682967"}, {"group": "3", "variable": "Mol 0", "value": "2.362200096534981"}, {"group": "4", "variable": "Mol 0", "value": "2.3828369516975374"}, {"group": "5", "variable": "Mol 0", "value": "2.362200096534981"}, {"group": "6", "variable": "Mol 0", "value": "2.281632091682967"}, {"group": "7", "variable": "Mol 0", "value": "2.1415564318810665"}, {"group": "8", "variable": "Mol 0", "value": "2.0231929040522125"}]',
+range_min_json: '1.5',
+range_max_json: '3.5',
+outer_width_json: '850',
+outer_height_json: '50',
+margins_json: '{"top": 10, "right": 30, "bottom": 18, "left": 30}'
+    }
+
+});
+</script>
+
+<h1>Time 33.0</h1>
+
+<div id="vue-root-12">   <!-- Container for VUE COMPONENTS below : ROOT element -->
+
+    <vue-heatmap-9 
+        v-bind:my_groups="JSON.parse(my_groups_json)"
+        v-bind:my_vars="JSON.parse(my_vars_json)"
+        v-bind:my_data="JSON.parse(my_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-9>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-12',
+
+    data: {
+        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8"]',
+my_vars_json: '["Mol 0"]',
+my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "2.054912351261011"}, {"group": "1", "variable": "Mol 0", "value": "2.1485717454517492"}, {"group": "2", "variable": "Mol 0", "value": "2.2668318771603513"}, {"group": "3", "variable": "Mol 0", "value": "2.3450661694458494"}, {"group": "4", "variable": "Mol 0", "value": "2.369235713362066"}, {"group": "5", "variable": "Mol 0", "value": "2.3450661694458494"}, {"group": "6", "variable": "Mol 0", "value": "2.2668318771603513"}, {"group": "7", "variable": "Mol 0", "value": "2.1485717454517492"}, {"group": "8", "variable": "Mol 0", "value": "2.054912351261011"}]',
+range_min_json: '1.5',
+range_max_json: '3.5',
+outer_width_json: '850',
+outer_height_json: '50',
+margins_json: '{"top": 10, "right": 30, "bottom": 18, "left": 30}'
+    }
+
+});
+</script>
+
+<h1>Time 36.0</h1>
+
+<div id="vue-root-13">   <!-- Container for VUE COMPONENTS below : ROOT element -->
+
+    <vue-heatmap-9 
+        v-bind:my_groups="JSON.parse(my_groups_json)"
+        v-bind:my_vars="JSON.parse(my_vars_json)"
+        v-bind:my_data="JSON.parse(my_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-9>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
