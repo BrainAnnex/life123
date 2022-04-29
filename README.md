@@ -1,4 +1,4 @@
-### VERSION 5.0-beta4
+### VERSION 1.0-beta5
 
 
 # Life123
@@ -50,20 +50,27 @@ Install, if not already present on your machine, Python 3.7+
 We test on Python 3.7/3.8 (3.6 *might* work - not tested - but not any earlier version, because of the use of Python f-strings.)
 
 
-**Quick-and-easy method**
+**QUICK-AND-EASY method**
 
 We highly recommend using an IDE, such as PyCharm.  
 PyCharm will auto-detect the `requirements.txt` file
 and prompt you to create a virtual environment as specified.
 
 Then:
-1. edit the folder names in the top-level batch file `quickstart.bat`, based on your local folder (one-time operation)
-2. just type `quickstart` in the *Terminal tab* at the bottom of PyCharm (not to be confused with the "Python Console" tab!)
+1. edit the folder names in the top-level batch file `quicklab.bat`, based on your local folder (one-time operation)
+2. just type `quicklab` in the *Terminal tab* at the bottom of PyCharm (not to be confused with the "Python Console" tab!)
 
-That's it!  A new browser tab will open, and you can review and run the `experiments` notebooks from within Jupyter!
+That's it!  A new browser tab will open, and you can review and run the `experiments` notebooks from within JupyterLab!
+
+We highly recommend JupyterLab over Jupyter Notebooks!
+
+"JupyterLab is the next-generation user interface for Project Jupyter  
+offering all the familiar building blocks of the classic Jupyter Notebook  
+in a flexible and powerful user interface.  
+JupyterLab will eventually replace the classic Jupyter Notebook."
 
 
-## Other ways to run Life123 (for more advanced users)
+## OTHER ways to run Life123 (for more advanced users)
 
 **Set up the virtual (local) environment**
 
@@ -145,7 +152,7 @@ Now, you can issue commands such as:
 
 Note that setting PYTHONPATH to a *dot* will NOT work for Jupyter Notebooks (see the next section.)
 
-**Specifying the root path, and running Jupyter Notebooks**
+**Specifying the root path, and running JupyterLab**
 
 IMPORTANT: all steps below are AFTER doing the steps described in the section about activating the virtual environment.
 
