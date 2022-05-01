@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>  
+    <meta charset="UTF-8">
+    <title>Log</title>
+    
+    <script src="../../modules/Vue2_lib/vue2.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../../modules/SVG_helper/svg_helper.js" ></script>
+    <link type="text/css" rel="stylesheet" href="../../modules/visualization/D3_heatmap.css">  
+</head>
+
+<body>
+<h2>Example of Heatmap, using the module "vue-heatmap-9":</h2><br>
+<br>
+
+
+<div id="vue-root-1">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+
+    <vue-heatmap-9 
+        v-bind:my_groups="JSON.parse(my_groups_json)"
+        v-bind:my_vars="JSON.parse(my_vars_json)"
+        v-bind:my_data="JSON.parse(my_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-9>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-1',
+
+    data: {
+        my_groups_json: '["A", "B", "C"]',
+my_vars_json: '["v1", "v2"]',
+my_data_json: '[{"group": "A", "variable": "v1", "value": "0"}, {"group": "A", "variable": "v2", "value": "82"}, {"group": "B", "variable": "v1", "value": "37"}, {"group": "B", "variable": "v2", "value": "50"}, {"group": "C", "variable": "v1", "value": "100"}, {"group": "C", "variable": "v2", "value": "13"}]',
+range_min_json: '0',
+range_max_json: '100',
+outer_width_json: '850',
+outer_height_json: '450',
+margins_json: '{"top": 30, "right": 30, "bottom": 30, "left": 30}'
+    }
+
+});
+</script>
+

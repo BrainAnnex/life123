@@ -106,8 +106,10 @@ class HtmlLog:
             else:
                 cls.file_handler = open(cls.log_fullname, "a")     # Create a new file, to append to
 
-
+                
+        # Give feedback about where the output is being logged
         print(f"-> Output will be LOGGED into the file '{cls.log_fullname}'")
+
 
         # Prepare the header
         if not css:
@@ -362,7 +364,7 @@ class HtmlLog:
             return
 
         vue_id = f"vue-root-{cls.VUE_COUNT}"
-        cls._write_to_file(f'\n\n<div id="{vue_id}">   <!-- Container for VUE COMPONENTS below : ROOT element -->\n')
+        cls._write_to_file(f'\n\n<div id="{vue_id}">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->\n')
 
         component_call = f'''
     <{component_name} {cls._pass_props(data)}
@@ -577,7 +579,7 @@ new Vue({{
 
 
 
-    ##########################################   Low-level logging (handlers for the logging)   ##########################################
+    ###########################   Low-level logging (handlers for the logging)   ###########################
 
     @classmethod
     def _write_to_file(cls, msg: str, blanks_before = 0, newline = False, blanks_after = 0) -> None:
@@ -603,6 +605,8 @@ new Vue({{
         for i in range(blanks_after):
             cls.file_handler.write("<br>\n")
 
+        cls.file_handler.flush()    # To avoid weird buffering issues seen in JupyterLab
+        
 
 
     @classmethod
@@ -632,6 +636,16 @@ new Vue({{
 
     ##########################################   Utilities   ##########################################
 
+    @classmethod
+    def close(cls):
+        """
+        Useful in case of ongoing file lock the prevents its deletion
+        (for example, if the file was opened in JupyterLab)
+        """
+        cls.file_handler.close()
+        
+        
+    
     @classmethod
     def _html_comment(cls, comment: str):
         """

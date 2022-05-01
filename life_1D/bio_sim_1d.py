@@ -81,31 +81,32 @@ class BioSim1D:
         """
         A simple printout of the state of the system, for now useful only for small systems
 
-        :param show_diffusion_rates:
-        :param concise: Only applicable if show_diff is False.
+        :param show_diffusion_rates:    NO LONGER USED.  TODO: phase out
+        :param concise: Only applicable if show_diffusion_rates is False.
                         If True, don't include a header with the number of bins and number of species
-        :return:
+        :return:        None
         """
-        if show_diffusion_rates:
-            if cls.chem_data.diffusion_rates is None:
-                print("Diffusion rates not yet set!")
-                cls.describe_state(show_diffusion_rates=False)
-            else  :
-                for species_index in range(cls.n_species):
-                    name = cls.chem_data.get_name(species_index)
-                    if name:
-                        name = f" ({name})"
+        if concise:     # A minimalist printout
+            print(cls.system)
+            return
 
-                    print(f"Species {species_index}{name}. Diff rate: {cls.chem_data.diffusion_rates[species_index]}. Conc: ", cls.system[species_index])
-
+        if cls.n_species == 1:
+            print(f"{cls.n_bins} bins and 1 species: ")
         else:
-            if concise:
-                print(cls.system)
+            print(f"{cls.n_bins} bins and {cls.n_species} species:\n")
+
+
+        for species_index in range(cls.n_species):
+            name = cls.chem_data.get_name(species_index)
+            if name:
+                name = f" ({name})"
+
+            if cls.chem_data.diffusion_rates is None:
+                print(f"  Species {species_index}{name}. Diff rate: NOT SET. Conc: ", cls.system[species_index])
             else:
-                if cls.n_species == 1:
-                    print(f"{cls.n_bins} bins and 1 species: ", cls.system)
-                else:
-                    print(f"{cls.n_bins} bins and {cls.n_species} species:\n", cls.system)
+                print(f"  Species {species_index}{name}. Diff rate: {cls.chem_data.diffusion_rates[species_index]}. Conc: ",
+                      cls.system[species_index])
+
 
 
 
@@ -344,7 +345,10 @@ class BioSim1D:
     @classmethod
     def diffuse(cls, time_duration=None, time_step=None, n_steps=None, verbose=False) -> dict:
         """
-        Uniform-step diffusion, until reaching, or just exceeding, the desired time duration.
+        Uniform-step diffusion, with 2 out of 3 criteria specified:
+            1) until reaching, or just exceeding, the desired time duration
+            2) using the given time step
+            3) carrying out the specified number of steps
 
         :param time_duration:
         :param time_step:
@@ -389,7 +393,9 @@ class BioSim1D:
     def diffuse_step(cls, time_step) -> None:
         """
         Diffuse all the species by the given time step:
-        clear and compute the delta_diffusion array.
+        clear the delta_diffusion array, and then re-compute it from all the species.
+
+        IMPORTANT: the actual system concentrations are NOT changed.
 
         :param time_step:   Time step over which to carry out the diffusion.
                             If too large, an Exception will be raised.
@@ -410,11 +416,13 @@ class BioSim1D:
 
 
     @classmethod
-    def diffuse_step_single_species(cls, time_step: float, species_index=0):
+    def diffuse_step_single_species(cls, time_step: float, species_index=0) -> np.array:
         """
         Diffuse the specified single species, for the specified time step, across all bins,
-        and return an array of the changes in concentration for the given species across all bins.
-        IMPORTANT: the actual concentrations are NOT changed.
+        and return an array of the changes in concentration ("Delta concentration")
+        for the given species across all bins.
+
+        IMPORTANT: the actual system concentrations are NOT changed.
 
         We're assuming an isolated environment, with nothing diffusing thru the "walls"
 
@@ -489,6 +497,13 @@ class BioSim1D:
     @classmethod
     def react(cls, time_duration=None, time_step=None, n_steps=None) -> None:
         """
+        Update the system concentrations as a result of all the reactions in all bins.
+
+        For each bin, process all the reactions in it - based on
+        the INITIAL concentrations (prior to this reaction step),
+        which are used as the basis for all the reactions.
+
+        TODO: in case of any Exception, the state of the system is still valid, as of the time before this call
 
         :param time_duration:
         :param time_step:
@@ -510,24 +525,26 @@ class BioSim1D:
 
         for i in range(n_steps):
             cls.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
-            cls.system += cls.delta_reactions     # Matrix operation
+            cls.system += cls.delta_reactions   # Matrix operation
 
 
 
     @classmethod
     def reaction_step(cls, delta_time: float) -> None:
         """
-        For each bin, process all the reactions in it - based on the INITIAL concentrations (prior to this reaction step),
+        Clear and compute the delta_reactions array (a class variable),
+        based on all the reactions in all bins.
+        IMPORTANT: the actual system concentrations are NOT changed.
+
+        For each bin, process all the reactions in it - based on
+        the INITIAL concentrations (prior to this reaction step),
         which are used as the basis for all the reactions.
-        Clear and compute the delta_reactions array.
-        IMPORTANT: the concentrations in the system only get changed at the very end of this call;
-                    in case of any Exception, the state of the system is still valid, as of the time before this call
 
         TODO: parallelize the computation over the separate bins
         TODO: explore looping over reactions first, and then over bins
 
         :param delta_time:
-        :return:
+        :return:            None
         """
         number_reactions = cls.all_reactions.number_of_reactions()
 
@@ -549,10 +566,13 @@ class BioSim1D:
 
 
     @classmethod
-    def single_bin_reaction_step(cls, bin_n: int, delta_time: float, number_reactions: int):
+    def single_bin_reaction_step(cls, bin_n: int, delta_time: float, number_reactions: int) -> np.array:
         """
-        For the given bin, process all the reactions in it - based on the INITIAL concentrations (prior to this reaction step),
+        For the given bin, do a single reaction time step for ALL the reactions in it -
+        based on the INITIAL concentrations in the bin (prior to this reaction step),
         which are used as the basis for all the reactions.
+
+        IMPORTANT: the actual system concentrations are NOT changed.
 
         :param bin_n:
         :param delta_time:
