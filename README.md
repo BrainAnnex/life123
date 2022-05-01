@@ -1,4 +1,5 @@
-### VERSION 1.0-beta4
+### VERSION 1.0-beta5
+
 
 
 # Life123
@@ -50,20 +51,27 @@ Install, if not already present on your machine, Python 3.7+
 We test on Python 3.7/3.8 (3.6 *might* work - not tested - but not any earlier version, because of the use of Python f-strings.)
 
 
-**Quick-and-easy method**
+**QUICK-AND-EASY method**
 
 We highly recommend using an IDE, such as PyCharm.  
 PyCharm will auto-detect the `requirements.txt` file
 and prompt you to create a virtual environment as specified.
 
 Then:
-1. edit the folder names in the top-level batch file `quickstart.bat`, based on your local folder (one-time operation)
-2. just type `quickstart` in the *Terminal tab* at the bottom of PyCharm (not to be confused with the "Python Console" tab!)
+1. edit the folder names in the top-level batch file `quick.bat`, based on your local folder (one-time operation)
+2. just type `quick` in the *Terminal tab* at the bottom of PyCharm (not to be confused with the "Python Console" tab!)
 
-That's it!  A new browser tab will open, and you can review and run the `experiments` notebooks from within Jupyter!
+That's it!  A new browser tab will open, and you can review and run the `experiments` notebooks from within JupyterLab!
+
+We highly recommend JupyterLab over Jupyter Notebooks!
+
+"JupyterLab is the next-generation user interface for Project Jupyter  
+offering all the familiar building blocks of the classic Jupyter Notebook  
+in a flexible and powerful user interface.  
+JupyterLab will eventually replace the classic Jupyter Notebook."
 
 
-## Other ways to run Life123 (for more advanced users)
+## OTHER ways to run Life123 (for more advanced users)
 
 **Set up the virtual (local) environment**
 
@@ -118,7 +126,7 @@ will only use this environment’s packages and settings.
 When using an IDE such as PyCharm, the IDE automatically adds the root of the Life123 files (the location
 of the PyCharm project) to the value of the `sys.path` seen inside the execution of the Python files.
 
-If you opt not to use an IDE, or if you're using Jupyter Notebooks (such as the ones provided in Life123's
+If you opt not to use an IDE, or if you're using JupyterLab (such as the ones provided in Life123's
 `experiments` folder), an extra step is necessary.
 
 IMPORTANT: all steps below are AFTER doing the steps described in the earlier section.
@@ -145,7 +153,7 @@ Now, you can issue commands such as:
 
 Note that setting PYTHONPATH to a *dot* will NOT work for Jupyter Notebooks (see the next section.)
 
-**Specifying the root path, and running Jupyter Notebooks**
+**Specifying the root path, and running JupyterLab**
 
 IMPORTANT: all steps below are AFTER doing the steps described in the section about activating the virtual environment.
 
@@ -161,9 +169,9 @@ IMPORTANT: all steps below are AFTER doing the steps described in the section ab
     EXAMPLE:  $env:PYTHONPATH="\Docs\- MY CODE\BioSimulations\life123-Win7\"
     You can verify it, by issuing:  $env:PYTHONPATH
 
-Next, start jupyter notebook:
+Next, start JupyterLab:
 
-    a) jupyter notebook
+    a) jupyter-lab
     OR
     b) jupyter notebook "path_and_name_of_your_desired_notebook"
         EXAMPLE: jupyter notebook "\Docs\- MY CODE\BioSimulations\life123-Win7\experiments\life_1D\diffusion\reach_equilibrium.ipynb"
@@ -172,12 +180,12 @@ Next, start jupyter notebook:
         EXAMPLE: jupyter notebook --notebook-dir="\Docs\- MY CODE\BioSimulations\life123-Win7\experiments"
         (note: you will not be able to navigate to the parent of the startup folder!)  
 
-Alternatively, the `quickstart.bat` file could be run,
+Alternatively, the `quick.bat` file could be run,
 after editing it to specify the name of the local folder and, optionally,
 to change the requested Jupyter notebook startup folder.
 
-To run it on Windows7 with the command prompt, issue the command: `quickstart`  
-To run it on Windows7 with the command prompt, issue the command: `.\quickstart.bat`
+To run it on Windows7 with the command prompt, issue the command: `quick`  
+To run it on Windows7 with the command prompt, issue the command: `.\quick.bat`
 
 ---
 A new browser tab should automatically open.
@@ -204,4 +212,4 @@ Make sure to use double-slashes to represent backslashes in the string.  EXAMPLE
 Port 8888 is used by default; if you want a different one,
 you can start jupyter notebook with an option such as:
 
-    jupyter notebook --port 9999    
+    jupyter-lab --port 9999    

@@ -1,9 +1,21 @@
+from typing import Union, List
 
 
 class Reactions:
     """
     Data about all applicable reactions,
     including stoichiometry, reaction rates and reaction orders
+
+    DATA STRUCTURE:
+        List of reactions.
+        Each reaction is a Python dictionary with 4 keys:
+            "reactants"
+            "products"
+            "Rf"    (forward reaction rate)
+            "Rb"    (back reaction rate)
+
+        Both reactants and products are triplets consisting of (stoichiometry, species index, reaction order).   The reaction order
+        refers to the forward reaction for reactants, and the reverse reaction for products.
     """
 
     def __init__(self, chem_data):
@@ -19,11 +31,18 @@ class Reactions:
 
 
     def get_reaction(self, i) -> dict:
+        """
+        Return the data structure of the i-th reaction (numbering starts at 0)
+        :param i:
+        :return:
+        """
         return self.reaction_list[i]
+
 
 
     def get_reactants(self, i) -> (int, int, int):
         """
+        Return a triplet with details of the reactants of the i-th reaction
 
         :param i:
         :return:        A triplet (stoichiometry, species index, reaction order)
@@ -39,6 +58,7 @@ class Reactions:
 
     def get_products(self, i) -> (int, int, int):
         """
+        Return a triplet with details of the products of the i-th reaction
 
         :param i:
         :return:        A triplet (stoichiometry, species index, reaction order)
@@ -58,6 +78,31 @@ class Reactions:
 
     def get_reverse_rate(self, i) -> float:
         rxn = self.get_reaction(i)
+        return rxn["Rb"]
+
+
+
+    def extract_reactants(self, rxn) -> (int, int, int):
+        """
+        Return a triplet with details of the reactants of the given reaction
+
+        :return:        A triplet (stoichiometry, species index, reaction order)
+        """
+        return rxn["reactants"]
+
+    def extract_products(self, rxn) -> (int, int, int):
+        """
+        Return a triplet with details of the products of the given reaction
+
+        :return:        A triplet (stoichiometry, species index, reaction order)
+        """
+        return rxn["products"]
+
+
+    def extract_forward_order(self, rxn) -> int:
+        return rxn["Rf"]
+
+    def extrac_reverse_order(self, rxn) -> int:
         return rxn["Rb"]
 
 
@@ -95,27 +140,49 @@ class Reactions:
 
 
 
-    def describe_reactions(self, concise=False) -> list:
+    def describe_reactions(self, concise=False, return_list=False) -> Union[None, List[str]]:
         """
         Print out and return a listing with a friendly form of all the reactions
         EXAMPLE:  ["(0) A <=> B  (Rf = 3.0 , Rb = 2.0)"]
 
         :param concise:
-        :return:
+        :param return_list:
+        :return:        Optionally return a list of strings
         """
         print("Number of reactions: ", self.number_of_reactions())
-        out = []
+
+        out = []    # Output list being built (and printed out item-wise)
         for i, rxn in enumerate(self.reaction_list):
-            left = self.standard_form(rxn["reactants"])
-            right = self.standard_form(rxn["products"])
-            rxn_description = f"{i}: {left} <-> {right}"
-            if not concise:
+            reactants = self.extract_reactants(rxn)
+            products = self.extract_products(rxn)
+
+            left = self.standard_form(reactants)     # Left side of the equation
+            right = self.standard_form(products)     # Right side of the equation
+
+            rxn_description = f"{i}: {left} <-> {right}"    # Initial brief description of the reaction
+            if not concise:     # Add more detail
                 rxn_description += f"  (Rf = {rxn['Rf']} / Rb = {rxn['Rb']})"
+                for r in reactants:
+                    if r[2] > 1:
+                        rxn_description += f" | {r[2]}-th order in reactant {self.chem_data.get_name(r[1])}"
+                for p in products:
+                    if p[2] > 1:
+                        rxn_description += f" | {p[2]}-th order in product {self.chem_data.get_name(p[1])}"
 
             print(rxn_description)
             out.append(rxn_description)
 
-        return out
+        if return_list:
+            return out
+
+
+    def _internal_reactions_data(self) -> None:
+        """
+        Print out the low-level view of the reactions data
+        :return:    None
+        """
+        for i in range(self.number_of_reactions()):
+            print(f"{i}: {self.get_reactants(i)} <-> {self.get_products(i)}   ; Fwd: {self.get_forward_rate(i)} / Back: {self.get_reverse_rate(i)}")
 
 
 

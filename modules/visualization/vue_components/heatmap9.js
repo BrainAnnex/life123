@@ -5,7 +5,18 @@ Vue.component('vue-heatmap-9',
     {
         props: ['my_groups', 'my_vars', 'my_data', 'range_min', 'range_max', 'outer_width', 'outer_height', 'margins'],
         /*
+            my_groups:  list of x-axis labels.  EXAMPLE: ["A", "B", "C"]
+            my_vars:    list of y-axis labels.  EXAMPLE: ["v1", "v2"]
             my_data:    array of objects with 3 keys ('group', 'variable' and 'value')
+                        EXAMPLE:  [
+                                    { "group": "A", "variable": "v1", "value": "0" },
+                                    { "group": "A", "variable": "v2", "value": "82" }
+                                   ]
+            "range_min":    value of heatmap cell to map to black
+            "range_max":    value of heatmap cell to map to white
+            "outer_width":  in pixels.  EXAMPLE: 850
+            "outer_height": in pixels
+            "margins":      EXAMPLE: {"top": 30, "right": 30, "bottom": 30, "left": 30}
          */
 
         template: `
@@ -13,7 +24,7 @@ Vue.component('vue-heatmap-9',
             <svg v-bind:width="outer_width" v-bind:height="outer_height" class="chart-holder">
                 <g v-bind:transform="translate(margins.left, margins.top)">
 
-                    <!-- The main part of the heatmap (a series of rectangles) -->
+                    <!-- The main part of the heatmap (a series of rectangles, colored based on the cell value) -->
                     <g class="heatmap">
                         <rect v-for="(item, index) in my_data"
                             v-bind:key="index"
@@ -106,9 +117,15 @@ Vue.component('vue-heatmap-9',
             /*  Create and return a function to build the color scale.
                 This returns maps a number ("value" in my_data) into a color code
                 EXAMPLES:  0 |-> "rgb(255, 255, 255)"  , 10 |-> "rgb(240, 247, 246)" , 100 |-> "rgb(105, 179, 162)"
+
+                Example of test in JS console:
+                    f = d3.scaleLinear().domain([0, 100]).range(["white", "black"])
+                    f(50) will give "rgb(128, 128, 128)"
+                    Likewise for f("50")
+                    It's also acceptable for the domain to contain strings, such as domain(["0", "100"])
              */
             {
-                const f = d3.scaleLog()
+                const f = d3.scaleLinear()
                     .domain([this.min_val, this.max_val])
                     .range(["white", "black"]);   // Maps 0 to white, and 100 to black
 
@@ -193,8 +210,8 @@ Vue.component('vue-heatmap-9',
             rect_color(item)
             // Return a string such as "rgb(240, 247, 246)", to be used for a heatmap rectangle
             {
-                var color_func = this.color_scale_func;   // This is a function
-                return color_func(item.value);
+                var color_func = this.color_scale_func;     // This is a function
+                return color_func(item.value);              // item.value can be a number or a string
             }
 
         }  // METHODS

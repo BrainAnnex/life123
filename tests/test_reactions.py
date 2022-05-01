@@ -52,28 +52,28 @@ def test_add_reaction(rxn):
     assert rxn.get_forward_rate(0) == 3.
     assert rxn.get_reverse_rate(0) == 2.
 
-    # A 2nd reaction
+    # Another reaction (reaction 1)
     rxn.add_reaction(reactants=[(2, "B")], products=[(5, "C")], forward_rate=9., reverse_rate=7.)
 
     assert rxn.number_of_reactions() == 2
     assert rxn.get_reaction(0) == {'reactants': [(1, 0, 1)], 'products': [(1, 1, 1)], 'Rf': 3.0, 'Rb': 2.0}
     assert rxn.get_reaction(1) == {'reactants': [(2, 1, 1)], 'products': [(5, 2, 1)], 'Rf': 9.0, 'Rb': 7.0}
 
-    # A 3rd reaction
+    # Another reaction (reaction 2)
     rxn.add_reaction(reactants=[(2, "D", 3)], products=[(1, "C", 2)], forward_rate=11., reverse_rate=13.)
     assert rxn.number_of_reactions() == 3
     assert rxn.get_reaction(2) == {'reactants': [(2, 3, 3)], 'products': [(1, 2, 2)], 'Rf': 11.0, 'Rb': 13.0}
 
-    # A multi-term reaction
+    # A multi-term reaction (reaction 3)
     rxn.add_reaction(reactants=["A", (2, "B")], products=[(3, "C", 2), "D"], forward_rate=5., reverse_rate=1.)
     assert rxn.number_of_reactions() == 4
     assert rxn.get_reaction(3) == {'reactants': [(1, 0, 1), (2, 1, 1)], 'products': [(3, 2, 2), (1, 3, 1)], 'Rf': 5.0, 'Rb': 1.0}
 
-    rxn_list = rxn.describe_reactions()
+    rxn_list = rxn.describe_reactions(return_list=True)
     assert rxn_list[0] == '0: A <-> B  (Rf = 3.0 / Rb = 2.0)'
     assert rxn_list[1] == '1: 2 B <-> 5 C  (Rf = 9.0 / Rb = 7.0)'
-    assert rxn_list[2] == '2: 2 D <-> C  (Rf = 11.0 / Rb = 13.0)'
-    assert rxn_list[3] == '3: A + 2 B <-> 3 C + D  (Rf = 5.0 / Rb = 1.0)'
+    assert rxn_list[2] == '2: 2 D <-> C  (Rf = 11.0 / Rb = 13.0) | 3-th order in reactant D | 2-th order in product C'
+    assert rxn_list[3] == '3: A + 2 B <-> 3 C + D  (Rf = 5.0 / Rb = 1.0) | 2-th order in product C'
 
 
 
@@ -115,7 +115,7 @@ def test_reaction_step_1b(rxn):
     bio.set_reactions(rxn)
 
     assert rxn.number_of_reactions() == 1
-    assert rxn.describe_reactions() == ["0: A <-> B  (Rf = 3.0 / Rb = 2.0)"]
+    assert rxn.describe_reactions(return_list=True) == ["0: A <-> B  (Rf = 3.0 / Rb = 2.0)"]
     assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
 
     # First step

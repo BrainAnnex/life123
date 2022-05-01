@@ -1,7 +1,8 @@
-:: Quick start for Jupyter notebook
+:: Quick start for Jupyter notebook.
+:: ***NOT*** RECOMMENDED!  See "quicklab.bat" instead
 
 :: This batch file can be run, for example, by typing its name (exclusive of the .bat) in
-::     the PyCharm Terminal window tab at the bottom (not to be confused with the Python console!)
+::     the PyCharm TERMINAL window tab at the bottom (not to be confused with the Python console!)
 
 ::IMPORTANT - FIRST CHANGE THE FILE NAMES BELOW TO WHAT YOU HAVE ON YOUR MACHINE!!
 
