@@ -1,17 +1,17 @@
-"""
-This is a test of the heatmap module
-"""
+# Test of the heatmap module "vue-heatmap-9"
 
 from modules.html_log.html_log import HtmlLog as log
 
-log.config(filename="heatmap_test_1.htm", mode='overwrite',
+# Note: paths are from the location of THE LOG FILE
+log.config(filename="vue-heatmap-9_1.htm", mode='overwrite',
            use_D3=True,
            Vue_lib = "../../../modules/Vue2_lib/vue2.js",
            js = "../../../modules/SVG_helper/svg_helper.js",
            css="../../../modules/visualization/D3_heatmap.css")
-# Note: paths are from the location of THE LOG FILE
 
 
+log.write('Example of Heatmap, using the module "vue-heatmap-9":',
+          style=log.h2, blanks_after=1)
 
 
 # EXAMPLE OF DATA VISUALIZATION WITH A HEATMAP (with arbitrary data, hardwired below)
@@ -34,8 +34,6 @@ all_data = {
     "margins": {"top": 30, "right": 30, "bottom": 30, "left": 30}
 }
 
-log.write('Example of Heatmap, using the module "vue-heatmap-9"')
-
 log.export_plot_Vue(data=all_data,
                     component_name="vue-heatmap-9",
-                    component_file="../../modules/visualization/vue_components/heatmap9.js")
+                    component_file="../../../modules/visualization/vue_components/heatmap9.js")

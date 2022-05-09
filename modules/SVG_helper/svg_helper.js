@@ -146,9 +146,9 @@ class SVGhelper
     /*  Create a vertical axis line meant to be placed to the left of a plot.
 
         Use CSS for styling.  The following classes are created:
-                            'axis-line', 'ticks', 'tick-labels'
+                            'axis-line', 'ticks', 'tick-labels-left-axis'
 
-        EXAMPLE:  g.tick-labels { translate(0, 10px); }  to shift down the tick labels
+        EXAMPLE:  g.tick-labels-left-axis { translate(0, 10px); }  to shift down the tick labels
 
         y_scale_func:       function produced with d3.scaleBand()
         Sx_axis:            x-coord of axis, in screen coordinates
@@ -189,7 +189,7 @@ class SVGhelper
 
         /* Handle the TICK LABELS (kept together as an SVG group)
          */
-        svg += this.start_group("tick-labels");         // Pass a class used for all the labels
+        svg += this.start_group("tick-labels-left-axis");         // Pass a class used for all the labels
 
         for (let item_index = 0;  item_index < n_items;  ++item_index)  {
             let Sy_tick = y_scale_func(categorical_labels[item_index]) + 0.5 * bin_width;
