@@ -1,29 +1,61 @@
 Vue.component('vue-heatmap-10',
-    /*  A heatmap in 2D, an improved version of 'vue-heatmap-9'.
+    /*  A heatmap in 2D, an improved version of 'vue-heatmap-9'
+        (with a simplification in data structure, and the addition of a slider to control the max value.)
         High values are shown as dark (think of ink in water); low values in white.
         An outer box (with border set by CSS "chart-holder") is also shown.
         See: https://julianspolymathexplorations.blogspot.com/2022/01/D3-plus-Vue-visualization-UI.html
         It needs the SVG_helper library for drawing the axes.
      */
     {
-        props: ['x_labels', 'y_labels', 'heatmap_data', 'range_min', 'range_max', 'outer_width', 'outer_height', 'margins'],
-        /*
-            x_labels:       List of x-axis labels.  EXAMPLE: ["C0", "C1", "C2"]
-            y_labels:       List of y-axis labels.  EXAMPLE: ["Chem 1", "Chem 2"]
-            heatmap_data:   List of row values.  Each item is a set of values from left to right;
-                            consecutive rows are moving UP along the y-axis
-                            EXAMPLE:  [
-                                            [10., 32., 2.6],
-                                            [90., 14.5, 55.1]
-                                      ]
+        props: {
 
-            "range_min":    Value of heatmap cell that maps to white
-            "range_max":    Value of heatmap cell that maps to black
-            "outer_width":  For the container box.  In pixels.  EXAMPLE: 850
-            "outer_height": For the container box.  In pixels.  EXAMPLE: 350
-            "margins":      Affecting the outside of the container box.
-                            EXAMPLE: {"top": 30, "right": 30, "bottom": 30, "left": 30}
-         */
+            x_labels: {
+                // List of x-axis labels.  EXAMPLE: ["C0", "C1", "C2"]
+            },
+
+            y_labels: {
+                // List of y-axis labels.  EXAMPLE: ["Chem 1", "Chem 2"]
+            },
+
+            heatmap_data: {
+                /* List of row values.  Each item is a set of values from left to right;
+                                               consecutive rows are moving UP along the y-axis
+                                               EXAMPLE:  [
+                                                               [10., 32., 2.6],
+                                                               [90., 14.5, 55.1]
+                                                         ]
+                 */
+            },
+
+            range_min: {
+                // Value of heatmap cell that maps to white
+                type: Number,
+                default: 0
+            },
+
+            range_max: {
+                // Value of heatmap cell that maps to black
+                type: Number,
+                required: true,
+            },
+
+            outer_width: {
+                // For the container box.  In pixels.  EXAMPLE: 850
+                type: Number
+            },
+
+            outer_height: {
+                // For the container box.  In pixels.  EXAMPLE: 350
+                type: Number
+            },
+
+            margins: {
+                /* Affecting the outside of the container box.
+                             EXAMPLE: {"top": 30, "right": 30, "bottom": 30, "left": 30}
+                 */
+            }
+        },
+
 
         template: `
             <div>  <!-- Outer container, serving as Vue-required component root  -->
@@ -67,7 +99,7 @@ Vue.component('vue-heatmap-10',
 
                         <!--
                             Add the axes (they make use of CSS)
-                          -->
+                        -->
                         <g class="horiz-axis" v-html="X_axis">
                         </g>
 
@@ -203,6 +235,12 @@ Vue.component('vue-heatmap-10',
                     Can also issue commands such as >> $vm0.color_scale_func(10)
              */
             {
+                if ( this.min_val === undefined ) {
+                    alert("The range_min parameter is undefined");
+                }
+                if ( this.max_val === undefined ) {
+                    alert("The range_max parameter is undefined");
+                }
                 const f = d3.scaleLinear()
                     .domain([this.min_val, this.max_val])
                     .range(["white", "black"]);   // Maps 0 to white, and 100 to black

@@ -7,7 +7,7 @@ log.config(filename="vue-heatmap-9_1.htm", mode='overwrite',
            use_D3=True,
            Vue_lib = "../../../modules/Vue2_lib/vue2.js",
            js = "../../../modules/SVG_helper/svg_helper.js",
-           css="../../../modules/visualization/D3_heatmap.css")
+           css="../../../modules/visualization/vue_components/heatmap9.css")
 
 
 log.write('Example of Heatmap, using the module "vue-heatmap-9":',

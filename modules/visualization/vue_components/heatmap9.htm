@@ -1,0 +1,82 @@
+<!-- This is just a tester for the Vue component in the .js file by the same name
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tester for Vue component</title>
+
+    <link type="text/css" rel="stylesheet" href="heatmap9.css">
+    <script src="../../Vue2_lib/vue2.js"></script>    <!-- Vue.js (version 2) -->
+</head>
+
+<body>
+
+
+<div id="vue-root">   <!-- Container for VUE COMPONENT below : ROOT element -->
+
+    <vue-heatmap-9
+            v-bind:my_groups="my_groups"
+            v-bind:my_vars="my_vars"
+            v-bind:my_data="my_data"
+
+            v-bind:range_min="range_min"
+            v-bind:range_max="range_max"
+
+            v-bind:outer_width="outer_width"
+            v-bind:outer_height="outer_height"
+            v-bind:margins="margins"
+    >
+    </vue-heatmap-9>
+
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~~~~~  -->
+
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="heatmap9.js"></script>                     <!-- CHANGE THIS AS NEEDED -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="../../SVG_helper/svg_helper.js"></script>
+
+
+
+<script>
+// Instantiation of the ROOT component must come after the definition of the descendant components
+new Vue({
+    el: '#vue-root',
+
+    data: {     // THE DATA FOR THE HEATMAP
+
+        // Labels of row and columns
+        my_groups: ["A", "B", "C"],
+        my_vars: ["v1", "v2"],
+
+        // Data for the heatmap
+        my_data: [
+            { group: "A", variable: "v1", value: "0" },
+            { group: "A", variable: "v2", value: "82" },
+            { group: "B", variable: "v1", value: "37" },
+            { group: "B", variable: "v2", value: "50" },
+            { group: "C", variable: "v1", value: "100" },
+            { group: "C", variable: "v2", value: "13" }
+        ],
+
+        // Set the range of values in the heatmap cells
+        range_min: 0,
+        range_max: 100,
+
+        // Set the dimensions and margins of the graph
+        outer_width: 850,
+        outer_height: 450,
+        margins: {top: 30, right: 30, bottom: 30, left: 30}
+    }
+
+});
+</script>
+
+
+</body>
+</html>

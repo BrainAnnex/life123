@@ -1,4 +1,4 @@
-// A simple D3-based function to draw a heatmap
+// A simple D3-based function to draw a heatmap.   TODO: take out!
 
 function draw_heatmap(svg_id, dt)
 /*  Expects a div tag
