@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <title>Tester for Vue component</title>
 
-    <link type="text/css" rel="stylesheet" href="heatmap10.css">
+    <link type="text/css" rel="stylesheet" href="heatmap11.css">  <!-- CHANGE THIS AS NEEDED -->
     <script src="../../Vue2_lib/vue2.js"></script>    <!-- Vue.js (version 2) -->
 </head>
 
@@ -16,8 +16,7 @@
 
 <div id="vue-root">   <!-- Container for VUE COMPONENT below : ROOT element -->
 
-    <vue-heatmap-10
-            v-bind:x_labels="x_labels"
+    <vue-heatmap-11
             v-bind:y_labels="y_labels"
             v-bind:heatmap_data="heatmap_data"
 
@@ -28,7 +27,7 @@
             v-bind:outer_height="outer_height"
             v-bind:margins="margins"
     >
-    </vue-heatmap-10>
+    </vue-heatmap-11>
 
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~~~~~  -->
 
@@ -37,7 +36,7 @@
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="heatmap10.js"></script>                    <!-- CHANGE THIS AS NEEDED -->
+<script src="heatmap11.js"></script>                    <!-- CHANGE THIS AS NEEDED -->
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="../../SVG_helper/svg_helper.js"></script>
 
@@ -50,8 +49,7 @@ new Vue({
 
     data: {     // THE DATA FOR THE HEATMAP
 
-        // Labels of rows and columns
-        x_labels: ["B0", "B1", "B2"],
+        // Labels of rows
         y_labels: ["v1", "very_long_label"],
 
         // Data for the heatmap, by rows, starting with the bottom one

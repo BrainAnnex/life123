@@ -291,6 +291,79 @@ class SVGhelper
 
 
 
+    axis_bottom_scaleLinear( {  x_scale_func,
+                                n_items,
+                                bin_width,
+                                Sy_axis,
+                                categorical_labels,
+                                tick_above=0,
+                                tick_below=6  } )
+    /*  Create a horizontal axis line meant to be placed below a plot.
+
+        Use CSS for styling.  The following classes are created:
+                            'axis-line', 'ticks', 'tick-labels'
+
+        EXAMPLE:  g.tick-labels { translate(0, 10px); }  to shift down the tick labels
+
+        x_scale_func:       function produced with d3.scaleLinear()
+        Sy_axis:            y-coord of axis, in screen coordinates
+        categorical_labels  List of desired label names (equally-spaced, at the center of their intervals)
+        tick_above:         Amount by which ticks stick above axis, in screen coordinates
+        tick_below:         Amount by which ticks stick below axis, in screen coordinates
+     */
+    {
+        //const n_items = categorical_labels.length;
+
+        //const bin_width = x_scale_func.bandwidth();
+
+        const Sx1 = x_scale_func(0);
+        const Sx2 = x_scale_func(n_items-1);
+
+        const Sxmin = Math.min(Sx1, Sx2);
+        const Sxmax = Math.max(Sx1, Sx2) + bin_width;
+
+        let svg = "";
+
+        // Horizontal axis line
+        svg += this.start_group("axis-line");
+        svg += this.line(Sxmin, Sy_axis, Sxmax, Sy_axis);
+        svg += this.end_group();
+
+
+        /* Handle the TICKS (kept together as an SVG group)
+         */
+        svg += this.start_group("ticks");	            // Pass a class used for all the ticks
+
+        for (let item_index = 0;  item_index < n_items;  ++item_index)  {
+            let Sx_tick = x_scale_func(item_index) + 0.5 * bin_width;
+            svg += this.vertical_tick(Sx_tick, Sy_axis, tick_above, tick_below);
+        }
+
+        svg += this.end_group();                        // end of the ticks
+
+
+        /* Handle the TICK LABELS (kept together as an SVG group)
+         */
+        svg += this.start_group("tick-labels");         // Pass a class used for all the labels
+
+        for (let item_index = 0;  item_index < n_items;  ++item_index)  {
+            let label = item_index;
+            // First, determine the horizontal position of the tick
+            let Sx_tick = x_scale_func(label) + 0.5 * bin_width;
+            // Now, position the label
+            svg += this.text(label, Sx_tick, Sy_axis + tick_below, "", 0., 0.9);
+            // Note: the last argument specifies a downward shift proportional to the font size,
+            //       to clear the ticks regardless of font.  Extra control can be achieved with CSS
+        }
+
+        svg += this.end_group();                        // end of the labels
+
+        return svg;
+
+    } // axis_bottom_scaleLinear
+
+
+
     axis_bottom_without_scale( {  Sxmin, Sxmax,
                     Sy_axis,
                     categorical_labels,
