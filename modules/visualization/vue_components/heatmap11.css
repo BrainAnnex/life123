@@ -4,16 +4,15 @@ svg.chart-holder {
 }
 
 
+/* A little box showing the heatmap value on a given bin */
 div.tooltip
 {
     background-color: #eee;
-    border: 2px solid cyan;
+    border: 2px solid gray;
     border-radius: 5px;
     padding: 5px;
 
-    position:fixed;
-
-    top:326px;
+    position:fixed;     /* This will allow it to follow the mouse */
 }
 
 

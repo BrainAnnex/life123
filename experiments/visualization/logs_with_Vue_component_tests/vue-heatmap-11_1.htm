@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>  
+    <meta charset="UTF-8">
+    <title>Log</title>
+    
+    <script src="../../../modules/Vue2_lib/vue2.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../../../modules/SVG_helper/svg_helper.js" ></script>
+    <link type="text/css" rel="stylesheet" href="../../../modules/visualization/vue_components/heatmap11.css">  
+</head>
+
+<body>
+<h2>Example of Heatmap, using the module "vue-heatmap-11":</h2><br>
+<br>
+
+
+<div id="vue-root-1">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+
+    <vue-heatmap-11 
+        v-bind:y_labels="JSON.parse(y_labels_json)"
+        v-bind:heatmap_data="JSON.parse(heatmap_data_json)"
+        v-bind:range_min="JSON.parse(range_min_json)"
+        v-bind:range_max="JSON.parse(range_max_json)"
+        v-bind:outer_width="JSON.parse(outer_width_json)"
+        v-bind:outer_height="JSON.parse(outer_height_json)"
+        v-bind:margins="JSON.parse(margins_json)"
+    >        
+    </vue-heatmap-11>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/heatmap11.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-1',
+
+    data: {
+        y_labels_json: '["Chem 1", "Chem 2"]',
+heatmap_data_json: '[[0, 85, 100], [100, 20, 0]]',
+range_min_json: '0',
+range_max_json: '100',
+outer_width_json: '900',
+outer_height_json: '400',
+margins_json: '{"top": 30, "right": 30, "bottom": 30, "left": 85}'
+    }
+
+});
+</script>
+

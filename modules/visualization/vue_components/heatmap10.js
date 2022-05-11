@@ -120,24 +120,6 @@ Vue.component('vue-heatmap-10',
                 </div>
 
 
-                <div style="border:1px solid purple; margin-top:35px; padding:5px; background-color:#eee">
-                    <i>Data for the above heatmap:</i><br>
-                    <template v-for="(row_data, row_index) in heatmap_data">
-
-                        <br><b>row_data: {{row_data}} | row_index: {{row_index}}</b><br>
-                        <template v-for="(heatmap_value, col_index) in row_data">
-
-                            <p style='color:gray; margin-left:15px'>
-                                heatmap_value: {{heatmap_value}} | col_index: {{col_index}} | rect_w: {{rect_w}} | rect_h: {{rect_h}} | fill: {{color_scale_func(heatmap_value)}}<br>
-                                x coord: {{x_labels[col_index]}} | y coord: {{y_labels[row_index]}}<br>
-                                x_scale_fun: {{x_scale_func(x_labels[col_index])}} |  y_scale_fun: {{y_scale_func(y_labels[row_index])}}
-                            </p>
-
-                        </template>
-
-                    </template>
-                </div>
-
             </div>
             <!-- End of outer container -->
             `,
