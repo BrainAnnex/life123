@@ -4,6 +4,19 @@ svg.chart-holder {
 }
 
 
+div.tooltip
+{
+    background-color: #eee;
+    border: 2px solid cyan;
+    border-radius: 5px;
+    padding: 5px;
+
+    position:fixed;
+
+    top:326px;
+}
+
+
 /*
     For the axes
  */

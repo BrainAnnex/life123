@@ -62,7 +62,7 @@ Vue.component('vue-heatmap-11',
                     <g v-bind:transform="translate(margins.left, margins.top)"> <!-- Shift the contained g block below -->
 
                         <!-- The main part of the heatmap (a series of rectangles, colored according to the cell value) -->
-                        <g class="heatmap">
+                        <g class="heatmap" @mouseleave='mouse_leave'>
                             <!-- For each row -->
                             <template v-for="(row_data, row_index) in heatmap_data">
 
@@ -74,6 +74,9 @@ Vue.component('vue-heatmap-11',
                                         v-bind:width="rect_w"  v-bind:height="rect_h"
                                         v-bind:fill="color_scale_func(heatmap_value)"
                                         stroke="rgb(200,200,200)" stroke-width="1"
+
+                                        @mouseover='mouseover'
+                                        @mousemove='mouse_move(heatmap_value, $event)'
                                     >
                                     </rect>
                                 </template>
@@ -109,6 +112,11 @@ Vue.component('vue-heatmap-11',
                     <!-- End of the translated element -->
                 </svg>
 
+                <div class='tooltip'
+                    v-bind:style="{'left': tooltip_left + 'px', 'top': tooltip_top + 'px', 'opacity': tooltip_opacity}"
+                    @mouseover='mouse_over_on_tooltip'>
+                {{tooltip}}
+                </div>
 
                 <!--  Slider, to let the user adjust the max value of the heatmap range -->
                 <div>
@@ -147,7 +155,12 @@ Vue.component('vue-heatmap-11',
                 svg_helper: new SVGhelper(),
                 min_val: this.range_min,
                 max_val: this.range_max,
-                original_max_val: this.range_max    // This will become the rightmost value on the slider
+                original_max_val: this.range_max,    // This will become the rightmost value on the slider
+
+                tooltip: null,
+                tooltip_opacity: 0,
+                tooltip_left: 0,
+                tooltip_top: 0
             }
         }, // data
 
@@ -155,6 +168,7 @@ Vue.component('vue-heatmap-11',
 
         // ---------------------------  COMPUTED  ---------------------------
         computed: {     // NOTE: computed methods are only invoked AS NEEDED
+
 
             plot_width()
             {
@@ -211,8 +225,7 @@ Vue.component('vue-heatmap-11',
 
             rect_w()
             /*  Return the width (in pixels) of each rectangle element in the heatmap.
-                EXAMPLE, if in the earlier call to x_scale_func(),
-                    with 4 bins and a plot_width of 600,
+                EXAMPLE, if there are 4 bins and a plot_width of 600,
                     then rect_w() returns 150
              */
             {
@@ -295,6 +308,37 @@ Vue.component('vue-heatmap-11',
 
         // ---------------------------  METHODS  ---------------------------
         methods: {
+            mouseover(ev)
+            {
+                console.log("mouseover: ", ev);
+                this.tooltip_opacity = 1;
+            },
+            mouse_over_on_tooltip(ev)
+            {
+                console.log("mouse_over_on_tooltip: ", ev);
+                // Make tooltip visible
+                this.tooltip_opacity = 1;
+                //this.tooltip = 999;
+            },
+
+            mouse_move(val, ev)
+            {
+                //console.log("In mouse_move", ev);
+                console.log("Value: ", val);
+                console.log("event.x: ", ev.x);
+                console.log("event.y: ", ev.y);
+                this.tooltip = val;
+                this.tooltip_left = ev.x + 30;
+                this.tooltip_top = ev.y - 30;
+            },
+
+            mouse_leave(ev)
+            {
+                console.log("mouse_leave", ev);
+                this.tooltip_opacity = 0;
+                //this.tooltip = null;
+            },
+
 
             translate(x, y)
             /*  Return a string suitable as an SVG attribute, to indicate a translation by <x,y>
