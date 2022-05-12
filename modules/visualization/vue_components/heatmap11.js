@@ -44,12 +44,14 @@ Vue.component('vue-heatmap-11',
 
             outer_width: {
                 // For the container box.  In pixels.  EXAMPLE: 850
-                type: Number
+                type: Number,
+                required: true
             },
 
             outer_height: {
                 // For the container box.  In pixels.  EXAMPLE: 350
-                type: Number
+                type: Number,
+                required: true
             },
 
             margins: {
@@ -74,6 +76,7 @@ Vue.component('vue-heatmap-11',
                                 <template v-for="(heatmap_value, col_index) in row_data">
                                     <rect
                                         v-bind:key="row_index + '_' + col_index"
+
                                         v-bind:x="x_scale_func(col_index)"  v-bind:y="y_scale_func(y_labels[row_index])"
                                         v-bind:width="rect_w"  v-bind:height="rect_h"
                                         v-bind:fill="color_scale_func(heatmap_value)"
@@ -87,7 +90,7 @@ Vue.component('vue-heatmap-11',
 
                             </template>
                         </g>
-                        <!-- End of the main part of the heatmap -->
+                        <!-- END of the main part of the heatmap -->
 
 
                         <!--
@@ -113,7 +116,7 @@ Vue.component('vue-heatmap-11',
                         </g>
 
                     </g>
-                    <!-- End of the translated element -->
+                    <!-- END of the translated element -->
                 </svg>
 
 
@@ -192,13 +195,14 @@ Vue.component('vue-heatmap-11',
                     return 0;
                 }
 
-                const first_row = this.heatmap_data[0]
+                const first_row = this.heatmap_data[0];
                 return first_row.length;
             },
 
             x_scale_func()
             /*  Create and return a function to build the X scale.
-                This function maps a "bin index" into an X-value in screen coordinates.
+                This function maps a "bin index" into an X-value in screen coordinates,
+                using existing values for the number of bins and the plot width.
                 EXAMPLE, if there are 4 bins, and the plot_width is 600:
                             0 |-> 0  , 1 |-> 150 , 2 |-> 300 , 3 |-> 450
 
@@ -270,7 +274,7 @@ Vue.component('vue-heatmap-11',
                 }
                 const f = d3.scaleLinear()
                     .domain([this.min_val, this.max_val])
-                    .range(["white", "black"]);   // Maps 0 to white, and 100 to black
+                    .range(["white", "black"]);   // Maps the min value to white, and the max value to black
 
                 return f;   // f is a function
             },
@@ -291,8 +295,7 @@ Vue.component('vue-heatmap-11',
                             {x_scale_func: this.x_scale_func,
                              n_items: this.n_bins,
                              bin_width: this.rect_w,
-                             Sy_axis: this.plot_height,
-                             categorical_labels: ["0", "1", "2"]
+                             Sy_axis: this.plot_height
                             }
                         );
             },

@@ -270,7 +270,6 @@ class SVGhelper
                                 n_items,
                                 bin_width,
                                 Sy_axis,
-                                categorical_labels,
                                 tick_above=0,
                                 tick_below=6  } )
     /*  Create a horizontal axis line meant to be placed below a plot that used d3.scaleLinear() for the x-axis.
@@ -282,7 +281,6 @@ class SVGhelper
 
         x_scale_func:       function produced with d3.scaleLinear()
         Sy_axis:            y-coord of axis, in screen coordinates
-        categorical_labels  List of desired label names (equally-spaced, at the center of their intervals)
         tick_above:         Amount by which ticks stick above axis, in screen coordinates
         tick_below:         Amount by which ticks stick below axis, in screen coordinates
      */
