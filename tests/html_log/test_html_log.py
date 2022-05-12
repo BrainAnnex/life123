@@ -3,6 +3,7 @@ from modules.html_log.html_log import HtmlLog as log
 import os
 
 
+
 def read_file(filename):
     """
     Read in, and return, the contents of the requested file
@@ -95,3 +96,27 @@ def test_write_to_file():
     assert read_file(filename) == "this is a test<br>\n<br>\n<br>\n"
 
     os.remove(filename)
+
+
+
+def test__convert_data():
+    d = { "outer_radius": 200 }
+    result = log._convert_data(d)
+    assert result == "outer_radius_json: 200"
+
+    d = { "outer_radius": 200, "width": True }
+    result = log._convert_data(d)
+    assert result == "outer_radius_json: 200,\nwidth_json: true"
+
+    d = { "outer_radius": 200, "width": True, "a": [1, 'yes', "no"] }
+    result = log._convert_data(d)
+    assert result == '''outer_radius_json: 200,\nwidth_json: true,\na_json: [1, "yes", "no"]'''
+
+    d = { "outer_radius": 200, "width": True, "a": [1, 'yes', "no"] , "b": {"x": 8, "y": False} }
+    result = log._convert_data(d)
+    assert result == '''outer_radius_json: 200,\nwidth_json: true,\na_json: [1, "yes", "no"],\nb_json: {"x": 8, "y": false}'''
+
+    d = { "outer_radius": 200, "width": True, "a": [1, 'yes', "no"] , "b": {"x": 8, "y": False}, "c": "it's \"almost\" true" }
+    result = log._convert_data(d)
+    assert result == '''outer_radius_json: 200,\nwidth_json: true,\na_json: [1, "yes", "no"],\nb_json: {"x": 8, "y": false},\nc_json: "it's \\"almost\\" true"'''
+    print(result)

@@ -421,7 +421,8 @@ new Vue({{
 
         s = ""
         for key in data:
-            s +=  f'\n        v-bind:{key}="JSON.parse({key}_json)"'
+            s +=  f'\n        v-bind:{key}="{key}_json"'
+            #s +=  f'\n        v-bind:{key}="JSON.parse({key}_json)"'   # In some tests, this extra conversion could be avoided
 
         return s
 
@@ -429,15 +430,21 @@ new Vue({{
     @staticmethod
     def _convert_data(data: dict) -> str:
         """
-        Prepare a string that goes inside the "data:" section of the Vue element instantiation.
+        From a Python dictionary, prepare a string that goes inside the "data:" section of the Vue element instantiation,
+        and therefore needs to be valid JavaScript.
 
-        EXAMPLE:  { "outer_radius": 200, "width": True, "a": [1, 'yes'] , "b": {"x": 8, "y": False}, "c": "it's \"almost\" true" }
-            gives:
+        EXAMPLE:  { "outer_radius": 200, "width": True, "a": [1, 'yes', "no"] , "b": {"x": 8, "y": False}, "c": "it's \"almost\" true" }
+            returns the string:
+            '''outer_radius_json: 200,\nwidth_json: true,\na_json: [1, "yes", "no"],\nb_json: {"x": 8, "y": false},\nc_json: "it's \\"almost\\" true"'''
+            which prints out as [left indent added for readability]:
+
                 outer_radius_json: 200,
                 width_json: true,
-                a_json: [1, "yes"],
+                a_json: [1, "yes", "no"],
                 b_json: {"x": 8, "y": false},
                 c_json: "it's \"almost\" true"
+
+        Notice the "_json" suffix added to the keys  (TODO: maybe this suffix could be ditched...)
 
         :param data:    A python dictionary
         :return:
@@ -445,9 +452,16 @@ new Vue({{
         if data is None:
             return ""
 
+        """
+        # In some tests, this extra conversion could be avoided
         l = [f"{key}_json: '{json.dumps(value)}'"
                         for (key, value) in data.items()]   # Notice the "_json" suffix added to keys
                                                             # and the values converted to JSON and placed in single quotes
+        """
+        l = []
+        for (key, value) in data.items():
+            l.append(f"{key}_json: {json.dumps(value)}")    # Notice the "_json" suffix added to keys
+
         #print(l)
         res = ",\n".join(l)
         return res

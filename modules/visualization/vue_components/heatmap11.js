@@ -16,6 +16,7 @@ Vue.component('vue-heatmap-11',
             y_labels: {
                 // List of y-axis labels.  EXAMPLE: ["Chem 1", "Chem 2"]
                 // Note: the x-axis labels are just the bin numbers
+                required: true
             },
 
             heatmap_data: {
@@ -26,6 +27,7 @@ Vue.component('vue-heatmap-11',
                                                                [90., 14.5, 55.1]
                                                          ]
                  */
+                required: true
             },
 
             range_min: {
@@ -126,8 +128,11 @@ Vue.component('vue-heatmap-11',
                 <!--  Slider, to let the user adjust the max value of the heatmap range -->
                 <div>
                     <span style="color: #888; margin-right:25px">Heatmap range: </span>
-                    <label>{{min_val}}</label>
-                    <input type="range" min="0" v-bind:max="original_max_val" v-model="max_val">
+                    <span>{{min_val}}</span> to
+                    <input type="range"
+                            v-bind:min="slider_min" v-bind:max="original_max_val"
+                            v-bind:step="slider_step"
+                            v-model:value="max_val">
                     <label>{{max_val}}</label>
                 </div>
 
@@ -156,6 +161,19 @@ Vue.component('vue-heatmap-11',
         // ---------------------------  COMPUTED  ---------------------------
         computed: {     // NOTE: computed methods are only invoked AS NEEDED
 
+            slider_min()
+            /*  To avoid letting the slider go all the way to the minimum value,
+                which would causes singularities in the value mappings
+             */
+            {
+                return this.min_val + this.slider_step;
+            },
+
+            slider_step()
+            // Make slider steps a 20-th of the range
+            {
+                return (this.original_max_val - this.min_val) / 20.;
+            },
 
             plot_width()
             {

@@ -17,7 +17,7 @@ log.write('Example of Heatmap, using the module "vue-heatmap-11":',
 # EXAMPLE OF DATA VISUALIZATION WITH A HEATMAP (with arbitrary data, hardwired below)
 
 all_data = {
-    # Labels of rows
+    # Labels for the rows
     "y_labels": ["Chem 1", "Chem 2"],
 
     # Data for the heatmap, by rows, starting with the bottom one

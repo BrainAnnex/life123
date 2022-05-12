@@ -54,7 +54,8 @@ class BioSim1D:
     @classmethod
     def lookup_species(cls, index: int) -> np.array:
         """
-        Return the array of concentration values for the single specified species
+        Return the NumPy array of concentration values across the bins (from left to right)
+        for the single specified species
 
         :param index:
         :return:
@@ -727,8 +728,49 @@ class BioSim1D:
     @classmethod
     def single_species_heatmap(cls, species_index: int, heatmap_pars: dict, header=None) -> None:
         """
+        Send to the HTML log, a heatmap representation of the concentrations of
+        the single requested species.
+        This version uses the Vue component heatmap11.js
+
+        :param species_index:   Index identifying the species of interest
+        :param heatmap_pars:    A dictionary of parameters for the heatmap
+        :param header:          Optional string to display just above the heatmap
+        :return:
+        """
+        if header:
+            log.write(f"{header}", style=log.h1, newline=False)
+
+        species_concentrations = list(cls.lookup_species(species_index))
+        #print(species_concentrations)
+
+        all_data = {
+            "y_labels": [f"Mol {species_index}"],
+
+            # Data for the heatmap, by rows, starting with the bottom one
+            "heatmap_data": [species_concentrations],
+
+            # Set the range of values in the heatmap bins
+            "range_min": heatmap_pars["range"][0],
+            "range_max": heatmap_pars["range"][1],
+
+            # Set the dimensions and margins of the heatmap
+            "outer_width": heatmap_pars["outer_width"],
+            "outer_height": heatmap_pars["outer_height"],
+            "margins": heatmap_pars["margins"]
+        }
+
+        log.export_plot_Vue(data=all_data,
+                            component_name="vue-heatmap-11",
+                            component_file="../../../modules/visualization/vue_components/heatmap11.js")
+
+
+    @classmethod
+    def single_species_heatmap_OLD(cls, species_index: int, heatmap_pars: dict, header=None) -> None:
+        """
+        TODO: obsolete!
         Send to the log a heatmap representation of the concentrations of
         the specified species
+        This version uses the Vue component heatmap9.js
 
         :param species_index:   Index identifying the species of interest
         :param heatmap_pars:    A dictionary of parameters for the heatmap
