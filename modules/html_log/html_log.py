@@ -8,6 +8,7 @@ import json
 class HtmlLog:
     """
     An HTML logger to file, plus optional plain-text printing to standard output
+    TODO: maybe rename "HtmlLogger"
     """
 
     #####################
