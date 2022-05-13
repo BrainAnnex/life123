@@ -1,5 +1,6 @@
 class SVGhelper
-/* 	VERSION 1.0.1
+/* 	VERSION 1.1
+
     Helper library to generate either individual SVG tags, or larger SVG constructs.
 
 	All coordinates are screen-coordinate integers (origin at top/left; x-axis point right; y-axis pointing DOWN)

@@ -111,50 +111,11 @@ Vue.component('curves-1',
                 </svg>
 
 
-
-                <svg width="500" height="500">
-
-                    <!-- Show a sample fixed set of datapoints as little circles -->
-                    <circle r="10"
-                        v-for="(item, index) in dataset"
-                            v-bind:key="index + '_old'"
-                            v-bind:cx="item[0]"
-                            v-bind:cy="item[1]"
-                            fill="#555"
-                            @click="on_click(item)"
-                    />
-
-                    <circle r="5"
-                        v-for="(val, index) in data"
-                            v-bind:key="index"
-
-                            v-bind:cx="x_scale_func(index)"
-                            v-bind:cy="val"
-                            fill="#111"
-                            @click="show_datapoint_info(index, val)"
-                    />
-
-                    <path stroke="green" stroke-width="2"
-                        fill="none"
-                        v-bind:d="path_data_straight"
-                    />
-
-                    <path stroke="red" stroke-width="4"
-                        fill="none"
-                        v-bind:d="path_data_curve"
-                    />
-
-                    <path stroke="yellow" stroke-width="3"
-                        fill="none"
-                        v-bind:d="path_data_steps"
-                    />
-
-                </svg>
-
-                <button @click="switch_curve_type" style='font-weight:bold; padding:5px'>
-                    Cycle between curve type
+                <button @click="cycle_curve_types" style='font-weight:bold; padding:5px'>
+                    Cycle between curve types<br>
+                    <span style='color:grey; margin-left:10px'>(currently '{{curve_type}}')</span>
                 </button>
-                <span style='color:grey; margin-left:10px'>(currently '{{curve_type}}')</span>
+
 
             </section>
             <!-- End of outer container -->
@@ -165,7 +126,6 @@ Vue.component('curves-1',
             return {
                 svg_helper: new SVGhelper(),
 
-                dataset: [ [80, 200], [100, 123], [250, 200] , [250, 300] , [220, 400], [310, 380] ],
                 curve_type: "curveNatural"
 
                 //min_val: this.range_min,
@@ -187,6 +147,7 @@ Vue.component('curves-1',
 
                 return this.data.length;
             },
+
 
             plot_width()
             // For the main part of the graph
@@ -243,6 +204,7 @@ Vue.component('curves-1',
                 return this.plot_width / this.n_bins;
             },
 
+
             X_axis()
             // Return the SVG code to produce an x-axis
             {
@@ -269,9 +231,10 @@ Vue.component('curves-1',
             },
 
 
-
             path_straight()
+            // Connect the data points with segments
             {
+                // The x-coord is the array index; the y-coord is the data value
                 const line_func = d3.line()
                                     .x((v, i) => this.x_scale_func(i))
                                     .y(v      => this.y_scale_func(v));      // This will be a function
@@ -280,7 +243,9 @@ Vue.component('curves-1',
             },
 
             path_steps()
+            // Connect the data points with a series of steps
             {
+                // The x-coord is the array index; the y-coord is the data value
                 const line_func = d3.line()
                                     .curve(d3.curveStepAfter)
                                     .x((v, i) => this.x_scale_func(i))
@@ -290,62 +255,34 @@ Vue.component('curves-1',
             },
 
             path_curve()
+            // Connect the data points in interpolating curve
             {
+                // The x-coord is the array index; the y-coord is the data value
                 const line_func = d3.line()
                                     .curve(d3[this.curve_type])
                                     .x((v, i) => this.x_scale_func(i))
                                     .y(v      => this.y_scale_func(v));      // This will be a function
 
                 return line_func(this.data);
-            },
-
-
-
-            path_data_straight()
-            {
-                const line_func = d3.line()
-                                      .x(v => v[0])
-                                      .y(v => v[1]);      // This will be a function
-
-                return line_func(this.dataset);
-            },
-
-            path_data_curve()
-            {
-                const curve_func = d3.line()
-                                     .curve(d3[this.curve_type])
-                                     .x(v => v[0])
-                                     .y(v => v[1]);      // This will be a function
-
-               return curve_func(this.dataset);
-            },
-
-            path_data_steps()
-            {
-                const curve_func = d3.line()
-                                     .curve(d3.curveStep)
-                                     .x(v => v[0])
-                                     .y(v => v[1]);      // This will be a function
-
-               return curve_func(this.dataset);
             }
 
         },  // COMPUTED
 
 
+
         // ---------------------------  METHODS  ---------------------------
         methods: {
 
-            show_datapoint_info(n, val) {
+            show_datapoint_info(n, val)
+            // Print out to the console the point's graph coordinates
+            {
                 console.log(`Bin ${n}, value ${val}`);
             },
 
-            on_click(item) {
-                console.log("This item: ", item);
-            },
 
-
-            switch_curve_type()  {
+            cycle_curve_types()
+            // Cycle among different available types of curve interpolators
+            {
                 const options = ["curveNatural", "curveBasis", "curveMonotoneX"];
                 let pos = options.indexOf(this.curve_type);
                 pos += 1;
