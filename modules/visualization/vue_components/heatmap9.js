@@ -1,26 +1,30 @@
 Vue.component('vue-heatmap-9',
-    /*  A heatmap.
+    /*  A simple heatmap in 2D.  High values are shown as dark (think of ink in water); low values in white.
+        An outer box in pale cyan is also shown.
+        See: https://julianspolymathexplorations.blogspot.com/2022/01/D3-plus-Vue-visualization-UI.html
         It needs the SVG_helper library for drawing the axes.
      */
     {
         props: ['my_groups', 'my_vars', 'my_data', 'range_min', 'range_max', 'outer_width', 'outer_height', 'margins'],
         /*
-            my_groups:  list of x-axis labels.  EXAMPLE: ["A", "B", "C"]
-            my_vars:    list of y-axis labels.  EXAMPLE: ["v1", "v2"]
-            my_data:    array of objects with 3 keys ('group', 'variable' and 'value')
-                        EXAMPLE:  [
+            my_groups:      list of x-axis labels.  EXAMPLE: ["A", "B", "C"]
+            my_vars:        list of y-axis labels.  EXAMPLE: ["v1", "v2"]
+            my_data:        array of objects with 3 keys ('group', 'variable' and 'value')
+                            'group' refers to the x-axis, and 'variable' to the y-axis
+                            EXAMPLE:  [
                                     { "group": "A", "variable": "v1", "value": "0" },
                                     { "group": "A", "variable": "v2", "value": "82" }
                                    ]
-            "range_min":    value of heatmap cell to map to black
-            "range_max":    value of heatmap cell to map to white
+            "range_min":    value of heatmap cell to map to white
+            "range_max":    value of heatmap cell to map to black
             "outer_width":  in pixels.  EXAMPLE: 850
             "outer_height": in pixels
-            "margins":      EXAMPLE: {"top": 30, "right": 30, "bottom": 30, "left": 30}
+            "margins":      Affecting the outside of the container box.
+                            EXAMPLE: {"top": 30, "right": 30, "bottom": 30, "left": 30}
          */
 
         template: `
-            <!-- Outer container, serving as Vue-required template root  -->
+            <!-- Outer container, serving as Vue-required component root  -->
             <svg v-bind:width="outer_width" v-bind:height="outer_height" class="chart-holder">
                 <g v-bind:transform="translate(margins.left, margins.top)">
 
@@ -28,17 +32,17 @@ Vue.component('vue-heatmap-9',
                     <g class="heatmap">
                         <rect v-for="(item, index) in my_data"
                             v-bind:key="index"
-                            v-bind:x="rect_x(item)"  v-bind:y="rect_y(item)"
+                            v-bind:x="x_scale_func(item.group)"  v-bind:y="y_scale_func(item.variable)"
                             v-bind:width="rect_w"  v-bind:height="rect_h"
-                            v-bind:fill="rect_color(item)"
+                            v-bind:fill="color_scale_func(item.value)"
                             stroke='rgb(200,200,200)' stroke-width='1'
                         >
                         </rect>
                     </g>
-
+                    <!-- End of the main part of the heatmap -->
 
                     <!--
-                        Insert some lines in the plot (no CSS used)
+                        Insert some lines in the plot (the CSS classes are not currently used)
                       -->
 
                     <!-- A line at the top -->
@@ -60,6 +64,7 @@ Vue.component('vue-heatmap-9',
                     </g>
 
                 </g>
+                <!-- End of the translated element -->
             </svg>
             <!-- End of outer container -->
             `,
@@ -91,8 +96,13 @@ Vue.component('vue-heatmap-9',
 
             x_scale_func()
             /*  Create and return a function to build the X scale.
-                This function maps a "group" name (in my_data) into an X value in screen coordinates.
-                EXAMPLE:  "A" |-> 0  , "B" |-> 130 , "C" |-> 260
+                This function maps a "group" name (in heatmap_data) into an X value in screen coordinates.
+                EXAMPLE, if the x_labels are ["A", "B", "C"], and the plot_width is 100:
+                            "A" |-> 0  , "B" |-> 33.33 , "C" |-> 66.66
+
+                Example of test in a browser's JS console:
+                    >> f = d3.scaleBand().domain(["A", "B", "C"]).range([0, 100])
+                    >> f("A") will give 0 ,  f("B") will give 33.33, etc
              */
             {
                 const f = d3.scaleBand()
@@ -134,11 +144,21 @@ Vue.component('vue-heatmap-9',
 
 
             rect_w()
+            /*  Return the width (in pixels) of each rectangle element in the heatmap, based on the previously-set x scale.
+                EXAMPLE, if in the earlier call to x_scale_func(),
+                    the x_labels is a list with 4 elements, and the plot_width is 600,
+                    then rect_w() returns 150
+             */
             {
                 return this.x_scale_func.bandwidth();
             },
 
             rect_h()
+            /*  Return the height (in pixels) of each rectangle element in the heatmap, based on the previously-set y scale.
+                EXAMPLE, in the earlier call to y_scale_func(),
+                    if the y_labels is a list with 2 elements, and the plot_height is 400,
+                    then rect_h() returns 200
+             */
             {
                 return this.y_scale_func.bandwidth();
             },
@@ -192,26 +212,6 @@ Vue.component('vue-heatmap-9',
              */
             {
                 return `translate(${x}, ${y})`;
-            },
-
-            rect_x(item)
-            // Return a number for the left x-coordinate of the heatmap rectangle
-            {
-                return this.x_scale_func(item.group);
-            },
-
-            rect_y(item)
-            // Return a number for the top y-coordinate of the heatmap rectangle
-            {
-                return this.y_scale_func(item.variable);
-            },
-
-
-            rect_color(item)
-            // Return a string such as "rgb(240, 247, 246)", to be used for a heatmap rectangle
-            {
-                var color_func = this.color_scale_func;     // This is a function
-                return color_func(item.value);              // item.value can be a number or a string
             }
 
         }  // METHODS

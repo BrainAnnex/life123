@@ -7,7 +7,7 @@
     <script src="../../../modules/Vue2_lib/vue2.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="../../../modules/SVG_helper/svg_helper.js" ></script>
-    <link type="text/css" rel="stylesheet" href="../../../modules/visualization/D3_heatmap.css">  
+    <link type="text/css" rel="stylesheet" href="../../../modules/visualization/vue_components/heatmap11.css">  
 </head>
 
 <body>
@@ -21,17 +21,16 @@ After delta time 20.0.  TOTAL TIME 20.0  (200 steps taken):<br>
 
 <div id="vue-root-1">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue-heatmap-9 
-        v-bind:my_groups="JSON.parse(my_groups_json)"
-        v-bind:my_vars="JSON.parse(my_vars_json)"
-        v-bind:my_data="JSON.parse(my_data_json)"
-        v-bind:range_min="JSON.parse(range_min_json)"
-        v-bind:range_max="JSON.parse(range_max_json)"
-        v-bind:outer_width="JSON.parse(outer_width_json)"
-        v-bind:outer_height="JSON.parse(outer_height_json)"
-        v-bind:margins="JSON.parse(margins_json)"
+    <vue-heatmap-11 
+        v-bind:y_labels="y_labels_json"
+        v-bind:heatmap_data="heatmap_data_json"
+        v-bind:range_min="range_min_json"
+        v-bind:range_max="range_max_json"
+        v-bind:outer_width="outer_width_json"
+        v-bind:outer_height="outer_height_json"
+        v-bind:margins="margins_json"
     >        
-    </vue-heatmap-9>
+    </vue-heatmap-11>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -39,7 +38,7 @@ After delta time 20.0.  TOTAL TIME 20.0  (200 steps taken):<br>
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="../../../modules/visualization/vue_components/heatmap11.js"></script>
 <script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
@@ -48,14 +47,13 @@ new Vue({
     el: '#vue-root-1',
 
     data: {
-        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]',
-my_vars_json: '["Mol 0"]',
-my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "1.7915449815979623"}, {"group": "1", "variable": "Mol 0", "value": "2.046049956197253"}, {"group": "2", "variable": "Mol 0", "value": "2.1575287571012467"}, {"group": "3", "variable": "Mol 0", "value": "1.8140865655191563"}, {"group": "4", "variable": "Mol 0", "value": "1.1857289679580865"}, {"group": "5", "variable": "Mol 0", "value": "0.6149316304187616"}, {"group": "6", "variable": "Mol 0", "value": "0.2603137725324633"}, {"group": "7", "variable": "Mol 0", "value": "0.09234937004182237"}, {"group": "8", "variable": "Mol 0", "value": "0.028350381854367064"}, {"group": "9", "variable": "Mol 0", "value": "0.009115616778886402"}]',
-range_min_json: '0',
-range_max_json: '2.5',
-outer_width_json: '850',
-outer_height_json: '450',
-margins_json: '{"top": 30, "right": 30, "bottom": 30, "left": 30}'
+        y_labels_json: ["Mol 0"],
+heatmap_data_json: [[1.7915449815979623, 2.046049956197253, 2.1575287571012467, 1.8140865655191563, 1.1857289679580865, 0.6149316304187616, 0.2603137725324633, 0.09234937004182237, 0.028350381854367064, 0.009115616778886402]],
+range_min_json: 0,
+range_max_json: 2.5,
+outer_width_json: 850,
+outer_height_json: 450,
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     }
 
 });
@@ -71,17 +69,16 @@ After delta time 40.0.  TOTAL TIME 60.0  (400 steps taken):<br>
 
 <div id="vue-root-2">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue-heatmap-9 
-        v-bind:my_groups="JSON.parse(my_groups_json)"
-        v-bind:my_vars="JSON.parse(my_vars_json)"
-        v-bind:my_data="JSON.parse(my_data_json)"
-        v-bind:range_min="JSON.parse(range_min_json)"
-        v-bind:range_max="JSON.parse(range_max_json)"
-        v-bind:outer_width="JSON.parse(outer_width_json)"
-        v-bind:outer_height="JSON.parse(outer_height_json)"
-        v-bind:margins="JSON.parse(margins_json)"
+    <vue-heatmap-11 
+        v-bind:y_labels="y_labels_json"
+        v-bind:heatmap_data="heatmap_data_json"
+        v-bind:range_min="range_min_json"
+        v-bind:range_max="range_max_json"
+        v-bind:outer_width="outer_width_json"
+        v-bind:outer_height="outer_height_json"
+        v-bind:margins="margins_json"
     >        
-    </vue-heatmap-9>
+    </vue-heatmap-11>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -89,7 +86,7 @@ After delta time 40.0.  TOTAL TIME 60.0  (400 steps taken):<br>
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="../../../modules/visualization/vue_components/heatmap11.js"></script>
 <script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
@@ -98,14 +95,13 @@ new Vue({
     el: '#vue-root-2',
 
     data: {
-        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]',
-my_vars_json: '["Mol 0"]',
-my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "1.7669762430068738"}, {"group": "1", "variable": "Mol 0", "value": "1.698775963907739"}, {"group": "2", "variable": "Mol 0", "value": "1.563095883685993"}, {"group": "3", "variable": "Mol 0", "value": "1.366619118349869"}, {"group": "4", "variable": "Mol 0", "value": "1.1270110298494436"}, {"group": "5", "variable": "Mol 0", "value": "0.872223687843469"}, {"group": "6", "variable": "Mol 0", "value": "0.6336731927902174"}, {"group": "7", "variable": "Mol 0", "value": "0.4378500586480128"}, {"group": "8", "variable": "Mol 0", "value": "0.301516347232347"}, {"group": "9", "variable": "Mol 0", "value": "0.23225847468603866"}]',
-range_min_json: '0',
-range_max_json: '2.5',
-outer_width_json: '850',
-outer_height_json: '450',
-margins_json: '{"top": 30, "right": 30, "bottom": 30, "left": 30}'
+        y_labels_json: ["Mol 0"],
+heatmap_data_json: [[1.7669762430068738, 1.698775963907739, 1.563095883685993, 1.366619118349869, 1.1270110298494436, 0.872223687843469, 0.6336731927902174, 0.4378500586480128, 0.301516347232347, 0.23225847468603866]],
+range_min_json: 0,
+range_max_json: 2.5,
+outer_width_json: 850,
+outer_height_json: 450,
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     }
 
 });
@@ -121,17 +117,16 @@ After delta time 60.0.  TOTAL TIME 120.0  (600 steps taken):<br>
 
 <div id="vue-root-3">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue-heatmap-9 
-        v-bind:my_groups="JSON.parse(my_groups_json)"
-        v-bind:my_vars="JSON.parse(my_vars_json)"
-        v-bind:my_data="JSON.parse(my_data_json)"
-        v-bind:range_min="JSON.parse(range_min_json)"
-        v-bind:range_max="JSON.parse(range_max_json)"
-        v-bind:outer_width="JSON.parse(outer_width_json)"
-        v-bind:outer_height="JSON.parse(outer_height_json)"
-        v-bind:margins="JSON.parse(margins_json)"
+    <vue-heatmap-11 
+        v-bind:y_labels="y_labels_json"
+        v-bind:heatmap_data="heatmap_data_json"
+        v-bind:range_min="range_min_json"
+        v-bind:range_max="range_max_json"
+        v-bind:outer_width="outer_width_json"
+        v-bind:outer_height="outer_height_json"
+        v-bind:margins="margins_json"
     >        
-    </vue-heatmap-9>
+    </vue-heatmap-11>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -139,7 +134,7 @@ After delta time 60.0.  TOTAL TIME 120.0  (600 steps taken):<br>
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/heatmap9.js"></script>
+<script src="../../../modules/visualization/vue_components/heatmap11.js"></script>
 <script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
@@ -148,14 +143,13 @@ new Vue({
     el: '#vue-root-3',
 
     data: {
-        my_groups_json: '["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]',
-my_vars_json: '["Mol 0"]',
-my_data_json: '[{"group": "0", "variable": "Mol 0", "value": "1.4312034412399606"}, {"group": "1", "variable": "Mol 0", "value": "1.3890387524056824"}, {"group": "2", "variable": "Mol 0", "value": "1.3087999894005211"}, {"group": "3", "variable": "Mol 0", "value": "1.1982983584343723"}, {"group": "4", "variable": "Mol 0", "value": "1.0683366491551287"}, {"group": "5", "variable": "Mol 0", "value": "0.9316631698667555"}, {"group": "6", "variable": "Mol 0", "value": "0.8017017106931155"}, {"group": "7", "variable": "Mol 0", "value": "0.6912002343007307"}, {"group": "8", "variable": "Mol 0", "value": "0.6109613167218046"}, {"group": "9", "variable": "Mol 0", "value": "0.5687963777819229"}]',
-range_min_json: '0',
-range_max_json: '2.5',
-outer_width_json: '850',
-outer_height_json: '450',
-margins_json: '{"top": 30, "right": 30, "bottom": 30, "left": 30}'
+        y_labels_json: ["Mol 0"],
+heatmap_data_json: [[1.4312034412399606, 1.3890387524056824, 1.3087999894005211, 1.1982983584343723, 1.0683366491551287, 0.9316631698667555, 0.8017017106931155, 0.6912002343007307, 0.6109613167218046, 0.5687963777819229]],
+range_min_json: 0,
+range_max_json: 2.5,
+outer_width_json: 850,
+outer_height_json: 450,
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     }
 
 });
