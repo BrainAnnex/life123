@@ -147,12 +147,93 @@ class SVGhelper
         AXES
      */
 
+    axis_left_scaleLinear( {    y_scale_func,
+                                n_intervals,
+                                y_min,
+                                y_max,
+                                Sx_axis,
+                                tick_right=0,
+                                tick_left=6  } )
+    /*  Create a vertical axis line meant to be placed to the left of a plot that used d3.scaleLinear() for the y-axis.
+
+        The y-axis is divided up into n_intervals equal parts,
+        resulting in n_intervals+1 tick marks.
+        The y-coordinates (in graph coordinates) are used as tick labels.
+
+        Use CSS for styling.  The following classes are created:
+                            'axis-line', 'ticks', 'tick-labels-left-axis'
+
+        EXAMPLE of CSS:  g.tick-labels-left-axis { translate(0, 10px); }  to shift down the tick labels
+     */
+    {
+        const bin_width = (y_max - y_min) / n_intervals;
+        //console.log("bin_width: ", bin_width);
+
+        // Determine the screen coordinates corresponding to, respectively,
+        // the bottom and top point on the y-axis
+        // NOTE: in SVG screen coordinates, which start at the top,
+        //       the top has a SMALLER value than the bottom
+        const Sy_bottom = y_scale_func(y_min);
+        const Sy_top = y_scale_func(y_max);
+        //console.log("Sy_bottom: ", Sy_bottom);
+        //console.log("Sy_top: ", Sy_top);
+
+        let svg = "";
+
+        // Vertical axis line (an SVG group consisting of 1 line element)
+        svg += this.start_group("axis-line");
+        svg += this.line(Sx_axis, Sy_bottom, Sx_axis, Sy_top);
+        svg += this.end_group();
+
+
+        /* Handle the TICKS (kept together as an SVG group)
+         */
+        svg += this.start_group("ticks");	            // Pass a class used for all the ticks
+
+        for (let item_index = 0;  item_index <= n_intervals;  ++item_index)  {
+            // Determine the vertical position of the tick
+            let y_graph = y_min + item_index * bin_width;
+            let Sy_tick = y_scale_func(y_graph);
+            //console.log("Sy_tick: ", Sy_tick);
+            svg += this.horizontal_tick(Sx_axis, Sy_tick, tick_left, tick_right);
+        }
+
+        svg += this.end_group();                        // end of the ticks
+
+
+
+        /* Handle the TICK LABELS (kept together as an SVG group)
+         */
+        svg += this.start_group("tick-labels-left-axis");         // Pass a class used for all the labels
+
+        for (let item_index = 0;  item_index <= n_intervals;  ++item_index)  {
+            let y_graph = y_min + item_index * bin_width;
+            let label = y_graph.toString();    // The y-coordinates (in graph coordinates) are used as tick labels
+            // First, determine the vertical position of the tick
+            let Sy_tick = y_scale_func(y_graph);
+            // Now, position the label
+            svg += this.text(label, Sx_axis - tick_left, Sy_tick, "", -0.75 -0.25 * label.length, 0.3);
+            // Note: the last 2 arguments specify, respectively, a rightward/downward shift proportional to the font size,
+            //       to clear the ticks and vertically-align the label regardless of font.
+            //       Extra control can be achieved with CSS
+        }
+
+        svg += this.end_group();                                // end of the labels
+
+
+        return svg;
+
+    } // axis_left_scaleLinear
+
+
+
+    /*  TODO: maybe rename axis_left_scaleBand() */
     axis_left( {    y_scale_func,
                     Sx_axis,
                     categorical_labels,
                     tick_right=0,
                     tick_left=6  } )
-    /*  Create a vertical axis line meant to be placed to the left of a plot.
+    /*  Create a vertical axis line meant to be placed to the left of a plot that used d3.scaleBand() for the y-axis.
 
         Use CSS for styling.  The following classes are created:
                             'axis-line', 'ticks', 'tick-labels-left-axis'
@@ -286,7 +367,7 @@ class SVGhelper
      */
     {
         // Determine the screen coordinates corresponding to, respectively,
-        // the first and last point on the x-axis
+        // the first (leftmost) and last (rightmost) point on the x-axis
         const Sx1 = x_scale_func(0);
         const Sx2 = x_scale_func(n_items-1);
 

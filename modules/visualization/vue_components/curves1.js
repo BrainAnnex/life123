@@ -34,6 +34,7 @@ Vue.component('curves-1',
             range_max: {
                 // Value corresponding to the top of the graph
                 type: Number,
+                required: true
             },
 
             outer_width: {
@@ -83,6 +84,8 @@ Vue.component('curves-1',
                             Add the axes (they make use of CSS)
                         -->
                         <g class="horiz-axis" v-html="X_axis">
+                        </g>
+                        <g class="vert-axis" v-html="Y_axis">
                         </g>
 
                     </g>
@@ -169,11 +172,13 @@ Vue.component('curves-1',
             },
 
             plot_width()
+            // For the main part of the graph
             {
                 return this.outer_width - this.margins.left - this.margins.right;
             },
 
             plot_height()
+            // For the main part of the graph
             {
                 return this.outer_height - this.margins.top - this.margins.bottom;
             },
@@ -200,12 +205,13 @@ Vue.component('curves-1',
             y_scale_func()
             /*  Create and return a function to build the Y scale.
                 This function maps a "data value" into a Y-value in screen coordinates,
-                using existing values for the number of bins and the plot width.
+                based on the previously-set maximum y range (the range starts at zero)
+                and the plot height.
              */
             {
                 const f = d3.scaleLinear()
                             .domain([ 0, this.range_max ])
-                            .range([ this.outer_height, 0 ]);     // f is a function
+                            .range([ this.plot_height, 0 ]);     // f is a function
                             // Note the UP/DOWN reversal between data coord and screen coords!
                 return f;
             },
@@ -228,6 +234,19 @@ Vue.component('curves-1',
                              n_items: this.n_bins,
                              bin_width: this.bin_width,
                              Sy_axis: this.plot_height
+                            }
+                        );
+            },
+
+            Y_axis()
+            // Return the SVG code to produce a y-axis
+            {
+                return this.svg_helper.axis_left_scaleLinear(
+                            {y_scale_func: this.y_scale_func,
+                             n_intervals: 10,
+                             y_min: 0,
+                             y_max: this.range_max,
+                             Sx_axis: 0
                             }
                         );
             },

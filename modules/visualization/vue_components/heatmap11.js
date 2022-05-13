@@ -111,7 +111,6 @@ Vue.component('vue-heatmap-11',
                         -->
                         <g class="horiz-axis" v-html="X_axis">
                         </g>
-
                         <g class="vert-axis" v-html="Y_axis">
                         </g>
 
@@ -179,11 +178,13 @@ Vue.component('vue-heatmap-11',
             },
 
             plot_width()
+            // For the main part of the heatmap
             {
                 return this.outer_width - this.margins.left - this.margins.right;
             },
 
             plot_height()
+            // For the main part of the heatmap
             {
                 return this.outer_height - this.margins.top - this.margins.bottom;
             },
