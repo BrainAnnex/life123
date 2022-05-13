@@ -249,7 +249,7 @@ class SVGhelper
     {
         const n_items = categorical_labels.length;
 
-        const bin_width = y_scale_func.bandwidth();
+        const bin_width = y_scale_func.bandwidth();     // TODO: move to caller function
 
         const Sy1 = y_scale_func(categorical_labels[0]);
         const Sy2 = y_scale_func(categorical_labels[n_items-1]);
@@ -323,7 +323,7 @@ class SVGhelper
     {
         const n_items = categorical_labels.length;
 
-        const bin_width = x_scale_func.bandwidth();
+        const bin_width = x_scale_func.bandwidth();          // TODO: move to caller function
 
         // Determine the screen coordinates corresponding to, respectively,
         // the first and last point on the x-axis

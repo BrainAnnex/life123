@@ -1,11 +1,12 @@
 Vue.component('curves-1',
-    /*  Interpolated lots for functions in 1D
+    /*  Line charts and interpolating functions in 1D.
+        For now, just 1 dataset at a time.
 
-        Based on the hardwired dataset, create a group of dots
+        Based on the passed dataset, create a group of dots
         connected by segments, plus interpolating curves/segments.
         Clicking on any dot will display its data in the browser console.
 
-        Based on https://www.youtube.com/watch?v=CkFktv0p3pw
+        Inspired by https://www.youtube.com/watch?v=CkFktv0p3pw
 
         DEPENDENCIES:   - the SVG_helper library for drawing the axes
                         - the D3 (v7) libraries
@@ -26,7 +27,7 @@ Vue.component('curves-1',
             },
 
             range_min: {
-                // NOT SURE WHETHER USING...
+                // NOT SURE WHETHER USING THIS...
                 type: Number,
                 default: 0
             },
@@ -76,6 +77,22 @@ Vue.component('curves-1',
                                     fill="#111"
                                     @click="show_datapoint_info(index, val)"
                             />
+
+                            <path stroke="yellow" stroke-width="1"
+                                fill="none"
+                                v-bind:d="path_straight"
+                            />
+
+                            <path stroke="gray" stroke-width="1"
+                                fill="none"
+                                v-bind:d="path_steps"
+                            />
+
+                            <path stroke="red" stroke-width="2"
+                                fill="none"
+                                v-bind:d="path_curve"
+                            />
+
                         </g>
                         <!-- END of the main part of the plot -->
 
@@ -135,7 +152,7 @@ Vue.component('curves-1',
                 </svg>
 
                 <button @click="switch_curve_type" style='font-weight:bold; padding:5px'>
-                    Toggle between Step curves<br>(animated on Chrome)
+                    Cycle between curve type
                 </button>
                 <span style='color:grey; margin-left:10px'>(currently '{{curve_type}}')</span>
 
@@ -252,6 +269,38 @@ Vue.component('curves-1',
             },
 
 
+
+            path_straight()
+            {
+                const line_func = d3.line()
+                                    .x((v, i) => this.x_scale_func(i))
+                                    .y(v      => this.y_scale_func(v));      // This will be a function
+
+                return line_func(this.data);
+            },
+
+            path_steps()
+            {
+                const line_func = d3.line()
+                                    .curve(d3.curveStepAfter)
+                                    .x((v, i) => this.x_scale_func(i))
+                                    .y(v      => this.y_scale_func(v));      // This will be a function
+
+                return line_func(this.data);
+            },
+
+            path_curve()
+            {
+                const line_func = d3.line()
+                                    .curve(d3[this.curve_type])
+                                    .x((v, i) => this.x_scale_func(i))
+                                    .y(v      => this.y_scale_func(v));      // This will be a function
+
+                return line_func(this.data);
+            },
+
+
+
             path_data_straight()
             {
                 const line_func = d3.line()
@@ -295,10 +344,17 @@ Vue.component('curves-1',
                 console.log("This item: ", item);
             },
 
+
             switch_curve_type()  {
-                //this.curve_type = (this.curve_type === "curveBasis" ? "curveNatural" : "curveBasis");
-                this.curve_type = (this.curve_type === "curveStepAfter" ? "curveStepBefore" : "curveStepAfter");
+                const options = ["curveNatural", "curveBasis", "curveMonotoneX"];
+                let pos = options.indexOf(this.curve_type);
+                pos += 1;
+                if (pos >= options.length)
+                    pos = 0;
+
+                this.curve_type = options[pos];
             },
+
 
             translate(x, y)
             /*  Return a string suitable as an SVG attribute, to indicate a translation by <x,y>
