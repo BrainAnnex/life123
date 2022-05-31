@@ -1,4 +1,4 @@
-### VERSION 1.0-beta6
+### VERSION 1.0-beta7
 
 
 
@@ -17,9 +17,9 @@ Including diffusion, reactions, membranes and compartments.
 6. A community effort bringing together biologists, system biologists, programmers, machine-learning specialists, biochemists, power-computing engineers, doctors, data scientists, graphic designers, members of the public willing to share computing resources, etc.
 
 ## Overview and Details
-[More information](https://julianspolymathexplorations.blogspot.com/2022/03/life123-systems-biology-modeling.html)
+[Project Announcement](https://julianspolymathexplorations.blogspot.com/2022/03/life123-systems-biology-modeling.html)
 
-[Website](https://life123.science/)
+[WEBSITE](https://life123.science/)
 
 ## Components
 * life_1D
@@ -46,9 +46,15 @@ See the annotated examples in the [experiments](https://github.com/BrainAnnex/li
 ## How to Run
 Copy the files from the repository to your local machine.
 
+On a Linux machine, you can use the command:
+
+    sudo git clone --verbose --config http.sslVerify=false https://github.com/BrainAnnex/life123.git YOUR_LOCAL_DIRECTORY
+
+Or you could download a zip file from [the repository](https://github.com/BrainAnnex/life123)
+
 Install, if not already present on your machine, Python 3.7+
 
-We test on Python 3.7/3.8 (3.6 *might* work - not tested - but not any earlier version, because of the use of Python f-strings.)
+We currently test on Python 3.7/3.8 (3.6 *might* work - not tested - but not any earlier version, because of the use of Python f-strings.)
 
 
 **QUICK-AND-EASY method**
@@ -58,28 +64,47 @@ PyCharm will auto-detect the `requirements.txt` file
 and prompt you to create a virtual environment as specified.
 
 Then:
-1. edit the folder names in the top-level batch file `quick.bat`, based on your local folder (one-time operation)
+1. edit the folder names in the top-level batch file `quick.bat`, based on your local folder where you installed Life123 (one-time operation)
 2. just type `quick` in the *Terminal tab* at the bottom of PyCharm (not to be confused with the "Python Console" tab!)
 
-That's it!  A new browser tab will open, and you can review and run the `experiments` notebooks from within JupyterLab!
+**That's it!**  A new browser tab will open, and you can review and run the `experiments` notebooks from within JupyterLab!
 
-We highly recommend JupyterLab over Jupyter Notebooks!
+For the quick-start method, we set things up with _JupyterLab_, because we find it much better than
+Jupyter Notebooks!
 
-"JupyterLab is the next-generation user interface for Project Jupyter  
-offering all the familiar building blocks of the classic Jupyter Notebook  
-in a flexible and powerful user interface.  
-JupyterLab will eventually replace the classic Jupyter Notebook."
+    "JupyterLab is the next-generation user interface for Project Jupyter  
+    offering all the familiar building blocks of the classic Jupyter Notebook  
+    in a flexible and powerful user interface.  
+    JupyterLab will eventually replace the classic Jupyter Notebook."
 
+Of particular relevance to this project, with _JupyterLab_, you can easily inspect the
+HTML log files (with the graphic outputs of program runs): just right-click on them,
+and request "Open in New Browser Tab", as shown below:
+
+![Example of JupyterLab](docs/Example_JupyterLab.png)
+
+_and here's that HTML file from above, viewed in a browser:_
+
+![Example of HTML log](docs/Example_HTML_log.png)
 
 ## OTHER ways to run Life123 (for more advanced users)
 
-**Set up the virtual (local) environment**
+**SET UP the virtual (local) environment**
 
-If you opt to handle setting up the virtual environment yourself, you'll need to use `pipenv` or your favorite tool.
+If you opt to handle setting up the virtual environment yourself, on Linux you can do:
+
+    $ sudo apt install python3.8-venv   (if needed)
+    $ python3 -m venv /path_to_root_folder_where_the_files_are/venv
+    $ cd source /path_to_root_folder_where_the_files_are
+    $ source venv/bin/activate
+    (venv) $ pip3 install -r requirements.txt
+    (venv) $ deactivate 
+
+(or use `pipenv` or your favorite tool.)
 
 All dependencies (such as NumPy and Jupyter notebooks) are specified in the file `requirements.txt`
 
-**Using the virtual (local) environment**
+**USING the virtual (local) environment**
 
 To use the virtual environment’s packages/resources in isolation (i.e. without an IDE),
 you need to “activate” it.  To activate the virtual environment:
@@ -123,13 +148,20 @@ will only use this environment’s packages and settings.
 
 **Specifying the root path, and running Python scripts**
 
-When using an IDE such as PyCharm, the IDE automatically adds the root of the Life123 files (the location
+When using an IDE such as PyCharm, *the IDE automatically adds the root of the Life123 files* (i.e. the location
 of the PyCharm project) to the value of the `sys.path` seen inside the execution of the Python files.
 
 If you opt not to use an IDE, or if you're using JupyterLab (such as the ones provided in Life123's
 `experiments` folder), an extra step is necessary.
 
 IMPORTANT: all steps below are AFTER doing the steps described in the earlier section.
+You should be in the local environment, and your prompt should be prefixed by (venv)
+
+*On Linux:*
+
+    (venv) $ export PYTHONPATH=$PYTHONPATH:`pwd`/venv/lib/python3.8/site-packages
+    (NOTE: you might need to change the path /venv/lib/python3.8/site-packages to whatever is on your machine)
+    (venv) $ echo $PYTHONPATH     [To verify]
 
 *On Windows 7, if using the Command Prompt:*
 
