@@ -1,4 +1,4 @@
-### VERSION 1.0-beta7
+### VERSION 1.0-beta8 In-progress
 
 
 
@@ -59,7 +59,9 @@ We currently test on Python 3.7/3.8 (3.6 *might* work - not tested - but not any
 
 **QUICK-AND-EASY method**
 
-We highly recommend using an IDE, such as PyCharm.  
+A Colab option is being investigated...
+
+For now, we highly recommend using an IDE, such as PyCharm.  
 PyCharm will auto-detect the `requirements.txt` file
 and prompt you to create a virtual environment as specified.
 

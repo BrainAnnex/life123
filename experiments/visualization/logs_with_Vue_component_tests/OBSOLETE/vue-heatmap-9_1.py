@@ -36,4 +36,4 @@ all_data = {
 
 log.export_plot_Vue(data=all_data,
                     component_name="vue-heatmap-9",
-                    component_file="../../../modules/visualization/vue_components/heatmap9.js")
+                    component_file="../../../../modules/visualization/vue_components/OBSOLETE/heatmap9.js")
