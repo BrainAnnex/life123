@@ -9,6 +9,18 @@ class GraphicLog:
     HOME_REL_PATH = None
 
 
+    @classmethod
+    def is_initialized(cls) -> bool:
+        """
+        Return True if this module has been initialized, or False otherwise
+
+        :return:
+        """
+        if cls.COMPONENT_NAME is None or cls.HOME_REL_PATH is None:
+            return False
+        return True
+
+
 
     @classmethod
     def config(cls, filename, component_name, home_rel_path, mode='overwrite'):

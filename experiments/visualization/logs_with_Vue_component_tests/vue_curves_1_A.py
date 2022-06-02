@@ -1,16 +1,18 @@
-# Test 1 of using the heatmap module "vue-heatmap-11" in an HTML log
+# Test "A" of using the heatmap module "vue_curves_1" in an HTML log
 
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
+COMPONENT_NAME = "vue_curves_1"
 
-# Initialize the HTML logging
+# Initialize the HTML logging.
+# Note: the relative path is from the location of THE LOG FILE to the project's home
 GraphicLog.config(filename="vue_curves_1_A.htm",
-                  component_name="vue_curves_1",
+                  component_name=COMPONENT_NAME,
                   home_rel_path="../../..")
 
 
-log.write('Example of Line plots, using the module "vue_curves_1":',
+log.write(f'Example of Line plots, using the module "{COMPONENT_NAME}":',
           style=log.h2, blanks_after=1)
 
 

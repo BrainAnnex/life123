@@ -1,6 +1,7 @@
 import numpy as np
 import math
 from modules.html_log.html_log import HtmlLog as log
+from modules.visualization.graphic_log import GraphicLog
 
 
 class BioSim1D:
@@ -730,16 +731,25 @@ class BioSim1D:
         """
         Send to the HTML log, a heatmap representation of the concentrations of
         the single requested species.
-        This version uses the Vue component heatmap11.js
+
+        IMPORTANT: must first call GraphicLog.config(), or an Exception will be raised
+        For the graphics, the version of the heatmap Vue component specified in the call
+        to GraphicLog.config() will be used.
 
         :param species_index:   Index identifying the species of interest
         :param heatmap_pars:    A dictionary of parameters for the heatmap
         :param header:          Optional string to display just above the heatmap
         :return:
         """
+        if not GraphicLog.is_initialized():
+            raise Exception("Prior to calling single_species_heatmap(), "
+                            "need to initialize the graphics module with a call to GraphicLog.config()")
+
         if header:
             log.write(f"{header}", style=log.h1, newline=False)
 
+
+        # Prepare the data for the heatmap
         species_concentrations = list(cls.lookup_species(species_index))
         #print(species_concentrations)
 
@@ -759,6 +769,7 @@ class BioSim1D:
             "margins": heatmap_pars["margins"]
         }
 
-        log.export_plot_Vue(data=all_data,
-                            component_name="vue-heatmap-11",
-                            component_file="../../../modules/visualization/vue_components/heatmap11.js")
+        # Send the plot to the HTML log file.
+        # The version of the heatmap Vue component specified in the call to GraphicLog.config() will be used
+        GraphicLog.export_plot(all_data)
+

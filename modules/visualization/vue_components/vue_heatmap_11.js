@@ -1,13 +1,9 @@
-/*  DEBUGGING VERSION - DON'T USE */
-Vue.component('vue-heatmap-11',
-    /*  A heatmap in 2D, , with tool tips and a slider control.
-
-        (A small change from 'vue-heatmap-10'
-         CHANGED: the x-axis labels are now just the bin numbers; a tooltip added)
+Vue.component('vue_heatmap_11',
+    /*  A heatmap in 2D, a small change from 'vue-heatmap-10'
+        (CHANGED: the x-axis labels are now just the bin numbers; a tooltip added)
 
         High values are shown as dark (think of ink in water); low values in white.
         An outer box (with border set by CSS "chart-holder") is also shown.
-
         See: https://julianspolymathexplorations.blogspot.com/2022/01/D3-plus-Vue-visualization-UI.html
         Loosely based on: https://d3-graph-gallery.com/graph/heatmap_tooltip.html
 
@@ -20,6 +16,7 @@ Vue.component('vue-heatmap-11',
             y_labels: {
                 // List of y-axis labels.  EXAMPLE: ["Chem 1", "Chem 2"]
                 // Note: the x-axis labels are just the bin numbers
+                required: true
             },
 
             heatmap_data: {
@@ -30,6 +27,7 @@ Vue.component('vue-heatmap-11',
                                                                [90., 14.5, 55.1]
                                                          ]
                  */
+                required: true
             },
 
             range_min: {
@@ -46,12 +44,14 @@ Vue.component('vue-heatmap-11',
 
             outer_width: {
                 // For the container box.  In pixels.  EXAMPLE: 850
-                type: Number
+                type: Number,
+                required: true
             },
 
             outer_height: {
                 // For the container box.  In pixels.  EXAMPLE: 350
-                type: Number
+                type: Number,
+                required: true
             },
 
             margins: {
@@ -76,6 +76,7 @@ Vue.component('vue-heatmap-11',
                                 <template v-for="(heatmap_value, col_index) in row_data">
                                     <rect
                                         v-bind:key="row_index + '_' + col_index"
+
                                         v-bind:x="x_scale_func(col_index)"  v-bind:y="y_scale_func(y_labels[row_index])"
                                         v-bind:width="rect_w"  v-bind:height="rect_h"
                                         v-bind:fill="color_scale_func(heatmap_value)"
@@ -89,7 +90,7 @@ Vue.component('vue-heatmap-11',
 
                             </template>
                         </g>
-                        <!-- End of the main part of the heatmap -->
+                        <!-- END of the main part of the heatmap -->
 
 
                         <!--
@@ -110,12 +111,11 @@ Vue.component('vue-heatmap-11',
                         -->
                         <g class="horiz-axis" v-html="X_axis">
                         </g>
-
                         <g class="vert-axis" v-html="Y_axis">
                         </g>
 
                     </g>
-                    <!-- End of the translated element -->
+                    <!-- END of the translated element -->
                 </svg>
 
 
@@ -130,29 +130,14 @@ Vue.component('vue-heatmap-11',
                 <!--  Slider, to let the user adjust the max value of the heatmap range -->
                 <div>
                     <span style="color: #888; margin-right:25px">Heatmap range: </span>
-                    <label>{{min_val}}</label>
-                    <input type="range" min="0" v-bind:max="original_max_val" v-model="max_val">
+                    <span>{{min_val}}</span> to
+                    <input type="range"
+                            v-bind:min="slider_min" v-bind:max="original_max_val"
+                            v-bind:step="slider_step"
+                            v-model:value="max_val">
                     <label>{{max_val}}</label>
                 </div>
 
-
-                <div style="border:1px solid purple; margin-top:35px; padding:5px; background-color:#eee">
-                    <i>Data for the above heatmap:</i><br>
-                    <template v-for="(row_data, row_index) in heatmap_data">
-
-                        <br><b>row_data: {{row_data}} | row_index: {{row_index}}</b><br>
-                        <template v-for="(heatmap_value, col_index) in row_data">
-
-                            <p style='color:gray; margin-left:15px'>
-                                heatmap_value: {{heatmap_value}} | col_index: {{col_index}} | rect_w: {{rect_w}} | rect_h: {{rect_h}} | fill: {{color_scale_func(heatmap_value)}}<br>
-                                x coord: {{col_index}} | y coord: {{y_labels[row_index]}}<br>
-                                x_scale_fun: {{x_scale_func(col_index)}} |  y_scale_fun: {{y_scale_func(y_labels[row_index])}}
-                            </p>
-
-                        </template>
-
-                    </template>
-                </div>
 
             </div>
             <!-- End of outer container -->
@@ -178,13 +163,28 @@ Vue.component('vue-heatmap-11',
         // ---------------------------  COMPUTED  ---------------------------
         computed: {     // NOTE: computed methods are only invoked AS NEEDED
 
+            slider_min()
+            /*  To avoid letting the slider go all the way to the minimum value,
+                which would causes singularities in the value mappings
+             */
+            {
+                return this.min_val + this.slider_step;
+            },
+
+            slider_step()
+            // Make slider steps a 20-th of the range
+            {
+                return (this.original_max_val - this.min_val) / 20.;
+            },
 
             plot_width()
+            // For the main part of the heatmap
             {
                 return this.outer_width - this.margins.left - this.margins.right;
             },
 
             plot_height()
+            // For the main part of the heatmap
             {
                 return this.outer_height - this.margins.top - this.margins.bottom;
             },
@@ -196,13 +196,14 @@ Vue.component('vue-heatmap-11',
                     return 0;
                 }
 
-                const first_row = this.heatmap_data[0]
+                const first_row = this.heatmap_data[0];
                 return first_row.length;
             },
 
             x_scale_func()
             /*  Create and return a function to build the X scale.
-                This function maps a "bin index" into an X-value in screen coordinates.
+                This function maps a "bin index" into an X-value in screen coordinates,
+                using existing values for the number of bins and the plot width.
                 EXAMPLE, if there are 4 bins, and the plot_width is 600:
                             0 |-> 0  , 1 |-> 150 , 2 |-> 300 , 3 |-> 450
 
@@ -274,7 +275,7 @@ Vue.component('vue-heatmap-11',
                 }
                 const f = d3.scaleLinear()
                     .domain([this.min_val, this.max_val])
-                    .range(["white", "black"]);   // Maps 0 to white, and 100 to black
+                    .range(["white", "black"]);   // Maps the min value to white, and the max value to black
 
                 return f;   // f is a function
             },
@@ -295,8 +296,7 @@ Vue.component('vue-heatmap-11',
                             {x_scale_func: this.x_scale_func,
                              n_items: this.n_bins,
                              bin_width: this.rect_w,
-                             Sy_axis: this.plot_height,
-                             categorical_labels: ["0", "1", "2"]
+                             Sy_axis: this.plot_height
                             }
                         );
             },
