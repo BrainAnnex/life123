@@ -1,4 +1,4 @@
-Vue.component('curves-1',
+Vue.component('vue_curves_1',
     /*  Line charts and interpolating functions in 1D.
         For now, just 1 dataset at a time.
 

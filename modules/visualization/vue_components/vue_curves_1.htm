@@ -16,7 +16,7 @@
 
 <div id="vue-root">   <!-- Container for VUE COMPONENT below : ROOT element -->
 
-    <curves-1
+    <vue_curves_1
             v-bind:y_labels="y_labels"
             v-bind:data="data"
 
@@ -27,7 +27,7 @@
             v-bind:outer_height="outer_height"
             v-bind:margins="margins"
     >
-    </curves-1>
+    </vue_curves_1>
 
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~~~~~  -->
 
@@ -47,15 +47,15 @@
 new Vue({
     el: '#vue-root',
 
-    data: {     // THE DATA FOR THE HEATMAP
+    data: {     // THE DATA FOR THE LINE CURVES
 
-        // Labels for the rows
+        // Labels for the rows (not yet being used)
         y_labels: ["v1", "very_long_label"],
 
-        // Data for the plots, by chemical species in their index order
+        // Concentration data for the plots (for now just 1 chemical species), in index order
         data: [20, 85, 100, 50],
 
-        // Set the range of values in the heatmap bins
+        // Set the range of values (not yet being used)
         range_min: 0,
         range_max: 100,
 
