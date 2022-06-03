@@ -7,7 +7,8 @@
     <script src="../../../modules/Vue2_lib/vue2.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="../../../modules/SVG_helper/svg_helper.js" ></script>
-    <link type="text/css" rel="stylesheet" href="../../../modules/visualization/vue_components/vue_heatmap_11.css">  
+    <link type="text/css" rel="stylesheet" href="../../../modules/visualization/vue_components/vue_heatmap_11.css">
+    <link type="text/css" rel="stylesheet" href="../../../modules/visualization/vue_components/vue_curves_1.css">  
 </head>
 
 <body>
@@ -56,26 +57,20 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 });
 </script>
 
-<br>
-<br>
-Advancing to time t=20, with time steps of 0.1 ...<br>
-<br>
-After delta time 20.0.  TOTAL TIME 20.0  (200 steps taken):<br>
-<br>
 
 
 <div id="vue-root-2">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_heatmap_11 
+    <vue_curves_1 
         v-bind:y_labels="y_labels_json"
-        v-bind:heatmap_data="heatmap_data_json"
+        v-bind:data="data_json"
         v-bind:range_min="range_min_json"
         v-bind:range_max="range_max_json"
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
     >        
-    </vue_heatmap_11>
+    </vue_curves_1>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -83,7 +78,7 @@ After delta time 20.0.  TOTAL TIME 20.0  (200 steps taken):<br>
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
+<script src="../../../modules/visualization/vue_components/vue_curves_1.js"></script>
 <script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
@@ -93,11 +88,11 @@ new Vue({
 
     data: {
         y_labels_json: ["Mol 0"],
-heatmap_data_json: [[1.7915449815979623, 2.046049956197253, 2.1575287571012467, 1.8140865655191563, 1.1857289679580865, 0.6149316304187616, 0.2603137725324633, 0.09234937004182237, 0.028350381854367064, 0.009115616778886402]],
+data_json: [0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
 range_min_json: 0,
-range_max_json: 2.5,
+range_max_json: 10,
 outer_width_json: 850,
-outer_height_json: 150,
+outer_height_json: 250,
 margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     }
 
@@ -106,9 +101,9 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <br>
 <br>
-Advancing an additional Delta time of 40.0, with time steps of 0.1 ...<br>
+Advancing to time t=20, with time steps of 0.1 ...<br>
 <br>
-After delta time 40.0.  TOTAL TIME 60.0  (400 steps taken):<br>
+After delta time 20.0.  TOTAL TIME 20.0  (200 steps taken):<br>
 <br>
 
 
@@ -141,7 +136,7 @@ new Vue({
 
     data: {
         y_labels_json: ["Mol 0"],
-heatmap_data_json: [[1.7669762430068738, 1.698775963907739, 1.563095883685993, 1.366619118349869, 1.1270110298494436, 0.872223687843469, 0.6336731927902174, 0.4378500586480128, 0.301516347232347, 0.23225847468603866]],
+heatmap_data_json: [[1.7915449815979623, 2.046049956197253, 2.1575287571012467, 1.8140865655191563, 1.1857289679580865, 0.6149316304187616, 0.2603137725324633, 0.09234937004182237, 0.028350381854367064, 0.009115616778886402]],
 range_min_json: 0,
 range_max_json: 2.5,
 outer_width_json: 850,
@@ -154,9 +149,9 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <br>
 <br>
-Advancing an additional Delta time of 60.0, with time steps of 0.1 ...<br>
+Advancing an additional Delta time of 40.0, with time steps of 0.1 ...<br>
 <br>
-After delta time 60.0.  TOTAL TIME 120.0  (600 steps taken):<br>
+After delta time 40.0.  TOTAL TIME 60.0  (400 steps taken):<br>
 <br>
 
 
@@ -186,6 +181,54 @@ After delta time 60.0.  TOTAL TIME 120.0  (600 steps taken):<br>
 // Instantiation of the Vue ROOT component
 new Vue({
     el: '#vue-root-4',
+
+    data: {
+        y_labels_json: ["Mol 0"],
+heatmap_data_json: [[1.7669762430068738, 1.698775963907739, 1.563095883685993, 1.366619118349869, 1.1270110298494436, 0.872223687843469, 0.6336731927902174, 0.4378500586480128, 0.301516347232347, 0.23225847468603866]],
+range_min_json: 0,
+range_max_json: 2.5,
+outer_width_json: 850,
+outer_height_json: 150,
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+    }
+
+});
+</script>
+
+<br>
+<br>
+Advancing an additional Delta time of 60.0, with time steps of 0.1 ...<br>
+<br>
+After delta time 60.0.  TOTAL TIME 120.0  (600 steps taken):<br>
+<br>
+
+
+<div id="vue-root-5">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+
+    <vue_heatmap_11 
+        v-bind:y_labels="y_labels_json"
+        v-bind:heatmap_data="heatmap_data_json"
+        v-bind:range_min="range_min_json"
+        v-bind:range_max="range_max_json"
+        v-bind:outer_width="outer_width_json"
+        v-bind:outer_height="outer_height_json"
+        v-bind:margins="margins_json"
+    >        
+    </vue_heatmap_11>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" ></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-5',
 
     data: {
         y_labels_json: ["Mol 0"],

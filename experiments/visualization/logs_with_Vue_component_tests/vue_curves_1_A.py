@@ -8,7 +8,7 @@ COMPONENT_NAME = "vue_curves_1"
 # Initialize the HTML logging.
 # Note: the relative path is from the location of THE LOG FILE to the project's home
 GraphicLog.config(filename="vue_curves_1_A.htm",
-                  component_name=COMPONENT_NAME,
+                  components=COMPONENT_NAME,
                   home_rel_path="../../..")
 
 
@@ -37,4 +37,4 @@ all_data = {
 
 
 # Send the plot to the HTML log file
-GraphicLog.export_plot(all_data)
+GraphicLog.export_plot(all_data, COMPONENT_NAME)
