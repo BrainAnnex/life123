@@ -1,4 +1,4 @@
-Vue.component('vue_curves_1',
+Vue.component('vue_curves_2',
     /*  Line charts and interpolating functions in 1D.
         For now, just 1 dataset at a time.
 
@@ -10,6 +10,8 @@ Vue.component('vue_curves_1',
 
         DEPENDENCIES:   - the SVG_helper library for drawing the axes
                         - the D3 (v7) libraries
+
+        CHANGES FROM THE PREVIOUS VERSION: the data points were shifted to mid-bin
      */
     {
         props: {
@@ -68,12 +70,12 @@ Vue.component('vue_curves_1',
 
                         <!-- The main part of the plot -->
                         <g class="main-plot">
-                            <!-- Show the datapoints as little circles -->
-                            <circle r="5"
+                            <!-- Show the data points as little circles -->
+                            <circle r="4"
                                 v-for="(val, index) in data"
                                     v-bind:key="index"
 
-                                    v-bind:cx="x_scale_func(index)"
+                                    v-bind:cx="x_scale_func(index+0.5)"
                                     v-bind:cy="y_scale_func(val)"
                                     fill="#111"
                                     @click="show_datapoint_info(index, val)"
@@ -138,6 +140,15 @@ Vue.component('vue_curves_1',
 
         // ---------------------------  COMPUTED  ---------------------------
         computed: {     // NOTE: computed methods are only invoked AS NEEDED
+
+            extended_data()
+            // Return an array that is the original data, with the last entry appended
+            {
+                const last_element = this.data[this.n_bins - 1];
+
+                return this.data.concat(last_element);
+            },
+
 
             n_bins()
             {
@@ -233,11 +244,11 @@ Vue.component('vue_curves_1',
 
 
             path_straight()
-            // Connect the data points with segments
+            // Connect the data points with line segments
             {
                 // The x-coord is the array index; the y-coord is the data value
                 const line_func = d3.line()
-                                    .x((v, i) => this.x_scale_func(i))
+                                    .x((v, i) => this.x_scale_func(i+0.5))
                                     .y(v      => this.y_scale_func(v));      // This will be a function
 
                 return line_func(this.data);
@@ -252,7 +263,7 @@ Vue.component('vue_curves_1',
                                     .x((v, i) => this.x_scale_func(i))
                                     .y(v      => this.y_scale_func(v));      // This will be a function
 
-                return line_func(this.data);
+                return line_func(this.extended_data);
             },
 
             path_curve()
@@ -261,7 +272,7 @@ Vue.component('vue_curves_1',
                 // The x-coord is the array index; the y-coord is the data value
                 const line_func = d3.line()
                                     .curve(d3[this.curve_type])
-                                    .x((v, i) => this.x_scale_func(i))
+                                    .x((v, i) => this.x_scale_func(i+0.5))
                                     .y(v      => this.y_scale_func(v));      // This will be a function
 
                 return line_func(this.data);
