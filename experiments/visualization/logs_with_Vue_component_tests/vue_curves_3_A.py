@@ -1,13 +1,15 @@
-# Test "A" of using the heatmap module "vue_curves_1" in an HTML log
+# Test "A" of using the heatmap module "vue_curves_3" in an HTML log
 
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
-COMPONENT_NAME = "vue_curves_1"
+COMPONENT_NAME = "vue_curves_3"     # CHANGE AS NEEDED
+FILENAME="vue_curves_3_A.htm"       # CHANGE AS NEEDED
+
 
 # Initialize the HTML logging.
 # Note: the relative path is from the location of THE LOG FILE to the project's home
-GraphicLog.config(filename="vue_curves_1_A.htm",
+GraphicLog.config(filename=FILENAME,
                   components=COMPONENT_NAME,
                   home_rel_path="../../..")
 
@@ -19,7 +21,7 @@ log.write(f'Example of Line plots, using the module "{COMPONENT_NAME}":',
 # EXAMPLE OF DATA VISUALIZATION WITH A HEATMAP (with arbitrary data, hardwired below)
 
 all_data = {
-    # Labels for the rows
+    # Labels for the y-axis
     "y_labels": ["v1", "very_long_label"],
 
     # Concentration data for the plots (for now just 1 chemical species), in index order

@@ -192,6 +192,8 @@ class HtmlLog:
 
         :param style:           Name of a function (or list/tuple of function names) to apply to the message string prior to sending it to HTML logs.
                                 Example:  HtmlLog.bold   , or   [HtmlLog.italic, HtmlLog.red]
+        :param style_par:
+
         :return:
         """
 

@@ -3,11 +3,13 @@
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
-COMPONENT_NAME = "vue_heatmap_11"
+COMPONENT_NAME = "vue_heatmap_11"       # CHANGE AS NEEDED
+FILENAME="vue_heatmap_11_A.htm"         # CHANGE AS NEEDED
+
 
 # Initialize the HTML logging.
 # Note: the relative path is from the location of THE LOG FILE to the project's home
-GraphicLog.config(filename="vue_heatmap_11_A.htm",
+GraphicLog.config(filename=FILENAME,
                   components=COMPONENT_NAME,
                   home_rel_path="../../..")
 

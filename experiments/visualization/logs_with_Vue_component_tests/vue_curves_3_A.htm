@@ -7,17 +7,17 @@
     <script src="../../../modules/Vue2_lib/vue2.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="../../../modules/SVG_helper/svg_helper.js" ></script>
-    <link type="text/css" rel="stylesheet" href="../../../modules/visualization/vue_components/vue_curves_1.css">  
+    <link type="text/css" rel="stylesheet" href="../../../modules/visualization/vue_components/vue_curves_3.css">  
 </head>
 
 <body>
-<h2>Example of Line plots, using the module "vue_curves_1":</h2><br>
+<h2>Example of Line plots, using the module "vue_curves_3":</h2><br>
 <br>
 
 
 <div id="vue-root-1">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_curves_1 
+    <vue_curves_3 
         v-bind:y_labels="y_labels_json"
         v-bind:data="data_json"
         v-bind:range_min="range_min_json"
@@ -26,7 +26,7 @@
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
     >        
-    </vue_curves_1>
+    </vue_curves_3>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -34,7 +34,7 @@
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/vue_curves_1.js"></script>
+<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
 <script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>

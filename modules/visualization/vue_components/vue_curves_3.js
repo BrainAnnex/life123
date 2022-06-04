@@ -11,7 +11,10 @@ Vue.component('vue_curves_3',
         DEPENDENCIES:   - the SVG_helper library for drawing the axes
                         - the D3 (v7) libraries
 
-        CHANGES FROM THE PREVIOUS VERSION: shift in x coordinates
+        CHANGES FROM THE PREVIOUS VERSION: shift in plot x-coordinates;
+                now they match the ticks on the axis.
+                Switch to svg_helper.axis_bottom_scaleLinear_bins(),
+                in version 1.2 of the class SVGhelper
      */
     {
         props: {
@@ -71,7 +74,7 @@ Vue.component('vue_curves_3',
                         <!-- The main part of the plot -->
                         <g class="main-plot">
                             <!-- Show the data points as little circles -->
-                            <circle r="7"
+                            <circle r="3"
                                 v-for="(val, index) in data"
                                     v-bind:key="index"
 
@@ -220,10 +223,9 @@ Vue.component('vue_curves_3',
             X_axis()
             // Return the SVG code to produce an x-axis
             {
-                return this.svg_helper.axis_bottom_scaleLinear_experimental(
+                return this.svg_helper.axis_bottom_scaleLinear_bins(
                             {x_scale_func: this.x_scale_func,
                              n_items: this.n_bins,
-                             bin_width: this.bin_width,
                              Sy_axis: this.plot_height
                             }
                         );
