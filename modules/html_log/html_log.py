@@ -22,7 +22,7 @@ class HtmlLog:
 
     # The following class variables (in CAPS) contain the default configuration
     LOG_DIRECTORY = ""              # TODO: test
-    LOG_FILENAME_BASE = "log.htm"   # Name for the log file (if using just 1 file), or basename (if using multiple log files)
+    LOG_FILENAME_BASE = "default_log.htm"   # Name for the log file (if using just 1 file), or basename (if using multiple log files)
 
 
     SEPARATE_LOGS = False           # Flag indicating whether each run's output should go into a separate file (consecutively numbered);
@@ -74,7 +74,7 @@ class HtmlLog:
 
         :return:            None
         """
-        assert not cls.config_lock, "The config() method can only be invoked ONCE per run"
+        assert not cls.config_lock, "The config() method can only be invoked ONCE per run.  Did you already make a call to config() or write() ?"
 
         # Change whatever configuration variables are being passed, if any
         if filename:
@@ -192,11 +192,14 @@ class HtmlLog:
 
         :param style:           Name of a function (or list/tuple of function names) to apply to the message string prior to sending it to HTML logs.
                                 Example:  HtmlLog.bold   , or   [HtmlLog.italic, HtmlLog.red]
+        :param style_par:
+
         :return:
         """
 
         # Check if the configuration was run
         if not cls.file_handler:
+            print("The logger module is being AUTOMATICALLY set to its default configuration (to set it manually, make a call to config() first)")
             cls.config()            # Set up the default configuration
 
         msg = str(msg)              # To convert numbers, or objects that can be sent as input to the str() function
@@ -454,7 +457,7 @@ new Vue({{
             return ""
 
         """
-        # In some tests, this extra conversion could be avoided
+        # In numerous tests, this extra conversion could be avoided
         l = [f"{key}_json: '{json.dumps(value)}'"
                         for (key, value) in data.items()]   # Notice the "_json" suffix added to keys
                                                             # and the values converted to JSON and placed in single quotes

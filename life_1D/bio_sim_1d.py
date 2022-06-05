@@ -1,6 +1,7 @@
 import numpy as np
 import math
 from modules.html_log.html_log import HtmlLog as log
+from modules.visualization.graphic_log import GraphicLog
 
 
 class BioSim1D:
@@ -726,20 +727,32 @@ class BioSim1D:
     #########################################################################
 
     @classmethod
-    def single_species_heatmap(cls, species_index: int, heatmap_pars: dict, header=None) -> None:
+    def single_species_heatmap(cls, species_index: int, heatmap_pars: dict, graphic_component, header=None) -> None:
         """
         Send to the HTML log, a heatmap representation of the concentrations of
         the single requested species.
-        This version uses the Vue component heatmap11.js
+
+        IMPORTANT: must first call GraphicLog.config(), or an Exception will be raised
 
         :param species_index:   Index identifying the species of interest
         :param heatmap_pars:    A dictionary of parameters for the heatmap
+        :param graphic_component:
         :param header:          Optional string to display just above the heatmap
-        :return:
+        :return:                None
         """
+        if not GraphicLog.is_initialized():
+            raise Exception("Prior to calling single_species_heatmap(), "
+                            "need to initialize the graphics module with a call to GraphicLog.config()")
+
         if header:
             log.write(f"{header}", style=log.h1, newline=False)
 
+
+        #
+        # Prepare the data for the heatmap
+        #
+
+        # List of concentrations in the various bins, for the requested species
         species_concentrations = list(cls.lookup_species(species_index))
         #print(species_concentrations)
 
@@ -759,6 +772,58 @@ class BioSim1D:
             "margins": heatmap_pars["margins"]
         }
 
-        log.export_plot_Vue(data=all_data,
-                            component_name="vue-heatmap-11",
-                            component_file="../../../modules/visualization/vue_components/heatmap11.js")
+        # Send the plot to the HTML log file.
+        # The version of the heatmap Vue component specified in the call to GraphicLog.config() will be used
+        GraphicLog.export_plot(all_data, graphic_component)
+
+
+
+    @classmethod
+    def single_species_line_plot(cls, species_index: int, plot_pars: dict, graphic_component, header=None) -> None:
+        """
+        Send to the HTML log, a line plot representation of the concentrations of
+        the single requested species.
+
+        IMPORTANT: must first call GraphicLog.config(), or an Exception will be raised
+
+        :param species_index:   Index identifying the species of interest
+        :param plot_pars:       A dictionary of parameters for the plot
+        :param graphic_component:
+        :param header:          Optional string to display just above the heatmap
+        :return:                None
+        """
+        if not GraphicLog.is_initialized():
+            raise Exception("Prior to calling single_species_heatmap(), "
+                            "need to initialize the graphics module with a call to GraphicLog.config()")
+
+        if header:
+            log.write(f"{header}", style=log.h1, newline=False)
+
+
+        #
+        # Prepare the data for the plot
+        #
+
+        # List of concentrations in the various bins, for the requested species
+        species_concentrations = list(cls.lookup_species(species_index))
+        #print(species_concentrations)
+
+        all_data = {
+            "y_labels": [f"Mol {species_index}"],
+
+            # Concentration data for the plots (for now just 1 chemical species), in index order
+            "data": species_concentrations,
+
+            # Set the range of values for the y-scale of the plot
+            "range_min": plot_pars["range"][0],
+            "range_max": plot_pars["range"][1],
+
+            # Set the dimensions and margins of the plot
+            "outer_width": plot_pars["outer_width"],
+            "outer_height": plot_pars["outer_height"],
+            "margins": plot_pars["margins"]
+        }
+
+        # Send the plot to the HTML log file.
+        # The version of the heatmap Vue component specified in the call to GraphicLog.config() will be used
+        GraphicLog.export_plot(all_data, graphic_component)

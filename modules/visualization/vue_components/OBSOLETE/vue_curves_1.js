@@ -1,4 +1,4 @@
-Vue.component('curves-1',
+Vue.component('vue_curves_1',
     /*  Line charts and interpolating functions in 1D.
         For now, just 1 dataset at a time.
 
@@ -20,7 +20,8 @@ Vue.component('curves-1',
             },
 
             data: {
-                /* List of row values.  Each item is a set of bin values from left to right;
+                /*  Concentration data for the plots (for now just 1 chemical species),
+                    in index order from left to right;
                         EXAMPLE:  [20, 85, 100, 50]
                  */
                 required: true
@@ -196,7 +197,7 @@ Vue.component('curves-1',
 
 
             bin_width()
-            /*  Return the width (in pixels) of each rectangle element in the heatmap.
+            /*  Return the width (in pixels) of bin (subdivision) in the system.
                 EXAMPLE, if there are 4 bins and a plot_width of 600,
                     then rect_w() returns 150
              */

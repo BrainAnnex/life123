@@ -1,0 +1,76 @@
+<!-- This is just a tester for the Vue component in the .js file by the same name
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tester for Vue component</title>
+
+    <link type="text/css" rel="stylesheet" href="vue_heatmap_11.css">  <!-- CHANGE THIS AS NEEDED -->
+    <script src="../../Vue2_lib/vue2.js"></script>    <!-- Vue.js (version 2) -->
+</head>
+
+<body>
+
+
+<div id="vue-root">   <!-- Container for VUE COMPONENT below : ROOT element -->
+
+    <vue_heatmap_11
+            v-bind:y_labels="y_labels"
+            v-bind:heatmap_data="heatmap_data"
+
+            v-bind:range_min="range_min"
+            v-bind:range_max="range_max"
+
+            v-bind:outer_width="outer_width"
+            v-bind:outer_height="outer_height"
+            v-bind:margins="margins"
+    >
+    </vue_heatmap_11>
+
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~~~~~  -->
+
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="vue_heatmap_11.js"></script>                    <!-- CHANGE THIS AS NEEDED -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="../../SVG_helper/svg_helper.js"></script>
+
+
+
+<script>
+// Instantiation of the ROOT component must come after the definition of the descendant components
+new Vue({
+    el: '#vue-root',
+
+    data: {     // THE DATA FOR THE HEATMAP
+
+        // Labels for the rows
+        y_labels: ["v1", "very_long_label"],
+
+        // Data for the heatmap, by rows, starting with the bottom one
+        heatmap_data: [
+            [0, 85, 100],
+            [100, 20, 0]
+        ],
+
+        // Set the range of values in the heatmap bins
+        range_min: 0,
+        range_max: 100,
+
+        // Set the dimensions and margins of the heatmap ("outer" means the surrounding box)
+        outer_width: 900,
+        outer_height: 400,
+        margins: {top: 30, right: 30, bottom: 30, left: 85}
+    }
+
+});
+</script>
+
+
+</body>
+</html>

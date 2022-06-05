@@ -1,30 +1,33 @@
-Vue.component('vue-heatmap-10',
-    /*  A heatmap in 2D, an improved version of 'vue-heatmap-9'
-        (with a simplification in data structure, and the addition of a slider to control the max value.)
+Vue.component('vue_heatmap_11',
+    /*  A heatmap in 2D, a small change from 'vue-heatmap-10'
+        (CHANGED: the x-axis labels are now just the bin numbers; a tooltip added)
+
         High values are shown as dark (think of ink in water); low values in white.
         An outer box (with border set by CSS "chart-holder") is also shown.
         See: https://julianspolymathexplorations.blogspot.com/2022/01/D3-plus-Vue-visualization-UI.html
-        It needs the SVG_helper library for drawing the axes.
+        Loosely based on: https://d3-graph-gallery.com/graph/heatmap_tooltip.html
+
+        DEPENDENCIES:   - the SVG_helper library for drawing the axes
+                        - the D3 (v7) libraries
      */
     {
         props: {
 
-            x_labels: {
-                // List of x-axis labels.  EXAMPLE: ["C0", "C1", "C2"]
-            },
-
             y_labels: {
                 // List of y-axis labels.  EXAMPLE: ["Chem 1", "Chem 2"]
+                // Note: the x-axis labels are just the bin numbers
+                required: true
             },
 
             heatmap_data: {
-                /* List of row values.  Each item is a set of values from left to right;
+                /* List of row values.  Each item is a set of bin values from left to right;
                                                consecutive rows are moving UP along the y-axis
                                                EXAMPLE:  [
                                                                [10., 32., 2.6],
                                                                [90., 14.5, 55.1]
                                                          ]
                  */
+                required: true
             },
 
             range_min: {
@@ -41,12 +44,14 @@ Vue.component('vue-heatmap-10',
 
             outer_width: {
                 // For the container box.  In pixels.  EXAMPLE: 850
-                type: Number
+                type: Number,
+                required: true
             },
 
             outer_height: {
                 // For the container box.  In pixels.  EXAMPLE: 350
-                type: Number
+                type: Number,
+                required: true
             },
 
             margins: {
@@ -63,7 +68,7 @@ Vue.component('vue-heatmap-10',
                     <g v-bind:transform="translate(margins.left, margins.top)"> <!-- Shift the contained g block below -->
 
                         <!-- The main part of the heatmap (a series of rectangles, colored according to the cell value) -->
-                        <g class="heatmap">
+                        <g class="heatmap" @mouseleave='mouse_leave_heatmap'>
                             <!-- For each row -->
                             <template v-for="(row_data, row_index) in heatmap_data">
 
@@ -71,17 +76,21 @@ Vue.component('vue-heatmap-10',
                                 <template v-for="(heatmap_value, col_index) in row_data">
                                     <rect
                                         v-bind:key="row_index + '_' + col_index"
-                                        v-bind:x="x_scale_func(x_labels[col_index])"  v-bind:y="y_scale_func(y_labels[row_index])"
+
+                                        v-bind:x="x_scale_func(col_index)"  v-bind:y="y_scale_func(y_labels[row_index])"
                                         v-bind:width="rect_w"  v-bind:height="rect_h"
                                         v-bind:fill="color_scale_func(heatmap_value)"
                                         stroke="rgb(200,200,200)" stroke-width="1"
+
+                                        @mouseover='mouseover_on_heatmap'
+                                        @mousemove='mouse_move(heatmap_value, $event)'
                                     >
                                     </rect>
                                 </template>
 
                             </template>
                         </g>
-                        <!-- End of the main part of the heatmap -->
+                        <!-- END of the main part of the heatmap -->
 
 
                         <!--
@@ -102,41 +111,33 @@ Vue.component('vue-heatmap-10',
                         -->
                         <g class="horiz-axis" v-html="X_axis">
                         </g>
-
                         <g class="vert-axis" v-html="Y_axis">
                         </g>
 
                     </g>
-                    <!-- End of the translated element -->
+                    <!-- END of the translated element -->
                 </svg>
+
+
+                <!-- Movable DIV that shows a tooltip -->
+                <div class='tooltip'
+                    v-bind:style="{'left': tooltip_left + 'px', 'top': tooltip_top + 'px', 'opacity': tooltip_opacity}"
+                    @mouseover='mouseover_on_tooltip' @mouseleave='mouse_leave_tooltip'>
+                {{tooltip_value}}
+                </div>
 
 
                 <!--  Slider, to let the user adjust the max value of the heatmap range -->
                 <div>
                     <span style="color: #888; margin-right:25px">Heatmap range: </span>
-                    <label>{{min_val}}</label>
-                    <input type="range" min="0" v-bind:max="original_max_val" v-model="max_val">
+                    <span>{{min_val}}</span> to
+                    <input type="range"
+                            v-bind:min="slider_min" v-bind:max="original_max_val"
+                            v-bind:step="slider_step"
+                            v-model:value="max_val">
                     <label>{{max_val}}</label>
                 </div>
 
-
-                <div style="border:1px solid purple; margin-top:35px; padding:5px; background-color:#eee">
-                    <i>Data for the above heatmap:</i><br>
-                    <template v-for="(row_data, row_index) in heatmap_data">
-
-                        <br><b>row_data: {{row_data}} | row_index: {{row_index}}</b><br>
-                        <template v-for="(heatmap_value, col_index) in row_data">
-
-                            <p style='color:gray; margin-left:15px'>
-                                heatmap_value: {{heatmap_value}} | col_index: {{col_index}} | rect_w: {{rect_w}} | rect_h: {{rect_h}} | fill: {{color_scale_func(heatmap_value)}}<br>
-                                x coord: {{x_labels[col_index]}} | y coord: {{y_labels[row_index]}}<br>
-                                x_scale_fun: {{x_scale_func(x_labels[col_index])}} |  y_scale_fun: {{y_scale_func(y_labels[row_index])}}
-                            </p>
-
-                        </template>
-
-                    </template>
-                </div>
 
             </div>
             <!-- End of outer container -->
@@ -148,7 +149,12 @@ Vue.component('vue-heatmap-10',
                 svg_helper: new SVGhelper(),
                 min_val: this.range_min,
                 max_val: this.range_max,
-                original_max_val: this.range_max    // This will become the rightmost value on the slider
+                original_max_val: this.range_max,    // This will become the rightmost value on the slider
+
+                tooltip_value: null,
+                tooltip_opacity: 0,
+                tooltip_left: 0,
+                tooltip_top: 0
             }
         }, // data
 
@@ -157,30 +163,57 @@ Vue.component('vue-heatmap-10',
         // ---------------------------  COMPUTED  ---------------------------
         computed: {     // NOTE: computed methods are only invoked AS NEEDED
 
+            slider_min()
+            /*  To avoid letting the slider go all the way to the minimum value,
+                which would causes singularities in the value mappings
+             */
+            {
+                return this.min_val + this.slider_step;
+            },
+
+            slider_step()
+            // Make slider steps a 20-th of the range
+            {
+                return (this.original_max_val - this.min_val) / 20.;
+            },
+
             plot_width()
+            // For the main part of the heatmap
             {
                 return this.outer_width - this.margins.left - this.margins.right;
             },
 
             plot_height()
+            // For the main part of the heatmap
             {
                 return this.outer_height - this.margins.top - this.margins.bottom;
             },
 
+            n_bins()
+            {
+                if (this.heatmap_data.length == 0)  {
+                    console.error("n_bins(): the heatmap data is empty");
+                    return 0;
+                }
+
+                const first_row = this.heatmap_data[0];
+                return first_row.length;
+            },
 
             x_scale_func()
             /*  Create and return a function to build the X scale.
-                This function maps an "x_labels" entry into an X-value in screen coordinates.
-                EXAMPLE, if the x_labels is ["A", "B", "C", "D"], and the plot_width is 600:
-                            "A" |-> 0  , "B" |-> 150 , "C" |-> 300 , "D" |-> 450
+                This function maps a "bin index" into an X-value in screen coordinates,
+                using existing values for the number of bins and the plot width.
+                EXAMPLE, if there are 4 bins, and the plot_width is 600:
+                            0 |-> 0  , 1 |-> 150 , 2 |-> 300 , 3 |-> 450
 
                 Example of test in a browser's JS console:
-                    >> f = d3.scaleBand().domain(["A", "B", "C", "D"]).range([0, 600])
-                    >> f("A") will give 0 ,  f("B") will give 150, etc
+                    >> f = d3.scaleLinear().domain([0, 4]).range([0, 600])
+                    >> f(0) will give 0 ,  f(1) will give 150, etc
              */
             {
-                const f = d3.scaleBand()
-                            .domain(this.x_labels)
+                const f = d3.scaleLinear()
+                            .domain([ 0, this.n_bins ])
                             .range([ 0, this.plot_width ]);     // f is a function
                 return f;
             },
@@ -201,13 +234,12 @@ Vue.component('vue-heatmap-10',
 
 
             rect_w()
-            /*  Return the width (in pixels) of each rectangle element in the heatmap, based on the previously-set x scale.
-                EXAMPLE, if in the earlier call to x_scale_func(),
-                    the x_labels is a list with 4 elements, and the plot_width is 600,
+            /*  Return the width (in pixels) of each rectangle element in the heatmap.
+                EXAMPLE, if there are 4 bins and a plot_width of 600,
                     then rect_w() returns 150
              */
             {
-                return this.x_scale_func.bandwidth();
+                return this.plot_width / this.n_bins;
             },
 
             rect_h()
@@ -243,7 +275,7 @@ Vue.component('vue-heatmap-10',
                 }
                 const f = d3.scaleLinear()
                     .domain([this.min_val, this.max_val])
-                    .range(["white", "black"]);   // Maps 0 to white, and 100 to black
+                    .range(["white", "black"]);   // Maps the min value to white, and the max value to black
 
                 return f;   // f is a function
             },
@@ -260,21 +292,13 @@ Vue.component('vue-heatmap-10',
             X_axis()
             // Return the SVG code to produce an x-axis
             {
-                return this.svg_helper.axis_bottom(
+                return this.svg_helper.axis_bottom_scaleLinear(
                             {x_scale_func: this.x_scale_func,
-                             Sy_axis: this.plot_height,
-                             categorical_labels: this.x_labels
+                             n_items: this.n_bins,
+                             bin_width: this.rect_w,
+                             Sy_axis: this.plot_height
                             }
                         );
-                /*
-                // Alternative that doesn't use the x scale function
-                return this.svg_helper.axis_bottom_without_scale(
-                            {Sxmin: 0, Sxmax: this.plot_width,
-                             Sy_axis: this.plot_height,
-                             categorical_labels: this.x_labels
-                            }
-                        );
-                */
             },
 
             Y_axis()
@@ -293,6 +317,52 @@ Vue.component('vue-heatmap-10',
 
         // ---------------------------  METHODS  ---------------------------
         methods: {
+            mouseover_on_heatmap()
+            // Upon detecting the mouse enter the main part of the heatmap
+            {
+                //console.log("mouseover_on_heatmap");
+                // Make tooltip visible
+                this.tooltip_opacity = 1;
+            },
+            mouseover_on_tooltip(ev)
+            /* This is needed for times when the mouse has landed on the tooltip DIV;
+                a consequence is that it has left the heatmap, and thus been made invisible:
+                make it visible again! (though in a dim way that reflects the different modality)
+             */
+            {
+                //console.log("mouseover_on_tooltip");
+                // Make tooltip visible, but dimly
+                this.tooltip_opacity = 0.3;
+            },
+
+            mouse_move(val, ev)
+            // Upon detecting the mouse in motion on a heatmap rectangle
+            {
+                //console.log("In mouse_move", ev);
+                //console.log("Value: ", val, " | event.x: ", ev.x, " | event.y: ", ev.y);
+                // Show the value of the heatmap rectangle
+                this.tooltip_value = val;
+                // Position the tooltip box a little to the right and above the mouse
+                this.tooltip_left = ev.x + 30;
+                this.tooltip_top = ev.y - 30;
+            },
+
+            mouse_leave_heatmap()
+            // Upon detecting the mouse leave the main part of the heatmap
+            {
+                //console.log("mouse_leave_heatmap");
+                this.tooltip_opacity = 0;
+            },
+            mouse_leave_tooltip()
+            /* This is needed for times when the mouse has landed on the tooltip DIV
+               upon leaving the heatmap, and thus is has been made visible again;
+               hide it for good when it leaves the tooltip DIV
+             */
+            {
+                //console.log("mouse_leave_tooltip");
+                this.tooltip_opacity = 0;
+            },
+
 
             translate(x, y)
             /*  Return a string suitable as an SVG attribute, to indicate a translation by <x,y>

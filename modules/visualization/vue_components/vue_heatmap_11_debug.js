@@ -1,9 +1,13 @@
-Vue.component('vue-heatmap-11',
-    /*  A heatmap in 2D, a small change from 'vue-heatmap-10'
-        (CHANGED: the x-axis labels are now just the bin numbers; a tooltip added)
+/*  DEBUGGING VERSION - DON'T USE */
+Vue.component('vue_heatmap_11',
+    /*  A heatmap in 2D, , with tool tips and a slider control.
+
+        (A small change from 'vue-heatmap-10'
+         CHANGED: the x-axis labels are now just the bin numbers; a tooltip added)
 
         High values are shown as dark (think of ink in water); low values in white.
         An outer box (with border set by CSS "chart-holder") is also shown.
+
         See: https://julianspolymathexplorations.blogspot.com/2022/01/D3-plus-Vue-visualization-UI.html
         Loosely based on: https://d3-graph-gallery.com/graph/heatmap_tooltip.html
 

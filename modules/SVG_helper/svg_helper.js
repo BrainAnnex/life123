@@ -1,5 +1,5 @@
 class SVGhelper
-/* 	VERSION 1.1
+/* 	VERSION 1.2
 
     Helper library to generate either individual SVG tags, or larger SVG constructs.
 
@@ -348,6 +348,145 @@ class SVGhelper
 
 
 
+    axis_bottom_scaleLinear_bins( {  x_scale_func,
+                                n_items,
+                                Sy_axis,
+                                tick_above=0,
+                                tick_below=6  } )
+    /*  MEANT FOR PLOTS BASED ON BINS.  THE BINS' X-VALUES ARE MID-BIN.
+
+        Create a horizontal axis line meant to be placed below a plot that used d3.scaleLinear() for the x-axis.
+
+        Use CSS for styling.  The following classes are created:
+                            'axis-line', 'ticks', 'tick-labels'
+
+        EXAMPLE:  g.tick-labels { translate(0, 10px); }  to shift down the tick labels
+
+        x_scale_func:       function produced with d3.scaleLinear()
+        Sy_axis:            y-coord of axis, in screen coordinates
+        tick_above:         Amount by which ticks stick above axis, in screen coordinates
+        tick_below:         Amount by which ticks stick below axis, in screen coordinates
+     */
+    {
+        // Determine the screen coordinates corresponding to, respectively,
+        // the leftmost point on the x-axis of the first (0-th) bin, and the rightmost point of the last (n-1) bin
+        const Sx1 = x_scale_func(-0.5);             // The 0-th bin is centered at 0, and extends: [-0.5, +0.5]
+        const Sx2 = x_scale_func(n_items-0.5);      // The last, (n-1)-th, bin is centered at (n-1), and extends: [n-1.5, n-0.5]
+
+        return this.axis_bottom_shared(
+            {   x_scale_func: x_scale_func,
+                Sx1: Sx1,
+                Sx2: Sx2,
+                Sy_axis: Sy_axis,
+                n_subdivisions: n_items,
+                is_bins: true,
+                tick_above: tick_above,
+                tick_below: tick_below
+            });
+
+    } // axis_bottom_scaleLinear_bins
+
+
+
+    axis_bottom_shared( {   x_scale_func,
+                            Sx1,
+                            Sx2,
+                            Sy_axis,
+                            n_subdivisions,
+                            is_bins,
+                            categorical_labels=null,
+                            tick_above=0,
+                            tick_below=6  } )
+    /*  Create a horizontal axis line meant to be placed below a plot.      TODO: newest function, to later absorb some older ones
+
+        Use CSS for styling.  The following classes are created:
+                            'axis-line', 'ticks', 'tick-labels'
+
+        EXAMPLE:  g.tick-labels { translate(0, 10px); }  to shift down the tick labels
+
+        x_scale_func:       Function produced with D3; for example d3.scaleLinear() or d3.scaleBand(),
+                                to map plot coordinates into screen coordinates
+        Sx1:                Screen coordinates corresponding to the first point on the x-axis
+        Sx2:                Screen coordinates corresponding to the last point on the x-axis
+
+        Sy_axis:            y-coord of axis, in screen coordinates
+
+        n_subdivisions:     The number of parts into which to divide up the interval
+        is_bins:            A boolean indicating whether the subdivisions are bins (to label in their midpoints)
+        categorical_labels  (OPTIONAL) List of desired label names (equally-spaced, at the center of their respective intervals);
+                                typically, only used if is_bins is true
+
+        tick_above:         Amount by which ticks stick above the axis, in screen coordinates
+        tick_below:         Amount by which ticks stick below the axis, in screen coordinates
+     */
+    {
+        const Sxmin = Math.min(Sx1, Sx2);
+        const Sxmax = Math.max(Sx1, Sx2);
+
+        let svg = "";
+
+        // Horizontal axis line
+        svg += this.start_group("axis-line");
+        svg += this.line(Sxmin, Sy_axis, Sxmax, Sy_axis);
+        svg += this.end_group();
+
+
+        /* Handle the TICKS (kept together as an SVG group)
+         */
+        svg += this.start_group("ticks");	            // Pass a class used for all the ticks
+
+        var n_ticks, label, Sx_tick;
+        if (is_bins)
+            n_ticks = n_subdivisions;
+        else
+            n_ticks = n_subdivisions + 1;
+
+        let tick_Sx_list = [];
+        let tick_label_list = [];
+
+        for (let item_index = 0;  item_index < n_ticks;  ++item_index)  {
+            if (is_bins)  {
+                if (categorical_labels && categorical_labels.length)    // Use categorical labels if provided; otherwise, fall back to the index
+                    label = categorical_labels[item_index];
+                else
+                    label = item_index;
+
+                Sx_tick = x_scale_func(item_index);               // Bin labels are placed mid-bin
+            }
+            else  {
+                Sx_tick = x_scale_func(item_index);
+                label = Sx_tick;
+            }
+
+            svg += this.vertical_tick(Sx_tick, Sy_axis, tick_above, tick_below);
+
+            // Save the position and label
+            tick_Sx_list.push(Sx_tick);
+            tick_label_list.push(label);
+        }
+
+        svg += this.end_group();                        // end of the ticks
+
+
+        /* Handle the TICK LABELS (kept together as an SVG group)
+         */
+        svg += this.start_group("tick-labels");         // Pass a class used for all the labels
+
+        for (let item_index = 0;  item_index < n_ticks;  ++item_index)  {
+            // position the label
+            svg += this.text(tick_label_list[item_index], tick_Sx_list[item_index], Sy_axis + tick_below, "", 0., 0.9);
+            // Note: the last argument specifies a downward shift proportional to the font size,
+            //       to clear the ticks regardless of font.  Extra control can be achieved with CSS
+        }
+
+        svg += this.end_group();                        // end of the labels
+
+        return svg;
+
+    } // axis_bottom_shared
+
+
+
     axis_bottom_scaleLinear( {  x_scale_func,
                                 n_items,
                                 bin_width,
@@ -396,7 +535,7 @@ class SVGhelper
                             categorical_labels=null,
                             tick_above=0,
                             tick_below=6  } )
-    /*  Create a horizontal axis line meant to be placed below a plot.
+    /*  Create a horizontal axis line meant to be placed below a plot.      TODO: replace by the newer axis_bottom_shared()
 
         Use CSS for styling.  The following classes are created:
                             'axis-line', 'ticks', 'tick-labels'

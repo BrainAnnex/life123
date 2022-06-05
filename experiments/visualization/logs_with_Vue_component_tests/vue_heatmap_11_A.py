@@ -1,16 +1,20 @@
 # Test 1 of using the heatmap module "vue-heatmap-11" in an HTML log
 
 from modules.html_log.html_log import HtmlLog as log
+from modules.visualization.graphic_log import GraphicLog
 
-# Note: paths are from the location of THE LOG FILE
-log.config(filename="vue-heatmap-11_1.htm", mode='overwrite',
-           use_D3=True,
-           Vue_lib = "../../../modules/Vue2_lib/vue2.js",
-           js = "../../../modules/SVG_helper/svg_helper.js",
-           css="../../../modules/visualization/vue_components/heatmap11.css")
+COMPONENT_NAME = "vue_heatmap_11"       # CHANGE AS NEEDED
+FILENAME="vue_heatmap_11_A.htm"         # CHANGE AS NEEDED
 
 
-log.write('Example of Heatmap, using the module "vue-heatmap-11":',
+# Initialize the HTML logging.
+# Note: the relative path is from the location of THE LOG FILE to the project's home
+GraphicLog.config(filename=FILENAME,
+                  components=COMPONENT_NAME,
+                  home_rel_path="../../..")
+
+
+log.write('Example of Heatmap, using the module "{COMPONENT_NAME}":',
           style=log.h2, blanks_after=1)
 
 
@@ -36,6 +40,5 @@ all_data = {
     "margins": {"top": 30, "right": 30, "bottom": 30, "left": 85}
 }
 
-log.export_plot_Vue(data=all_data,
-                    component_name="vue-heatmap-11",
-                    component_file="../../../modules/visualization/vue_components/heatmap11.js")
+# Send the plot to the HTML log file
+GraphicLog.export_plot(all_data, COMPONENT_NAME)
