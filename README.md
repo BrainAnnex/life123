@@ -1,4 +1,4 @@
-### VERSION 1.0-beta8 In-progress
+### VERSION 1.0-beta7
 
 
 
