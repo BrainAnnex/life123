@@ -8,7 +8,7 @@ Vue.component('vue_curves_3',
 
         Inspired by https://www.youtube.com/watch?v=CkFktv0p3pw
 
-        DEPENDENCIES:   - the SVG_helper library for drawing the axes
+        DEPENDENCIES:   - the SVG_helper (v1.2) library for drawing the axes
                         - the D3 (v7) libraries
 
         CHANGES FROM THE PREVIOUS VERSION: shift in plot x-coordinates;
