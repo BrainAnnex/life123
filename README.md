@@ -1,4 +1,4 @@
-### VERSION 1.0-beta8 In-Progress
+### VERSION 1.0-beta8
 
 
 
@@ -21,8 +21,16 @@ Including diffusion, reactions, membranes and compartments.
 
 [WEBSITE](https://life123.science/)
 
-TRY IT OUT LIVE (no registration nor install!):
+## Try it Out Live on a hosted JupyterLab!
+**TRY IT OUT LIVE** (no registration nor install!):
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/BrainAnnex/life123/main)
+
+"Binder" is akin to Google's Colab: short-term runs on a hosted JupyterLab environment.  
+It takes about a minute to launch... and then you'll have your own private copy of all notebooks,
+to run and/or change and re-run.
+
+Please remember that nothing gets saved long term; so, if you make changes you want to preserve,
+make sure to download the changed notebooks!
 
 ## Components
 * life_1D
