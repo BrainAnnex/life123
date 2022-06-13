@@ -3,15 +3,17 @@ When run in a Jupyterlab 3 notebook, it returns the notebook filename or the ful
 
 Adapted from:  https://github.com/msm1089/ipynbname/blob/master/ipynbname/__init__.py
 
-Added comments, and simplified to only be applicable to jupyterlab 3 - a simplification that
+Added comments, and simplified to be more friendly to jupyterlab 3 - a simplification that
 in some environments very dramatically speeds up execution: 
 see https://github.com/msm1089/ipynbname/issues/2
+
+It may work with other versions of jupyterlab, or with the classic jupyter notebooks -
+but not tested with them.
 """
 
 import json
 import urllib.error
 import urllib.request
-from itertools import chain
 from pathlib import Path, PurePath
 from typing import Generator, Tuple, Union
 
@@ -26,21 +28,32 @@ CONN_ERROR = "Unable to access server;\n" \
 
 
 
-def _list_maybe_running_servers(runtime_dir=None) -> Generator[dict, None, None]:
-    """ Iterate over the server info files of running notebook servers.
+def _list_maybe_running_servers(pattern: str) -> Generator[dict, None, None]:
     """
-    if runtime_dir is None:
-        runtime_dir = jupyter_runtime_dir()
-        # EXAMPLE on Windows: 'C:\\Users\\valerie\\AppData\\Roaming\\jupyter\\runtime'
+    Iterate over the server info files of running notebook servers.
+
+    :param pattern: Pattern to locate the names of interest.
+                    On jupyterlab 3 on Windows, it is "jpserver-*.json";
+                    on jupyterlab 3 on Linux, as well as on jupyterlab 2 and jupyter notebook, it appears to be "nbserver-*.json"
+                    There seems to be inconsistency in the naming convention
+    :return:
+    """
+
+    runtime_dir_str = jupyter_runtime_dir()
+    # EXAMPLE on Windows: 'C:\\Users\\valerie\\AppData\\Roaming\\jupyter\\runtime'
+    # EXAMPLE on Linux:   '/home/jovyan/.local/share/jupyter/runtime'
     
-    runtime_dir = Path(runtime_dir)
-    # EXAMPLE: WindowsPath('C:/Users/valerie/AppData/Roaming/jupyter/runtime')
+    runtime_dir = Path(runtime_dir_str)
+    # EXAMPLE on Windows: WindowsPath('C:/Users/valerie/AppData/Roaming/jupyter/runtime')
+    # EXAMPLE on Linux:   PosixPath('/home/jovyan/.local/share/jupyter/runtime')
 
     if runtime_dir.is_dir():
         # glob finds all the pathnames matching a specified pattern, and returns a generator object
-        for file_name in runtime_dir.glob('jpserver-*.json'):  # jupyterlab 3
-            # EXAMPLES of file_name on Windows: 
+        for file_name in runtime_dir.glob(pattern):
+            # EXAMPLE of file_name on Windows:
             # 'C:\Users\valerie\AppData\Roaming\jupyter\runtime\jpserver-10368.json'
+            # EXAMPLE on Linux:
+            # '/home/jovyan/.local/share/jupyter/runtime/nbserver-25.json'
             yield json.loads(file_name.read_bytes())
 
 
@@ -77,20 +90,22 @@ def _get_sessions(srv):
 
 
         
-def _find_nb_path() -> Union[Tuple[dict, PurePath], Tuple[None, None]]:
+def _find_nb_path(pattern: str) -> Union[Tuple[dict, PurePath], Tuple[None, None]]:
     """
     If successful in locating the notebook, return a pair consisting of:
     1) a dictionary of session data,
     2) a PurePath object for the located notebook.  EXAMPLE: PureWindowsPath('experiments/life_1D/diffusion/diffusion_1.ipynb')
     
     Otherwise, return (None, None)
+
+    :param pattern: Pattern to locate the names of interest (for more info, see _list_maybe_running_servers)
     """
     try:
         kernel_id = _get_kernel_id()   # EXAMPLE:  'f191d796-178a-4a17-acf1-4c3933cd30fc'
     except (MultipleInstanceError, RuntimeError):
         return None, None    # Could not determine the kernel ID
     
-    for srv in _list_maybe_running_servers():
+    for srv in _list_maybe_running_servers(pattern):
         """EXAMPLE of srv: 
             {'base_url': '/', 
             'hostname': 'localhost', 
@@ -125,12 +140,20 @@ def _find_nb_path() -> Union[Tuple[dict, PurePath], Tuple[None, None]]:
 
 
 def name() -> str:
-    """ Returns the short name of the notebook w/o the .ipynb extension,
-        or raises a FileNotFoundError exception if it cannot be determined.
     """
-    _, path = _find_nb_path()
+    Returns the short name of the notebook w/o the .ipynb extension,
+    or raises a FileNotFoundError exception if it cannot be determined.
+    """
+    # First, look for names used on jupyterlab 3 on Windows (presumably, this is the new standard for names in jupyterlab)
+    _, path = _find_nb_path("jpserver-*.json")
     if path:
         return path.stem
+
+    # If nothing found thus far, look for names used on jupyterlab 3 on Linux, as well as on jupyterlab 2 and jupyter notebook
+    _, path = _find_nb_path("nbserver-*.json")
+    if path:
+        return path.stem
+
     raise FileNotFoundError(FILE_ERROR.format('name'))
 
 
