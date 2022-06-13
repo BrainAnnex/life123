@@ -1,33 +1,12 @@
-from jupyter_server import serverapp
-from jupyter_server.utils import url_path_join
-from pathlib import Path
-import re
-import requests
-from IPython import get_ipython
-from pathlib import Path
+"""
+IMPORTANT: meant *only* for Jupyterlab 3 notebooks.
 
+Return the name - WITHOUT extension - of the JupyterLab notebook invoking this function.
+This version is based on a modified version of the library "ipynbname",
+and appears to work on a variety of systems.
+"""
 
-kernelIdRegex = re.compile(r"(?<=kernel-)[\w\d\-]+(?=\.json)")
-
-
-def get_notebook_path() -> str:
-    """
-    Return the name and path of the JupyterLab notebook invoking this function.
-    Example:  "experiments/life_1D/diffusion/reach_equilibrium_1.ipynb"
-
-    See https://stackoverflow.com/a/69096754/5478830 and
-    https://github.com/jupyter/jupyter_client/pull/656
-
-    :return:
-    """
-    kernelId = kernelIdRegex.search(get_ipython().config["IPKernelApp"]["connection_file"])[0]
-
-    for jupServ in serverapp.list_running_servers():
-        for session in requests.get(url_path_join(jupServ["url"], "api/sessions"), params={"token": jupServ["token"]}).json():
-            if kernelId == session["kernel"]["id"]:
-                return str(session["notebook"]['path'])
-                # Path(jupServ["root_dir"]) / str(session["notebook"]['path'])
-                # The above alt version would return something like "D:\Docs\[...]\experiments\life_1D\diffusion\reach_equilibrium_1.ipynb"
+from experiments.ipynbname import name
 
 
 
@@ -38,6 +17,4 @@ def get_notebook_basename() -> str:
 
     :return:
     """
-    full_name = get_notebook_path()
-    return Path(full_name).stem
-    # Alternatively:  (os.path.splitext("/path/to/some/file.txt.zip.asc")[0])
+    return name()

@@ -21,6 +21,9 @@ Including diffusion, reactions, membranes and compartments.
 
 [WEBSITE](https://life123.science/)
 
+TRY IT OUT LIVE (no registration nor install!):
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/BrainAnnex/life123/main)
+
 ## Components
 * life_1D
 * life_2D
@@ -153,7 +156,7 @@ will only use this environment’s packages and settings.
 When using an IDE such as PyCharm, *the IDE automatically adds the root of the Life123 files* (i.e. the location
 of the PyCharm project) to the value of the `sys.path` seen inside the execution of the Python files.
 
-If you opt not to use an IDE, or if you're using JupyterLab (such as the ones provided in Life123's
+If you opt not to use an IDE, or if you're using Jupyter notebooks (such as the ones provided in Life123's
 `experiments` folder), an extra step is necessary.
 
 IMPORTANT: all steps below are AFTER doing the steps described in the earlier section.
