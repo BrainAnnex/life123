@@ -1,4 +1,4 @@
-### VERSION 1.0-beta8.1
+### VERSION 1.0-beta8.2
 
 
 
