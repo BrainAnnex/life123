@@ -1,4 +1,4 @@
-### VERSION 1.0-beta7
+### VERSION 1.0-beta8
 
 
 
@@ -20,6 +20,17 @@ Including diffusion, reactions, membranes and compartments.
 [Project Announcement](https://julianspolymathexplorations.blogspot.com/2022/03/life123-systems-biology-modeling.html)
 
 [WEBSITE](https://life123.science/)
+
+## Try it Out Live on a hosted JupyterLab!
+**TRY IT OUT LIVE** (no registration nor install!):
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/BrainAnnex/life123/main)
+
+"Binder" is akin to Google's Colab: short-term runs on a hosted JupyterLab environment.  
+It takes about a minute to launch... and then you'll have your own private copy of all notebooks,
+to run and/or change and re-run.
+
+Please remember that nothing gets saved long term; so, if you make changes you want to preserve,
+make sure to download the changed notebooks!
 
 ## Components
 * life_1D
@@ -153,7 +164,7 @@ will only use this environment’s packages and settings.
 When using an IDE such as PyCharm, *the IDE automatically adds the root of the Life123 files* (i.e. the location
 of the PyCharm project) to the value of the `sys.path` seen inside the execution of the Python files.
 
-If you opt not to use an IDE, or if you're using JupyterLab (such as the ones provided in Life123's
+If you opt not to use an IDE, or if you're using Jupyter notebooks (such as the ones provided in Life123's
 `experiments` folder), an extra step is necessary.
 
 IMPORTANT: all steps below are AFTER doing the steps described in the earlier section.

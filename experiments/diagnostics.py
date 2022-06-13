@@ -2,13 +2,13 @@ import os
 import sys
 
 
-print("SOME DIAGNOSTIC VALUES:")
+print("--- SOME DIAGNOSTIC VALUES: ---")
 
 print("\nsys.executable: ", sys.executable)
 
-print("\ncwd: ", os.getcwd())
+print("\ncwd (Current Working Directory): ", os.getcwd())
 
 print("\nsys.path: ", sys.path)
-print("\nsys.path again, using separate lines: ")
+print("\nsys.path again, this time on separate lines: ")
 for p in sys.path:
     print("    ", p)
