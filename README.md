@@ -73,9 +73,11 @@ On a Linux machine, you can use the command:
 
 Or you could download a zip file from [the repository](https://github.com/BrainAnnex/life123)
 
-Install, if not already present on your machine, Python 3.7+
+Install, if not already present on your machine, Python 3.8+
 
-We currently test on Python 3.7/3.8 (3.6 *might* work - not tested - but not any earlier version, because of the use of Python f-strings.)
+We currently test on Python 3.8 (earlier versions will NOT work, because of the various libraries).
+
+Note that Python 3.8 is the last version of python still compatible with Win7.
 
 
 **QUICK-AND-EASY method**
