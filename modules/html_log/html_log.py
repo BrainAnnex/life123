@@ -76,7 +76,7 @@ class HtmlLog:
         """
         assert not cls.config_lock, "The config() method can only be invoked ONCE per run.  Did you already make a call to config() or write() ?"
 
-        # Change whatever configuration variables are being passed, if any
+        # Change the default values of any configuration variables that are explicitly being passed
         if filename:
             cls.LOG_FILENAME_BASE = filename
 
@@ -97,15 +97,14 @@ class HtmlLog:
         if cls.SEPARATE_LOGS:   # Create new files, with an auto-increment in the filename.  Example: "log8.htm"
             # Retrieve the first available filename
             cls.log_fullname = cls._next_available_filename(cls.LOG_DIRECTORY + cls.LOG_FILENAME_BASE)
-            cls.file_handler = open(cls.log_fullname, "a")  # Create a new file, to write to
-                                                            # (the append part is only relevant if we reach the max # of files)
+            cls.file_handler = open(cls.log_fullname, "w")          # Create a new file, to write to: over-write if present
 
         else:                   # Using a single log file
             cls.log_fullname = cls.LOG_DIRECTORY + cls.LOG_FILENAME_BASE
             if cls.OVERWRITE_SINGLE_LOG:
-                cls.file_handler = open(cls.log_fullname, "w")     # Create a new file, to write into: over-written if present
+                cls.file_handler = open(cls.log_fullname, "w")      # Create a new file, to write to: over-write if present
             else:
-                cls.file_handler = open(cls.log_fullname, "a")     # Create a new file, to append to
+                cls.file_handler = open(cls.log_fullname, "a")      # Create a new file, to append to
 
                 
         # Give feedback about where the output is being logged
@@ -264,7 +263,7 @@ class HtmlLog:
         :return:    None
         """
         #if cls.SEPARATE_LOGS:
-            #return              # Not needed in case of separate logs
+            #return              # Not needed in case of separate logs      TODO: check this
 
         # Prepare timestamp
         now = datetime.now()
