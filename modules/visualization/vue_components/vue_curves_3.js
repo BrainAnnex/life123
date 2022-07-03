@@ -132,7 +132,7 @@ Vue.component('vue_curves_3',
             return {
                 svg_helper: new SVGhelper(),
 
-                curve_type: "curveNatural"
+                curve_type: "curveBasis"
 
                 //min_val: this.range_min,
                 //max_val: this.range_max,

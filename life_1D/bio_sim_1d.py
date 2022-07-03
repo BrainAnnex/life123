@@ -79,29 +79,32 @@ class BioSim1D:
 
 
     @classmethod
-    def describe_state(cls, show_diffusion_rates=False, concise=False) -> None:
+    def describe_state(cls, concise=False, time=None) -> None:
         """
         A simple printout of the state of the system, for now useful only for small systems
 
-        :param show_diffusion_rates:    NO LONGER USED.  TODO: phase out
-        :param concise: Only applicable if show_diffusion_rates is False.
-                        If True, don't include a header with the number of bins and number of species
+        :param time:    (Optional) System time to display in a header (regardless of "concise" flag)
+        :param concise: If True, only produce a minimalist printout with just the concentration values
         :return:        None
         """
-        if concise:     # A minimalist printout
-            print(cls.system)
+        if time is not None:
+            print(f"SYSTEM STATE at Time t = {time}:")
+
+        if concise:             # A minimalist printout...
+            print(cls.system)   # ...only showing the concentration data (a Numpy array)
             return
 
-        if cls.n_species == 1:
-            print(f"{cls.n_bins} bins and 1 species: ")
-        else:
-            print(f"{cls.n_bins} bins and {cls.n_species} species:\n")
+        # If we get thus far, it's a FULL printout
 
+        print(f"{cls.n_bins} bins and {cls.n_species} species:")
 
+        # Show a line of line of data for each chemical species in turn
         for species_index in range(cls.n_species):
             name = cls.chem_data.get_name(species_index)
-            if name:
+            if name:    # If a name was provided, show it
                 name = f" ({name})"
+            else:
+                name = ""
 
             if cls.chem_data.diffusion_rates is None:
                 print(f"  Species {species_index}{name}. Diff rate: NOT SET. Conc: ", cls.system[species_index])
