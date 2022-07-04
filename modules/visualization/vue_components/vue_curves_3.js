@@ -84,6 +84,7 @@ Vue.component('vue_curves_3',
                                     @click="show_datapoint_info(index, val)"
                             />
 
+                            <!-- Segments connecting the circles -->
                             <path stroke="yellow" stroke-width="1"
                                 fill="none"
                                 v-bind:d="path_straight"
@@ -269,7 +270,7 @@ Vue.component('vue_curves_3',
             },
 
             path_curve()
-            // Connect the data points in interpolating curve
+            // Connect the data points with an interpolating curve
             {
                 // The x-coord is the array index; the y-coord is the data value
                 const line_func = d3.line()

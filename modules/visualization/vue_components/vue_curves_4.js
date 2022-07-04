@@ -75,34 +75,35 @@ Vue.component('vue_curves_4',
 
                         <!-- The main part of the plot -->
                         <g class="main-plot">
-                            <!-- Show the data points as little circles -->
-                            <circle r="3"
-                                v-for="(val, index) in plot_data[0]"
-                                    v-bind:key="index"
 
+                            <!-- Show the data points in each plot as little circles -->
+                            <template v-for="(xxx, index_xxx) in plot_data">
+                                <circle v-for="(val, index) in plot_data[index_xxx]"
+                                    v-bind:key="index_xxx + '-' + index"
                                     v-bind:cx="x_scale_func(index)"
                                     v-bind:cy="y_scale_func(val)"
+                                    r="3"
                                     fill="#111"
                                     @click="show_datapoint_info(index, val)"
-                            />
+                                />
+                            </template>
 
+                            <!-- Connect the data points of each plot with line segments -->
                             <path v-for="(p, index_p) in plot_data"
-                                v-bind:key="'p' + index_p"
-
-                                v-bind:stroke="color_picker(index_p)" stroke-width="1"
+                                v-bind:key="'seg' + index_p"
+                                v-bind:stroke="color_picker(index_p)"
+                                v-bind:d="path_straight(index_p)"
+                                stroke-width="1"
                                 fill="none"
-                                v-bind:d="foo(index_p)"
                             />
 
-
-                            <circle r="3"
-                                 v-for="(val, index) in plot_data[1]"
-                                     v-bind:key="'dupe' + index"
-
-                                     v-bind:cx="x_scale_func(index)"
-                                     v-bind:cy="y_scale_func(val)"
-                                     fill="#111"
-                                     @click="show_datapoint_info(index, val)"
+                            <!-- Connect the data points of each plot with interpolating curves -->
+                            <path v-for="(p, index_p) in plot_data"
+                                v-bind:key="'inter' + index_p"
+                                v-bind:stroke="color_picker(index_p)"
+                                v-bind:d="path_curve(index_p)"
+                                stroke-width="1"
+                                fill="none"
                             />
 
 
@@ -253,17 +254,6 @@ Vue.component('vue_curves_4',
             },
 
 
-            path_straight(a)
-            // Connect the data points with line segments
-            {
-                // The x-coord is the array index; the y-coord is the data value
-                const line_func = d3.line()
-                                    .x((v, i) => this.x_scale_func(i))
-                                    .y(v      => this.y_scale_func(v));      // This will be a function
-
-                return line_func(this.plot_data[0]);
-            },
-
             path_steps(i)
             // Connect the data points with a series of steps
             {
@@ -274,18 +264,6 @@ Vue.component('vue_curves_4',
                                     .y(v      => this.y_scale_func(v));      // This will be a function
 
                 return line_func(this.extended_data(i));
-            },
-
-            path_curve(i)
-            // Connect the data points in interpolating curve
-            {
-                // The x-coord is the array index; the y-coord is the data value
-                const line_func = d3.line()
-                                    .curve(d3[this.curve_type])
-                                    .x((v, i) => this.x_scale_func(i))
-                                    .y(v      => this.y_scale_func(v));      // This will be a function
-
-                return line_func(this.plot_data[i]);
             }
 
         },  // COMPUTED
@@ -303,11 +281,23 @@ Vue.component('vue_curves_4',
             },
 
 
-            foo(i)
-            // Connect the data points with line segments
+            path_straight(i)
+            // Connect the data points with line segments (for the i-th plot)
             {
                 // The x-coord is the array index; the y-coord is the data value
                 const line_func = d3.line()
+                                    .x((v, i) => this.x_scale_func(i))
+                                    .y(v      => this.y_scale_func(v));      // This will be a function
+
+                return line_func(this.plot_data[i]);
+            },
+
+            path_curve(i)
+            // Connect the data points with an interpolating curve
+            {
+                // The x-coord is the array index; the y-coord is the data value
+                const line_func = d3.line()
+                                    .curve(d3[this.curve_type])
                                     .x((v, i) => this.x_scale_func(i))
                                     .y(v      => this.y_scale_func(v));      // This will be a function
 
