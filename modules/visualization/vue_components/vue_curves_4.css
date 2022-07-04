@@ -1,3 +1,8 @@
+/* For outer box around everything */
+section.graphic-component {
+    border:2px solid green;
+}
+
 /* For outer box around the plot */
 svg.chart-holder {
     border:1px solid cyan;

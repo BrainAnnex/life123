@@ -1,8 +1,8 @@
-Vue.component('vue_curves_3',
+Vue.component('vue_curves_4',
     /*  Line charts and interpolating curves in 1D.
-        For now, just 1 dataset at a time.
+        Thus version can handle multiple datasets.
 
-        Based on the passed dataset, create a group of dots
+        Based on each of the the passed dataset, create a group of dots
         connected by segments, plus interpolating curves and segments.
         Clicking on any dot will display its data in the browser console.
 
@@ -11,10 +11,10 @@ Vue.component('vue_curves_3',
         DEPENDENCIES:   - the SVG_helper (v1.2) library for drawing the axes
                         - the D3 (v7) libraries
 
-        CHANGES FROM THE PREVIOUS VERSION: shift in plot x-coordinates;
-                now they match the ticks on the axis.
-                Switch to svg_helper.axis_bottom_scaleLinear_bins(),
-                in version 1.2 of the class SVGhelper
+        CHANGES FROM THE PREVIOUS VERSION:
+                - support for multiple datasets
+                - ditched curveNatural from the option for the interpolating curves
+                - added a border around the whole component (CSS: section.graphic-component)
      */
     {
         props: {
@@ -24,10 +24,12 @@ Vue.component('vue_curves_3',
                 // Note: the x-axis labels are just the bin numbers
             },
 
-            data: {
-                /*  Concentration data for the plots (for now just 1 chemical species),
-                    in bin index order from left to right
-                        EXAMPLE:  [20, 85, 100, 50]
+            plot_data: {
+                /*  Concentration data for the plots;
+                    at the outer level in order of chemical-species index,
+                    and at the inner level in bin index order from left to right
+                        EXAMPLE:  [[20, 85, 100, 50],     <- 0-th chemical
+                                   [14, 99, 5, 65]       <- 1st chemical
                  */
                 required: true
             },
@@ -66,7 +68,7 @@ Vue.component('vue_curves_3',
 
         template: `
             <!-- Outer container, serving as Vue-required component root  -->
-            <section>
+            <section class="graphic-component">
 
                 <svg v-bind:width="outer_width" v-bind:height="outer_height" class="chart-holder">
                     <g v-bind:transform="translate(margins.left, margins.top)"> <!-- Shift the contained g blocks below -->
@@ -75,7 +77,7 @@ Vue.component('vue_curves_3',
                         <g class="main-plot">
                             <!-- Show the data points as little circles -->
                             <circle r="3"
-                                v-for="(val, index) in data"
+                                v-for="(val, index) in plot_data[0]"
                                     v-bind:key="index"
 
                                     v-bind:cx="x_scale_func(index)"
@@ -84,20 +86,25 @@ Vue.component('vue_curves_3',
                                     @click="show_datapoint_info(index, val)"
                             />
 
-                            <path stroke="yellow" stroke-width="1"
+                            <path v-for="(p, index_p) in plot_data"
+                                v-bind:key="'p' + index_p"
+
+                                v-bind:stroke="color_picker(index_p)" stroke-width="1"
                                 fill="none"
-                                v-bind:d="path_straight"
+                                v-bind:d="foo(index_p)"
                             />
 
-                            <path stroke="gray" stroke-width="1"
-                                fill="none"
-                                v-bind:d="path_steps"
+
+                            <circle r="3"
+                                 v-for="(val, index) in plot_data[1]"
+                                     v-bind:key="'dupe' + index"
+
+                                     v-bind:cx="x_scale_func(index)"
+                                     v-bind:cy="y_scale_func(val)"
+                                     fill="#111"
+                                     @click="show_datapoint_info(index, val)"
                             />
 
-                            <path stroke="red" stroke-width="2"
-                                fill="none"
-                                v-bind:d="path_curve"
-                            />
 
                         </g>
                         <!-- END of the main part of the plot -->
@@ -117,9 +124,9 @@ Vue.component('vue_curves_3',
                 </svg>
 
 
-                <button @click="cycle_curve_types" style='font-weight:bold; padding:5px'>
-                    Cycle between curve types<br>
-                    <span style='color:grey; margin-left:10px'>(currently '{{curve_type}}')</span>
+                <button @click="cycle_curve_types" style='padding:2px'>
+                    <span style='font-weight:bold'>Toggle<br>curve type</span><br>
+                    <span style='color:grey'>(using '{{curve_type}}')</span>
                 </button>
 
 
@@ -137,30 +144,31 @@ Vue.component('vue_curves_3',
                 //min_val: this.range_min,
                 //max_val: this.range_max,
             }
-        }, // data
+        }, // data of the Vue component
 
 
 
         // ---------------------------  COMPUTED  ---------------------------
         computed: {     // NOTE: computed methods are only invoked AS NEEDED
 
-            extended_data()
+            extended_data(i)
             // Return an array that is the original data, with the last entry appended
             {
-                const last_element = this.data[this.n_bins - 1];
+                const last_element = this.plot_data[i][this.n_bins - 1];
 
-                return this.data.concat(last_element);
+                return this.plot_data[i].concat(last_element);
             },
 
 
             n_bins()
+            // TODO: should check that all elements have the same length
             {
-                if (this.data.length == 0)  {
+                if (this.plot_data[0].length == 0)  {
                     console.error("n_bins(): the data is empty");
                     return 0;
                 }
 
-                return this.data.length;
+                return this.plot_data[0].length;
             },
 
 
@@ -245,7 +253,7 @@ Vue.component('vue_curves_3',
             },
 
 
-            path_straight()
+            path_straight(a)
             // Connect the data points with line segments
             {
                 // The x-coord is the array index; the y-coord is the data value
@@ -253,10 +261,10 @@ Vue.component('vue_curves_3',
                                     .x((v, i) => this.x_scale_func(i))
                                     .y(v      => this.y_scale_func(v));      // This will be a function
 
-                return line_func(this.data);
+                return line_func(this.plot_data[0]);
             },
 
-            path_steps()
+            path_steps(i)
             // Connect the data points with a series of steps
             {
                 // The x-coord is the array index; the y-coord is the data value
@@ -265,10 +273,10 @@ Vue.component('vue_curves_3',
                                     .x((v, i) => this.x_scale_func(i-0.5))
                                     .y(v      => this.y_scale_func(v));      // This will be a function
 
-                return line_func(this.extended_data);
+                return line_func(this.extended_data(i));
             },
 
-            path_curve()
+            path_curve(i)
             // Connect the data points in interpolating curve
             {
                 // The x-coord is the array index; the y-coord is the data value
@@ -277,7 +285,7 @@ Vue.component('vue_curves_3',
                                     .x((v, i) => this.x_scale_func(i))
                                     .y(v      => this.y_scale_func(v));      // This will be a function
 
-                return line_func(this.data);
+                return line_func(this.plot_data[i]);
             }
 
         },  // COMPUTED
@@ -286,6 +294,25 @@ Vue.component('vue_curves_3',
 
         // ---------------------------  METHODS  ---------------------------
         methods: {
+            color_picker(index)
+            {
+                if (index==0)
+                    return "red";
+
+                return "yellow";
+            },
+
+
+            foo(i)
+            // Connect the data points with line segments
+            {
+                // The x-coord is the array index; the y-coord is the data value
+                const line_func = d3.line()
+                                    .x((v, i) => this.x_scale_func(i))
+                                    .y(v      => this.y_scale_func(v));      // This will be a function
+
+                return line_func(this.plot_data[i]);
+            },
 
             show_datapoint_info(n, val)
             // Print out to the console the point's graph coordinates
@@ -297,7 +324,7 @@ Vue.component('vue_curves_3',
             cycle_curve_types()
             // Cycle among different available types of curve interpolators
             {
-                const options = ["curveNatural", "curveBasis", "curveMonotoneX"];
+                const options = ["curveBasis", "curveMonotoneX"];
                 let pos = options.indexOf(this.curve_type);
                 pos += 1;
                 if (pos >= options.length)
