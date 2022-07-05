@@ -19,9 +19,8 @@ Vue.component('vue_curves_4',
     {
         props: {
 
-            y_labels: {
-                // List of y-axis labels.  EXAMPLE: ["Chem 1", "Chem 2"]
-                // Note: the x-axis labels are just the bin numbers
+            curve_labels: {
+                // List of labels for the curves.  EXAMPLE: ["Chem 1", "Chem 2"]
             },
 
             plot_data: {
@@ -89,10 +88,19 @@ Vue.component('vue_curves_4',
                             </template>
 
                             <!-- Connect the data points of each plot with line segments -->
-                            <path v-for="(p, index_p) in plot_data"
+                            <path v-if="show_segments" v-for="(p, index_p) in plot_data"
                                 v-bind:key="'seg' + index_p"
-                                v-bind:stroke="color_picker(index_p)"
+                                v-bind:stroke="color_picker(index_p, true)"
                                 v-bind:d="path_straight(index_p)"
+                                stroke-width="1"
+                                fill="none"
+                            />
+
+                            <!-- Connect the data points of each plot with a series of steps -->
+                            <path v-for="(p, index_p) in plot_data"
+                                v-bind:key="'steps' + index_p"
+                                v-bind:stroke="color_picker(index_p, true)"
+                                v-bind:d="path_steps(index_p)"
                                 stroke-width="1"
                                 fill="none"
                             />
@@ -100,12 +108,11 @@ Vue.component('vue_curves_4',
                             <!-- Connect the data points of each plot with interpolating curves -->
                             <path v-for="(p, index_p) in plot_data"
                                 v-bind:key="'inter' + index_p"
-                                v-bind:stroke="color_picker(index_p)"
+                                v-bind:stroke="color_picker(index_p, false)"
                                 v-bind:d="path_curve(index_p)"
                                 stroke-width="1"
                                 fill="none"
                             />
-
 
                         </g>
                         <!-- END of the main part of the plot -->
@@ -125,6 +132,18 @@ Vue.component('vue_curves_4',
                 </svg>
 
 
+                <!-- The plot legend-->
+                <svg width="150" v-bind:height="legend_SVG_height" class="chart-holder">
+                    <rect x='10' y='10' width='130' v-bind:height="legend_box_height" stroke="#D4D4D4" stroke-width="1" fill='#F4F4F4'/>
+
+                    <g v-for="(label, index_labels) in curve_labels">
+                        <text x="15" v-bind:y="legend_text_Y(index_labels)" v-bind:fill="color_picker(index_labels, false)">{{label}}</text>
+                        <line x1="15" v-bind:y1="legend_Y(index_labels)" x2="135" v-bind:y2="legend_Y(index_labels)" v-bind:stroke="color_picker(index_labels, false)" />
+                    </g>
+                </svg>
+
+
+                <!-- A button to choose the type of interpolating curves -->
                 <button @click="cycle_curve_types" style='padding:2px'>
                     <span style='font-weight:bold'>Toggle<br>curve type</span><br>
                     <span style='color:grey'>(using '{{curve_type}}')</span>
@@ -140,7 +159,9 @@ Vue.component('vue_curves_4',
             return {
                 svg_helper: new SVGhelper(),
 
-                curve_type: "curveBasis"
+                curve_type: "curveMonotoneX",
+
+                show_segments: false    // Maybe segments aren't so needed, after all
 
                 //min_val: this.range_min,
                 //max_val: this.range_max,
@@ -151,15 +172,6 @@ Vue.component('vue_curves_4',
 
         // ---------------------------  COMPUTED  ---------------------------
         computed: {     // NOTE: computed methods are only invoked AS NEEDED
-
-            extended_data(i)
-            // Return an array that is the original data, with the last entry appended
-            {
-                const last_element = this.plot_data[i][this.n_bins - 1];
-
-                return this.plot_data[i].concat(last_element);
-            },
-
 
             n_bins()
             // TODO: should check that all elements have the same length
@@ -253,18 +265,15 @@ Vue.component('vue_curves_4',
                         );
             },
 
-
-            path_steps(i)
-            // Connect the data points with a series of steps
+            legend_SVG_height()
             {
-                // The x-coord is the array index; the y-coord is the data value
-                const line_func = d3.line()
-                                    .curve(d3.curveStepAfter)
-                                    .x((v, i) => this.x_scale_func(i-0.5))
-                                    .y(v      => this.y_scale_func(v));      // This will be a function
+                return this.legend_box_height + 15;
+            },
 
-                return line_func(this.extended_data(i));
-            }
+            legend_box_height()
+            {
+                return 10 + 25 * this.curve_labels.length;
+            },
 
         },  // COMPUTED
 
@@ -272,17 +281,52 @@ Vue.component('vue_curves_4',
 
         // ---------------------------  METHODS  ---------------------------
         methods: {
-            color_picker(index)
-            {
-                if (index==0)
-                    return "red";
 
-                return "yellow";
+            legend_text_Y(index)
+            {
+                return 30 + index*25;
+            },
+
+            legend_Y(index)
+            {
+                return 35 + index*25;
+            },
+
+            color_picker(index, pale)
+            {
+                switch(index) {
+                  case 0:
+                    if (pale)
+                        return "#FFCCCC"
+                    else
+                        return "red";
+                    break;
+
+                  case 1:
+                    if (pale)
+                          return "#CCFFCC";
+                    else
+                        return "green";
+                    break;
+
+                  case 2:
+                    if (pale)
+                          return "#CCCCFF";
+                    else
+                        return "blue";
+                    break;
+
+                  default:
+                    if (pale)
+                          return "#CCCCCC";
+                    else
+                        return "black";
+                }
             },
 
 
             path_straight(i)
-            // Connect the data points with line segments (for the i-th plot)
+            // Connect the data points of the i-th graph with line segments
             {
                 // The x-coord is the array index; the y-coord is the data value
                 const line_func = d3.line()
@@ -293,7 +337,7 @@ Vue.component('vue_curves_4',
             },
 
             path_curve(i)
-            // Connect the data points with an interpolating curve
+            // Connect the data points of the i-th graph with an interpolating curve
             {
                 // The x-coord is the array index; the y-coord is the data value
                 const line_func = d3.line()
@@ -303,6 +347,27 @@ Vue.component('vue_curves_4',
 
                 return line_func(this.plot_data[i]);
             },
+
+            path_steps(i)
+            // Connect the data points of the i-th graph with a series of steps
+            {
+                // The x-coord is the array index; the y-coord is the data value
+                const line_func = d3.line()
+                                    .curve(d3.curveStepAfter)
+                                    .x((v, i) => this.x_scale_func(i-0.5))
+                                    .y(v      => this.y_scale_func(v));      // This will be a function
+
+                return line_func(this.extended_data(i));
+            } ,
+
+            extended_data(i)
+            // Return an array that is the original data of the i-th graph, with the last entry appended (i.e. repeated twice)
+            {
+                const last_element = this.plot_data[i][this.n_bins - 1];
+
+                return this.plot_data[i].concat(last_element);
+            },
+
 
             show_datapoint_info(n, val)
             // Print out to the console the point's graph coordinates
