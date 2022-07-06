@@ -1,10 +1,10 @@
 Vue.component('vue_curves_4',
     /*  Line charts and interpolating curves in 1D.
-        Thus version can handle multiple datasets.
+        This version can handle multiple datasets.
 
         Based on each of the the passed dataset, create a group of dots
-        connected by segments, plus interpolating curves and segments.
-        Clicking on any dot will display its data in the browser console.
+        optionally connected by segments, interpolating curves and steps.
+        Clicking on any dot will display its data in the browser console and on the UI.
 
         Inspired by https://www.youtube.com/watch?v=CkFktv0p3pw
 
@@ -12,9 +12,14 @@ Vue.component('vue_curves_4',
                         - the D3 (v7) libraries
 
         CHANGES FROM THE PREVIOUS VERSION:
-                - support for multiple datasets
+                - support for multiple datasets, incl. a legend
                 - ditched curveNatural from the option for the interpolating curves
                 - added a border around the whole component (CSS: section.graphic-component)
+                - data from clicking on dots is also shown on the UI
+                - checkboxes to let user display segments, interpolating curves and/or steps
+
+        TODO:   - Expand the number of colors (currently, just 4)
+                - Allow users to dynamically change y-range
      */
     {
         props: {
@@ -72,20 +77,17 @@ Vue.component('vue_curves_4',
                 <svg v-bind:width="outer_width" v-bind:height="outer_height" class="chart-holder">
                     <g v-bind:transform="translate(margins.left, margins.top)"> <!-- Shift the contained g blocks below -->
 
-                        <!-- The main part of the plot -->
-                        <g class="main-plot">
+                        <!--
+                            Add the axes (they make use of CSS)
+                        -->
+                        <g class="horiz-axis" v-html="X_axis">
+                        </g>
+                        <g class="vert-axis" v-html="Y_axis">
+                        </g>
 
-                            <!-- Show the data points in each plot as little circles -->
-                            <template v-for="(xxx, index_xxx) in plot_data">
-                                <circle v-for="(val, index) in plot_data[index_xxx]"
-                                    v-bind:key="index_xxx + '-' + index"
-                                    v-bind:cx="x_scale_func(index)"
-                                    v-bind:cy="y_scale_func(val)"
-                                    r="3"
-                                    fill="#111"
-                                    @click="show_datapoint_info(index, val)"
-                                />
-                            </template>
+
+                        <!-- The MAIN PART of the plot -->
+                        <g class="main-plot">
 
                             <!-- Connect the data points of each plot with line segments -->
                             <path v-if="show_segments" v-for="(p, index_p) in plot_data"
@@ -97,7 +99,7 @@ Vue.component('vue_curves_4',
                             />
 
                             <!-- Connect the data points of each plot with a series of steps -->
-                            <path v-for="(p, index_p) in plot_data"
+                            <path v-if="show_steps" v-for="(p, index_p) in plot_data"
                                 v-bind:key="'steps' + index_p"
                                 v-bind:stroke="color_picker(index_p, true)"
                                 v-bind:d="path_steps(index_p)"
@@ -106,7 +108,7 @@ Vue.component('vue_curves_4',
                             />
 
                             <!-- Connect the data points of each plot with interpolating curves -->
-                            <path v-for="(p, index_p) in plot_data"
+                            <path v-if="show_curves"  v-for="(p, index_p) in plot_data"
                                 v-bind:key="'inter' + index_p"
                                 v-bind:stroke="color_picker(index_p, false)"
                                 v-bind:d="path_curve(index_p)"
@@ -114,17 +116,22 @@ Vue.component('vue_curves_4',
                                 fill="none"
                             />
 
+                            <!-- Show the data points in each plot as little circles (on top of all curves/segments) -->
+                            <template v-for="(plot, index_plot) in plot_data">
+                                <circle v-for="(val, index) in plot_data[index_plot]"
+                                    v-bind:key="index_plot + '-' + index"
+                                    v-bind:cx="x_scale_func(index)"
+                                    v-bind:cy="y_scale_func(val)"
+                                    r="5"
+                                    fill="#111"
+                                    fill-opacity='0.1'
+                                    @click="show_datapoint_info(index, val, index_plot)"
+                                />
+                            </template>
+
                         </g>
                         <!-- END of the main part of the plot -->
 
-
-                        <!--
-                            Add the axes (they make use of CSS)
-                        -->
-                        <g class="horiz-axis" v-html="X_axis">
-                        </g>
-                        <g class="vert-axis" v-html="Y_axis">
-                        </g>
 
                     </g>
                     <!-- END of the translated elements -->
@@ -132,22 +139,34 @@ Vue.component('vue_curves_4',
                 </svg>
 
 
-                <!-- The plot legend-->
-                <svg width="150" v-bind:height="legend_SVG_height" class="chart-holder">
-                    <rect x='10' y='10' width='130' v-bind:height="legend_box_height" stroke="#D4D4D4" stroke-width="1" fill='#F4F4F4'/>
+                <div style='display: inline-block; vertical-align:top'> <!-- Side box with legend and controls -->
 
-                    <g v-for="(label, index_labels) in curve_labels">
-                        <text x="15" v-bind:y="legend_text_Y(index_labels)" v-bind:fill="color_picker(index_labels, false)">{{label}}</text>
-                        <line x1="15" v-bind:y1="legend_Y(index_labels)" x2="135" v-bind:y2="legend_Y(index_labels)" v-bind:stroke="color_picker(index_labels, false)" />
-                    </g>
-                </svg>
+                    <!-- The plot legend-->
+                    <svg width="150" v-bind:height="legend_SVG_height">
+                        <rect x='5' y='10' width='140' v-bind:height="legend_box_height" stroke="#E4E4E4" stroke-width="1" fill='#F6F6F6'/>
 
+                        <g v-for="(label, index_labels) in curve_labels">
+                            <text x="15" v-bind:y="legend_text_Y(index_labels)" v-bind:fill="color_picker(index_labels, false)">{{label}}</text>
+                            <line x1="15" v-bind:y1="legend_Y(index_labels)" x2="135" v-bind:y2="legend_Y(index_labels)" v-bind:stroke="color_picker(index_labels, false)" />
+                        </g>
+                    </svg>
 
-                <!-- A button to choose the type of interpolating curves -->
-                <button @click="cycle_curve_types" style='padding:2px'>
-                    <span style='font-weight:bold'>Toggle<br>curve type</span><br>
-                    <span style='color:grey'>(using '{{curve_type}}')</span>
-                </button>
+                    <br><span style="color:gray">{{info_line}}</span>
+
+                    <!-- Graph controls -->
+
+                    <!-- Specify what to show -->
+                    <br><br>
+                    <input type="checkbox" v-model="show_steps"> Show steps<br>
+                    <input type="checkbox" v-model="show_segments"> Show segments<br>
+                    <input type="checkbox" v-model="show_curves"> Show curves<br>
+
+                    <!-- A button to choose the type of interpolating curves -->
+                    <button @click="cycle_curve_types" style='padding:2px'>
+                        <span style='font-weight:bold'>Toggle<br>curve type</span><br>
+                        <span style='color:grey'>(using '{{curve_type}}')</span>
+                    </button>
+                </div>
 
 
             </section>
@@ -161,7 +180,11 @@ Vue.component('vue_curves_4',
 
                 curve_type: "curveMonotoneX",
 
-                show_segments: false    // Maybe segments aren't so needed, after all
+                show_curves: true,
+                show_segments: false,
+                show_steps: false,
+
+                info_line: "click points for details"
 
                 //min_val: this.range_min,
                 //max_val: this.range_max,
@@ -293,32 +316,33 @@ Vue.component('vue_curves_4',
             },
 
             color_picker(index, pale)
+            // TODO: generalize to more colors!
             {
                 switch(index) {
                   case 0:
                     if (pale)
-                        return "#FFCCCC"
+                        return "#FFAAAA"
                     else
                         return "red";
                     break;
 
                   case 1:
                     if (pale)
-                          return "#CCFFCC";
+                          return "#AAFFAA";
                     else
                         return "green";
                     break;
 
                   case 2:
                     if (pale)
-                          return "#CCCCFF";
+                          return "#AAAAFF";
                     else
                         return "blue";
                     break;
 
                   default:
                     if (pale)
-                          return "#CCCCCC";
+                          return "#AAAAAA";
                     else
                         return "black";
                 }
@@ -369,10 +393,13 @@ Vue.component('vue_curves_4',
             },
 
 
-            show_datapoint_info(n, val)
-            // Print out to the console the point's graph coordinates
+            show_datapoint_info(n, val, plot_no)
+            // Print out to the console and to the UI the point's graph coordinates
             {
-                console.log(`Bin ${n}, value ${val}`);
+                var label = this.curve_labels[plot_no];
+                var message = `${label}: bin ${n}, value ${val}`
+                console.log(message);
+                this.info_line = message;
             },
 
 

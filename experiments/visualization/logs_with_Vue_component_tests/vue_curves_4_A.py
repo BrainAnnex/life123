@@ -1,10 +1,10 @@
-# Test "A" of using the graphic module (Vue component)  "vue_curves_3" in an HTML log
+# Test "A" of using the graphic module (Vue component) "vue_curves_4" in an HTML log
 
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
-COMPONENT_NAME = "vue_curves_3"     # CHANGE AS NEEDED
-FILENAME="vue_curves_3_A.htm"       # CHANGE AS NEEDED
+COMPONENT_NAME = "vue_curves_4"     # CHANGE AS NEEDED
+FILENAME="vue_curves_4_A.htm"       # CHANGE AS NEEDED
 
 
 # Initialize the HTML logging.
@@ -21,19 +21,21 @@ log.write(f'Example of Line plots, using the module "{COMPONENT_NAME}":',
 # EXAMPLE OF DATA VISUALIZATION (with arbitrary data, hardwired below)
 
 all_data = {         # CHANGE AS NEEDED
-    # Labels for the y-axis
-    "y_labels": ["v1", "very_long_label"],
+    # Labels for the curves
+    "curve_labels": ["Chem A", "Hydrogen sulfide", "Element X", "Acetone"],
 
-    # Concentration data for the plots (for now just 1 chemical species), in index order
-    "data": [20, 85, 100, 50],
+    # Concentration data for the plots
+    #       outer level : order of chemical-species index,
+    #       inner level : in bin index order from left to right
+    "plot_data": [[20, 85, 100, 50] , [14, 99, 5, 65] , [100, 75, 55, 0] , [0, 15, 45, 90]],
 
-    # Set the range of values (not sure if being used)
-    "range_min": 0,
+    # Set the range of values
+    "range_min": 0,         # (not yet being used)
     "range_max": 100,
 
     # Set the dimensions and margins of the plot ("outer" means the surrounding box)
     "outer_width": 900,
-    "outer_height": 400,
+    "outer_height": 300,
     "margins": {"top": 20, "right": 20, "bottom": 20, "left": 30}
 }
 

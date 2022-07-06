@@ -6,6 +6,7 @@ section.graphic-component {
 /* For outer box around the plot */
 svg.chart-holder {
     border:1px solid #EEEEEE;
+    padding: 0;
 }
 
 /* For animations when switching between the interpolation styles

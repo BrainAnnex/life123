@@ -102,6 +102,16 @@ class Chemicals:
             return None
 
 
+    def get_all_names(self) -> [str]:
+        """
+        Return the names of all the species, in their index order
+
+        :return:    A list of strings
+        """
+        return self.names
+
+
+
     def get_index(self, name: str) -> Union[int, None]:
         """
         Return the index of the chemical species with the given name,
