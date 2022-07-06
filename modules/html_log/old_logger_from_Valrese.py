@@ -1,6 +1,6 @@
 ################################################################################
 #       NOT used in this project!
-#       An older library, parts of which are being integrated into
+#       An older library, parts of which were integrated into
 #       the class HtmlLog
 ################################################################################
 
@@ -12,7 +12,7 @@ import html
 from datetime import datetime
 
 
-class old_log:      #####  DEPRECATED  #####
+class old_log:      #####  OBSOLETE!  DON'T USE  #####
     """
     Multi-output channel logging, with optional over-riding directives to include or suppress logging.
     It provides class methods and class properties.

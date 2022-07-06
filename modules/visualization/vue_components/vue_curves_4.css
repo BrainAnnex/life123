@@ -1,6 +1,12 @@
+/* For outer box around everything */
+section.graphic-component {
+    border:1px solid #9999FF;
+}
+
 /* For outer box around the plot */
 svg.chart-holder {
-    border:1px solid cyan;
+    border:1px solid #EEEEEE;
+    padding: 0;
 }
 
 /* For animations when switching between the interpolation styles

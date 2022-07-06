@@ -17,7 +17,7 @@ class BioSim1D:
 
     n_species = 1       # The number of (non-water) chemical species
 
-    chem_data = None    # Object with info on the individual chemicals, incl. their names
+    chem_data = None    # Object of type "Chemicals", with info on the individual chemicals, incl. their names
 
     system = None       # Concentration data in the System we're simulating, for all the chemicals
                         # NumPy array of dimension: (n_species x n_cells).
@@ -39,7 +39,7 @@ class BioSim1D:
                                     # in the diffusion process.
                                     # See explanation in file overly_large_single_timesteps.py
 
-    all_reactions = None             # Object of class "Reactions"      # TODO: add a setter method
+    all_reactions = None            # Object of class "Reactions"      # TODO: add a setter method
 
     verbose = False
 
@@ -58,50 +58,53 @@ class BioSim1D:
         Return the NumPy array of concentration values across the bins (from left to right)
         for the single specified species
 
-        :param index:
-        :return:
+        :param index:   The index order of the chemical species of interest
+        :return:        A NumPy array of concentration values across the bins (from left to right)
         """
         assert 0 <= index < cls.n_species, f"The species index must be in the range [0-{cls.n_species - 1}]"
         return cls.system[index]
 
 
     @classmethod
-    def bin_concentration(cls, bin_address: int, species_index: int):
+    def bin_concentration(cls, bin_address: int, species_index: int) -> float:
         """
         Return the concentration at the requested bin of the specified species
 
         :param bin_address:
-        :param species_index:
-        :return:
+        :param species_index:   The index order of the chemical species of interest
+        :return:                A concentration value at the indicated bin, for the requested species
         """
         return cls.system[species_index, bin_address]
 
 
 
     @classmethod
-    def describe_state(cls, show_diffusion_rates=False, concise=False) -> None:
+    def describe_state(cls, concise=False, time=None) -> None:
         """
         A simple printout of the state of the system, for now useful only for small systems
 
-        :param show_diffusion_rates:    NO LONGER USED.  TODO: phase out
-        :param concise: Only applicable if show_diffusion_rates is False.
-                        If True, don't include a header with the number of bins and number of species
+        :param time:    (Optional) System time to display in a header (regardless of "concise" flag)
+        :param concise: If True, only produce a minimalist printout with just the concentration values
         :return:        None
         """
-        if concise:     # A minimalist printout
-            print(cls.system)
+        if time is not None:
+            print(f"SYSTEM STATE at Time t = {time}:")
+
+        if concise:             # A minimalist printout...
+            print(cls.system)   # ...only showing the concentration data (a Numpy array)
             return
 
-        if cls.n_species == 1:
-            print(f"{cls.n_bins} bins and 1 species: ")
-        else:
-            print(f"{cls.n_bins} bins and {cls.n_species} species:\n")
+        # If we get thus far, it's a FULL printout
 
+        print(f"{cls.n_bins} bins and {cls.n_species} species:")
 
+        # Show a line of line of data for each chemical species in turn
         for species_index in range(cls.n_species):
             name = cls.chem_data.get_name(species_index)
-            if name:
+            if name:    # If a name was provided, show it
                 name = f" ({name})"
+            else:
+                name = ""
 
             if cls.chem_data.diffusion_rates is None:
                 print(f"  Species {species_index}{name}. Diff rate: NOT SET. Conc: ", cls.system[species_index])
@@ -734,11 +737,11 @@ class BioSim1D:
 
         IMPORTANT: must first call GraphicLog.config(), or an Exception will be raised
 
-        :param species_index:   Index identifying the species of interest
-        :param heatmap_pars:    A dictionary of parameters for the heatmap
-        :param graphic_component:
-        :param header:          Optional string to display just above the heatmap
-        :return:                None
+        :param species_index:       Index identifying the species of interest
+        :param heatmap_pars:        A dictionary of parameters for the heatmap
+        :param graphic_component:   A string with the name of the graphic module to use.  EXAMPLE: "vue_heatmap_11"
+        :param header:              Optional string to display just above the heatmap
+        :return:                    None
         """
         if not GraphicLog.is_initialized():
             raise Exception("Prior to calling single_species_heatmap(), "
@@ -782,18 +785,18 @@ class BioSim1D:
     def single_species_line_plot(cls, species_index: int, plot_pars: dict, graphic_component, header=None) -> None:
         """
         Send to the HTML log, a line plot representation of the concentrations of
-        the single requested species.
+        the single requested species.  To plot more than 1 species, use line_plot() instead
 
         IMPORTANT: must first call GraphicLog.config(), or an Exception will be raised
 
-        :param species_index:   Index identifying the species of interest
-        :param plot_pars:       A dictionary of parameters for the plot
-        :param graphic_component:
-        :param header:          Optional string to display just above the heatmap
-        :return:                None
+        :param species_index:       Index identifying the species of interest
+        :param plot_pars:           A dictionary of parameters for the plot
+        :param graphic_component:   A string with the name of the graphic module to use.  EXAMPLE: "vue_curves_3"
+        :param header:              Optional string to display just above the plot
+        :return:                    None
         """
         if not GraphicLog.is_initialized():
-            raise Exception("Prior to calling single_species_heatmap(), "
+            raise Exception("Prior to calling single_species_line_plot(), "
                             "need to initialize the graphics module with a call to GraphicLog.config()")
 
         if header:
@@ -813,6 +816,61 @@ class BioSim1D:
 
             # Concentration data for the plots (for now just 1 chemical species), in index order
             "data": species_concentrations,
+
+            # Set the range of values for the y-scale of the plot
+            "range_min": plot_pars["range"][0],
+            "range_max": plot_pars["range"][1],
+
+            # Set the dimensions and margins of the plot
+            "outer_width": plot_pars["outer_width"],
+            "outer_height": plot_pars["outer_height"],
+            "margins": plot_pars["margins"]
+        }
+
+        # Send the plot to the HTML log file.
+        # The version of the heatmap Vue component specified in the call to GraphicLog.config() will be used
+        GraphicLog.export_plot(all_data, graphic_component)
+
+
+
+    @classmethod
+    def line_plot(cls, plot_pars: dict, graphic_component, header=None) -> None:
+        """
+        Send to the HTML log, a line plot representation of the concentrations of
+        all the chemical species species.
+        TODO: offer an option to limit which chemical species to display
+
+        IMPORTANT: must first call GraphicLog.config(), or an Exception will be raised
+
+        :param plot_pars:           A dictionary of parameters (such as "outer_width") for the plot
+        :param graphic_component:   A string with the name of the graphic module to use.  EXAMPLE: "vue_curves_4"
+        :param header:              Optional string to display just above the plot
+        :return:                    None
+        """
+        if not GraphicLog.is_initialized():
+            raise Exception("Prior to calling line_plot(), "
+                            "need to initialize the graphics module with a call to GraphicLog.config()")
+
+        if header:
+            # Display the requested header just above the plot, in the log file
+            log.write(f"{header}", style=log.h1, newline=False)
+
+
+        #
+        # Prepare the data for the plot
+        #
+
+        # Concentration data for the plots
+        #       outer level : order of chemical-species index,
+        #       inner level : in bin index order from left to right
+        species_concentrations = [list(cls.lookup_species(i)) for i in range(cls.n_species)]
+        #print(species_concentrations)
+
+        all_data = {
+            "curve_labels": cls.chem_data.get_all_names(),
+
+            # Concentration data for the plots
+            "plot_data": species_concentrations,
 
             # Set the range of values for the y-scale of the plot
             "range_min": plot_pars["range"][0],

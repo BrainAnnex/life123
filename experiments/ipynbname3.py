@@ -6,6 +6,7 @@ Adapted from:  https://github.com/msm1089/ipynbname/blob/master/ipynbname/__init
 Added comments, and simplified to be more friendly to jupyterlab 3 - a simplification that
 in some environments very dramatically speeds up execution: 
 see https://github.com/msm1089/ipynbname/issues/2
+and https://github.com/msm1089/ipynbname/pull/11
 
 It may work with other versions of jupyterlab, or with the classic jupyter notebooks -
 but not tested with them.

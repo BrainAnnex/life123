@@ -1,4 +1,4 @@
-# EXPERIMENTAL - to simplify use of HtmlLog and Vue components from within this project
+# To simplify use of HtmlLog and Vue components from within this project
 
 from typing import Union, List
 from modules.html_log.html_log import HtmlLog as log
@@ -58,12 +58,13 @@ class GraphicLog:
 
 
     @classmethod
-    def export_plot(cls, data, graphic_component):
+    def export_plot(cls, data, graphic_component, print_notification=True) -> None:
         """
 
         :param data:
         :param graphic_component:
-        :return:
+        :param print_notification:
+        :return:                    None
         """
         #assert cls.COMPONENT_NAME is not None, "Must first call GraphicLog.config(), and pass a `component_name` argument"
         assert cls.HOME_REL_PATH is not None, "Must first call GraphicLog.config(), and pass a `home_rel_path` argument"
@@ -72,3 +73,6 @@ class GraphicLog:
         log.export_plot_Vue(data=data,
                         component_name = graphic_component,
                         component_file = f"{cls.HOME_REL_PATH}/modules/visualization/vue_components/{graphic_component}.js")
+
+        if print_notification:
+            print("[Graphic element sent to log file]")

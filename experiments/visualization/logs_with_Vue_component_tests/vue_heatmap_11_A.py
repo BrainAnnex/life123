@@ -1,4 +1,4 @@
-# Test 1 of using the heatmap module "vue-heatmap-11" in an HTML log
+# Test "A" of using the graphic module (Vue component) "vue-heatmap-11" in an HTML log
 
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
@@ -18,7 +18,7 @@ log.write('Example of Heatmap, using the module "{COMPONENT_NAME}":',
           style=log.h2, blanks_after=1)
 
 
-# EXAMPLE OF DATA VISUALIZATION WITH A HEATMAP (with arbitrary data, hardwired below)
+# EXAMPLE OF DATA VISUALIZATION (with arbitrary data, hardwired below)
 
 all_data = {
     # Labels for the rows

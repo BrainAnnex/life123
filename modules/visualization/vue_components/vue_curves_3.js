@@ -1,9 +1,9 @@
 Vue.component('vue_curves_3',
-    /*  Line charts and interpolating functions in 1D.
+    /*  Line charts and interpolating curves in 1D.
         For now, just 1 dataset at a time.
 
         Based on the passed dataset, create a group of dots
-        connected by segments, plus interpolating curves/segments.
+        connected by segments, plus interpolating curves and segments.
         Clicking on any dot will display its data in the browser console.
 
         Inspired by https://www.youtube.com/watch?v=CkFktv0p3pw
@@ -26,14 +26,14 @@ Vue.component('vue_curves_3',
 
             data: {
                 /*  Concentration data for the plots (for now just 1 chemical species),
-                    in index order from left to right;
+                    in bin index order from left to right
                         EXAMPLE:  [20, 85, 100, 50]
                  */
                 required: true
             },
 
             range_min: {
-                // NOT SURE WHETHER USING THIS...
+                // NOT USING THIS FOR NOW...
                 type: Number,
                 default: 0
             },
@@ -69,7 +69,7 @@ Vue.component('vue_curves_3',
             <section>
 
                 <svg v-bind:width="outer_width" v-bind:height="outer_height" class="chart-holder">
-                    <g v-bind:transform="translate(margins.left, margins.top)"> <!-- Shift the contained g block below -->
+                    <g v-bind:transform="translate(margins.left, margins.top)"> <!-- Shift the contained g blocks below -->
 
                         <!-- The main part of the plot -->
                         <g class="main-plot">
@@ -84,6 +84,7 @@ Vue.component('vue_curves_3',
                                     @click="show_datapoint_info(index, val)"
                             />
 
+                            <!-- Segments connecting the circles -->
                             <path stroke="yellow" stroke-width="1"
                                 fill="none"
                                 v-bind:d="path_straight"
@@ -112,7 +113,7 @@ Vue.component('vue_curves_3',
                         </g>
 
                     </g>
-                    <!-- END of the translated element -->
+                    <!-- END of the translated elements -->
 
                 </svg>
 
@@ -132,7 +133,7 @@ Vue.component('vue_curves_3',
             return {
                 svg_helper: new SVGhelper(),
 
-                curve_type: "curveNatural"
+                curve_type: "curveMonotoneX"
 
                 //min_val: this.range_min,
                 //max_val: this.range_max,
@@ -269,7 +270,7 @@ Vue.component('vue_curves_3',
             },
 
             path_curve()
-            // Connect the data points in interpolating curve
+            // Connect the data points with an interpolating curve
             {
                 // The x-coord is the array index; the y-coord is the data value
                 const line_func = d3.line()

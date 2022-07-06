@@ -1,4 +1,4 @@
-### VERSION 1.0-beta8.2
+### VERSION 1.0-beta9 IN-PROGRESS
 
 
 
@@ -22,15 +22,25 @@ Including diffusion, reactions, membranes and compartments.
 [WEBSITE](https://life123.science/)
 
 ## Try it Out Live on a hosted JupyterLab!
-**TRY IT OUT LIVE** (no registration nor install!):
+**TRY IT OUT LIVE** (no registration nor install!)  
+Click on
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/BrainAnnex/life123/main)
 
-"Binder" is akin to Google's Colab: short-term runs on a hosted JupyterLab environment.  
-It takes about a minute to launch... and then you'll have your own private copy of all notebooks,
-to run and/or change and re-run.
+Then explore the notebooks under the `experiments` folder.
 
-Please remember that nothing gets saved long term; so, if you make changes you want to preserve,
-make sure to download the changed notebooks!
+Note that several notebooks create **HTML log files**, by the same name as the notebook (eg,
+running the notebook called `diffusion_1.ipynb` will create a log file named `diffusion_1.htm`).
+These log files typically contain the output of the runs, nicely formatted, plus interactive graphics: see
+screenshots under the *"QUICK-AND-EASY method"* section, below.
+
+"Binder", the host of the live demo, is akin to Google's Colab:
+short-term runs on a hosted JupyterLab environment.  
+It generally takes less than one minute to launch... and then you'll have your own private copy of all the notebooks,
+to run and/or change and re-run.  (`.htm` log files are generally pre-existing; you may view them without
+having to run anything.)
+
+Please remember that nothing gets saved long term on Binder; so, if you make changes you want to preserve,
+make sure to download the changed notebooks!  For instruction on creating your own private local copy, read on...
 
 ## Components
 * life_1D
@@ -55,7 +65,7 @@ make sure to download the changed notebooks!
 See the annotated examples in the [experiments](https://github.com/BrainAnnex/life123/tree/main/experiments/life_1D) folder
 
 ## How to Run
-Copy the files from the repository to your local machine.
+Copy the files from the repository to your local machine.  (If you just want to a live demo, see the earlier section on that.)
 
 On a Linux machine, you can use the command:
 
@@ -63,9 +73,11 @@ On a Linux machine, you can use the command:
 
 Or you could download a zip file from [the repository](https://github.com/BrainAnnex/life123)
 
-Install, if not already present on your machine, Python 3.7+
+Install, if not already present on your machine, Python 3.8+
 
-We currently test on Python 3.7/3.8 (3.6 *might* work - not tested - but not any earlier version, because of the use of Python f-strings.)
+We currently test on Python 3.8 (earlier versions will NOT work, because of the various libraries).
+
+Note that Python 3.8 is the last version of python still compatible with Win7.
 
 
 **QUICK-AND-EASY method**
