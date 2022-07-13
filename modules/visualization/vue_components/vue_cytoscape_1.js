@@ -1,4 +1,4 @@
-Vue.component('vue-cytoscape-1',  <!-- NOTE:  Only lower cases in component names! -->
+Vue.component('vue_cytoscape_1',  <!-- NOTE:  Only lower cases in component names! -->
     {
         props: {
             <!-- NOTE:  Only lower cases in props names! -->

@@ -14,7 +14,7 @@ GraphicLog.config(filename=FILENAME,
                   home_rel_path="../../..")
 
 
-log.write('Example of Heatmap, using the module "{COMPONENT_NAME}":',
+log.write(f'Example of Heatmap, using the module "{COMPONENT_NAME}":',
           style=log.h2, blanks_after=1)
 
 
