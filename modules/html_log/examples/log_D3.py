@@ -23,7 +23,7 @@ handler_func = "draw_barchart"
 
 svg_id = "svg1"     # ID to use for the <SVG element>
 
-log.export_plot(data=my_data, svg_id=svg_id, js_file=handler_file, js_func=handler_func)
+log.export_plot_D3(data=my_data, svg_id=svg_id, js_file=handler_file, js_func=handler_func)
 
 
 ###################   2nd plot   ##########################
@@ -32,7 +32,7 @@ log.write("A repeat of the same plot:", style=log.h2, blanks_before=2)
 
 svg_id = "svg2"     # ID to use for the <SVG element>
 
-log.export_plot(data=my_data, svg_id=svg_id, js_file=handler_file, js_func=handler_func)
+log.export_plot_D3(data=my_data, svg_id=svg_id, js_file=handler_file, js_func=handler_func)
 
 
 ###################   3rd plot   ##########################
@@ -52,4 +52,4 @@ handler_file = "../D3_heatmap.js"
 handler_func = "draw_heatmap"
 svg_id = "svg3"                      # ID to use for the <DIV element>
 
-log.export_plot(data=my_heatmap_data, svg_id=svg_id, js_file=handler_file, js_func=handler_func, D3_tag="div")
+log.export_plot_D3(data=my_heatmap_data, svg_id=svg_id, js_file=handler_file, js_func=handler_func, D3_tag="div")
