@@ -222,7 +222,7 @@ class Reactions:
 
 
 
-    # SUPPORT FOR CREATION OF NETWORK DIAGRAMS
+    ########  SUPPORT FOR CREATION OF NETWORK DIAGRAMS  ########
 
     def prepare_graph_network(self):
         return {
@@ -240,7 +240,8 @@ class Reactions:
         Encode the reaction data in a form suitable for visualization
         with the graph module "vue_cytoscape"
 
-        TODO: assign a new, separate node label to chemicals that are both reagents and product
+        TODO:   assign a new, separate node label to chemicals that are both reagents and product
+                Ditch all None values
 
         :return:    A list of dictionaries.  Each dictionary must have an 'id' key with a unique value
         """

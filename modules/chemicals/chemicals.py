@@ -13,7 +13,8 @@ class Chemicals:
     def __init__(self, diffusion_rates=None, names=None):
         """
         If diffusion rates and names are both provided, they must have the same count,
-        and the passed elements must be in the same order
+        and the passed elements must appear in the same order.
+        It's ok not to pass any data yet, and later add it.
 
         :param diffusion_rates: A list or tuple with the diffusion rates of the chemicals
         :param names:           A list with the names of the chemicals

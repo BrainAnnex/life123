@@ -8,7 +8,7 @@ from modules.chemicals.chemicals import Chemicals as chem
 #########   TESTS OF INITIALIZATION, SETTING AND VIEWING    #########
 
 def test_initialize_universe():
-    chem_data = chem(n_species=1)
+    chem_data = chem(names=["A"])
     bio.initialize_system(n_bins=10, chem_data=chem_data)
 
     assert bio.n_bins == 10
@@ -20,7 +20,7 @@ def test_initialize_universe():
     assert np.allclose(bio.system, expected)
 
     # New test
-    chem_data = chem(n_species=3)
+    chem_data = chem(names=["A", "B", "C"])
     bio.initialize_system(n_bins=15, chem_data=chem_data)
     bio.describe_state()
     expected = np.zeros((3,15), dtype=float)
@@ -43,7 +43,7 @@ def test_set_diffusion_rates():
 
 
 def test_set_uniform_concentration():
-    chem_data = chem(n_species=1)
+    chem_data = chem(names=["A"])
     bio.initialize_system(n_bins=8, chem_data=chem_data)
     bio.set_uniform_concentration(species_index=0, conc=0.3)
     bio.describe_state()
@@ -51,7 +51,7 @@ def test_set_uniform_concentration():
     assert np.allclose(bio.lookup_species(0), expected)
 
     # New test
-    chem_data = chem(n_species=3)
+    chem_data = chem(names=["A", "B", "C"])
     bio.initialize_system(n_bins=15, chem_data=chem_data)
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=11.)
@@ -64,7 +64,7 @@ def test_set_uniform_concentration():
 
 
 def test_inject_conc_to_cell():
-    chem_data = chem(n_species=1)
+    chem_data = chem(names=["A"])
     bio.initialize_system(n_bins=5, chem_data=chem_data)
 
     with pytest.raises(Exception):
@@ -82,7 +82,7 @@ def test_inject_conc_to_cell():
 
 
 def test_increase_spacial_resolution():
-    chem_data = chem(n_species=2)
+    chem_data = chem(names=["A", "B"])
     bio.initialize_system(n_bins=3, chem_data=chem_data)
     bio.set_species_conc(0, [11., 12., 13.])
     bio.set_species_conc(1, [5., 15., 25.])
@@ -95,7 +95,7 @@ def test_increase_spacial_resolution():
 
 
 def test_decrease_spacial_resolution():
-    chem_data = chem(n_species=2)
+    chem_data = chem(names=["A", "B"])
     bio.initialize_system(n_bins=6, chem_data=chem_data)
     bio.set_species_conc(0, [10., 20., 30., 40., 50., 60.])
     bio.set_species_conc(1, [ 2., 8.,   5., 15., 4.,   2.])
@@ -121,7 +121,7 @@ def test_decrease_spacial_resolution():
 
 
 def test_varying_spacial_resolution():
-    chem_data = chem(n_species=2)
+    chem_data = chem(names=["A", "B"])
     bio.initialize_system(n_bins=3, chem_data=chem_data)
     bio.set_species_conc(0, [11., 12., 13.])
     bio.set_species_conc(1, [5., 15., 25.])
@@ -182,7 +182,7 @@ def test_diffuse_step_single_species_1b():
 
 
 def test_diffuse_step_single_species_2():
-    chem_data = chem(n_species=1)
+    chem_data = chem(names=["A"])
     bio.initialize_system(n_bins=1, chem_data=chem_data)
     bio.set_uniform_concentration(species_index=0, conc=8.0)
     with pytest.raises(Exception):
@@ -198,7 +198,7 @@ def test_diffuse_step_single_species_2():
 
 
 def test_diffuse_step_single_species_2b():
-    chem_data = chem(n_species=1)
+    chem_data = chem(names=["A"])
     bio.initialize_system(n_bins=1, chem_data=chem_data)
     bio.set_uniform_concentration(species_index=0, conc=8.0)
 
@@ -222,7 +222,7 @@ def test_diffuse_step_single_species_3():
     bio.set_uniform_concentration(species_index=0, conc=22.2)
     bio.set_uniform_concentration(species_index=1, conc=66.6)
 
-    bio.describe_state(show_diffusion_rates=True)
+    bio.describe_state()
     """
     5 bins and 2 species:
     Species 0. Diff rate: 2.78. Conc:  [22.2 22.2 22.2 22.2 22.2]
@@ -243,7 +243,7 @@ def test_diffuse_step_4():
     bio.initialize_system(n_bins=2, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin=0, species_index=0, delta_conc=10.)
-    bio.describe_state(show_diffusion_rates=True)
+    bio.describe_state()
     """
     2 bins and 1 species:
     Species 0. Diff rate: 1.0. Conc:  [10.  0.]
@@ -265,7 +265,7 @@ def test_diffuse_step_5():
     bio.initialize_system(n_bins=3, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin=1, species_index=0, delta_conc=10.)
-    bio.describe_state(show_diffusion_rates=True)
+    bio.describe_state()
 
     # The time step is so large that the system immediately equilibrates
     print("The default max allowed time step is: ", bio.max_time_step(.5))
@@ -285,7 +285,7 @@ def test_diffuse_step_6():
     bio.initialize_system(n_bins=5, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin=0, species_index=0, delta_conc=10.)
-    bio.describe_state(show_diffusion_rates=True)
+    bio.describe_state()
 
     print("The default max allowed time step is: ", bio.max_time_step(.5))
     for i in range(20):
@@ -305,7 +305,7 @@ def test_diffuse_step_7():
     bio.initialize_system(n_bins=5, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin=0, species_index=0, delta_conc=10.)
-    bio.describe_state(show_diffusion_rates=True)
+    bio.describe_state()
 
     for i in range(20*2):
         bio.diffuse_step(time_step=0.6666/2)
@@ -326,7 +326,7 @@ def test_diffuse_step_8():
     np.random.seed(18)
     bio.set_species_conc(species_index=0, conc_list= 100*np.random.rand(15))
     print()
-    bio.describe_state(show_diffusion_rates=True)
+    bio.describe_state()
 
     avg_conc = sum(bio.lookup_species(0)) / 15.
     print("Avg of concentrations: ", avg_conc)
@@ -362,7 +362,7 @@ def test_diffuse_step_1():
 
     bio.set_species_conc(species_index=1, conc_list=[10, 20, 50])
 
-    bio.describe_state(show_diffusion_rates=True)
+    bio.describe_state()
     """
     3 bins and 2 species:
     Species 0. Diff rate: 5.0. Conc:  [  0. 100.   0.]
@@ -388,7 +388,7 @@ def test_diffuse_1():
     bio.initialize_system(n_bins=3, chem_data=chem_data)
     bio.set_bin_conc(species_index=0, bin=1, conc=100.)
     bio.set_species_conc(species_index=1, conc_list=[10, 20, 50])
-    bio.describe_state(show_diffusion_rates=True)
+    bio.describe_state()
     """
     Species 0. Diff rate: 5.0. Conc:  [  0. 100.   0.]
     Species 1. Diff rate: 20.0. Conc:  [10. 20. 50.]   

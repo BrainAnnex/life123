@@ -77,16 +77,16 @@ def test_add_reaction(rxn):
 
 
 
-def test_prepare_graph_network(rxn):
+def test_create_graph_network_data(rxn):
     rxn.clear_reactions()
     rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-    network_data = rxn.prepare_graph_network()
+    network_data = rxn.create_graph_network_data()
     print(network_data)
     expected = [{'id': 6, 'label': 'Reaction', 'name': 'RXN', 'Rf': 3.0, 'Rb': 2.0},
-                {'id': 0, 'label': 'Reactant', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_rate': 1},
-                {'id': 7, 'source': 0, 'target': 6, 'name': 'reacts'},
                 {'id': 1, 'label': 'Product', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_rate': 1},
-                {'id': 8, 'source': 6, 'target': 1, 'name': 'produces'}
+                {'id': 7, 'name': 'produces', 'source': 6, 'target': 1},
+                {'id': 0, 'label': 'Reactant', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_rate': 1},
+                {'id': 8, 'name': 'reacts', 'source': 0, 'target': 6}
                 ]
     assert network_data == expected
 
