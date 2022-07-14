@@ -8,7 +8,8 @@ import json
 class HtmlLog:
     """
     An HTML logger to file, plus optional plain-text printing to standard output
-    TODO: maybe rename "HtmlLogger"
+    TODO:   maybe rename "HtmlLogger" or "ReportMaker"
+            Add feature to create a Table of Contents
     """
 
     #####################
@@ -46,7 +47,7 @@ class HtmlLog:
     #########################################
 
     @classmethod
-    def config(cls, filename=None, mode=None,
+    def config(cls, filename=None, namestem=None, mode=None,
                     css=None, js=None, use_D3=False, Vue_lib=False) -> None:
         """
         It can only be called once in a run.
@@ -57,7 +58,10 @@ class HtmlLog:
 
         # ARGUMENTS OPTIONALLY USED TO CHANGE THE CLASS DEFAULTS
         :param filename:    Name for the log file (if using just 1 file), or basename (if using multiple log files);
-                                EXAMPLE: "log.htm"
+                                EXAMPLES: "log.htm" or "reports/log1.htm"
+
+        :param namestem:    EXPERIMENTAL, not yet in use.  A filename, or full/relative path, without a suffix;
+                                ".log.htm" will automatically get added
 
         :param mode:        Must be one of:
                                 "append"    - if the log file exists, append to it; otherwise, create it (AVOID if using Vue)
@@ -66,7 +70,7 @@ class HtmlLog:
 
         # ARGUMENTS OPTIONALLY USED TO PASS STYLING/JAVASCRIPT/GRAPHING PARAMETER
         :param css:         String, or list of strings, with name(s) of CSS files to include
-        :param js:          Name of extra JavaScript file to include
+        :param js:          String, or list of strings, with name(s) of extra JavaScript files to include
         :param use_D3:      Flag indicating whether D3 will be used.  If True,
                                 https://d3js.org/d3.v7.min.js will be included
         :param Vue_lib:     Full name of js file that contains the desired version of the Vue library.
@@ -102,7 +106,8 @@ class HtmlLog:
         else:                   # Using a single log file
             cls.log_fullname = cls.LOG_DIRECTORY + cls.LOG_FILENAME_BASE
             if cls.OVERWRITE_SINGLE_LOG:
-                cls.file_handler = open(cls.log_fullname, "w")      # Create a new file, to write to: over-write if present
+                cls.file_handler = open(cls.log_fullname, "w")      # Create a new file, to write to; over-write if present
+                cls._html_comment("Auto-generated log file", newline_before = False)
             else:
                 cls.file_handler = open(cls.log_fullname, "a")      # Create a new file, to append to
 
@@ -111,49 +116,66 @@ class HtmlLog:
         print(f"-> Output will be LOGGED into the file '{cls.log_fullname}'")
 
 
-        # Prepare the header
+        # PREPARE THE HEADER
+
+        # Handle the required CSS file(s)
         if not css:
-            css_line = ""
+            css_lines = ""
         elif type(css) == str:
-            css_line = f'    <link type="text/css" rel="stylesheet" href="{css}">'
+            css_lines = f'    <link type="text/css" rel="stylesheet" href="{css}">'
         elif type(css) == list:
             css_list = [f'    <link type="text/css" rel="stylesheet" href="{css_file}">'
                             for css_file in css]
-            css_line = "\n".join(css_list)
+            css_lines = "\n".join(css_list)
         else:
-            raise Exception("Argument css, if passed, must be a string or list of strings")
+            raise Exception(f"Argument css, if passed, must be a string or a list of strings; instead, it was a {type(css)}")
 
-        js_line = ''
 
-        use_Vue = False
+        # Handle the required JavaScript file(s)
+        js_lines = ''
+
         if Vue_lib:
             if not cls.SEPARATE_LOGS and not cls.OVERWRITE_SINGLE_LOG:
                 raise Exception("At present, Vue cannot be used in the 'append' mode: use mode='overwrite' or mode='multiple'")
 
-            js_line += f'\n    <script src="{Vue_lib}"></script>'
+            js_lines += f'\n    <script src="{Vue_lib}"></script>'
             use_Vue = True
+        else:
+            use_Vue = False
+
 
         if use_D3:
-            js_line += '\n    <script src="https://d3js.org/d3.v7.min.js"></script>'
+            js_lines += '\n    <script src="https://d3js.org/d3.v7.min.js"></script>'
+
 
         if js:
-            js_line += f'\n    <script src="{js}" ></script>'
+            if type(js) == str:
+                js_lines += f'\n    <script src="{js}"></script>'
+            elif type(js) == list:
+                for js_file in js:
+                    js_lines += f'\n    <script src="{js_file}"></script>'
+        else:
+            raise Exception(f"Argument js, if passed, must be a string or a list of strings; instead, it was a {type(js)}")
+
 
         cls.use_D3 = use_D3
         cls.use_Vue = use_Vue
 
-        head = f'''<!DOCTYPE html>
+
+        # Assemble the initial part of the HTML file, thru the opening of the <BODY> tag
+        initial_html = f'''<!DOCTYPE html>
 <html lang="en">
 <head>  
     <meta charset="UTF-8">
     <title>Log</title>
-    {js_line}
-{css_line}  
+
+{css_lines}
+{js_lines}
 </head>
 
 <body>\n'''
 
-        cls._write_to_file(head)
+        cls._write_to_file(initial_html)
 
         cls.config_lock = True       # This intercepts and prevents additional calls to this method in the same run
 
@@ -313,8 +335,9 @@ class HtmlLog:
 
 
     @classmethod
-    def export_plot(cls, data, svg_id, js_file, js_func, D3_tag="svg") -> None:
+    def export_plot_D3(cls, data, svg_id, js_file, js_func, D3_tag="svg") -> None:
         """
+        Append to the log the HTML to produce a D3-based plot
 
         :param data:
         :param svg_id:
@@ -341,8 +364,8 @@ class HtmlLog:
         js_data = "var json_data = '"       # Note the opening single quote...
         cls._write_to_file(js_data)
 
-        json.dump(data, cls.file_handler)           # Convert the date to JS, and write it to the log file
-        #json_str = json.dumps(data, indent=4)     # Without an indent value, the whole string is in one line
+        json.dump(data, cls.file_handler)       # Convert the date to JS, and write it to the log file
+        #json_str = json.dumps(data, indent=4)  # Without an indent value, the whole string is in one line
 
         js_data = f"';\nvar DATA_1 = JSON.parse(json_data);\n{js_func}(\"{svg_id}\", DATA_1);\n</script>"
         cls._write_to_file(js_data)
@@ -355,6 +378,7 @@ class HtmlLog:
     @classmethod
     def export_plot_Vue(cls, data, component_name, component_file) -> None:
         """
+        Append to the log the HTML to produce a Vue-based plot
 
         :param data:
         :param component_name:
@@ -387,9 +411,6 @@ class HtmlLog:
 <script src="{component_file}"></script>
 '''
         cls._write_to_file(html)
-
-        if cls.use_D3:
-            cls._write_to_file('<script src="https://d3js.org/d3.v7.min.js" ></script>\n')
 
         instantiate_vue = f'''
 <script>
@@ -601,13 +622,13 @@ new Vue({{
     @classmethod
     def _write_to_file(cls, msg: str, blanks_before = 0, newline = False, blanks_after = 0) -> None:
         """
-        Write the given message (containing text and/or HTML code) into the file managed by
+        Write the given message (containing text and/or HTML code) into the file managed with
         the File Handler stored in the class property "file_handler"
 
         :param msg:             String to write to the designated log file
-        :param blanks_before:   Number of blank lines to precede the output with
-        :param newline:         Flag indicating whether the output should be terminated by a newline ("<br>\n")
-        :param blanks_after:    Number of blank lines to place after the output
+        :param blanks_before:   Number of blank lines ("<br>\n") to precede the output with
+        :param newline:         Flag indicating whether the output should be terminated by an HTML newline ("<br>\n")
+        :param blanks_after:    Number of blank lines ("<br>\n") to place after the output
         :return:                None
         """
 
@@ -664,14 +685,19 @@ new Vue({{
         
     
     @classmethod
-    def _html_comment(cls, comment: str):
+    def _html_comment(cls, comment: str, newline_before = True) -> None:
         """
-        Write to the log an HTML comment (meant for readability), on a separate line
+        Write to the log, an HTML comment (useful for readability), on a separate line
 
-        :param comment: string with the body of the comment.  EXAMPLE: "Start of data table"
-        :return:
+        :param comment:         String with the body of the comment.  EXAMPLE: "Start of data table"
+        :param newline_before:
+        :return:                None
         """
-        cls._write_to_file(f"\n<!-- {comment} -->\n", newline=False)
+        s = f"<!-- {comment} -->\n"
+        if newline_before:
+            s = "\n" + s
+
+        cls._write_to_file(s)
 
 
 

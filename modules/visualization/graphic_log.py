@@ -25,15 +25,21 @@ class GraphicLog:
 
 
     @classmethod
-    def config(cls, filename, components: Union[str, List[str]], home_rel_path, mode='overwrite'):
+    def config(cls, filename, components: Union[str, List[str]], home_rel_path, mode='overwrite', extra_js=None):
         """
 
-        :param filename:
+        :param filename:        Name, with full path, of the desired log file
         :param components:      Either a string or list of strings,
                                 with the name(s) of ALL the graphic components that will be used in the log file
-        :param home_rel_path:   Relative path from location of the LOG file to Life123's home
+        :param home_rel_path:   Relative path from location of *THE LOG FILE* to Life123's home
                                 EXAMPLE: "../../.."
-        :param mode:
+        :param mode:            A string with the desired logging mode.  Must be one of:
+                                    "overwrite" - if the log file exists, first clear it; otherwise, create it
+                                    "multiple"  - each run's output should go into a separate file (consecutively numbered)
+                                (note the "append" mode of the class HtmlLog cannot be used)
+        :param extra_js:        Optional string with the name of an "extra" JavaScript file to include
+                                ("extra" refers to the fact that several JS files are already automatically included)
+
         :return:
         """
         if type(components) == str:
@@ -45,11 +51,18 @@ class GraphicLog:
             raise Exception("GraphicLog.config(): argument `components` must be either a string or a list of strings")
 
 
-        # Note: paths are from the location of THE LOG FILE
+        assert mode == "overwrite" or mode == "append", \
+                "GraphicLog.config(): argument `mode` must be either 'overwrite' or 'append'"
+
+        js = f"{home_rel_path}/modules/SVG_helper/svg_helper.js"
+        if extra_js:
+            js = [js, extra_js]
+
+        # Note: paths are from the location of *THE LOG FILE*
         log.config(filename=filename, mode=mode,
                    use_D3=True,
                    Vue_lib = f"{home_rel_path}/modules/Vue2_lib/vue2.js",
-                   js  = f"{home_rel_path}/modules/SVG_helper/svg_helper.js",
+                   js  = js,
                    css = css_files)
 
         #cls.COMPONENT_NAME = components

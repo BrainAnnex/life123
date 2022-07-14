@@ -14,8 +14,8 @@ class Reactions:
             "Rf"    (forward reaction rate)
             "Rb"    (back reaction rate)
 
-        Both reactants and products are triplets consisting of (stoichiometry, species index, reaction order).   The reaction order
-        refers to the forward reaction for reactants, and the reverse reaction for products.
+        Both reactants and products are triplets consisting of (stoichiometry, species index, reaction order).
+        The reaction order refers to the forward reaction for reactants, and the reverse reaction for products.
     """
 
     def __init__(self, chem_data):
@@ -25,27 +25,30 @@ class Reactions:
         self.chem_data = chem_data  # Object with info on the individual chemicals, incl. their names
         
 
+
     def number_of_reactions(self) -> int:
         # Return the number of registered reactions
         return len(self.reaction_list)
 
 
-    def get_reaction(self, i) -> dict:
+
+    def get_reaction(self, i: int) -> dict:
         """
         Return the data structure of the i-th reaction (numbering starts at 0)
-        :param i:
-        :return:
+        :param i:   The index (0-based) to identify the reaction of interest
+        :return:    A dictionary with 4 keys ("reactants", "products", "Rf", "Rb"),
+                    where "Rf" is the forward reaction rate, and "Rb" the back reaction rate
         """
         return self.reaction_list[i]
 
 
 
-    def get_reactants(self, i) -> (int, int, int):
+    def get_reactants(self, i: int) -> (int, int, int):
         """
         Return a triplet with details of the reactants of the i-th reaction
 
-        :param i:
-        :return:        A triplet (stoichiometry, species index, reaction order)
+        :param i:   The index (0-based) to identify the reaction of interest
+        :return:    A triplet (stoichiometry, species index, reaction order)
         """
         rxn = self.get_reaction(i)
         return rxn["reactants"]
@@ -53,15 +56,15 @@ class Reactions:
     def get_reactants_formula(self, i):
         rxn = self.get_reaction(i)
         reactants = rxn["reactants"]
-        return self.standard_form(reactants)
+        return self.standard_form_chem_eqn(reactants)
 
 
-    def get_products(self, i) -> (int, int, int):
+    def get_products(self, i: int) -> (int, int, int):
         """
         Return a triplet with details of the products of the i-th reaction
 
-        :param i:
-        :return:        A triplet (stoichiometry, species index, reaction order)
+        :param i:   The index (0-based) to identify the reaction of interest
+        :return:    A triplet (stoichiometry, species index, reaction order)
         """
         rxn = self.get_reaction(i)
         return rxn["products"]
@@ -69,40 +72,57 @@ class Reactions:
     def get_products_formula(self, i):
         rxn = self.get_reaction(i)
         products = rxn["products"]
-        return self.standard_form(products)
+        return self.standard_form_chem_eqn(products)
 
 
-    def get_forward_rate(self, i) -> float:
+    def get_forward_rate(self, i: int) -> float:
         rxn = self.get_reaction(i)
         return rxn["Rf"]
 
-    def get_reverse_rate(self, i) -> float:
+    def get_reverse_rate(self, i: int) -> float:    # TODO: transition to name get_back_rate()
+        rxn = self.get_reaction(i)
+        return rxn["Rb"]
+
+    def get_back_rate(self, i: int) -> float:   # Transitioning to this name for consistency
         rxn = self.get_reaction(i)
         return rxn["Rb"]
 
 
-
-    def extract_reactants(self, rxn) -> (int, int, int):
+    def extract_reactants(self, rxn: dict) -> [(int, int, int)]:
         """
-        Return a triplet with details of the reactants of the given reaction
+        Return a list of triplet with details of the reactants of the given reaction
 
-        :return:        A triplet (stoichiometry, species index, reaction order)
+        :param rxn: The data structure representing the reaction
+        :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
         """
         return rxn["reactants"]
 
-    def extract_products(self, rxn) -> (int, int, int):
-        """
-        Return a triplet with details of the products of the given reaction
 
-        :return:        A triplet (stoichiometry, species index, reaction order)
+    def extract_stoichiometry(self, term):
+        return term[0]
+
+    def extract_species_index(self, term):
+        return term[1]
+
+    def extract_rxn_order(self, term):
+        return term[2]
+
+
+
+    def extract_products(self, rxn: dict) -> [(int, int, int)]:
+        """
+        Return a list of triplet with details of the products of the given reaction
+
+        :param rxn: The data structure representing the reaction
+        :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
         """
         return rxn["products"]
 
 
-    def extract_forward_order(self, rxn) -> int:
+    def extract_forward_rate(self, rxn: dict) -> int:
         return rxn["Rf"]
 
-    def extrac_reverse_order(self, rxn) -> int:
+    def extract_back_rate(self, rxn: dict) -> int:
         return rxn["Rb"]
 
 
@@ -119,11 +139,11 @@ class Reactions:
         :param reverse_rate:
         :return:                None
         """
-        assert type(reactants) == list, "ERROR: argument `reactants` must be a list"
-        reactant_list = [self._parse_reaction_term(r, "reactants") for r in reactants]
+        assert type(reactants) == list, "add_reaction(): argument `reactants` must be a list"
+        reactant_list = [self._parse_reaction_term(r, "reactant") for r in reactants]
 
-        assert type(products) == list, "ERROR: argument `products` must be a list"
-        product_list = [self._parse_reaction_term(r, "products") for r in products]
+        assert type(products) == list, "add_reaction(): argument `products` must be a list"
+        product_list = [self._parse_reaction_term(r, "product") for r in products]
 
         rxn = {"reactants": reactant_list, "products": product_list, "Rf": forward_rate, "Rb": reverse_rate}
         self.reaction_list.append(rxn)
@@ -134,20 +154,19 @@ class Reactions:
         """
         Get rid of all reactions; start again with "an empty slate" (but still with reference
         to the same "Chemicals" object)
-        :return:
+        :return:    None
         """
         self.reaction_list = []
 
 
 
-    def describe_reactions(self, concise=False, return_list=False) -> Union[None, List[str]]:
+    def describe_reactions(self, concise=False) -> Union[None, List[str]]:
         """
-        Print out and return a listing with a friendly form of all the reactions
-        EXAMPLE:  ["(0) A <=> B  (Rf = 3.0 , Rb = 2.0)"]
+        Print out and return a listing with a user-friendly plain-text form of all the reactions
+        EXAMPLE:  ["(0) CH4 + 2 O2 <-> CO2 + 2 H2O  (Rf = 3.0 , Rb = 2.0)"]
 
         :param concise:
-        :param return_list:
-        :return:        Optionally return a list of strings
+        :return:         A list of strings
         """
         print("Number of reactions: ", self.number_of_reactions())
 
@@ -156,8 +175,8 @@ class Reactions:
             reactants = self.extract_reactants(rxn)
             products = self.extract_products(rxn)
 
-            left = self.standard_form(reactants)     # Left side of the equation
-            right = self.standard_form(products)     # Right side of the equation
+            left = self.standard_form_chem_eqn(reactants)     # Left side of the equation
+            right = self.standard_form_chem_eqn(products)     # Right side of the equation
 
             rxn_description = f"{i}: {left} <-> {right}"    # Initial brief description of the reaction
             if not concise:     # Add more detail
@@ -172,34 +191,25 @@ class Reactions:
             print(rxn_description)
             out.append(rxn_description)
 
-        if return_list:
-            return out
+
+        return out
 
 
-    def _internal_reactions_data(self) -> None:
+
+    def standard_form_chem_eqn(self, eqn_side: list) -> str:
         """
-        Print out the low-level view of the reactions data
-        :return:    None
-        """
-        for i in range(self.number_of_reactions()):
-            print(f"{i}: {self.get_reactants(i)} <-> {self.get_products(i)}   ; Fwd: {self.get_forward_rate(i)} / Back: {self.get_reverse_rate(i)}")
+        Return a user-friendly form of the given side of a chemical equation.
 
-
-
-    def standard_form(self, eqn_side: list) -> str:
-        """
-        Return a friendly form of the given side of a chemical equation.
-
-        EXAMPLE:  turn [(1, 0, 1), (2, 1, 1)]  into  "Fe + 2 Cl"  (if species 0 is named "Fe" and species 1 "Cl")
+        EXAMPLE:  turn [(1, 0, 1), (2, 10, 1)]  into  "Fe + 2 Cl"  (if species 0 is named "Fe" and species 10 is "Cl")
 
         :param eqn_side:    A list encoding either side of a chemical equation
-        :return:
+        :return:            A string with a user-friendly form of a side of a chemical equation
         """
         formula_list = []
         for t in eqn_side:
             stoichiometry = t[0]
             species_index = t[1]
-            # Note: the reaction order (t[2]) is not used
+            # Note: the reaction order (stored in t[2]) is not used
 
             if stoichiometry == 1:
                 term = f"{self.chem_data.get_name(species_index)}"
@@ -212,13 +222,106 @@ class Reactions:
 
 
 
+    ########  SUPPORT FOR CREATION OF NETWORK DIAGRAMS  ########
 
-    ###################       PRIVATE             ###################
+    def prepare_graph_network(self):
+        return {
+            # Data to define the nodes and edges of the network
+            'graph': self.create_graph_network_data(),
+
+            # Mapping the node label to its interior color
+            'color_mapping': self.assign_color_mapping()
+        }
 
 
-    def _parse_reaction_term(self, term, name="term"):
+
+    def create_graph_network_data(self) -> [{}]:
         """
-        EXAMPLES (assuming that the species with index 6 is called "E"):
+        Encode the reaction data in a form suitable for visualization
+        with the graph module "vue_cytoscape"
+
+        TODO:   assign a new, separate node label to chemicals that are both reagents and product
+                Ditch all None values
+
+        :return:    A list of dictionaries.  Each dictionary must have an 'id' key with a unique value
+        """
+        graph_data = []
+        species_in_graph = []
+
+        # Note: the species index of the various chemicals is a UNIQUE number; so, it's suitable to be used as an ID for the nodes
+        #       For the reaction nodes, use numbers from a range starting just above the end-range of the numbers for the chemicals
+        next_available_id = self.chem_data.number_of_chemicals()
+
+        for i, rxn in enumerate(self.reaction_list):
+            print("\n", rxn, "\n")
+            # Add a node representing the reaction
+            rxn_id = next_available_id
+            next_available_id += 1
+            graph_data.append({'id': rxn_id, 'label': 'Reaction', 'name': 'RXN',
+                               'Rf': self.extract_forward_rate(rxn), 'Rb': self.extract_back_rate(rxn)})
+
+            # Process all products
+            products = self.extract_products(rxn)
+            for term in products:
+                species_index = term[1]
+                # Add each product to the graph as a node (if not already present)
+                if species_index not in species_in_graph:
+                    graph_data.append({'id': species_index, 'label': 'Product',
+                                       'name': self.chem_data.get_name(species_index),
+                                       'diff_rate': self.chem_data.get_diffusion_rate(species_index),
+                                       'stoich': self.extract_stoichiometry(term),
+                                       'rxn_rate': self.extract_rxn_order(term)
+                                       })
+                # Append edge from "reaction node" to product
+                graph_data.append({'id': next_available_id, 'source': rxn_id, 'target': species_index, 'name': 'produces'})
+                next_available_id += 1
+
+            # Process all reactants
+            reactants = self.extract_reactants(rxn)
+            for term in reactants:
+                species_index = term[1]
+                # Add each reactant to the graph as a node (if not already present)
+                if species_index not in species_in_graph:
+                    graph_data.append({'id': species_index, 'label': 'Reactant',
+                                       'name': self.chem_data.get_name(species_index),
+                                       'diff_rate': self.chem_data.get_diffusion_rate(species_index),
+                                       'stoich': self.extract_stoichiometry(term),
+                                       'rxn_rate': self.extract_rxn_order(term)
+                                       })
+                # Append edge from reactant to "reaction node"
+                graph_data.append({'id': next_available_id, 'source': species_index, 'target': rxn_id, 'name': 'reacts'})
+                next_available_id += 1
+
+        return graph_data
+
+
+
+    def assign_color_mapping(self):
+        return {
+            'Reactant': 'neo4j_green',
+            'Product': 'neo4j_red',
+            'Reaction': 'neo4j_lightbrown'
+        }
+
+
+
+    ######################         PRIVATE         ######################
+
+    def _internal_reactions_data(self) -> None:
+        """
+        Print out the low-level view of the reactions data
+        :return:    None
+        """
+        for i in range(self.number_of_reactions()):
+            print(f"{i}: {self.get_reactants(i)} <-> {self.get_products(i)}   ; Fwd: {self.get_forward_rate(i)} / Back: {self.get_reverse_rate(i)}")
+
+
+
+    def _parse_reaction_term(self, term: Union[int, str, tuple, list], name="term") -> tuple:
+        """
+        Accept various ways to specify a reaction term, and return a standardized tuple form.
+
+        EXAMPLES (*assuming* that the species with index 5 is called "F"):
             5               (1, 5, 1)
             "F"             (1, 5, 1)
             (3, 5)          (3, 5, 1)
@@ -227,9 +330,9 @@ class Reactions:
             (3, "F", 2)     (3, 5, 2)
             Same if lists were used in lieu of tuples
 
-        :param term:
-        :param name:
-        :return:
+        :param term:    An integer or string or tuple or list
+        :param name:    An optional nickname to refer to this term in error messages, if applicable
+        :return:        A standardized tuple form
         """
 
         if type(term) == int:
