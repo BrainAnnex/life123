@@ -1,35 +1,31 @@
+<!-- Auto-generated log file -->
 <!DOCTYPE html>
 <html lang="en">
 <head>  
     <meta charset="UTF-8">
     <title>Log</title>
-    
-    <script src="../../../modules/Vue2_lib/vue2.js"></script>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="../../../modules/SVG_helper/svg_helper.js" ></script>
+
     <link type="text/css" rel="stylesheet" href="../../../modules/visualization/vue_components/vue_heatmap_11.css">
     <link type="text/css" rel="stylesheet" href="../../../modules/visualization/vue_components/vue_curves_3.css">
-    <link type="text/css" rel="stylesheet" href="../../../modules/visualization/vue_components/vue_curves_4.css">  
+    <link type="text/css" rel="stylesheet" href="../../../modules/visualization/vue_components/vue_curves_4.css">
+    <link type="text/css" rel="stylesheet" href="../../../modules/visualization/vue_components/vue_cytoscape_1.css">
+
+    <script src="../../../modules/Vue2_lib/vue2.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../../../modules/SVG_helper/svg_helper.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js"></script>
 </head>
 
 <body>
-<br>
-<br>
-<b>Initial system state at time t=0.0:</b><br>
 
 
 <div id="vue-root-1">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_heatmap_11 
-        v-bind:y_labels="y_labels_json"
-        v-bind:heatmap_data="heatmap_data_json"
-        v-bind:range_min="range_min_json"
-        v-bind:range_max="range_max_json"
-        v-bind:outer_width="outer_width_json"
-        v-bind:outer_height="outer_height_json"
-        v-bind:margins="margins_json"
+    <vue_cytoscape_1 
+        v-bind:graph="graph_json"
+        v-bind:color_mapping="color_mapping_json"
     >        
-    </vue_heatmap_11>
+    </vue_cytoscape_1>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -37,8 +33,7 @@
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
+<script src="../../../modules/visualization/vue_components/vue_cytoscape_1.js"></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -46,18 +41,16 @@ new Vue({
     el: '#vue-root-1',
 
     data: {
-        y_labels_json: ["Mol 0"],
-heatmap_data_json: [[20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]],
-range_min_json: 0,
-range_max_json: 20,
-outer_width_json: 850,
-outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+        graph_json: [{"id": 3, "label": "Reaction", "name": "RXN", "Rf": 20.0, "Rb": 2.0}, {"id": 2, "label": "Product", "name": "C", "diff_rate": 1.0, "stoich": 1, "rxn_rate": 1}, {"id": 4, "source": 3, "target": 2, "name": "produces"}, {"id": 0, "label": "Reactant", "name": "A", "diff_rate": 50.0, "stoich": 1, "rxn_rate": 1}, {"id": 5, "source": 0, "target": 3, "name": "reacts"}, {"id": 1, "label": "Reactant", "name": "B", "diff_rate": 50.0, "stoich": 1, "rxn_rate": 1}, {"id": 6, "source": 1, "target": 3, "name": "reacts"}],
+color_mapping_json: {"Reactant": "neo4j_green", "Product": "neo4j_red", "Reaction": "neo4j_lightbrown"}
     }
 
 });
 </script>
 
+<br>
+<br>
+<b>Initial system state at time t=0.0:</b><br>
 
 
 <div id="vue-root-2">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -80,7 +73,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -88,8 +80,8 @@ new Vue({
     el: '#vue-root-2',
 
     data: {
-        y_labels_json: ["Mol 1"],
-heatmap_data_json: [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 20.0]],
+        y_labels_json: ["Mol 0"],
+heatmap_data_json: [[20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -122,7 +114,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -130,8 +121,8 @@ new Vue({
     el: '#vue-root-3',
 
     data: {
-        y_labels_json: ["Mol 2"],
-heatmap_data_json: [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]],
+        y_labels_json: ["Mol 1"],
+heatmap_data_json: [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 20.0]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -146,16 +137,16 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <div id="vue-root-4">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_curves_3 
+    <vue_heatmap_11 
         v-bind:y_labels="y_labels_json"
-        v-bind:data="data_json"
+        v-bind:heatmap_data="heatmap_data_json"
         v-bind:range_min="range_min_json"
         v-bind:range_max="range_max_json"
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
     >        
-    </vue_curves_3>
+    </vue_heatmap_11>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -163,8 +154,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
+<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -172,12 +162,12 @@ new Vue({
     el: '#vue-root-4',
 
     data: {
-        y_labels_json: ["Mol 0"],
-data_json: [20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        y_labels_json: ["Mol 2"],
+heatmap_data_json: [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
-outer_height_json: 200,
+outer_height_json: 100,
 margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     }
 
@@ -206,7 +196,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -214,8 +203,8 @@ new Vue({
     el: '#vue-root-5',
 
     data: {
-        y_labels_json: ["Mol 1"],
-data_json: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 20.0],
+        y_labels_json: ["Mol 0"],
+data_json: [20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -248,12 +237,52 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
     el: '#vue-root-6',
+
+    data: {
+        y_labels_json: ["Mol 1"],
+data_json: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 20.0],
+range_min_json: 0,
+range_max_json: 20,
+outer_width_json: 850,
+outer_height_json: 200,
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+    }
+
+});
+</script>
+
+
+
+<div id="vue-root-7">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+
+    <vue_curves_3 
+        v-bind:y_labels="y_labels_json"
+        v-bind:data="data_json"
+        v-bind:range_min="range_min_json"
+        v-bind:range_max="range_max_json"
+        v-bind:outer_width="outer_width_json"
+        v-bind:outer_height="outer_height_json"
+        v-bind:margins="margins_json"
+    >        
+    </vue_curves_3>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-7',
 
     data: {
         y_labels_json: ["Mol 2"],
@@ -270,7 +299,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 
 
-<div id="vue-root-7">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+<div id="vue-root-8">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
     <vue_curves_4 
         v-bind:curve_labels="curve_labels_json"
@@ -290,12 +319,11 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_4.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
-    el: '#vue-root-7',
+    el: '#vue-root-8',
 
     data: {
         curve_labels_json: ["A", "B", "C"],
@@ -313,48 +341,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <br>
 <br>
 <b>System state at time t=0.002:</b><br>
-
-
-<div id="vue-root-8">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
-
-    <vue_heatmap_11 
-        v-bind:y_labels="y_labels_json"
-        v-bind:heatmap_data="heatmap_data_json"
-        v-bind:range_min="range_min_json"
-        v-bind:range_max="range_max_json"
-        v-bind:outer_width="outer_width_json"
-        v-bind:outer_height="outer_height_json"
-        v-bind:margins="margins_json"
-    >        
-    </vue_heatmap_11>
-    
-</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
-
-
-<!--
-    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
-  -->
-<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
-
-<script>
-// Instantiation of the Vue ROOT component
-new Vue({
-    el: '#vue-root-8',
-
-    data: {
-        y_labels_json: ["Mol 0"],
-heatmap_data_json: [[18.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0]],
-range_min_json: 0,
-range_max_json: 20,
-outer_width_json: 850,
-outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
-    }
-
-});
-</script>
-
 
 
 <div id="vue-root-9">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -377,7 +363,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -385,8 +370,8 @@ new Vue({
     el: '#vue-root-9',
 
     data: {
-        y_labels_json: ["Mol 1"],
-heatmap_data_json: [[0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 18.0]],
+        y_labels_json: ["Mol 0"],
+heatmap_data_json: [[18.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -419,7 +404,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -427,8 +411,8 @@ new Vue({
     el: '#vue-root-10',
 
     data: {
-        y_labels_json: ["Mol 2"],
-heatmap_data_json: [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]],
+        y_labels_json: ["Mol 1"],
+heatmap_data_json: [[0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 18.0]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -443,16 +427,16 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <div id="vue-root-11">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_curves_3 
+    <vue_heatmap_11 
         v-bind:y_labels="y_labels_json"
-        v-bind:data="data_json"
+        v-bind:heatmap_data="heatmap_data_json"
         v-bind:range_min="range_min_json"
         v-bind:range_max="range_max_json"
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
     >        
-    </vue_curves_3>
+    </vue_heatmap_11>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -460,8 +444,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
+<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -469,12 +452,12 @@ new Vue({
     el: '#vue-root-11',
 
     data: {
-        y_labels_json: ["Mol 0"],
-data_json: [18.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        y_labels_json: ["Mol 2"],
+heatmap_data_json: [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
-outer_height_json: 200,
+outer_height_json: 100,
 margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     }
 
@@ -503,7 +486,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -511,8 +493,8 @@ new Vue({
     el: '#vue-root-12',
 
     data: {
-        y_labels_json: ["Mol 1"],
-data_json: [0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 18.0],
+        y_labels_json: ["Mol 0"],
+data_json: [18.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -545,12 +527,52 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
     el: '#vue-root-13',
+
+    data: {
+        y_labels_json: ["Mol 1"],
+data_json: [0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 18.0],
+range_min_json: 0,
+range_max_json: 20,
+outer_width_json: 850,
+outer_height_json: 200,
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+    }
+
+});
+</script>
+
+
+
+<div id="vue-root-14">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+
+    <vue_curves_3 
+        v-bind:y_labels="y_labels_json"
+        v-bind:data="data_json"
+        v-bind:range_min="range_min_json"
+        v-bind:range_max="range_max_json"
+        v-bind:outer_width="outer_width_json"
+        v-bind:outer_height="outer_height_json"
+        v-bind:margins="margins_json"
+    >        
+    </vue_curves_3>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-14',
 
     data: {
         y_labels_json: ["Mol 2"],
@@ -567,7 +589,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 
 
-<div id="vue-root-14">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+<div id="vue-root-15">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
     <vue_curves_4 
         v-bind:curve_labels="curve_labels_json"
@@ -587,12 +609,11 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_4.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
-    el: '#vue-root-14',
+    el: '#vue-root-15',
 
     data: {
         curve_labels_json: ["A", "B", "C"],
@@ -610,48 +631,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <br>
 <br>
 <b>System state at time t=0.016:</b><br>
-
-
-<div id="vue-root-15">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
-
-    <vue_heatmap_11 
-        v-bind:y_labels="y_labels_json"
-        v-bind:heatmap_data="heatmap_data_json"
-        v-bind:range_min="range_min_json"
-        v-bind:range_max="range_max_json"
-        v-bind:outer_width="outer_width_json"
-        v-bind:outer_height="outer_height_json"
-        v-bind:margins="margins_json"
-    >        
-    </vue_heatmap_11>
-    
-</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
-
-
-<!--
-    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
-  -->
-<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
-
-<script>
-// Instantiation of the Vue ROOT component
-new Vue({
-    el: '#vue-root-15',
-
-    data: {
-        y_labels_json: ["Mol 0"],
-heatmap_data_json: [[11.156850734867037, 6.215989188067845, 2.0943348565616033, 0.4483473209623955, 0.06094685656160334, 0.00516378806784531, 0.00029453486703668355]],
-range_min_json: 0,
-range_max_json: 20,
-outer_width_json: 850,
-outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
-    }
-
-});
-</script>
-
 
 
 <div id="vue-root-16">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -674,7 +653,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -682,8 +660,8 @@ new Vue({
     el: '#vue-root-16',
 
     data: {
-        y_labels_json: ["Mol 1"],
-heatmap_data_json: [[0.00029453486703668355, 0.00516378806784531, 0.06094685656160334, 0.44834732096239543, 2.0943348565616033, 6.215989188067845, 11.156850734867037]],
+        y_labels_json: ["Mol 0"],
+heatmap_data_json: [[11.156850734867037, 6.215989188067845, 2.0943348565616033, 0.4483473209623955, 0.06094685656160334, 0.00516378806784531, 0.00029453486703668355]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -716,7 +694,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -724,8 +701,8 @@ new Vue({
     el: '#vue-root-17',
 
     data: {
-        y_labels_json: ["Mol 2"],
-heatmap_data_json: [[5.7798387539496395e-05, 0.000874133776849439, 0.004378827295405076, 0.0074512011250459685, 0.004378827295405076, 0.0008741337768494389, 5.7798387539496395e-05]],
+        y_labels_json: ["Mol 1"],
+heatmap_data_json: [[0.00029453486703668355, 0.00516378806784531, 0.06094685656160334, 0.44834732096239543, 2.0943348565616033, 6.215989188067845, 11.156850734867037]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -740,16 +717,16 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <div id="vue-root-18">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_curves_3 
+    <vue_heatmap_11 
         v-bind:y_labels="y_labels_json"
-        v-bind:data="data_json"
+        v-bind:heatmap_data="heatmap_data_json"
         v-bind:range_min="range_min_json"
         v-bind:range_max="range_max_json"
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
     >        
-    </vue_curves_3>
+    </vue_heatmap_11>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -757,8 +734,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
+<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -766,12 +742,12 @@ new Vue({
     el: '#vue-root-18',
 
     data: {
-        y_labels_json: ["Mol 0"],
-data_json: [11.156850734867037, 6.215989188067845, 2.0943348565616033, 0.4483473209623955, 0.06094685656160334, 0.00516378806784531, 0.00029453486703668355],
+        y_labels_json: ["Mol 2"],
+heatmap_data_json: [[5.7798387539496395e-05, 0.000874133776849439, 0.004378827295405076, 0.0074512011250459685, 0.004378827295405076, 0.0008741337768494389, 5.7798387539496395e-05]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
-outer_height_json: 200,
+outer_height_json: 100,
 margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     }
 
@@ -800,7 +776,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -808,8 +783,8 @@ new Vue({
     el: '#vue-root-19',
 
     data: {
-        y_labels_json: ["Mol 1"],
-data_json: [0.00029453486703668355, 0.00516378806784531, 0.06094685656160334, 0.44834732096239543, 2.0943348565616033, 6.215989188067845, 11.156850734867037],
+        y_labels_json: ["Mol 0"],
+data_json: [11.156850734867037, 6.215989188067845, 2.0943348565616033, 0.4483473209623955, 0.06094685656160334, 0.00516378806784531, 0.00029453486703668355],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -842,12 +817,52 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
     el: '#vue-root-20',
+
+    data: {
+        y_labels_json: ["Mol 1"],
+data_json: [0.00029453486703668355, 0.00516378806784531, 0.06094685656160334, 0.44834732096239543, 2.0943348565616033, 6.215989188067845, 11.156850734867037],
+range_min_json: 0,
+range_max_json: 20,
+outer_width_json: 850,
+outer_height_json: 200,
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+    }
+
+});
+</script>
+
+
+
+<div id="vue-root-21">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+
+    <vue_curves_3 
+        v-bind:y_labels="y_labels_json"
+        v-bind:data="data_json"
+        v-bind:range_min="range_min_json"
+        v-bind:range_max="range_max_json"
+        v-bind:outer_width="outer_width_json"
+        v-bind:outer_height="outer_height_json"
+        v-bind:margins="margins_json"
+    >        
+    </vue_curves_3>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-21',
 
     data: {
         y_labels_json: ["Mol 2"],
@@ -864,7 +879,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 
 
-<div id="vue-root-21">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+<div id="vue-root-22">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
     <vue_curves_4 
         v-bind:curve_labels="curve_labels_json"
@@ -884,12 +899,11 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_4.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
-    el: '#vue-root-21',
+    el: '#vue-root-22',
 
     data: {
         curve_labels_json: ["A", "B", "C"],
@@ -907,48 +921,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <br>
 <br>
 <b>System state at time t=0.024000000000000007:</b><br>
-
-
-<div id="vue-root-22">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
-
-    <vue_heatmap_11 
-        v-bind:y_labels="y_labels_json"
-        v-bind:heatmap_data="heatmap_data_json"
-        v-bind:range_min="range_min_json"
-        v-bind:range_max="range_max_json"
-        v-bind:outer_width="outer_width_json"
-        v-bind:outer_height="outer_height_json"
-        v-bind:margins="margins_json"
-    >        
-    </vue_heatmap_11>
-    
-</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
-
-
-<!--
-    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
-  -->
-<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
-
-<script>
-// Instantiation of the Vue ROOT component
-new Vue({
-    el: '#vue-root-22',
-
-    data: {
-        y_labels_json: ["Mol 0"],
-heatmap_data_json: [[4.220945799875002, 3.501706607196435, 2.348734851167281, 1.2304268485314718, 0.5007537562676033, 0.1682156746601824, 0.06060640434340992]],
-range_min_json: 0,
-range_max_json: 20,
-outer_width_json: 850,
-outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
-    }
-
-});
-</script>
-
 
 
 <div id="vue-root-23">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -971,7 +943,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -979,8 +950,8 @@ new Vue({
     el: '#vue-root-23',
 
     data: {
-        y_labels_json: ["Mol 1"],
-heatmap_data_json: [[0.060606404343409914, 0.16821567466018233, 0.5007537562676032, 1.2304268485314713, 2.34873485116728, 3.5017066071964345, 4.220945799875002]],
+        y_labels_json: ["Mol 0"],
+heatmap_data_json: [[4.220945799875002, 3.501706607196435, 2.348734851167281, 1.2304268485314718, 0.5007537562676033, 0.1682156746601824, 0.06060640434340992]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -1013,7 +984,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1021,8 +991,8 @@ new Vue({
     el: '#vue-root-24',
 
     data: {
-        y_labels_json: ["Mol 2"],
-heatmap_data_json: [[0.2598259315037728, 0.7546480379299463, 1.7653428524886308, 2.408976414113915, 1.765342852488631, 0.7546480379299466, 0.2598259315037728]],
+        y_labels_json: ["Mol 1"],
+heatmap_data_json: [[0.060606404343409914, 0.16821567466018233, 0.5007537562676032, 1.2304268485314713, 2.34873485116728, 3.5017066071964345, 4.220945799875002]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -1037,16 +1007,16 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <div id="vue-root-25">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_curves_3 
+    <vue_heatmap_11 
         v-bind:y_labels="y_labels_json"
-        v-bind:data="data_json"
+        v-bind:heatmap_data="heatmap_data_json"
         v-bind:range_min="range_min_json"
         v-bind:range_max="range_max_json"
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
     >        
-    </vue_curves_3>
+    </vue_heatmap_11>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -1054,8 +1024,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
+<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1063,12 +1032,12 @@ new Vue({
     el: '#vue-root-25',
 
     data: {
-        y_labels_json: ["Mol 0"],
-data_json: [4.220945799875002, 3.501706607196435, 2.348734851167281, 1.2304268485314718, 0.5007537562676033, 0.1682156746601824, 0.06060640434340992],
+        y_labels_json: ["Mol 2"],
+heatmap_data_json: [[0.2598259315037728, 0.7546480379299463, 1.7653428524886308, 2.408976414113915, 1.765342852488631, 0.7546480379299466, 0.2598259315037728]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
-outer_height_json: 200,
+outer_height_json: 100,
 margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     }
 
@@ -1097,7 +1066,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1105,8 +1073,8 @@ new Vue({
     el: '#vue-root-26',
 
     data: {
-        y_labels_json: ["Mol 1"],
-data_json: [0.060606404343409914, 0.16821567466018233, 0.5007537562676032, 1.2304268485314713, 2.34873485116728, 3.5017066071964345, 4.220945799875002],
+        y_labels_json: ["Mol 0"],
+data_json: [4.220945799875002, 3.501706607196435, 2.348734851167281, 1.2304268485314718, 0.5007537562676033, 0.1682156746601824, 0.06060640434340992],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -1139,12 +1107,52 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
     el: '#vue-root-27',
+
+    data: {
+        y_labels_json: ["Mol 1"],
+data_json: [0.060606404343409914, 0.16821567466018233, 0.5007537562676032, 1.2304268485314713, 2.34873485116728, 3.5017066071964345, 4.220945799875002],
+range_min_json: 0,
+range_max_json: 20,
+outer_width_json: 850,
+outer_height_json: 200,
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+    }
+
+});
+</script>
+
+
+
+<div id="vue-root-28">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+
+    <vue_curves_3 
+        v-bind:y_labels="y_labels_json"
+        v-bind:data="data_json"
+        v-bind:range_min="range_min_json"
+        v-bind:range_max="range_max_json"
+        v-bind:outer_width="outer_width_json"
+        v-bind:outer_height="outer_height_json"
+        v-bind:margins="margins_json"
+    >        
+    </vue_curves_3>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-28',
 
     data: {
         y_labels_json: ["Mol 2"],
@@ -1161,7 +1169,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 
 
-<div id="vue-root-28">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+<div id="vue-root-29">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
     <vue_curves_4 
         v-bind:curve_labels="curve_labels_json"
@@ -1181,12 +1189,11 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_4.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
-    el: '#vue-root-28',
+    el: '#vue-root-29',
 
     data: {
         curve_labels_json: ["A", "B", "C"],
@@ -1204,48 +1211,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <br>
 <br>
 <b>System state at time t=0.032000000000000015:</b><br>
-
-
-<div id="vue-root-29">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
-
-    <vue_heatmap_11 
-        v-bind:y_labels="y_labels_json"
-        v-bind:heatmap_data="heatmap_data_json"
-        v-bind:range_min="range_min_json"
-        v-bind:range_max="range_max_json"
-        v-bind:outer_width="outer_width_json"
-        v-bind:outer_height="outer_height_json"
-        v-bind:margins="margins_json"
-    >        
-    </vue_heatmap_11>
-    
-</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
-
-
-<!--
-    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
-  -->
-<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
-
-<script>
-// Instantiation of the Vue ROOT component
-new Vue({
-    el: '#vue-root-29',
-
-    data: {
-        y_labels_json: ["Mol 0"],
-heatmap_data_json: [[0.6979803947540453, 0.681118641913137, 0.6421355607884649, 0.5719614476422072, 0.4743542231899678, 0.3787871183250769, 0.32097915127339055]],
-range_min_json: 0,
-range_max_json: 20,
-outer_width_json: 850,
-outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
-    }
-
-});
-</script>
-
 
 
 <div id="vue-root-30">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -1268,7 +1233,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1276,8 +1240,8 @@ new Vue({
     el: '#vue-root-30',
 
     data: {
-        y_labels_json: ["Mol 1"],
-heatmap_data_json: [[0.32097915127339083, 0.37878711832507717, 0.47435422318996806, 0.5719614476422076, 0.6421355607884652, 0.6811186419131374, 0.6979803947540457]],
+        y_labels_json: ["Mol 0"],
+heatmap_data_json: [[0.6979803947540453, 0.681118641913137, 0.6421355607884649, 0.5719614476422072, 0.4743542231899678, 0.3787871183250769, 0.32097915127339055]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -1310,7 +1274,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1318,8 +1281,8 @@ new Vue({
     el: '#vue-root-31',
 
     data: {
-        y_labels_json: ["Mol 2"],
-heatmap_data_json: [[1.2748205305163067, 1.976961021064764, 3.0540490684090416, 3.621022222133474, 3.054049068409042, 1.9769610210647641, 1.2748205305163067]],
+        y_labels_json: ["Mol 1"],
+heatmap_data_json: [[0.32097915127339083, 0.37878711832507717, 0.47435422318996806, 0.5719614476422076, 0.6421355607884652, 0.6811186419131374, 0.6979803947540457]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -1334,16 +1297,16 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <div id="vue-root-32">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_curves_3 
+    <vue_heatmap_11 
         v-bind:y_labels="y_labels_json"
-        v-bind:data="data_json"
+        v-bind:heatmap_data="heatmap_data_json"
         v-bind:range_min="range_min_json"
         v-bind:range_max="range_max_json"
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
     >        
-    </vue_curves_3>
+    </vue_heatmap_11>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -1351,8 +1314,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
+<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1360,12 +1322,12 @@ new Vue({
     el: '#vue-root-32',
 
     data: {
-        y_labels_json: ["Mol 0"],
-data_json: [0.6979803947540453, 0.681118641913137, 0.6421355607884649, 0.5719614476422072, 0.4743542231899678, 0.3787871183250769, 0.32097915127339055],
+        y_labels_json: ["Mol 2"],
+heatmap_data_json: [[1.2748205305163067, 1.976961021064764, 3.0540490684090416, 3.621022222133474, 3.054049068409042, 1.9769610210647641, 1.2748205305163067]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
-outer_height_json: 200,
+outer_height_json: 100,
 margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     }
 
@@ -1394,7 +1356,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1402,8 +1363,8 @@ new Vue({
     el: '#vue-root-33',
 
     data: {
-        y_labels_json: ["Mol 1"],
-data_json: [0.32097915127339083, 0.37878711832507717, 0.47435422318996806, 0.5719614476422076, 0.6421355607884652, 0.6811186419131374, 0.6979803947540457],
+        y_labels_json: ["Mol 0"],
+data_json: [0.6979803947540453, 0.681118641913137, 0.6421355607884649, 0.5719614476422072, 0.4743542231899678, 0.3787871183250769, 0.32097915127339055],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -1436,12 +1397,52 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
     el: '#vue-root-34',
+
+    data: {
+        y_labels_json: ["Mol 1"],
+data_json: [0.32097915127339083, 0.37878711832507717, 0.47435422318996806, 0.5719614476422076, 0.6421355607884652, 0.6811186419131374, 0.6979803947540457],
+range_min_json: 0,
+range_max_json: 20,
+outer_width_json: 850,
+outer_height_json: 200,
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+    }
+
+});
+</script>
+
+
+
+<div id="vue-root-35">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+
+    <vue_curves_3 
+        v-bind:y_labels="y_labels_json"
+        v-bind:data="data_json"
+        v-bind:range_min="range_min_json"
+        v-bind:range_max="range_max_json"
+        v-bind:outer_width="outer_width_json"
+        v-bind:outer_height="outer_height_json"
+        v-bind:margins="margins_json"
+    >        
+    </vue_curves_3>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-35',
 
     data: {
         y_labels_json: ["Mol 2"],
@@ -1458,7 +1459,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 
 
-<div id="vue-root-35">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+<div id="vue-root-36">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
     <vue_curves_4 
         v-bind:curve_labels="curve_labels_json"
@@ -1478,12 +1479,11 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_4.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
-    el: '#vue-root-35',
+    el: '#vue-root-36',
 
     data: {
         curve_labels_json: ["A", "B", "C"],
@@ -1501,48 +1501,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <br>
 <br>
 <b>System state at time t=0.04000000000000002:</b><br>
-
-
-<div id="vue-root-36">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
-
-    <vue_heatmap_11 
-        v-bind:y_labels="y_labels_json"
-        v-bind:heatmap_data="heatmap_data_json"
-        v-bind:range_min="range_min_json"
-        v-bind:range_max="range_max_json"
-        v-bind:outer_width="outer_width_json"
-        v-bind:outer_height="outer_height_json"
-        v-bind:margins="margins_json"
-    >        
-    </vue_heatmap_11>
-    
-</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
-
-
-<!--
-    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
-  -->
-<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
-
-<script>
-// Instantiation of the Vue ROOT component
-new Vue({
-    el: '#vue-root-36',
-
-    data: {
-        y_labels_json: ["Mol 0"],
-heatmap_data_json: [[0.47257504436514136, 0.48488523225546803, 0.5004006196750733, 0.5065283645846135, 0.4973306679836391, 0.47935337045557497, 0.4656769255300909]],
-range_min_json: 0,
-range_max_json: 20,
-outer_width_json: 850,
-outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
-    }
-
-});
-</script>
-
 
 
 <div id="vue-root-37">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -1565,7 +1523,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1573,8 +1530,8 @@ new Vue({
     el: '#vue-root-37',
 
     data: {
-        y_labels_json: ["Mol 1"],
-heatmap_data_json: [[0.4656769255300913, 0.47935337045557536, 0.49733066798363945, 0.5065283645846138, 0.5004006196750737, 0.4848852322554684, 0.47257504436514175]],
+        y_labels_json: ["Mol 0"],
+heatmap_data_json: [[0.47257504436514136, 0.48488523225546803, 0.5004006196750733, 0.5065283645846135, 0.4973306679836391, 0.47935337045557497, 0.4656769255300909]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -1607,7 +1564,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1615,8 +1571,8 @@ new Vue({
     el: '#vue-root-38',
 
     data: {
-        y_labels_json: ["Mol 2"],
-heatmap_data_json: [[1.8936766456371248, 2.2353634669163243, 2.703383423401405, 2.9284027032406743, 2.703383423401405, 2.235363466916324, 1.8936766456371246]],
+        y_labels_json: ["Mol 1"],
+heatmap_data_json: [[0.4656769255300913, 0.47935337045557536, 0.49733066798363945, 0.5065283645846138, 0.5004006196750737, 0.4848852322554684, 0.47257504436514175]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -1631,16 +1587,16 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <div id="vue-root-39">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_curves_3 
+    <vue_heatmap_11 
         v-bind:y_labels="y_labels_json"
-        v-bind:data="data_json"
+        v-bind:heatmap_data="heatmap_data_json"
         v-bind:range_min="range_min_json"
         v-bind:range_max="range_max_json"
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
     >        
-    </vue_curves_3>
+    </vue_heatmap_11>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -1648,8 +1604,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
+<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1657,12 +1612,12 @@ new Vue({
     el: '#vue-root-39',
 
     data: {
-        y_labels_json: ["Mol 0"],
-data_json: [0.47257504436514136, 0.48488523225546803, 0.5004006196750733, 0.5065283645846135, 0.4973306679836391, 0.47935337045557497, 0.4656769255300909],
+        y_labels_json: ["Mol 2"],
+heatmap_data_json: [[1.8936766456371248, 2.2353634669163243, 2.703383423401405, 2.9284027032406743, 2.703383423401405, 2.235363466916324, 1.8936766456371246]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
-outer_height_json: 200,
+outer_height_json: 100,
 margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     }
 
@@ -1691,7 +1646,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1699,8 +1653,8 @@ new Vue({
     el: '#vue-root-40',
 
     data: {
-        y_labels_json: ["Mol 1"],
-data_json: [0.4656769255300913, 0.47935337045557536, 0.49733066798363945, 0.5065283645846138, 0.5004006196750737, 0.4848852322554684, 0.47257504436514175],
+        y_labels_json: ["Mol 0"],
+data_json: [0.47257504436514136, 0.48488523225546803, 0.5004006196750733, 0.5065283645846135, 0.4973306679836391, 0.47935337045557497, 0.4656769255300909],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -1733,12 +1687,52 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
     el: '#vue-root-41',
+
+    data: {
+        y_labels_json: ["Mol 1"],
+data_json: [0.4656769255300913, 0.47935337045557536, 0.49733066798363945, 0.5065283645846138, 0.5004006196750737, 0.4848852322554684, 0.47257504436514175],
+range_min_json: 0,
+range_max_json: 20,
+outer_width_json: 850,
+outer_height_json: 200,
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+    }
+
+});
+</script>
+
+
+
+<div id="vue-root-42">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+
+    <vue_curves_3 
+        v-bind:y_labels="y_labels_json"
+        v-bind:data="data_json"
+        v-bind:range_min="range_min_json"
+        v-bind:range_max="range_max_json"
+        v-bind:outer_width="outer_width_json"
+        v-bind:outer_height="outer_height_json"
+        v-bind:margins="margins_json"
+    >        
+    </vue_curves_3>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-42',
 
     data: {
         y_labels_json: ["Mol 2"],
@@ -1755,7 +1749,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 
 
-<div id="vue-root-42">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+<div id="vue-root-43">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
     <vue_curves_4 
         v-bind:curve_labels="curve_labels_json"
@@ -1775,12 +1769,11 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_4.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
-    el: '#vue-root-42',
+    el: '#vue-root-43',
 
     data: {
         curve_labels_json: ["A", "B", "C"],
@@ -1798,48 +1791,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <br>
 <br>
 <b>System state at time t=0.04800000000000003:</b><br>
-
-
-<div id="vue-root-43">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
-
-    <vue_heatmap_11 
-        v-bind:y_labels="y_labels_json"
-        v-bind:heatmap_data="heatmap_data_json"
-        v-bind:range_min="range_min_json"
-        v-bind:range_max="range_max_json"
-        v-bind:outer_width="outer_width_json"
-        v-bind:outer_height="outer_height_json"
-        v-bind:margins="margins_json"
-    >        
-    </vue_heatmap_11>
-    
-</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
-
-
-<!--
-    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
-  -->
-<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
-
-<script>
-// Instantiation of the Vue ROOT component
-new Vue({
-    el: '#vue-root-43',
-
-    data: {
-        y_labels_json: ["Mol 0"],
-heatmap_data_json: [[0.4853444442523404, 0.4864795044657276, 0.487899564656073, 0.4885332316752089, 0.4878995458501259, 0.48647947057858193, 0.48534440199576095]],
-range_min_json: 0,
-range_max_json: 20,
-outer_width_json: 850,
-outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
-    }
-
-});
-</script>
-
 
 
 <div id="vue-root-44">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -1862,7 +1813,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1870,8 +1820,8 @@ new Vue({
     el: '#vue-root-44',
 
     data: {
-        y_labels_json: ["Mol 1"],
-heatmap_data_json: [[0.4853444019957615, 0.4864794705785825, 0.48789954585012646, 0.48853323167520946, 0.48789956465607354, 0.4864795044657281, 0.4853444442523409]],
+        y_labels_json: ["Mol 0"],
+heatmap_data_json: [[0.4853444442523404, 0.4864795044657276, 0.487899564656073, 0.4885332316752089, 0.4878995458501259, 0.48647947057858193, 0.48534440199576095]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -1904,7 +1854,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1912,8 +1861,8 @@ new Vue({
     el: '#vue-root-45',
 
     data: {
-        y_labels_json: ["Mol 2"],
-heatmap_data_json: [[2.328762222165967, 2.3598861313027157, 2.3990540155447895, 2.4166150984992485, 2.3990540155447895, 2.3598861313027157, 2.328762222165967]],
+        y_labels_json: ["Mol 1"],
+heatmap_data_json: [[0.4853444019957615, 0.4864794705785825, 0.48789954585012646, 0.48853323167520946, 0.48789956465607354, 0.4864795044657281, 0.4853444442523409]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -1928,16 +1877,16 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <div id="vue-root-46">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_curves_3 
+    <vue_heatmap_11 
         v-bind:y_labels="y_labels_json"
-        v-bind:data="data_json"
+        v-bind:heatmap_data="heatmap_data_json"
         v-bind:range_min="range_min_json"
         v-bind:range_max="range_max_json"
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
     >        
-    </vue_curves_3>
+    </vue_heatmap_11>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -1945,8 +1894,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
+<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1954,12 +1902,12 @@ new Vue({
     el: '#vue-root-46',
 
     data: {
-        y_labels_json: ["Mol 0"],
-data_json: [0.4853444442523404, 0.4864795044657276, 0.487899564656073, 0.4885332316752089, 0.4878995458501259, 0.48647947057858193, 0.48534440199576095],
+        y_labels_json: ["Mol 2"],
+heatmap_data_json: [[2.328762222165967, 2.3598861313027157, 2.3990540155447895, 2.4166150984992485, 2.3990540155447895, 2.3598861313027157, 2.328762222165967]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
-outer_height_json: 200,
+outer_height_json: 100,
 margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     }
 
@@ -1988,7 +1936,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -1996,8 +1943,8 @@ new Vue({
     el: '#vue-root-47',
 
     data: {
-        y_labels_json: ["Mol 1"],
-data_json: [0.4853444019957615, 0.4864794705785825, 0.48789954585012646, 0.48853323167520946, 0.48789956465607354, 0.4864795044657281, 0.4853444442523409],
+        y_labels_json: ["Mol 0"],
+data_json: [0.4853444442523404, 0.4864795044657276, 0.487899564656073, 0.4885332316752089, 0.4878995458501259, 0.48647947057858193, 0.48534440199576095],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -2030,12 +1977,52 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
     el: '#vue-root-48',
+
+    data: {
+        y_labels_json: ["Mol 1"],
+data_json: [0.4853444019957615, 0.4864794705785825, 0.48789954585012646, 0.48853323167520946, 0.48789956465607354, 0.4864795044657281, 0.4853444442523409],
+range_min_json: 0,
+range_max_json: 20,
+outer_width_json: 850,
+outer_height_json: 200,
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+    }
+
+});
+</script>
+
+
+
+<div id="vue-root-49">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+
+    <vue_curves_3 
+        v-bind:y_labels="y_labels_json"
+        v-bind:data="data_json"
+        v-bind:range_min="range_min_json"
+        v-bind:range_max="range_max_json"
+        v-bind:outer_width="outer_width_json"
+        v-bind:outer_height="outer_height_json"
+        v-bind:margins="margins_json"
+    >        
+    </vue_curves_3>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-49',
 
     data: {
         y_labels_json: ["Mol 2"],
@@ -2052,7 +2039,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 
 
-<div id="vue-root-49">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+<div id="vue-root-50">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
     <vue_curves_4 
         v-bind:curve_labels="curve_labels_json"
@@ -2072,12 +2059,11 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_4.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
-    el: '#vue-root-49',
+    el: '#vue-root-50',
 
     data: {
         curve_labels_json: ["A", "B", "C"],
@@ -2095,48 +2081,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <br>
 <br>
 <b>System state at time t=0.05200000000000003:</b><br>
-
-
-<div id="vue-root-50">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
-
-    <vue_heatmap_11 
-        v-bind:y_labels="y_labels_json"
-        v-bind:heatmap_data="heatmap_data_json"
-        v-bind:range_min="range_min_json"
-        v-bind:range_max="range_max_json"
-        v-bind:outer_width="outer_width_json"
-        v-bind:outer_height="outer_height_json"
-        v-bind:margins="margins_json"
-    >        
-    </vue_heatmap_11>
-    
-</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
-
-
-<!--
-    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
-  -->
-<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
-
-<script>
-// Instantiation of the Vue ROOT component
-new Vue({
-    el: '#vue-root-50',
-
-    data: {
-        y_labels_json: ["Mol 0"],
-heatmap_data_json: [[0.48685551153677925, 0.48685582393940036, 0.48685621349957864, 0.48685638687034, 0.48685621349957864, 0.48685582393940036, 0.48685551153677925]],
-range_min_json: 0,
-range_max_json: 20,
-outer_width_json: 850,
-outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
-    }
-
-});
-</script>
-
 
 
 <div id="vue-root-51">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -2159,7 +2103,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -2167,8 +2110,8 @@ new Vue({
     el: '#vue-root-51',
 
     data: {
-        y_labels_json: ["Mol 1"],
-heatmap_data_json: [[0.4868555115367796, 0.4868558239394007, 0.48685621349957897, 0.48685638687034033, 0.48685621349957897, 0.4868558239394007, 0.4868555115367796]],
+        y_labels_json: ["Mol 0"],
+heatmap_data_json: [[0.48685551153677925, 0.48685582393940036, 0.48685621349957864, 0.48685638687034, 0.48685621349957864, 0.48685582393940036, 0.48685551153677925]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -2201,7 +2144,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -2209,8 +2151,8 @@ new Vue({
     el: '#vue-root-52',
 
     data: {
-        y_labels_json: ["Mol 2"],
-heatmap_data_json: [[2.3702755054567786, 2.3702841089131956, 2.3702948372837676, 2.37029961187066, 2.3702948372837676, 2.3702841089131956, 2.3702755054567786]],
+        y_labels_json: ["Mol 1"],
+heatmap_data_json: [[0.4868555115367796, 0.4868558239394007, 0.48685621349957897, 0.48685638687034033, 0.48685621349957897, 0.4868558239394007, 0.4868555115367796]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -2225,16 +2167,16 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <div id="vue-root-53">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_curves_3 
+    <vue_heatmap_11 
         v-bind:y_labels="y_labels_json"
-        v-bind:data="data_json"
+        v-bind:heatmap_data="heatmap_data_json"
         v-bind:range_min="range_min_json"
         v-bind:range_max="range_max_json"
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
     >        
-    </vue_curves_3>
+    </vue_heatmap_11>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -2242,8 +2184,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
+<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -2251,12 +2192,12 @@ new Vue({
     el: '#vue-root-53',
 
     data: {
-        y_labels_json: ["Mol 0"],
-data_json: [0.48685551153677925, 0.48685582393940036, 0.48685621349957864, 0.48685638687034, 0.48685621349957864, 0.48685582393940036, 0.48685551153677925],
+        y_labels_json: ["Mol 2"],
+heatmap_data_json: [[2.3702755054567786, 2.3702841089131956, 2.3702948372837676, 2.37029961187066, 2.3702948372837676, 2.3702841089131956, 2.3702755054567786]],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
-outer_height_json: 200,
+outer_height_json: 100,
 margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     }
 
@@ -2285,7 +2226,6 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -2293,8 +2233,8 @@ new Vue({
     el: '#vue-root-54',
 
     data: {
-        y_labels_json: ["Mol 1"],
-data_json: [0.4868555115367796, 0.4868558239394007, 0.48685621349957897, 0.48685638687034033, 0.48685621349957897, 0.4868558239394007, 0.4868555115367796],
+        y_labels_json: ["Mol 0"],
+data_json: [0.48685551153677925, 0.48685582393940036, 0.48685621349957864, 0.48685638687034, 0.48685621349957864, 0.48685582393940036, 0.48685551153677925],
 range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
@@ -2327,12 +2267,52 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
     el: '#vue-root-55',
+
+    data: {
+        y_labels_json: ["Mol 1"],
+data_json: [0.4868555115367796, 0.4868558239394007, 0.48685621349957897, 0.48685638687034033, 0.48685621349957897, 0.4868558239394007, 0.4868555115367796],
+range_min_json: 0,
+range_max_json: 20,
+outer_width_json: 850,
+outer_height_json: 200,
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+    }
+
+});
+</script>
+
+
+
+<div id="vue-root-56">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+
+    <vue_curves_3 
+        v-bind:y_labels="y_labels_json"
+        v-bind:data="data_json"
+        v-bind:range_min="range_min_json"
+        v-bind:range_max="range_max_json"
+        v-bind:outer_width="outer_width_json"
+        v-bind:outer_height="outer_height_json"
+        v-bind:margins="margins_json"
+    >        
+    </vue_curves_3>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/vue_curves_3.js"></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-56',
 
     data: {
         y_labels_json: ["Mol 2"],
@@ -2349,7 +2329,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 
 
-<div id="vue-root-56">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+<div id="vue-root-57">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
     <vue_curves_4 
         v-bind:curve_labels="curve_labels_json"
@@ -2369,12 +2349,11 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
 <script src="../../../modules/visualization/vue_components/vue_curves_4.js"></script>
-<script src="https://d3js.org/d3.v7.min.js" ></script>
 
 <script>
 // Instantiation of the Vue ROOT component
 new Vue({
-    el: '#vue-root-56',
+    el: '#vue-root-57',
 
     data: {
         curve_labels_json: ["A", "B", "C"],

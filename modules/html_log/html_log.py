@@ -8,7 +8,8 @@ import json
 class HtmlLog:
     """
     An HTML logger to file, plus optional plain-text printing to standard output
-    TODO: maybe rename "HtmlLogger"
+    TODO:   maybe rename "HtmlLogger" or "ReportMaker"
+            Add feature to create a Table of Contents
     """
 
     #####################
@@ -46,7 +47,7 @@ class HtmlLog:
     #########################################
 
     @classmethod
-    def config(cls, filename=None, mode=None,
+    def config(cls, filename=None, namestem=None, mode=None,
                     css=None, js=None, use_D3=False, Vue_lib=False) -> None:
         """
         It can only be called once in a run.
@@ -57,7 +58,10 @@ class HtmlLog:
 
         # ARGUMENTS OPTIONALLY USED TO CHANGE THE CLASS DEFAULTS
         :param filename:    Name for the log file (if using just 1 file), or basename (if using multiple log files);
-                                EXAMPLE: "log.htm"
+                                EXAMPLES: "log.htm" or "reports/log1.htm"
+
+        :param namestem:    EXPERIMENTAL, not yet in use.  A filename, or full/relative path, without a suffix;
+                                ".log.htm" will automatically get added
 
         :param mode:        Must be one of:
                                 "append"    - if the log file exists, append to it; otherwise, create it (AVOID if using Vue)

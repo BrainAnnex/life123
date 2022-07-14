@@ -37,6 +37,12 @@ class Chemicals:
 
 
 
+    def number_of_chemicals(self):
+        # The number of chemicals - exclusive of water
+        return self.n_species
+
+
+
     def set_diffusion_rates(self, diff_list: list) -> None:
         """
         Set the diffusion rates of all the chemical species, given in index order
@@ -121,6 +127,28 @@ class Chemicals:
         :return:        The index of the species with the given name
         """
         return self.name_dict.get(name, None)
+
+
+    def get_diffusion_rate(self, species_index: int) -> Union[str, None]:
+        """
+        Return the diffusion rate of the species with the given index.
+        If no name was assigned, return None.
+
+        :param species_index:   An integer (starting with zero) corresponding to the
+                                    original order with which the chemical species were first added
+        :return:                The value of the diffusion rate for the species with the given index if present,
+                                    or None if not
+        """
+        assert type(species_index) == int, \
+            f"Chemicals.get_diffusion_rate(): the argument `species_index` must be an integer (value passed was: {species_index})"
+
+        assert species_index >= 0, \
+            f"Chemicals.get_diffusion_rate(): the argument `species_index` must be a non-negative integer (value passed was: {species_index})"
+
+        try:
+            return self.diffusion_rates[species_index]
+        except Exception as ex:
+            return None
 
 
 

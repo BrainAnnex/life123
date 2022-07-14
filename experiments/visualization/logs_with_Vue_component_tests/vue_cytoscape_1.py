@@ -26,9 +26,10 @@ log.write(f'Example of Network Diagram, using the module "{COMPONENT_NAME}":',
 # EXAMPLE OF DATA VISUALIZATION (with arbitrary data, hardwired below)
 
 all_data = {
-#Data to define the nodes and edges of the network
+    # Data to define the nodes and edges of the network
     'graph':
     [
+        # NODES
         {'id': 1, 'label': 'Reactant', 'name': 'A', 'diff_rate': 0.4},
         {'id': 2, 'label': 'Reactant', 'name': 'B', 'diff_rate': 1.8},
         {'id': 3, 'label': 'Reactant', 'name': 'C', 'diff_rate': 0.57},
@@ -38,6 +39,7 @@ all_data = {
 
         {'id': 6, 'label': 'Reaction' , 'name': 'RXN', 'Rf': 24.2, 'Rb': 4.1},
 
+        # EDGES
         {'id': 10, 'source': 1, 'target': 6, 'name': 'reacts'},
         {'id': 11, 'source': 2, 'target': 6, 'name': 'reacts'},
         {'id': 12, 'source': 3, 'target': 6, 'name': 'reacts'},
