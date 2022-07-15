@@ -1,4 +1,4 @@
-### VERSION 1.0-beta10
+### VERSION 1.0-beta11 IN-PROGRESS
 
 
 
@@ -20,6 +20,8 @@ Including diffusion, reactions, membranes and compartments.
 [Project Announcement](https://julianspolymathexplorations.blogspot.com/2022/03/life123-systems-biology-modeling.html)
 
 [WEBSITE](https://life123.science/)
+
+[Follow our blog/discussions](https://github.com/BrainAnnex/life123/discussions)
 
 ## Try it Out Live on a hosted JupyterLab!
 **TRY IT OUT LIVE** (no registration nor install!)  
