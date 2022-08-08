@@ -1,0 +1,279 @@
+# ---
+# jupyter:
+#   jupytext:
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.14.0
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
+# %% [markdown]
+# **Reaction  A + B <-> C, mostly forward and with 1st-order kinetics for each species,
+# taken to equilibrium**
+#
+# Initial concentrations of A and B are spacially separated to the opposite ends of the system;
+# as a result, no C is being generated.
+#
+# But, as soon as A and B, from their respective distant originating points at the edges, 
+# diffuse into the middle - and into each other - the reaction starts,
+# consuming both A and B (the forward reaction is much more substantial than the reverse one),
+# until an equilibrium is reached in both diffusion and reactions.
+#
+# A LOT of plots are sent to the log file from this experiment; the reason is to compare two
+# graphic elements, "vue_curves_3" and "vue_curves_4"
+#
+# LAST REVISED: July 13, 2022
+
+# %%
+import set_path
+set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up 
+                                         # to reach the project's home, from the folder containing this notebook
+
+# %%
+from experiments.get_notebook_info import get_notebook_basename
+
+from life_1D.bio_sim_1d import BioSim1D as bio
+
+from modules.chemicals.chemicals import Chemicals as chem
+from modules.reactions.reactions import Reactions
+from modules.html_log.html_log import HtmlLog as log
+from modules.visualization.graphic_log import GraphicLog
+
+# %%
+# Initialize the HTML logging
+log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
+
+# Set up the use of some specified graphic (Vue) components
+GraphicLog.config(filename=log_file,
+                  components=["vue_heatmap_11", "vue_curves_3", "vue_curves_4", "vue_cytoscape_1"],
+                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js",
+                  home_rel_path="../../..")    # relative path is from the location of THE LOG FILE to the project's home
+
+# %%
+# Initialize the system
+chem_data = chem(names=["A", "B", "C"], diffusion_rates=[50., 50., 1.])
+
+rxn = Reactions(chem_data)
+
+# Reaction A + B <-> C , with 1st-order kinetics for each species; note that it's mostly in the forward direction
+rxn.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=20., reverse_rate=2.)
+
+bio.initialize_system(n_bins=7, chem_data=chem_data, reactions=rxn)
+
+bio.set_bin_conc(bin=0, species_index=0, conc=20.)
+bio.set_bin_conc(bin=6, species_index=1, conc=20.)
+
+total_time = 0.
+
+bio.describe_state(time = total_time)
+
+# %%
+rxn.describe_reactions()
+
+# %%
+# Send the plot to the HTML log file
+graph_data = rxn.prepare_graph_network()
+GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
+
+# %%
+# Set the heatmap parameters
+heatmap_pars = {"range": [0, 20],
+                "outer_width": 850, "outer_height": 100,
+                "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
+                }
+
+# Set the parameters of the line plots (for now, same for single-curve and multiple-curves)
+lineplot_pars = {"range": [0, 20],
+                "outer_width": 850, "outer_height": 200,
+                "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
+                }
+
+# %%
+log.write(f"Initial system state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+
+# Output to the log file a heatmap for each chemical species
+for i in range(3):
+    bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
+
+# Output to the log file a one-curve line plot for each chemical species
+for i in range(3):
+    bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
+
+# Output to the log file a line plot for all the chemicals together 
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
+delta_t = 0.002   # This will be our time "quantum" for this experiment
+
+
+# First step
+bio.react_diffuse(time_step=delta_t, n_steps=1)
+total_time += delta_t
+bio.describe_state(time=total_time)
+
+# %% [markdown]
+# _After the first delta_t time step_:
+#
+#   Species 0 (A). Diff rate: 50.0. Conc:  [18.  2.  0.  0.  0.  0.  0.]
+#   
+#   Species 1 (B). Diff rate: 50.0. Conc:  [ 0.  0.  0.  0.  0.  2. 18.]
+#   
+#   Species 2 (C). Diff rate: 1.0. Conc:  [0. 0. 0. 0. 0. 0. 0.]
+#
+
+# %%
+log.write(f"System state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+
+# Output to the log file a heatmap for each chemical species
+for i in range(3):
+    bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
+
+# Output to the log file a one-curve line plot for each chemical species
+for i in range(3):
+    bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
+
+# Output to the log file a line plot for all the chemicals together 
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
+# Continue with several delta_t steps
+for _ in range(7):
+    bio.react_diffuse(time_step=delta_t, n_steps=1)
+    total_time += delta_t
+    bio.describe_state(concise=True, time=total_time)
+
+# %%
+log.write(f"System state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+
+# Output to the log file a heatmap for each chemical species
+for i in range(3):
+    bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
+
+# Output to the log file a one-curve line plot for each chemical species
+for i in range(3):
+    bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
+
+# Output to the log file a line plot for all the chemicals together 
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
+# Now, do several group of longer runs
+for _ in range(4):
+    print("\n\n+ 10 steps later:")
+    bio.react_diffuse(time_step=delta_t, n_steps=10)
+    total_time += delta_t
+    bio.describe_state(concise=True, time=total_time)
+
+# %%
+log.write(f"System state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+
+# Output to the log file a heatmap for each chemical species
+for i in range(3):
+    bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
+
+# Output to the log file a one-curve line plot for each chemical species
+for i in range(3):
+    bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
+
+# Output to the log file a line plot for all the chemicals together 
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
+for _ in range(4):
+    print("\n\n+++ 30 steps later:")
+    bio.react_diffuse(time_step=delta_t, n_steps=30)
+    total_time += delta_t
+    bio.describe_state(concise=True, time=total_time)
+
+# %%
+log.write(f"System state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+
+# Output to the log file a heatmap for each chemical species
+for i in range(3):
+    bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
+
+# Output to the log file a one-curve line plot for each chemical species
+for i in range(3):
+    bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
+
+# Output to the log file a line plot for all the chemicals together 
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
+for _ in range(4):
+    print("\n+++++ 50 steps later:")
+    bio.react_diffuse(time_step=delta_t, n_steps=50)
+    total_time += delta_t
+    bio.describe_state(concise=True, time=total_time)
+
+# %%
+log.write(f"System state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+
+# Output to the log file a heatmap for each chemical species
+for i in range(3):
+    bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
+
+# Output to the log file a one-curve line plot for each chemical species
+for i in range(3):
+    bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
+
+# Output to the log file a line plot for all the chemicals together 
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
+for _ in range(4):
+    print("\n+++++++++++++++ 150 steps later:")
+    bio.react_diffuse(time_step=delta_t, n_steps=150)
+    total_time += delta_t
+    bio.describe_state(concise=True, time=total_time)
+
+# %%
+log.write(f"System state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+
+# Output to the log file a heatmap for each chemical species
+for i in range(3):
+    bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
+
+# Output to the log file a one-curve line plot for each chemical species
+for i in range(3):
+    bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
+
+# Output to the log file a line plot for all the chemicals together 
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
+for _ in range(2):
+    print("\n++++++++++ ... ++++++++++ 1,000 steps later:")
+    bio.react_diffuse(time_step=delta_t, n_steps=1000)
+    total_time += delta_t
+    bio.describe_state(concise=True, time=total_time)
+
+# %%
+log.write(f"System state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+
+# Output to the log file a heatmap for each chemical species
+for i in range(3):
+    bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
+
+# Output to the log file a one-curve line plot for each chemical species
+for i in range(3):
+    bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
+
+# Output to the log file a line plot for all the chemicals together 
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
+# Verify equilibrium concentrations (sampled in the 1st bin; at this point, all bins have equilibrated)
+A_eq = bio.bin_concentration(0, 0)
+B_eq = bio.bin_concentration(0, 1)
+C_eq = bio.bin_concentration(0, 2)
+print(f"\nRatio of equilibrium concentrations ((C_eq) / (A_eq * B_eq)) : {(C_eq) / (A_eq * B_eq)}")
+print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
+# Both are essentially equal, as expected
+
+# %%
