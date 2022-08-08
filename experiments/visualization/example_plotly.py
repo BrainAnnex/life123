@@ -33,3 +33,14 @@ print(fig.data)
 print(fig.layout)
 
 # %%
+fig = px.bar(x=["a", "b", "c"], y=[1, 3, 2])
+fig.show()
+
+# %%
+import plotly.graph_objects as go
+
+# %%
+fig_widget = go.FigureWidget(fig)
+fig_widget
+
+# %%

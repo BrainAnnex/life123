@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -17,7 +17,7 @@
 # **A simple A <-> B reaction between 2 species with initial uniform concentrations across 3 bins,
 # with 1st-order kinetics in both directions, taken to equilibrium**
 #
-# Diffusion not done
+# Diffusion NOT taken into account
 #
 # LAST REVISED: Aug. 7, 2022
 
@@ -51,16 +51,20 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["A", "B"])       # Diffusion NOT taken into account
 bio.initialize_system(n_bins=3, chem_data=chem_data)
 
-bio.set_uniform_concentration(species_index=0, conc=10.)
-bio.set_uniform_concentration(species_index=1, conc=50.)
+bio.set_uniform_concentration(species_name="A", conc=10.)
+bio.set_uniform_concentration(species_name="B", conc=50.)
 
 bio.describe_state()
+
+# %%
+A_values = [bio.bin_concentration(bin_address = 0, species_index = 0)]
+B_values = [bio.bin_concentration(bin_address = 0, species_index = 1)]
 
 # %%
 # Specify the reaction
 rxn = Reactions(chem_data)
 
-# Reaction A -> B , with 1st-order kinetics in both directions
+# Reaction A <-> B , with 1st-order kinetics in both directions
 rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
 bio.all_reactions = rxn
@@ -87,6 +91,13 @@ bio.describe_state()
 #  [43. 43. 43.]]
 
 # %%
+A_values.append(bio.bin_concentration(bin_address = 0, species_index = 0))
+B_values.append(bio.bin_concentration(bin_address = 0, species_index = 1))
+
+# %%
+A_values
+
+# %%
 # Numerous more steps
 bio.react(time_step=0.1, n_steps=10)
 
@@ -106,5 +117,48 @@ A_eq = bio.bin_concentration(0, 0)
 B_eq = bio.bin_concentration(0, 1)
 print(f"Ratio of equilibrium concentrations: {B_eq / A_eq}")
 print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
+
+# %% [markdown] tags=[]
+# # Plots of changes of concentration with time
+
+# %%
+A_values.append(bio.bin_concentration(bin_address = 0, species_index = 0))
+B_values.append(bio.bin_concentration(bin_address = 0, species_index = 1))
+
+# %%
+A_values
+
+# %%
+B_values
+
+# %%
+import plotly.express as px
+
+# %%
+fig = px.line(x=[0,1,11], y=[A_values, B_values], title="Changes in concentrations",
+             color_discrete_sequence = ['navy', 'darkorange'],
+             labels={"x":"Time", "value":"concentration", "variable":"Chemical"})
+fig.show()
+
+# %%
+import pandas as pd
+
+# %%
+c = pd.DataFrame({"t": [0, 1, 11], "A": A_values, "B": B_values})
+
+# %%
+c
+
+# %%
+fig = px.line(data_frame=c, x="t", y=["A", "B"], title="Changes in concentrations",
+              color_discrete_sequence = ['navy', 'darkorange'],
+              labels={"t":"Time", "value":"concentration", "variable":"Chemical"})
+fig.show()
+
+# %%
+fig = px.line(data_frame=c, x="t", y=["A", "B"], title="Changes in concentrations (interpolated)", 
+              line_shape="spline", color_discrete_sequence = ['navy', 'darkorange'],
+              labels=dict(t="Time", value="concentration", variable="Chemical"))
+fig.show()
 
 # %%

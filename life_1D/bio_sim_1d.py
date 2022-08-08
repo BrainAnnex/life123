@@ -1,5 +1,6 @@
 import numpy as np
 import math
+from typing import Union
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
@@ -70,7 +71,7 @@ class BioSim1D:
         """
         Return the concentration at the requested bin of the specified species
 
-        :param bin_address:
+        :param bin_address:     The bin index
         :param species_index:   The index order of the chemical species of interest
         :return:                A concentration value at the indicated bin, for the requested species
         """
@@ -155,9 +156,10 @@ class BioSim1D:
     @classmethod
     def replace_system(cls, new_state: np.array) -> None:
         """
-        Replace the System's internal state
+        Replace the System's internal state.
+        For details of the data structure, see the class variable "system"
 
-        :param new_state:
+        :param new_state:   Numpy array containing the desired new System's internal state
         :return:
         """
         cls.system = new_state
@@ -166,16 +168,21 @@ class BioSim1D:
 
 
     @classmethod
-    def set_uniform_concentration(cls, species_index: int, conc: float) -> None:
+    def set_uniform_concentration(cls, conc: float, species_index=None, species_name=None) -> None:
         """
         Assign the given concentration to all the cells of the specified species (identified by its index).
         Any previous values get over-written
 
-        :param species_index:   Zero-based index to identify a specific chemical species
         :param conc:            The desired value of chemical concentration for the above species
+        :param species_index:   Zero-based index to identify a specific chemical species
+        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
         :return:                None
         """
-        assert (species_index >= 0) and (species_index < cls.n_species), \
+        if species_name is not None:
+            assert cls.chem_data, f"set_uniform_concentration(): must first call BioSim1D.initialize_system()"
+            species_index = cls.chem_data.get_index(species_name)
+
+        assert (species_index is not None) and (species_index >= 0) and (species_index < cls.n_species), \
                     f"The species_index must be an integer between 0 and {cls.n_species - 1}"
 
         assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
