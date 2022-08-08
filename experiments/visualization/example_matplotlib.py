@@ -1,12 +1,11 @@
 # ---
 # jupyter:
 #   jupytext:
-#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -14,12 +13,18 @@
 # ---
 
 # %% [markdown]
-# **TEST OF Jupytext**
+# **TEST OF matplotlib**
 
 # %%
-a = 2
+import matplotlib.pyplot as plt
+import numpy as np
 
 # %%
-a+5
+# Data for plotting
+t = np.arange(0.0, 2.0, 0.01)
+s = 1 + np.sin(2 * np.pi * t)
+
+# %%
+plt.plot(t, s)
 
 # %%
