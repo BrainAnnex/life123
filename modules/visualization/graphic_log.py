@@ -7,7 +7,8 @@ from modules.html_log.html_log import HtmlLog as log
 class GraphicLog:
 
     #COMPONENT_NAME = None
-    HOME_REL_PATH = None
+    HOME_REL_PATH = None        # Relative path from location of *THE LOG FILE* to Life123's home
+                                # EXAMPLE: "../../.."
 
 
     @classmethod
@@ -79,7 +80,6 @@ class GraphicLog:
         :param print_notification:
         :return:                    None
         """
-        #assert cls.COMPONENT_NAME is not None, "Must first call GraphicLog.config(), and pass a `component_name` argument"
         assert cls.HOME_REL_PATH is not None, "Must first call GraphicLog.config(), and pass a `home_rel_path` argument"
 
 
@@ -88,4 +88,4 @@ class GraphicLog:
                         component_file = f"{cls.HOME_REL_PATH}/modules/visualization/vue_components/{graphic_component}.js")
 
         if print_notification:
-            print("[Graphic element sent to log file]")
+            print(f"[GRAPHIC ELEMENT SENT TO LOG FILE `{log.log_fullname}`]")

@@ -17,7 +17,7 @@ class HtmlLog:
     #####################
 
     config_lock = False             # Lock to prevent multiple calls to the config() method
-    log_fullname = ""               # Including paths and, if applicable, automatically-generated numerical suffixes (eg, "D:/Docs/log8.htm")
+    log_fullname = ""               # Including optional path and, if applicable, automatically-generated numerical suffixes (eg, "D:/Docs/log8.htm")
     file_handler = None             # To write into the log file
 
 

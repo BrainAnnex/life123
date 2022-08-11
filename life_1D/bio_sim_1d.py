@@ -30,7 +30,7 @@ class BioSim1D:
     delta_diffusion = None  # Buffer for the concentration changes from diffusion step (n_species x n_cells)
     delta_reactions = None  # Buffer for the concentration changes from reactions step (n_species x n_cells)
 
-    sealed = True       # If True, no exchange with the outside; if False, immersed in a "bath"
+    sealed = True           # If True, no exchange with the outside; if False, immersed in a "bath"
 
     # Only applicable if "sealed" is False:
     bath_concentrations = None      # A NumPy array for each species
@@ -43,6 +43,8 @@ class BioSim1D:
     all_reactions = None            # Object of class "Reactions"      # TODO: add a setter method
 
     verbose = False
+
+    system_time = None          # EXPERIMENTAL.  Global time of the system, from initialization on
 
 
 
@@ -80,16 +82,40 @@ class BioSim1D:
 
 
     @classmethod
+    def bin_snapshot(cls, bin_address) -> dict:
+        """
+        Extract the concentrations of all the chemical species at the specified bin
+        EXAMPLE:  {'A': 10.0, 'B': 50.0}
+
+        :param bin_address:
+        :return:
+        """
+        d = {}
+        for species_index in range(cls.n_species):
+            name = cls.chem_data.get_name(species_index)
+            conc = cls.bin_concentration(bin_address, species_index)
+            d[name] = conc
+
+        return d
+
+
+
+    @classmethod
     def describe_state(cls, concise=False, time=None) -> None:
         """
-        A simple printout of the state of the system, for now useful only for small systems
+        A printout of the state of the system, for now useful only for small systems
 
-        :param time:    (Optional) System time to display in a header (regardless of "concise" flag)
+        :param time:    (Optional) System time to display in a header (regardless of "concise" flag);
+                            this value becomes irrelevant if the official system time is in place (currently being phased in)
         :param concise: If True, only produce a minimalist printout with just the concentration values
         :return:        None
         """
-        if time is not None:
-            print(f"SYSTEM STATE at Time t = {time}:")
+        if (time is not None) or (cls.system_time is not None):
+            if (time is not None) and (cls.system_time is not None) and (time != cls.system_time):
+                raise Exception(f"describe_state(): conflict between `time` argument ({time}) and system time ({cls.system_time})")
+
+            time_to_show = time if time is not None else cls.system_time
+            print(f"SYSTEM STATE at Time t = {time_to_show}:")
 
         if concise:             # A minimalist printout...
             print(cls.system)   # ...only showing the concentration data (a Numpy array)
@@ -151,6 +177,9 @@ class BioSim1D:
 
         if reactions:
             cls.all_reactions = reactions
+
+        cls.system_time = 0             # "Start the clock"
+
 
 
     @classmethod
@@ -574,6 +603,7 @@ class BioSim1D:
             cls.delta_reactions[:, bin_n] = increment_vector.transpose()
 
         #print(cls.delta_reactions)
+        cls.system_time += delta_time
 
 
 

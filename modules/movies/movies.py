@@ -1,31 +1,42 @@
-class Movies:
+import pandas as pd
+
+
+class Movie:
     """
-    A "movie" is a list of snapshots of the state of the entire system,
-    or of parts thereof,
+    A "movie" is a list of snapshots
+    of the state of the entire system, or of parts thereof,
     either taken at different times,
     or as a results of varying some parameter(s)
 
     MAIN DATA STRUCTURE:
         A list of triplets.
-        Each triplet is of the form (parameter, caption, snapshot_data)
-            The "parameter" is typically time, but could be anything.
-            (a descriptive meaning of this parameter is stored in the object attribute "parameter_name"
-            "caption" is just a string with a label.
-            "snapshot_data" can be anything of interest, typically a clone of some data element.
+        Each triplet is of the form (parameter value, caption, snapshot_data)
+            1) The "parameter" is typically time, but could be anything.
+               (a descriptive meaning of this parameter is stored in the object attribute "parameter_name")
+            2) "caption" is just a string with an optional label.
+            3) "snapshot_data" can be anything of interest, typically a clone of some data element.
 
         If the "parameter" is time, it's assumed to be in increasing order
 
     EXAMPLE:
         [
-            (0., "State at t=0.", NUMPY_ARRAY_1),
-            (8., "State at t=8.", NUMPY_ARRAY_2)
+            (0., "Initial state", NUMPY_ARRAY_1),
+            (8., "State immediately after injection of 2nd reagent", NUMPY_ARRAY_2)
         ]
     """
 
 
-    def __init__(self, parameter_name="TIME"):
-        self.movie = []
+    def __init__(self, parameter_name="SYSTEM TIME", tabular=True):
+        """
+
+        :param parameter_name:
+        :param tabular:
+        """
         self.parameter_name = parameter_name
+        self.tabular = tabular
+
+        self.movie = []
+        self.df = None      # It will only be applicable if tabular is True
 
 
 
@@ -35,20 +46,43 @@ class Movies:
 
 
     def __str__(self):
-        return f"Movie with {len(self.movie)} snapshots of type {self.parameter_name}"
+        return f"Movie with {len(self.movie)} snapshots of type `{self.parameter_name}`"
 
 
 
-    def append(self, pars, caption:str, data_snapshot) -> None:
+    def append(self, pars, data_snapshot, caption = "") -> None:
         """
-        EXAMPLE:  append(8., "State at t=8.", NUMPY_ARRAY_2)
+        Save up the given data snapshot
 
-        :param pars:
-        :param caption:
-        :param data_snapshot:
+        EXAMPLE with tabular mode:
+                append(8., {"A": 1., "B": 2.}, "State immediately after injection of 2nd reagent")
+        EXAMPLE without tabular mode:
+                append(8., NUMPY_ARRAY_2, "State immediately after injection of 2nd reagent")
+
+        IMPORTANT:  if passing a variable pointing to an existing mutable structure (such as a list, dict, object)
+                    make sure to first *clone* it, to preserve it as it!
+
+        :param pars:            Typical, the System Time... but could be anything that parametrizes the snapshots
+        :param data_snapshot:   If using a tabular system, this must be a dict;
+                                    otherwise, it can be anything
+        :param caption:         OPTIONAL string to describe the snapshot
         :return:                None
         """
-        self.movie.append( (pars, caption, data_snapshot) )
+        if not self.tabular:
+            self.movie.append( (pars, caption, data_snapshot) )
+        else:
+            if self.df is None:
+                assert type(data_snapshot) == dict, \
+                    "Movie.append(): The argument `data_snapshot` must be a dictionary whenever a 'tabular' movie is created"
+                self.df = pd.DataFrame(data_snapshot, index=[0])            # Form the initial Pandas dataframe
+                self.df[self.parameter_name] = pars                         # Add a column
+                if caption:
+                    self.df["caption"] = caption                            # Add a column
+            else:
+                data_snapshot[self.parameter_name] = pars                   # Expand the snapshot dict
+                if caption:
+                    self.df["caption"] = caption                            # Expand the snapshot dict
+                self.df = pd.concat([self.df, pd.DataFrame([data_snapshot])], ignore_index=True)    # Append new row to dataframe
 
 
 
@@ -58,4 +92,7 @@ class Movies:
 
         :return:
         """
-        return self.movie
+        if self.tabular:
+            return self.df
+        else:
+            return self.movie
