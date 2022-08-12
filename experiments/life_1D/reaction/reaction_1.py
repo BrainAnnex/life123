@@ -19,10 +19,12 @@
 #
 # Diffusion NOT taken into account
 #
-# LAST REVISED: Aug. 10, 2022
+# LAST REVISED: Aug. 11, 2022
+#
+# * [First Step](#sec_1)
 
 # %%
-# Expand the sys.path variable, to contain the project's root directory
+# Extend the sys.path variable, to contain the project's root directory
 import set_path
 set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up 
                                          # to reach the project's home, from the folder containing this notebook
@@ -32,7 +34,6 @@ from experiments.get_notebook_info import get_notebook_basename
 
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
-from modules.movies.movies import Movie
 from life_1D.bio_sim_1d import BioSim1D as bio
 
 import plotly.express as px
@@ -52,7 +53,7 @@ GraphicLog.config(filename=log_file,
 # %% tags=[]
 # Initialize the system
 chem_data = chem(names=["A", "B"])       # Diffusion NOT taken into account
-bio.initialize_system(n_bins=3, chem_data=chem_data)
+bio.initialize_system(n_bins=3, chem_data=chem_data)   # We'll specify the reactions later
 
 bio.set_uniform_concentration(species_name="A", conc=10.)
 bio.set_uniform_concentration(species_name="B", conc=50.)
@@ -73,7 +74,7 @@ rxn = Reactions(chem_data)
 # Reaction A <-> B , with 1st-order kinetics in both directions
 rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
-bio.all_reactions = rxn
+bio.set_reactions(rxn)
 
 print("Number of reactions: ", rxn.number_of_reactions())
 
@@ -84,6 +85,9 @@ rxn.describe_reactions()
 # Send the plot to the HTML log file
 graph_data = rxn.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
+
+# %% [markdown] tags=[]
+# ### <a name="sec_1"></a>First step
 
 # %%
 # First step of reaction
@@ -101,11 +105,17 @@ bio.describe_state()
 bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
+# %% [markdown]
+# ### <a name="sec_more_steps"></a>Numerous more steps
+
 # %%
 # Numerous more steps
 bio.react(time_step=0.1, n_steps=10)
 
 bio.describe_state()
+
+# %% [markdown]
+# ### <a name="sec_equilibrium"></a>Equilibrium
 
 # %% [markdown]
 # NOTE: Consistent with the 3/2 ratio of forward/reverse rates (and the 1st order reactions),

@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -20,9 +20,10 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: July 13, 2022
+# LAST REVISED: Aug. 11, 2022
 
 # %%
+# Extend the sys.path variable, to contain the project's root directory
 import set_path
 set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up 
                                          # to reach the project's home, from the folder containing this notebook
@@ -34,6 +35,7 @@ from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
 from life_1D.bio_sim_1d import BioSim1D as bio
 
+import plotly.express as px
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
@@ -65,12 +67,20 @@ bio.set_all_uniform_concentrations( [3., 5., 1., 0.4, 0.1] )
 bio.describe_state()
 
 # %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %%
 rxn.describe_reactions()
 
 # %%
 # Send the plot to the HTML log file
 graph_data = rxn.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
+
+# %% [markdown] tags=[]
+# ### <a name="sec_2_first_step"></a>First step
 
 # %%
 # First step

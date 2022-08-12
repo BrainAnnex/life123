@@ -38,7 +38,7 @@ new Vue({
     el: '#vue-root-1',
 
     data: {
-        graph_json: [{"id": 4, "label": "Reaction", "name": "RXN", "Rf": 5.0, "Rb": 2.0}, {"id": 2, "label": "Product", "name": "C", "diff_rate": null, "stoich": 4, "rxn_order": 1}, {"id": 5, "source": 4, "target": 2, "name": "produces"}, {"id": 3, "label": "Product", "name": "D", "diff_rate": null, "stoich": 3, "rxn_order": 1}, {"id": 6, "source": 4, "target": 3, "name": "produces"}, {"id": 0, "label": "Reactant", "name": "A", "diff_rate": null, "stoich": 2, "rxn_order": 1}, {"id": 7, "source": 0, "target": 4, "name": "reacts"}, {"id": 1, "label": "Reactant", "name": "B", "diff_rate": null, "stoich": 5, "rxn_order": 1}, {"id": 8, "source": 1, "target": 4, "name": "reacts"}],
+        graph_json: [{"id": 2, "label": "Reaction", "name": "RXN", "Rf": 5.0, "Rb": 2.0}, {"id": 1, "label": "Product", "name": "B", "diff_rate": null, "stoich": 3, "rxn_order": 1}, {"id": 3, "source": 2, "target": 1, "name": "produces"}, {"id": 0, "label": "Reactant", "name": "A", "diff_rate": null, "stoich": 2, "rxn_order": 1}, {"id": 4, "source": 0, "target": 2, "name": "reacts"}],
 color_mapping_json: {"Reactant": "neo4j_green", "Product": "neo4j_red", "Reaction": "neo4j_lightbrown"}
     }
 

@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -18,13 +18,14 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Aug. 7, 2022
+# LAST REVISED: Aug. 11, 2022
 #
-# * [First Step](#sec_1)
+# * [First Step](#sec_2_first_step)
 # * [Numerous more steps](#sec_2)
-# * [Equilibrium](#sec_3)
+# * [Equilibrium](#sec_2_equilibrium)
 
 # %%
+# Extend the sys.path variable, to contain the project's root directory
 import set_path
 set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up 
                                          # to reach the project's home, from the folder containing this notebook
@@ -36,6 +37,7 @@ from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
 from life_1D.bio_sim_1d import BioSim1D as bio
 
+import plotly.express as px
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
@@ -55,7 +57,7 @@ chem_data = chem(names=["A", "B"])     # NOTE: Diffusion not applicable (just 1 
 
 rxn = Reactions(chem_data)
 
-# Reaction A -> 3B , with 1st-order kinetics in both directions
+# Reaction A <-> 3B , with 1st-order kinetics in both directions
 rxn.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
 
 bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
@@ -69,12 +71,17 @@ bio.describe_state()
 rxn.describe_reactions()
 
 # %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %%
 # Send the plot to the HTML log file
 graph_data = rxn.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
-# %% [markdown]
-# ### <a name="sec_1"></a>First step
+# %% [markdown] tags=[]
+# ### <a name="sec_2_first_step"></a>First step
 
 # %%
 # First step
@@ -85,6 +92,11 @@ bio.describe_state()
 # _Early in the reaction :_  
 # [A] = 15.   [B] = 35.
 
+# %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
 # %% [markdown]
 # ### <a name="sec_2"></a>Numerous more steps
 
@@ -94,8 +106,8 @@ bio.react(time_step=0.1, n_steps=10)
 
 bio.describe_state()
 
-# %% [markdown]
-# ### <a name="sec_3"></a>Equilibrium
+# %% [markdown] tags=[]
+# ### <a name="sec_2_equilibrium"></a>Equilibrium
 
 # %% [markdown]
 # Consistent with the 5/2 ratio of forward/reverse rates (and the 1st order reactions),
@@ -106,5 +118,35 @@ A_eq = bio.bin_concentration(0, 0)
 B_eq = bio.bin_concentration(0, 1)
 print(f"Ratio of equilibrium concentrations: {B_eq / A_eq}")
 print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
+
+# %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %% [markdown]
+# Note how the simulation initially **OVERSHOT** the equilibrium values; the first step was too large!
+
+# %% [markdown] tags=[]
+# # Plots of changes of concentration with time
+
+# %%
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
+              title="Changes in concentrations",
+              color_discrete_sequence = ['navy', 'darkorange'],
+              labels={"value":"concentration", "variable":"Chemical"})
+fig.show()
+
+# %%
+# Same plot, but with smooth line
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
+              title="Changes in concentrations",
+              color_discrete_sequence = ['navy', 'darkorange'],
+              labels={"value":"concentration", "variable":"Chemical"},
+              line_shape="spline")
+fig.show()
+
+# %% [markdown]
+# The early **OVERSHOOTING** of the equilibrium values shows prominently in the last plot!
 
 # %%

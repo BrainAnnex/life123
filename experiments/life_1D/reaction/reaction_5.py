@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -18,19 +18,34 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Aug. 7, 2022
+# LAST REVISED: Aug. 11, 2022
 
 # %%
+# Extend the sys.path variable, to contain the project's root directory
 import set_path
 set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up 
                                          # to reach the project's home, from the folder containing this notebook
 
 # %%
+from experiments.get_notebook_info import get_notebook_basename
+
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
 from life_1D.bio_sim_1d import BioSim1D as bio
 
+import plotly.express as px
 from modules.html_log.html_log import HtmlLog as log
+from modules.visualization.graphic_log import GraphicLog
+
+# %%
+# Initialize the HTML logging
+log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
+
+# Set up the use of some specified graphic (Vue) components
+GraphicLog.config(filename=log_file,
+                  components=["vue_cytoscape_1"],
+                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js",
+                  home_rel_path="../../..")    # relative path is from the location of THE LOG FILE to the project's home
 
 # %%
 # Initialize the system
@@ -49,10 +64,20 @@ bio.set_all_uniform_concentrations( [4., 7., 2.] )
 bio.describe_state()
 
 # %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %%
 rxn.describe_reactions()
 
 # %%
-rxn._internal_reactions_data()    # Low-level view of the reactions data
+# Send the plot to the HTML log file
+graph_data = rxn.prepare_graph_network()
+GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
+
+# %% [markdown] tags=[]
+# ### <a name="sec_2_first_step"></a>First step
 
 # %%
 # First step
@@ -75,10 +100,21 @@ bio.describe_state()
 # ---
 
 # %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %% [markdown]
+# ### <a name="sec_2"></a>Numerous more steps
+
+# %%
 # Numerous more steps
 bio.react(time_step=0.05, n_steps=30)
 
 bio.describe_state()
+
+# %% [markdown] tags=[]
+# ### <a name="sec_2_equilibrium"></a>Equilibrium
 
 # %% [markdown]
 # Consistent with the 5/2 ratio of forward/reverse rates (and the 1st order reactions),
@@ -91,5 +127,27 @@ C_eq = bio.bin_concentration(0, 1)
 D_eq = bio.bin_concentration(0, 2)
 print(f"Ratio of equilibrium concentrations (C_eq * D_eq / A_eq) : {C_eq * D_eq / A_eq}")
 print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
+
+# %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %% [markdown]
+# C and D get depleted, while A gets produced.
+# A wild overshoot is present at t=0.2
+
+# %% [markdown] tags=[]
+# # Plots of changes of concentration with time
+
+# %% tags=[]
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "C", "D"], 
+              title="Changes in concentrations",
+              color_discrete_sequence = ['navy', 'violet', 'red'],
+              labels={"value":"concentration", "variable":"Chemical"})
+fig.show()
+
+# %% [markdown]
+# Notice the wild overshoot present at t=0.2
 
 # %%

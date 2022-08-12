@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -18,9 +18,10 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: July 13, 2022
+# LAST REVISED: Aug. 11, 2022
 
 # %%
+# Extend the sys.path variable, to contain the project's root directory
 import set_path
 set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up 
                                          # to reach the project's home, from the folder containing this notebook
@@ -32,6 +33,7 @@ from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
 from life_1D.bio_sim_1d import BioSim1D as bio
 
+import plotly.express as px
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
@@ -66,9 +68,17 @@ bio.describe_state()
 rxn.describe_reactions()
 
 # %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %%
 # Send the plot to the HTML log file
 graph_data = rxn.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
+
+# %% [markdown] tags=[]
+# ### <a name="sec_2_first_step"></a>First step
 
 # %%
 # First step
@@ -80,10 +90,21 @@ bio.describe_state()
 # [A] = 3.76 ,  [B] = 6.4 ,  [C] = 5.48 ,  [D] = 2.36
 
 # %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %% [markdown]
+# ### <a name="sec_2"></a>Numerous more steps
+
+# %%
 # Numerous more steps
 bio.react(time_step=0.001, n_steps=40)
 
 bio.describe_state()
+
+# %% [markdown] tags=[]
+# ### <a name="sec_2_equilibrium"></a>Equilibrium
 
 # %% [markdown]
 # Consistent with the 5/2 ratio of forward/reverse rates (and the 1st order reactions),
@@ -97,5 +118,34 @@ C_eq = bio.bin_concentration(0, 2)
 D_eq = bio.bin_concentration(0, 3)
 print(f"Ratio of equilibrium concentrations ((C_eq * D_eq) / (A_eq * B_eq)) : {(C_eq * D_eq) / (A_eq * B_eq)}")
 print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
+
+# %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %% [markdown]
+# A and B get depleted, while C and D get produced.
+#
+# **2A + 5B <-> 4C + 3D**
+
+# %% [markdown] tags=[]
+# # Plots of changes of concentration with time
+
+# %% tags=[]
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "C", "D"], 
+              title="Changes in concentrations",
+              color_discrete_sequence = ['navy', 'cyan', 'red', 'orange'],
+              labels={"value":"concentration", "variable":"Chemical"})
+fig.show()
+
+# %%
+# Same plot, but with smooth line
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "C", "D"], 
+              title="Changes in concentrations",
+              color_discrete_sequence = ['navy', 'cyan', 'red', 'orange'],
+              labels={"value":"concentration", "variable":"Chemical"},
+              line_shape="spline")
+fig.show()
 
 # %%

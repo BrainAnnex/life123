@@ -43,7 +43,7 @@ class BioSim1D:
                                     # in the diffusion process.
                                     # See explanation in file overly_large_single_timesteps.py
 
-    all_reactions = None            # Object of class "Reactions"      # TODO: add a setter method
+    all_reactions = None            # Object of class "Reactions"
 
     history = Movie(tabular=True)   # To store user-selected snapshots of (parts of) the system,
                                     # whenever requested by the user
@@ -534,7 +534,7 @@ class BioSim1D:
         Anything previously registered, will be over-written.
 
         :param reactions:   Object of class "Reactions"
-        :return:
+        :return:            None
         """
         cls.all_reactions = reactions
 
