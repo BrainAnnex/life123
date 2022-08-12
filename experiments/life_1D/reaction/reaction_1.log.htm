@@ -38,7 +38,7 @@ new Vue({
     el: '#vue-root-1',
 
     data: {
-        graph_json: [{"id": 2, "label": "Reaction", "name": "RXN", "Rf": 3.0, "Rb": 2.0}, {"id": 1, "label": "Product", "name": "B", "diff_rate": null, "stoich": 1, "rxn_rate": 1}, {"id": 3, "source": 2, "target": 1, "name": "produces"}, {"id": 0, "label": "Reactant", "name": "A", "diff_rate": null, "stoich": 1, "rxn_rate": 1}, {"id": 4, "source": 0, "target": 2, "name": "reacts"}],
+        graph_json: [{"id": 2, "label": "Reaction", "name": "RXN", "Rf": 3.0, "Rb": 2.0}, {"id": 1, "label": "Product", "name": "B", "diff_rate": null, "stoich": 1, "rxn_order": 1}, {"id": 3, "source": 2, "target": 1, "name": "produces"}, {"id": 0, "label": "Reactant", "name": "A", "diff_rate": null, "stoich": 1, "rxn_order": 1}, {"id": 4, "source": 0, "target": 2, "name": "reacts"}],
 color_mapping_json: {"Reactant": "neo4j_green", "Product": "neo4j_red", "Reaction": "neo4j_lightbrown"}
     }
 

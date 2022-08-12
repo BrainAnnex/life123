@@ -60,15 +60,11 @@ bio.set_uniform_concentration(species_name="B", conc=50.)
 bio.describe_state()
 
 # %%
-history = Movie()
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-history.append(pars=bio.system_time, 
-               data_snapshot = bio.bin_snapshot(bin_address = 0))
-
-# %% tags=[]
-history.get()
+bio.get_history()
 
 # %%
 # Specify the reaction
@@ -102,11 +98,8 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-history.append(pars=bio.system_time, 
-               data_snapshot = bio.bin_snapshot(bin_address = 0))
-
-# %% tags=[]
-history.get()
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
 
 # %%
 # Numerous more steps
@@ -131,17 +124,14 @@ print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_rever
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-history.append(pars=bio.system_time, 
-               data_snapshot = bio.bin_snapshot(bin_address = 0))
-
-# %%
-history.get()
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
 
 # %% [markdown] tags=[]
 # # Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=history.get(), x="SYSTEM TIME", y=["A", "B"], 
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
               title="Changes in concentrations",
               color_discrete_sequence = ['navy', 'darkorange'],
               labels={"value":"concentration", "variable":"Chemical"})
@@ -149,7 +139,7 @@ fig.show()
 
 # %%
 # Same plot, but with smooth line
-fig = px.line(data_frame=history.get(), x="SYSTEM TIME", y=["A", "B"], 
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
               title="Changes in concentrations",
               color_discrete_sequence = ['navy', 'darkorange'],
               labels={"value":"concentration", "variable":"Chemical"},

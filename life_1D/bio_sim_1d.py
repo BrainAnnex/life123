@@ -1,18 +1,21 @@
 import numpy as np
 import math
 from typing import Union
+from modules.movies.movies import Movie
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
 
 class BioSim1D:
     """
-    Note: for at least the time being, this class doesn't get instantiated
+    Note: for at least the time being, this class does NOT get instantiated
     """
 
     #####################
     #  Class variables  #
     #####################
+
+    verbose = False
 
     n_bins = 0          # Number of spacial compartments (bins) used in the simulation
 
@@ -42,9 +45,11 @@ class BioSim1D:
 
     all_reactions = None            # Object of class "Reactions"      # TODO: add a setter method
 
-    verbose = False
+    history = Movie(tabular=True)   # To store user-selected snapshots of (parts of) the system,
+                                    # whenever requested by the user
 
-    system_time = None          # EXPERIMENTAL.  Global time of the system, from initialization on
+    system_time = None              # EXPERIMENTAL, being phased in.
+                                    # Global time of the system, from initialization on
 
 
 
@@ -922,3 +927,33 @@ class BioSim1D:
         # Send the plot to the HTML log file.
         # The version of the heatmap Vue component specified in the call to GraphicLog.config() will be used
         GraphicLog.export_plot(all_data, graphic_component)
+
+
+
+
+    #########################################################################
+    #                                                                       #
+    #                                HISTORY                                #
+    #                                                                       #
+    #########################################################################
+
+
+    @classmethod
+    def save_snapshot(cls, data_snapshot, caption = "") -> None:
+        """
+
+        :param data_snapshot:
+        :param caption:
+        :return:
+        """
+        cls.history.append(pars=cls.system_time,
+                           data_snapshot = data_snapshot, caption=caption)
+
+
+    @classmethod
+    def get_history(cls):
+        """
+
+        :return:
+        """
+        return cls.history.get()

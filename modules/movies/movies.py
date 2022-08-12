@@ -6,9 +6,14 @@ class Movie:
     A "movie" is a list of snapshots
     of the state of the entire system, or of parts thereof,
     either taken at different times,
-    or as a results of varying some parameter(s)
+    or resulting from varying some parameter(s)
 
-    MAIN DATA STRUCTURE:
+
+    MAIN DATA STRUCTURE for "tabular" mode:
+        A Pandas frame
+
+
+    MAIN DATA STRUCTURE for "non-tabular" mode:
         A list of triplets.
         Each triplet is of the form (parameter value, caption, snapshot_data)
             1) The "parameter" is typically time, but could be anything.
@@ -18,11 +23,11 @@ class Movie:
 
         If the "parameter" is time, it's assumed to be in increasing order
 
-    EXAMPLE:
-        [
-            (0., "Initial state", NUMPY_ARRAY_1),
-            (8., "State immediately after injection of 2nd reagent", NUMPY_ARRAY_2)
-        ]
+        EXAMPLE:
+            [
+                (0., "Initial state", NUMPY_ARRAY_1),
+                (8., "State immediately after injection of 2nd reagent", NUMPY_ARRAY_2)
+            ]
     """
 
 

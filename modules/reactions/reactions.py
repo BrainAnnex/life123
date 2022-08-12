@@ -160,13 +160,14 @@ class Reactions:
 
 
 
-    def describe_reactions(self, concise=False) -> Union[None, List[str]]:
+    def describe_reactions(self, concise=False, return_as_list=False) -> Union[None, List[str]]:
         """
         Print out and return a listing with a user-friendly plain-text form of all the reactions
         EXAMPLE:  ["(0) CH4 + 2 O2 <-> CO2 + 2 H2O  (Rf = 3.0 , Rb = 2.0)"]
 
-        :param concise:
-        :return:         A list of strings
+        :param concise:         If True, less detail is shown
+        :param return_as_list:  If True, in addition to being printed, a list of reaction listings gets returned
+        :return:                Either None or a list of strings, based on the flag return_as_list
         """
         print("Number of reactions: ", self.number_of_reactions())
 
@@ -191,8 +192,8 @@ class Reactions:
             print(rxn_description)
             out.append(rxn_description)
 
-
-        return out
+        if return_as_list:
+            return out
 
 
 
@@ -270,7 +271,7 @@ class Reactions:
                                        'name': self.chem_data.get_name(species_index),
                                        'diff_rate': self.chem_data.get_diffusion_rate(species_index),
                                        'stoich': self.extract_stoichiometry(term),
-                                       'rxn_rate': self.extract_rxn_order(term)
+                                       'rxn_order': self.extract_rxn_order(term)
                                        })
                 # Append edge from "reaction node" to product
                 graph_data.append({'id': next_available_id, 'source': rxn_id, 'target': species_index, 'name': 'produces'})
@@ -286,7 +287,7 @@ class Reactions:
                                        'name': self.chem_data.get_name(species_index),
                                        'diff_rate': self.chem_data.get_diffusion_rate(species_index),
                                        'stoich': self.extract_stoichiometry(term),
-                                       'rxn_rate': self.extract_rxn_order(term)
+                                       'rxn_order': self.extract_rxn_order(term)
                                        })
                 # Append edge from reactant to "reaction node"
                 graph_data.append({'id': next_available_id, 'source': species_index, 'target': rxn_id, 'name': 'reacts'})
