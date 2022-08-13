@@ -65,15 +65,17 @@ bio.set_all_uniform_concentrations( [4., 7., 5., 2.] )
 bio.describe_state()
 
 # %%
-rxn.describe_reactions()
-
-# %%
 # Save the state of the concentrations of all species at bin 0
 bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
-# Send the plot to the HTML log file
+rxn.describe_reactions()
+
+# %%
+# Send a header and a plot to the HTML log file
+log.write("Reaction 2 A + 5 B <-> 4 C + 3 D",
+          style=log.h2)
 graph_data = rxn.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 

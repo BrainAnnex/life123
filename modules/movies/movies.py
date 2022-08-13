@@ -76,7 +76,7 @@ class Movie:
         if not self.tabular:
             self.movie.append( (pars, caption, data_snapshot) )
         else:
-            if self.df is None:
+            if self.df is None:     # No Pandas dataframe was yet started
                 assert type(data_snapshot) == dict, \
                     "Movie.append(): The argument `data_snapshot` must be a dictionary whenever a 'tabular' movie is created"
                 self.df = pd.DataFrame(data_snapshot, index=[0])            # Form the initial Pandas dataframe
@@ -86,7 +86,7 @@ class Movie:
             else:
                 data_snapshot[self.parameter_name] = pars                   # Expand the snapshot dict
                 if caption:
-                    self.df["caption"] = caption                            # Expand the snapshot dict
+                    data_snapshot["caption"] = caption                      # Expand the snapshot dict
                 self.df = pd.concat([self.df, pd.DataFrame([data_snapshot])], ignore_index=True)    # Append new row to dataframe
 
 

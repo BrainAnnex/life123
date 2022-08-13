@@ -47,6 +47,9 @@ GraphicLog.config(filename=log_file,
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js",
                   home_rel_path="../../..")    # relative path is from the location of THE LOG FILE to the project's home
 
+# %% [markdown]
+# # INITIALLY, with 1st-order kinetics in both directions
+
 # %%
 # Initialize the system
 chem_data = chem(names=["A", "B"])     # NOTE: Diffusion not applicable (just 1 bin)
@@ -74,12 +77,12 @@ rxn.describe_reactions()
 rxn._internal_reactions_data()    # Low-level view of the reactions data
 
 # %%
-# Send the plot to the HTML log file
+# Send a header and a plot to the HTML log file
+log.write("Reaction 2A <-> B is 1st order in all species:",
+          style=log.h2)
+
 graph_data = rxn.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
-
-# %% [markdown]
-# # INITIALLY, with 1st-order kinetics in both directions
 
 # %%
 # First step
@@ -90,7 +93,12 @@ bio.describe_state()
 # Small conc. changes so far:  [A] = 2.8 , [B] = 5.1
 
 # %%
-# Numerous more steps
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %%
+# Numerous more steps, to equilibrium
 bio.react(time_step=0.02, n_steps=20)
 
 bio.describe_state()
@@ -106,6 +114,21 @@ B_eq = bio.bin_concentration(0, 1)
 print(f"Ratio of equilibrium concentrations: {B_eq / A_eq}")
 print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
 
+# %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %% tags=[]
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
+              title="2A <-> B : changes in concentrations",
+              color_discrete_sequence = ['navy', 'orange'],
+              labels={"value":"concentration", "variable":"Chemical"})
+fig.show()
+
+# %% [markdown]
+# A gets depleted, while B gets produced.
+
 # %% [markdown]
 # # STARTING OVER, this time with 2nd-order kinetics in the forward reaction
 
@@ -116,15 +139,32 @@ rxn.clear_reactions()
 # Reaction  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction
 rxn.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
 
+
+
+# %%
+# RESET the concentrations to their original values
 bio.set_all_uniform_concentrations( [3., 5.] )
 
 bio.describe_state()
+
+# %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0), 
+                  caption = "RESET all concentrations to initial values")
+bio.get_history()
 
 # %%
 rxn.describe_reactions()
 
 # %%
 rxn._internal_reactions_data()    # Low-level view of the reactions data
+
+# %%
+# Send a header and a plot to the HTML log file
+log.write("Reaction 2A <-> B is 2nd order in A, and 1st order in B:",
+          style=log.h2)
+graph_data = rxn.prepare_graph_network()
+GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %%
 # First step
@@ -134,6 +174,11 @@ bio.describe_state()
 # %% [markdown]
 # [A] = 1.6 , [B] = 5.7
 # _(Contrast with the counterpart in the 1st order kinetics:  [A] = 2.8 , [B] = 5.1)_
+
+# %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
 
 # %%
 # Numerous more steps
@@ -149,5 +194,20 @@ A_eq = bio.bin_concentration(0, 0)
 B_eq = bio.bin_concentration(0, 1)
 print(f"Ratio of equilibrium concentrations ((B_eq) / (A_eq **2)) : {(B_eq) / (A_eq **2)}")
 print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
+
+# %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %%
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
+              title="2A <-> B : changes in concentrations",
+              color_discrete_sequence = ['navy', 'orange'],
+              labels={"value":"concentration", "variable":"Chemical"})
+fig.show()
+
+# %% [markdown]
+# Compared to first-order kinetics in A, the reaction now takes place much more quickly, and proceeds to almost complete depletion of A
 
 # %%

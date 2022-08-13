@@ -8,6 +8,10 @@ Vue.component('vue_cytoscape_1',  <!-- NOTE:  Only lower cases in component name
 
             color_mapping: {        // Mapping the node label to its interior color
                 required: true      // For now (TODO: auto-assign if unspecified)
+            },
+
+            component_id: {
+                default: 1
             }
 
         },
@@ -17,7 +21,7 @@ Vue.component('vue_cytoscape_1',  <!-- NOTE:  Only lower cases in component name
         template: `
             <div>  <!-- Outer container, serving as Vue-required template root.  OK to use a <section> instead -->
 
-                <div id="cy">
+                <div v-bind:id="'cy_' + component_id" class="cytoscape-container">
                 <!-- CYTOSCAPE.js WILL INSERT THE GRAPH HERE -->
                 </div>
 
@@ -76,7 +80,7 @@ Vue.component('vue_cytoscape_1',  <!-- NOTE:  Only lower cases in component name
         // ----------------  COMPUTED  -----------------
         computed: {
             assemble_element_structure()
-            /*  Create and return the graph structure needed by Cystoscape.js
+            /*  Create and return the graph structure needed by Cytoscape.js
                 (a list of objects with a key named "data")
                 EXAMPLE:
                     [
@@ -108,15 +112,15 @@ Vue.component('vue_cytoscape_1',  <!-- NOTE:  Only lower cases in component name
         methods: {
             create_graph()
             /* The main part of the old Cytoscape code got moved here,
-                EXCEPT for the DIV element <div id="cy">,
+                EXCEPT for the DIV element <div id="SOME_ID">,
                 which is now in the Vue template, above
              */
             {
                 console.log('Running create_graph()');
 
-                var cy = cytoscape({
+                var cy_object = cytoscape({
 
-                    container: document.getElementById('cy'),    // Container to render in
+                    container: document.getElementById('cy_' + this.component_id),    // Container to render in
 
                     elements: this.assemble_element_structure,   // List of graph elements (nodes & edges)
 
@@ -177,15 +181,15 @@ Vue.component('vue_cytoscape_1',  <!-- NOTE:  Only lower cases in component name
 
                 });
 
-                cy.on('click', 'node', this.show_node_info);
+                cy_object.on('click', 'node', this.show_node_info);
 
                 /*
                 // EXAMPLES of adding nodes
-                cy.add([
+                cy_object.add([
                     { data: { id: 4, label: 'import' , name: 'Restaurants' }, position: {x: 80, y: 100} }
                 ]);
 
-                cy.add([
+                cy_object.add([
                     { data: { id: 5, label: 'SOME_OTHER_LABEL' , name: 'Mr. Node' }, position: {x: 80, y: 200} }
                 ]);
                 */
