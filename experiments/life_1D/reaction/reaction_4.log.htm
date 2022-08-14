@@ -1,0 +1,47 @@
+<!-- Auto-generated log file -->
+<!DOCTYPE html>
+<html lang="en">
+<head>  
+    <meta charset="UTF-8">
+    <title>Log</title>
+
+    <link type="text/css" rel="stylesheet" href="../../../modules/visualization/vue_components/vue_cytoscape_1.css">
+
+    <script src="../../../modules/Vue2_lib/vue2.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="../../../modules/SVG_helper/svg_helper.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js"></script>
+</head>
+
+<body>
+
+
+<div id="vue-root-1">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
+
+    <vue_cytoscape_1 
+        v-bind:graph="graph_json"
+        v-bind:color_mapping="color_mapping_json"
+    >        
+    </vue_cytoscape_1>
+    
+</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="../../../modules/visualization/vue_components/vue_cytoscape_1.js"></script>
+
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({
+    el: '#vue-root-1',
+
+    data: {
+        graph_json: [{"id": 3, "label": "Reaction", "name": "RXN", "Rf": 5.0, "Rb": 2.0}, {"id": 2, "label": "Product", "name": "C", "diff_rate": null, "stoich": 1, "rxn_order": 1}, {"id": 4, "source": 3, "target": 2, "name": "produces"}, {"id": 0, "label": "Reactant", "name": "A", "diff_rate": null, "stoich": 1, "rxn_order": 1}, {"id": 5, "source": 0, "target": 3, "name": "reacts"}, {"id": 1, "label": "Reactant", "name": "B", "diff_rate": null, "stoich": 1, "rxn_order": 1}, {"id": 6, "source": 1, "target": 3, "name": "reacts"}],
+color_mapping_json: {"Reactant": "neo4j_green", "Product": "neo4j_red", "Reaction": "neo4j_lightbrown"}
+    }
+
+});
+</script>
+

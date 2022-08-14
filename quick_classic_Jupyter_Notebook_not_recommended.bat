@@ -11,5 +11,6 @@ set PYTHONPATH=\Docs\- MY CODE\BioSimulations\life123-Win7\
 
 :: Start Jupyter notebook at a convenient startup folder;
 :: warning: one will not be able to navigate to the parent of that startup folder!
+::          And it might interfere with jupytext.toml
 :: Ditch the  --notebook-dir  argument if you want to see everything
 jupyter notebook --notebook-dir="\Docs\- MY CODE\BioSimulations\life123-Win7\experiments\life_1D"

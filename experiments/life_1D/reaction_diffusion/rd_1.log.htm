@@ -17,6 +17,7 @@
 </head>
 
 <body>
+<h2>Reaction:  A + B <-> C</h2><br>
 
 
 <div id="vue-root-1">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -24,6 +25,7 @@
     <vue_cytoscape_1 
         v-bind:graph="graph_json"
         v-bind:color_mapping="color_mapping_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_cytoscape_1>
     
@@ -41,8 +43,9 @@ new Vue({
     el: '#vue-root-1',
 
     data: {
-        graph_json: [{"id": 3, "label": "Reaction", "name": "RXN", "Rf": 20.0, "Rb": 2.0}, {"id": 2, "label": "Product", "name": "C", "diff_rate": 1.0, "stoich": 1, "rxn_rate": 1}, {"id": 4, "source": 3, "target": 2, "name": "produces"}, {"id": 0, "label": "Reactant", "name": "A", "diff_rate": 50.0, "stoich": 1, "rxn_rate": 1}, {"id": 5, "source": 0, "target": 3, "name": "reacts"}, {"id": 1, "label": "Reactant", "name": "B", "diff_rate": 50.0, "stoich": 1, "rxn_rate": 1}, {"id": 6, "source": 1, "target": 3, "name": "reacts"}],
-color_mapping_json: {"Reactant": "neo4j_green", "Product": "neo4j_red", "Reaction": "neo4j_lightbrown"}
+        graph_json: [{"id": 3, "label": "Reaction", "name": "RXN", "Rf": 20.0, "Rb": 2.0}, {"id": 2, "label": "Product", "name": "C", "diff_rate": 1.0, "stoich": 1, "rxn_order": 1}, {"id": 4, "source": 3, "target": 2, "name": "produces"}, {"id": 0, "label": "Reactant", "name": "A", "diff_rate": 50.0, "stoich": 1, "rxn_order": 1}, {"id": 5, "source": 0, "target": 3, "name": "reacts"}, {"id": 1, "label": "Reactant", "name": "B", "diff_rate": 50.0, "stoich": 1, "rxn_order": 1}, {"id": 6, "source": 1, "target": 3, "name": "reacts"}],
+color_mapping_json: {"Reactant": "neo4j_green", "Product": "neo4j_red", "Reaction": "neo4j_lightbrown"},
+component_id_json: 1
     }
 
 });
@@ -50,7 +53,8 @@ color_mapping_json: {"Reactant": "neo4j_green", "Product": "neo4j_red", "Reactio
 
 <br>
 <br>
-<b>Initial system state at time t=0.0:</b><br>
+<b>Initial system state at time t=0:</b><br>
+A:<br>
 
 
 <div id="vue-root-2">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -63,6 +67,7 @@ color_mapping_json: {"Reactant": "neo4j_green", "Product": "neo4j_red", "Reactio
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -86,12 +91,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 2
     }
 
 });
 </script>
 
+B:<br>
 
 
 <div id="vue-root-3">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -104,6 +111,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -127,12 +135,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 3
     }
 
 });
 </script>
 
+C:<br>
 
 
 <div id="vue-root-4">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -145,6 +155,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -168,12 +179,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 4
     }
 
 });
 </script>
 
+A:<br>
 
 
 <div id="vue-root-5">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -186,6 +199,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -209,12 +223,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 5
     }
 
 });
 </script>
 
+B:<br>
 
 
 <div id="vue-root-6">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -227,6 +243,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -250,12 +267,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 6
     }
 
 });
 </script>
 
+C:<br>
 
 
 <div id="vue-root-7">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -268,6 +287,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -291,7 +311,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 7
     }
 
 });
@@ -309,6 +330,8 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:color_mapping="color_mapping_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_4>
     
@@ -332,7 +355,9 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+color_mapping_json: {"0": "red", "1": "orange", "2": "green"},
+component_id_json: 8
     }
 
 });
@@ -341,6 +366,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <br>
 <br>
 <b>System state at time t=0.002:</b><br>
+A:<br>
 
 
 <div id="vue-root-9">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -353,6 +379,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -376,12 +403,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 9
     }
 
 });
 </script>
 
+B:<br>
 
 
 <div id="vue-root-10">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -394,6 +423,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -417,12 +447,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 10
     }
 
 });
 </script>
 
+C:<br>
 
 
 <div id="vue-root-11">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -435,6 +467,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -458,12 +491,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 11
     }
 
 });
 </script>
 
+A:<br>
 
 
 <div id="vue-root-12">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -476,6 +511,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -499,12 +535,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 12
     }
 
 });
 </script>
 
+B:<br>
 
 
 <div id="vue-root-13">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -517,6 +555,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -540,12 +579,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 13
     }
 
 });
 </script>
 
+C:<br>
 
 
 <div id="vue-root-14">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -558,6 +599,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -581,7 +623,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 14
     }
 
 });
@@ -599,6 +642,8 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:color_mapping="color_mapping_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_4>
     
@@ -622,7 +667,9 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+color_mapping_json: {"0": "red", "1": "orange", "2": "green"},
+component_id_json: 15
     }
 
 });
@@ -631,6 +678,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 <br>
 <br>
 <b>System state at time t=0.016:</b><br>
+A:<br>
 
 
 <div id="vue-root-16">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -643,6 +691,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -666,12 +715,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 16
     }
 
 });
 </script>
 
+B:<br>
 
 
 <div id="vue-root-17">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -684,6 +735,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -707,12 +759,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 17
     }
 
 });
 </script>
 
+C:<br>
 
 
 <div id="vue-root-18">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -725,6 +779,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -748,12 +803,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 18
     }
 
 });
 </script>
 
+A:<br>
 
 
 <div id="vue-root-19">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -766,6 +823,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -789,12 +847,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 19
     }
 
 });
 </script>
 
+B:<br>
 
 
 <div id="vue-root-20">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -807,6 +867,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -830,12 +891,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 20
     }
 
 });
 </script>
 
+C:<br>
 
 
 <div id="vue-root-21">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -848,6 +911,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -871,7 +935,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 21
     }
 
 });
@@ -889,6 +954,8 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:color_mapping="color_mapping_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_4>
     
@@ -912,7 +979,9 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+color_mapping_json: {"0": "red", "1": "orange", "2": "green"},
+component_id_json: 22
     }
 
 });
@@ -920,7 +989,8 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <br>
 <br>
-<b>System state at time t=0.024000000000000007:</b><br>
+<b>System state at time t=0.09600000000000007:</b><br>
+A:<br>
 
 
 <div id="vue-root-23">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -933,6 +1003,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -956,12 +1027,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 23
     }
 
 });
 </script>
 
+B:<br>
 
 
 <div id="vue-root-24">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -974,6 +1047,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -997,12 +1071,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 24
     }
 
 });
 </script>
 
+C:<br>
 
 
 <div id="vue-root-25">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -1015,6 +1091,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -1038,12 +1115,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 25
     }
 
 });
 </script>
 
+A:<br>
 
 
 <div id="vue-root-26">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -1056,6 +1135,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -1079,12 +1159,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 26
     }
 
 });
 </script>
 
+B:<br>
 
 
 <div id="vue-root-27">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -1097,6 +1179,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -1120,12 +1203,14 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 27
     }
 
 });
 </script>
 
+C:<br>
 
 
 <div id="vue-root-28">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -1138,6 +1223,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -1161,7 +1247,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 28
     }
 
 });
@@ -1179,6 +1266,8 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:color_mapping="color_mapping_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_4>
     
@@ -1202,7 +1291,9 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+color_mapping_json: {"0": "red", "1": "orange", "2": "green"},
+component_id_json: 29
     }
 
 });
@@ -1210,7 +1301,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <br>
 <br>
-<b>System state at time t=0.032000000000000015:</b><br>
+<b>System state at time t=0.33600000000000024:</b><br>
 
 
 <div id="vue-root-30">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -1223,6 +1314,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -1246,7 +1338,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 30
     }
 
 });
@@ -1264,6 +1357,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -1287,7 +1381,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 31
     }
 
 });
@@ -1305,6 +1400,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -1328,7 +1424,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 32
     }
 
 });
@@ -1346,6 +1443,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -1369,7 +1467,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 33
     }
 
 });
@@ -1387,6 +1486,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -1410,7 +1510,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 34
     }
 
 });
@@ -1428,6 +1529,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -1451,7 +1553,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 35
     }
 
 });
@@ -1469,6 +1572,8 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:color_mapping="color_mapping_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_4>
     
@@ -1492,7 +1597,9 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+color_mapping_json: {"0": "red", "1": "orange", "2": "green"},
+component_id_json: 36
     }
 
 });
@@ -1500,7 +1607,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <br>
 <br>
-<b>System state at time t=0.04000000000000002:</b><br>
+<b>System state at time t=0.7360000000000005:</b><br>
 
 
 <div id="vue-root-37">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -1513,6 +1620,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -1536,7 +1644,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 37
     }
 
 });
@@ -1554,6 +1663,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -1577,7 +1687,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 38
     }
 
 });
@@ -1595,6 +1706,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -1618,7 +1730,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 39
     }
 
 });
@@ -1636,6 +1749,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -1659,7 +1773,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 40
     }
 
 });
@@ -1677,6 +1792,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -1700,7 +1816,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 41
     }
 
 });
@@ -1718,6 +1835,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -1741,7 +1859,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 42
     }
 
 });
@@ -1759,6 +1878,8 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:color_mapping="color_mapping_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_4>
     
@@ -1782,7 +1903,9 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+color_mapping_json: {"0": "red", "1": "orange", "2": "green"},
+component_id_json: 43
     }
 
 });
@@ -1790,7 +1913,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <br>
 <br>
-<b>System state at time t=0.04800000000000003:</b><br>
+<b>System state at time t=1.9360000000000015:</b><br>
 
 
 <div id="vue-root-44">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -1803,6 +1926,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -1826,7 +1950,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 44
     }
 
 });
@@ -1844,6 +1969,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -1867,7 +1993,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 45
     }
 
 });
@@ -1885,6 +2012,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -1908,7 +2036,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 46
     }
 
 });
@@ -1926,6 +2055,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -1949,7 +2079,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 47
     }
 
 });
@@ -1967,6 +2098,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -1990,7 +2122,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 48
     }
 
 });
@@ -2008,6 +2141,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -2031,7 +2165,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 49
     }
 
 });
@@ -2049,6 +2184,8 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:color_mapping="color_mapping_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_4>
     
@@ -2072,7 +2209,9 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+color_mapping_json: {"0": "red", "1": "orange", "2": "green"},
+component_id_json: 50
     }
 
 });
@@ -2080,7 +2219,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
 
 <br>
 <br>
-<b>System state at time t=0.05200000000000003:</b><br>
+<b>System state at time t=5.935999999999568:</b><br>
 
 
 <div id="vue-root-51">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -2093,6 +2232,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -2116,7 +2256,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 51
     }
 
 });
@@ -2134,6 +2275,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -2157,7 +2299,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 52
     }
 
 });
@@ -2175,6 +2318,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_heatmap_11>
     
@@ -2198,7 +2342,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 100,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 53
     }
 
 });
@@ -2216,6 +2361,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -2239,7 +2385,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 54
     }
 
 });
@@ -2257,6 +2404,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -2280,7 +2428,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 55
     }
 
 });
@@ -2298,6 +2447,7 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_3>
     
@@ -2321,7 +2471,8 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+component_id_json: 56
     }
 
 });
@@ -2339,6 +2490,8 @@ margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:color_mapping="color_mapping_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_curves_4>
     
@@ -2362,7 +2515,9 @@ range_min_json: 0,
 range_max_json: 20,
 outer_width_json: 850,
 outer_height_json: 200,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55}
+margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 55},
+color_mapping_json: {"0": "red", "1": "orange", "2": "green"},
+component_id_json: 57
     }
 
 });

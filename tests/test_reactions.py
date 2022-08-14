@@ -69,7 +69,7 @@ def test_add_reaction(rxn):
     assert rxn.number_of_reactions() == 4
     assert rxn.get_reaction(3) == {'reactants': [(1, 0, 1), (2, 1, 1)], 'products': [(3, 2, 2), (1, 3, 1)], 'Rf': 5.0, 'Rb': 1.0}
 
-    rxn_list = rxn.describe_reactions()
+    rxn_list = rxn.describe_reactions(return_as_list=True)
     assert rxn_list[0] == '0: A <-> B  (Rf = 3.0 / Rb = 2.0)'
     assert rxn_list[1] == '1: 2 B <-> 5 C  (Rf = 9.0 / Rb = 7.0)'
     assert rxn_list[2] == '2: 2 D <-> C  (Rf = 11.0 / Rb = 13.0) | 3-th order in reactant D | 2-th order in product C'
@@ -83,9 +83,9 @@ def test_create_graph_network_data(rxn):
     network_data = rxn.create_graph_network_data()
     print(network_data)
     expected = [{'id': 6, 'label': 'Reaction', 'name': 'RXN', 'Rf': 3.0, 'Rb': 2.0},
-                {'id': 1, 'label': 'Product', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_rate': 1},
+                {'id': 1, 'label': 'Product', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
                 {'id': 7, 'name': 'produces', 'source': 6, 'target': 1},
-                {'id': 0, 'label': 'Reactant', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_rate': 1},
+                {'id': 0, 'label': 'Reactant', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
                 {'id': 8, 'name': 'reacts', 'source': 0, 'target': 6}
                 ]
     assert network_data == expected
@@ -133,7 +133,7 @@ def test_reaction_step_1b(rxn):
     bio.set_reactions(rxn)
 
     assert rxn.number_of_reactions() == 1
-    assert rxn.describe_reactions() == ["0: A <-> B  (Rf = 3.0 / Rb = 2.0)"]
+    assert rxn.describe_reactions(return_as_list=True) == ["0: A <-> B  (Rf = 3.0 / Rb = 2.0)"]
     assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
 
     # First step

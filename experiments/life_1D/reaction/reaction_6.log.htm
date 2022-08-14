@@ -14,6 +14,7 @@
 </head>
 
 <body>
+<h2>Reaction 2 A + 5 B <-> 4 C + 3 D</h2><br>
 
 
 <div id="vue-root-1">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -21,6 +22,7 @@
     <vue_cytoscape_1 
         v-bind:graph="graph_json"
         v-bind:color_mapping="color_mapping_json"
+        v-bind:component_id="component_id_json"
     >        
     </vue_cytoscape_1>
     
@@ -38,8 +40,9 @@ new Vue({
     el: '#vue-root-1',
 
     data: {
-        graph_json: [{"id": 4, "label": "Reaction", "name": "RXN", "Rf": 5.0, "Rb": 2.0}, {"id": 0, "label": "Reactant", "name": "A", "diff_rate": null, "stoich": 2, "rxn_rate": 1}, {"id": 5, "source": 0, "target": 4, "name": "reacts"}, {"id": 1, "label": "Reactant", "name": "B", "diff_rate": null, "stoich": 5, "rxn_rate": 1}, {"id": 6, "source": 1, "target": 4, "name": "reacts"}, {"id": 2, "label": "Product", "name": "C", "diff_rate": null, "stoich": 4, "rxn_rate": 1}, {"id": 7, "source": 4, "target": 2, "name": "produces"}, {"id": 3, "label": "Product", "name": "D", "diff_rate": null, "stoich": 3, "rxn_rate": 1}, {"id": 8, "source": 4, "target": 3, "name": "produces"}],
-color_mapping_json: {"Reactant": "neo4j_green", "Product": "neo4j_red", "Reaction": "neo4j_lightbrown"}
+        graph_json: [{"id": 4, "label": "Reaction", "name": "RXN", "Rf": 5.0, "Rb": 2.0}, {"id": 2, "label": "Product", "name": "C", "diff_rate": null, "stoich": 4, "rxn_order": 1}, {"id": 5, "source": 4, "target": 2, "name": "produces"}, {"id": 3, "label": "Product", "name": "D", "diff_rate": null, "stoich": 3, "rxn_order": 1}, {"id": 6, "source": 4, "target": 3, "name": "produces"}, {"id": 0, "label": "Reactant", "name": "A", "diff_rate": null, "stoich": 2, "rxn_order": 1}, {"id": 7, "source": 0, "target": 4, "name": "reacts"}, {"id": 1, "label": "Reactant", "name": "B", "diff_rate": null, "stoich": 5, "rxn_order": 1}, {"id": 8, "source": 1, "target": 4, "name": "reacts"}],
+color_mapping_json: {"Reactant": "neo4j_green", "Product": "neo4j_red", "Reaction": "neo4j_lightbrown"},
+component_id_json: 1
     }
 
 });

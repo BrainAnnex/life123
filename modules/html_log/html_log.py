@@ -17,7 +17,7 @@ class HtmlLog:
     #####################
 
     config_lock = False             # Lock to prevent multiple calls to the config() method
-    log_fullname = ""               # Including paths and, if applicable, automatically-generated numerical suffixes (eg, "D:/Docs/log8.htm")
+    log_fullname = ""               # Including optional path and, if applicable, automatically-generated numerical suffixes (eg, "D:/Docs/log8.htm")
     file_handler = None             # To write into the log file
 
 
@@ -337,7 +337,7 @@ class HtmlLog:
     @classmethod
     def export_plot_D3(cls, data, svg_id, js_file, js_func, D3_tag="svg") -> None:
         """
-        Append to the log the HTML to produce a D3-based plot
+        Append to the log the HTML needed to produce a D3-based plot
 
         :param data:
         :param svg_id:
@@ -376,19 +376,27 @@ class HtmlLog:
 
 
     @classmethod
-    def export_plot_Vue(cls, data, component_name, component_file) -> None:
+    def export_plot_Vue(cls, data: dict, component_name: str, component_file: str) -> None:
         """
-        Append to the log the HTML to produce a Vue-based plot
+        Append to the log the HTML needed to produce a Vue-based plot
 
-        :param data:
-        :param component_name:
-        :param component_file:
+        :param data:            A python dictionary of data to pass to the Vue component
+        :param component_name:  A string with the name of the existing Vue.js component to use.
+                                        EXAMPLE: "vue_curves_4" (assuming that a js file with such a component exists)
+        :param component_file:  A string with the name of the .js file containing the needed Vue component above
 
         :return:        None
         """
         if not cls.use_Vue:
             cls.write("ERROR: In order to utilize Vue, the  use_Vue=True  option must be used in the call to config()", style=cls.red)
             return
+
+        # Validate args
+        assert type(data) == dict,\
+            f"export_plot_Vue(): the `data` argument must be a dictionary; the value passed was {type(data)}"
+        #TODO: more validation
+
+        data["component_id"] = cls.VUE_COUNT
 
         vue_id = f"vue-root-{cls.VUE_COUNT}"
         cls._write_to_file(f'\n\n<div id="{vue_id}">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->\n')
@@ -437,8 +445,8 @@ new Vue({{
         """
         Prepare a string that goes inside the Vue component call
 
-        :param data:
-        :return:
+        :param data:    A python dictionary of data for the component
+        :return:        A string that goes inside the Vue component call
         """
         if data is None:
             return ""
@@ -471,7 +479,7 @@ new Vue({{
         Notice the "_json" suffix added to the keys  (TODO: maybe this suffix could be ditched...)
 
         :param data:    A python dictionary
-        :return:
+        :return:        A string that goes inside the "data:" section of the Vue element instantiation
         """
         if data is None:
             return ""

@@ -111,7 +111,7 @@ class Chemicals:
 
     def get_all_names(self) -> [str]:
         """
-        Return the names of all the species, in their index order
+        Return a list with the names of all the chemical species, in their index order
 
         :return:    A list of strings
         """
@@ -128,6 +128,7 @@ class Chemicals:
         :return:        The index of the species with the given name
         """
         return self.name_dict.get(name, None)
+
 
 
     def get_diffusion_rate(self, species_index: int) -> Union[str, None]:

@@ -1,17 +1,22 @@
 import numpy as np
 import math
+import pandas as pd
+from typing import Union
+from modules.movies.movies import Movie
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
 
 class BioSim1D:
     """
-    Note: for at least the time being, this class doesn't get instantiated
+    Note: for at least the time being, this class does NOT get instantiated
     """
 
     #####################
     #  Class variables  #
     #####################
+
+    verbose = False
 
     n_bins = 0          # Number of spacial compartments (bins) used in the simulation
 
@@ -29,7 +34,7 @@ class BioSim1D:
     delta_diffusion = None  # Buffer for the concentration changes from diffusion step (n_species x n_cells)
     delta_reactions = None  # Buffer for the concentration changes from reactions step (n_species x n_cells)
 
-    sealed = True       # If True, no exchange with the outside; if False, immersed in a "bath"
+    sealed = True           # If True, no exchange with the outside; if False, immersed in a "bath"
 
     # Only applicable if "sealed" is False:
     bath_concentrations = None      # A NumPy array for each species
@@ -39,9 +44,13 @@ class BioSim1D:
                                     # in the diffusion process.
                                     # See explanation in file overly_large_single_timesteps.py
 
-    all_reactions = None            # Object of class "Reactions"      # TODO: add a setter method
+    all_reactions = None            # Object of class "Reactions"
 
-    verbose = False
+    history = Movie(tabular=True)   # To store user-selected snapshots of (parts of) the system,
+                                    # whenever requested by the user
+
+    system_time = None              # EXPERIMENTAL, being phased in.
+                                    # Global time of the system, from initialization on
 
 
 
@@ -70,7 +79,7 @@ class BioSim1D:
         """
         Return the concentration at the requested bin of the specified species
 
-        :param bin_address:
+        :param bin_address:     The bin index
         :param species_index:   The index order of the chemical species of interest
         :return:                A concentration value at the indicated bin, for the requested species
         """
@@ -79,16 +88,74 @@ class BioSim1D:
 
 
     @classmethod
+    def bin_snapshot(cls, bin_address: int) -> dict:
+        """
+        Extract the concentrations of all the chemical species at the specified bin,
+        as a dict whose keys are the names of the species
+        EXAMPLE:  {'A': 10.0, 'B': 50.0}
+
+        :param bin_address: An integer with the bin number
+        :return:            A dict of concentration values; the keys are the names of the species
+        """
+        assert type(bin_address) == int, "bin_snapshot(): the argument must be an integer"
+
+        d = {}
+        for species_index in range(cls.n_species):
+            name = cls.chem_data.get_name(species_index)
+            conc = cls.bin_concentration(bin_address, species_index)
+            d[name] = conc
+
+        return d
+
+
+
+    @classmethod
+    def system_snapshot(cls) -> pd.DataFrame:
+        """
+        Return a snapshot of all the concentrations of all the species,
+        as a Pandas dataframe
+
+        :return:    A Pandas dataframe: each row is a bin,
+                        and each column a chemical species
+        """
+        all_chem_names = cls.chem_data.get_all_names()
+        if cls.system is None:
+            return pd.DataFrame(columns = all_chem_names)   # Empty dataframe
+
+        matrix = cls.system.T
+
+        df = pd.DataFrame(matrix, columns = all_chem_names)
+
+        return df
+
+
+
+    @classmethod
+    def show_system_snapshot(cls) -> None:
+        """"
+        """
+        print(f"SYSTEM SNAPSHOT at time {cls.system_time}:")
+        print(cls.system_snapshot())
+
+
+
+    @classmethod
     def describe_state(cls, concise=False, time=None) -> None:
         """
-        A simple printout of the state of the system, for now useful only for small systems
+        A printout of the state of the system, for now useful only for small systems
 
-        :param time:    (Optional) System time to display in a header (regardless of "concise" flag)
+        :param time:    TODO: phase out
+                            (Optional) System time to display in a header (regardless of "concise" flag);
+                            this value becomes irrelevant if the official system time is in place (currently being phased in)
         :param concise: If True, only produce a minimalist printout with just the concentration values
         :return:        None
         """
-        if time is not None:
-            print(f"SYSTEM STATE at Time t = {time}:")
+        if (time is not None) or (cls.system_time is not None):
+            if (time is not None) and (cls.system_time is not None) and (not np.allclose(time, cls.system_time)):
+                raise Exception(f"describe_state(): conflict between `time` argument ({time}) and system time ({cls.system_time})")
+
+            time_to_show = time if time is not None else cls.system_time
+            print(f"SYSTEM STATE at Time t = {time_to_show}:")
 
         if concise:             # A minimalist printout...
             print(cls.system)   # ...only showing the concentration data (a Numpy array)
@@ -151,13 +218,17 @@ class BioSim1D:
         if reactions:
             cls.all_reactions = reactions
 
+        cls.system_time = 0             # "Start the clock"
+
+
 
     @classmethod
     def replace_system(cls, new_state: np.array) -> None:
         """
-        Replace the System's internal state
+        Replace the System's internal state.
+        For details of the data structure, see the class variable "system"
 
-        :param new_state:
+        :param new_state:   Numpy array containing the desired new System's internal state
         :return:
         """
         cls.system = new_state
@@ -166,16 +237,21 @@ class BioSim1D:
 
 
     @classmethod
-    def set_uniform_concentration(cls, species_index: int, conc: float) -> None:
+    def set_uniform_concentration(cls, conc: float, species_index=None, species_name=None) -> None:
         """
         Assign the given concentration to all the cells of the specified species (identified by its index).
         Any previous values get over-written
 
-        :param species_index:   Zero-based index to identify a specific chemical species
         :param conc:            The desired value of chemical concentration for the above species
+        :param species_index:   Zero-based index to identify a specific chemical species
+        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
         :return:                None
         """
-        assert (species_index >= 0) and (species_index < cls.n_species), \
+        if species_name is not None:
+            assert cls.chem_data, f"set_uniform_concentration(): must first call BioSim1D.initialize_system()"
+            species_index = cls.chem_data.get_index(species_name)
+
+        assert (species_index is not None) and (species_index >= 0) and (species_index < cls.n_species), \
                     f"The species_index must be an integer between 0 and {cls.n_species - 1}"
 
         assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
@@ -358,7 +434,7 @@ class BioSim1D:
         :param time_duration:
         :param time_step:
         :param n_steps:
-        :param verbose:
+        :param verbose:         TODO: replace with a class-wide verbose flag
         :return:                A dictionary with data about the status of the operation
         """
         # TODO: factor out this part, in common to diffuse() and react()
@@ -382,7 +458,8 @@ class BioSim1D:
                     print("    ...")
 
             cls.diffuse_step(time_step)
-            cls.system += cls.delta_diffusion     # Matrix operation
+            cls.system += cls.delta_diffusion     # Matrix operation to update all the concentrations
+            cls.system_time += time_step
 
         if verbose:
             print(f"\nSystem after Delta time {time_duration}, at end of {n_steps} steps of size {time_step}:")
@@ -493,7 +570,7 @@ class BioSim1D:
         Anything previously registered, will be over-written.
 
         :param reactions:   Object of class "Reactions"
-        :return:
+        :return:            None
         """
         cls.all_reactions = reactions
 
@@ -503,6 +580,7 @@ class BioSim1D:
     def react(cls, time_duration=None, time_step=None, n_steps=None) -> None:
         """
         Update the system concentrations as a result of all the reactions in all bins.
+        CAUTION : NO diffusion is taken into account.
 
         For each bin, process all the reactions in it - based on
         the INITIAL concentrations (prior to this reaction step),
@@ -530,7 +608,8 @@ class BioSim1D:
 
         for i in range(n_steps):
             cls.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
-            cls.system += cls.delta_reactions   # Matrix operation
+            cls.system += cls.delta_reactions   # Matrix operation to update all the concentrations
+            cls.system_time += time_step
 
 
 
@@ -567,6 +646,7 @@ class BioSim1D:
             cls.delta_reactions[:, bin_n] = increment_vector.transpose()
 
         #print(cls.delta_reactions)
+        #cls.system_time += delta_time  # System time is managed at a higher level
 
 
 
@@ -717,9 +797,11 @@ class BioSim1D:
             cls.diffuse_step(time_step)
             # Merge into the concentrations of the various bins/chemical species pairs,
             # the increments concentrations computed separately by the reaction and the diffusion steps
-            cls.system += cls.delta_reactions     # Matrix operation
-            cls.system += cls.delta_diffusion     # Matrix operation
-
+            cls.system += cls.delta_reactions   # Matrix operation to update all the concentrations
+                                                #   from the reactions
+            cls.system += cls.delta_diffusion   # Matrix operation to update all the concentrations
+                                                #   from the diffusion
+            cls.system_time += time_step
 
 
 
@@ -748,7 +830,7 @@ class BioSim1D:
                             "need to initialize the graphics module with a call to GraphicLog.config()")
 
         if header:
-            log.write(f"{header}", style=log.h1, newline=False)
+            log.write(f"{header}", style=log.h1, newline=False, also_print=False)
 
 
         #
@@ -834,7 +916,7 @@ class BioSim1D:
 
 
     @classmethod
-    def line_plot(cls, plot_pars: dict, graphic_component, header=None) -> None:
+    def line_plot(cls, plot_pars: dict, graphic_component, header=None, color_mapping=None) -> None:
         """
         Send to the HTML log, a line plot representation of the concentrations of
         all the chemical species species.
@@ -844,7 +926,8 @@ class BioSim1D:
 
         :param plot_pars:           A dictionary of parameters (such as "outer_width") for the plot
         :param graphic_component:   A string with the name of the graphic module to use.  EXAMPLE: "vue_curves_4"
-        :param header:              Optional string to display just above the plot
+        :param header:              OPTIONAL string to display just above the plot
+        :param color_mapping:       OPTIONAL dict mapping index numbers to color names or RBG hex values
         :return:                    None
         """
         if not GraphicLog.is_initialized():
@@ -882,6 +965,41 @@ class BioSim1D:
             "margins": plot_pars["margins"]
         }
 
+        # If a color mapping was provided, add it to the data
+        if color_mapping:
+            all_data["color_mapping"] = color_mapping
+
+
         # Send the plot to the HTML log file.
         # The version of the heatmap Vue component specified in the call to GraphicLog.config() will be used
         GraphicLog.export_plot(all_data, graphic_component)
+
+
+
+
+    #########################################################################
+    #                                                                       #
+    #                                HISTORY                                #
+    #                                                                       #
+    #########################################################################
+
+
+    @classmethod
+    def save_snapshot(cls, data_snapshot, caption = "") -> None:
+        """
+
+        :param data_snapshot:
+        :param caption:
+        :return:
+        """
+        cls.history.append(pars=cls.system_time,
+                           data_snapshot = data_snapshot, caption=caption)
+
+
+    @classmethod
+    def get_history(cls):
+        """
+
+        :return:
+        """
+        return cls.history.get()

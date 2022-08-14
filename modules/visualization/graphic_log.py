@@ -7,7 +7,8 @@ from modules.html_log.html_log import HtmlLog as log
 class GraphicLog:
 
     #COMPONENT_NAME = None
-    HOME_REL_PATH = None
+    HOME_REL_PATH = None        # Relative path from location of *THE LOG FILE* to Life123's home
+                                # EXAMPLE: "../../.."
 
 
     @classmethod
@@ -71,15 +72,16 @@ class GraphicLog:
 
 
     @classmethod
-    def export_plot(cls, data, graphic_component, print_notification=True) -> None:
+    def export_plot(cls, data: dict, graphic_component: str, print_notification=True) -> None:
         """
+        Send a Vue-based plot to the log file
 
-        :param data:
-        :param graphic_component:
-        :param print_notification:
+        :param data:                A python dictionary of data to pass to the Vue component
+        :param graphic_component:   A string with the name of the existing Vue.js component to use.
+                                        EXAMPLE: "vue_curves_4" (assuming that a js file with such a component exists)
+        :param print_notification:  If True, something is printed to inform of what's happening with the log file
         :return:                    None
         """
-        #assert cls.COMPONENT_NAME is not None, "Must first call GraphicLog.config(), and pass a `component_name` argument"
         assert cls.HOME_REL_PATH is not None, "Must first call GraphicLog.config(), and pass a `home_rel_path` argument"
 
 
@@ -88,4 +90,4 @@ class GraphicLog:
                         component_file = f"{cls.HOME_REL_PATH}/modules/visualization/vue_components/{graphic_component}.js")
 
         if print_notification:
-            print("[Graphic element sent to log file]")
+            print(f"[GRAPHIC ELEMENT SENT TO LOG FILE `{log.log_fullname}`]")
