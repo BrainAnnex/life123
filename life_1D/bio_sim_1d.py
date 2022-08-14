@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import pandas as pd
 from typing import Union
 from modules.movies.movies import Movie
 from modules.html_log.html_log import HtmlLog as log
@@ -87,14 +88,17 @@ class BioSim1D:
 
 
     @classmethod
-    def bin_snapshot(cls, bin_address) -> dict:
+    def bin_snapshot(cls, bin_address: int) -> dict:
         """
-        Extract the concentrations of all the chemical species at the specified bin
+        Extract the concentrations of all the chemical species at the specified bin,
+        as a dict whose keys are the names of the species
         EXAMPLE:  {'A': 10.0, 'B': 50.0}
 
-        :param bin_address:
-        :return:
+        :param bin_address: An integer with the bin number
+        :return:            A dict of concentration values; the keys are the names of the species
         """
+        assert type(bin_address) == int, "bin_snapshot(): the argument must be an integer"
+
         d = {}
         for species_index in range(cls.n_species):
             name = cls.chem_data.get_name(species_index)
@@ -102,6 +106,36 @@ class BioSim1D:
             d[name] = conc
 
         return d
+
+
+
+    @classmethod
+    def system_snapshot(cls) -> pd.DataFrame:
+        """
+        Return a snapshot of all the concentrations of all the species,
+        as a Pandas dataframe
+
+        :return:    A Pandas dataframe: each row is a bin,
+                        and each column a chemical species
+        """
+        all_chem_names = cls.chem_data.get_all_names()
+        if cls.system is None:
+            return pd.DataFrame(columns = all_chem_names)   # Empty dataframe
+
+        matrix = cls.system.T
+
+        df = pd.DataFrame(matrix, columns = all_chem_names)
+
+        return df
+
+
+
+    @classmethod
+    def show_system_snapshot(cls) -> None:
+        """"
+        """
+        print(f"SYSTEM SNAPSHOT at time {cls.system_time}:")
+        print(cls.system_snapshot())
 
 
 
@@ -116,7 +150,7 @@ class BioSim1D:
         :return:        None
         """
         if (time is not None) or (cls.system_time is not None):
-            if (time is not None) and (cls.system_time is not None) and (time != cls.system_time):
+            if (time is not None) and (cls.system_time is not None) and (not np.allclose(time, cls.system_time)):
                 raise Exception(f"describe_state(): conflict between `time` argument ({time}) and system time ({cls.system_time})")
 
             time_to_show = time if time is not None else cls.system_time
@@ -544,6 +578,7 @@ class BioSim1D:
     def react(cls, time_duration=None, time_step=None, n_steps=None) -> None:
         """
         Update the system concentrations as a result of all the reactions in all bins.
+        CAUTION : NO diffusion is taken into account.
 
         For each bin, process all the reactions in it - based on
         the INITIAL concentrations (prior to this reaction step),
@@ -571,7 +606,8 @@ class BioSim1D:
 
         for i in range(n_steps):
             cls.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
-            cls.system += cls.delta_reactions   # Matrix operation
+            cls.system += cls.delta_reactions   # Matrix operation to update all the concentrations
+            cls.system_time += time_step
 
 
 
@@ -608,7 +644,7 @@ class BioSim1D:
             cls.delta_reactions[:, bin_n] = increment_vector.transpose()
 
         #print(cls.delta_reactions)
-        cls.system_time += delta_time
+        #cls.system_time += delta_time  # System time is managed at a higher level
 
 
 
@@ -759,9 +795,11 @@ class BioSim1D:
             cls.diffuse_step(time_step)
             # Merge into the concentrations of the various bins/chemical species pairs,
             # the increments concentrations computed separately by the reaction and the diffusion steps
-            cls.system += cls.delta_reactions     # Matrix operation
-            cls.system += cls.delta_diffusion     # Matrix operation
-
+            cls.system += cls.delta_reactions   # Matrix operation to update all the concentrations
+                                                #   from the reactions
+            cls.system += cls.delta_diffusion   # Matrix operation to update all the concentrations
+                                                #   from the diffusion
+            cls.system_time += time_step
 
 
 
@@ -876,7 +914,7 @@ class BioSim1D:
 
 
     @classmethod
-    def line_plot(cls, plot_pars: dict, graphic_component, header=None) -> None:
+    def line_plot(cls, plot_pars: dict, graphic_component, header=None, color_mapping=None) -> None:
         """
         Send to the HTML log, a line plot representation of the concentrations of
         all the chemical species species.
@@ -886,7 +924,8 @@ class BioSim1D:
 
         :param plot_pars:           A dictionary of parameters (such as "outer_width") for the plot
         :param graphic_component:   A string with the name of the graphic module to use.  EXAMPLE: "vue_curves_4"
-        :param header:              Optional string to display just above the plot
+        :param header:              OPTIONAL string to display just above the plot
+        :param color_mapping:       OPTIONAL dict mapping index numbers to color names or RBG hex values
         :return:                    None
         """
         if not GraphicLog.is_initialized():
@@ -923,6 +962,11 @@ class BioSim1D:
             "outer_height": plot_pars["outer_height"],
             "margins": plot_pars["margins"]
         }
+
+        # If a color mapping was provided, add it to the data
+        if color_mapping:
+            all_data["color_mapping"] = color_mapping
+
 
         # Send the plot to the HTML log file.
         # The version of the heatmap Vue component specified in the call to GraphicLog.config() will be used

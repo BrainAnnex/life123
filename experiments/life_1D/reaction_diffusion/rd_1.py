@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -27,9 +27,10 @@
 # A LOT of plots are sent to the log file from this experiment; the reason is to compare two
 # graphic elements, "vue_curves_3" and "vue_curves_4"
 #
-# LAST REVISED: July 13, 2022
+# LAST REVISED: Aug. 13, 2022
 
 # %%
+# Extend the sys.path variable, to contain the project's root directory
 import set_path
 set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up 
                                          # to reach the project's home, from the folder containing this notebook
@@ -39,6 +40,7 @@ from experiments.get_notebook_info import get_notebook_basename
 
 from life_1D.bio_sim_1d import BioSim1D as bio
 
+import plotly.express as px
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
 from modules.html_log.html_log import HtmlLog as log
@@ -62,21 +64,18 @@ rxn = Reactions(chem_data)
 
 # Reaction A + B <-> C , with 1st-order kinetics for each species; note that it's mostly in the forward direction
 rxn.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=20., reverse_rate=2.)
-
 bio.initialize_system(n_bins=7, chem_data=chem_data, reactions=rxn)
 
-bio.set_bin_conc(bin=0, species_index=0, conc=20.)
-bio.set_bin_conc(bin=6, species_index=1, conc=20.)
-
-total_time = 0.
-
-bio.describe_state(time = total_time)
+# %%
+bio.show_system_snapshot()
 
 # %%
 rxn.describe_reactions()
 
 # %%
-# Send the plot to the HTML log file
+# Send a header and a plot to the HTML log file
+log.write("Reaction:  A + B <-> C",
+          style=log.h2)
 graph_data = rxn.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
@@ -93,28 +92,56 @@ lineplot_pars = {"range": [0, 20],
                 "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
                 }
 
+# %% [markdown]
+# # Inject initial concentrations of A and B at opposite ends of the system
+
 # %%
-log.write(f"Initial system state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+bio.set_bin_conc(bin=0, species_index=0, conc=20.)
+bio.set_bin_conc(bin=6, species_index=1, conc=20.)
+
+bio.describe_state()
+
+# %%
+bio.show_system_snapshot()
+
+# %%
+# Save the state of the concentrations of all species at the middle bin
+bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.get_history()
+
+# %%
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+              title= f"A + B <-> C . System snapshot at time t={bio.system_time}",
+              color_discrete_sequence = ['red', 'orange', 'green'],
+              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
+fig.show()
+
+# %%
+log.write(f"Initial system state at time t={bio.system_time}:", blanks_before=2, style=log.bold)
 
 # Output to the log file a heatmap for each chemical species
-for i in range(3):
+for i in range(bio.n_species):
+    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
     bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
 
 # Output to the log file a one-curve line plot for each chemical species
-for i in range(3):
+for i in range(bio.n_species):
+    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
-# Output to the log file a line plot for all the chemicals together 
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+# Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
+
+# %% [markdown] tags=[]
+# ### <a name="sec_2_first_step"></a>First step
 
 # %%
 delta_t = 0.002   # This will be our time "quantum" for this experiment
 
-
+# %%
 # First step
 bio.react_diffuse(time_step=delta_t, n_steps=1)
-total_time += delta_t
-bio.describe_state(time=total_time)
+bio.describe_state()
 
 # %% [markdown]
 # _After the first delta_t time step_:
@@ -127,71 +154,154 @@ bio.describe_state(time=total_time)
 #
 
 # %%
-log.write(f"System state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+bio.show_system_snapshot()
+
+# %%
+# Save the state of the concentrations of all species at the middle bin
+bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.get_history()
+
+# %%
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+              title= f"A + B <-> C . System snapshot at time t={bio.system_time}",
+              color_discrete_sequence = ['red', 'orange', 'green'],
+              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
+fig.show()
+
+# %%
+log.write(f"System state at time t={bio.system_time}:", blanks_before=2, style=log.bold)
 
 # Output to the log file a heatmap for each chemical species
-for i in range(3):
+for i in range(bio.n_species):
+    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
     bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
 
 # Output to the log file a one-curve line plot for each chemical species
-for i in range(3):
+for i in range(bio.n_species):
+    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
-# Output to the log file a line plot for all the chemicals together 
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+# Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
+
+# %% [markdown]
+# ### <a name="sec_2"></a>Several more steps
 
 # %%
 # Continue with several delta_t steps
 for _ in range(7):
     bio.react_diffuse(time_step=delta_t, n_steps=1)
-    total_time += delta_t
-    bio.describe_state(concise=True, time=total_time)
+    bio.describe_state(concise=True)
 
 # %%
-log.write(f"System state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+bio.show_system_snapshot()
+
+# %%
+# Save the state of the concentrations of all species at the middle bin
+bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.get_history()
+
+# %%
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+              title= f"A + B <-> C . System snapshot (interpolated) at time t={bio.system_time}",
+              color_discrete_sequence = ['red', 'orange', 'green'],
+              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"},
+              line_shape="spline")
+fig.show()
+
+# %% [markdown]
+# A is continuing to diffuse from the left.  
+# B is continuing to diffuse from the right.  
+# They're finally beginning to overlap in the middle bin
+
+# %%
+log.write(f"System state at time t={bio.system_time}:", blanks_before=2, style=log.bold)
 
 # Output to the log file a heatmap for each chemical species
-for i in range(3):
+for i in range(bio.n_species):
+    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
     bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
 
 # Output to the log file a one-curve line plot for each chemical species
-for i in range(3):
+for i in range(bio.n_species):
+    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
-# Output to the log file a line plot for all the chemicals together 
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+# Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
+
+# %% [markdown]
+# ### <a name="sec_2"></a>Several group of longer runs
 
 # %%
 # Now, do several group of longer runs
 for _ in range(4):
     print("\n\n+ 10 steps later:")
     bio.react_diffuse(time_step=delta_t, n_steps=10)
-    total_time += delta_t
-    bio.describe_state(concise=True, time=total_time)
+    bio.describe_state(concise=True)
 
 # %%
-log.write(f"System state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+bio.show_system_snapshot()
+
+# %%
+# Save the state of the concentrations of all species at the middle bin
+bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.get_history()
+
+# %%
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+              title= f"A + B <-> C . System snapshot at time t={bio.system_time}",
+              color_discrete_sequence = ['red', 'orange', 'green'],
+              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"},
+              line_shape="spline")
+fig.show()
+
+# %% [markdown]
+# A is continuing to diffuse from the left.  
+# B is continuing to diffuse from the right.  
+# By now, they're overlapping in the middle bin sufficiently to react and generate C
+
+# %%
+log.write(f"System state at time t={bio.system_time}:", blanks_before=2, style=log.bold)
 
 # Output to the log file a heatmap for each chemical species
-for i in range(3):
+for i in range(bio.n_species):
+    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
     bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
 
 # Output to the log file a one-curve line plot for each chemical species
-for i in range(3):
+for i in range(bio.n_species):
+    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
-# Output to the log file a line plot for all the chemicals together 
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+# Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
 
 # %%
+# Continue the simulation
 for _ in range(4):
     print("\n\n+++ 30 steps later:")
     bio.react_diffuse(time_step=delta_t, n_steps=30)
-    total_time += delta_t
-    bio.describe_state(concise=True, time=total_time)
+    bio.describe_state(concise=True)
 
 # %%
-log.write(f"System state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+bio.show_system_snapshot()
+
+# %%
+# Save the state of the concentrations of all species at the middle bin
+bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.get_history()
+
+# %%
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+              title= f"A + B <-> C . System snapshot at time t={bio.system_time}",
+              color_discrete_sequence = ['red', 'orange', 'green'],
+              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"},
+              line_shape="spline")
+fig.show()
+
+# %%
+log.write(f"System state at time t={bio.system_time}:", blanks_before=2, style=log.bold)
 
 # Output to the log file a heatmap for each chemical species
 for i in range(3):
@@ -201,18 +311,34 @@ for i in range(3):
 for i in range(3):
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
-# Output to the log file a line plot for all the chemicals together 
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+# Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
 
 # %%
+# Continue the simulation
 for _ in range(4):
     print("\n+++++ 50 steps later:")
     bio.react_diffuse(time_step=delta_t, n_steps=50)
-    total_time += delta_t
-    bio.describe_state(concise=True, time=total_time)
+    bio.describe_state(concise=True)
 
 # %%
-log.write(f"System state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+bio.show_system_snapshot()
+
+# %%
+# Save the state of the concentrations of all species at the middle bin
+bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.get_history()
+
+# %%
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+              title= f"A + B <-> C . System snapshot at time t={bio.system_time}",
+              color_discrete_sequence = ['red', 'orange', 'green'],
+              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"},
+              line_shape="spline")
+fig.show()
+
+# %%
+log.write(f"System state at time t={bio.system_time}:", blanks_before=2, style=log.bold)
 
 # Output to the log file a heatmap for each chemical species
 for i in range(3):
@@ -222,18 +348,34 @@ for i in range(3):
 for i in range(3):
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
-# Output to the log file a line plot for all the chemicals together 
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+# Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
 
 # %%
+# Continue the simulation
 for _ in range(4):
     print("\n+++++++++++++++ 150 steps later:")
     bio.react_diffuse(time_step=delta_t, n_steps=150)
-    total_time += delta_t
-    bio.describe_state(concise=True, time=total_time)
+    bio.describe_state(concise=True)
 
 # %%
-log.write(f"System state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+bio.show_system_snapshot()
+
+# %%
+# Save the state of the concentrations of all species at the middle bin
+bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.get_history()
+
+# %%
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+              title= f"A + B <-> C . System snapshot at time t={bio.system_time}",
+              color_discrete_sequence = ['red', 'orange', 'green'],
+              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"},
+              line_shape="spline")
+fig.show()
+
+# %%
+log.write(f"System state at time t={bio.system_time}:", blanks_before=2, style=log.bold)
 
 # Output to the log file a heatmap for each chemical species
 for i in range(3):
@@ -243,18 +385,34 @@ for i in range(3):
 for i in range(3):
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
-# Output to the log file a line plot for all the chemicals together 
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+# Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
 
 # %%
+# Continue the simulation
 for _ in range(2):
     print("\n++++++++++ ... ++++++++++ 1,000 steps later:")
     bio.react_diffuse(time_step=delta_t, n_steps=1000)
-    total_time += delta_t
-    bio.describe_state(concise=True, time=total_time)
+    bio.describe_state(concise=True)
 
 # %%
-log.write(f"System state at time t={total_time}:", blanks_before=2, style=log.bold, also_print=False)
+bio.show_system_snapshot()
+
+# %%
+# Save the state of the concentrations of all species at the middle bin
+bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.get_history()
+
+# %%
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+              title= f"A + B <-> C . System snapshot at time t={bio.system_time}",
+              color_discrete_sequence = ['red', 'orange', 'green'],
+              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"},
+              line_shape="spline")
+fig.show()
+
+# %%
+log.write(f"System state at time t={bio.system_time}:", blanks_before=2, style=log.bold)
 
 # Output to the log file a heatmap for each chemical species
 for i in range(3):
@@ -264,8 +422,11 @@ for i in range(3):
 for i in range(3):
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
-# Output to the log file a line plot for all the chemicals together 
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+# Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
+
+# %% [markdown] tags=[]
+# ### <a name="sec_2_equilibrium"></a>Equilibrium
 
 # %%
 # Verify equilibrium concentrations (sampled in the 1st bin; at this point, all bins have equilibrated)
@@ -275,5 +436,20 @@ C_eq = bio.bin_concentration(0, 2)
 print(f"\nRatio of equilibrium concentrations ((C_eq) / (A_eq * B_eq)) : {(C_eq) / (A_eq * B_eq)}")
 print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
 # Both are essentially equal, as expected
+
+# %% [markdown] tags=[]
+# # Plots of changes of concentration with time
+
+# %% tags=[]
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "C"], 
+              title="Reactions:  A + B <-> C . Changes in concentrations in the MIDDLE bin",
+              color_discrete_sequence = ['navy', 'cyan', 'red'],
+              labels={"value":"concentration", "variable":"Chemical"})
+fig.show()
+
+# %% [markdown]
+# A and B overlap on the plot, due to the symmetry of the system.  
+# Initially, in the middle bin, neither A nor B are present; over time they diffuse there... but then they react and get consumed (producing C), to an equilibrium value.  
+# C gradually diffuses away.
 
 # %%

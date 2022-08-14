@@ -7,7 +7,7 @@ Vue.component('vue_cytoscape_1',  <!-- NOTE:  Only lower cases in component name
             },
 
             color_mapping: {        // Mapping the node label to its interior color
-                required: true      // For now (TODO: auto-assign if unspecified)
+                required: true      // For now (TODO: auto-assign if unspecified; SEE vue_curves_4.js)
             },
 
             component_id: {

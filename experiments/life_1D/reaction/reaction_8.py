@@ -13,14 +13,14 @@
 # ---
 
 # %% [markdown]
-# **Two COUPLED reactions:  A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species,
+# ** 2 COUPLED reactions:  A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species,
 # taken to equilibrium**
 #
 # Both reactions are stronger in their respective forward rates.  For the most part, "C" is produced by the 1st reaction, and consumed by the 2nd one
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Aug. 11, 2022
+# LAST REVISED: Aug. 12, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -75,6 +75,9 @@ bio.get_history()
 rxn.describe_reactions()
 
 # %%
+# Send a header and a plot to the HTML log file
+log.write("2 COUPLED reactions:  A + B <-> C  and  C + D <-> E",
+          style=log.h2)
 # Send the plot to the HTML log file
 graph_data = rxn.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
@@ -87,45 +90,57 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 bio.react(time_step=0.01, n_steps=1)
 bio.describe_state()
 
-# %%
-"""
-1 bins and 5 species:
- [[2.27 ]
- [4.27 ]
- [1.702]
- [0.372]
- [0.128]]
-"""
+# %% [markdown]
+# 1 bins and 5 species:
+#  [[2.27 ]
+#  [4.27 ]
+#  [1.702]
+#  [0.372]
+#  [0.128]]
 
+# %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %%
 # Identical 2nd step
 bio.react(time_step=0.01, n_steps=1)
 bio.describe_state()
 
-# %%
-"""
-1 bins and 5 species:
- [[1.819395  ]
- [3.819395  ]
- [2.10707348]
- [0.32646848]
- [0.17353152]]
-"""
+# %% [markdown]
+# 1 bins and 5 species:
+#  [[1.819395  ]
+#  [3.819395  ]
+#  [2.10707348]
+#  [0.32646848]
+#  [0.17353152]]
 
-# Numerous more identical steps
+# %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %% [markdown]
+# ### <a name="sec_2"></a>Numerous more steps
+
+# %%
+# Numerous more identical steps, to equilibrium
 bio.react(time_step=0.01, n_steps=200)
 bio.describe_state()
 
+# %% [markdown]
+# 1 bins and 5 species:
+#  [[0.50508029]
+#  [2.50508029]
+#  [3.16316668]
+#  [0.06824696]
+#  [0.43175304]]
+
+# %% [markdown] tags=[]
+# ### <a name="sec_2_equilibrium"></a>Equilibrium
+
 # %%
-"""
-1 bins and 5 species:
- [[0.50508029]
- [2.50508029]
- [3.16316668]
- [0.06824696]
- [0.43175304]]
-"""
-
-
 # Do a consistent check with the equilibrium concentrations:
 
 A_eq = bio.bin_concentration(0, 0)
@@ -143,5 +158,25 @@ Rb1 = rxn.get_reverse_rate(1)
 equil = -(Rf0 * A_eq * B_eq - Rf1 * C_eq * D_eq) + (Rb0 * C_eq - Rb1 * E_eq)
 
 print("\nAt equilibrium: ", equil, " (this should be close to 0 at equilibrium)")
+
+# %%
+# Save the state of the concentrations of all species at bin 0
+bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.get_history()
+
+# %% [markdown] tags=[]
+# # Plots of changes of concentration with time
+
+# %% tags=[]
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "C", "D", "E"], 
+              title="2 COUPLED reactions:  A + B <-> C  and  C + D <-> E . Changes in concentrations",
+              color_discrete_sequence = ['navy', 'cyan', 'red', 'orange', 'green'],
+              labels={"value":"concentration", "variable":"Chemical"})
+fig.show()
+
+# %% [markdown]
+# A and B get consumed.  
+# C gets produced by the 1st reaction more quickly than consumed by the 2nd one.
+# D gets consumed, while E gets produced.
 
 # %%

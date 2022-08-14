@@ -66,6 +66,16 @@ Vue.component('vue_curves_4',
                 /* Affecting the outside of the container box.
                              EXAMPLE: {"top": 30, "right": 30, "bottom": 30, "left": 30}
                  */
+            },
+
+            color_mapping: {
+                default: {    // TODO: define more colors!
+                     0: 'red',
+                     1: 'orange',
+                     2: 'green',
+                     3: 'blue',
+                     4: 'pink'
+                }
             }
         },
 
@@ -315,37 +325,41 @@ Vue.component('vue_curves_4',
                 return 35 + index*25;
             },
 
-            color_picker(index, pale)
-            // TODO: generalize to more colors!
+
+
+            pale_version(color)
+            /*  Return the paler version of the given color,
+                specified as a string name ("red") or string RBG hex ("#FFAAAA").
+                Return the new color as a string RBG hex.
+                EXAMPLE: pale_version("red") and pale_version("#FF0000") return "#ffb3b3"
+             */
             {
-                switch(index) {
-                  case 0:
-                    if (pale)
-                        return "#FFAAAA"
-                    else
-                        return "red";
-                    break;
+                //console.log(color);
+                const c = d3.hsl(color);        // Convert to HSL coordinates
+                //console.log(c);
+                c.l = 0.8;                      // Set the luminosity relatively close to the max
+                const c_new = c.formatHex();    // Convert back to RBG hex
+                //console.log(c_new);
+                return c_new;
+            },
 
-                  case 1:
-                    if (pale)
-                          return "#AAFFAA";
-                    else
-                        return "green";
-                    break;
+            color_picker(index, pale)
+            /*  Given an integer index (0, 1, 2, ...) return a color;
+                If the pale flag is true, return a pale version of the color instead.
+                A default color (and pale version) are provided if the index isn't recognized.
+             */
+            {
+                var color;
 
-                  case 2:
-                    if (pale)
-                          return "#AAAAFF";
-                    else
-                        return "blue";
-                    break;
+                if (index in this.color_mapping)
+                    color = this.color_mapping[index];
+                else
+                    color = 'black';
 
-                  default:
-                    if (pale)
-                          return "#AAAAAA";
-                    else
-                        return "black";
-                }
+                if (pale)
+                    return this.pale_version(color);
+                else
+                    return color;
             },
 
 
