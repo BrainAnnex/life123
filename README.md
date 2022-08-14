@@ -1,4 +1,4 @@
-### VERSION 1.0-beta11.2
+### VERSION 1.0-beta11.3
 
 
 
