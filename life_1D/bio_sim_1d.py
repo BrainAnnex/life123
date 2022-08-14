@@ -144,7 +144,8 @@ class BioSim1D:
         """
         A printout of the state of the system, for now useful only for small systems
 
-        :param time:    (Optional) System time to display in a header (regardless of "concise" flag);
+        :param time:    TODO: phase out
+                            (Optional) System time to display in a header (regardless of "concise" flag);
                             this value becomes irrelevant if the official system time is in place (currently being phased in)
         :param concise: If True, only produce a minimalist printout with just the concentration values
         :return:        None
@@ -433,7 +434,7 @@ class BioSim1D:
         :param time_duration:
         :param time_step:
         :param n_steps:
-        :param verbose:
+        :param verbose:         TODO: replace with a class-wide verbose flag
         :return:                A dictionary with data about the status of the operation
         """
         # TODO: factor out this part, in common to diffuse() and react()
@@ -457,7 +458,8 @@ class BioSim1D:
                     print("    ...")
 
             cls.diffuse_step(time_step)
-            cls.system += cls.delta_diffusion     # Matrix operation
+            cls.system += cls.delta_diffusion     # Matrix operation to update all the concentrations
+            cls.system_time += time_step
 
         if verbose:
             print(f"\nSystem after Delta time {time_duration}, at end of {n_steps} steps of size {time_step}:")
@@ -828,7 +830,7 @@ class BioSim1D:
                             "need to initialize the graphics module with a call to GraphicLog.config()")
 
         if header:
-            log.write(f"{header}", style=log.h1, newline=False)
+            log.write(f"{header}", style=log.h1, newline=False, also_print=False)
 
 
         #

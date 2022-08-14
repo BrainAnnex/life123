@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ** 2 COUPLED reactions:  A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species,
+# **2 COUPLED reactions:  A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species,
 # taken to equilibrium**
 #
 # Both reactions are stronger in their respective forward rates.  For the most part, "C" is produced by the 1st reaction, and consumed by the 2nd one

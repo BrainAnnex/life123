@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -23,14 +23,17 @@
 # LAST REVISED: July 13, 2022
 
 # %%
+# Extend the sys.path variable, to contain the project's root directory
 import set_path
 set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up 
                                          # to reach the project's home from the folder containing this notebook
 
 # %%
+from experiments.get_notebook_info import get_notebook_basename
+
 from life_1D.bio_sim_1d import BioSim1D as bio
 
-from experiments.get_notebook_info import get_notebook_basename
+import plotly.express as px
 
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.html_log.html_log import HtmlLog as log
