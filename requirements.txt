@@ -1,4 +1,4 @@
-numpy==1.21.6       # downgraded for compatibility with mybinder.org
+numpy==1.22.4
 
 pytest==6.2.5
 
