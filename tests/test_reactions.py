@@ -133,7 +133,7 @@ def test_reaction_step_1b(rxn):
     bio.set_reactions(rxn)
 
     assert rxn.number_of_reactions() == 1
-    assert rxn.describe_reactions() == ["0: A <-> B  (Rf = 3.0 / Rb = 2.0)"]
+    assert rxn.describe_reactions(return_as_list=True) == ["0: A <-> B  (Rf = 3.0 / Rb = 2.0)"]
     assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
 
     # First step
