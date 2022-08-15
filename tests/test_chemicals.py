@@ -36,12 +36,59 @@ def test_initialize():
 
 
 
+def test_number_of_chemicals():
+    chem_data = chem(names=['A', 'B', 'C'])
+    assert chem_data.number_of_chemicals() == 3
+
+    chem_data = chem(names=[])
+    assert chem_data.number_of_chemicals() == 0
+
+
+
 def test_set_diffusion_rates():
-    pass
+    with pytest.raises(Exception):
+        chem_data = chem(names=['A', 'B', 'C'])
+        chem_data.set_diffusion_rates("Do I look like a list??")
+
+    with pytest.raises(Exception):
+        chem_data = chem(names=['A', 'B', 'C'])
+        chem_data.set_diffusion_rates([1, 2, 3])
+        chem_data.set_diffusion_rates([4, 5, 6])
+
+    with pytest.raises(Exception):
+        chem_data = chem(names=['A', 'B', 'C'])
+        chem_data.set_diffusion_rates([10])
+
+    chem_data = chem(names=['A', 'B', 'C'])
+    chem_data.set_diffusion_rates([1, 2, 3])
+    assert chem_data.number_of_chemicals() == 3
+    assert np.allclose(chem_data.diffusion_rates, [1, 2, 3])
+
 
 
 def test_set_names():
-    pass
+    with pytest.raises(Exception):
+        chem_data = chem()
+        chem_data.set_names("Do I look like a list??")
+
+    with pytest.raises(Exception):
+        chem_data = chem(names=['A', 'B', 'C'])
+        chem_data.set_names(['X', 'Y', 'Z'])
+
+    with pytest.raises(Exception):
+        chem_data = chem()
+        chem_data.set_diffusion_rates([1, 2, 3])
+        chem_data.set_names(['A', 'B'])
+
+    chem_data = chem()
+    chem_data.set_diffusion_rates([1, 2, 3])
+    chem_data.set_names(['A', 'B', 'C'])
+    assert chem_data.number_of_chemicals() == 3
+    assert chem_data.names == ['A', 'B', 'C']
+    # Verify that the name index also got created successfully
+    assert chem_data.name_dict['A'] == 0
+    assert chem_data.name_dict['B'] == 1
+    assert chem_data.name_dict['C'] == 2
 
 
 
