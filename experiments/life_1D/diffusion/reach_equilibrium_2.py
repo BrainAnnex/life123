@@ -65,7 +65,8 @@ bio.initialize_system(n_bins=9, chem_data=chem_data)
 
 bio.set_uniform_concentration(species_index=0, conc=0.)
 
-# Start out with a pulse in bins near the *left* and the *right* endpoints
+# Start out with a pulse in bins near the *left* and the *right* endpoints.  
+# A total of 20 "units of concentration" is injected
 bio.inject_conc_to_bin(species_index=0, bin=2, delta_conc=10.)
 bio.inject_conc_to_bin(species_index=0, bin=6, delta_conc=10.)
 
@@ -120,3 +121,7 @@ for i in range(15):
 
 # %% [markdown] tags=[]
 # **All cells now have essentially uniform concentration**
+#
+# The "20 units of concentration" are now uniformly spread across the 9 bins, leading to a near-constant concentration of 20/9 = **2.22**
+
+# %%

@@ -13,14 +13,14 @@
 # ---
 
 # %% [markdown]
-# **An initial concentration pulse (near the left edge of the system) moving towards equilibrium**
+# # An initial concentration pulse (near the left edge of the system) moving towards equilibrium
 #
 # The system starts out with a "concentration pulse" in bin 2 (the 3rd bin from the left) - i.e. that bin is initially the only one with a non-zero concentration of the only chemical species.
 # Then the system is left undisturbed, and followed to equilibrium.
 #
-# **OUTPUT (incl. graphics):** overwritten into the .htm file with the same base name.  Visualized with heatmaps and line curves.
+# **EXTRA OUTPUT (incl. graphics):** overwritten into the .htm file with the same base name.  Visualized with heatmaps and line curves.
 #
-# LAST REVISED: July 13, 2022
+# LAST REVISED: Aug. 14, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -49,20 +49,6 @@ GraphicLog.config(filename=log_file,
                   home_rel_path="../../..")    # relative path is from the location of THE LOG FILE to the project's home
 
 # %%
-# Prepare the initial system
-chem_data = chem(diffusion_rates=[0.1])
-bio.initialize_system(n_bins=10, chem_data=chem_data)
-
-log.write("1-D diffusion to equilibrium of a single species, with Diffusion rate 0.1",
-          style=log.h2)
-
-# %%
-bio.set_uniform_concentration(species_index=0, conc=0.)
-bio.inject_conc_to_bin(bin=2, species_index=0, delta_conc=10.)
-
-bio.describe_state()
-
-# %%
 # Set the heatmap parameters
 heatmap_pars = {"range": [0, 2.5],
                 "outer_width": 850, "outer_height": 150,
@@ -76,6 +62,24 @@ lineplot_pars = {"range": [0, 10],
                 }
 
 # %%
+# Prepare the initial system
+chem_data = chem(names=["A"], diffusion_rates=[0.1])
+bio.initialize_system(n_bins=10, chem_data=chem_data)
+
+bio.inject_conc_to_bin(bin=2, species_index=0, delta_conc=10.)
+
+bio.describe_state()
+
+# %%
+fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
+              title= f"Diffusion. System snapshot at time t={bio.system_time}",
+              color_discrete_sequence = ['red'],
+              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
+fig.show()
+
+# %%
+log.write("1-D diffusion to equilibrium of a single species, with Diffusion rate 0.1",
+          style=log.h2)
 log.write("Initial system state at time t=0:", blanks_before=2, style=log.bold)
 
 # Output a heatmap to the log file
@@ -88,15 +92,20 @@ bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_c
 log.write("Advancing to time t=10, with time steps of 0.1 ... ", blanks_before=2, newline=False)
 
 # %%
-total_time = 0.
 delta_time = 10.
 
 status = bio.diffuse(time_duration=delta_time, time_step=0.1)
 print("\n", status)
-total_time += delta_time
 
-log.write(f"After delta time {delta_time}.  TOTAL TIME {total_time}  ({status['steps']} steps taken):")
+log.write(f"After delta time {delta_time}.  TOTAL TIME {bio.system_time}  ({status['steps']} steps taken):")
 bio.describe_state(concise=True)
+
+# %%
+fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
+              title= f"Diffusion. System snapshot at time t={bio.system_time}",
+              color_discrete_sequence = ['red'],
+              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
+fig.show()
 
 # %%
 # Output a heatmap into the log file
@@ -112,14 +121,26 @@ bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_c
 # %% tags=[]
 for i in range(50):
     status = bio.diffuse(time_duration=delta_time, time_step=0.1)
-    total_time += delta_time
 
-    print(f"\nAfter Delta time {delta_time}.  TOTAL TIME {total_time}  ({status['steps']} steps taken):")
+    print(f"\nAfter Delta time {delta_time}.  TOTAL TIME {bio.system_time}  ({status['steps']} steps taken):")
     bio.describe_state(concise=True)
 
     if i<2 or i==6 or i>=49:
+        fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
+              title= f"Diffusion. System snapshot at time t={bio.system_time}",
+              color_discrete_sequence = ['red'],
+              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
+        fig.show()
+        
         # Output a heatmap to the log file
-        bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, header=f"Time {total_time} :\n", graphic_component="vue_heatmap_11")
+        bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, header=f"Time {bio.system_time} :\n", graphic_component="vue_heatmap_11")
         # Output a line plot the log file
         bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
+
+# %% [markdown]
+# **All cells now have essentially uniform concentration**
+#
+# The "10 units of concentration" are now uniformly spread across the 10 bins, leading to a near-constant concentration of 10/10 = **1.0**
+
+# %%
