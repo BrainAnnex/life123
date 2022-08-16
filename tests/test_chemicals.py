@@ -107,12 +107,14 @@ def test_get_name():
         chem_data.get_name(3.14)            # Invalid argument type
 
 
+
 def test_get_index():
     chem_data = chem(names=['A', 'B', 'C'])
     assert chem_data.get_index('A') == 0
     assert chem_data.get_index('B') == 1
     assert chem_data.get_index('C') == 2
-    assert chem_data.get_index('X') is None
+    with pytest.raises(Exception):
+        assert chem_data.get_index('X')     # Not found
 
 
 

@@ -145,6 +145,7 @@ class Reactions:
         assert type(products) == list, "add_reaction(): argument `products` must be a list"
         product_list = [self._parse_reaction_term(r, "product") for r in products]
 
+
         rxn = {"reactants": reactant_list, "products": product_list, "Rf": forward_rate, "Rb": reverse_rate}
         self.reaction_list.append(rxn)
 
@@ -318,7 +319,7 @@ class Reactions:
 
 
 
-    def _parse_reaction_term(self, term: Union[int, str, tuple, list], name="term") -> tuple:
+    def _parse_reaction_term(self, term: Union[int, str, tuple, list], name="term") -> (int, int, int):
         """
         Accept various ways to specify a reaction term, and return a standardized tuple form.
 
@@ -333,7 +334,8 @@ class Reactions:
 
         :param term:    An integer or string or tuple or list
         :param name:    An optional nickname to refer to this term in error messages, if applicable
-        :return:        A standardized tuple form
+        :return:        A standardized tuple form, of the form (stoichiometry, species, reaction_order),
+                            where all terms are integers
         """
 
         if type(term) == int:
@@ -341,18 +343,18 @@ class Reactions:
         elif type(term) == str:
             return  (1, self.chem_data.get_index(term), 1)
         elif type(term) != tuple and type(term) != list:
-            raise Exception(f"{name} must be either an integer string, or a pair or a triplet. Instead, it is {type(term)}")
+            raise Exception(f"_parse_reaction_term(): {name} must be either an integer string, or a pair or a triplet. Instead, it is {type(term)}")
 
         # If we get thus far, term is either a tuple or a list
         if len(term) != 3 and len(term) != 2:
-            raise Exception(f"Unexpected length for {name} tuple/list: it should be 2 or 3. Instead, it is {len(term)}")
+            raise Exception(f"parse_reaction_term(): Unexpected length for {name} tuple/list: it should be 2 or 3. Instead, it is {len(term)}")
 
         stoichiometry = term[0]
         species = term[1]
         if type(species) == str:
             species = self.chem_data.get_index(species)
         elif type(species) != int:
-            raise Exception(f"The species value must be an integer or a string. Instead, it is {species}")
+            raise Exception(f"parse_reaction_term(): The species value must be an integer or a string. Instead, it is {species}")
 
         if len(term) == 2:
             return (stoichiometry, species, 1)

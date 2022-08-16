@@ -138,15 +138,19 @@ class Chemicals:
 
 
 
-    def get_index(self, name: str) -> Union[int, None]:
+    def get_index(self, name: str) -> int:
         """
-        Return the index of the chemical species with the given name,
-        or None if not found
+        Return the index of the chemical species with the given name.
+        If not found, an Exception is raised
 
         :param name:    Name of the chemical species of interest
         :return:        The index of the species with the given name
         """
-        return self.name_dict.get(name, None)
+        index =  self.name_dict.get(name)
+        assert index is not None, \
+            f"Chemicals.get_index(): No chemical species named `{name}` was found"
+
+        return index
 
 
 

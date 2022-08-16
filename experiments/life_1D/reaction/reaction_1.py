@@ -14,8 +14,8 @@
 # ---
 
 # %% [markdown]
-# **A simple A <-> B reaction between 2 species with initial uniform concentrations across 3 bins,
-# with 1st-order kinetics in both directions, taken to equilibrium**
+# ### A simple A <-> B reaction between 2 species with initial uniform concentrations across 3 bins,
+# with 1st-order kinetics in both directions, taken to equilibrium
 #
 # Diffusion NOT taken into account
 #

@@ -577,7 +577,7 @@ class BioSim1D:
 
 
     @classmethod
-    def react(cls, time_duration=None, time_step=None, n_steps=None) -> None:
+    def react(cls, time_duration=None, time_step=None, n_steps=None, snapshots=None) -> None:
         """
         Update the system concentrations as a result of all the reactions in all bins.
         CAUTION : NO diffusion is taken into account.
@@ -591,6 +591,8 @@ class BioSim1D:
         :param time_duration:
         :param time_step:
         :param n_steps:
+        :param snapshots:       OPTIONAL dict with the keys: "frequency", "sample_bin", "sample_species"
+                                    If provided, take a system snapshot after running a multiple of "frequency" runs
         :return:                None
         """
         # TODO: factor out this part, in common to diffuse() and react()
@@ -606,10 +608,19 @@ class BioSim1D:
         if not n_steps:
             n_steps = math.ceil(time_duration / time_step)
 
+
+        # TODO: validation; implement sample_species
+        if snapshots is None:
+            frequency = None
+        else:
+            frequency = snapshots.get("frequency", 1)
+
         for i in range(n_steps):
             cls.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
             cls.system += cls.delta_reactions   # Matrix operation to update all the concentrations
             cls.system_time += time_step
+            if (frequency is not None) and ((i+1)%frequency == 0):
+                cls.save_snapshot(cls.bin_snapshot(bin_address = snapshots["sample_bin"]))
 
 
 
@@ -744,13 +755,13 @@ class BioSim1D:
             delta_fwd = delta_time * fwd_rate_coeff         # TODO: save, to avoid re-computing at each bin
             for r in reactants:
                 stoichiometry, species_index, order = r
-                conc = cls.system[species_index , bin_n]      # TODO: make more general for 2D and 3D
+                conc = cls.system[species_index , bin_n]      # TODO: make more general for 2D and 3D (receive as argument)
                 delta_fwd *= conc ** order      # Raise to power
 
             delta_back = delta_time * back_rate_coeff       # TODO: save, to avoid re-computing at each bin
             for p in products:
                 stoichiometry, species_index, order = p
-                conc = cls.system[species_index , bin_n]      # TODO: make more general for 2D and 3D
+                conc = cls.system[species_index , bin_n]      # TODO: make more general for 2D and 3D (receive as argument)
                 delta_back *= conc ** order     # Raise to power
 
             #print(f"    delta_fwd: {delta_fwd} | delta_back: {delta_back}")

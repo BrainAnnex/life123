@@ -113,19 +113,19 @@ bio.describe_state()
 # [A] = 0.29487741 , [B] = 40.29487741 , [C] = [29.70512259]
 
 # %%
+A_eq = bio.bin_concentration(0, 0)
+B_eq = bio.bin_concentration(0, 1)
+C_eq = bio.bin_concentration(0, 2)
+print(f"Ratio of equilibrium concentrations (C_eq / (A_eq * B_eq)) : {C_eq / (A_eq * B_eq)}")
+print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
+
+# %%
 # Save the state of the concentrations of all species at bin 0
 bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% [markdown]
 # # Note: "A" (now almost completely depleted) is largely the limiting reagent
-
-# %%
-A_eq = bio.bin_concentration(0, 0)
-B_eq = bio.bin_concentration(0, 1)
-C_eq = bio.bin_concentration(0, 2)
-print(f"Ratio of equilibrium concentrations (C_eq / (A_eq * B_eq)) : {C_eq / (A_eq * B_eq)}")
-print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
 
 # %% [markdown] tags=[]
 # # Plots of changes of concentration with time
