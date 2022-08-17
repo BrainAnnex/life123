@@ -13,12 +13,11 @@
 # ---
 
 # %% [markdown]
-# **One-bin  2A <-> B reaction, COMPARING 1st-order and 2nd-order kinetics in forward direction;
-# reverse direction 1-st order**
+# ## One-bin  2A <-> B reaction, COMPARING 1st-order and 2nd-order kinetics in *forward* direction; reverse direction 1-st order
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Aug. 11, 2022
+# LAST REVISED: Aug. 16, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -104,15 +103,13 @@ bio.react(time_step=0.02, n_steps=20)
 bio.describe_state()
 
 # %% [markdown]
-# Consistent with the 5/2 ratio of forward/reverse rates (and the 1st order reactions),
+# Consistent with the 5/2 ratio of forward/reverse rates (and the *1st order* reactions),
 # the systems settles in the following equilibrium:  
 # [A] = 2.16928427 , [B] = 5.41535786
 
 # %%
-A_eq = bio.bin_concentration(0, 0)
-B_eq = bio.bin_concentration(0, 1)
-print(f"Ratio of equilibrium concentrations: {B_eq / A_eq}")
-print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
+# Verify that the reaction has reached equilibrium
+rxn.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
 # Save the state of the concentrations of all species at bin 0
@@ -138,8 +135,6 @@ rxn.clear_reactions()
 # %%
 # Reaction  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction
 rxn.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
-
-
 
 # %%
 # RESET the concentrations to their original values
@@ -190,10 +185,8 @@ bio.describe_state()
 # The systems settles in the following equilibrium:  [A] = 1.51554944 , [B] = 5.74222528
 
 # %%
-A_eq = bio.bin_concentration(0, 0)
-B_eq = bio.bin_concentration(0, 1)
-print(f"Ratio of equilibrium concentrations ((B_eq) / (A_eq **2)) : {(B_eq) / (A_eq **2)}")
-print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
+# Verify that the reaction has reached equilibrium
+rxn.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
 # Save the state of the concentrations of all species at bin 0

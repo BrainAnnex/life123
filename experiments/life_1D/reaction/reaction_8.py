@@ -13,14 +13,14 @@
 # ---
 
 # %% [markdown]
-# **2 COUPLED reactions:  A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species,
-# taken to equilibrium**
+# ## 2 COUPLED reactions:  A + B <-> C  and  C + D <-> E , 
+# ### with 1st-order kinetics for each species, taken to equilibrium
 #
 # Both reactions are stronger in their respective forward rates.  For the most part, "C" is produced by the 1st reaction, and consumed by the 2nd one
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Aug. 12, 2022
+# LAST REVISED: Aug. 16, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -141,6 +141,13 @@ bio.describe_state()
 # ### <a name="sec_2_equilibrium"></a>Equilibrium
 
 # %%
+# Verify that each reaction has reached equilibrium
+rxn.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
+
+# %%
+rxn.is_in_equilibrium(rxn_index=1, conc=bio.bin_snapshot(bin_address = 0))
+
+# %%
 # Do a consistent check with the equilibrium concentrations:
 
 A_eq = bio.bin_concentration(0, 0)
@@ -150,10 +157,10 @@ D_eq = bio.bin_concentration(0, 3)
 E_eq = bio.bin_concentration(0, 4)
 
 Rf0 = rxn.get_forward_rate(0)
-Rb0 = rxn.get_reverse_rate(0)
+Rb0 = rxn.get_back_rate(0)
 
 Rf1 = rxn.get_forward_rate(1)
-Rb1 = rxn.get_reverse_rate(1)
+Rb1 = rxn.get_back_rate(1)
 
 equil = -(Rf0 * A_eq * B_eq - Rf1 * C_eq * D_eq) + (Rb0 * C_eq - Rb1 * E_eq)
 

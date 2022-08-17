@@ -1,4 +1,5 @@
 from typing import Union, List
+import numpy as np
 
 
 class Reactions:
@@ -15,7 +16,7 @@ class Reactions:
             "Rb"    (back reaction rate)
 
         Both reactants and products are triplets consisting of (stoichiometry, species index, reaction order).
-        The reaction order refers to the forward reaction for reactants, and the reverse reaction for products.
+        The "reaction order" refers to the forward reaction for reactants, and the reverse reaction for products.
     """
 
     def __init__(self, chem_data):
@@ -35,10 +36,15 @@ class Reactions:
     def get_reaction(self, i: int) -> dict:
         """
         Return the data structure of the i-th reaction (numbering starts at 0)
+
         :param i:   The index (0-based) to identify the reaction of interest
         :return:    A dictionary with 4 keys ("reactants", "products", "Rf", "Rb"),
                     where "Rf" is the forward reaction rate, and "Rb" the back reaction rate
         """
+        assert 0 <= i < self.number_of_reactions(), \
+            f"get_reaction(): argument `i` must be in the range [0-{self.number_of_reactions()}], inclusive; " \
+            f"The value passed was {i} "
+
         return self.reaction_list[i]
 
 
@@ -53,10 +59,17 @@ class Reactions:
         rxn = self.get_reaction(i)
         return rxn["reactants"]
 
+
     def get_reactants_formula(self, i):
+        """
+
+        :param i:   The index (0-based) to identify the reaction of interest
+        :return:
+        """
         rxn = self.get_reaction(i)
         reactants = rxn["reactants"]
         return self.standard_form_chem_eqn(reactants)
+
 
 
     def get_products(self, i: int) -> (int, int, int):
@@ -69,7 +82,13 @@ class Reactions:
         rxn = self.get_reaction(i)
         return rxn["products"]
 
+
     def get_products_formula(self, i):
+        """
+
+        :param i:   The index (0-based) to identify the reaction of interest
+        :return:
+        """
         rxn = self.get_reaction(i)
         products = rxn["products"]
         return self.standard_form_chem_eqn(products)
@@ -79,7 +98,7 @@ class Reactions:
         rxn = self.get_reaction(i)
         return rxn["Rf"]
 
-    def get_reverse_rate(self, i: int) -> float:    # TODO: transition to name get_back_rate()
+    def get_reverse_rate(self, i: int) -> float:    # TODO: PHASE OUT.  Transition to name get_back_rate()
         rxn = self.get_reaction(i)
         return rxn["Rb"]
 
@@ -90,7 +109,7 @@ class Reactions:
 
     def extract_reactants(self, rxn: dict) -> [(int, int, int)]:
         """
-        Return a list of triplet with details of the reactants of the given reaction
+        Return a list of triplets with details of the reactants of the given reaction
 
         :param rxn: The data structure representing the reaction
         :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
@@ -99,6 +118,11 @@ class Reactions:
 
 
     def extract_stoichiometry(self, term):
+        """
+
+        :param term:
+        :return:
+        """
         return term[0]
 
     def extract_species_index(self, term):
@@ -224,9 +248,80 @@ class Reactions:
 
 
 
-    ########  SUPPORT FOR CREATION OF NETWORK DIAGRAMS  ########
 
-    def prepare_graph_network(self):
+    def is_in_equilibrium(self, rxn_index: int, conc: dict, tolerance=0.05, explain=True) -> bool:
+        """
+        Ascertain whether the given concentrations are in equilibrium for the given reaction
+
+        :param rxn_index:   The index (0-based) to identify the reaction of interest
+        :param conc:        EXAMPLE: {'A': 23.9931640625, 'B': 36.0068359375}
+        :param tolerance:   Allowable absolute tolerance, to establish satisfactory equality
+        :param explain:     If True, print out the formula being used.
+                                EXAMPLES:  "([C][D]) / ([A][B])" , "[B] / [A]^2",
+        :return:            True if the reaction is close enough to an equilibrium
+        """
+        rxn = self.get_reaction(rxn_index)
+        reactants = self.extract_reactants(rxn) # A list of triplets
+        products = self.extract_products(rxn)   # A list of triplets
+        Rf = self.extract_forward_rate(rxn)
+        Rb = self.extract_back_rate(rxn)
+
+        rate_ratio = Rf / Rb                    # Ratio of forward/reverse reaction rates
+
+        conc_ratio = 1.
+        numerator = ""
+        denominator = ""
+        for rxn_index, p in enumerate(products):
+            species_index = self.extract_species_index(p)
+            rxn_order = self.extract_rxn_order(p)
+
+            species_name = self.chem_data.get_name(species_index)
+            species_conc = conc[species_name]
+            conc_ratio *= (species_conc ** rxn_order)
+            if explain:
+                numerator += f"[{species_name}]"
+                if rxn_order > 1:
+                    numerator += f"^{rxn_order} "
+
+        if explain and len(products) > 1:
+            numerator = f"({numerator})"
+
+        for r in reactants:
+            species_index = self.extract_species_index(r)
+            rxn_order = self.extract_rxn_order(r)
+
+            species_name = self.chem_data.get_name(species_index)
+            species_conc = conc[species_name]
+            conc_ratio /= (species_conc ** rxn_order)
+            if explain:
+                denominator += f"[{species_name}]"
+                if rxn_order > 1:
+                    denominator += f"^{rxn_order} "
+
+        if explain and len(reactants) > 1:
+            denominator = f"({denominator})"
+
+        if explain:
+            print(f"Ratio of forward/reverse reaction rates: {rate_ratio}")
+            print(f"Ratio of reactant/product concentrations, adjusted for reaction orders: {conc_ratio}")
+            print(f"    {numerator} / {denominator}")
+            #([B]^2 * [X]) / [A]^^3
+
+        return np.allclose(conc_ratio, rate_ratio, atol=tolerance)
+
+
+
+    #########################################################################
+    #                                                                       #
+    #              SUPPORT FOR CREATION OF NETWORK DIAGRAMS                 #
+    #                                                                       #
+    #########################################################################
+
+    def prepare_graph_network(self) -> dict:
+        """
+
+        :return:
+        """
         return {
             # Data to define the nodes and edges of the network
             'graph': self.create_graph_network_data(),
@@ -307,7 +402,11 @@ class Reactions:
 
 
 
-    ######################         PRIVATE         ######################
+    #########################################################################
+    #                                                                       #
+    #                               PRIVATE                                 #
+    #                                                                       #
+    #########################################################################
 
     def _internal_reactions_data(self) -> None:
         """

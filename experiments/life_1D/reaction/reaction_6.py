@@ -13,12 +13,11 @@
 # ---
 
 # %% [markdown]
-# **One-bin 2A + 5B <-> 4C + 3D, with 1st-order kinetics for each species,
-# taken to equilibrium**
+# ## One-bin 2A + 5B <-> 4C + 3D, with 1st-order kinetics for each species, taken to equilibrium
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Aug. 11, 2022
+# LAST REVISED: Aug. 16, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -114,12 +113,8 @@ bio.describe_state()
 # [A] = 2.80284552 , [B] = 4.00711381 , [C] = 7.39430896 , [D] = 3.79573172
 
 # %%
-A_eq = bio.bin_concentration(0, 0)
-B_eq = bio.bin_concentration(0, 1)
-C_eq = bio.bin_concentration(0, 2)
-D_eq = bio.bin_concentration(0, 3)
-print(f"Ratio of equilibrium concentrations ((C_eq * D_eq) / (A_eq * B_eq)) : {(C_eq * D_eq) / (A_eq * B_eq)}")
-print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
+# Verify that the reaction has reached equilibrium
+rxn.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
 # Save the state of the concentrations of all species at bin 0

@@ -18,7 +18,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Aug. 11, 2022
+# LAST REVISED: Aug. 16, 2022
 #
 # * [First Step](#sec_2_first_step)
 # * [Numerous more steps](#sec_2)
@@ -114,10 +114,8 @@ bio.describe_state()
 # the systems settles in the equilibrium:   [A] = 14.54545455 , [B] = 36.36363636
 
 # %%
-A_eq = bio.bin_concentration(0, 0)
-B_eq = bio.bin_concentration(0, 1)
-print(f"Ratio of equilibrium concentrations: {B_eq / A_eq}")
-print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
+# Verify that the reaction has reached equilibrium
+rxn.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
 # Save the state of the concentrations of all species at bin 0

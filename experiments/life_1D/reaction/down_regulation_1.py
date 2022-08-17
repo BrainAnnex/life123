@@ -14,9 +14,9 @@
 # ---
 
 # %% [markdown]
-# ### A up-regulates B , by being *the limiting reagent* in reaction A + X <-> 2B (mostly forward), where X is plentiful
+# ### A down-regulates B , by being the *limiting reagent* in reaction A + 2 B <-> Y (mostly forward)
 # 1st-order kinetics.   
-# If [A] is low, [B] remains low, too.  Then, if [A] goes high, then so does [B].  However, at that point, A can no longer bring B down to any substantial extent.
+# If [A] is low, [B] remains high.  Then, if [A] goes high, [B] goes low.  However, at that point, A can no longer bring B up to any substantial extent.
 #
 # Single-bin reaction
 #
@@ -51,12 +51,12 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = chem(names=["A", "X", "B"])     # NOTE: Diffusion not applicable (just 1 bin)
+chem_data = chem(names=["A", "B", "Y"])     # NOTE: Diffusion not applicable (just 1 bin)
 
 rxn = Reactions(chem_data)
 
 # Reaction A + X <-> 2B , with 1st-order kinetics for all species
-rxn.add_reaction(reactants=[("A") , ("X")], products=[(2, "B")],
+rxn.add_reaction(reactants=[("A") , (2, "B")], products=[("Y")],
                  forward_rate=8., reverse_rate=2.)
 
 rxn.describe_reactions()
@@ -69,8 +69,8 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
 
 bio.set_uniform_concentration(species_name="A", conc=5.)     # Scarce
-bio.set_uniform_concentration(species_name="X", conc=100.)   # Plentiful
-# Initially, no "B" is present
+bio.set_uniform_concentration(species_name="B", conc=100.)   # Plentiful
+# Initially, no "Y" is present
 
 bio.describe_state()
 
@@ -107,9 +107,9 @@ rxn.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 # # Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "X", "B"], 
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "Y"], 
               title="Changes in concentrations",
-              color_discrete_sequence = ['red', 'darkorange', 'green'],
+              color_discrete_sequence = ['red', 'green', 'darkorange'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
@@ -117,7 +117,7 @@ fig.show()
 # ## Now, let's suddenly increase [A]
 
 # %%
-bio.set_bin_conc(bin=0, species_index=0, conc=50.)
+bio.set_bin_conc(bin=0, species_index=0, conc=40.)
 bio.describe_state()
 
 # %%
@@ -147,9 +147,9 @@ print("Ratio of equilibrium concentrations (B_eq / (A_eq * X_eq)): ", (B_eq / (A
 print("Ratio of forward/reverse rates: ", rxn.get_forward_rate(0) / rxn.get_reverse_rate(0))
 
 # %%
-fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "X", "B"], 
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "Y"], 
               title="Changes in concentrations",
-              color_discrete_sequence = ['red', 'darkorange', 'green'],
+              color_discrete_sequence = ['red', 'green', 'darkorange'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
@@ -185,9 +185,9 @@ print("Ratio of equilibrium concentrations (B_eq / (A_eq * X_eq)): ", (B_eq / (A
 print("Ratio of forward/reverse rates: ", rxn.get_forward_rate(0) / rxn.get_reverse_rate(0))
 
 # %%
-fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "X", "B"], 
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "Y"], 
               title="Changes in concentrations",
-              color_discrete_sequence = ['red', 'darkorange', 'green'],
+              color_discrete_sequence = ['red', 'green', 'darkorange'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
