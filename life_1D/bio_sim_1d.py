@@ -20,7 +20,7 @@ class BioSim1D:
 
     n_bins = 0          # Number of spacial compartments (bins) used in the simulation
 
-    n_species = 1       # The number of (non-water) chemical species
+    n_species = 1       # The number of (non-water) chemical species   TODO: phase out?
 
     chem_data = None    # Object of type "Chemicals", with info on the individual chemicals, incl. their names
 
@@ -211,7 +211,6 @@ class BioSim1D:
         # Initialize all concentrations to zero
         cls.system = np.zeros((cls.n_species, n_bins), dtype=float)
 
-        cls.diffusion_rates = None
         cls.names = None
         cls.chem_data = chem_data
 
@@ -595,7 +594,7 @@ class BioSim1D:
                                     If provided, take a system snapshot after running a multiple of "frequency" runs
         :return:                None
         """
-        # TODO: factor out this part, in common to diffuse() and react()
+        # TODO: factor out this part, in common to diffuse() and react()  ==> SEE Reactions.define_series()
         assert (not time_duration or not time_step or not n_steps), \
             "Cannot specify all 3 arguments: time_duration, time_step, n_steps"
 
@@ -673,116 +672,6 @@ class BioSim1D:
 
             #print(cls.delta_reactions)
 
-
-
-    @classmethod
-    def single_bin_reaction_step_OBSOLETE(cls, bin_n: int, delta_time: float, number_reactions: int) -> np.array:
-        """
-        For the given bin, do a single reaction time step for ALL the reactions in it -
-        based on the INITIAL concentrations in the bin (prior to this reaction step),
-        which are used as the basis for all the reactions.
-
-        IMPORTANT: the actual system concentrations are NOT changed.
-
-        :param bin_n:
-        :param delta_time:
-        :param number_reactions:
-        :return:                    The increment vector for all the chemical species concentrations for this bin
-        """
-
-        # Compute the forward and back conversions of all the reactions
-        delta_fwd_list, delta_back_list = cls.compute_rates(bin_n, delta_time, number_reactions)
-        if cls.verbose:
-            print(f"    delta_fwd_list: {delta_fwd_list} | delta_back_list: {delta_back_list}")
-
-
-        increment_vector = np.zeros((cls.n_species, 1), dtype=float)       # One element per species
-
-        # For each reaction, adjust the concentrations of the reactants and products,
-        # based on the forward and back rates of the reaction
-        for i in range(number_reactions):
-            if cls.verbose:
-                print(f"    adjusting the species concentrations based on reaction number {i}")
-
-            # TODO: turn into a more efficient single step, as as:
-            #(reactants, products) = cls.all_reactions.unpack_terms(i)
-            reactants = cls.all_reactions.get_reactants(i)
-            products = cls.all_reactions.get_products(i)
-
-            # Adjust the concentrations
-
-            #   The reactants decrease based on the forward reaction,
-            #             and increase based on the reverse reaction
-            for r in reactants:
-                stoichiometry, species_index, order = r
-                increment_vector[species_index] += stoichiometry * (- delta_fwd_list[i] + delta_back_list[i])
-
-                if (cls.system[species_index , bin_n] + increment_vector[species_index]) < 0:
-                    raise Exception(f"The given time interval ({delta_time}) leads to negative concentrations in reactions: make it smaller!")
-
-                #cls.univ[species_index , bin_n] += increment_vector[species_index]
-
-
-            #   The products increase based on the forward reaction,
-            #             and decrease based on the reverse reaction
-            for p in products:
-                stoichiometry, species_index, order = p
-                increment_vector[species_index] += stoichiometry * (delta_fwd_list[i] - delta_back_list[i])
-
-                if (cls.system[species_index , bin_n] + increment_vector[species_index]) < 0:
-                    raise Exception(f"The given time interval ({delta_time}) leads to negative concentrations in reactions: make it smaller!")
-
-                #cls.univ[species_index , bin_n] += increment_vector[species_index]
-
-        # END for
-
-        return increment_vector
-
-
-
-    @classmethod
-    def compute_rates_OBSOLETE(cls, bin_n: int, delta_time: float, number_reactions: int) -> (list, list):
-        """
-        For each of the reactions, compute its forward and back "contributions" (rates, multiplied by delta_time)
-
-        :param bin_n:
-        :param delta_time:
-        :param number_reactions:
-        :return:                A pair of lists (List of forward conversions, List of reverse conversions);
-                                    each list has 1 entry per reaction, in the index order of the reactions
-                                TODO: simply return the list of their differences!
-                                TODO: also, make a note of large relative increments (to guide future time-step choices)
-        """
-        delta_fwd_list = []             # It will have 1 entry per reaction
-        delta_back_list = []            # It will have 1 entry per reaction
-        for i in range(number_reactions):
-            if cls.verbose:
-                print(f"    evaluating the rates for reaction number {i}")
-
-            # TODO: turn into a more efficient single step, as as:
-            #(reactants, products, fwd_rate_coeff, back_rate_coeff) = cls.all_reactions.unpack_reaction(i)
-            reactants = cls.all_reactions.get_reactants(i)
-            products = cls.all_reactions.get_products(i)
-            fwd_rate_coeff = cls.all_reactions.get_forward_rate(i)
-            back_rate_coeff = cls.all_reactions.get_back_rate(i)
-
-            delta_fwd = delta_time * fwd_rate_coeff         # TODO: save, to avoid re-computing at each bin
-            for r in reactants:
-                stoichiometry, species_index, order = r
-                conc = cls.system[species_index , bin_n]      # TODO: make more general for 2D and 3D (receive as argument)
-                delta_fwd *= conc ** order      # Raise to power
-
-            delta_back = delta_time * back_rate_coeff       # TODO: save, to avoid re-computing at each bin
-            for p in products:
-                stoichiometry, species_index, order = p
-                conc = cls.system[species_index , bin_n]      # TODO: make more general for 2D and 3D (receive as argument)
-                delta_back *= conc ** order     # Raise to power
-
-            #print(f"    delta_fwd: {delta_fwd} | delta_back: {delta_back}")
-            delta_fwd_list.append(delta_fwd)
-            delta_back_list.append(delta_back)
-
-        return( (delta_fwd_list, delta_back_list) )
 
 
 

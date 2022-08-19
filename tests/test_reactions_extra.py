@@ -97,7 +97,7 @@ def test_create_graph_network_data(rxn):
 
 def test_reaction_step_1(rxn):
     # Based on experiment "reaction1"
-    chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
+    chem_data = chem(names=["A", "B"])
     bio.initialize_system(n_bins=3, chem_data=chem_data)
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
@@ -112,7 +112,7 @@ def test_reaction_step_1(rxn):
     assert rxn.number_of_reactions() == 1
     assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
 
-    # Just the first step, with the lower-level call to reaction_step()
+    # Just the first reaction step, with the lower-level call to reaction_step()
     bio.reaction_step(0.1)
     assert np.allclose(bio.delta_reactions, [[ 7., 7., 7.] , [-7., -7., -7.]])
 

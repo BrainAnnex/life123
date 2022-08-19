@@ -1,4 +1,5 @@
 from typing import Union, List
+import math
 import numpy as np
 
 
@@ -264,6 +265,31 @@ class Reactions:
     #                                                                       #
     #########################################################################
 
+    def define_series(self, time_duration=None, time_step=None, n_steps=None):
+        """     TODO: test
+        Specify 2 out of 3 possible parameters
+
+        :param time_duration:
+        :param time_step:
+        :param n_steps:
+        :return:
+        """
+        assert (not time_duration or not time_step or not n_steps), \
+            "Cannot specify all 3 arguments: time_duration, time_step, n_steps"
+
+        assert (time_duration and time_step) or (time_duration and n_steps) or (time_step and n_steps), \
+            "Must provide exactly 2 arguments from:  time_duration, time_step, n_steps"
+
+        if not time_step:
+            time_step = time_duration / n_steps
+
+        if not n_steps:
+            n_steps = math.ceil(time_duration / time_step)
+
+        return (time_step, n_steps)
+
+
+
     def single_compartment_reaction_step(self, conc_dict: dict, delta_time: float) -> np.array:
         """
         Using the given concentration data for all the applicable species in a single compartment,
@@ -285,7 +311,7 @@ class Reactions:
         """
 
         # Compute the forward and back conversions of all the reactions
-        delta_list = self.compute_all_rate_diffs(conc_dict=conc_dict, delta_time=delta_time)
+        delta_list = self.compute_all_rate_deltas(conc_dict=conc_dict, delta_time=delta_time)
         if self.debug:
             print(f"    delta_list: {delta_list}")
 
@@ -331,9 +357,9 @@ class Reactions:
 
 
 
-    def compute_all_rate_diffs(self, conc_dict: dict, delta_time: float) -> list:
+    def compute_all_rate_deltas(self, conc_dict: dict, delta_time: float) -> list:
         """
-        For all the reactions
+        For all the reactions.  Return a list with an entry for each reaction
 
         :param conc_dict:    EXAMPLE: {3: 16.3, 8: 0.53, 12: 1.78}
         :param delta_time:
@@ -347,7 +373,7 @@ class Reactions:
             if self.debug:
                 print(f"    evaluating the rates for reaction number {i}")
 
-            delta = self.compute_rate_diff(rxn_index=i, conc_dict=conc_dict, delta_time=delta_time)
+            delta = self.compute_rate_delta(rxn_index=i, conc_dict=conc_dict, delta_time=delta_time)
             delta_list.append(delta)
 
         return( delta_list )
@@ -355,7 +381,7 @@ class Reactions:
 
 
 
-    def compute_rate_diff(self, rxn_index: int, conc_dict: dict, delta_time: float) -> float:
+    def compute_rate_delta(self, rxn_index: int, conc_dict: dict, delta_time: float) -> float:
         """
         For the specified reaction, compute the difference of its forward and back "contributions",
         i.e. delta_time * reaction_rate * (concentration ** reaction_order)
