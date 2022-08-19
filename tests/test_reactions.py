@@ -9,358 +9,241 @@ from life_1D.bio_sim_1d import BioSim1D as bio
 # Provide an instantiated object that can be used by the various tests that need it
 @pytest.fixture(scope="module")
 def rxn():
-    chem_data = chem()
-    chem_data.set_names(["A", "B", "C", "D", "E", "F"])
+    pass
+    #chem_data = chem()
+    #chem_data.set_names(["A", "B", "C", "D", "E", "F"])
 
-    bio.initialize_system(n_bins=10, chem_data=chem_data)
+    #bio.initialize_system(n_bins=10, chem_data=chem_data)
 
-    rnx_obj = Reactions(chem_data)
-    yield rnx_obj
-
-
-
-def test_chem_data(rxn):
-    assert rxn.chem_data.names == ["A", "B", "C", "D", "E", "F"]
-    assert rxn.chem_data.name_dict == {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5}
+    #rnx_obj = Reactions(chem_data)
+    #yield rnx_obj
 
 
 
-def test_parse_reaction_term(rxn):
-    assert rxn._parse_reaction_term(5) == (1, 5, 1)
-    assert rxn._parse_reaction_term("F") == (1, 5, 1)
-
-    assert rxn._parse_reaction_term( (3, 5) ) == (3, 5, 1)
-    assert rxn._parse_reaction_term( (3, "F") ) == (3, 5, 1)
-
-    assert rxn._parse_reaction_term( (3, 5, 2) ) == (3, 5, 2)
-    assert rxn._parse_reaction_term( (3, "F", 2) ) == (3, 5, 2)
-
-
-
-def test_add_reaction(rxn):
-    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-
-    assert rxn.number_of_reactions() == 1
-    assert rxn.get_reaction(0) == {'reactants': [(1, 0, 1)], 'products': [(1, 1, 1)], 'Rf': 3.0, 'Rb': 2.0}
-
-    assert rxn.get_reactants(0) == [(1, 0, 1)]
-    assert rxn.get_reactants_formula(0) == "A"
-
-    assert rxn.get_products(0) == [(1, 1, 1)]
-    assert rxn.get_products_formula(0) == "B"
-
-    assert rxn.get_forward_rate(0) == 3.
-    assert rxn.get_reverse_rate(0) == 2.
-
-    # Another reaction (reaction 1)
-    rxn.add_reaction(reactants=[(2, "B")], products=[(5, "C")], forward_rate=9., reverse_rate=7.)
-
-    assert rxn.number_of_reactions() == 2
-    assert rxn.get_reaction(0) == {'reactants': [(1, 0, 1)], 'products': [(1, 1, 1)], 'Rf': 3.0, 'Rb': 2.0}
-    assert rxn.get_reaction(1) == {'reactants': [(2, 1, 1)], 'products': [(5, 2, 1)], 'Rf': 9.0, 'Rb': 7.0}
-
-    # Another reaction (reaction 2)
-    rxn.add_reaction(reactants=[(2, "D", 3)], products=[(1, "C", 2)], forward_rate=11., reverse_rate=13.)
-    assert rxn.number_of_reactions() == 3
-    assert rxn.get_reaction(2) == {'reactants': [(2, 3, 3)], 'products': [(1, 2, 2)], 'Rf': 11.0, 'Rb': 13.0}
-
-    # A multi-term reaction (reaction 3)
-    rxn.add_reaction(reactants=["A", (2, "B")], products=[(3, "C", 2), "D"], forward_rate=5., reverse_rate=1.)
-    assert rxn.number_of_reactions() == 4
-    assert rxn.get_reaction(3) == {'reactants': [(1, 0, 1), (2, 1, 1)], 'products': [(3, 2, 2), (1, 3, 1)], 'Rf': 5.0, 'Rb': 1.0}
-
-    rxn_list = rxn.describe_reactions(return_as_list=True)
-    assert rxn_list[0] == '0: A <-> B  (Rf = 3.0 / Rb = 2.0)'
-    assert rxn_list[1] == '1: 2 B <-> 5 C  (Rf = 9.0 / Rb = 7.0)'
-    assert rxn_list[2] == '2: 2 D <-> C  (Rf = 11.0 / Rb = 13.0) | 3-th order in reactant D | 2-th order in product C'
-    assert rxn_list[3] == '3: A + 2 B <-> 3 C + D  (Rf = 5.0 / Rb = 1.0) | 2-th order in product C'
-
-
-
-def test_create_graph_network_data(rxn):
-    rxn.clear_reactions()
-    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-    network_data = rxn.create_graph_network_data()
-    print(network_data)
-    expected = [{'id': 6, 'label': 'Reaction', 'name': 'RXN', 'Rf': 3.0, 'Rb': 2.0},
-                {'id': 1, 'label': 'Product', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
-                {'id': 7, 'name': 'produces', 'source': 6, 'target': 1},
-                {'id': 0, 'label': 'Reactant', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
-                {'id': 8, 'name': 'reacts', 'source': 0, 'target': 6}
-                ]
-    assert network_data == expected
-
-
-
-
-###########################  TESTS OF REACTION DYNAMICS (TODO: move to separate file)  ###########################
-
-def test_reaction_step_1(rxn):
-    # Based on experiment "reaction1"
-    chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
-    bio.initialize_system(n_bins=3, chem_data=chem_data)
-
-    bio.set_uniform_concentration(species_index=0, conc=10.)
-    bio.set_uniform_concentration(species_index=1, conc=50.)
+def test_single_bin_reaction_step_1(rxn):
+    chem_data = chem(names=["A", "B"])
 
     rxn = Reactions(chem_data)
 
-    # Reaction A <-> B , with 1st-order kinetics in both directions
+    conc_dict = {0: 10., 1: 50.}
+
+    # Reaction A <-> B , with 1st-order kinetics in both directions.  Based on experiment "reaction1"
     rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-    bio.set_reactions(rxn)
 
-    assert rxn.number_of_reactions() == 1
-    assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
-
-    # Just the first step, with the lower-level call to reaction_step()
-    bio.reaction_step(0.1)
-    assert np.allclose(bio.delta_reactions, [[ 7., 7., 7.] , [-7., -7., -7.]])
+    result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.1)
+    assert np.allclose(result, [[ 7.] , [-7.]])
+    assert result[0][0] == - result[1][0]   # From the stoichiometry
 
 
-
-def test_reaction_step_1b(rxn):
-    # Based on experiment "reaction1"
-    chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
-    bio.initialize_system(n_bins=3, chem_data=chem_data)
-
-    bio.set_uniform_concentration(species_index=0, conc=10.)
-    bio.set_uniform_concentration(species_index=1, conc=50.)
-
-    rxn = Reactions(chem_data)
-
-    # Reaction A <-> B , with 1st-order kinetics in both directions
-    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-    bio.set_reactions(rxn)
-
-    assert rxn.number_of_reactions() == 1
-    assert rxn.describe_reactions(return_as_list=True) == ["0: A <-> B  (Rf = 3.0 / Rb = 2.0)"]
-    assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
-
-    # First step
-    bio.react(time_step=0.1, n_steps=1)
-    assert np.allclose(bio.delta_reactions, [[ 7., 7., 7.] , [-7., -7., -7.]])
-    assert np.allclose(bio.system, [[17., 17., 17.] , [43., 43., 43.]])
-
-    # More steps
-    for i in range(10):
-        bio.reaction_step(0.1)
-        bio.system += bio.delta_reactions     # Matrix operation
-
-    assert np.allclose(bio.system,
-                       [[ 23.99316406, 23.99316406, 23.99316406] ,
-                        [ 36.00683594, 36.00683594, 36.00683594]])
-
-    # Taken to equilibrium
-    bio.react(time_step=0.1, n_steps=20)
-    assert np.allclose(bio.system, [[24., 24., 24.] , [36., 36., 36.]])
-
-
-
-def test_react_2(rxn):
-    # Based on experiment "reaction2"
-    chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
-
-    rxn = Reactions(chem_data)
-
-    # Reaction A <-> 3B , with 1st-order kinetics in both directions
+    rxn.clear_reactions()   # Re-start with a blank slate of reactions
+    # Reaction A <-> 3B , with 1st-order kinetics in both directions.  Based on experiment "reaction2"
     rxn.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
-    assert rxn.number_of_reactions() == 1
 
-    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
-
-    bio.set_uniform_concentration(species_index=0, conc=10.)
-    bio.set_uniform_concentration(species_index=1, conc=50.)
-
-    # Large number of steps
-    bio.react(time_step=0.1, n_steps=15)
-    assert np.allclose(bio.system, [[14.54545455] , [36.36363636]])
-    assert bio.n_bins == 1
+    result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.1)
+    assert np.allclose(result, [[ 5.] , [-15.]])
+    assert -3 * result[0][0] == result[1][0]   # From the stoichiometry
 
 
-
-def test_react_3(rxn):
-    # Based on experiment "reaction3"
-    chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
-
-    rxn = Reactions(chem_data)
-
-    # Reaction 2A <-> 3B , with 1st-order kinetics in both directions
+    rxn.clear_reactions()   # Re-start with a blank slate of reactions
+    # Reaction 2A <-> 3B , with 1st-order kinetics in both directions.  Based on experiment "reaction3"
     rxn.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
-    assert rxn.number_of_reactions() == 1
 
-    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
-
-    bio.set_uniform_concentration(species_index=0, conc=10.)
-    bio.set_uniform_concentration(species_index=1, conc=50.)
-
-    # First step
-    bio.react(time_step=0.1, n_steps=1)
-    assert np.allclose(bio.system, [[20.] , [35.]])
-
-    # Large number of steps
-    bio.react(time_step=0.1, n_steps=100)
-    assert np.allclose(bio.system, [[16.25] , [40.625]])
-    assert bio.n_bins == 1
+    result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.1)
+    assert np.allclose(result, [[ 10.] , [-15.]])
+    assert result[0][0]/2 == - result[1][0] /3   # From the stoichiometry
 
 
 
-def test_react_4(rxn):
-    # Based on experiment "reaction4"
-    chem_data = chem(diffusion_rates=[0.1, 0.1, 0.1], names=["A", "B", "C"])   # NOTE: diffusion_rates not used
+def test_single_bin_reaction_step_2(rxn):
+    chem_data = chem(names=["A", "B", "C"])
 
     rxn = Reactions(chem_data)
 
-    # Reaction A + B <-> C , with 1st-order kinetics for each species
+    conc_dict = {0: 10., 1: 50., 2: 20.}
+
+    # Reaction A <-> B , with 1st-order kinetics in both directions.  Based on experiment "reaction1"
+    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+
+    result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.1)
+    assert np.allclose(result, [[ 7.] , [-7.] , [0.]])
+    assert result[0][0] == - result[1][0]   # From the stoichiometry
+
+
+    rxn.clear_reactions()   # Re-start with a blank slate of reactions
+    # Reaction A + B <-> C , with 1st-order kinetics for each species.  Based on experiment "reaction4"
     rxn.add_reaction(reactants=[("A") , ("B")], products=[("C")],
                      forward_rate=5., reverse_rate=2.)
-    assert rxn.number_of_reactions() == 1
 
-    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
-
-    bio.set_uniform_concentration(species_index=0, conc=10.)
-    bio.set_uniform_concentration(species_index=1, conc=50.)
-    bio.set_uniform_concentration(species_index=2, conc=20.)
-
-    # First step
-    bio.react(time_step=0.002, n_steps=1)
-    assert np.allclose(bio.system, [[5.08], [45.08], [24.92]])
-
-    # Large number of steps
-    bio.react(time_step=0.002, n_steps=40)
-    assert np.allclose(bio.system, [[0.29487741], [40.29487741], [29.70512259]])
-    assert bio.n_bins == 1
+    result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.002)
+    assert np.allclose(result, [[-4.92], [-4.92], [4.92]])
+    assert result[0][0] == result[1][0]     # From the stoichiometry
+    assert result[1][0] == - result[2][0]   # From the stoichiometry
 
 
-def test_react_5(rxn):
-    # Based on experiment "reaction5"
-    chem_data = chem(diffusion_rates=[0.1, 0.1, 0.1], names=["A", "C", "D"])   # NOTE: diffusion_rates not used
+
+def test_single_bin_reaction_step_3(rxn):
+    chem_data = chem(names=["A", "C", "D"])
 
     rxn = Reactions(chem_data)
 
-    # Reaction A <-> 2C + D , with 1st-order kinetics for each species
+    conc_dict = {0: 4., 1: 7., 2: 2.}
+
+    # Reaction A <-> 2C + D , with 1st-order kinetics for each species.  Based on experiment "reaction5"
     rxn.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
                      forward_rate=5., reverse_rate=2.)
-    assert rxn.number_of_reactions() == 1
 
-    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
-
-    bio.set_all_uniform_concentrations( [4., 7., 2.] )
-
-    # First step
-    bio.react(time_step=.2, n_steps=1)
-    assert np.allclose(bio.system, [[5.6], [3.8], [0.4]])
-
-    # Numerous more steps
-    bio.react(time_step=.05, n_steps=30)
-    assert np.allclose(bio.system, [[4.31058733], [6.37882534], [1.68941267]])
-    assert bio.n_bins == 1
+    result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.05)
+    assert np.allclose(result, [[0.4] , [-0.8] , [-0.4]])
+    assert result[0][0] == - result[1][0] /2    # From the stoichiometry
+    assert result[0][0] == - result[2][0]       # From the stoichiometry
 
 
 
-def test_react_6(rxn):
-    # Based on experiment "reaction6"
-    chem_data = chem(diffusion_rates=[0.1, 0.1, 0.1, 0.1], names=["A", "B", "C", "D"])   # NOTE: diffusion_rates not used
+def test_single_bin_reaction_step_4(rxn):
+    chem_data = chem(names=["A", "B", "C", "D"])
 
     rxn = Reactions(chem_data)
 
-    # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
+    conc_dict = {0: 4., 1: 7., 2: 5., 3: 2.}
+
+    # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species.  Based on experiment "reaction6"
     rxn.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
                      forward_rate=5., reverse_rate=2.)
-    assert rxn.number_of_reactions() == 1
 
-    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
-
-    bio.set_all_uniform_concentrations( [4., 7., 5., 2.] )
-
-    # First step
-    bio.react(time_step=0.001, n_steps=1)
-    assert np.allclose(bio.system, [[3.76],
-                                    [6.4 ],
-                                    [5.48],
-                                    [2.36]])
-
-    # Numerous more steps
-    bio.react(time_step=0.001, n_steps=40)
-    assert np.allclose(bio.system, [[2.80284552],
-                                    [4.00711381],
-                                    [7.39430896],
-                                    [3.79573172]])
-    assert bio.n_bins == 1
+    result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.001)
+    assert np.allclose(result, [[-0.24] , [-0.6] , [0.48], [0.36]])
+    assert  np.allclose(result[0][0] /2 , result[1][0] /5)    # From the stoichiometry
+    assert  np.allclose(result[1][0] /5 , -result[2][0] /4)   # From the stoichiometry
+    assert  np.allclose(result[2][0] /4 , result[3][0] /3)   # From the stoichiometry
 
 
 
-def test_react_7(rxn):
-    # Based on experiment "reaction7"
-    chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
+def test_single_bin_reaction_step_5(rxn):
+    chem_data = chem(names=["A", "B"])
 
     rxn = Reactions(chem_data)
 
-    # Reaction  2A <-> B , with 2nd-order kinetics in forward reaction, and 1st-order in reverse
+    conc_dict = {0: 3., 1: 5.}
+
+    # Reaction  2A <-> B , with 2nd-order kinetics in forward reaction, and 1st-order in reverse.  Based on experiment "reaction7"
     rxn.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
-    assert rxn.number_of_reactions() == 1
 
-    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
-
-    bio.set_all_uniform_concentrations( [3., 5.] )
-
-    # First step
-    bio.react(time_step=0.02, n_steps=1)
-    assert np.allclose(bio.system, [[1.6],
-                                    [5.7]])
-
-    # Numerous more steps
-    bio.react(time_step=0.02, n_steps=20)
-    assert np.allclose(bio.system, [[1.51554944],
-                                    [5.74222528]])
-    assert bio.n_bins == 1
+    result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.02)
+    assert np.allclose(result, [[-1.4] , [0.7]])
+    assert  np.allclose(result[0][0] /2 , -result[1][0])    # From the stoichiometry
 
 
 
-def test_react_8(rxn):
-    # Based on experiment "reaction8"
-    chem_data = chem(diffusion_rates=[.1, .1, .1, .1, .1], names=["A", "B", "C", "D", "E"])   # NOTE: diffusion_rates not used
+def test_single_bin_reaction_step_6(rxn):
+    chem_data = chem(names=["A", "B", "C", "D", "E"])
 
     rxn = Reactions(chem_data)
 
-    # Reactions A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species
+    conc_dict = {0: 3., 1: 5., 2: 1., 3: 0.4, 4: 0.1}
+
+    # Coupled reactions A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species.  Based on experiment "reaction8"
     rxn.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=5., reverse_rate=2.)
     rxn.add_reaction(reactants=["C", "D"], products=["E"], forward_rate=8., reverse_rate=4.)
     assert rxn.number_of_reactions() == 2
 
+    result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.02)
+    assert np.allclose(result, [[-1.46] , [-1.46 ] , [ 1.404] , [-0.056] , [ 0.056]])
+    assert  np.allclose(result[0][0] , result[1][0])                # From the stoichiometry
+    assert  np.allclose(result[3][0] , -result[4][0])               # From the stoichiometry
+    assert  np.allclose(result[0][0] + result[4][0], -result[2][0]) # From the stoichiometry
+                                                                    # The increase in [A] and [E] combined
+                                                                    # must match the decrease in [C]
+
+
+
+def test_compute_all_rate_diffs():
+    chem_data = chem(names=["A", "B", "C", "D"])
+    rxn = Reactions(chem_data)
+
+    # Reaction A <-> B , with 1st-order kinetics in both directions
+    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=20., reverse_rate=2.)
+    conc_dict = {0: 5., 1: 8.}
+    result = rxn.compute_all_rate_diffs(conc_dict=conc_dict, delta_time=0.5)
+    assert np.allclose(result, [42.0])
+
+    # Reaction 2B <-> 3C , with 1st-order kinetics in both directions
+    rxn.add_reaction(reactants=[(2, "B")], products=[(3, "C")], forward_rate=10., reverse_rate=25.)
+    conc_dict = {0: 5., 1: 8., 2: 15.}
+    result = rxn.compute_all_rate_diffs(conc_dict=conc_dict, delta_time=0.5)
+    assert np.allclose(result, [42.0, -147.5])
+
+    # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
+    rxn.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
+                     forward_rate=5., reverse_rate=2.)
+    conc_dict = {0: 5., 1: 8., 2: 15., 3: 7.}
+    result = rxn.compute_all_rate_diffs(conc_dict=conc_dict, delta_time=0.5)
+    assert np.allclose(result, [42.0, -147.5, -5.0])
+
+    # Reaction  2A <-> B , with 2nd-order kinetics in the forward direction
+    rxn.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=3., reverse_rate=2.)
+    conc_dict = {0: 5., 1: 8., 2: 15., 3: 7.}
+    result = rxn.compute_all_rate_diffs(conc_dict=conc_dict, delta_time=0.5)
+    assert np.allclose(result, [42.0, -147.5, -5.0, 29.5])
+
+    # FLUSH OUT ALL REACTIONS
+    rxn.clear_reactions()
+    # Reaction A <-> B , with 1st-order kinetics in both directions
+    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=20., reverse_rate=2.)
+    conc_dict = {0: 5., 1: 8.}
+    result = rxn.compute_all_rate_diffs(conc_dict=conc_dict, delta_time=0.25)
+    assert np.allclose(result, [21.0])
+
+    #print(result)
+    """
     bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
-
-    bio.set_all_uniform_concentrations( [3., 5., 1., 0.4, 0.1] )
-
-    # First step
-    bio.react(time_step=0.01, n_steps=1)
-    assert np.allclose(bio.system, [[2.27],
-                                    [4.27 ],
-                                    [1.702],
-                                    [0.372],
-                                    [0.128]])
-
-    # 2nd step
-    bio.react(time_step=0.01, n_steps=1)
-    assert np.allclose(bio.system, [[1.819395],
-                                    [3.819395  ],
-                                    [2.10707348],
-                                    [0.32646848],
-                                    [0.17353152]])
-
-    # Numerous more steps
-    bio.react(time_step=0.01, n_steps=200)
-    assert np.allclose(bio.system, [[0.50508029],
-                                    [2.50508029],
-                                    [3.16316668],
-                                    [0.06824696],
-                                    [0.43175304]])
-    assert bio.n_bins == 1
+    bio.set_all_uniform_concentrations([5., 8., 0.])
+    old_result = bio.compute_rates(bin_n=0, delta_time=0.5, number_reactions=1)
+    print(old_result)
+    """
 
 
 
+def test_compute_rate_diff():
+    chem_data = chem(names=["A", "B", "C", "D"])
+    rxn = Reactions(chem_data)
 
-def test_is_in_equilibrium(rxn):
-    rxn.clear_reactions()   # This will reset the reaction count to 0
+    # Reaction A <-> B , with 1st-order kinetics in both directions
+    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=20., reverse_rate=2.)
+    conc_dict = {0: 5., 1: 8.}
+    result = rxn.compute_rate_diff(rxn_index=0, conc_dict=conc_dict, delta_time=0.5)
+    assert np.allclose(result, 42.0)
+
+    # Reaction 2B <-> 3C , with 1st-order kinetics in both directions
+    rxn.add_reaction(reactants=[(2, "B")], products=[(3, "C")], forward_rate=10., reverse_rate=25.)
+    conc_dict = {1: 8., 2: 15.}
+    result = rxn.compute_rate_diff(rxn_index=1, conc_dict=conc_dict, delta_time=1.5)
+    assert np.allclose(result, -442.5)
+
+    # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
+    rxn.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
+                    forward_rate=5., reverse_rate=2.)
+    conc_dict = {0: 3.5, 1: 9., 2: 11., 3: 7.}
+    result = rxn.compute_rate_diff(rxn_index=2, conc_dict=conc_dict, delta_time=0.5)
+    assert np.allclose(result, 1.75)
+
+    # Reaction  2A <-> B , with 2nd-order kinetics in the forward direction
+    rxn.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
+    conc_dict = {0: 4.5, 1: 6.}
+    result = rxn.compute_rate_diff(rxn_index=3, conc_dict=conc_dict, delta_time=2.0)
+    assert np.allclose(result, 178.5)
+
+    # Reaction  B <-> 2C , with 2nd-order kinetics in the reverse direction
+    rxn.add_reaction(reactants=[("B")], products=[(2, "C", 2)], forward_rate=4., reverse_rate=2.)
+    conc_dict = {1: 5., 2: 4.}
+    result = rxn.compute_rate_diff(rxn_index=4, conc_dict=conc_dict, delta_time=0.5)
+    assert np.allclose(result, -6.0)
+
+
+
+def test_is_in_equilibrium():
+    chem_data = chem(names=["A", "B", "C", "D", "E", "F"])
+
+    rxn = Reactions(chem_data)
 
     rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
     c = {'A': 23.9931640625, 'B': 36.0068359375}
@@ -376,13 +259,13 @@ def test_is_in_equilibrium(rxn):
 
     # Reaction A + B <-> C , with 1st-order kinetics for each species
     rxn.add_reaction(reactants=[("A") , ("B")], products=[("C")],
-                    forward_rate=5., reverse_rate=2.)
+                     forward_rate=5., reverse_rate=2.)
     c = {'A': 0.29487741, 'B': 40.29487741, 'C': 29.70512259}
     assert rxn.is_in_equilibrium(rxn_index = 3, conc = c)
 
     # Reaction A <-> 2C + D , with 1st-order kinetics for each species
     rxn.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
-                 forward_rate=5., reverse_rate=2.)
+                     forward_rate=5., reverse_rate=2.)
     c = {'A': 4.31058733, 'C': 6.37882534, 'D': 1.68941267}
     assert rxn.is_in_equilibrium(rxn_index = 4, conc = c)
 

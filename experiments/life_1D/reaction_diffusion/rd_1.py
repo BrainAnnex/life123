@@ -434,7 +434,7 @@ A_eq = bio.bin_concentration(0, 0)
 B_eq = bio.bin_concentration(0, 1)
 C_eq = bio.bin_concentration(0, 2)
 print(f"\nRatio of equilibrium concentrations ((C_eq) / (A_eq * B_eq)) : {(C_eq) / (A_eq * B_eq)}")
-print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_reverse_rate(0)}")
+print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_back_rate(0)}")
 # Both are essentially equal, as expected
 
 # %% [markdown] tags=[]

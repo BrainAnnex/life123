@@ -49,8 +49,7 @@ class BioSim1D:
     history = Movie(tabular=True)   # To store user-selected snapshots of (parts of) the system,
                                     # whenever requested by the user
 
-    system_time = None              # EXPERIMENTAL, being phased in.
-                                    # Global time of the system, from initialization on
+    system_time = None              # Global time of the system, from initialization on
 
 
 
@@ -209,6 +208,7 @@ class BioSim1D:
         cls.n_bins = n_bins
         cls.n_species = chem_data.n_species
 
+        # Initialize all concentrations to zero
         cls.system = np.zeros((cls.n_species, n_bins), dtype=float)
 
         cls.diffusion_rates = None
@@ -641,28 +641,42 @@ class BioSim1D:
         :param delta_time:
         :return:            None
         """
-        number_reactions = cls.all_reactions.number_of_reactions()
+        assert cls.all_reactions is not None, \
+            "reaction_step(): must first set the Reactions object"
+
+        #number_reactions = cls.all_reactions.number_of_reactions()
 
         cls.delta_reactions = np.zeros((cls.n_species, cls.n_bins), dtype=float)
 
         # For each bin
         for bin_n in range(cls.n_bins):     # Bin number, ranging from 0 to max_bin_number, inclusive
             if cls.verbose:
-                print(f"Processing the reaction in bin number {bin_n}")
+                print(f"reaction_step(): processing the all the reactions in bin number {bin_n}")
+
+            # Obtain the Delta-concentration for each species, for this bin
+            conc_dict = {species_index: cls.system[species_index , bin_n]
+                         for species_index in range(cls.n_species)}
+            #print(f"\nconc_dict in bin {bin_n}: ", conc_dict)
+
 
             # Obtain the Delta-conc for each species, for bin number bin_n
-            increment_vector = cls.single_bin_reaction_step(bin_n, delta_time, number_reactions)
+            # OLD APPROACH
+            #increment_vector = cls.single_bin_reaction_step(bin_n, delta_time, number_reactions)
+
+            # NEW APPROACH
+            increment_vector = cls.all_reactions.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=delta_time)
+
 
             # Replace the "bin_n" column of the cls.delta_reactions matrix with the contents of the vector increment_vector
             cls.delta_reactions[:, bin_n] = increment_vector.transpose()
+            #cls.delta_reactions[:, bin_n] = np.array([increment_vector])
 
-        #print(cls.delta_reactions)
-        #cls.system_time += delta_time  # System time is managed at a higher level
+            #print(cls.delta_reactions)
 
 
 
     @classmethod
-    def single_bin_reaction_step(cls, bin_n: int, delta_time: float, number_reactions: int) -> np.array:
+    def single_bin_reaction_step_OBSOLETE(cls, bin_n: int, delta_time: float, number_reactions: int) -> np.array:
         """
         For the given bin, do a single reaction time step for ALL the reactions in it -
         based on the INITIAL concentrations in the bin (prior to this reaction step),
@@ -727,7 +741,7 @@ class BioSim1D:
 
 
     @classmethod
-    def compute_rates(cls, bin_n: int, delta_time: float, number_reactions: int) -> (list, list):
+    def compute_rates_OBSOLETE(cls, bin_n: int, delta_time: float, number_reactions: int) -> (list, list):
         """
         For each of the reactions, compute its forward and back "contributions" (rates, multiplied by delta_time)
 
@@ -750,7 +764,7 @@ class BioSim1D:
             reactants = cls.all_reactions.get_reactants(i)
             products = cls.all_reactions.get_products(i)
             fwd_rate_coeff = cls.all_reactions.get_forward_rate(i)
-            back_rate_coeff = cls.all_reactions.get_reverse_rate(i)
+            back_rate_coeff = cls.all_reactions.get_back_rate(i)
 
             delta_fwd = delta_time * fwd_rate_coeff         # TODO: save, to avoid re-computing at each bin
             for r in reactants:

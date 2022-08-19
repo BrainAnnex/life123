@@ -10,8 +10,8 @@ class BioSim2D:
     #  Class variables  #
     #####################
 
-    n_cells_x = 0       # Number of x-direction spacial compartments (bins) used in the simulation
-    n_cells_y = 0       # Number of y-direction spacial compartments (bins) used in the simulation
+    n_bins_x = 0       # Number of x-direction spacial compartments (bins) used in the simulation
+    n_bins_y = 0       # Number of y-direction spacial compartments (bins) used in the simulation
 
     n_species = 1       # The number of (non-water) chemical species
 
@@ -28,6 +28,12 @@ class BioSim2D:
     container_diffusion = None      # A NumPy array for each species: diffusion rate in/out of the container
 
 
+    all_reactions = None            # Object of class "Reactions"
+
+    system_time = None              # Global time of the system, from initialization on
+
+
+
 
     #########################################################################
     #                                                                       #
@@ -36,24 +42,36 @@ class BioSim2D:
     #########################################################################
 
     @classmethod
-    def initialize_system(cls, n_cells: (int, int), n_species: int) -> None:
+    def initialize_system(cls, n_bins: (int, int), chem_data, reactions=None) -> None:
         """
+        Initialize all concentrations to zero.
 
-        :param n_cells:     The number of compartments (bins) to use in the simulation,
+        :param n_bins:     The number of compartments (bins) to use in the simulation,
                                 in the x- and y- dimensions, as a pair of integers
-        :param n_species:   The number of (non-water) chemical species.  It must be at least 1
+        :param chem_data:   An object of class "Chemicals"
+        :param reactions:   (OPTIONAL) Object of class "Reactions".  It may also be set later
+
         :return:            None
         """
-        (n_cells_x, n_cells_y) = n_cells
-        assert n_cells_x >= 1, "The number of cells must be at least 1 in either dimension"
-        assert n_cells_y >= 1, "The number of cells must be at least 1 in either dimension"
-        assert n_species >= 1, "The number of (non-water) chemical species must be at least 1"
+        (n_cells_x, n_cells_y) = n_bins
+        assert n_cells_x >= 1, "The number of bins must be at least 1 in either dimension"
+        assert n_cells_y >= 1, "The number of bins must be at least 1 in either dimension"
 
-        cls.n_cells_x = n_cells_x
-        cls.n_cells_y = n_cells_y
-        cls.n_species = n_species
+        cls.n_bins_x = n_cells_x
+        cls.n_bins_y = n_cells_y
+        cls.n_species = chem_data.n_species
 
-        cls.system = np.zeros((n_cells_y, n_cells_x, n_species), dtype=float)
+        # Initialize all concentrations to zero
+        cls.system = np.zeros((cls.n_species, n_cells_y, n_cells_x), dtype=float)
+
+        cls.diffusion_rates = None
+        cls.names = None
+        cls.chem_data = chem_data
+
+        if reactions:
+            cls.all_reactions = reactions
+
+        cls.system_time = 0             # "Start the clock"
 
 
 

@@ -5,7 +5,8 @@ import numpy as np
 class Reactions:
     """
     Data about all applicable reactions,
-    including stoichiometry, reaction rates and reaction orders
+    including stoichiometry, reaction rates and reaction orders.
+    TODO (in-progress): add general methods to carry out reactions (currently in BioSim1D)
 
     DATA STRUCTURE:
         List of reactions.
@@ -24,8 +25,17 @@ class Reactions:
                                     # Reactions should be added by means of calls to add_reaction()
 
         self.chem_data = chem_data  # Object with info on the individual chemicals, incl. their names
-        
 
+        self.debug = False
+
+
+
+
+    #########################################################################
+    #                                                                       #
+    #                       TO  MANAGE DATA STRUCTURE                       #
+    #                                                                       #
+    #########################################################################
 
     def number_of_reactions(self) -> int:
         # Return the number of registered reactions
@@ -35,7 +45,8 @@ class Reactions:
 
     def get_reaction(self, i: int) -> dict:
         """
-        Return the data structure of the i-th reaction (numbering starts at 0)
+        Return the data structure of the i-th reaction,
+        in the order in whic reactions were added (numbering starts at 0)
 
         :param i:   The index (0-based) to identify the reaction of interest
         :return:    A dictionary with 4 keys ("reactants", "products", "Rf", "Rb"),
@@ -94,15 +105,12 @@ class Reactions:
         return self.standard_form_chem_eqn(products)
 
 
+
     def get_forward_rate(self, i: int) -> float:
         rxn = self.get_reaction(i)
         return rxn["Rf"]
 
-    def get_reverse_rate(self, i: int) -> float:    # TODO: PHASE OUT.  Transition to name get_back_rate()
-        rxn = self.get_reaction(i)
-        return rxn["Rb"]
-
-    def get_back_rate(self, i: int) -> float:   # Transitioning to this name for consistency
+    def get_back_rate(self, i: int) -> float:
         rxn = self.get_reaction(i)
         return rxn["Rb"]
 
@@ -117,7 +125,7 @@ class Reactions:
         return rxn["reactants"]
 
 
-    def extract_stoichiometry(self, term):
+    def extract_stoichiometry(self, term) -> int:
         """
 
         :param term:
@@ -125,10 +133,10 @@ class Reactions:
         """
         return term[0]
 
-    def extract_species_index(self, term):
+    def extract_species_index(self, term) -> int:
         return term[1]
 
-    def extract_rxn_order(self, term):
+    def extract_rxn_order(self, term) -> int:
         return term[2]
 
 
@@ -156,9 +164,10 @@ class Reactions:
         Add the parameters of a SINGLE reaction, including its reverse rate
 
         NOTE: in the next 2 parameters, if the stoichiometry and/or reaction order aren't specified, they're assumed to be 1
-        :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order)
-        :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction)
-
+        :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
+                                    or simplified terms, as shown in _parse_reaction_term()
+        :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction),
+                                    or simplified terms, as shown in _parse_reaction_term()
         :param forward_rate:
         :param reverse_rate:
         :return:                None
@@ -249,20 +258,161 @@ class Reactions:
 
 
 
+    #########################################################################
+    #                                                                       #
+    #                   TO CARRY OUT AND EXAMINE REACTIONS                  #
+    #                                                                       #
+    #########################################################################
+
+    def single_compartment_reaction_step(self, conc_dict: dict, delta_time: float) -> np.array:
+        """
+        Using the given concentration data for all the applicable species in a single compartment,
+        do a single reaction time step for ALL the reactions -
+        based on the INITIAL concentrations (prior to this reaction step),
+        which are used as the basis for all the reactions.
+
+        Return the increment vector for all the chemical species concentrations in the compartment
+
+        NOTES:  - the actual system concentrations are NOT changed
+                - "compartments" may or may not correspond to the "bins" of the higher layers;
+                  the calling code might have opted to merge some bins into a single compartment
+
+        :param conc_dict:           EXAMPLE: {3: 16.3, 8: 0.53, 12: 1.78}
+        :param delta_time:
+        :return:                    The increment vector for all the chemical species concentrations
+                                    in the compartment
+                                    EXAMPLE (for 2 species with a 3:1 stoichiometry):   [[ 7.] , [-21.]]
+        """
+
+        # Compute the forward and back conversions of all the reactions
+        delta_list = self.compute_all_rate_diffs(conc_dict=conc_dict, delta_time=delta_time)
+        if self.debug:
+            print(f"    delta_list: {delta_list}")
+
+
+        increment_vector = np.zeros((self.chem_data.number_of_chemicals(), 1), dtype=float)       # One element per chemical species
+        #increment_vector = np.zeros(self.chem_data.number_of_chemicals(), dtype=float)       # One element per chemical species
+
+        # For each reaction, adjust the concentrations of the reactants and products,
+        # based on the forward and back rates of the reaction
+        for i in range(self.number_of_reactions()):
+            if self.debug:
+                print(f"    adjusting the species concentrations based on reaction number {i}")
+
+            # TODO: turn into a more efficient single step, as as:
+            #(reactants, products) = cls.all_reactions.unpack_terms(i)
+            reactants = self.get_reactants(i)
+            products = self.get_products(i)
+
+            # Determine the concentration adjustments
+
+            #   The reactants decrease based on the forward reaction,
+            #             and increase based on the reverse reaction
+            for r in reactants:
+                stoichiometry, species_index, order = r
+                increment_vector[species_index] += stoichiometry * (- delta_list[i])
+
+                if (conc_dict[species_index] + increment_vector[species_index]) < 0:
+                    raise Exception(f"The given time interval ({delta_time}) leads to negative concentrations in reactions: make it smaller!")
+
+
+            #   The products increase based on the forward reaction,
+            #             and decrease based on the reverse reaction
+            for p in products:
+                stoichiometry, species_index, order = p
+                increment_vector[species_index] += stoichiometry * delta_list[i]
+
+                if (conc_dict[species_index] + increment_vector[species_index]) < 0:
+                    raise Exception(f"The given time interval ({delta_time}) leads to negative concentrations in reactions: make it smaller!")
+
+        # END for
+
+        return increment_vector
+
+
+
+    def compute_all_rate_diffs(self, conc_dict: dict, delta_time: float) -> list:
+        """
+        For all the reactions
+
+        :param conc_dict:    EXAMPLE: {3: 16.3, 8: 0.53, 12: 1.78}
+        :param delta_time:
+
+        :return:              A list of the differences between forward and reverse conversions;
+                                    each list has 1 entry per reaction, in the index order of the reactions
+        """
+        delta_list = []            # It will have 1 entry per reaction
+        for i in range(self.number_of_reactions()):
+        # Consider each reaction in turn
+            if self.debug:
+                print(f"    evaluating the rates for reaction number {i}")
+
+            delta = self.compute_rate_diff(rxn_index=i, conc_dict=conc_dict, delta_time=delta_time)
+            delta_list.append(delta)
+
+        return( delta_list )
+
+
+
+
+    def compute_rate_diff(self, rxn_index: int, conc_dict: dict, delta_time: float) -> float:
+        """
+        For the specified reaction, compute the difference of its forward and back "contributions",
+        i.e. delta_time * reaction_rate * (concentration ** reaction_order)
+
+        :param rxn_index:
+        :param conc_dict:    EXAMPLE: {3: 16.3, 8: 0.53, 12: 1.78}
+        :param delta_time:
+
+        :return:            The differences between forward and reverse conversions
+                            TODO: also, make a note of large relative increments (to guide future time-step choices)
+        """
+
+        # TODO: turn into a more efficient single step, as as:
+        #(reactants, products, fwd_rate_coeff, back_rate_coeff) = cls.all_reactions.unpack_reaction(i)
+        reactants = self.get_reactants(rxn_index)
+        products = self.get_products(rxn_index)
+        fwd_rate_coeff = self.get_forward_rate(rxn_index)
+        back_rate_coeff = self.get_back_rate(rxn_index)
+
+        delta_fwd = delta_time * fwd_rate_coeff         # TODO: save, to avoid re-computing at each bin
+        for r in reactants:
+            stoichiometry, species_index, order = r
+            conc = conc_dict.get(species_index)
+            assert conc is not None,\
+                f"compute_rate_diff(): lacking the concentration value for the species `{self.chem_data.get_name(species_index)}`"
+            delta_fwd *= conc ** order      # Raise to power
+
+        delta_back = delta_time * back_rate_coeff       # TODO: save, to avoid re-computing at each bin
+        for p in products:
+            stoichiometry, species_index, order = p
+            conc = conc_dict.get(species_index)
+            assert conc is not None, \
+                f"compute_rate_diff(): lacking the concentration value for the species `{self.chem_data.get_name(species_index)}`"
+            delta_back *= conc ** order     # Raise to power
+
+        #print(f"    delta_fwd: {delta_fwd} | delta_back: {delta_back}")
+        return delta_fwd - delta_back
+
+
+
+
     def is_in_equilibrium(self, rxn_index: int, conc: dict, tolerance=0.05, explain=True) -> bool:
         """
-        Ascertain whether the given concentrations are in equilibrium for the given reaction
+        Ascertain whether the given concentrations are in equilibrium for the specified reaction
 
         :param rxn_index:   The index (0-based) to identify the reaction of interest
-        :param conc:        EXAMPLE: {'A': 23.9931640625, 'B': 36.0068359375}
+        :param conc:        Dict with the concentrations of the species involved in the reaction
+                                EXAMPLE: {'A': 23.9, 'B': 36.1}
         :param tolerance:   Allowable absolute tolerance, to establish satisfactory equality
         :param explain:     If True, print out the formula being used.
                                 EXAMPLES:  "([C][D]) / ([A][B])" , "[B] / [A]^2",
         :return:            True if the reaction is close enough to an equilibrium
         """
         rxn = self.get_reaction(rxn_index)
-        reactants = self.extract_reactants(rxn) # A list of triplets
-        products = self.extract_products(rxn)   # A list of triplets
+
+        reactants = self.extract_reactants(rxn)     # A list of triplets
+        products = self.extract_products(rxn)       # A list of triplets
         Rf = self.extract_forward_rate(rxn)
         Rb = self.extract_back_rate(rxn)
 
@@ -305,9 +455,9 @@ class Reactions:
             print(f"Ratio of forward/reverse reaction rates: {rate_ratio}")
             print(f"Ratio of reactant/product concentrations, adjusted for reaction orders: {conc_ratio}")
             print(f"    {numerator} / {denominator}")
-            #([B]^2 * [X]) / [A]^^3
 
         return np.allclose(conc_ratio, rate_ratio, atol=tolerance)
+
 
 
 
@@ -414,7 +564,7 @@ class Reactions:
         :return:    None
         """
         for i in range(self.number_of_reactions()):
-            print(f"{i}: {self.get_reactants(i)} <-> {self.get_products(i)}   ; Fwd: {self.get_forward_rate(i)} / Back: {self.get_reverse_rate(i)}")
+            print(f"{i}: {self.get_reactants(i)} <-> {self.get_products(i)}   ; Fwd: {self.get_forward_rate(i)} / Back: {self.get_back_rate(i)}")
 
 
 
