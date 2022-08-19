@@ -10,11 +10,8 @@ from life_1D.bio_sim_1d import BioSim1D as bio
 @pytest.fixture(scope="module")
 def rxn():
     pass
-    #chem_data = chem()
-    #chem_data.set_names(["A", "B", "C", "D", "E", "F"])
-
+    #chem_data = chem(names=["A", "B", "C", "D", "E", "F"])
     #bio.initialize_system(n_bins=10, chem_data=chem_data)
-
     #rnx_obj = Reactions(chem_data)
     #yield rnx_obj
 
@@ -31,8 +28,8 @@ def test_single_bin_reaction_step_1(rxn):
     rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
     result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.1)
-    assert np.allclose(result, [[ 7.] , [-7.]])
-    assert result[0][0] == - result[1][0]   # From the stoichiometry
+    assert np.allclose(result, [ 7. , -7.])
+    assert result[0] == - result[1]   # From the stoichiometry
 
 
     rxn.clear_reactions()   # Re-start with a blank slate of reactions
@@ -40,8 +37,8 @@ def test_single_bin_reaction_step_1(rxn):
     rxn.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
 
     result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.1)
-    assert np.allclose(result, [[ 5.] , [-15.]])
-    assert -3 * result[0][0] == result[1][0]   # From the stoichiometry
+    assert np.allclose(result, [5. , -15.])
+    assert -3 * result[0] == result[1]   # From the stoichiometry
 
 
     rxn.clear_reactions()   # Re-start with a blank slate of reactions
@@ -49,8 +46,8 @@ def test_single_bin_reaction_step_1(rxn):
     rxn.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
 
     result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.1)
-    assert np.allclose(result, [[ 10.] , [-15.]])
-    assert result[0][0]/2 == - result[1][0] /3   # From the stoichiometry
+    assert np.allclose(result, [10., -15.])
+    assert result[0]/2 == - result[1] /3   # From the stoichiometry
 
 
 
@@ -65,8 +62,8 @@ def test_single_bin_reaction_step_2(rxn):
     rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
     result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.1)
-    assert np.allclose(result, [[ 7.] , [-7.] , [0.]])
-    assert result[0][0] == - result[1][0]   # From the stoichiometry
+    assert np.allclose(result, [ 7. , -7. , 0.])
+    assert result[0] == - result[1]   # From the stoichiometry
 
 
     rxn.clear_reactions()   # Re-start with a blank slate of reactions
@@ -75,9 +72,9 @@ def test_single_bin_reaction_step_2(rxn):
                      forward_rate=5., reverse_rate=2.)
 
     result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.002)
-    assert np.allclose(result, [[-4.92], [-4.92], [4.92]])
-    assert result[0][0] == result[1][0]     # From the stoichiometry
-    assert result[1][0] == - result[2][0]   # From the stoichiometry
+    assert np.allclose(result, [-4.92, -4.92, 4.92])
+    assert result[0] == result[1]    # From the stoichiometry
+    assert result[1] == - result[2]   # From the stoichiometry
 
 
 
@@ -93,9 +90,9 @@ def test_single_bin_reaction_step_3(rxn):
                      forward_rate=5., reverse_rate=2.)
 
     result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.05)
-    assert np.allclose(result, [[0.4] , [-0.8] , [-0.4]])
-    assert result[0][0] == - result[1][0] /2    # From the stoichiometry
-    assert result[0][0] == - result[2][0]       # From the stoichiometry
+    assert np.allclose(result, [0.4 , -0.8 , -0.4])
+    assert result[0] == - result[1] /2    # From the stoichiometry
+    assert result[0] == - result[2]       # From the stoichiometry
 
 
 
@@ -111,10 +108,10 @@ def test_single_bin_reaction_step_4(rxn):
                      forward_rate=5., reverse_rate=2.)
 
     result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.001)
-    assert np.allclose(result, [[-0.24] , [-0.6] , [0.48], [0.36]])
-    assert  np.allclose(result[0][0] /2 , result[1][0] /5)    # From the stoichiometry
-    assert  np.allclose(result[1][0] /5 , -result[2][0] /4)   # From the stoichiometry
-    assert  np.allclose(result[2][0] /4 , result[3][0] /3)   # From the stoichiometry
+    assert np.allclose(result, [-0.24 , -0.6 , 0.48, 0.36])
+    assert  np.allclose(result[0] /2 , result[1] /5)    # From the stoichiometry
+    assert  np.allclose(result[1] /5 , -result[2] /4)   # From the stoichiometry
+    assert  np.allclose(result[2] /4 , result[3] /3)    # From the stoichiometry
 
 
 
@@ -129,8 +126,8 @@ def test_single_bin_reaction_step_5(rxn):
     rxn.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
 
     result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.02)
-    assert np.allclose(result, [[-1.4] , [0.7]])
-    assert  np.allclose(result[0][0] /2 , -result[1][0])    # From the stoichiometry
+    assert np.allclose(result, [-1.4 , 0.7])
+    assert  np.allclose(result[0] /2 , -result[1])    # From the stoichiometry
 
 
 
@@ -147,10 +144,10 @@ def test_single_bin_reaction_step_6(rxn):
     assert rxn.number_of_reactions() == 2
 
     result = rxn.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=0.02)
-    assert np.allclose(result, [[-1.46] , [-1.46 ] , [ 1.404] , [-0.056] , [ 0.056]])
-    assert  np.allclose(result[0][0] , result[1][0])                # From the stoichiometry
-    assert  np.allclose(result[3][0] , -result[4][0])               # From the stoichiometry
-    assert  np.allclose(result[0][0] + result[4][0], -result[2][0]) # From the stoichiometry
+    assert np.allclose(result, [-1.46 , -1.46  , 1.404 , -0.056 ,  0.056])
+    assert  np.allclose(result[0] , result[1])                # From the stoichiometry
+    assert  np.allclose(result[3] , -result[4])               # From the stoichiometry
+    assert  np.allclose(result[0] + result[4], -result[2]) # From the stoichiometry
                                                                     # The increase in [A] and [E] combined
                                                                     # must match the decrease in [C]
 

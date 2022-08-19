@@ -668,8 +668,8 @@ class BioSim1D:
 
 
             # Replace the "bin_n" column of the cls.delta_reactions matrix with the contents of the vector increment_vector
-            cls.delta_reactions[:, bin_n] = increment_vector.transpose()
-            #cls.delta_reactions[:, bin_n] = np.array([increment_vector])
+            #cls.delta_reactions[:, bin_n] = increment_vector.transpose()
+            cls.delta_reactions[:, bin_n] = np.array([increment_vector])
 
             #print(cls.delta_reactions)
 

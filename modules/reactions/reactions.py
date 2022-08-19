@@ -281,7 +281,7 @@ class Reactions:
         :param delta_time:
         :return:                    The increment vector for all the chemical species concentrations
                                     in the compartment
-                                    EXAMPLE (for 2 species with a 3:1 stoichiometry):   [[ 7.] , [-21.]]
+                                    EXAMPLE (for 2 species with a 3:1 stoichiometry):   [7. , -21.]
         """
 
         # Compute the forward and back conversions of all the reactions
@@ -290,8 +290,8 @@ class Reactions:
             print(f"    delta_list: {delta_list}")
 
 
-        increment_vector = np.zeros((self.chem_data.number_of_chemicals(), 1), dtype=float)       # One element per chemical species
-        #increment_vector = np.zeros(self.chem_data.number_of_chemicals(), dtype=float)       # One element per chemical species
+        #increment_vector = np.zeros((self.chem_data.number_of_chemicals(), 1), dtype=float)       # One element per chemical species
+        increment_vector = np.zeros(self.chem_data.number_of_chemicals(), dtype=float)       # One element per chemical species
 
         # For each reaction, adjust the concentrations of the reactants and products,
         # based on the forward and back rates of the reaction
