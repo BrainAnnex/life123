@@ -8,7 +8,7 @@ from modules.reactions.reactions import Reactions
 
 #########   TESTS OF INITIALIZATION, SETTING AND VIEWING    #########
 
-def test_initialize_universe():
+def test_initialize_system():
     chem_data = chem(names=["A", "B"])
     bio.initialize_system(n_bins=(3,5), chem_data=chem_data)
 
@@ -78,7 +78,7 @@ def test_set_bin_conc_all_species():
 
 
 
-def test_reaction_step():
+def test_react():
     chem_data = chem(names=["A", "B"])
 
     rxn = Reactions(chem_data)
@@ -92,16 +92,46 @@ def test_reaction_step():
     bio.set_bin_conc_all_species(bin_x=2, bin_y=3, conc_list=[5.,100.])
     bio.describe_state()
 
+    bio.react(time_step=0.1, n_steps=1)
+    bio.describe_state()
+
+    assert np.allclose(bio.system[0], [[ 17., 21., 0., 0.] , [ 0., 0., 0., 0.] , [ 0., 0., 0., 23.5]])
+    assert np.allclose(bio.system[1], [[43., 34., 0., 0.] , [ 0., 0., 0., 0.] , [ 0., 0., 0., 81.5]])
+
+    # Continue to equilibrium
+    bio.react(time_step=0.1, n_steps=20)
+    bio.describe_state()
+
+    assert np.allclose(bio.system[1, 0, 0] / bio.system[0, 0, 0], 1.5)  # From the ration forward/back reaction rates
+    assert np.allclose(bio.system[1, 0, 1] / bio.system[0, 0, 1], 1.5)
+    assert np.allclose(bio.system[1, 2, 3] / bio.system[0, 2, 3], 1.5)
+
+
+
+def test_reaction_step():
+    chem_data = chem(names=["A", "B"])
+
+    rxn = Reactions(chem_data)
+
+    # Reaction A <-> B , with 1st-order kinetics in both directions
+    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+
+    bio.initialize_system(n_bins=(3,4), chem_data=chem_data, reactions=rxn)
+    bio.set_bin_conc_all_species(bin_x=0, bin_y=0, conc_list=[10.,50.])
+    bio.set_bin_conc_all_species(bin_x=0, bin_y=1, conc_list=[20.,35.])
+    bio.set_bin_conc_all_species(bin_x=2, bin_y=3, conc_list=[5.,100.])
+    #bio.describe_state()
+
     bio.reaction_step(delta_time=0.1)
-    print("bio.delta_reactions:\n", bio.delta_reactions)
+    #print("bio.delta_reactions:\n", bio.delta_reactions)
 
     assert np.allclose(bio.delta_reactions[0], [[ 7., 1., 0., 0.] , [ 0., 0., 0., 0.] , [ 0., 0., 0., 18.5]])
     assert np.allclose(bio.delta_reactions[1], [[-7., -1., 0., 0.] , [ 0., 0., 0., 0.] , [ 0., 0., 0., -18.5]])
 
-    bio.system += bio.delta_reactions       # Matrix operation to update all the concentrations
-    bio.system_time += 0.1
+    #bio.system += bio.delta_reactions       # Matrix operation to update all the concentrations
+    #bio.system_time += 0.1
 
-    bio.describe_state()
+    #bio.describe_state()
 
     #conc_dict = {0: 5., 1: 100.}
     #result = rxn.compute_all_rate_deltas(conc_dict=conc_dict, delta_time=0.1)

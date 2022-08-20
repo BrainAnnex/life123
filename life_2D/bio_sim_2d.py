@@ -117,11 +117,11 @@ class BioSim2D:
     def set_bin_conc_all_species(cls, bin_x: int, bin_y: int, conc_list: [float]) -> None:
         """
         Assign the requested concentration values to the cell with the given index,
-        for all the species in index order
+        for all the species in their index order
 
         :param bin_x:       The zero-based bin number of the desired cell
         :param bin_y:       The zero-based bin number of the desired cell
-        :param conc_list:   The desired concentration values to assign to the specified location
+        :param conc_list:   A list with the desired concentration values to assign to the specified location
         :return:            None
         """
         #assert bin < cls.n_bins, f"The requested cell index ({bin}) must be in the range [0 - {cls.n_bins - 1}]"
@@ -133,8 +133,8 @@ class BioSim2D:
 
 
     @classmethod
-    def react(cls, time_duration=None, time_step=None, n_steps=None, snapshots=None) -> None:
-        """     TODO: test
+    def react(cls, total_duration=None, time_step=None, n_steps=None, snapshots=None) -> None:
+        """
         Update the system concentrations as a result of all the reactions in all bins.
         CAUTION : NO diffusion is taken into account.
 
@@ -144,7 +144,7 @@ class BioSim2D:
 
         TODO: in case of any Exception, the state of the system is still valid, as of the time before this call
 
-        :param time_duration:
+        :param total_duration:
         :param time_step:
         :param n_steps:
         :param snapshots:       OPTIONAL dict with the keys: "frequency", "sample_bin", "sample_species"
@@ -152,7 +152,7 @@ class BioSim2D:
         :return:                None
         """
 
-        time_step, n_steps = cls.all_reactions.specify_steps(time_duration=time_duration,
+        time_step, n_steps = cls.all_reactions.specify_steps(total_duration=total_duration,
                                                              time_step=time_step,
                                                              n_steps=n_steps)
         #if snapshots is None:

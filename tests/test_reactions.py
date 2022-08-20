@@ -23,15 +23,15 @@ def test_specify_steps():
     with pytest.raises(Exception):
         # Too few arguments
         rxn.specify_steps()
-        rxn.specify_steps(time_duration=15.1)
+        rxn.specify_steps(total_duration=15.1)
         rxn.specify_steps(time_step=0.2)
         rxn.specify_steps(n_steps=30)
         # Too many arguments
-        rxn.specify_steps(time_duration=15.1, time_step=0.2, n_steps=30)
+        rxn.specify_steps(total_duration=15.1, time_step=0.2, n_steps=30)
 
     assert rxn.specify_steps(time_step=0.5, n_steps=24) == (0.5, 24)
-    assert rxn.specify_steps(time_duration=12.0, time_step=0.5) == (0.5, 24)
-    assert rxn.specify_steps(time_duration=12.0, n_steps=24) == (0.5, 24)
+    assert rxn.specify_steps(total_duration=12.0, time_step=0.5) == (0.5, 24)
+    assert rxn.specify_steps(total_duration=12.0, n_steps=24) == (0.5, 24)
 
 
 

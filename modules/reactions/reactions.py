@@ -270,28 +270,28 @@ class Reactions:
     #                                                                       #
     #########################################################################
 
-    def specify_steps(self, time_duration=None, time_step=None, n_steps=None) -> (float, float):
+    def specify_steps(self, total_duration=None, time_step=None, n_steps=None) -> (float, float):
         """
         Specify 2 out of 3 possible parameters, and determine the 3rd one:
             time_duration, time_step, n_steps
             Their desired relationship is time_duration = time_step * n_steps
 
-        :param time_duration:   Float
+        :param total_duration:  Float
         :param time_step:       Float
         :param n_steps:         Integer
         :return:                The pair (time_step, n_steps)
         """
-        assert (not time_duration or not time_step or not n_steps), \
+        assert (not total_duration or not time_step or not n_steps), \
             "specify_steps(): cannot specify all 3 arguments: `time_duration`, `time_step`, `n_steps`"
 
-        assert (time_duration and time_step) or (time_duration and n_steps) or (time_step and n_steps), \
+        assert (total_duration and time_step) or (total_duration and n_steps) or (time_step and n_steps), \
             "specify_steps(): must provide exactly 2 arguments from:  `time_duration`, `time_step`, `n_steps`"
 
         if not time_step:
-            time_step = time_duration / n_steps
+            time_step = total_duration / n_steps
 
         if not n_steps:
-            n_steps = math.ceil(time_duration / time_step)
+            n_steps = math.ceil(total_duration / time_step)
 
         return (time_step, n_steps)     # Note: could opt to also return time_duration is there's a need for it
 

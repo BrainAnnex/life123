@@ -71,10 +71,11 @@ graph_data = rxn.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown] tags=[]
-# ### <a name="sec_2_first_step"></a>First step
+# ## First step
 
 # %%
-# First step
+# First step (NOTE: here we're using a lower-level function that doesn't update the system state;
+#                   it only computes the delta_reactions array)
 bio.reaction_step(delta_time=0.1)
 print("bio.delta_reactions:\n", bio.delta_reactions)
 
@@ -83,3 +84,37 @@ bio.system += bio.delta_reactions       # Matrix operation to update all the con
 bio.system_time += 0.1
 
 bio.describe_state()
+
+# %% [markdown] tags=[]
+# ## Second step
+
+# %%
+# NOTE: now, we're using a highel-level function that also updates the system state
+bio.react(time_step=0.1, n_steps=1)
+bio.describe_state()
+
+# %% [markdown]
+# ## Many more steps, to equilibrium
+
+# %%
+bio.react(time_step=0.1, n_steps=8)
+bio.describe_state()
+
+# %%
+bio.react(time_step=0.1, n_steps=10)
+bio.describe_state()
+
+# %% [markdown]
+# ## The system has now reached equilibrium
+# ### in individual bins, which remain separate because we're NOT doing diffusion in this experiment
+
+# %%
+bio.all_reactions.is_in_equilibrium(0, {"A": 23.99998665, "B": 36.00001335})
+
+# %%
+bio.all_reactions.is_in_equilibrium(0, {"A": 21.99999809, "B": 33.00000191})
+
+# %%
+bio.all_reactions.is_in_equilibrium(0, {"A": 41.99996471, "B": 63.00003529}, explain=False)
+
+# %%
