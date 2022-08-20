@@ -1,4 +1,6 @@
 import numpy as np
+from modules.movies.movies import Movie
+from modules.reactions.reactions import Reactions
 
 
 class BioSim2D:
@@ -47,49 +49,46 @@ class BioSim2D:
     #########################################################################
 
     @classmethod
-    def initialize_system(cls, n_bins: (int, int), chem_data, reactions=None) -> None:
+    def initialize_system(cls, n_bins: (int, int), chem_data=None, reactions=None) -> None:
         """
         Initialize all concentrations to zero.
 
         :param n_bins:     The number of compartments (bins) to use in the simulation,
                                 in the x- and y- dimensions, as a pair of integers
-        :param chem_data:   An object of class "Chemicals"
-        :param reactions:   (OPTIONAL) Object of class "Reactions".  It may also be set later
+        :param chem_data:   (OPTIONAL) Object of class "Chemicals";
+                                if not specified, it will get extracted from the "Reactions" class
+        :param reactions:   (OPTIONAL) Object of class "Reactions";
+                                if not specified, it'll get instantiated here
 
         :return:            None
         """
+        assert type(n_bins) == tuple, "BioSim2D: the argument `n_bins` must be a pair of integers"
         (n_cells_x, n_cells_y) = n_bins
-        assert n_cells_x >= 1, "The number of bins must be at least 1 in either dimension"
-        assert n_cells_y >= 1, "The number of bins must be at least 1 in either dimension"
+        assert n_cells_x >= 1, "The number of bins must be at least 1 in each dimension"
+        assert n_cells_y >= 1, "The number of bins must be at least 1 in each dimension"
+
+        assert chem_data is not None or reactions is not None, \
+            "BioSim2D: at least one of the arguments `chem_data` and `reactions` must be set"
+
+        if chem_data:
+            cls.chem_data = chem_data
+        else:
+            cls.chem_data = reactions.chem_data
+
+        if reactions:
+            cls.all_reactions = reactions
+        else:
+            cls.all_reactions = Reactions(chem_data=chem_data)
 
         cls.n_bins_x = n_cells_x
         cls.n_bins_y = n_cells_y
+
         cls.n_species = chem_data.n_species
 
         # Initialize all concentrations to zero
         cls.system = np.zeros((cls.n_species, n_cells_x, n_cells_y), dtype=float)
 
-        cls.names = None
-        cls.chem_data = chem_data
-
-        if reactions:
-            cls.all_reactions = reactions
-
         cls.system_time = 0             # "Start the clock"
-
-
-
-    @classmethod
-    def describe_state(cls, concise=False) -> None:
-        """
-
-        :param concise:
-        :return:
-        """
-        print(f"SYSTEM STATE at Time t = {cls.system_time}:")
-        for species_index in range(cls.n_species):
-            print(f"Species `{cls.chem_data.get_name(species_index)}`:")
-            print(cls.system[species_index])
 
 
 
@@ -131,6 +130,45 @@ class BioSim2D:
             cls.system[i, bin_x, bin_y] = conc
 
 
+
+
+    #########################################################################
+    #                                                                       #
+    #                              TO VIEW                                  #
+    #                                                                       #
+    #########################################################################
+
+    @classmethod
+    def describe_state(cls, concise=False) -> None:
+        """
+
+        :param concise:
+        :return:
+        """
+        print(f"SYSTEM STATE at Time t = {cls.system_time}:")
+        for species_index in range(cls.n_species):
+            print(f"Species `{cls.chem_data.get_name(species_index)}`:")
+            print(cls.system[species_index])
+
+
+
+
+    #########################################################################
+    #                                                                       #
+    #                               DIFFUSION                               #
+    #                                                                       #
+    #########################################################################
+
+    # TODO: TBA
+
+
+
+
+    #########################################################################
+    #                                                                       #
+    #                               REACTIONS                               #
+    #                                                                       #
+    #########################################################################
 
     @classmethod
     def react(cls, total_duration=None, time_step=None, n_steps=None, snapshots=None) -> None:

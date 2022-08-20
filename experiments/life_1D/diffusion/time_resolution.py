@@ -50,25 +50,25 @@ bio.describe_state(show_diffusion_rates=True)
 # %%
 t_final = 33.3
 
-bio.diffuse(time_duration=t_final, n_steps=10, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=10, verbose=True)
 
 set_initial_condition()     # Reset the concentrations
-bio.diffuse(time_duration=t_final, n_steps=20, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=20, verbose=True)
 
 set_initial_condition()     # Reset the concentrations
-bio.diffuse(time_duration=t_final, n_steps=30, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=30, verbose=True)
 
 set_initial_condition()     # Reset the concentrations
-bio.diffuse(time_duration=t_final, n_steps=50, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=50, verbose=True)
 
 set_initial_condition()     # Reset the concentrations
-bio.diffuse(time_duration=t_final, n_steps=100, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=100, verbose=True)
 
 set_initial_condition()     # Reset the concentrations
-bio.diffuse(time_duration=t_final, n_steps=1000, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=1000, verbose=True)
 
 set_initial_condition()     # Reset the concentrations
-bio.diffuse(time_duration=t_final, n_steps=10000, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=10000, verbose=True)
 
 set_initial_condition()     # Reset the concentrations
-bio.diffuse(time_duration=t_final, n_steps=100000, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=100000, verbose=True)

@@ -44,6 +44,19 @@ class Chemicals:
 
 
 
+    def assert_valid_index(self, species_index: int) -> None:
+        """
+        Raise an Exception if the specified species_index isn't valid
+
+        :param species_index:
+        :return:
+        """
+        assert (species_index is not None) and (type(species_index) == int) and \
+                0 <= species_index < self.n_species, \
+            f"The requested species index ({species_index}) must be in the range [0 - {self.n_species - 1}], inclusive"
+
+
+
     def set_diffusion_rates(self, diff_list: list) -> None:
         """
         Set the diffusion rates of all the chemical species, given in index order.

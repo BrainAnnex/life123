@@ -105,7 +105,7 @@ for i in range(501):
     # Note: the NET GAIN of moles of A in the system is zero!
     
     # Diffuse for the time span delta_time
-    status = bio.diffuse(time_duration=delta_time, time_step=0.1)
+    status = bio.diffuse(total_duration=delta_time, time_step=0.1)
 
     
     if (i <= 12 and i%3 == 0) or (i%100 == 0):   # Display more frequently initially

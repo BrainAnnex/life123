@@ -102,7 +102,7 @@ delta_time = 3.
 
 # %%
 for i in range(15):
-    status = bio.diffuse(time_duration=delta_time, time_step=0.1)
+    status = bio.diffuse(total_duration=delta_time, time_step=0.1)
 
     print(f"\nAfter Delta time {delta_time}.  TOTAL TIME {bio.system_time}  ({status['steps']} steps taken):")
     bio.describe_state(concise=True)

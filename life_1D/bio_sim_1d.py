@@ -3,6 +3,7 @@ import math
 import pandas as pd
 from typing import Union
 from modules.movies.movies import Movie
+from modules.reactions.reactions import Reactions
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
@@ -51,6 +52,174 @@ class BioSim1D:
 
     system_time = None              # Global time of the system, from initialization on
 
+    debug = False
+
+
+
+
+    #########################################################################
+    #                                                                       #
+    #                     SET/MODIFY CONCENTRATIONS                         #
+    #                                                                       #
+    #########################################################################
+
+    @classmethod
+    def initialize_system(cls, n_bins: int, chem_data=None, reactions=None) -> None:
+        """
+        Initialize all concentrations to zero.
+
+        TODO?: maybe allow optionally passing n_species in lieu of chem_data,
+              and let it create and return the "Chemicals" object in that case
+
+        :param n_bins:      The number of compartments (bins) to use in the simulation
+        :param chem_data:   (OPTIONAL) Object of class "Chemicals";
+                                if not specified, it will get extracted from the "Reactions" class
+        :param reactions:   (OPTIONAL) Object of class "Reactions";
+                                if not specified, it'll get instantiated here
+        :return:            None
+        """
+        assert n_bins >= 1, "The number of bins must be at least 1"
+
+        assert chem_data is not None or reactions is not None, \
+            "BioSim1D: at least one of the arguments `chem_data` and `reactions` must be set"
+
+        if chem_data:
+            cls.chem_data = chem_data
+        else:
+            cls.chem_data = reactions.chem_data
+
+        if reactions:
+            cls.all_reactions = reactions
+        else:
+            cls.all_reactions = Reactions(chem_data=chem_data)
+
+        cls.n_bins = n_bins
+
+        cls.n_species = chem_data.n_species
+
+        # Initialize all concentrations to zero
+        cls.system = np.zeros((cls.n_species, n_bins), dtype=float)
+
+        cls.system_time = 0             # "Start the clock"
+
+
+
+
+    @classmethod
+    def replace_system(cls, new_state: np.array) -> None:
+        """
+        Replace the System's internal state.
+        For details of the data structure, see the class variable "system"
+
+        :param new_state:   Numpy array containing the desired new System's internal state
+        :return:
+        """
+        cls.system = new_state
+        cls.n_species, cls.n_bins = new_state.shape     # Extract from the new state
+        assert cls.n_species == cls.chem_data.n_species, \
+            "replace_system(): inconsistency in the number of chemical species vs. the Chemicals object"
+
+
+
+    @classmethod
+    def set_uniform_concentration(cls, conc: float, species_index=None, species_name=None) -> None:
+        """
+        Assign the given concentration to all the cells of the specified species (identified by its index).
+        Any previous values get over-written
+
+        :param conc:            The desired value of chemical concentration for the above species
+        :param species_index:   Zero-based index to identify a specific chemical species
+        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
+        :return:                None
+        """
+        if species_name is not None:
+            assert cls.chem_data, f"set_uniform_concentration(): must first call BioSim1D.initialize_system()"
+            species_index = cls.chem_data.get_index(species_name)
+
+        cls.chem_data.assert_valid_index(species_index)
+
+        assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
+
+        cls.system[species_index] = np.full(cls.n_bins, conc, dtype=float)
+
+
+    @classmethod
+    def set_all_uniform_concentrations(cls, conc_list: [float]) -> None:
+        """
+        Set the concentrations of all species at once, uniformly across all bins
+        :param conc_list:
+        :return:
+        """
+        assert len(conc_list) == cls.chem_data.n_species, \
+            f"The argument to 'set_all_uniform_concentrations()' must be a list of size {cls.chem_data.n_species}"
+
+        for i, conc in enumerate(conc_list):
+            cls.set_uniform_concentration(species_index=i, conc=conc)
+
+
+
+    @classmethod
+    def set_bin_conc(cls, bin: int, species_index: int, conc: float) -> None:
+        """
+        Assign the requested concentration value to the cell with the given index, for the specified species
+
+        :param bin:             The zero-based bin number of the desired cell
+        :param species_index:   Zero-based index to identify a specific chemical species
+        :param conc:            The desired concentration value to assign to the specified location
+        :return:                None
+        """
+        assert bin < cls.n_bins, f"The requested cell index ({bin}) must be in the range [0 - {cls.n_bins - 1}], inclusive"
+        cls.chem_data.assert_valid_index(species_index)
+
+        assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
+
+        cls.system[species_index, bin] = conc
+
+
+    @classmethod
+    def set_species_conc(cls, species_index: int, conc_list: Union[list, tuple, np.ndarray]) -> None:
+        """
+        Assign the requested list of concentration values to all the bins, in order, for the specified species
+
+        :param species_index:   Zero-based index to identify a specific chemical species
+        :param conc_list:       A list, tuple or Numpy array with the desired concentration value to assign to the specified location
+        :return:                None
+        """
+        cls.chem_data.assert_valid_index(species_index)
+        assert (type(conc_list) == list) or (type(conc_list) == tuple) or (type(conc_list) == np.ndarray), \
+            f"set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; the passed value was {type(conc_list)})"
+
+        assert len(conc_list) == cls.n_bins, \
+            "set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the various bins (wrong length)"
+
+        cls.system[species_index] = conc_list
+
+
+
+    @classmethod
+    def inject_conc_to_bin(cls, bin: int, species_index: int, delta_conc: float, zero_clip = True) -> None:
+        """
+        Add the requested concentration to the cell with the given index, for the specified species
+
+        :param bin:             The zero-based bin number of the desired cell
+        :param species_index:   Zero-based index to identify a specific chemical species
+        :param delta_conc:      The concentration to add to the specified location
+        :param zero_clip:       If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
+                                otherwise, an Exception will be raised
+        :return:                None
+        """
+        assert bin < cls.n_bins, f"The requested cell index ({bin}) must be in the range [0 - {cls.n_bins - 1}]"
+
+        if (cls.system[species_index, bin] + delta_conc) < 0. :
+            if zero_clip:
+                cls.system[species_index, bin] = 0
+            else:
+                raise Exception("The requested concentration change would result in a negative final value")
+
+        # Normal scenario, not leading to negative values for the final concentration
+        cls.system[species_index, bin] += delta_conc
+
+
 
 
     #########################################################################
@@ -69,7 +238,7 @@ class BioSim1D:
         :param index:   The index order of the chemical species of interest
         :return:        A NumPy array of concentration values across the bins (from left to right)
         """
-        assert 0 <= index < cls.n_species, f"The species index must be in the range [0-{cls.n_species - 1}]"
+        cls.chem_data.assert_valid_index(index)
         return cls.system[index]
 
 
@@ -181,156 +350,11 @@ class BioSim1D:
 
 
 
-
     #########################################################################
     #                                                                       #
-    #                     SET/MODIFY CONCENTRATIONS                         #
+    #                        CHANGE RESOLUTIONS                             #
     #                                                                       #
     #########################################################################
-
-    @classmethod
-    def initialize_system(cls, n_bins: int, chem_data, reactions=None) -> None:
-        """
-        Initialize all concentrations to zero.
-
-        TODO: maybe allow optionally passing n_species in lieu of chem_data,
-              and let it create and return the "Chemicals" object in that case
-
-        :param n_bins:      The number of compartments (bins) to use in the simulation
-        :param chem_data:   An object of class "Chemicals"
-        :param reactions:   (OPTIONAL) Object of class "Reactions".  It may also be set later
-
-        :return:            None
-        """
-        assert n_bins >= 1, "The number of bins must be at least 1"
-        assert chem_data.n_species >= 1, "The number chemical species set in the `chem_data` object must be at least 1"
-
-        cls.n_bins = n_bins
-        cls.n_species = chem_data.n_species
-
-        # Initialize all concentrations to zero
-        cls.system = np.zeros((cls.n_species, n_bins), dtype=float)
-
-        cls.names = None
-        cls.chem_data = chem_data
-
-        if reactions:
-            cls.all_reactions = reactions
-
-        cls.system_time = 0             # "Start the clock"
-
-
-
-    @classmethod
-    def replace_system(cls, new_state: np.array) -> None:
-        """
-        Replace the System's internal state.
-        For details of the data structure, see the class variable "system"
-
-        :param new_state:   Numpy array containing the desired new System's internal state
-        :return:
-        """
-        cls.system = new_state
-        cls.n_species, cls.n_bins = new_state.shape     # Extract from the new state
-
-
-
-    @classmethod
-    def set_uniform_concentration(cls, conc: float, species_index=None, species_name=None) -> None:
-        """
-        Assign the given concentration to all the cells of the specified species (identified by its index).
-        Any previous values get over-written
-
-        :param conc:            The desired value of chemical concentration for the above species
-        :param species_index:   Zero-based index to identify a specific chemical species
-        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
-        :return:                None
-        """
-        if species_name is not None:
-            assert cls.chem_data, f"set_uniform_concentration(): must first call BioSim1D.initialize_system()"
-            species_index = cls.chem_data.get_index(species_name)
-
-        assert (species_index is not None) and (species_index >= 0) and (species_index < cls.n_species), \
-                    f"The species_index must be an integer between 0 and {cls.n_species - 1}"
-
-        assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
-
-        cls.system[species_index] = np.full(cls.n_bins, conc, dtype=float)
-
-
-    @classmethod
-    def set_all_uniform_concentrations(cls, conc_list: [float]) -> None:
-        """
-        Set the concentrations of all species at once, uniformly across all bins
-        :param conc_list:
-        :return:
-        """
-        if cls.chem_data.n_species:
-            assert len(conc_list) == cls.chem_data.n_species, \
-                f"The argument to 'set_all_uniform_concentrations()' must be a list of size {cls.chem_data.n_species}"
-
-        for i, conc in enumerate(conc_list):
-            cls.set_uniform_concentration(species_index=i, conc=conc)
-
-
-
-    @classmethod
-    def set_bin_conc(cls, bin: int, species_index: int, conc: float) -> None:
-        """
-        Assign the requested concentration value to the cell with the given index, for the specified species
-
-        :param bin:             The zero-based bin number of the desired cell
-        :param species_index:   Zero-based index to identify a specific chemical species
-        :param conc:            The desired concentration value to assign to the specified location
-        :return:                None
-        """
-        assert bin < cls.n_bins, f"The requested cell index ({bin}) must be in the range [0 - {cls.n_bins - 1}]"
-        assert species_index < cls.n_species, f"The requested species index ({bin}) must be in the range [0 - {cls.n_species - 1}]"
-
-        assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
-
-        cls.system[species_index, bin] = conc
-
-
-    @classmethod
-    def set_species_conc(cls, species_index: int, conc_list: list) -> None:
-        """
-        Assign the requested list of concentration values to all the bins, in order, for the specified species
-
-        :param species_index:   Zero-based index to identify a specific chemical species
-        :param conc_list:            The desired concentration value to assign to the specified location
-        :return:                None
-        """
-        assert species_index < cls.n_species, f"The requested species index ({bin}) must be in the range [0 - {cls.n_species - 1}]"
-
-        cls.system[species_index] = conc_list
-
-
-
-    @classmethod
-    def inject_conc_to_bin(cls, bin: int, species_index: int, delta_conc: float, zero_clip = True) -> None:
-        """
-        Add the requested concentration to the cell with the given index, for the specified species
-
-        :param bin:             The zero-based bin number of the desired cell
-        :param species_index:   Zero-based index to identify a specific chemical species
-        :param delta_conc:      The concentration to add to the specified location
-        :param zero_clip:       If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
-                                otherwise, an Exception will be raised
-        :return:                None
-        """
-        assert bin < cls.n_bins, f"The requested cell index ({bin}) must be in the range [0 - {cls.n_bins - 1}]"
-
-        if (cls.system[species_index, bin] + delta_conc) < 0. :
-            if zero_clip:
-                cls.system[species_index, bin] = 0
-            else:
-                raise Exception("The requested concentration change would result in a negative final value")
-
-        # Normal scenario, not leading to negative values for the final concentration
-        cls.system[species_index, bin] += delta_conc
-
-
 
     @classmethod
     def increase_spacial_resolution(cls, factor:int) -> np.array:
@@ -423,34 +447,24 @@ class BioSim1D:
 
 
     @classmethod
-    def diffuse(cls, time_duration=None, time_step=None, n_steps=None, verbose=False) -> dict:
+    def diffuse(cls, total_duration=None, time_step=None, n_steps=None) -> dict:
         """
         Uniform-step diffusion, with 2 out of 3 criteria specified:
             1) until reaching, or just exceeding, the desired time duration
             2) using the given time step
             3) carrying out the specified number of steps
 
-        :param time_duration:
-        :param time_step:
-        :param n_steps:
-        :param verbose:         TODO: replace with a class-wide verbose flag
+        :param total_duration:  The overall time advance (i.e. time_step * n_steps)
+        :param time_step:       The size of each time step
+        :param n_steps:         The desired number of steps
         :return:                A dictionary with data about the status of the operation
         """
-        # TODO: factor out this part, in common to diffuse() and react()
-        assert (not time_duration or not time_step or not n_steps), \
-                        "Cannot specify all 3 arguments: time_duration, time_step, n_steps"
-
-        assert (time_duration and time_step) or (time_duration and n_steps) or (time_step and n_steps), \
-                        "Must provide exactly 2 arguments from:  time_duration, time_step, n_steps"
-
-        if not time_step:
-            time_step = time_duration / n_steps
-
-        if not n_steps:
-            n_steps = math.ceil(time_duration / time_step)
+        time_step, n_steps = cls.all_reactions.specify_steps(total_duration=total_duration,
+                                                             time_step=time_step,
+                                                             n_steps=n_steps)
 
         for i in range(n_steps):
-            if verbose:
+            if cls.debug:
                 if (i < 2) or (i >= n_steps-2):
                     print(f"    Performing diffusion step {i}...")
                 elif i == 2:
@@ -460,8 +474,8 @@ class BioSim1D:
             cls.system += cls.delta_diffusion     # Matrix operation to update all the concentrations
             cls.system_time += time_step
 
-        if verbose:
-            print(f"\nSystem after Delta time {time_duration}, at end of {n_steps} steps of size {time_step}:")
+        if cls.debug:
+            print(f"\nSystem after Delta time {total_duration}, at end of {n_steps} steps of size {time_step}:")
             cls.describe_state(concise=True)
             print()
 
@@ -576,7 +590,7 @@ class BioSim1D:
 
 
     @classmethod
-    def react(cls, time_duration=None, time_step=None, n_steps=None, snapshots=None) -> None:
+    def react(cls, total_duration=None, time_step=None, n_steps=None, snapshots=None) -> None:
         """
         Update the system concentrations as a result of all the reactions in all bins.
         CAUTION : NO diffusion is taken into account.
@@ -587,26 +601,16 @@ class BioSim1D:
 
         TODO: in case of any Exception, the state of the system is still valid, as of the time before this call
 
-        :param time_duration:
-        :param time_step:
-        :param n_steps:
+        :param total_duration:  The overall time advance (i.e. time_step * n_steps)
+        :param time_step:       The size of each time step
+        :param n_steps:         The desired number of steps
         :param snapshots:       OPTIONAL dict with the keys: "frequency", "sample_bin", "sample_species"
                                     If provided, take a system snapshot after running a multiple of "frequency" runs
         :return:                None
         """
-        # TODO: factor out this part, in common to diffuse() and react()  ==> SEE Reactions.define_series()
-        assert (not time_duration or not time_step or not n_steps), \
-            "Cannot specify all 3 arguments: time_duration, time_step, n_steps"
-
-        assert (time_duration and time_step) or (time_duration and n_steps) or (time_step and n_steps), \
-            "Must provide exactly 2 arguments from:  time_duration, time_step, n_steps"
-
-        if not time_step:
-            time_step = time_duration / n_steps
-
-        if not n_steps:
-            n_steps = math.ceil(time_duration / time_step)
-
+        time_step, n_steps = cls.all_reactions.specify_steps(total_duration=total_duration,
+                                                             time_step=time_step,
+                                                             n_steps=n_steps)
 
         # TODO: validation; implement sample_species
         if snapshots is None:
@@ -682,28 +686,19 @@ class BioSim1D:
     #########################################################################
 
     @classmethod
-    def react_diffuse(cls, time_duration=None, time_step=None, n_steps=None) -> None:
+    def react_diffuse(cls, total_duration=None, time_step=None, n_steps=None) -> None:
         """
-        It expects 2 of the arguments:  time_duration, time_step, n_steps
+        It expects 2 of the arguments:  total_duration, time_step, n_steps
         Perform a series of reaction and diffusion time steps.
 
-        :param time_duration:   The overall time advance (i.e. time_step * n_steps)
+        :param total_duration:  The overall time advance (i.e. time_step * n_steps)
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
         :return:                None
         """
-
-        assert (not time_duration or not time_step or not n_steps), \
-            "Cannot specify all 3 arguments: time_duration, time_step, n_steps"
-
-        assert (time_duration and time_step) or (time_duration and n_steps) or (time_step and n_steps), \
-            "Must provide exactly 2 arguments from:  time_duration, time_step, n_steps"
-
-        if not time_step:
-            time_step = time_duration / n_steps
-
-        if not n_steps:
-            n_steps = math.ceil(time_duration / time_step)
+        time_step, n_steps = cls.all_reactions.specify_steps(total_duration=total_duration,
+                                                             time_step=time_step,
+                                                             n_steps=n_steps)
 
         for i in range(n_steps):
             # TODO: split off the reaction step and the diffusion step to 2 different computing cores

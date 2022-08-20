@@ -52,7 +52,7 @@ print("\n\nSTARTING on SHORTER time scales.  Dtime=10, with time steps of 0.1 ..
 total_time = 0.
 for i in range(10):
     delta_time = 10.
-    status = bio.diffuse(time_duration=delta_time, time_step=0.1)
+    status = bio.diffuse(total_duration=delta_time, time_step=0.1)
     total_time += delta_time
     print(f"\nAfter Delta time {delta_time}.  TOTAL TIME {total_time}  ({status['steps']} steps taken):")
     bio.describe_state(concise=True)
@@ -71,7 +71,7 @@ bio.inject_conc_to_bin(species_index=0, bin=2, delta_conc=10.)
 total_time = 0.
 for i in range(20):
     delta_time = 100.
-    status = bio.diffuse(time_duration=delta_time, time_step=0.1)
+    status = bio.diffuse(total_duration=delta_time, time_step=0.1)
     total_time += delta_time
     print(f"\nAfter Delta time {delta_time}.  TOTAL TIME {total_time}  ({status['steps']} steps taken):")
     bio.describe_state(concise=True)

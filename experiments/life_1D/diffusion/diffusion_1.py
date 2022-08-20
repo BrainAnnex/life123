@@ -94,7 +94,7 @@ log.write("Advancing to time t=10, with time steps of 0.1 ... ", blanks_before=2
 # %%
 delta_time = 10.
 
-status = bio.diffuse(time_duration=delta_time, time_step=0.1)
+status = bio.diffuse(total_duration=delta_time, time_step=0.1)
 print("\n", status)
 
 log.write(f"After delta time {delta_time}.  TOTAL TIME {bio.system_time}  ({status['steps']} steps taken):")
@@ -120,7 +120,7 @@ bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_c
 
 # %% tags=[]
 for i in range(50):
-    status = bio.diffuse(time_duration=delta_time, time_step=0.1)
+    status = bio.diffuse(total_duration=delta_time, time_step=0.1)
 
     print(f"\nAfter Delta time {delta_time}.  TOTAL TIME {bio.system_time}  ({status['steps']} steps taken):")
     bio.describe_state(concise=True)
