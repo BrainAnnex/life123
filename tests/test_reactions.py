@@ -17,7 +17,25 @@ def rxn():
 
 
 
-def test_single_bin_reaction_step_1(rxn):
+def test_specify_steps():
+    rxn = Reactions(None)
+
+    with pytest.raises(Exception):
+        # Too few arguments
+        rxn.specify_steps()
+        rxn.specify_steps(time_duration=15.1)
+        rxn.specify_steps(time_step=0.2)
+        rxn.specify_steps(n_steps=30)
+        # Too many arguments
+        rxn.specify_steps(time_duration=15.1, time_step=0.2, n_steps=30)
+
+    assert rxn.specify_steps(time_step=0.5, n_steps=24) == (0.5, 24)
+    assert rxn.specify_steps(time_duration=12.0, time_step=0.5) == (0.5, 24)
+    assert rxn.specify_steps(time_duration=12.0, n_steps=24) == (0.5, 24)
+
+
+
+def test_single_compartment_reaction_step_1():
     chem_data = chem(names=["A", "B"])
 
     rxn = Reactions(chem_data)
@@ -51,7 +69,7 @@ def test_single_bin_reaction_step_1(rxn):
 
 
 
-def test_single_bin_reaction_step_2(rxn):
+def test_single_compartment_reaction_step_2():
     chem_data = chem(names=["A", "B", "C"])
 
     rxn = Reactions(chem_data)
@@ -78,7 +96,7 @@ def test_single_bin_reaction_step_2(rxn):
 
 
 
-def test_single_bin_reaction_step_3(rxn):
+def test_single_compartment_reaction_step_3():
     chem_data = chem(names=["A", "C", "D"])
 
     rxn = Reactions(chem_data)
@@ -96,7 +114,7 @@ def test_single_bin_reaction_step_3(rxn):
 
 
 
-def test_single_bin_reaction_step_4(rxn):
+def test_single_compartment_reaction_step_4():
     chem_data = chem(names=["A", "B", "C", "D"])
 
     rxn = Reactions(chem_data)
@@ -115,7 +133,7 @@ def test_single_bin_reaction_step_4(rxn):
 
 
 
-def test_single_bin_reaction_step_5(rxn):
+def test_single_compartment_reaction_step_5():
     chem_data = chem(names=["A", "B"])
 
     rxn = Reactions(chem_data)
@@ -131,7 +149,7 @@ def test_single_bin_reaction_step_5(rxn):
 
 
 
-def test_single_bin_reaction_step_6(rxn):
+def test_single_compartment_reaction_step_6():
     chem_data = chem(names=["A", "B", "C", "D", "E"])
 
     rxn = Reactions(chem_data)
@@ -199,7 +217,7 @@ def test_compute_all_rate_deltas():
 
 
 
-def test_compute_rate_diff():
+def test_compute_rate_delta():
     chem_data = chem(names=["A", "B", "C", "D"])
     rxn = Reactions(chem_data)
 

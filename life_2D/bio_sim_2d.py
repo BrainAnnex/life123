@@ -152,7 +152,7 @@ class BioSim2D:
         :return:                None
         """
 
-        time_step, n_steps = cls.all_reactions.define_series(time_duration=time_duration,
+        time_step, n_steps = cls.all_reactions.specify_steps(time_duration=time_duration,
                                                              time_step=time_step,
                                                              n_steps=n_steps)
         #if snapshots is None:

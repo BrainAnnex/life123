@@ -22,6 +22,11 @@ class Reactions:
     """
 
     def __init__(self, chem_data):
+        """
+        For now, it's acceptable for chem_data to be None
+
+        :param chem_data:
+        """
         self.reaction_list = []     # List of dicts.  Each item represents a reaction, incl. its reverse
                                     # Reactions should be added by means of calls to add_reaction()
 
@@ -265,20 +270,22 @@ class Reactions:
     #                                                                       #
     #########################################################################
 
-    def define_series(self, time_duration=None, time_step=None, n_steps=None):
-        """     TODO: test
-        Specify 2 out of 3 possible parameters
+    def specify_steps(self, time_duration=None, time_step=None, n_steps=None) -> (float, float):
+        """
+        Specify 2 out of 3 possible parameters, and determine the 3rd one:
+            time_duration, time_step, n_steps
+            Their desired relationship is time_duration = time_step * n_steps
 
-        :param time_duration:
-        :param time_step:
-        :param n_steps:
-        :return:
+        :param time_duration:   Float
+        :param time_step:       Float
+        :param n_steps:         Integer
+        :return:                The pair (time_step, n_steps)
         """
         assert (not time_duration or not time_step or not n_steps), \
-            "Cannot specify all 3 arguments: time_duration, time_step, n_steps"
+            "specify_steps(): cannot specify all 3 arguments: `time_duration`, `time_step`, `n_steps`"
 
         assert (time_duration and time_step) or (time_duration and n_steps) or (time_step and n_steps), \
-            "Must provide exactly 2 arguments from:  time_duration, time_step, n_steps"
+            "specify_steps(): must provide exactly 2 arguments from:  `time_duration`, `time_step`, `n_steps`"
 
         if not time_step:
             time_step = time_duration / n_steps
@@ -286,7 +293,7 @@ class Reactions:
         if not n_steps:
             n_steps = math.ceil(time_duration / time_step)
 
-        return (time_step, n_steps)
+        return (time_step, n_steps)     # Note: could opt to also return time_duration is there's a need for it
 
 
 
