@@ -365,6 +365,39 @@ class BioSim1D:
 
 
 
+    @classmethod
+    def show_membranes(cls) -> str:
+        """
+        A simple-minded early method to visualize where the membranes are.
+
+        EXAMPLE (with 2 membrane on the right part of a 5-bin system):
+                    ___________
+                    | | |*| |*|
+                    -----------
+        :return:
+        """
+        box_width = 2 * cls.n_bins + 1
+
+        box = "\n"
+        box += "_" * box_width + "\n"   # The top of the box
+
+        # Prepare the middle line
+        box_contents = "|"
+        for val in cls.membranes:
+            if val:
+                box_contents += "*|"
+            else:
+                box_contents += " |"
+
+        box += box_contents + "\n"
+        box += "-" * box_width          # The bottom of the box
+
+        print(box)
+        return box
+
+
+
+
     #########################################################################
     #                                                                       #
     #                        CHANGE RESOLUTIONS                             #

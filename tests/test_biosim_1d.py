@@ -162,6 +162,41 @@ def test_varying_spacial_resolution():
 
 
 
+    #########################################################################
+    #                                                                       #
+    #                              TO VIEW                                  #
+    #                                                                       #
+    #########################################################################
+
+def test_lookup_species():
+    pass    # TODO
+
+
+def test_bin_concentration():
+    pass    # TODO
+
+
+def test_bin_snapshot():
+    pass    # TODO
+
+
+def test_system_snapshot():
+    pass    # TODO
+
+
+
+def test_show_membranes():
+    chem_data = chem(names=["A"])
+    bio.initialize_system(n_bins=5, chem_data=chem_data)
+
+    bio.set_membranes(membrane_pos=[2, 4])
+
+    result = bio.show_membranes()
+    assert result == "\n___________\n| | |*| |*|\n-----------"
+
+
+
+
 #########   TESTS OF DIFFUSION : single species, one step    #########
 
 def test_diffuse_step_single_species_1():
