@@ -23,11 +23,12 @@ class BioSim1D:
 
     n_species = 1       # The number of (non-water) chemical species   TODO: phase out?
 
-    chem_data = None    # Object of type "Chemicals", with info on the individual chemicals, incl. their names
+    chem_data = None    # Object of type "Chemicals", with info on the individual chemicals,
+                        #   incl. their names and diffusion rates
 
     system = None       # Concentration data in the System we're simulating, for all the chemicals
-                        # NumPy array of dimension: (n_species x n_cells).
-                        # Each row represents a species
+                        #   NumPy array of dimension: (n_species x n_cells).
+                        #   Each row represents a species
 
     system_earlier = None   # NOT IN CURRENT USE.  Envisioned for simulations where the past 2 time states are used
                             # to compute the state at the next time step
@@ -42,18 +43,17 @@ class BioSim1D:
     container_diffusion = None      # A NumPy array for each species: diffusion rate in/out of the container
 
     time_step_threshold = 0.33333   # This is used to set an Upper Bound on the single time steps
-                                    # in the diffusion process.
-                                    # See explanation in file overly_large_single_timesteps.py
+                                    #   in the diffusion process.
+                                    #   See explanation in file overly_large_single_timesteps.py
 
     all_reactions = None            # Object of class "Reactions"
 
     history = Movie(tabular=True)   # To store user-selected snapshots of (parts of) the system,
-                                    # whenever requested by the user
+                                    #   whenever requested by the user
 
     system_time = None              # Global time of the system, from initialization on
 
     debug = False
-
 
 
 
@@ -605,7 +605,8 @@ class BioSim1D:
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
         :param snapshots:       OPTIONAL dict with the keys: "frequency", "sample_bin", "sample_species"
-                                    If provided, take a system snapshot after running a multiple of "frequency" runs
+                                    If provided, take a system snapshot after running a multiple of "frequency" runs.
+                                    EXAMPLE: snapshots={"frequency": 2, "sample_bin": 0}
         :return:                None
         """
         time_step, n_steps = cls.all_reactions.specify_steps(total_duration=total_duration,

@@ -13,16 +13,15 @@
 # ---
 
 # %% [markdown]
-# **One-bin A <-> 3B reaction, with 1st-order kinetics in both directions,
-# taken to equilibrium**
+# ### One-bin A <-> 3B reaction, with 1st-order kinetics in both directions, taken to equilibrium
+# ### Examine State Space trajectory, using [A] and [B] as state variables
+#
+# Based on reactions/reaction_2
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Aug. 16, 2022
+# LAST REVISED: Aug. 21, 2022
 #
-# * [First Step](#sec_2_first_step)
-# * [Numerous more steps](#sec_2)
-# * [Equilibrium](#sec_2_equilibrium)
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -38,6 +37,7 @@ from modules.reactions.reactions import Reactions
 from life_1D.bio_sim_1d import BioSim1D as bio
 
 import plotly.express as px
+import plotly.graph_objects as go
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
@@ -81,70 +81,77 @@ graph_data = rxn.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown] tags=[]
-# ### <a name="sec_2_first_step"></a>First step
+# ### To equilibrium
 
 # %%
-# First step
-bio.react(time_step=0.1, n_steps=1)
+# Using smaller steps that in experiment reaction_2, to avoid the initial overshooting
+bio.react(time_step=0.05, n_steps=10, snapshots={"frequency": 1, "sample_bin": 0})
 bio.describe_state()
 
-# %% [markdown]
-# _Early in the reaction :_  
-# [A] = 15.   [B] = 35.
-
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
-
-# %% [markdown]
-# ### <a name="sec_2"></a>Numerous more steps
-
-# %%
-# Numerous more steps
-bio.react(time_step=0.1, n_steps=10)
-
-bio.describe_state()
-
-# %% [markdown] tags=[]
-# ### <a name="sec_2_equilibrium"></a>Equilibrium
-
-# %% [markdown]
-# Consistent with the 5/2 ratio of forward/reverse rates (and the 1st order reactions),
-# the systems settles in the equilibrium:   [A] = 14.54545455 , [B] = 36.36363636
 
 # %%
 # Verify that the reaction has reached equilibrium
 rxn.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
-# %%
-# Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
-bio.get_history()
-
-# %% [markdown]
-# Note how the simulation initially **OVERSHOT** the equilibrium values; the first step was too large!
-
 # %% [markdown] tags=[]
 # # Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="Changes in concentrations",
+df = bio.get_history()
+
+px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B"], 
+              title="Reaction A <-> 3B .  Changes in [A] and [B] over time",
               color_discrete_sequence = ['navy', 'darkorange'],
               labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
 
 # %%
-# Same plot, but with smooth line
-fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="Changes in concentrations",
-              color_discrete_sequence = ['navy', 'darkorange'],
-              labels={"value":"concentration", "variable":"Chemical"},
-              line_shape="spline")
-fig.show()
+# Same data, but shown differently
+fig0 = px.line(data_frame=bio.get_history(), x="A", y="B", 
+              title="State space of reaction A <-> 3B : [A] vs. [B]",
+              color_discrete_sequence = ['#C83778'],
+              labels={"value":"concentration", "variable":"Chemical"})
+fig0.show()
+
+# %%
+# Now show the individual data points
+
+df['SYSTEM TIME'] = round(df['SYSTEM TIME'], 2)    # To avoid clutter from too many digits
+
+fig1 = px.scatter(data_frame=df, x="A", y="B",
+                  title="Trajectory in State space: [A] vs. [B]",
+                  hover_data=['SYSTEM TIME'])
+
+fig1.update_traces(marker={"size": 6, "color": "#2FAC74"})    # Modify the style of the dots
+
+# Add annotations (showing the System Time value) to SOME of the points, to avoid clutter
+for ind in df.index:
+    label = df["SYSTEM TIME"][ind]
+    if ind == 0:
+        label = f"t={label}"
+        
+    label_x = ind*16
+    label_y = 20 + ind*8    # A greater y value here means further DOWN!!
+        
+    if (ind <= 3) or (ind%2 == 0):
+        fig1.add_annotation(x=df["A"][ind], y=df["B"][ind],
+                            text=label,
+                            font=dict(
+                                size=10,
+                                color="grey"
+                            ),
+                            showarrow=True, arrowhead=0, ax=label_x, ay=label_y, arrowcolor="#b0b0b0",
+                            bordercolor="#c7c7c7")
+
+fig1.show()
+
+# %%
+# Combine the two above plots, while using the layout of fig1 (which includes the title and annotations)
+all_fig = go.Figure(data=fig0.data + fig1.data, layout = fig1.layout)
+all_fig.show()
 
 # %% [markdown]
-# The early **OVERSHOOTING** of the equilibrium values shows prominently in the last plot!
+# #### Note how the trajectory is progressively slowing down towards the dynamical system's "attractor" (equilibrium state of the reaction)
 
 # %%

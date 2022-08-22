@@ -12,22 +12,23 @@ class BioSim2D:
     #  Class variables  #
     #####################
 
-    n_bins_x = 0       # Number of x-direction spacial compartments (bins) used in the simulation
-    n_bins_y = 0       # Number of y-direction spacial compartments (bins) used in the simulation
+    n_bins_x = 0        # Number of x-direction spacial compartments (bins) used in the simulation
+    n_bins_y = 0        # Number of y-direction spacial compartments (bins) used in the simulation
 
     n_species = 1       # The number of (non-water) chemical species    TODO: phase out?
 
-    chem_data = None    # Object of type "Chemicals", with info on the individual chemicals, incl. their names
+    chem_data = None    # Object of type "Chemicals", with info on the individual chemicals,
+                        #   incl. their names and diffusion rates
 
     system = None       # Concentration data in the System we're simulating, for all the chemicals
-                        # NumPy array of dimension (n_species x n_bins_x x n_bins_y)
-                        # Each plane represents a species
+                        #   NumPy array of dimension (n_species x n_bins_x x n_bins_y)
+                        #   Each plane represents a species
 
     # The following buffers are (n_species x n_bins_x x n_bins_y)
     delta_diffusion = None  # Buffer for the concentration changes from diffusion step
     delta_reactions = None  # Buffer for the concentration changes from reactions step
 
-    sealed = True       # If True, no exchange with the outside; if False, immersed in a "bath"
+    sealed = True           # If True, no exchange with the outside; if False, immersed in a "bath"
 
     # Only applicable if "sealed" is False:
     bath_concentrations = None      # A NumPy array for each species
