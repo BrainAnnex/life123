@@ -33,6 +33,9 @@ class BioSim1D:
     system_earlier = None   # NOT IN CURRENT USE.  Envisioned for simulations where the past 2 time states are used
                             # to compute the state at the next time step
 
+    membranes = None        # NumPy array of dimension n_cells; each element is a boolean, marking the presence of a membrane
+                            #   Any given bin is expected to either contain, or not contain, membrane
+
     delta_diffusion = None  # Buffer for the concentration changes from diffusion step (n_species x n_cells)
     delta_reactions = None  # Buffer for the concentration changes from reactions step (n_species x n_cells)
 
@@ -59,7 +62,7 @@ class BioSim1D:
 
     #########################################################################
     #                                                                       #
-    #                     SET/MODIFY CONCENTRATIONS                         #
+    #                    SET/MODIFY CONCENTRATIONS (or membranes)           #
     #                                                                       #
     #########################################################################
 
@@ -221,6 +224,26 @@ class BioSim1D:
 
 
 
+    @classmethod
+    def set_membranes(cls, membrane_pos: Union[list, tuple]) -> None:
+        """
+        Set the class variable "membranes", a NumPy array of dimension n_cells;
+        each element is a boolean, marking the presence of a membrane.
+        IMPORTANT: any previously set membrane information is lost.
+
+        :param membrane_pos:    A list or tuple of bin numbers that contain membrane
+        :return:                None
+        """
+        cls.membranes = np.zeros(cls.n_bins, dtype=bool)
+        for bin_number in membrane_pos:
+            if bin_number < 0 or bin_number >= cls.n_bins:
+                raise Exception(f"set_membranes(): the requested bin number ({bin_number}) is out of bounds for the system size; "
+                                f"allowed range is [0-{cls.n_bins-1}], inclusive")
+
+            cls.membranes[bin_number] = True
+
+
+
 
     #########################################################################
     #                                                                       #
@@ -308,22 +331,14 @@ class BioSim1D:
 
 
     @classmethod
-    def describe_state(cls, concise=False, time=None) -> None:
+    def describe_state(cls, concise=False) -> None:
         """
         A printout of the state of the system, for now useful only for small systems
 
-        :param time:    TODO: phase out
-                            (Optional) System time to display in a header (regardless of "concise" flag);
-                            this value becomes irrelevant if the official system time is in place (currently being phased in)
         :param concise: If True, only produce a minimalist printout with just the concentration values
         :return:        None
         """
-        if (time is not None) or (cls.system_time is not None):
-            if (time is not None) and (cls.system_time is not None) and (not np.allclose(time, cls.system_time)):
-                raise Exception(f"describe_state(): conflict between `time` argument ({time}) and system time ({cls.system_time})")
-
-            time_to_show = time if time is not None else cls.system_time
-            print(f"SYSTEM STATE at Time t = {time_to_show}:")
+        print(f"SYSTEM STATE at Time t = {cls.system_time}:")
 
         if concise:             # A minimalist printout...
             print(cls.system)   # ...only showing the concentration data (a Numpy array)

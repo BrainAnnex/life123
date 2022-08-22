@@ -64,7 +64,7 @@ def test_set_uniform_concentration():
 
 
 
-def test_inject_conc_to_cell():
+def test_inject_conc_to_bin():
     chem_data = chem(names=["A"])
     bio.initialize_system(n_bins=5, chem_data=chem_data)
 
@@ -79,6 +79,27 @@ def test_inject_conc_to_cell():
     bio.inject_conc_to_bin(bin=1, species_index=0, delta_conc=10.)
 
     bio.describe_state()
+
+
+
+def test_set_membranes():
+    chem_data = chem(names=["A"])
+    bio.initialize_system(n_bins=5, chem_data=chem_data)
+
+    bio.set_membranes(membrane_pos=[2, 4])
+    expected = np.array([False, False, True, False, True])
+    assert (bio.membranes == expected).all()
+
+    bio.set_membranes(membrane_pos=(0,2))
+    expected = np.array([True, False, True, False, False])
+    assert (bio.membranes == expected).all()
+
+    with pytest.raises(Exception):
+        bio.set_membranes(membrane_pos=[5])
+        bio.set_membranes(membrane_pos=[-1])
+        bio.set_membranes(membrane_pos=[2, 4, 6])
+
+    #print(bio.membranes)
 
 
 
