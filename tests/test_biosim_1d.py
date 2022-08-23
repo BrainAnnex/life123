@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 from life_1D.bio_sim_1d import BioSim1D as bio
 from modules.chemicals.chemicals import Chemicals as chem
+from modules.reactions.reactions import Reactions
 
 
 
@@ -63,7 +64,7 @@ def test_set_uniform_concentration():
 
 
 
-def test_inject_conc_to_cell():
+def test_inject_conc_to_bin():
     chem_data = chem(names=["A"])
     bio.initialize_system(n_bins=5, chem_data=chem_data)
 
@@ -78,6 +79,27 @@ def test_inject_conc_to_cell():
     bio.inject_conc_to_bin(bin=1, species_index=0, delta_conc=10.)
 
     bio.describe_state()
+
+
+
+def test_set_membranes():
+    chem_data = chem(names=["A"])
+    bio.initialize_system(n_bins=5, chem_data=chem_data)
+
+    bio.set_membranes(membrane_pos=[2, 4])
+    expected = np.array([False, False, True, False, True])
+    assert (bio.membranes == expected).all()
+
+    bio.set_membranes(membrane_pos=(0,2))
+    expected = np.array([True, False, True, False, False])
+    assert (bio.membranes == expected).all()
+
+    with pytest.raises(Exception):
+        bio.set_membranes(membrane_pos=[5])
+        bio.set_membranes(membrane_pos=[-1])
+        bio.set_membranes(membrane_pos=[2, 4, 6])
+
+    #print(bio.membranes)
 
 
 
@@ -136,6 +158,41 @@ def test_varying_spacial_resolution():
     result = bio.decrease_spacial_resolution(3)
     #print(result)
     assert np.allclose(result, original_state)
+
+
+
+
+    #########################################################################
+    #                                                                       #
+    #                              TO VIEW                                  #
+    #                                                                       #
+    #########################################################################
+
+def test_lookup_species():
+    pass    # TODO
+
+
+def test_bin_concentration():
+    pass    # TODO
+
+
+def test_bin_snapshot():
+    pass    # TODO
+
+
+def test_system_snapshot():
+    pass    # TODO
+
+
+
+def test_show_membranes():
+    chem_data = chem(names=["A"])
+    bio.initialize_system(n_bins=5, chem_data=chem_data)
+
+    bio.set_membranes(membrane_pos=[2, 4])
+
+    result = bio.show_membranes()
+    assert result == "\n___________\n| | |*| |*|\n-----------"
 
 
 
@@ -398,7 +455,7 @@ def test_diffuse_1():
         bio.diffuse()               # Is not passing any arguments
 
     with pytest.raises(Exception):
-        bio.diffuse(time_duration = 5)      # Is not passing enough arguments
+        bio.diffuse(total_duration= 5)      # Is not passing enough arguments
 
     with pytest.raises(Exception):
         bio.diffuse(time_step = 0.2)        # Is not passing enough arguments
@@ -407,7 +464,7 @@ def test_diffuse_1():
         bio.diffuse(n_steps=3)              # Is not passing enough arguments
 
     with pytest.raises(Exception):
-        bio.diffuse(time_duration = 5, time_step = 0.2, n_steps=3)  # Too many args
+        bio.diffuse(total_duration= 5, time_step = 0.2, n_steps=3)  # Too many args
 
 
     # Do 1 step
@@ -449,7 +506,7 @@ def test_diffuse_2():
     bio.set_uniform_concentration(species_index=0, conc=0.)
     bio.inject_conc_to_bin(species_index=0, bin=2, delta_conc=10.)
 
-    status = bio.diffuse(time_duration=800, time_step=0.1)
+    status = bio.diffuse(total_duration=800, time_step=0.1)
     assert status['steps'] == 8000
     assert np.allclose(bio.lookup_species(0),
                                 [1.00055275, 1.00049864, 1.00039572, 1.00025407, 1.00008755, 0.99991245,

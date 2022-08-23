@@ -38,44 +38,76 @@ class Chemicals:
 
 
 
-    def number_of_chemicals(self):
-        # The number of chemicals - exclusive of water
+    def number_of_chemicals(self) -> int:
+        # Return the number of registered chemicals - exclusive of water
         return self.n_species
+
+
+
+    def assert_valid_index(self, species_index: int) -> None:
+        """
+        Raise an Exception if the specified species_index isn't valid
+
+        :param species_index:
+        :return:
+        """
+        assert (species_index is not None) and (type(species_index) == int) and \
+                0 <= species_index < self.n_species, \
+            f"The requested species index ({species_index}) must be in the range [0 - {self.n_species - 1}], inclusive"
 
 
 
     def set_diffusion_rates(self, diff_list: list) -> None:
         """
-        Set the diffusion rates of all the chemical species, given in index order
+        Set the diffusion rates of all the chemical species, given in index order.
+        If chemicals names have already been registered, then the number of diffusion rates
+        must match that of the names.
 
         :param diff_list:   List or tuple of diffusion rates, in index order
         :return:            None
         """
+        # Validate
         assert self.diffusion_rates is None, \
-            f"Chemicals.set_diffusion_rates(): can only be invoked if no diffusion rates were previously set"
+            f"Chemicals.set_diffusion_rates(): can be invoked only if no diffusion rates were previously set"
 
         arg_type = type(diff_list)
         assert arg_type == list or arg_type == tuple,   \
             f"Chemicals.set_diffusion_rates(): the diffusion rates must be a list or tuple.  What was passed was of type {arg_type}"
 
+        if self.names is not None:
+            assert len(diff_list) == len(self.names), \
+                f"Chemicals.set_diffusion_rates(): the number of the passed diffusion rates ({len(diff_list)}) " \
+                f"doesn't match that of the registered chemicals ({len(self.names)})"
+
+
         self.diffusion_rates = np.array(diff_list, dtype=float)
+
         self.n_species = len(diff_list)
 
 
 
     def set_names(self, name_list)  -> None:
         """
-        Set the names of all the chemical species, given in index order
+        Set the names of all the chemical species, given in index order.
+        If diffusion rates have already been registered, then the number of names
+        must match that of the diffusion rates.
 
         :param name_list:   List or tuple of the names of the chemical species, in index order
         :return:            None
         """
+        # Validate
         assert self.names is None, \
-            f"Chemicals.set_names(): can only be invoked if no names for the chemical species were previously set"
+            f"Chemicals.set_names(): can be invoked only if no names for the chemical species were previously set"
 
         arg_type = type(name_list)
         assert arg_type == list or arg_type == tuple, \
             f"Chemicals.set_names(): the names must be a list or tuple.  What was passed was of type {arg_type}"
+
+        if self.diffusion_rates is not None:
+            assert len(name_list) == len(self.diffusion_rates), \
+                f"Chemicals.set_names(): the number of the passed names ({len(name_list)}) " \
+                f"doesn't match that of the registered diffusion rates ({len(self.diffusion_rates)})"
+
 
         self.names = name_list
 
@@ -119,15 +151,19 @@ class Chemicals:
 
 
 
-    def get_index(self, name: str) -> Union[int, None]:
+    def get_index(self, name: str) -> int:
         """
-        Return the index of the chemical species with the given name,
-        or None if not found
+        Return the index of the chemical species with the given name.
+        If not found, an Exception is raised
 
         :param name:    Name of the chemical species of interest
         :return:        The index of the species with the given name
         """
-        return self.name_dict.get(name, None)
+        index =  self.name_dict.get(name)
+        assert index is not None, \
+            f"Chemicals.get_index(): No chemical species named `{name}` was found"
+
+        return index
 
 
 
