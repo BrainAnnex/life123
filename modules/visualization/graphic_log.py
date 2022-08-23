@@ -6,9 +6,24 @@ from modules.html_log.html_log import HtmlLog as log
 
 class GraphicLog:
 
-    #COMPONENT_NAME = None
-    HOME_REL_PATH = None        # Relative path from location of *THE LOG FILE* to Life123's home
-                                # EXAMPLE: "../../.."
+    ###  START OF CONFIGURATION  ###
+    LOCAL_FILES_ROOT = None     # This needs to be set by config().   EXAMPLE: "../../../"
+                                #   For local files (NOT recommended), it's the relative path from location of *THE LOG FILE* to Life123's home
+                                #   Using local files causes issues in JupyterLab
+    LOCAL_VUE_LIBRARY_FILE = "modules/Vue2_lib/vue2.js"                 # Relative to LOCAL_FILES_ROOT
+    LOCAL_SVG_HELPER_LIBRARY_FILE = "modules/SVG_helper/svg_helper.js"  # Relative to LOCAL_FILES_ROOT
+    LOCAL_VUE_COMPS_DIR = "modules/visualization/vue_components/"       # Relative to LOCAL_FILES_ROOT
+
+    REMOTE_FILES_ROOT = "https://life123.science/libraries/"
+    REMOTE_VUE_LIBRARY_FILE = "https://life123.science/libraries/vue_2.6.12.js"
+    REMOTE_SVG_HELPER_LIBRARY_FILE = "https://life123.science/libraries/svg_helper_1.2.js"
+    REMOTE_VUE_COMPS_DIR = "https://life123.science/libraries/vue_components/"
+
+    FILES_ROOT = None
+    VUE_LIBRARY_FILE = None
+    SVG_HELPER_LIBRARY_FILE = None
+    VUE_COMPS_DIR = None
+    ###  End of configuration  ###
 
 
     @classmethod
@@ -18,35 +33,53 @@ class GraphicLog:
 
         :return:
         """
-        #if cls.COMPONENT_NAME is None or cls.HOME_REL_PATH is None:
-        if cls.HOME_REL_PATH is None:
+        if cls.FILES_ROOT is None:    
             return False
+
         return True
 
 
 
     @classmethod
-    def config(cls, filename, components: Union[str, List[str]], home_rel_path, mode='overwrite', extra_js=None):
+    def config(cls, filename, components: Union[str, List[str]], mode='overwrite', extra_js=None, local_files=False, home_rel_path=None) -> None:
         """
-
-        :param filename:        Name, with full path, of the desired log file
+        Initialize this library
+        
+        :param filename:        Name, with FULL path, of the desired log file
         :param components:      Either a string or list of strings,
-                                with the name(s) of ALL the graphic components that will be used in the log file
-        :param home_rel_path:   Relative path from location of *THE LOG FILE* to Life123's home
-                                EXAMPLE: "../../.."
+                                with the name(s) of ALL the Vue.js graphic components that will be used in the log file
         :param mode:            A string with the desired logging mode.  Must be one of:
                                     "overwrite" - if the log file exists, first clear it; otherwise, create it
                                     "multiple"  - each run's output should go into a separate file (consecutively numbered)
-                                (note the "append" mode of the class HtmlLog cannot be used)
+                                    (note the "append" mode of the class HtmlLog cannot be used)
         :param extra_js:        Optional string with the name of an "extra" JavaScript file to include
-                                ("extra" refers to the fact that several JS files are already automatically included)
+                                    ("extra" refers to the fact that several JS files are already automatically included)
+                                
+        :param local_files:     If True, local files will be used for the Vue components (see arg "home_rel_path")
+        :param home_rel_path:   Relative path from location of *THE LOG FILE* to the Life123's project home
+                                    NEW: ONLY APPLICABLE IF local_files=True ; otherwise, it's simply ignored
+                                    EXAMPLE: "../../.."
 
-        :return:
+        :return:                None
         """
+        if local_files:
+            assert home_rel_path, "config(): if the local_files=True flag is set, then an argument must be passed for `home_rel_path`"
+
+            cls.FILES_ROOT = home_rel_path
+            cls.VUE_LIBRARY_FILE = home_rel_path + "/" + cls.LOCAL_VUE_LIBRARY_FILE
+            cls.SVG_HELPER_LIBRARY_FILE = home_rel_path + "/" + cls.LOCAL_SVG_HELPER_LIBRARY_FILE
+            cls.VUE_COMPS_DIR = home_rel_path + "/" + cls.LOCAL_VUE_COMPS_DIR
+        else:
+            cls.FILES_ROOT = cls.REMOTE_FILES_ROOT
+            cls.VUE_LIBRARY_FILE = cls.REMOTE_VUE_LIBRARY_FILE
+            cls.SVG_HELPER_LIBRARY_FILE = cls.REMOTE_SVG_HELPER_LIBRARY_FILE
+            cls.VUE_COMPS_DIR = cls.REMOTE_VUE_COMPS_DIR
+
+
         if type(components) == str:
-            css_files = f"{home_rel_path}/modules/visualization/vue_components/{components}.css"
+            css_files = f"{cls.VUE_COMPS_DIR}{components}.css"
         elif type(components) == list:
-            css_files = [f"{home_rel_path}/modules/visualization/vue_components/{comp}.css"
+            css_files = [f"{cls.VUE_COMPS_DIR}{comp}.css"
                                         for comp in components]
         else:
             raise Exception("GraphicLog.config(): argument `components` must be either a string or a list of strings")
@@ -55,19 +88,17 @@ class GraphicLog:
         assert mode == "overwrite" or mode == "append", \
                 "GraphicLog.config(): argument `mode` must be either 'overwrite' or 'append'"
 
-        js = f"{home_rel_path}/modules/SVG_helper/svg_helper.js"
+        # Assemble a list of all the needed JavaScript files
+        js = cls.SVG_HELPER_LIBRARY_FILE
         if extra_js:
             js = [js, extra_js]
 
         # Note: paths are from the location of *THE LOG FILE*
         log.config(filename=filename, mode=mode,
                    use_D3=True,
-                   Vue_lib = f"{home_rel_path}/modules/Vue2_lib/vue2.js",
+                   Vue_lib = cls.VUE_LIBRARY_FILE,
                    js  = js,
                    css = css_files)
-
-        #cls.COMPONENT_NAME = components
-        cls.HOME_REL_PATH = home_rel_path
 
 
 
@@ -82,12 +113,12 @@ class GraphicLog:
         :param print_notification:  If True, something is printed to inform of what's happening with the log file
         :return:                    None
         """
-        assert cls.HOME_REL_PATH is not None, "Must first call GraphicLog.config(), and pass a `home_rel_path` argument"
+        assert cls.FILES_ROOT is not None, "export_plot(): must first initialize library with call to GraphicLog.config()"
 
 
         log.export_plot_Vue(data=data,
-                        component_name = graphic_component,
-                        component_file = f"{cls.HOME_REL_PATH}/modules/visualization/vue_components/{graphic_component}.js")
+                            component_name = graphic_component,
+                            component_file = f"{cls.VUE_COMPS_DIR}{graphic_component}.js")
 
         if print_notification:
             print(f"[GRAPHIC ELEMENT SENT TO LOG FILE `{log.log_fullname}`]")

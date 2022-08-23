@@ -27,7 +27,7 @@
 # A LOT of plots are sent to the log file from this experiment; the reason is to compare two
 # graphic elements, "vue_curves_3" and "vue_curves_4"
 #
-# LAST REVISED: Aug. 13, 2022
+# LAST REVISED: Aug. 22, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -53,8 +53,7 @@ log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filen
 # Set up the use of some specified graphic (Vue) components
 GraphicLog.config(filename=log_file,
                   components=["vue_heatmap_11", "vue_curves_3", "vue_curves_4", "vue_cytoscape_1"],
-                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js",
-                  home_rel_path="../../..")    # relative path is from the location of THE LOG FILE to the project's home
+                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
 # Initialize the system

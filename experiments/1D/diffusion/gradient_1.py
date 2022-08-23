@@ -19,7 +19,7 @@
 # The system starts out with a uniform concentration.  
 # Then identical concentrations are repeatedly *injected to the left* and *drained from the right*
 #
-# LAST REVISED: Aug. 13, 2022
+# LAST REVISED: Aug. 22, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -42,8 +42,7 @@ from modules.visualization.graphic_log import GraphicLog
 # Initialize the HTML logging
 log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
 GraphicLog.config(filename=log_file,
-                  components=["vue_heatmap_11", "vue_curves_3"],
-                  home_rel_path="../../..")    # relative path is from the location of THE LOG FILE to the project's home
+                  components=["vue_heatmap_11", "vue_curves_3"])
 
 # %%
 # Set the heatmap parameters

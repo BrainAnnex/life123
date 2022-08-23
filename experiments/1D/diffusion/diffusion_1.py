@@ -18,9 +18,9 @@
 # The system starts out with a "concentration pulse" in bin 2 (the 3rd bin from the left) - i.e. that bin is initially the only one with a non-zero concentration of the only chemical species.
 # Then the system is left undisturbed, and followed to equilibrium.
 #
-# **EXTRA OUTPUT (incl. graphics):** overwritten into the .htm file with the same base name.  Visualized with heatmaps and line curves.
+# **EXTRA OUTPUT (incl. graphics):** overwritten into the .htm file with the same base name.
 #
-# LAST REVISED: Aug. 14, 2022
+# LAST REVISED: Aug. 22, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -45,8 +45,7 @@ log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filen
 
 # Set up the use of some specified graphic (Vue) components
 GraphicLog.config(filename=log_file,
-                  components=["vue_heatmap_11", "vue_curves_3"],
-                  home_rel_path="../../..")    # relative path is from the location of THE LOG FILE to the project's home
+                  components=["vue_heatmap_11", "vue_curves_3"])
 
 # %%
 # Set the heatmap parameters

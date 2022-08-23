@@ -17,7 +17,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Aug. 16, 2022
+# LAST REVISED: Aug. 22, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -43,8 +43,7 @@ log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filen
 # Set up the use of some specified graphic (Vue) components
 GraphicLog.config(filename=log_file,
                   components=["vue_cytoscape_1"],
-                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js",
-                  home_rel_path="../../..")    # relative path is from the location of THE LOG FILE to the project's home
+                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
 # Initialize the system
@@ -138,12 +137,12 @@ bio.get_history()
 
 # %% tags=[]
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "C", "D"], 
-              title="Changes in concentrations",
+              title="Reaction A <-> 2C + D .  Changes in concentrations",
               color_discrete_sequence = ['navy', 'violet', 'red'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
 # %% [markdown]
-# Notice the wild overshoot present at t=0.2
+# #### Notice the wild overshoot present at t=0.2
 
 # %%
