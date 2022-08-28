@@ -1,7 +1,7 @@
 import numpy as np
 import math
 import pandas as pd
-from typing import Union
+from typing import Union, List, Tuple
 from modules.movies.movies import Movie
 from modules.reactions.reactions import Reactions
 from modules.html_log.html_log import HtmlLog as log
@@ -27,17 +27,26 @@ class BioSim1D:
                         #   incl. their names and diffusion rates
 
     system = None       # Concentration data in the System we're simulating, for all the chemicals
-                        #   NumPy array of dimension: (n_species x n_cells).
+                        #   NumPy array of reals, of dimension: (n_species x n_bins).
                         #   Each row represents a species
 
     system_earlier = None   # NOT IN CURRENT USE.  Envisioned for simulations where the past 2 time states are used
                             # to compute the state at the next time step
 
-    membranes = None        # NumPy array of dimension n_cells; each element is a boolean, marking the presence of a membrane
-                            #   Any given bin is expected to either contain, or not contain, membrane
+    membranes = None        # NumPy boolean array of dimension n_bins;
+                            #   each boolean value marks the presence of a membrane in that bin.
+                            #   Any given bin is expected to either contain, or not contain, a single membrane passing thru it
 
-    delta_diffusion = None  # Buffer for the concentration changes from diffusion step (n_species x n_cells)
-    delta_reactions = None  # Buffer for the concentration changes from reactions step (n_species x n_cells)
+    A_fraction = None       # NumPy array of reals, of dimension n_bins;
+                            #   each value records the fraction (between 0. and 1.) of the LEFT one
+                            #   of the 2 parts into which the membrane splits the bin.
+                            #   0. if N/A
+
+    system_B = None         # Just like "system", but only for the "A" fractions of the bin, where applicable;
+                            #   0. if N/A
+
+    delta_diffusion = None  # Buffer for the concentration changes from diffusion step (n_species x n_bins)
+    delta_reactions = None  # Buffer for the concentration changes from reactions step (n_species x n_bins)
 
     sealed = True           # If True, no exchange with the outside; if False, immersed in a "bath"
 
@@ -70,6 +79,7 @@ class BioSim1D:
     def initialize_system(cls, n_bins: int, chem_data=None, reactions=None) -> None:
         """
         Initialize all concentrations to zero.
+        Membranes, if present, need to be set later.
 
         TODO?: maybe allow optionally passing n_species in lieu of chem_data,
               and let it create and return the "Chemicals" object in that case
@@ -127,7 +137,7 @@ class BioSim1D:
     @classmethod
     def set_uniform_concentration(cls, conc: float, species_index=None, species_name=None) -> None:
         """
-        Assign the given concentration to all the cells of the specified species (identified by its index).
+        Assign the given concentration to all the bin of the specified species (identified by its index).
         Any previous values get over-written
 
         :param conc:            The desired value of chemical concentration for the above species
@@ -136,7 +146,7 @@ class BioSim1D:
         :return:                None
         """
         if species_name is not None:
-            assert cls.chem_data, f"set_uniform_concentration(): must first call BioSim1D.initialize_system()"
+            assert cls.chem_data, f"BioSim1D.set_uniform_concentration(): must first call initialize_system()"
             species_index = cls.chem_data.get_index(species_name)
 
         cls.chem_data.assert_valid_index(species_index)
@@ -150,11 +160,11 @@ class BioSim1D:
     def set_all_uniform_concentrations(cls, conc_list: [float]) -> None:
         """
         Set the concentrations of all species at once, uniformly across all bins
-        :param conc_list:
-        :return:
+        :param conc_list:   List of concentration values for each of the chemical species
+        :return:            None
         """
         assert len(conc_list) == cls.chem_data.n_species, \
-            f"The argument to 'set_all_uniform_concentrations()' must be a list of size {cls.chem_data.n_species}"
+            f"set_all_uniform_concentrations(): the argument must be a list of size {cls.chem_data.n_species}"
 
         for i, conc in enumerate(conc_list):
             cls.set_uniform_concentration(species_index=i, conc=conc)
@@ -164,17 +174,17 @@ class BioSim1D:
     @classmethod
     def set_bin_conc(cls, bin: int, species_index: int, conc: float) -> None:
         """
-        Assign the requested concentration value to the cell with the given index, for the specified species
+        Assign the requested concentration value to the bin with the given index, for the specified species
 
-        :param bin:             The zero-based bin number of the desired cell
+        :param bin:             The zero-based bin number of the desired compartment
         :param species_index:   Zero-based index to identify a specific chemical species
         :param conc:            The desired concentration value to assign to the specified location
         :return:                None
         """
-        assert bin < cls.n_bins, f"The requested cell index ({bin}) must be in the range [0 - {cls.n_bins - 1}], inclusive"
+        assert bin < cls.n_bins, f"set_bin_conc(): the requested cell index ({bin}) must be in the range [0 - {cls.n_bins - 1}], inclusive"
         cls.chem_data.assert_valid_index(species_index)
 
-        assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
+        assert conc >= 0., f"set_bin_conc(): the concentration must be a positive number or zero (the requested value was {conc})"
 
         cls.system[species_index, bin] = conc
 
@@ -224,22 +234,24 @@ class BioSim1D:
 
 
 
-    @classmethod
-    def set_membranes(cls, membrane_pos: Union[list, tuple]) -> None:
-        """
-        Set the class variable "membranes", a NumPy array of dimension n_cells;
-        each element is a boolean, marking the presence of a membrane.
-        IMPORTANT: any previously set membrane information is lost.
+    ########  EXPERIMENTAL!  MEMBRANE-RELATED  ################
 
-        :param membrane_pos:    A list or tuple of bin numbers that contain membrane
+    @classmethod
+    def set_membranes(cls, membrane_pos: Union[List[int], Tuple[int]]) -> None:
+        """
+        Set the class variable "membranes", a NumPy boolean array of dimension n_cells;
+        each element marks the presence of a membrane in that bin.
+
+        IMPORTANT: any previously-set membrane information is lost.
+
+        :param membrane_pos:    A list or tuple of indexes of bins that contain membranes
         :return:                None
         """
         cls.membranes = np.zeros(cls.n_bins, dtype=bool)
-        for bin_number in membrane_pos:
-            if bin_number < 0 or bin_number >= cls.n_bins:
-                raise Exception(f"set_membranes(): the requested bin number ({bin_number}) is out of bounds for the system size; "
-                                f"allowed range is [0-{cls.n_bins-1}], inclusive")
 
+        # Loop over all the values passed as a list or tuple
+        for bin_number in membrane_pos:
+            cls.assert_valid_bin_number(bin_number)
             cls.membranes[bin_number] = True
 
 
@@ -250,6 +262,19 @@ class BioSim1D:
     #                              TO VIEW                                  #
     #                                                                       #
     #########################################################################
+
+    @classmethod
+    def assert_valid_bin_number(cls, bin_number: int) -> None:
+        """
+        Raise an Exception if the given bin number isn't valid
+        :param bin_number:  An integer that ought to be between 0 and (cls.n_bins-1), inclusive
+        :return:            None
+        """
+        if bin_number < 0 or bin_number >= cls.n_bins:
+            raise Exception(f"BioSim1D: the requested bin number ({bin_number}) is out of bounds for the system size; "
+                            f"allowed range is [0-{cls.n_bins-1}], inclusive")
+
+
 
 
     @classmethod
