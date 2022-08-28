@@ -20,13 +20,13 @@
 #
 # **EXTRA OUTPUT (incl. graphics):** overwritten into the .htm file with the same base name.
 #
-# LAST REVISED: Aug. 22, 2022
+# LAST REVISED: Aug. 27, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
 import set_path
 set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up 
-                                         # to reach the project's home from the folder containing this notebook
+                                         # to reach the project's home, from the folder containing this notebook
 
 # %%
 from experiments.get_notebook_info import get_notebook_basename
@@ -34,6 +34,7 @@ from experiments.get_notebook_info import get_notebook_basename
 from life_1D.bio_sim_1d import BioSim1D as bio
 
 import plotly.express as px
+import plotly.graph_objects as go
 
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.html_log.html_log import HtmlLog as log
@@ -48,7 +49,7 @@ GraphicLog.config(filename=log_file,
                   components=["vue_heatmap_11", "vue_curves_3"])
 
 # %%
-# Set the heatmap parameters
+# Set the heatmap parameters (for the log file)
 heatmap_pars = {"range": [0, 2.5],
                 "outer_width": 850, "outer_height": 150,
                 "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
@@ -70,10 +71,39 @@ bio.inject_conc_to_bin(bin=2, species_index=0, delta_conc=10.)
 bio.describe_state()
 
 # %%
+bio.system_snapshot()
+
+# %%
 fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
               title= f"Diffusion. System snapshot at time t={bio.system_time}",
               color_discrete_sequence = ['red'],
               labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
+fig.show()
+
+# %%
+# ONE APPROACH TO CREATE A PLOTLY HEATMAP, using imshow() from plotly.express
+fig = px.imshow(bio.system_snapshot().T, 
+                title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
+                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
+                text_auto=True, color_continuous_scale="gray_r")         # text_auto=’.2f’
+
+fig.data[0].xgap=4
+fig.data[0].ygap=4
+
+fig.show()
+
+# %%
+# ANOTHER APPROACH TO CREATE A PLOTLY HEATMAP, using Heatmap() from plotly.graph_objects
+data = go.Heatmap(z=bio.system_snapshot().T,
+                    y=['A'],
+                    colorscale='gray_r', colorbar={'title': 'Concentration'},
+                    xgap=4, ygap=4, texttemplate = '%{z}', hovertemplate= 'Bin number: %{x}<br>Chem. species: %{y}<br>Concentration: %{z}<extra></extra>')
+
+fig = go.Figure(data,
+                layout=go.Layout(title=f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}",
+                                 xaxis={'title': 'Bin number'}, yaxis={'title': 'Chem. species'}
+                                )
+               )
 fig.show()
 
 # %%
