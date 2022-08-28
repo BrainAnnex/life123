@@ -168,6 +168,21 @@ def test_varying_spacial_resolution():
     #                                                                       #
     #########################################################################
 
+
+def test_assert_valid_bin_number():
+    chem_data = chem(names=["A", "B"])
+    bio.initialize_system(n_bins=3, chem_data=chem_data)
+    with pytest.raises(Exception):
+        bio.assert_valid_bin_number(-1)
+        bio.assert_valid_bin_number(3)
+        bio.assert_valid_bin_number("2")
+        bio.assert_valid_bin_number((0, 2))
+
+    bio.assert_valid_bin_number(0)
+    bio.assert_valid_bin_number(2)
+
+
+
 def test_lookup_species():
     pass    # TODO
 

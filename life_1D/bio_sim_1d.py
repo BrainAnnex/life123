@@ -27,7 +27,7 @@ class BioSim1D:
                         #   incl. their names and diffusion rates
 
     system = None       # Concentration data in the System we're simulating, for all the chemicals
-                        #   NumPy array of reals, of dimension: (n_species x n_bins).
+                        #   NumPy array of floats, of dimension: (n_species x n_bins).
                         #   Each row represents a species
 
     system_earlier = None   # NOT IN CURRENT USE.  Envisioned for simulations where the past 2 time states are used
@@ -37,7 +37,7 @@ class BioSim1D:
                             #   each boolean value marks the presence of a membrane in that bin.
                             #   Any given bin is expected to either contain, or not contain, a single membrane passing thru it
 
-    A_fraction = None       # NumPy array of reals, of dimension n_bins;
+    A_fraction = None       # NumPy array of floats, of dimension n_bins;
                             #   each value records the fraction (between 0. and 1.) of the LEFT one
                             #   of the 2 parts into which the membrane splits the bin.
                             #   0. if N/A
@@ -237,22 +237,40 @@ class BioSim1D:
     ########  EXPERIMENTAL!  MEMBRANE-RELATED  ################
 
     @classmethod
-    def set_membranes(cls, membrane_pos: Union[List[int], Tuple[int]]) -> None:
+    def set_membranes(cls, membrane_pos: Union[List, Tuple]) -> None:
         """
-        Set the class variable "membranes", a NumPy boolean array of dimension n_cells;
-        each element marks the presence of a membrane in that bin.
+        Set the presence of all membranes in the system,
+        and optionally specify the fraction of the "A" part of the bin (by default 0.5)
+
+        Initialize the class variables "membranes" and "A_fraction"
+
+        EXAMPLES:   set_membranes([4, 20, 23])
+                    set_membranes([4, (20, 0.7), 23])
 
         IMPORTANT: any previously-set membrane information is lost.
 
-        :param membrane_pos:    A list or tuple of indexes of bins that contain membranes
+        :param membrane_pos:    A list or tuple of:
+                                    1) EITHER indexes of bins that contain membranes
+                                    2) OR pairs of bins numbers and fractional values
         :return:                None
         """
         cls.membranes = np.zeros(cls.n_bins, dtype=bool)
+        cls.A_fraction = np.zeros(cls.n_bins, dtype=float)
 
         # Loop over all the values passed as a list or tuple
-        for bin_number in membrane_pos:
+        for bin_info in membrane_pos:
+            if type(bin_info) == int:
+                bin_number = bin_info
+                fraction = 0.5
+            elif (type(bin_info) == tuple) or (type(bin_info) == list):
+                assert len(bin_info == 2), "tuples or lists must contain exactly 2 elements"
+                bin_number, fraction = bin_info
+            else:
+                raise Exception("set_membranes(): the elements of the argument `membrane_pos` must be tuples or lists")
+
             cls.assert_valid_bin_number(bin_number)
-            cls.membranes[bin_number] = True
+            cls.membranes[bin_info] = True
+            cls.A_fraction[bin_info] = fraction
 
 
 
@@ -267,9 +285,13 @@ class BioSim1D:
     def assert_valid_bin_number(cls, bin_number: int) -> None:
         """
         Raise an Exception if the given bin number isn't valid
+
         :param bin_number:  An integer that ought to be between 0 and (cls.n_bins-1), inclusive
         :return:            None
         """
+        assert type(bin_number) == int, \
+            f"BioSim1D: the requested bin number ({bin_number}) is not an integer; its type is {type(bin_number)}"
+
         if bin_number < 0 or bin_number >= cls.n_bins:
             raise Exception(f"BioSim1D: the requested bin number ({bin_number}) is out of bounds for the system size; "
                             f"allowed range is [0-{cls.n_bins-1}], inclusive")
