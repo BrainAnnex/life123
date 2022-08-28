@@ -74,6 +74,7 @@ bio.describe_state()
 bio.system_snapshot()
 
 # %%
+# Line curve view
 fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
               title= f"Diffusion. System snapshot at time t={bio.system_time}",
               color_discrete_sequence = ['red'],
@@ -117,6 +118,9 @@ bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, graphic_c
 # Output a line plot the log file
 bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
+# %% [markdown]
+# # Initial Diffusion Step
+
 # %%
 log.write("Advancing to time t=10, with time steps of 0.1 ... ", blanks_before=2, newline=False)
 
@@ -130,10 +134,23 @@ log.write(f"After delta time {delta_time}.  TOTAL TIME {bio.system_time}  ({stat
 bio.describe_state(concise=True)
 
 # %%
+# Line curve view
 fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
               title= f"Diffusion. System snapshot at time t={bio.system_time}",
               color_discrete_sequence = ['red'],
               labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
+fig.show()
+
+# %%
+# Heatmap view
+fig = px.imshow(bio.system_snapshot().T, 
+                title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
+                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
+                text_auto='.3f', color_continuous_scale="gray_r")
+
+fig.data[0].xgap=4
+fig.data[0].ygap=4
+
 fig.show()
 
 # %%
@@ -144,8 +161,7 @@ bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, graphic_c
 bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # %% [markdown]
-# _Note: this is still an early stage in the diffusion process; let's advance it more... (Results at selected times plotted to log file)_
-# ---
+# ## This is still an early stage in the diffusion process; let's advance it more... (Visualization from results shown at selected times)
 
 # %% tags=[]
 for i in range(50):
@@ -155,10 +171,20 @@ for i in range(50):
     bio.describe_state(concise=True)
 
     if i<2 or i==6 or i>=49:
+        # Line curve view
         fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
               title= f"Diffusion. System snapshot at time t={bio.system_time}",
               color_discrete_sequence = ['red'],
               labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
+        fig.show()
+        
+        # Heatmap view
+        fig = px.imshow(bio.system_snapshot().T, 
+                        title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
+                        labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
+                        text_auto='.2f', color_continuous_scale="gray_r")
+        fig.data[0].xgap=4
+        fig.data[0].ygap=4
         fig.show()
         
         # Output a heatmap to the log file
@@ -168,7 +194,7 @@ for i in range(50):
 
 
 # %% [markdown]
-# **All cells now have essentially uniform concentration**
+# ## All bins now have essentially uniform concentration
 #
 # The "10 units of concentration" are now uniformly spread across the 10 bins, leading to a near-constant concentration of 10/10 = **1.0**
 
