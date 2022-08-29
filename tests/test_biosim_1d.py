@@ -147,6 +147,31 @@ def test_varying_spacial_resolution(biomsim1D):
 
 
 
+def test_set_dimensions(biomsim1D):
+    chem_data = chem(names=["A"])
+    bio.initialize_system(n_bins=4, chem_data=chem_data)
+    bio.set_dimensions(20.)
+    assert np.allclose(bio.system_length, 20.)
+
+    with pytest.raises(Exception):
+        bio.set_dimensions("I'm no number")
+        bio.set_dimensions(0)
+
+
+def test_x_coord(biomsim1D):
+    chem_data = chem(names=["A"])
+    bio.initialize_system(n_bins=4, chem_data=chem_data)
+
+    with pytest.raises(Exception):
+        bio.x_coord(0)      # must first call set_dimensions()
+
+    bio.set_dimensions(21.)
+    assert np.allclose(bio.x_coord(0), 0.)
+    assert np.allclose(bio.x_coord(1), 7.)
+    assert np.allclose(bio.x_coord(3), 21.)
+
+
+
 ########  MEMBRANE-RELATED  ################
 
 def test_set_membranes(biomsim1D):
@@ -176,16 +201,25 @@ def test_set_membranes(biomsim1D):
     assert np.allclose(bio.A_fraction, [0, 0.5, 0.8, 0, 0.3])
 
     # Re-do the last setting of membrane, this time to a system that has concentration values set
+    bio.reset_system()
+    bio.initialize_system(n_bins=5, chem_data=chem_data)
+
     bio.set_uniform_concentration(conc=8., species_name="A")
     bio.set_uniform_concentration(conc=5., species_name="B")
+    assert np.allclose(bio.lookup_species(species_name="A"), [8, 8, 8, 8, 8])
+    assert np.allclose(bio.lookup_species(species_name="B"), [5, 5, 5, 5, 5])
+    assert bio.membranes is None
+
     bio.set_membranes(membrane_pos=[1, [2, .8], (4, .3)])
     expected = np.array([False, True, True, False, True])
     assert (bio.membranes == expected).all()
     assert np.allclose(bio.A_fraction, [0, 0.5, 0.8, 0, 0.3])
+    assert np.allclose(bio.lookup_species(species_name="A"), [8, 8, 8, 8, 8])
+    assert np.allclose(bio.lookup_species(species_name="B"), [5, 5, 5, 5, 5])
+    assert np.allclose(bio.lookup_species(species_name="A", across_membrane=True), [0, 8, 8, 0, 8])
+    assert np.allclose(bio.lookup_species(species_name="B", across_membrane=True), [0, 5, 5, 0, 5])
 
-    #print(bio.membranes)
     #bio.show_membranes()
-
 
 
 

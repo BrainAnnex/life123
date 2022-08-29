@@ -25,9 +25,11 @@ class BioSim1D:
     chem_data = None    # Object of type "Chemicals", with info on the individual chemicals,
                         #   incl. their names and diffusion rates
 
-    system = None       # Concentration data in the System we're simulating, for all the chemicals
-                        #   NumPy array of floats, of dimension: (n_species x n_bins).
-                        #   Each row represents a species
+    system_length = None
+
+    system = None           # Concentration data in the System we're simulating, for all the chemicals
+                            #   NumPy array of floats, of dimension: (n_species x n_bins).
+                            #   Each row represents a species
 
     system_earlier = None   # NOT IN CURRENT USE.  Envisioned for simulations where the past 2 time states are used
                             # to compute the state at the next time step
@@ -188,14 +190,14 @@ class BioSim1D:
 
 
     @classmethod
-    def set_bin_conc(cls, bin_address: int, species_index: int, conc: float, other_side=False) -> None:
+    def set_bin_conc(cls, bin_address: int, species_index: int, conc: float, across_membrane=False) -> None:
         """
         Assign the requested concentration value to the given bin, for the specified species
 
         :param bin_address:     The zero-based bin number of the desired compartment
         :param species_index:   Zero-based index to identify a specific chemical species
         :param conc:            The desired concentration value to assign to the specified location
-        :param other_side:
+        :param across_membrane: It True, consider the "other side" of the bin, i.e. the portion across the membrane
         :return:                None
         """
         cls.assert_valid_bin(bin_address)
@@ -204,7 +206,7 @@ class BioSim1D:
         assert conc >= 0., \
             f"set_bin_conc(): the concentration must be a positive number or zero (the requested value was {conc})"
 
-        if other_side:
+        if across_membrane:
             assert cls.system_B is not None, \
                 "set_bin_conc(): the `other_side` option cannot be used unless membranes are first set"
             cls.system_B[species_index, bin_address] = conc
@@ -255,6 +257,37 @@ class BioSim1D:
 
         # Normal scenario, not leading to negative values for the final concentration
         cls.system[species_index, bin_address] += delta_conc
+
+
+
+    ########  DIMENSION-RELATED  ################
+
+    @classmethod
+    def set_dimensions(cls, length) -> None:
+        """
+        Set the overall length of the system.
+        Doing so, will permit to convert bin numbers to positional values
+
+        :param length:
+        :return:
+        """
+        assert (type(length) == float) or (type(length) == int), "set_dimensions(): length must be a number"
+        assert length > 0, "set_dimensions(): length must be positive"
+
+        cls.system_length = length
+
+
+    @classmethod
+    def x_coord(cls, bin_address):
+        """"
+        Return the x coordinate of the middle of the specified bin.
+        By convention, for the leftmost bin, it's zero,
+        and for the rightmost, it's the overall length of the system
+        """
+        assert cls.system_length, "x_coord(): must first call set_dimensions()"
+
+        return bin_address * (cls.system_length / (cls.n_bins-1))   # TODO: save the ratio
+
 
 
 
@@ -310,7 +343,7 @@ class BioSim1D:
                 for chem_index in range(cls.chem_data.number_of_chemicals()):
                     # TODO: do as vector operation
                     conc = cls.bin_concentration(bin_address=bin_number, species_index=chem_index)
-                    cls.set_bin_conc(bin_address=bin_number, species_index=chem_index, conc=conc, other_side=True)
+                    cls.set_bin_conc(bin_address=bin_number, species_index=chem_index, conc=conc, across_membrane=True)
 
 
 
@@ -340,16 +373,28 @@ class BioSim1D:
 
 
     @classmethod
-    def lookup_species(cls, index: int) -> np.array:
+    def lookup_species(cls, species_index=None, species_name=None, across_membrane=False) -> np.array:
         """
-        Return the NumPy array of concentration values across the bins (from left to right)
-        for the single specified species
+        Return the NumPy array of concentration values across the all bins (from left to right)
+        for the single specified chemical species
 
-        :param index:   The index order of the chemical species of interest
-        :return:        A NumPy array of concentration values across the bins (from left to right)
+        :param species_index:   The index order of the chemical species of interest
+        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
+        :param across_membrane: It True, consider the "other side" of the bin, i.e. the portion across the membrane
+        :return:                A NumPy array of concentration values across the bins (from left to right);
+                                    the size of the array is the number of bins
         """
-        cls.chem_data.assert_valid_index(index)
-        return cls.system[index]
+        if species_name is not None:
+            assert cls.chem_data, f"BioSim1D.lookup_species(): must first call initialize_system()"
+            species_index = cls.chem_data.get_index(species_name)
+
+        cls.chem_data.assert_valid_index(species_index)
+
+        if across_membrane:
+            return cls.system_B[species_index]
+        else:
+            return cls.system[species_index]
+
 
 
     @classmethod
