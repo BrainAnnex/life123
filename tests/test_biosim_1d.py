@@ -150,8 +150,9 @@ def test_varying_spacial_resolution(biomsim1D):
 def test_set_dimensions(biomsim1D):
     chem_data = chem(names=["A"])
     bio.initialize_system(n_bins=4, chem_data=chem_data)
-    bio.set_dimensions(20.)
-    assert np.allclose(bio.system_length, 20.)
+    bio.set_dimensions(21.)
+    assert np.allclose(bio.system_length, 21.)
+    assert np.allclose(bio.global_Dx, 7.)
 
     with pytest.raises(Exception):
         bio.set_dimensions("I'm no number")

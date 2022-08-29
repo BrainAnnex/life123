@@ -25,7 +25,10 @@ class BioSim1D:
     chem_data = None    # Object of type "Chemicals", with info on the individual chemicals,
                         #   incl. their names and diffusion rates
 
-    system_length = None
+    system_length = None    # System extension, from the middle of the leftmost bin to the middle of the rightmost one.
+                            #  The de-facto default value, though not used, is (n_bins-1)
+
+    global_Dx = 1           # Used in cases when not using ad-hoc local changes in x-scale resolution
 
     system = None           # Concentration data in the System we're simulating, for all the chemicals
                             #   NumPy array of floats, of dimension: (n_species x n_bins).
@@ -132,6 +135,8 @@ class BioSim1D:
         cls.history = None
 
         cls.n_bins = 0
+        cls.system_length = None
+        cls.global_Dx = 1
         cls.system_time = 0
 
 
@@ -155,7 +160,7 @@ class BioSim1D:
     @classmethod
     def set_uniform_concentration(cls, conc: float, species_index=None, species_name=None) -> None:
         """
-        Assign the given concentration to all the bins of the specified species (identified by its index).
+        Assign the given concentration to all the bins of the specified species (identified by its index or name.)
         Any previous values get over-written
 
         :param conc:            The desired value of chemical concentration for the above species
@@ -192,7 +197,8 @@ class BioSim1D:
     @classmethod
     def set_bin_conc(cls, bin_address: int, species_index: int, conc: float, across_membrane=False) -> None:
         """
-        Assign the requested concentration value to the given bin, for the specified species
+        Assign the requested concentration value to the given bin, for the specified chemical species.
+        Optionally, set the value for the "alternate bin" ("other side" of the membrane)
 
         :param bin_address:     The zero-based bin number of the desired compartment
         :param species_index:   Zero-based index to identify a specific chemical species
@@ -236,7 +242,7 @@ class BioSim1D:
 
 
     @classmethod
-    def inject_conc_to_bin(cls, bin_address: int, species_index: int, delta_conc: float, zero_clip = True) -> None:
+    def inject_conc_to_bin(cls, bin_address: int, species_index: int, delta_conc: float, zero_clip = False) -> None:
         """
         Add the requested concentration to the cell with the given index, for the specified species
 
@@ -275,6 +281,7 @@ class BioSim1D:
         assert length > 0, "set_dimensions(): length must be positive"
 
         cls.system_length = length
+        cls.global_Dx = length / (cls.n_bins-1)
 
 
     @classmethod
@@ -286,7 +293,7 @@ class BioSim1D:
         """
         assert cls.system_length, "x_coord(): must first call set_dimensions()"
 
-        return bin_address * (cls.system_length / (cls.n_bins-1))   # TODO: save the ratio
+        return bin_address * cls.global_Dx
 
 
 
@@ -398,15 +405,25 @@ class BioSim1D:
 
 
     @classmethod
-    def bin_concentration(cls, bin_address: int, species_index: int) -> float:
+    def bin_concentration(cls, bin_address: int, species_index=None, species_name=None, across_membrane=False) -> float:
         """
         Return the concentration at the requested bin of the specified species
 
         :param bin_address:     The bin number
         :param species_index:   The index order of the chemical species of interest
+        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
         :return:                A concentration value at the indicated bin, for the requested species
         """
-        return cls.system[species_index, bin_address]
+        if species_name is not None:
+            assert cls.chem_data, f"BioSim1D.bin_concentration(): must first call initialize_system()"
+            species_index = cls.chem_data.get_index(species_name)
+
+        cls.chem_data.assert_valid_index(species_index)
+
+        if across_membrane:
+            return cls.system_B[species_index, bin_address]
+        else:
+            return cls.system[species_index, bin_address]
 
 
 
