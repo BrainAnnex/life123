@@ -20,7 +20,7 @@
 #
 # Single-bin reaction
 #
-# LAST REVISED: Aug. 22, 2022
+# LAST REVISED: Aug. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -116,7 +116,7 @@ fig.show()
 # ## Now, let's suddenly increase [A]
 
 # %%
-bio.set_bin_conc(bin=0, species_index=0, conc=50.)
+bio.set_bin_conc(bin_address=0, species_index=0, conc=50.)
 bio.describe_state()
 
 # %%
@@ -156,7 +156,7 @@ fig.show()
 # ## Let's again suddenly increase [A]
 
 # %%
-bio.set_bin_conc(bin=0, species_index=0, conc=30.)
+bio.set_bin_conc(bin_address=0, species_index=0, conc=30.)
 bio.describe_state()
 
 # %%

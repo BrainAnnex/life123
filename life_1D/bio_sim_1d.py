@@ -1,5 +1,4 @@
 import numpy as np
-import math
 import pandas as pd
 from typing import Union, List, Tuple
 from modules.movies.movies import Movie
@@ -117,6 +116,23 @@ class BioSim1D:
 
 
 
+    @classmethod
+    def reset_system(cls) -> None:
+        """
+        WARNING - THIS IS VERY PARTIAL.  TODO: expand, or switch to instantiated class
+        :return:
+        """
+        cls.system = None
+        cls.membranes = None
+        cls.A_fraction = None
+        cls.chem_data = None
+        cls.all_reactions = None
+        cls.history = None
+
+        cls.n_bins = 0
+        cls.system_time = 0
+
+
 
     @classmethod
     def replace_system(cls, new_state: np.array) -> None:
@@ -137,7 +153,7 @@ class BioSim1D:
     @classmethod
     def set_uniform_concentration(cls, conc: float, species_index=None, species_name=None) -> None:
         """
-        Assign the given concentration to all the bin of the specified species (identified by its index).
+        Assign the given concentration to all the bins of the specified species (identified by its index).
         Any previous values get over-written
 
         :param conc:            The desired value of chemical concentration for the above species
@@ -172,21 +188,29 @@ class BioSim1D:
 
 
     @classmethod
-    def set_bin_conc(cls, bin: int, species_index: int, conc: float) -> None:
+    def set_bin_conc(cls, bin_address: int, species_index: int, conc: float, other_side=False) -> None:
         """
-        Assign the requested concentration value to the bin with the given index, for the specified species
+        Assign the requested concentration value to the given bin, for the specified species
 
-        :param bin:             The zero-based bin number of the desired compartment
+        :param bin_address:     The zero-based bin number of the desired compartment
         :param species_index:   Zero-based index to identify a specific chemical species
         :param conc:            The desired concentration value to assign to the specified location
+        :param other_side:
         :return:                None
         """
-        assert bin < cls.n_bins, f"set_bin_conc(): the requested cell index ({bin}) must be in the range [0 - {cls.n_bins - 1}], inclusive"
+        cls.assert_valid_bin(bin_address)
         cls.chem_data.assert_valid_index(species_index)
 
-        assert conc >= 0., f"set_bin_conc(): the concentration must be a positive number or zero (the requested value was {conc})"
+        assert conc >= 0., \
+            f"set_bin_conc(): the concentration must be a positive number or zero (the requested value was {conc})"
 
-        cls.system[species_index, bin] = conc
+        if other_side:
+            assert cls.system_B is not None, \
+                "set_bin_conc(): the `other_side` option cannot be used unless membranes are first set"
+            cls.system_B[species_index, bin_address] = conc
+        else:
+            cls.system[species_index, bin_address] = conc
+
 
 
     @classmethod
@@ -210,27 +234,27 @@ class BioSim1D:
 
 
     @classmethod
-    def inject_conc_to_bin(cls, bin: int, species_index: int, delta_conc: float, zero_clip = True) -> None:
+    def inject_conc_to_bin(cls, bin_address: int, species_index: int, delta_conc: float, zero_clip = True) -> None:
         """
         Add the requested concentration to the cell with the given index, for the specified species
 
-        :param bin:             The zero-based bin number of the desired cell
+        :param bin_address:     The zero-based bin number of the desired cell
         :param species_index:   Zero-based index to identify a specific chemical species
         :param delta_conc:      The concentration to add to the specified location
         :param zero_clip:       If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
                                 otherwise, an Exception will be raised
         :return:                None
         """
-        assert bin < cls.n_bins, f"The requested cell index ({bin}) must be in the range [0 - {cls.n_bins - 1}]"
+        cls.assert_valid_bin(bin_address)
 
-        if (cls.system[species_index, bin] + delta_conc) < 0. :
+        if (cls.system[species_index, bin_address] + delta_conc) < 0. :
             if zero_clip:
-                cls.system[species_index, bin] = 0
+                cls.system[species_index, bin_address] = 0
             else:
                 raise Exception("The requested concentration change would result in a negative final value")
 
         # Normal scenario, not leading to negative values for the final concentration
-        cls.system[species_index, bin] += delta_conc
+        cls.system[species_index, bin_address] += delta_conc
 
 
 
@@ -256,6 +280,9 @@ class BioSim1D:
         """
         cls.membranes = np.zeros(cls.n_bins, dtype=bool)
         cls.A_fraction = np.zeros(cls.n_bins, dtype=float)
+        if cls.system_B is None:
+            cls.system_B = np.zeros((cls.n_species, cls.n_bins), dtype=float)
+
 
         # Loop over all the values passed as a list or tuple
         for bin_info in membrane_pos:
@@ -274,9 +301,16 @@ class BioSim1D:
             else:
                 raise Exception("set_membranes(): the elements of the argument `membrane_pos` must be tuples or lists")
 
-            cls.assert_valid_bin_number(bin_number)
+            cls.assert_valid_bin(bin_number)
             cls.membranes[bin_number] = True
             cls.A_fraction[bin_number] = fraction
+
+            # Equalize all the concentrations across the compartments on both sides of the membrane
+            if cls.chem_data:
+                for chem_index in range(cls.chem_data.number_of_chemicals()):
+                    # TODO: do as vector operation
+                    conc = cls.bin_concentration(bin_address=bin_number, species_index=chem_index)
+                    cls.set_bin_conc(bin_address=bin_number, species_index=chem_index, conc=conc, other_side=True)
 
 
 
@@ -288,18 +322,18 @@ class BioSim1D:
     #########################################################################
 
     @classmethod
-    def assert_valid_bin_number(cls, bin_number: int) -> None:
+    def assert_valid_bin(cls, bin_address: int) -> None:
         """
         Raise an Exception if the given bin number isn't valid
 
-        :param bin_number:  An integer that ought to be between 0 and (cls.n_bins-1), inclusive
+        :param bin_address:  An integer that ought to be between 0 and (cls.n_bins-1), inclusive
         :return:            None
         """
-        assert type(bin_number) == int, \
-            f"BioSim1D: the requested bin number ({bin_number}) is not an integer; its type is {type(bin_number)}"
+        assert type(bin_address) == int, \
+            f"BioSim1D: the requested bin address ({bin_address}) is not an integer; its type is {type(bin_address)}"
 
-        if bin_number < 0 or bin_number >= cls.n_bins:
-            raise Exception(f"BioSim1D: the requested bin number ({bin_number}) is out of bounds for the system size; "
+        if bin_address < 0 or bin_address >= cls.n_bins:
+            raise Exception(f"BioSim1D: the requested bin address ({bin_address}) is out of bounds for the system size; "
                             f"allowed range is [0-{cls.n_bins-1}], inclusive")
 
 
@@ -323,7 +357,7 @@ class BioSim1D:
         """
         Return the concentration at the requested bin of the specified species
 
-        :param bin_address:     The bin index
+        :param bin_address:     The bin number
         :param species_index:   The index order of the chemical species of interest
         :return:                A concentration value at the indicated bin, for the requested species
         """

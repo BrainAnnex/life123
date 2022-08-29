@@ -13,10 +13,10 @@
 # ---
 
 # %% [markdown]
-# **Exploring reaching equilibrium, first on a shorter timescale and then a longer one (but
-# both with identical time steps.)**
+# ## Exploring reaching equilibrium, first on a shorter timescale and then a longer one 
+# ### (but both with identical time steps.)
 #
-# The system starts out with a "concentration pulse" in bin 2 (the 3rd bin from the left) - i.e. that bin is initially the only one with a non-zero concentration of the only chemical species. 
+# The system starts out with a "concentration pulse" in bin 2 (the 3rd bin from the left) - i.e. that bin is initially the only one with a non-zero concentration of the only chemical species.
 #
 # Notice the diffusing pulse "bouncing" off the left wall after total time 30.
 #
@@ -24,7 +24,7 @@
 #
 # *NO log file.*
 #
-# LAST REVISED: July 2, 2022
+# LAST REVISED: Aug. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -41,7 +41,7 @@ chem_data = chem(diffusion_rates=[0.1])
 bio.initialize_system(n_bins=10, chem_data=chem_data)
 
 bio.set_uniform_concentration(species_index=0, conc=0.)
-bio.inject_conc_to_bin(species_index=0, bin=2, delta_conc=10.)
+bio.inject_conc_to_bin(species_index=0, bin_address=2, delta_conc=10.)
 
 bio.describe_state()
 
@@ -66,7 +66,7 @@ print("\n\nREPEATING to LONGER time scales.  Dtime=100, again with time steps of
 
 # Reset the concentrations
 bio.set_uniform_concentration(species_index=0, conc=0.)
-bio.inject_conc_to_bin(species_index=0, bin=2, delta_conc=10.)
+bio.inject_conc_to_bin(species_index=0, bin_address=2, delta_conc=10.)
 
 total_time = 0.
 for i in range(20):

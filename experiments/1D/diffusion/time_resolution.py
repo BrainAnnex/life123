@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -13,18 +13,18 @@
 # ---
 
 # %% [markdown]
-# **Exploring effect of Time Resolution on accuracy**
+# ### Exploring effect of Time Resolution on accuracy
 #
 # In the examples below, the _time advance_ always remains constant,
 # but the _number of steps_ used to arrive there vary
 #
 # NO log file.
 #
-# LAST REVISED: June 13, 2022
+# LAST REVISED: Aug. 28, 2022
 
 # %%
 import set_path
-set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up 
+set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up, 
                                          # to reach the project's home from the folder containing this notebook
 
 # %%
@@ -36,7 +36,7 @@ from life_1D.bio_sim_1d import BioSim1D as bio
 def set_initial_condition():
     # Set or reset the initial concentrations
     bio.set_uniform_concentration(species_index=0, conc=0.)
-    bio.inject_conc_to_bin(bin=2, species_index=0, delta_conc=10.)
+    bio.inject_conc_to_bin(bin_address=2, species_index=0, delta_conc=10.)
 
 
 # %%

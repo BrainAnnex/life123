@@ -20,7 +20,7 @@
 #
 # **EXTRA OUTPUT (incl. graphics):** overwritten into the .htm file with the same base name.
 #
-# LAST REVISED: Aug. 27, 2022
+# LAST REVISED: Aug. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -66,7 +66,7 @@ lineplot_pars = {"range": [0, 10],
 chem_data = chem(names=["A"], diffusion_rates=[0.1])
 bio.initialize_system(n_bins=10, chem_data=chem_data)
 
-bio.inject_conc_to_bin(bin=2, species_index=0, delta_conc=10.)
+bio.inject_conc_to_bin(bin_address=2, species_index=0, delta_conc=10.)
 
 bio.describe_state()
 
