@@ -263,14 +263,20 @@ class BioSim1D:
                 bin_number = bin_info
                 fraction = 0.5
             elif (type(bin_info) == tuple) or (type(bin_info) == list):
-                assert len(bin_info == 2), "tuples or lists must contain exactly 2 elements"
+                assert len(bin_info) == 2, \
+                    "set_membranes(): tuples or lists must contain exactly 2 elements"
                 bin_number, fraction = bin_info
+
+                assert (type(fraction) == float) or (type(fraction) == int), \
+                    "set_membranes(): requested fractions must be floats or integers"
+                assert 0. <= fraction <= 1., \
+                    "set_membranes(): requested fractions must be in the [0.-1.0] range, inclusive"
             else:
                 raise Exception("set_membranes(): the elements of the argument `membrane_pos` must be tuples or lists")
 
             cls.assert_valid_bin_number(bin_number)
-            cls.membranes[bin_info] = True
-            cls.A_fraction[bin_info] = fraction
+            cls.membranes[bin_number] = True
+            cls.A_fraction[bin_number] = fraction
 
 
 
@@ -413,29 +419,37 @@ class BioSim1D:
 
 
     @classmethod
-    def show_membranes(cls) -> str:
+    def show_membranes(cls, n_decimals=1) -> str:
         """
         A simple-minded early method to visualize where the membranes are.
+        Print, and return, a string with a diagram to visualize membranes and their fractions
 
-        EXAMPLE (with 2 membrane on the right part of a 5-bin system):
-                    ___________
-                    | | |*| |*|
-                    -----------
-        :return:
+        EXAMPLE (with 2 membranes on the right part of a 5-bin system):
+                _____________________
+                |   |   |0.8|   |0.3|
+                ---------------------
+
+        :param n_decimals:  Number of decimal places to show in the fractions
+        :return:            A string with the character-based diagram;
+                            if no membranes were defined, return an empty string
         """
-        box_width = 2 * cls.n_bins + 1
-
-        box = "\n"
-        box += "_" * box_width + "\n"   # The top of the box
+        if cls.membranes is None:
+            print("No membranes present.  Call set_membranes() to set them")
+            return ""
 
         # Prepare the middle line
         box_contents = "|"
-        for val in cls.membranes:
+        for bin_no, val in enumerate(cls.membranes):
             if val:
-                box_contents += "*|"
+                fraction = round(cls.A_fraction[bin_no], n_decimals)
+                box_contents += str(fraction) + "|"
             else:
-                box_contents += " |"
+                box_contents += "   |"
 
+        box_width = len(box_contents)
+
+        box = "\n"
+        box += "_" * box_width + "\n"   # The top of the box
         box += box_contents + "\n"
         box += "-" * box_width          # The bottom of the box
 

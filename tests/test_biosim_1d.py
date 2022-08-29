@@ -82,27 +82,6 @@ def test_inject_conc_to_bin():
 
 
 
-def test_set_membranes():
-    chem_data = chem(names=["A"])
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
-
-    bio.set_membranes(membrane_pos=[2, 4])
-    expected = np.array([False, False, True, False, True])
-    assert (bio.membranes == expected).all()
-
-    bio.set_membranes(membrane_pos=(0,2))
-    expected = np.array([True, False, True, False, False])
-    assert (bio.membranes == expected).all()
-
-    with pytest.raises(Exception):
-        bio.set_membranes(membrane_pos=[5])
-        bio.set_membranes(membrane_pos=[-1])
-        bio.set_membranes(membrane_pos=[2, 4, 6])
-
-    #print(bio.membranes)
-
-
-
 def test_increase_spacial_resolution():
     chem_data = chem(names=["A", "B"])
     bio.initialize_system(n_bins=3, chem_data=chem_data)
@@ -161,6 +140,39 @@ def test_varying_spacial_resolution():
 
 
 
+########  MEMBRANE-RELATED  ################
+
+def test_set_membranes():
+    chem_data = chem(names=["A"])
+    bio.initialize_system(n_bins=5, chem_data=chem_data)
+
+    bio.set_membranes(membrane_pos=[2, 4])
+    expected = np.array([False, False, True, False, True])
+    assert (bio.membranes == expected).all()
+    assert np.allclose(bio.A_fraction, [0, 0, 0.5, 0, 0.5])
+
+    bio.set_membranes(membrane_pos=(0,2))
+    expected = np.array([True, False, True, False, False])
+    assert (bio.membranes == expected).all()
+    assert np.allclose(bio.A_fraction, [0.5, 0, 0.5, 0, 0])
+
+    with pytest.raises(Exception):  # Invalid bin numbers
+        bio.set_membranes(membrane_pos=[5])
+        bio.set_membranes(membrane_pos=[-1])
+        bio.set_membranes(membrane_pos=[2, 4, 6])
+
+
+    # Now, specify the "A fraction" of (some of) the membrane-containing bins
+    bio.set_membranes(membrane_pos=[1, [2, .8], (4, .3)])
+    expected = np.array([False, True, True, False, True])
+    assert (bio.membranes == expected).all()
+    assert np.allclose(bio.A_fraction, [0, 0.5, 0.8, 0, 0.3])
+    #print(bio.membranes)
+    #bio.show_membranes()
+
+
+
+
 
     #########################################################################
     #                                                                       #
@@ -204,11 +216,16 @@ def test_show_membranes():
     chem_data = chem(names=["A"])
     bio.initialize_system(n_bins=5, chem_data=chem_data)
 
-    bio.set_membranes(membrane_pos=[2, 4])
-
     result = bio.show_membranes()
-    assert result == "\n___________\n| | |*| |*|\n-----------"
+    assert result == ""
 
+    bio.set_membranes(membrane_pos=[2, 4])
+    result = bio.show_membranes()
+    assert result == "\n_____________________\n|   |   |0.5|   |0.5|\n---------------------"
+
+    bio.set_membranes(membrane_pos=[1, [2, .8], (4, .3)])
+    result = bio.show_membranes()
+    assert result == "\n_____________________\n|   |0.5|0.8|   |0.3|\n---------------------"
 
 
 
