@@ -195,17 +195,22 @@ class BioSim1D:
 
 
     @classmethod
-    def set_bin_conc(cls, bin_address: int, species_index: int, conc: float, across_membrane=False) -> None:
+    def set_bin_conc(cls, bin_address: int, conc: float, species_index=None, species_name=None, across_membrane=False) -> None:
         """
         Assign the requested concentration value to the given bin, for the specified chemical species.
         Optionally, set the value for the "alternate bin" ("other side" of the membrane)
 
         :param bin_address:     The zero-based bin number of the desired compartment
-        :param species_index:   Zero-based index to identify a specific chemical species
         :param conc:            The desired concentration value to assign to the specified location
+        :param species_index:   Zero-based index to identify a specific chemical species
+        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
         :param across_membrane: It True, consider the "other side" of the bin, i.e. the portion across the membrane
         :return:                None
         """
+        if species_name is not None:
+            assert cls.chem_data, f"BioSim1D.set_bin_conc(): must first call initialize_system()"
+            species_index = cls.chem_data.get_index(species_name)
+
         cls.assert_valid_bin(bin_address)
         cls.chem_data.assert_valid_index(species_index)
 
@@ -412,6 +417,7 @@ class BioSim1D:
         :param bin_address:     The bin number
         :param species_index:   The index order of the chemical species of interest
         :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
+        :param across_membrane: It True, consider the "other side" of the bin, i.e. the portion across the membrane
         :return:                A concentration value at the indicated bin, for the requested species
         """
         if species_name is not None:
@@ -482,7 +488,15 @@ class BioSim1D:
     @classmethod
     def describe_state(cls, concise=False) -> None:
         """
-        A printout of the state of the system, for now useful only for small systems
+        A simple printout of the state of the system, for now useful only for small systems
+
+        TODO: The goal for ASCII-based printouts involving membranes is something like.  Maybe use Pandas?
+
+           _____________________
+        A: |20|18|12|8( )  2| 6|    Diff rate: 0.2 (M: 0.01)
+        B: |30| 2|56|4( )3.5|12|    Diff rate: 0.8 (M: 0.3)
+           ---------------------
+             0  1  2       3  4
 
         :param concise: If True, only produce a minimalist printout with just the concentration values
         :return:        None
@@ -491,6 +505,9 @@ class BioSim1D:
 
         if concise:             # A minimalist printout...
             print(cls.system)   # ...only showing the concentration data (a Numpy array)
+            if cls.membranes is not None:
+                print("Membranes:")
+                print(cls.system_B)
             return
 
         # If we get thus far, it's a FULL printout
@@ -505,11 +522,22 @@ class BioSim1D:
             else:
                 name = ""
 
-            if cls.chem_data.diffusion_rates is None:
-                print(f"  Species {species_index}{name}. Diff rate: NOT SET. Conc: ", cls.system[species_index])
+            if cls.membranes is None:
+                all_conc = cls.system[species_index]
             else:
-                print(f"  Species {species_index}{name}. Diff rate: {cls.chem_data.diffusion_rates[species_index]}. Conc: ",
-                      cls.system[species_index])
+                all_conc = "|"
+                for bin_no in range(cls.n_bins):
+                    all_conc += str(cls.bin_concentration(bin_no, species_index=species_index))
+                    if cls.membranes[bin_no]:
+                        # Add a symbol for the membrane, and the additional membrane concentration data (on the "other side")
+                        all_conc += "()"    # To indicate a membrane
+                        all_conc += str(cls.bin_concentration(bin_no, species_index=species_index, across_membrane=True))
+                    all_conc += "|"
+
+            if cls.chem_data.diffusion_rates is None:
+                print(f"  Species {species_index}{name}. Diff rate: NOT SET. Conc: {all_conc}")
+            else:
+                print(f"  Species {species_index}{name}. Diff rate: {cls.chem_data.diffusion_rates[species_index]}. Conc: {all_conc}")
 
 
 
@@ -518,7 +546,8 @@ class BioSim1D:
     def show_membranes(cls, n_decimals=1) -> str:
         """
         A simple-minded early method to visualize where the membranes are.
-        Print, and return, a string with a diagram to visualize membranes and their fractions
+        Print, and return, a string with a diagram to visualize membranes and the fractions
+        of their "left" sides
 
         EXAMPLE (with 2 membranes on the right part of a 5-bin system):
                 _____________________

@@ -24,7 +24,7 @@
 #
 # *NO log file.*
 #
-# LAST REVISED: Aug. 28, 2022
+# LAST REVISED: Aug. 29, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -49,12 +49,10 @@ bio.describe_state()
 print("\n\nSTARTING on SHORTER time scales.  Dtime=10, with time steps of 0.1 ...")
 
 # %%
-total_time = 0.
 for i in range(10):
     delta_time = 10.
     status = bio.diffuse(total_duration=delta_time, time_step=0.1)
-    total_time += delta_time
-    print(f"\nAfter Delta time {delta_time}.  TOTAL TIME {total_time}  ({status['steps']} steps taken):")
+    print(f"\nAfter Delta time {delta_time}.  ({status['steps']} steps taken):")
     bio.describe_state(concise=True)
 
 # %% [markdown]
@@ -68,13 +66,14 @@ print("\n\nREPEATING to LONGER time scales.  Dtime=100, again with time steps of
 bio.set_uniform_concentration(species_index=0, conc=0.)
 bio.inject_conc_to_bin(species_index=0, bin_address=2, delta_conc=10.)
 
-total_time = 0.
+#total_time = 0.
 for i in range(20):
     delta_time = 100.
     status = bio.diffuse(total_duration=delta_time, time_step=0.1)
-    total_time += delta_time
-    print(f"\nAfter Delta time {delta_time}.  TOTAL TIME {total_time}  ({status['steps']} steps taken):")
+    print(f"\nAfter Delta time {delta_time}.  ({status['steps']} steps taken):")
     bio.describe_state(concise=True)
 
 # %% [markdown]
-# **The system has now reached equilibrium**
+# ## The system has now reached equilibrium
+
+# %%
