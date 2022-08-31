@@ -15,7 +15,7 @@ def biomsim1D():
 
 #########   TESTS OF INITIALIZATION, SETTING AND VIEWING    #########
 
-def test_initialize_universe(biomsim1D):
+def test_initialize_system(biomsim1D):
     chem_data = chem(names=["A"])
     bio.initialize_system(n_bins=10, chem_data=chem_data)
 
@@ -35,39 +35,78 @@ def test_initialize_universe(biomsim1D):
     assert np.allclose(bio.system, expected)
 
 
+def test_reset_system(biomsim1D):
+    pass
 
-def test_set_diffusion_rates(biomsim1D):
-    chem_data = chem()
-    chem_data.set_diffusion_rates([.2])
-    print("diffusion_rates: ", chem_data.diffusion_rates)
-    assert np.allclose(chem_data.diffusion_rates, [.2])
-
-    # New test
-    chem_data = chem()
-    chem_data.set_diffusion_rates([.1, .7, .2, .4])
-    print("diffusion_rates: ", chem_data.diffusion_rates)
-    assert np.allclose(chem_data.diffusion_rates, [.1, .7, .2, .4])
+def test_replace_system(biomsim1D):
+    pass
 
 
 
 def test_set_uniform_concentration(biomsim1D):
     chem_data = chem(names=["A"])
-    bio.initialize_system(n_bins=8, chem_data=chem_data)
+    bio.initialize_system(n_bins=5, chem_data=chem_data)
+
     bio.set_uniform_concentration(species_index=0, conc=0.3)
-    bio.describe_state()
-    expected = np.full(8, 0.3, dtype=float)
+    expected = np.full(5, 0.3, dtype=float)
     assert np.allclose(bio.lookup_species(0), expected)
 
     # New test
+    bio.reset_system()
     chem_data = chem(names=["A", "B", "C"])
     bio.initialize_system(n_bins=15, chem_data=chem_data)
-    bio.set_uniform_concentration(species_index=0, conc=10.)
-    bio.set_uniform_concentration(species_index=1, conc=11.)
-    bio.set_uniform_concentration(species_index=2, conc=12.)
-    bio.describe_state()
+    bio.set_uniform_concentration(species_name="A", conc=10.)
+    bio.set_uniform_concentration(species_name="B", conc=11.)
+    bio.set_uniform_concentration(species_name="C", conc=12.)
+    #bio.describe_state()
     assert np.allclose(bio.lookup_species(0), np.full(15, 10., dtype=float))
     assert np.allclose(bio.lookup_species(1), np.full(15, 11., dtype=float))
     assert np.allclose(bio.lookup_species(2), np.full(15, 12., dtype=float))
+
+    # New test, with membranes
+    bio.reset_system()
+    chem_data = chem(names=["A"])
+    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio.set_membranes(membrane_pos=[1])   # A single membrane, passing thru bin 1
+
+    bio.set_uniform_concentration(species_name="A", conc=8.8)
+    expected = np.full(5, 8.8, dtype=float)
+    assert np.allclose(bio.lookup_species(0), expected)
+    #print(bio.system_B)
+    expected = np.array([0, 8.8, 0, 0, 0])
+    assert np.allclose(bio.lookup_species(species_name="A", across_membrane=True), expected)
+
+
+
+
+def test_set_all_uniform_concentrations(biomsim1D):
+    chem_data = chem(names=["A", "B"])
+    bio.initialize_system(n_bins=5, chem_data=chem_data)
+
+    bio.set_all_uniform_concentrations(conc_list=[3., 7.])
+    assert np.allclose(bio.lookup_species(species_name="A"), np.full(5, 3., dtype=float))
+    assert np.allclose(bio.lookup_species(species_name="B"), np.full(5, 7., dtype=float))
+
+    #print(bio.system)
+
+
+
+def test_set_bin_conc(biomsim1D):
+    chem_data = chem(names=["A", "B"])
+    bio.initialize_system(n_bins=5, chem_data=chem_data)
+
+    bio.set_bin_conc(bin_address=2, conc=3.14, species_name="A")
+    assert np.allclose(bio.lookup_species(species_name="A"), [0, 0, 3.14, 0, 0])
+
+    bio.set_bin_conc(bin_address=2, conc=2.78, species_index=0)
+    assert np.allclose(bio.lookup_species(species_name="A"), [0, 0, 2.78, 0, 0])
+    #print(bio.system)
+
+
+
+
+def test_set_species_conc(biomsim1D):
+    pass
 
 
 
@@ -89,63 +128,8 @@ def test_inject_conc_to_bin(biomsim1D):
 
 
 
-def test_increase_spacial_resolution(biomsim1D):
-    chem_data = chem(names=["A", "B"])
-    bio.initialize_system(n_bins=3, chem_data=chem_data)
-    bio.set_species_conc(0, [11., 12., 13.])
-    bio.set_species_conc(1, [5., 15., 25.])
-    #bio.describe_state()
 
-    result = bio.increase_spacial_resolution(2)
-    #print(result)
-    assert np.allclose(result[0], [11., 11., 12., 12., 13., 13.])
-    assert np.allclose(result[1], [ 5., 5.,  15., 15., 25., 25.])
-
-
-def test_decrease_spacial_resolution(biomsim1D):
-    chem_data = chem(names=["A", "B"])
-    bio.initialize_system(n_bins=6, chem_data=chem_data)
-    bio.set_species_conc(0, [10., 20., 30., 40., 50., 60.])
-    bio.set_species_conc(1, [ 2., 8.,   5., 15., 4.,   2.])
-    bio.describe_state()
-
-    # Group by pairs
-    result = bio.decrease_spacial_resolution(2)
-    #print(result)
-    assert np.allclose(result, [[15., 35., 55.],
-                                [ 5., 10.,  3.]])
-
-    # Group by triplets
-    result = bio.decrease_spacial_resolution(3)
-    #print(result)
-    assert np.allclose(result, [[20., 50.],
-                                [ 5., 7.]])
-
-    # Group into just 1 single bin
-    result = bio.decrease_spacial_resolution(6)
-    #print(result)
-    assert np.allclose(result, [[35.],
-                                [ 6.]])
-
-
-def test_varying_spacial_resolution(biomsim1D):
-    chem_data = chem(names=["A", "B"])
-    bio.initialize_system(n_bins=3, chem_data=chem_data)
-    bio.set_species_conc(0, [11., 12., 13.])
-    bio.set_species_conc(1, [5., 15., 25.])
-
-    # First, increase the spacial resolution, after saving the original matrix
-    original_state = bio.system
-    result = bio.increase_spacial_resolution(3)
-    #print(result)
-    bio.replace_system(result)
-
-    # Then, decrease the spacial resolution, by the same factor
-    result = bio.decrease_spacial_resolution(3)
-    #print(result)
-    assert np.allclose(result, original_state)
-
-
+########  DIMENSION-RELATED  ################
 
 def test_set_dimensions(biomsim1D):
     chem_data = chem(names=["A"])
@@ -170,6 +154,7 @@ def test_x_coord(biomsim1D):
     assert np.allclose(bio.x_coord(0), 0.)
     assert np.allclose(bio.x_coord(1), 7.)
     assert np.allclose(bio.x_coord(3), 21.)
+
 
 
 
@@ -278,6 +263,67 @@ def test_show_membranes(biomsim1D):
     bio.set_membranes(membrane_pos=[1, [2, .8], (4, .3)])
     result = bio.show_membranes()
     assert result == "\n_____________________\n|   |0.5|0.8|   |0.3|\n---------------------"
+
+
+
+#######  CHANGE RESOLUTIONS #########
+
+def test_increase_spacial_resolution(biomsim1D):
+    chem_data = chem(names=["A", "B"])
+    bio.initialize_system(n_bins=3, chem_data=chem_data)
+    bio.set_species_conc(0, [11., 12., 13.])
+    bio.set_species_conc(1, [5., 15., 25.])
+    #bio.describe_state()
+
+    result = bio.increase_spacial_resolution(2)
+    #print(result)
+    assert np.allclose(result[0], [11., 11., 12., 12., 13., 13.])
+    assert np.allclose(result[1], [ 5., 5.,  15., 15., 25., 25.])
+
+
+def test_decrease_spacial_resolution(biomsim1D):
+    chem_data = chem(names=["A", "B"])
+    bio.initialize_system(n_bins=6, chem_data=chem_data)
+    bio.set_species_conc(0, [10., 20., 30., 40., 50., 60.])
+    bio.set_species_conc(1, [ 2., 8.,   5., 15., 4.,   2.])
+    bio.describe_state()
+
+    # Group by pairs
+    result = bio.decrease_spacial_resolution(2)
+    #print(result)
+    assert np.allclose(result, [[15., 35., 55.],
+                                [ 5., 10.,  3.]])
+
+    # Group by triplets
+    result = bio.decrease_spacial_resolution(3)
+    #print(result)
+    assert np.allclose(result, [[20., 50.],
+                                [ 5., 7.]])
+
+    # Group into just 1 single bin
+    result = bio.decrease_spacial_resolution(6)
+    #print(result)
+    assert np.allclose(result, [[35.],
+                                [ 6.]])
+
+
+def test_varying_spacial_resolution(biomsim1D):
+    chem_data = chem(names=["A", "B"])
+    bio.initialize_system(n_bins=3, chem_data=chem_data)
+    bio.set_species_conc(0, [11., 12., 13.])
+    bio.set_species_conc(1, [5., 15., 25.])
+
+    # First, increase the spacial resolution, after saving the original matrix
+    original_state = bio.system
+    result = bio.increase_spacial_resolution(3)
+    #print(result)
+    bio.replace_system(result)
+
+    # Then, decrease the spacial resolution, by the same factor
+    result = bio.decrease_spacial_resolution(3)
+    #print(result)
+    assert np.allclose(result, original_state)
+
 
 
 

@@ -16,7 +16,7 @@
 # ### Exploring the data structures of MEMBRANES, and reactions in them 
 # #### - with NO DIFFUSION
 #
-# LAST REVISED: Aug. 29, 2022
+# LAST REVISED: Aug. 30, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -29,16 +29,20 @@ from modules.chemicals.chemicals import Chemicals as chem
 from life_1D.bio_sim_1d import BioSim1D as bio
 
 # %%
-chem_data = chem(names=["A", "B"])
+chem_data = chem(names=["A", "B", "C"])
 bio.initialize_system(n_bins=5, chem_data=chem_data)
 
-bio.set_membranes(membrane_pos=[1])
+bio.set_membranes(membrane_pos=[1])   # A single membrane, passing thru bin 1
 
-bio.set_all_uniform_concentrations(conc_list=[4., 8.])
+bio.set_all_uniform_concentrations(conc_list=[4., 8., 12.])
+
+bio.describe_state()
+
+# %%
 bio.set_bin_conc(bin_address=1, species_name="A", conc=10.)
-bio.set_bin_conc(bin_address=1, species_name="B", conc=20.)
-
 bio.set_bin_conc(bin_address=1, species_name="A", conc=55., across_membrane=True)
+bio.set_bin_conc(bin_address=1, species_name="B", conc=20.)
+bio.set_bin_conc(bin_address=1, species_name="C", conc=30., both_sides=True)
 
 bio.describe_state()
 

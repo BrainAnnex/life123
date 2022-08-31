@@ -9,7 +9,7 @@
 set PYTHONPATH=\Docs\- MY CODE\BioSimulations\life123-Win7\
 
 @echo off
-echo *** IMPORTANT *** LOG FILES TO BE FOUND UNDER THE FOLDER: %PYTHONPATH%experiments
+echo *** IMPORTANT *** Additional LOG FILES TO BE FOUND UNDER THE FOLDER: %PYTHONPATH%experiments
 echo on
 
 :: Start Jupyter Lab (if a port other than the default 8888 is desired, use the option --port YOUR_PORT_NUMBER)

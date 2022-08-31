@@ -40,6 +40,7 @@ class BioSim1D:
     membranes = None        # NumPy boolean array of dimension n_bins;
                             #   each boolean value marks the presence of a membrane in that bin.
                             #   Any given bin is expected to either contain, or not contain, a single membrane passing thru it
+                            #   TODO - explore possible alternative: list of bin addresses the contains a membrane
 
     A_fraction = None       # NumPy array of floats, of dimension n_bins;
                             #   each value records the fraction (between 0. and 1.) of the LEFT one
@@ -128,6 +129,8 @@ class BioSim1D:
         :return:
         """
         cls.system = None
+        cls.system_earlier = None
+        cls.system_B = None
         cls.membranes = None
         cls.A_fraction = None
         cls.chem_data = None
@@ -178,16 +181,24 @@ class BioSim1D:
 
         cls.system[species_index] = np.full(cls.n_bins, conc, dtype=float)
 
+        if cls.membranes is not None:
+            # If membranes are present, also set "side B" of the bins with membranes, to the same concentration
+            for bin_address in range(cls.n_bins):       # TODO: see if it can be done as vector operation
+                if cls.membranes[bin_address]:
+                    cls.system_B[species_index, bin_address] = conc
+
+
+
 
     @classmethod
-    def set_all_uniform_concentrations(cls, conc_list: [float]) -> None:
+    def set_all_uniform_concentrations(cls, conc_list: Union[list, tuple]) -> None:
         """
         Set the concentrations of all species at once, uniformly across all bins
-        :param conc_list:   List of concentration values for each of the chemical species
+        :param conc_list:   List or tuple of concentration values for each of the chemical species
         :return:            None
         """
         assert len(conc_list) == cls.chem_data.n_species, \
-            f"set_all_uniform_concentrations(): the argument must be a list of size {cls.chem_data.n_species}"
+            f"set_all_uniform_concentrations(): the argument must be a list or tuple of size {cls.chem_data.n_species}"
 
         for i, conc in enumerate(conc_list):
             cls.set_uniform_concentration(species_index=i, conc=conc)
@@ -195,7 +206,8 @@ class BioSim1D:
 
 
     @classmethod
-    def set_bin_conc(cls, bin_address: int, conc: float, species_index=None, species_name=None, across_membrane=False) -> None:
+    def set_bin_conc(cls, bin_address: int, conc: float, species_index=None, species_name=None,
+                     across_membrane=False, both_sides=False) -> None:
         """
         Assign the requested concentration value to the given bin, for the specified chemical species.
         Optionally, set the value for the "alternate bin" ("other side" of the membrane)
@@ -205,6 +217,7 @@ class BioSim1D:
         :param species_index:   Zero-based index to identify a specific chemical species
         :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
         :param across_membrane: It True, consider the "other side" of the bin, i.e. the portion across the membrane
+        :param both_sides:      If True, set the "regular" bin and the "other side" as well
         :return:                None
         """
         if species_name is not None:
@@ -217,11 +230,12 @@ class BioSim1D:
         assert conc >= 0., \
             f"set_bin_conc(): the concentration must be a positive number or zero (the requested value was {conc})"
 
-        if across_membrane:
+        if across_membrane or both_sides:
             assert cls.system_B is not None, \
                 "set_bin_conc(): the `other_side` option cannot be used unless membranes are first set"
             cls.system_B[species_index, bin_address] = conc
-        else:
+
+        if both_sides or (not across_membrane):
             cls.system[species_index, bin_address] = conc
 
 
