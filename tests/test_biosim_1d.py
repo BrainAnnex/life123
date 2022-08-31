@@ -160,6 +160,25 @@ def test_x_coord(biomsim1D):
 
 ########  MEMBRANE-RELATED  ################
 
+def test_uses_membranes(biomsim1D):
+    chem_data = chem(names=["A", "B"])
+    bio.initialize_system(n_bins=5, chem_data=chem_data)
+
+    assert not bio.uses_membranes()
+    bio.set_membranes(membrane_pos=[2, 4])
+    assert bio.uses_membranes()
+
+
+
+def test_bins_with_membranes(biomsim1D):
+    chem_data = chem(names=["A", "B"])
+    bio.initialize_system(n_bins=5, chem_data=chem_data)
+
+    bio.set_membranes(membrane_pos=[2, 4])
+    assert bio.bins_with_membranes() == [2, 4]
+
+
+
 def test_set_membranes(biomsim1D):
     chem_data = chem(names=["A", "B"])
     bio.initialize_system(n_bins=5, chem_data=chem_data)

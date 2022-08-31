@@ -40,7 +40,8 @@ class BioSim1D:
     membranes = None        # NumPy boolean array of dimension n_bins;
                             #   each boolean value marks the presence of a membrane in that bin.
                             #   Any given bin is expected to either contain, or not contain, a single membrane passing thru it
-                            #   TODO - explore possible alternative: list of bin addresses the contains a membrane
+                            #   TODO - explore possible alternative: list of bin addresses the contains a membrane,
+                            #          or other sparse-matrix representation
 
     A_fraction = None       # NumPy array of floats, of dimension n_bins;
                             #   each value records the fraction (between 0. and 1.) of the LEFT one
@@ -52,6 +53,9 @@ class BioSim1D:
 
     delta_diffusion = None  # Buffer for the concentration changes from diffusion step (n_species x n_bins)
     delta_reactions = None  # Buffer for the concentration changes from reactions step (n_species x n_bins)
+
+    delta_reactions_B = None    # Same as above, but for the "other sides" of bins with membranes
+                                # TODO: explore sparse-matrix representations
 
     sealed = True           # If True, no exchange with the outside; if False, immersed in a "bath"
 
@@ -142,6 +146,9 @@ class BioSim1D:
         cls.global_Dx = 1
         cls.system_time = 0
 
+        cls.delta_reactions = None
+        cls.delta_reactions_B = None
+
 
 
     @classmethod
@@ -181,9 +188,10 @@ class BioSim1D:
 
         cls.system[species_index] = np.full(cls.n_bins, conc, dtype=float)
 
-        if cls.membranes is not None:
+        if cls.uses_membranes():
             # If membranes are present, also set "side B" of the bins with membranes, to the same concentration
-            for bin_address in range(cls.n_bins):       # TODO: see if it can be done as vector operation
+            # TODO: see if it can be done as vector operation
+            for bin_address in cls.bins_with_membranes():
                 if cls.membranes[bin_address]:
                     cls.system_B[species_index, bin_address] = conc
 
@@ -243,7 +251,7 @@ class BioSim1D:
     @classmethod
     def set_species_conc(cls, species_index: int, conc_list: Union[list, tuple, np.ndarray]) -> None:
         """
-        Assign the requested list of concentration values to all the bins, in order, for the specified species
+        Assign the requested list of concentration values to all the bins, in order, for the specified species.
 
         :param species_index:   Zero-based index to identify a specific chemical species
         :param conc_list:       A list, tuple or Numpy array with the desired concentration value to assign to the specified location
@@ -317,7 +325,29 @@ class BioSim1D:
 
 
 
-    ########  EXPERIMENTAL!  MEMBRANE-RELATED  ################
+    ########  MEMBRANE-RELATED  ################
+
+    @classmethod
+    def uses_membranes(cls) -> bool:
+        """
+        Return True if membranes are part of the system
+
+        :return:
+        """
+        return cls.membranes is not None
+
+
+    @classmethod
+    def bins_with_membranes(cls) -> [int]:
+        """
+
+        :return:
+        """
+        # Create and return a list of bin numbers whose entry in cls.membranes is True
+        return [bin_number for bin_number in range(cls.n_bins)
+                if cls.membranes[bin_number]]
+
+
 
     @classmethod
     def set_membranes(cls, membrane_pos: Union[List, Tuple]) -> None:
@@ -519,7 +549,7 @@ class BioSim1D:
 
         if concise:             # A minimalist printout...
             print(cls.system)   # ...only showing the concentration data (a Numpy array)
-            if cls.membranes is not None:
+            if cls.uses_membranes():
                 print("Membranes:")
                 print(cls.system_B)
             return
@@ -861,7 +891,7 @@ class BioSim1D:
                                                              time_step=time_step,
                                                              n_steps=n_steps)
 
-        # TODO: validation; implement sample_species
+        # TODO: validation; also, implement sample_species
         if snapshots is None:
             frequency = None
         else:
@@ -869,7 +899,11 @@ class BioSim1D:
 
         for i in range(n_steps):
             cls.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
+            # Update the state of the system
             cls.system += cls.delta_reactions   # Matrix operation to update all the concentrations
+            if cls.uses_membranes():
+                cls.system_B += cls.delta_reactions_B
+
             cls.system_time += time_step
             if (frequency is not None) and ((i+1)%frequency == 0):
                 cls.save_snapshot(cls.bin_snapshot(bin_address = snapshots["sample_bin"]))
@@ -899,6 +933,8 @@ class BioSim1D:
         #number_reactions = cls.all_reactions.number_of_reactions()
 
         cls.delta_reactions = np.zeros((cls.n_species, cls.n_bins), dtype=float)
+        if cls.uses_membranes():
+            cls.delta_reactions_B = np.zeros((cls.n_species, cls.n_bins), dtype=float)
 
         # For each bin
         for bin_n in range(cls.n_bins):     # Bin number, ranging from 0 to max_bin_number, inclusive
@@ -910,20 +946,28 @@ class BioSim1D:
                          for species_index in range(cls.n_species)}
             #print(f"\nconc_dict in bin {bin_n}: ", conc_dict)
 
-
-            # Obtain the Delta-conc for each species, for bin number bin_n
-            # OLD APPROACH
-            #increment_vector = cls.single_bin_reaction_step(bin_n, delta_time, number_reactions)
-
-            # NEW APPROACH
+            # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
             increment_vector = cls.all_reactions.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=delta_time)
 
-
             # Replace the "bin_n" column of the cls.delta_reactions matrix with the contents of the vector increment_vector
-            #cls.delta_reactions[:, bin_n] = increment_vector.transpose()
             cls.delta_reactions[:, bin_n] = np.array([increment_vector])
 
             #print(cls.delta_reactions)
+
+
+        # Now process the "other side" of membrane-containing bins, if applicable
+        if cls.uses_membranes():
+            for bin_n in cls.bins_with_membranes():
+                # Obtain the Delta-concentration for each species, for this bin
+                conc_dict = {species_index: cls.bin_concentration(bin_address=bin_n, species_index=species_index, across_membrane=True)
+                             for species_index in range(cls.n_species)}
+                #print(f"\n Post-membrane side conc_dict in bin {bin_n}: ", conc_dict)
+
+                # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
+                increment_vector = cls.all_reactions.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=delta_time)
+
+                # Replace the "bin_n" column of the cls.delta_reactions_B matrix with the contents of the vector increment_vector
+                cls.delta_reactions_B[:, bin_n] = np.array([increment_vector])
 
 
 
