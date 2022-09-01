@@ -27,7 +27,7 @@
 # A LOT of plots are sent to the log file from this experiment; the reason is to compare two
 # graphic elements, "vue_curves_3" and "vue_curves_4"
 #
-# LAST REVISED: Aug. 22, 2022
+# LAST REVISED: Aug. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -95,8 +95,8 @@ lineplot_pars = {"range": [0, 20],
 # # Inject initial concentrations of A and B at opposite ends of the system
 
 # %%
-bio.set_bin_conc(bin=0, species_index=0, conc=20.)
-bio.set_bin_conc(bin=6, species_index=1, conc=20.)
+bio.set_bin_conc(bin_address=0, species_index=0, conc=20.)
+bio.set_bin_conc(bin_address=6, species_index=1, conc=20.)
 
 bio.describe_state()
 
@@ -448,7 +448,7 @@ fig.show()
 
 # %% [markdown]
 # A and B overlap on the plot, due to the symmetry of the system.  
-# Initially, in the middle bin, neither A nor B are present; over time they diffuse there... but then they react and get consumed (producing C), to an equilibrium value.  
+# Initially, in the middle bin, neither A nor B are present; over time they diffuse there... but then they react and get consumed (producing C), to an equilibrium value.
 # C gradually diffuses away.
 
 # %%

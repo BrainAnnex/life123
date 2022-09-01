@@ -18,7 +18,7 @@
 #
 # Diffusion not done
 #
-# LAST REVISED: Aug. 22, 2022
+# LAST REVISED: Aug. 31, 2022
 # %%
 # Extend the sys.path variable, to contain the project's root directory
 import set_path
@@ -104,16 +104,19 @@ bio.react(time_step=0.1, n_steps=10)
 bio.describe_state()
 
 # %% [markdown]
-# ## The system has now reached equilibrium
+# ### The system has now reached equilibrium
 # ### in individual bins, which remain separate because we're NOT doing diffusion in this experiment
 
-# %%
-bio.all_reactions.is_in_equilibrium(0, {"A": 23.99998665, "B": 36.00001335})
+# %% [markdown]
+# Verify the equilibrium in each of the active bins
 
 # %%
-bio.all_reactions.is_in_equilibrium(0, {"A": 21.99999809, "B": 33.00000191})
+bio.all_reactions.is_in_equilibrium(rxn_index=0, conc={"A": 23.99998665, "B": 36.00001335})
 
 # %%
-bio.all_reactions.is_in_equilibrium(0, {"A": 41.99996471, "B": 63.00003529}, explain=False)
+bio.all_reactions.is_in_equilibrium(rxn_index=0, conc={"A": 21.99999809, "B": 33.00000191})
+
+# %%
+bio.all_reactions.is_in_equilibrium(rxn_index=0, conc={"A": 41.99996471, "B": 63.00003529}, explain=False)
 
 # %%

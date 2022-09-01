@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -31,7 +31,7 @@
 #
 # *NO log file.*
 #
-# LAST REVISED: July 2, 2022
+# LAST REVISED: Aug. 28, 2022
 
 # %%
 import set_path
@@ -48,7 +48,7 @@ from life_1D.bio_sim_1d import BioSim1D as bio
 ###########################
 chem_data = chem(diffusion_rates=[10.])
 bio.initialize_system(n_bins=2, chem_data=chem_data)
-bio.inject_conc_to_bin(bin=0, delta_conc=100., species_index=0)
+bio.inject_conc_to_bin(bin_address=0, delta_conc=100., species_index=0)
 bio.describe_state()
 
 # %%
@@ -68,7 +68,7 @@ print(bio.system)
 # with an excessive single time step
 ######################################
 bio.initialize_system(n_bins=3, chem_data=chem_data)
-bio.inject_conc_to_bin(bin=1, delta_conc=100., species_index=0)
+bio.inject_conc_to_bin(bin_address=1, delta_conc=100., species_index=0)
 bio.describe_state()
 #3 bins and 1 species:   [[  0. 100.   0.]]
 
@@ -89,7 +89,7 @@ print(bio.system)
 # with a somewhat smaller single time step
 #############################################
 bio.initialize_system(n_bins=3, chem_data=chem_data)
-bio.inject_conc_to_bin(bin=1, delta_conc=100., species_index=0)
+bio.inject_conc_to_bin(bin_address=1, delta_conc=100., species_index=0)
 bio.describe_state()
 
 # %%

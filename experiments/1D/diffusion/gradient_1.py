@@ -19,7 +19,7 @@
 # The system starts out with a uniform concentration.  
 # Then identical concentrations are repeatedly *injected to the left* and *drained from the right*
 #
-# LAST REVISED: Aug. 22, 2022
+# LAST REVISED: Aug. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -96,10 +96,10 @@ delta_time = 1.
 # %% tags=[]
 for i in range(501):
     # Inject to the leftmost bin
-    bio.inject_conc_to_bin(bin=0, species_index=0, delta_conc=4, zero_clip = False)
+    bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=4, zero_clip = False)
     
     # Drain from the rightmost bin
-    bio.inject_conc_to_bin(bin=8, species_index=0, delta_conc=-4, zero_clip = False)
+    bio.inject_conc_to_bin(bin_address=8, species_index=0, delta_conc=-4, zero_clip = False)
     
     # Note: the NET GAIN of moles of A in the system is zero!
     
