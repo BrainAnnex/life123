@@ -52,7 +52,7 @@ class Reactions:
     def get_reaction(self, i: int) -> dict:
         """
         Return the data structure of the i-th reaction,
-        in the order in whic reactions were added (numbering starts at 0)
+        in the order in which reactions were added (numbering starts at 0)
 
         :param i:   The index (0-based) to identify the reaction of interest
         :return:    A dictionary with 4 keys ("reactants", "products", "Rf", "Rb"),

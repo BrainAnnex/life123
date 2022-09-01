@@ -45,6 +45,15 @@ def test_number_of_chemicals():
 
 
 
+def test_set_names(rxn):
+    chem_data = chem()
+    chem_data.set_names(["A", "B", "C", "D", "E", "F"])
+
+    assert chem_data.names == ["A", "B", "C", "D", "E", "F"]
+    assert chem_data.name_dict == {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5}
+
+
+
 def test_set_diffusion_rates():
     with pytest.raises(Exception):
         chem_data = chem(names=['A', 'B', 'C'])

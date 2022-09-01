@@ -56,8 +56,6 @@ bio.set_bin_conc(bin_address=4, species_name="C", conc=30.)
 bio.describe_state()
 
 # %%
-rxn = Reactions(chem_data)
-
 # Reaction A + B <-> C , with 1st-order kinetics in both directions, mostly forward
 bio.all_reactions.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=8., reverse_rate=2.)
 

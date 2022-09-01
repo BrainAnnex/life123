@@ -104,6 +104,7 @@ class BioSim1D:
 
         assert chem_data is not None or reactions is not None, \
             "BioSim1D: at least one of the arguments `chem_data` and `reactions` must be set"
+            # TODO: maybe drop this requirement?  And then set the system matrix later on?
 
         if chem_data:
             cls.chem_data = chem_data
@@ -118,6 +119,9 @@ class BioSim1D:
         cls.n_bins = n_bins
 
         cls.n_species = chem_data.n_species
+
+        assert cls.n_species >= 1, \
+            "At least 1 chemical species must be declared prior to calling initialize_system()"
 
         # Initialize all concentrations to zero
         cls.system = np.zeros((cls.n_species, n_bins), dtype=float)
@@ -429,14 +433,15 @@ class BioSim1D:
 
 
     @classmethod
-    def lookup_species(cls, species_index=None, species_name=None, across_membrane=False) -> np.array:
+    def lookup_species(cls, species_index=None, species_name=None, trans_membrane=False) -> np.array:
         """
         Return the NumPy array of concentration values across the all bins (from left to right)
         for the single specified chemical species
 
         :param species_index:   The index order of the chemical species of interest
         :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
-        :param across_membrane: It True, consider the "other side" of the bin, i.e. the portion across the membrane
+        :param trans_membrane:  It True, consider only the "other side" of the bins, i.e. the portion across the membrane
+                                    (it will be zero for bins without membrane)
         :return:                A NumPy array of concentration values across the bins (from left to right);
                                     the size of the array is the number of bins
         """
@@ -446,7 +451,7 @@ class BioSim1D:
 
         cls.chem_data.assert_valid_index(species_index)
 
-        if across_membrane:
+        if trans_membrane:
             return cls.system_B[species_index]
         else:
             return cls.system[species_index]
@@ -454,14 +459,14 @@ class BioSim1D:
 
 
     @classmethod
-    def bin_concentration(cls, bin_address: int, species_index=None, species_name=None, across_membrane=False) -> float:
+    def bin_concentration(cls, bin_address: int, species_index=None, species_name=None, trans_membrane=False) -> float:
         """
         Return the concentration at the requested bin of the specified species
 
         :param bin_address:     The bin number
         :param species_index:   The index order of the chemical species of interest
         :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
-        :param across_membrane: It True, consider the "other side" of the bin, i.e. the portion across the membrane
+        :param trans_membrane:  If True, consider the "other side" of the bin, i.e. the portion across the membrane
         :return:                A concentration value at the indicated bin, for the requested species
         """
         if species_name is not None:
@@ -470,7 +475,7 @@ class BioSim1D:
 
         cls.chem_data.assert_valid_index(species_index)
 
-        if across_membrane:
+        if trans_membrane:
             return cls.system_B[species_index, bin_address]
         else:
             return cls.system[species_index, bin_address]
@@ -575,7 +580,7 @@ class BioSim1D:
                     if cls.membranes[bin_no]:
                         # Add a symbol for the membrane, and the additional membrane concentration data (on the "other side")
                         all_conc += "()"    # To indicate a membrane
-                        all_conc += str(cls.bin_concentration(bin_no, species_index=species_index, across_membrane=True))
+                        all_conc += str(cls.bin_concentration(bin_no, species_index=species_index, trans_membrane=True))
                     all_conc += "|"
 
             if cls.chem_data.diffusion_rates is None:
@@ -870,10 +875,12 @@ class BioSim1D:
     @classmethod
     def react(cls, total_duration=None, time_step=None, n_steps=None, snapshots=None) -> None:
         """
-        Update the system concentrations as a result of all the reactions in all bins.
-        CAUTION : NO diffusion is taken into account.
+        Update the system concentrations as a result of all the reactions in all bins - taking
+        the presence of membranes into account, if applicable.
+        CAUTION : NO diffusion is performed.
 
-        For each bin, process all the reactions in it - based on
+        For each bin, or each membrane-separated side of bin, (or combined group of bins - not currently implemented),
+        process all the reactions in it - based on
         the INITIAL concentrations (prior to this reaction step),
         which are used as the basis for all the reactions.
 
@@ -882,7 +889,8 @@ class BioSim1D:
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
-        :param snapshots:       OPTIONAL dict with the keys: "frequency", "sample_bin", "sample_species"
+        :param snapshots:       OPTIONAL dict that may contain any the following keys:
+                                    "frequency", "sample_bin", "sample_species"
                                     If provided, take a system snapshot after running a multiple of "frequency" runs.
                                     EXAMPLE: snapshots={"frequency": 2, "sample_bin": 0}
         :return:                None
@@ -891,7 +899,7 @@ class BioSim1D:
                                                              time_step=time_step,
                                                              n_steps=n_steps)
 
-        # TODO: validation; also, implement sample_species
+        # TODO: validation; also, implement "sample_species" option for snapshots
         if snapshots is None:
             frequency = None
         else:
@@ -900,11 +908,12 @@ class BioSim1D:
         for i in range(n_steps):
             cls.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
             # Update the state of the system
-            cls.system += cls.delta_reactions   # Matrix operation to update all the concentrations
+            cls.system += cls.delta_reactions           # Matrix operation to update all the concentrations
             if cls.uses_membranes():
-                cls.system_B += cls.delta_reactions_B
+                cls.system_B += cls.delta_reactions_B   # Matrix operation to update all the concentrations
 
             cls.system_time += time_step
+            # Preserve some of the data, as requested
             if (frequency is not None) and ((i+1)%frequency == 0):
                 cls.save_snapshot(cls.bin_snapshot(bin_address = snapshots["sample_bin"]))
 
@@ -959,7 +968,7 @@ class BioSim1D:
         if cls.uses_membranes():
             for bin_n in cls.bins_with_membranes():
                 # Obtain the Delta-concentration for each species, for this bin
-                conc_dict = {species_index: cls.bin_concentration(bin_address=bin_n, species_index=species_index, across_membrane=True)
+                conc_dict = {species_index: cls.bin_concentration(bin_address=bin_n, species_index=species_index, trans_membrane=True)
                              for species_index in range(cls.n_species)}
                 #print(f"\n Post-membrane side conc_dict in bin {bin_n}: ", conc_dict)
 

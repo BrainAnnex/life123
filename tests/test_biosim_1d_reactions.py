@@ -19,81 +19,19 @@ def rxn():
 
 
 
-def test_chem_data(rxn):
-    assert rxn.chem_data.names == ["A", "B", "C", "D", "E", "F"]
-    assert rxn.chem_data.name_dict == {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5}
+def test_set_reactions():
+    chem_data = chem(names=["A", "B", "C"])
+    bio.initialize_system(n_bins=3, chem_data=chem_data)
+
+    rxn = Reactions(chem_data)
+    rxn.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=8., reverse_rate=2.)
+
+    bio.set_reactions(rxn)
+    assert bio.all_reactions == rxn
+    assert bio.all_reactions.number_of_reactions() == rxn.number_of_reactions()
+    assert bio.all_reactions.get_reaction(0) == rxn.get_reaction(0)
 
 
-
-def test_parse_reaction_term(rxn):
-    assert rxn._parse_reaction_term(5) == (1, 5, 1)
-    assert rxn._parse_reaction_term("F") == (1, 5, 1)
-
-    assert rxn._parse_reaction_term( (3, 5) ) == (3, 5, 1)
-    assert rxn._parse_reaction_term( (3, "F") ) == (3, 5, 1)
-
-    assert rxn._parse_reaction_term( (3, 5, 2) ) == (3, 5, 2)
-    assert rxn._parse_reaction_term( (3, "F", 2) ) == (3, 5, 2)
-
-
-
-def test_add_reaction(rxn):
-    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-
-    assert rxn.number_of_reactions() == 1
-    assert rxn.get_reaction(0) == {'reactants': [(1, 0, 1)], 'products': [(1, 1, 1)], 'Rf': 3.0, 'Rb': 2.0}
-
-    assert rxn.get_reactants(0) == [(1, 0, 1)]
-    assert rxn.get_reactants_formula(0) == "A"
-
-    assert rxn.get_products(0) == [(1, 1, 1)]
-    assert rxn.get_products_formula(0) == "B"
-
-    assert rxn.get_forward_rate(0) == 3.
-    assert rxn.get_back_rate(0) == 2.
-
-    # Another reaction (reaction 1)
-    rxn.add_reaction(reactants=[(2, "B")], products=[(5, "C")], forward_rate=9., reverse_rate=7.)
-
-    assert rxn.number_of_reactions() == 2
-    assert rxn.get_reaction(0) == {'reactants': [(1, 0, 1)], 'products': [(1, 1, 1)], 'Rf': 3.0, 'Rb': 2.0}
-    assert rxn.get_reaction(1) == {'reactants': [(2, 1, 1)], 'products': [(5, 2, 1)], 'Rf': 9.0, 'Rb': 7.0}
-
-    # Another reaction (reaction 2)
-    rxn.add_reaction(reactants=[(2, "D", 3)], products=[(1, "C", 2)], forward_rate=11., reverse_rate=13.)
-    assert rxn.number_of_reactions() == 3
-    assert rxn.get_reaction(2) == {'reactants': [(2, 3, 3)], 'products': [(1, 2, 2)], 'Rf': 11.0, 'Rb': 13.0}
-
-    # A multi-term reaction (reaction 3)
-    rxn.add_reaction(reactants=["A", (2, "B")], products=[(3, "C", 2), "D"], forward_rate=5., reverse_rate=1.)
-    assert rxn.number_of_reactions() == 4
-    assert rxn.get_reaction(3) == {'reactants': [(1, 0, 1), (2, 1, 1)], 'products': [(3, 2, 2), (1, 3, 1)], 'Rf': 5.0, 'Rb': 1.0}
-
-    rxn_list = rxn.describe_reactions(return_as_list=True)
-    assert rxn_list[0] == '0: A <-> B  (Rf = 3.0 / Rb = 2.0)'
-    assert rxn_list[1] == '1: 2 B <-> 5 C  (Rf = 9.0 / Rb = 7.0)'
-    assert rxn_list[2] == '2: 2 D <-> C  (Rf = 11.0 / Rb = 13.0) | 3-th order in reactant D | 2-th order in product C'
-    assert rxn_list[3] == '3: A + 2 B <-> 3 C + D  (Rf = 5.0 / Rb = 1.0) | 2-th order in product C'
-
-
-
-def test_create_graph_network_data(rxn):
-    rxn.clear_reactions()
-    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-    network_data = rxn.create_graph_network_data()
-    print(network_data)
-    expected = [{'id': 6, 'label': 'Reaction', 'name': 'RXN', 'Rf': 3.0, 'Rb': 2.0},
-                {'id': 1, 'label': 'Product', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
-                {'id': 7, 'name': 'produces', 'source': 6, 'target': 1},
-                {'id': 0, 'label': 'Reactant', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
-                {'id': 8, 'name': 'reacts', 'source': 0, 'target': 6}
-                ]
-    assert network_data == expected
-
-
-
-
-###########################  TESTS OF REACTION DYNAMICS (TODO: move to separate file)  ###########################
 
 def test_reaction_step_1(rxn):
     # Based on experiment "reaction1"
@@ -156,7 +94,7 @@ def test_reaction_step_1b(rxn):
 
 
 
-def test_react_2(rxn):
+def test_react_1(rxn):
     # Based on experiment "reaction2"
     chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
 
@@ -178,7 +116,7 @@ def test_react_2(rxn):
 
 
 
-def test_react_3(rxn):
+def test_react_2(rxn):
     # Based on experiment "reaction3"
     chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
 
@@ -204,7 +142,7 @@ def test_react_3(rxn):
 
 
 
-def test_react_4(rxn):
+def test_react_3(rxn):
     # Based on experiment "reaction4"
     chem_data = chem(diffusion_rates=[0.1, 0.1, 0.1], names=["A", "B", "C"])   # NOTE: diffusion_rates not used
 
@@ -231,7 +169,8 @@ def test_react_4(rxn):
     assert bio.n_bins == 1
 
 
-def test_react_5(rxn):
+
+def test_react_4(rxn):
     # Based on experiment "reaction5"
     chem_data = chem(diffusion_rates=[0.1, 0.1, 0.1], names=["A", "C", "D"])   # NOTE: diffusion_rates not used
 
@@ -257,7 +196,7 @@ def test_react_5(rxn):
 
 
 
-def test_react_6(rxn):
+def test_react_5(rxn):
     # Based on experiment "reaction6"
     chem_data = chem(diffusion_rates=[0.1, 0.1, 0.1, 0.1], names=["A", "B", "C", "D"])   # NOTE: diffusion_rates not used
 
@@ -289,7 +228,7 @@ def test_react_6(rxn):
 
 
 
-def test_react_7(rxn):
+def test_react_6(rxn):
     # Based on experiment "reaction7"
     chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
 
@@ -316,7 +255,7 @@ def test_react_7(rxn):
 
 
 
-def test_react_8(rxn):
+def test_react_7(rxn):
     # Based on experiment "reaction8"
     chem_data = chem(diffusion_rates=[.1, .1, .1, .1, .1], names=["A", "B", "C", "D", "E"])   # NOTE: diffusion_rates not used
 
@@ -357,3 +296,49 @@ def test_react_8(rxn):
     assert bio.n_bins == 1
 
 
+
+def test_react_with_membrane(rxn):
+    # Based on experiment "reaction/membranes_1"
+    chem_data = chem(names=["A", "B", "C"])     # NOTE: Diffusion not done
+    bio.initialize_system(n_bins=5, chem_data=chem_data)
+
+    bio.set_membranes(membrane_pos=[1])   # A single membrane, passing thru bin 1
+
+    bio.set_all_uniform_concentrations(conc_list=[4., 8., 12.])
+    bio.set_bin_conc(bin_address=1, species_name="A", conc=10.)
+    bio.set_bin_conc(bin_address=1, species_name="A", conc=55., across_membrane=True)
+    bio.set_bin_conc(bin_address=1, species_name="B", conc=20.)
+    bio.set_bin_conc(bin_address=1, species_name="C", conc=30., both_sides=True)
+
+    # Make the last bin match all the concentrations of the "post-membrane" section of bin 1
+    bio.set_bin_conc(bin_address=4, species_name="A", conc=55.)
+    bio.set_bin_conc(bin_address=4, species_name="C", conc=30.)
+
+    assert np.allclose(bio.lookup_species(species_name="A"), [4, 10, 4, 4, 55])
+    assert np.allclose(bio.lookup_species(species_name="A", trans_membrane=True), [0, 55, 0, 0, 0])
+
+    assert np.allclose(bio.lookup_species(species_name="B"), [8, 20, 8, 8, 8])
+    assert np.allclose(bio.lookup_species(species_name="B", trans_membrane=True), [0, 8, 0, 0, 0])
+
+    assert np.allclose(bio.lookup_species(species_name="C"), [12, 30, 12, 12, 30])
+    assert np.allclose(bio.lookup_species(species_name="C", trans_membrane=True), [0, 30, 0, 0, 0])
+
+    # Reaction A + B <-> C , with 1st-order kinetics in both directions, mostly forward
+    bio.all_reactions.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=8., reverse_rate=2.)
+
+    bio.react(time_step=0.002, n_steps=1)
+
+    bin1_trans = bio.bin_concentration(bin_address=1, species_name="A", trans_membrane=True)
+    bin4 = bio.bin_concentration(bin_address=4, species_name="A")
+    assert np.allclose(bin1_trans, bin4)
+    assert np.allclose(bin4, 48.08)
+
+    bin1_trans = bio.bin_concentration(bin_address=1, species_name="B", trans_membrane=True)
+    bin4 = bio.bin_concentration(bin_address=4, species_name="B")
+    assert np.allclose(bin1_trans, bin4)
+    assert np.allclose(bin4, 1.08)
+
+    bin1_trans = bio.bin_concentration(bin_address=1, species_name="C", trans_membrane=True)
+    bin4 = bio.bin_concentration(bin_address=4, species_name="C")
+    assert np.allclose(bin1_trans, bin4)
+    assert np.allclose(bin4, 36.92)

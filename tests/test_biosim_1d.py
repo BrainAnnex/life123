@@ -74,7 +74,7 @@ def test_set_uniform_concentration(biomsim1D):
     assert np.allclose(bio.lookup_species(0), expected)
     #print(bio.system_B)
     expected = np.array([0, 8.8, 0, 0, 0])
-    assert np.allclose(bio.lookup_species(species_name="A", across_membrane=True), expected)
+    assert np.allclose(bio.lookup_species(species_name="A", trans_membrane=True), expected)
 
 
 
@@ -221,8 +221,8 @@ def test_set_membranes(biomsim1D):
     assert np.allclose(bio.A_fraction, [0, 0.5, 0.8, 0, 0.3])
     assert np.allclose(bio.lookup_species(species_name="A"), [8, 8, 8, 8, 8])
     assert np.allclose(bio.lookup_species(species_name="B"), [5, 5, 5, 5, 5])
-    assert np.allclose(bio.lookup_species(species_name="A", across_membrane=True), [0, 8, 8, 0, 8])
-    assert np.allclose(bio.lookup_species(species_name="B", across_membrane=True), [0, 5, 5, 0, 5])
+    assert np.allclose(bio.lookup_species(species_name="A", trans_membrane=True), [0, 8, 8, 0, 8])
+    assert np.allclose(bio.lookup_species(species_name="B", trans_membrane=True), [0, 5, 5, 0, 5])
 
     #bio.show_membranes()
 
@@ -660,3 +660,27 @@ def test_diffuse_2(biomsim1D):
     assert np.allclose(bio.lookup_species(0),
                                 [1.00055275, 1.00049864, 1.00039572, 1.00025407, 1.00008755, 0.99991245,
                                  0.99974593, 0.99960428, 0.99950136, 0.99944725])
+
+
+
+
+#########################################################################
+#                                                                       #
+#                               REACTIONS                               #
+#                                                                       #
+#########################################################################
+
+
+# Done in separate file "test_biosim_1d_reactions.py"
+
+
+
+
+#########################################################################
+#                                                                       #
+#                         REACTION-DIFFUSION                            #
+#                                                                       #
+#########################################################################
+
+def test_react_diffuse(biomsim1D):
+    pass

@@ -8,11 +8,78 @@ from modules.reactions.reactions import Reactions
 # Provide an instantiated object that can be used by the various tests that need it
 @pytest.fixture(scope="module")
 def rxn():
-    pass
-    #chem_data = chem(names=["A", "B", "C", "D", "E", "F"])
+    chem_data = chem(names=["A", "B", "C", "D", "E", "F"])
     #bio.initialize_system(n_bins=10, chem_data=chem_data)
-    #rnx_obj = Reactions(chem_data)
-    #yield rnx_obj
+    rnx_obj = Reactions(chem_data)
+    yield rnx_obj
+
+
+
+
+def test_parse_reaction_term(rxn):
+    assert rxn._parse_reaction_term(5) == (1, 5, 1)
+    assert rxn._parse_reaction_term("F") == (1, 5, 1)
+
+    assert rxn._parse_reaction_term( (3, 5) ) == (3, 5, 1)
+    assert rxn._parse_reaction_term( (3, "F") ) == (3, 5, 1)
+
+    assert rxn._parse_reaction_term( (3, 5, 2) ) == (3, 5, 2)
+    assert rxn._parse_reaction_term( (3, "F", 2) ) == (3, 5, 2)
+
+
+
+def test_add_reaction(rxn):
+    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+
+    assert rxn.number_of_reactions() == 1
+    assert rxn.get_reaction(0) == {'reactants': [(1, 0, 1)], 'products': [(1, 1, 1)], 'Rf': 3.0, 'Rb': 2.0}
+
+    assert rxn.get_reactants(0) == [(1, 0, 1)]
+    assert rxn.get_reactants_formula(0) == "A"
+
+    assert rxn.get_products(0) == [(1, 1, 1)]
+    assert rxn.get_products_formula(0) == "B"
+
+    assert rxn.get_forward_rate(0) == 3.
+    assert rxn.get_back_rate(0) == 2.
+
+    # Another reaction (reaction 1)
+    rxn.add_reaction(reactants=[(2, "B")], products=[(5, "C")], forward_rate=9., reverse_rate=7.)
+
+    assert rxn.number_of_reactions() == 2
+    assert rxn.get_reaction(0) == {'reactants': [(1, 0, 1)], 'products': [(1, 1, 1)], 'Rf': 3.0, 'Rb': 2.0}
+    assert rxn.get_reaction(1) == {'reactants': [(2, 1, 1)], 'products': [(5, 2, 1)], 'Rf': 9.0, 'Rb': 7.0}
+
+    # Another reaction (reaction 2)
+    rxn.add_reaction(reactants=[(2, "D", 3)], products=[(1, "C", 2)], forward_rate=11., reverse_rate=13.)
+    assert rxn.number_of_reactions() == 3
+    assert rxn.get_reaction(2) == {'reactants': [(2, 3, 3)], 'products': [(1, 2, 2)], 'Rf': 11.0, 'Rb': 13.0}
+
+    # A multi-term reaction (reaction 3)
+    rxn.add_reaction(reactants=["A", (2, "B")], products=[(3, "C", 2), "D"], forward_rate=5., reverse_rate=1.)
+    assert rxn.number_of_reactions() == 4
+    assert rxn.get_reaction(3) == {'reactants': [(1, 0, 1), (2, 1, 1)], 'products': [(3, 2, 2), (1, 3, 1)], 'Rf': 5.0, 'Rb': 1.0}
+
+    rxn_list = rxn.describe_reactions(return_as_list=True)
+    assert rxn_list[0] == '0: A <-> B  (Rf = 3.0 / Rb = 2.0)'
+    assert rxn_list[1] == '1: 2 B <-> 5 C  (Rf = 9.0 / Rb = 7.0)'
+    assert rxn_list[2] == '2: 2 D <-> C  (Rf = 11.0 / Rb = 13.0) | 3-th order in reactant D | 2-th order in product C'
+    assert rxn_list[3] == '3: A + 2 B <-> 3 C + D  (Rf = 5.0 / Rb = 1.0) | 2-th order in product C'
+
+
+
+def test_create_graph_network_data(rxn):
+    rxn.clear_reactions()
+    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    network_data = rxn.create_graph_network_data()
+    print(network_data)
+    expected = [{'id': 6, 'label': 'Reaction', 'name': 'RXN', 'Rf': 3.0, 'Rb': 2.0},
+                {'id': 1, 'label': 'Product', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
+                {'id': 7, 'name': 'produces', 'source': 6, 'target': 1},
+                {'id': 0, 'label': 'Reactant', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
+                {'id': 8, 'name': 'reacts', 'source': 0, 'target': 6}
+                ]
+    assert network_data == expected
 
 
 
