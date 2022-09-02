@@ -730,7 +730,7 @@ class BioSim1D:
 
 
     @classmethod
-    def diffuse(cls, total_duration=None, time_step=None, n_steps=None) -> dict:
+    def diffuse(cls, total_duration=None, time_step=None, n_steps=None, delta_x = 1) -> dict:
         """
         Uniform-step diffusion, with 2 out of 3 criteria specified:
             1) until reaching, or just exceeding, the desired time duration
@@ -740,6 +740,7 @@ class BioSim1D:
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
+        :param delta_x:         Distance between consecutive bins
         :return:                A dictionary with data about the status of the operation
         """
         time_step, n_steps = cls.all_reactions.specify_steps(total_duration=total_duration,
@@ -753,7 +754,7 @@ class BioSim1D:
                 elif i == 2:
                     print("    ...")
 
-            cls.diffuse_step(time_step)
+            cls.diffuse_step(time_step, delta_x=delta_x)
             cls.system += cls.delta_diffusion     # Matrix operation to update all the concentrations
             cls.system_time += time_step
 
@@ -768,15 +769,16 @@ class BioSim1D:
 
 
     @classmethod
-    def diffuse_step(cls, time_step) -> None:
+    def diffuse_step(cls, time_step, delta_x = 1) -> None:
         """
         Diffuse all the species by the given time step:
         clear the delta_diffusion array, and then re-compute it from all the species.
 
         IMPORTANT: the actual system concentrations are NOT changed.
 
-        :param time_step:   Time step over which to carry out the diffusion.
-                            If too large, an Exception will be raised.
+        :param time_step:   Time step over which to carry out the diffusion
+                            If too large - as determined by the method is_excessive() - an Exception will be raised
+        :param delta_x:     Distance between consecutive bins
         :return:            None
         """
         # TODO: parallelize the independent computations
@@ -785,7 +787,7 @@ class BioSim1D:
 
         for species_index in range(cls.n_species):
 
-            increment_vector = cls.diffuse_step_single_species(time_step, species_index=species_index)
+            increment_vector = cls.diffuse_step_single_species(time_step, species_index=species_index, delta_x=delta_x)
             #print("Increment vector is: ", increment_vector)
 
             # For each bin, update the concentrations from the buffered increments
@@ -794,7 +796,7 @@ class BioSim1D:
 
 
     @classmethod
-    def diffuse_step_single_species(cls, time_step: float, species_index=0) -> np.array:
+    def diffuse_step_single_species(cls, time_step: float, species_index=0, delta_x = 1) -> np.array:
         """
         Diffuse the specified single species, for the specified time step, across all bins,
         and return an array of the changes in concentration ("Delta concentration")
@@ -806,11 +808,11 @@ class BioSim1D:
 
         EXPLANATION:  https://life123.science/diffusion
 
-        TODO: allow to specify the Delta_x (for now, taken to always be 1)
-
         :param time_step:       Time step over which to carry out the diffusion.
                                 If too large, an Exception will be raised.
         :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
+        :param delta_x:         Distance between consecutive bins
+
         :return:                A Numpy array with the change in concentration for the given species across all bins
         """
         assert cls.system is not None, "Must first initialize the system"
@@ -834,6 +836,9 @@ class BioSim1D:
         max_bin_number = cls.n_bins - 1     # Bin numbers range from 0 to max_bin_number, inclusive
 
         effective_diff = diff * time_step
+        if delta_x != 1:
+            effective_diff /= (delta_x**2)
+
 
         for i in range(cls.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
             #print(f"Processing bin number {i}")
@@ -988,7 +993,7 @@ class BioSim1D:
     #########################################################################
 
     @classmethod
-    def react_diffuse(cls, total_duration=None, time_step=None, n_steps=None) -> None:
+    def react_diffuse(cls, total_duration=None, time_step=None, n_steps=None, delta_x = 1) -> None:
         """
         It expects 2 of the arguments:  total_duration, time_step, n_steps
         Perform a series of reaction and diffusion time steps.
@@ -996,6 +1001,7 @@ class BioSim1D:
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
+        :param delta_x:         Distance between consecutive bins
         :return:                None
         """
         time_step, n_steps = cls.all_reactions.specify_steps(total_duration=total_duration,
@@ -1005,7 +1011,7 @@ class BioSim1D:
         for i in range(n_steps):
             # TODO: split off the reaction step and the diffusion step to 2 different computing cores
             cls.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
-            cls.diffuse_step(time_step)
+            cls.diffuse_step(time_step, delta_x=delta_x)
             # Merge into the concentrations of the various bins/chemical species pairs,
             # the increments concentrations computed separately by the reaction and the diffusion steps
             cls.system += cls.delta_reactions   # Matrix operation to update all the concentrations
