@@ -185,8 +185,8 @@ class BioSim1D:
         if species_name is not None:
             assert cls.chem_data, f"BioSim1D.set_uniform_concentration(): must first call initialize_system()"
             species_index = cls.chem_data.get_index(species_name)
-
-        cls.chem_data.assert_valid_index(species_index)
+        else:
+            cls.chem_data.assert_valid_index(species_index)
 
         assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
 
@@ -235,9 +235,11 @@ class BioSim1D:
         if species_name is not None:
             assert cls.chem_data, f"BioSim1D.set_bin_conc(): must first call initialize_system()"
             species_index = cls.chem_data.get_index(species_name)
+        else:
+            cls.chem_data.assert_valid_index(species_index)
 
         cls.assert_valid_bin(bin_address)
-        cls.chem_data.assert_valid_index(species_index)
+
 
         assert conc >= 0., \
             f"set_bin_conc(): the concentration must be a positive number or zero (the requested value was {conc})"
@@ -253,15 +255,21 @@ class BioSim1D:
 
 
     @classmethod
-    def set_species_conc(cls, species_index: int, conc_list: Union[list, tuple, np.ndarray]) -> None:
+    def set_species_conc(cls, conc_list: Union[list, tuple, np.ndarray], species_index=None, species_name=None) -> None:
         """
         Assign the requested list of concentration values to all the bins, in order, for the specified species.
 
-        :param species_index:   Zero-based index to identify a specific chemical species
         :param conc_list:       A list, tuple or Numpy array with the desired concentration value to assign to the specified location
+        :param species_index:   Zero-based index to identify a specific chemical species
+        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
         :return:                None
         """
-        cls.chem_data.assert_valid_index(species_index)
+        if species_name is not None:
+            assert cls.chem_data, f"BioSim1D.set_species_conc(): must first call initialize_system()"
+            species_index = cls.chem_data.get_index(species_name)
+        else:
+            cls.chem_data.assert_valid_index(species_index)
+
         assert (type(conc_list) == list) or (type(conc_list) == tuple) or (type(conc_list) == np.ndarray), \
             f"set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; the passed value was {type(conc_list)})"
 

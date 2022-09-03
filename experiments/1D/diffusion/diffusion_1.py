@@ -62,7 +62,7 @@ lineplot_pars = {"range": [0, 10],
                 }
 
 # %%
-# Prepare the initial system
+# Prepare the initial system, with a single non-zero bin, near the left edge of the system
 chem_data = chem(names=["A"], diffusion_rates=[0.1])
 bio.initialize_system(n_bins=10, chem_data=chem_data)
 

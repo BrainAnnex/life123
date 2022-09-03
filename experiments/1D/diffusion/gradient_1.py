@@ -19,7 +19,7 @@
 # The system starts out with a uniform concentration.  
 # Then identical concentrations are repeatedly *injected to the left* and *drained from the right*
 #
-# LAST REVISED: Aug. 28, 2022
+# LAST REVISED: Sep. 2, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -33,6 +33,7 @@ from experiments.get_notebook_info import get_notebook_basename
 from life_1D.bio_sim_1d import BioSim1D as bio
 
 import plotly.express as px
+import plotly.graph_objects as go
 
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.html_log.html_log import HtmlLog as log
@@ -77,6 +78,18 @@ fig = px.line(data_frame=bio.system_snapshot(), y=["A"],
 fig.show()
 
 # %%
+# Show as heatmap
+fig = px.imshow(bio.system_snapshot().T, 
+                title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
+                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
+                text_auto=True, color_continuous_scale="gray_r")         # text_auto='.2f'
+
+fig.data[0].xgap=4
+fig.data[0].ygap=4
+
+fig.show()
+
+# %%
 # Output to the log file
 log.write("Creation of a gradient", style=log.h3)
 
@@ -110,10 +123,23 @@ for i in range(501):
     if (i <= 12 and i%3 == 0) or (i%100 == 0):   # Display more frequently initially
         print()
         bio.describe_state(concise=True)
+        
+        # Show as a line plot
         fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
                   title= f"Diffusion. System snapshot at time t={bio.system_time}",
                   color_discrete_sequence = ['red'],
                   labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
+        fig.show()
+        
+        # Show as heatmap
+        fig = px.imshow(bio.system_snapshot().T, 
+                        title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
+                        labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
+                        text_auto='.2f', color_continuous_scale="gray_r")
+
+        fig.data[0].xgap=4
+        fig.data[0].ygap=4
+
         fig.show()
 
         # Output a heatmap the log file
