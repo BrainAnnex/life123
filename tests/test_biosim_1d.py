@@ -292,7 +292,6 @@ def test_increase_spacial_resolution(biomsim1D):
     bio.initialize_system(n_bins=3, chem_data=chem_data)
     bio.set_species_conc(species_index=0, conc_list=[11., 12., 13.])
     bio.set_species_conc(species_index=1, conc_list=[5., 15., 25.])
-    #bio.describe_state()
 
     bio.increase_spacial_resolution(2)
 
@@ -697,3 +696,69 @@ def test_diffuse_2(biomsim1D):
 
 def test_react_diffuse(biomsim1D):
     pass
+
+
+
+
+def manual_test_compare_states(biomsim1D):     # MANUAL TEST
+    state1 = np.array([10, 20, 30])
+    state2 = np.array([10.3, 19.9, 30.2])
+
+    print()
+    bio.compare_states(state1, state2, verbose=True)
+    """
+    Max of unsigned absolute differences:  0.3000000000000007
+    Relative differences:  [-0.03        0.005      -0.00666667]
+    Max of unsigned relative differences:  0.030000000000000072
+    Mean of relative differences:  -0.010555555555555547
+    Median of relative differences:  -0.006666666666666643
+    Standard deviation of relative differences:  0.014550889837454275
+    np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
+    np.allclose with mid tolerance?  (rtol=1e-03, atol=1e-04) :  False
+    np.allclose with tight tolerance?  (rtol=1e-04, atol=1e-06) :  False
+    np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  False
+    """
+
+
+    state1 = np.array([[10, 20, 30],
+                       [100, 200, 300]])
+    state2 = np.array([[10.3, 19.9, 30.2],
+                       [103, 199, 302]])
+
+    print()
+    bio.compare_states(state1, state2, verbose=True)
+    """
+    Max of unsigned absolute differences:  3.0
+    Relative differences:  [[-0.03        0.005      -0.00666667]
+     [-0.03        0.005      -0.00666667]]
+    Max of unsigned relative differences:  0.030000000000000072
+    Mean of relative differences:  -0.010555555555555552
+    Median of relative differences:  -0.006666666666666655
+    Standard deviation of relative differences:  0.014550889837454246
+    np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
+    np.allclose with mid tolerance?  (rtol=1e-03, atol=1e-04) :  False
+    np.allclose with tight tolerance?  (rtol=1e-04, atol=1e-06) :  False
+    np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  False
+    """
+
+
+    state1 = np.array([[10, 20, 30],
+                       [100, 200, 300]])
+    state2 = np.array([[10.0001, 19.9999, 30.0001],
+                       [100.0004, 199.9985, 300.0003]])
+
+    print()
+    bio.compare_states(state1, state2, verbose=True)
+    """
+    Max of unsigned absolute differences:  0.0014999999999929514
+    Relative differences:  [[-1.00000000e-05  5.00000000e-06 -3.33333333e-06]
+     [-4.00000000e-06  7.50000000e-06 -1.00000000e-06]]
+    Max of unsigned relative differences:  9.999999999976694e-06
+    Mean of relative differences:  -9.722222222130482e-07
+    Median of relative differences:  -2.166666666632011e-06
+    Standard deviation of relative differences:  5.82651718172416e-06
+    np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
+    np.allclose with mid tolerance?  (rtol=1e-03, atol=1e-04) :  True
+    np.allclose with tight tolerance?  (rtol=1e-04, atol=1e-06) :  True
+    np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  True
+    """

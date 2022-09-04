@@ -15,7 +15,7 @@
 # %% [markdown]
 # # Change of delta_x in diffusion computations
 #
-# LAST REVISED: Sep. 2, 2022
+# LAST REVISED: Sep. 3, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -105,7 +105,7 @@ bio.describe_state(concise=True)
 
 # %% [markdown]
 # # Populate the data set with more bins, using interpolated concentration values
-# ### IMPORTANT: we're **NOT** changing spacial resolution here; we're just creating a smoother dataset, as *our initial system state*
+# ### IMPORTANT: we're **NOT** changing spacial resolution here; we're just creating a less ragged dataset, as *our initial system state*
 
 # %%
 bio.smooth_spacial_resolution()
@@ -116,6 +116,9 @@ bio.n_bins
 
 # %% [markdown]
 # #### This system setup will be our starting point in exploring diffusion using different spacial resolutions
+
+# %%
+original_state = bio.save_system()    # Save a copy of the system state, to do multiple runs starting from it
 
 # %%
 # Line plot
@@ -147,6 +150,11 @@ bio.diffuse(total_duration=7, time_step=0.0005)
 bio.describe_state(concise=True)
 
 # %%
+# Save the concentrations of the single species; 
+# this is the result of diffusion with delta_x of 1 (the default value)
+diffuse_dx_1 = bio.lookup_species(species_name="A")
+
+# %%
 # Line plot
 fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
               title= f"Diffusion. System snapshot at time t={bio.system_time}",
@@ -156,5 +164,40 @@ fig.show()
 
 # %% [markdown]
 # ### Enough time has proceeded some smoothing, and non-puny changes in most values - but still nowhere near equilibrium
+
+# %% [markdown]
+# # Now restore the system to its initial (pre-diffusion) state
+# ### and then perform a diffusion over the same time span, but with double the spacial resolution
+# #### delta_x will be be 1/2 instead of the original default 1
+
+# %%
+bio.restore_system(original_state)
+
+# %%
+bio.describe_state()
+
+# %%
+# Double the spacial resolution
+bio.increase_spacial_resolution(2)
+bio.describe_state()
+
+# %%
+# Now repeat the idential diffusion process as before, but with half the delta_x
+bio.diffuse(total_duration=7, time_step=0.0005, delta_x=0.5)
+
+# %%
+# Finally, halve the resolution, to return to the original number of bins
+bio.decrease_spacial_resolution(2)
+
+# %%
+bio.describe_state(concise=True)
+
+# %%
+# Save the concentrations of the single species; 
+# this is the result of diffusion with delta_x of 1/2
+diffuse_dx_1_2 = bio.lookup_species(species_name="A")
+
+# %%
+bio.compare_states(diffuse_dx_1 , diffuse_dx_1_2, verbose=True)
 
 # %%

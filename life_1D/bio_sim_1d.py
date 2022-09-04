@@ -80,7 +80,7 @@ class BioSim1D:
 
     #########################################################################
     #                                                                       #
-    #                    SET/MODIFY CONCENTRATIONS (or membranes)           #
+    #                               SYSTEM-WIDE                             #
     #                                                                       #
     #########################################################################
 
@@ -156,6 +156,38 @@ class BioSim1D:
 
 
     @classmethod
+    def save_system(cls) -> dict:
+        """
+        For now, just return a copy of cls.system, with a "frozen" snapshot of the current system state
+        TODO: deal with membranes, and anything else needed to later restore the complete system state
+
+        :return:    A dict of (for now a part of) the elements needed to later restore the complete system state
+        """
+        return {"system": cls.system.copy(), "system_time": cls.system_time}
+
+
+
+    @classmethod
+    def restore_system(cls, new_state: dict) -> None:
+        """
+        Replace (some, for now, of) the various parts the System's internal state.
+        For details of the data structure, see the class variable "system"
+        TODO: membranes aren't yet managed. System length and global_Dx are currently not modified
+
+        :param new_state:   Numpy array containing the desired new System's internal state
+        :return:
+        """
+        cls.system = new_state["system"]
+        cls.n_species, cls.n_bins = cls.system.shape     # Extract from the new state
+        assert cls.n_species == cls.chem_data.n_species, \
+            f"restore_system(): inconsistency in the number of chemical species in the specified new state ({cls.n_species}) " \
+            f"vs. what's stored in the `Chemicals` object ({cls.chem_data.n_species})"
+
+        cls.system_time = new_state["system_time"]
+
+
+
+    @classmethod
     def replace_system(cls, new_state: np.array) -> None:
         """
         Replace the System's internal state.
@@ -171,6 +203,71 @@ class BioSim1D:
             "replace_system(): inconsistency in the number of chemical species vs. what's stored in the `Chemicals` object"
 
 
+
+    @classmethod
+    def system_snapshot(cls) -> pd.DataFrame:
+        """
+        Return a snapshot of all the concentrations of all the species,
+        as a Pandas dataframe
+        TODO: make allowance for membranes
+
+        :return:    A Pandas dataframe: each row is a bin,
+                        and each column a chemical species
+        """
+        all_chem_names = cls.chem_data.get_all_names()
+        if cls.system is None:
+            return pd.DataFrame(columns = all_chem_names)   # Empty dataframe
+
+        matrix = cls.system.T
+
+        df = pd.DataFrame(matrix, columns = all_chem_names)
+
+        return df
+
+
+
+    @classmethod
+    def compare_states(cls, state1: np.array, state2: np.array, verbose=False):
+        """
+
+        :param state1:
+        :param state2:
+        :param verbose:
+        :return:
+        """
+        diff = state1 - state2
+        abs_diff = abs(diff)
+        print("Max of unsigned absolute differences: ", np.max(abs_diff))
+
+        rel_diff = diff / state1
+
+        if verbose:
+            print("Relative differences: ", rel_diff)
+
+        print("Max of unsigned relative differences: ", np.max(abs(rel_diff)))
+
+        print("Mean of relative differences: ", np.mean(rel_diff))
+        print("Median of relative differences: ", np.median(rel_diff))
+        print("Standard deviation of relative differences: ", np.std(rel_diff))
+
+        print("np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) : ",
+              np.allclose(state1 , state2, rtol=1e-01, atol=1e-01))
+        print("np.allclose with mid tolerance?  (rtol=1e-03, atol=1e-04) : ",
+              np.allclose(state1 , state2, rtol=1e-03, atol=1e-04))
+        print("np.allclose with tight tolerance?  (rtol=1e-04, atol=1e-06) : ",
+              np.allclose(state1 , state2, rtol=1e-04, atol=1e-06))
+        print("np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) : ",
+              np.allclose(state1 , state2, rtol=1e-05, atol=1e-08))
+
+
+
+
+
+    #########################################################################
+    #                                                                       #
+    #                    SET/MODIFY CONCENTRATIONS (or membranes)           #
+    #                                                                       #
+    #########################################################################
 
     @classmethod
     def set_uniform_concentration(cls, conc: float, species_index=None, species_name=None) -> None:
@@ -510,27 +607,6 @@ class BioSim1D:
             d[name] = conc
 
         return d
-
-
-
-    @classmethod
-    def system_snapshot(cls) -> pd.DataFrame:
-        """
-        Return a snapshot of all the concentrations of all the species,
-        as a Pandas dataframe
-
-        :return:    A Pandas dataframe: each row is a bin,
-                        and each column a chemical species
-        """
-        all_chem_names = cls.chem_data.get_all_names()
-        if cls.system is None:
-            return pd.DataFrame(columns = all_chem_names)   # Empty dataframe
-
-        matrix = cls.system.T
-
-        df = pd.DataFrame(matrix, columns = all_chem_names)
-
-        return df
 
 
 
