@@ -160,6 +160,7 @@ class BioSim1D:
         """
         Replace the System's internal state.
         For details of the data structure, see the class variable "system"
+        IMPORTANT: membranes aren't handled. System length and global_Dx are currently not modified
 
         :param new_state:   Numpy array containing the desired new System's internal state
         :return:
@@ -167,7 +168,7 @@ class BioSim1D:
         cls.system = new_state
         cls.n_species, cls.n_bins = new_state.shape     # Extract from the new state
         assert cls.n_species == cls.chem_data.n_species, \
-            "replace_system(): inconsistency in the number of chemical species vs. the Chemicals object"
+            "replace_system(): inconsistency in the number of chemical species vs. what's stored in the `Chemicals` object"
 
 
 
@@ -648,12 +649,13 @@ class BioSim1D:
     #########################################################################
 
     @classmethod
-    def increase_spacial_resolution(cls, factor:int) -> np.array:
+    def increase_spacial_resolution(cls, factor:int) -> None:
         """
         Increase the spacial resolution of the system by cloning and repeating
-        each bin, by the specified number of times
+        each bin, by the specified number of times.
+        Replace the System's internal state.
 
-        EXAMPLE: if the system is
+        EXAMPLE: if the (2-chemicals) system is
                         [[11. 12. 13.]
                          [ 5. 15. 25.]]
                 and factor=2, then the result will be
@@ -661,14 +663,16 @@ class BioSim1D:
                          [ 5.  5. 15. 15. 25. 25.]]
 
         :param factor:  Number of bins into which to split each bin (replicating their concentration values)
-        :return:        The derived system state
+        :return:        None
         """
         assert type(factor) == int, "The argument `factor` must be an integer"
-        return np.repeat(cls.system, factor, axis=1)
+        new_state = np.repeat(cls.system, factor, axis=1)
+        cls.replace_system(new_state)
+
 
 
     @classmethod
-    def decrease_spacial_resolution(cls, factor:int) -> np.array:
+    def decrease_spacial_resolution(cls, factor:int) -> None:
         """
 
         TODO: eliminate the restriction that the number of bins must be a multiple of factor
@@ -688,17 +692,49 @@ class BioSim1D:
 
         reduced_n_bins = int(cls.n_bins / factor)
         # The result matrix will have the same number of chemical species, but fewer bins
-        result = np.zeros((cls.n_species, reduced_n_bins), dtype=float)
+        new_state = np.zeros((cls.n_species, reduced_n_bins), dtype=float)
 
         for i in range(reduced_n_bins):
             start_col = factor * i      # The start column will initially be 0, and will get incremented by factor
             col_group = cls.system[ : , start_col:start_col+factor] # Extract a submatrix containing the number of columns specified by "factor",
                                                                     # starting with the column specified by start_col
             compressed_col_group = np.sum(col_group, axis=1, keepdims=True) / factor    # Create a single column that is the average of the columns in the group
-            result[:, [i]] = compressed_col_group                                       # Store the newly-computed column of averages in the appropriate place
+            new_state[:, [i]] = compressed_col_group                                       # Store the newly-computed column of averages in the appropriate place
                                                                                         # in the result matrix
+        cls.replace_system(new_state)
 
-        return result
+
+
+    @classmethod
+    def smooth_spacial_resolution(cls) -> None:
+        """
+        EXAMPLE: if the system is
+                        [[10., 20., 30.]
+                         [ 2., 8.,   4.]]
+                then the result will be
+                        [[10., 15., 20., 25., 30.]
+                         [ 2.,  5.,  8.,  6.,  4.]]
+
+        :return:
+        """
+        n_bins = cls.n_bins
+        new_n_bins = n_bins * 2 - 1     # The final number of bins
+        new_state = np.zeros((cls.n_species, new_n_bins), dtype=float)
+
+        for start_col in range(n_bins-1):                           # The start column will be between 0 and (cls.n_bins-2), inclusive
+            col_group = cls.system[ : , start_col:start_col+2]      # Extract a submatrix containing 2 columns,
+                                                                    # starting with the one in position start_col
+            avg_col = np.sum(col_group, axis=1, keepdims=True) / 2. # Create a single column that is the average of the columns in the group
+
+            new_state[:, [2*start_col]] = cls.system[ : , start_col:start_col+1]   # Set one column, from the first column in the group
+            new_state[:, [2*start_col+1]] = avg_col                                # Set the next column with the newly-computed column of averages
+
+
+        new_state[ : , -1:] = cls.system[ : , -1:]                 # Set the last column of result to the last column of cls.system
+
+        cls.replace_system(new_state)
+
+
 
 
 

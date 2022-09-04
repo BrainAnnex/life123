@@ -290,58 +290,71 @@ def test_show_membranes(biomsim1D):
 def test_increase_spacial_resolution(biomsim1D):
     chem_data = chem(names=["A", "B"])
     bio.initialize_system(n_bins=3, chem_data=chem_data)
-    bio.set_species_conc(0, [11., 12., 13.])
-    bio.set_species_conc(1, [5., 15., 25.])
+    bio.set_species_conc(species_index=0, conc_list=[11., 12., 13.])
+    bio.set_species_conc(species_index=1, conc_list=[5., 15., 25.])
     #bio.describe_state()
 
-    result = bio.increase_spacial_resolution(2)
-    #print(result)
-    assert np.allclose(result[0], [11., 11., 12., 12., 13., 13.])
-    assert np.allclose(result[1], [ 5., 5.,  15., 15., 25., 25.])
+    bio.increase_spacial_resolution(2)
+
+    assert np.allclose(bio.lookup_species(species_index=0), [11., 11., 12., 12., 13., 13.])
+    assert np.allclose(bio.lookup_species(species_name="B"), [ 5., 5.,  15., 15., 25., 25.])
+
 
 
 def test_decrease_spacial_resolution(biomsim1D):
     chem_data = chem(names=["A", "B"])
     bio.initialize_system(n_bins=6, chem_data=chem_data)
-    bio.set_species_conc(0, [10., 20., 30., 40., 50., 60.])
-    bio.set_species_conc(1, [ 2., 8.,   5., 15., 4.,   2.])
-    bio.describe_state()
+    bio.set_species_conc(species_index=0, conc_list=[10., 20., 30., 40., 50., 60.])
+    bio.set_species_conc(species_index=1, conc_list=[ 2., 8.,   5., 15., 4.,   2.])
+    original_state = bio.system
 
     # Group by pairs
-    result = bio.decrease_spacial_resolution(2)
-    #print(result)
-    assert np.allclose(result, [[15., 35., 55.],
-                                [ 5., 10.,  3.]])
+    bio.decrease_spacial_resolution(2)
+    assert np.allclose(bio.system, [[15., 35., 55.],
+                                    [ 5., 10.,  3.]])
 
     # Group by triplets
-    result = bio.decrease_spacial_resolution(3)
-    #print(result)
-    assert np.allclose(result, [[20., 50.],
-                                [ 5., 7.]])
+    bio.replace_system(original_state)
+    bio.decrease_spacial_resolution(3)
+    assert np.allclose(bio.system, [[20., 50.],
+                                    [ 5., 7.]])
 
     # Group into just 1 single bin
-    result = bio.decrease_spacial_resolution(6)
-    #print(result)
-    assert np.allclose(result, [[35.],
-                                [ 6.]])
+    bio.replace_system(original_state)
+    bio.decrease_spacial_resolution(6)
+    assert np.allclose(bio.system, [[35.],
+                                    [ 6.]])
+
 
 
 def test_varying_spacial_resolution(biomsim1D):
     chem_data = chem(names=["A", "B"])
     bio.initialize_system(n_bins=3, chem_data=chem_data)
-    bio.set_species_conc(0, [11., 12., 13.])
-    bio.set_species_conc(1, [5., 15., 25.])
+    bio.set_species_conc(species_name="A", conc_list=[11., 12., 13.])
+    bio.set_species_conc(species_name="B", conc_list=[5., 15., 25.])
 
     # First, increase the spacial resolution, after saving the original matrix
     original_state = bio.system
-    result = bio.increase_spacial_resolution(3)
-    #print(result)
-    bio.replace_system(result)
+    bio.increase_spacial_resolution(3)
 
     # Then, decrease the spacial resolution, by the same factor
-    result = bio.decrease_spacial_resolution(3)
-    #print(result)
-    assert np.allclose(result, original_state)
+    bio.decrease_spacial_resolution(3)
+    assert np.allclose(bio.system, original_state)
+
+
+
+def test_smooth_spacial_resolution(biomsim1D):
+    chem_data = chem(names=["A", "B"])
+    bio.initialize_system(n_bins=3, chem_data=chem_data)
+    bio.set_species_conc(species_name="A", conc_list=[10., 20., 30.])
+    bio.set_species_conc(species_name="B", conc_list=[2.,   8., 4.])
+
+    bio.smooth_spacial_resolution()
+    expected = np.array([[10., 15., 20., 25., 30.],
+                         [ 2.,  5.,  8.,  6.,  4.]])
+    assert np.allclose(bio.system, expected)
+    assert bio.n_bins == 5
+    assert bio.n_species == 2
 
 
 
