@@ -714,8 +714,8 @@ def manual_test_compare_states(biomsim1D):     # MANUAL TEST
     Median of relative differences:  -0.006666666666666643
     Standard deviation of relative differences:  0.014550889837454275
     np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
-    np.allclose with mid tolerance?  (rtol=1e-03, atol=1e-04) :  False
-    np.allclose with tight tolerance?  (rtol=1e-04, atol=1e-06) :  False
+    np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) :  False
+    np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) :  False
     np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  False
     """
 
@@ -736,8 +736,8 @@ def manual_test_compare_states(biomsim1D):     # MANUAL TEST
     Median of relative differences:  -0.006666666666666655
     Standard deviation of relative differences:  0.014550889837454246
     np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
-    np.allclose with mid tolerance?  (rtol=1e-03, atol=1e-04) :  False
-    np.allclose with tight tolerance?  (rtol=1e-04, atol=1e-06) :  False
+    np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) :  False
+    np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) :  False
     np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  False
     """
 
@@ -758,7 +758,7 @@ def manual_test_compare_states(biomsim1D):     # MANUAL TEST
     Median of relative differences:  -2.166666666632011e-06
     Standard deviation of relative differences:  5.82651718172416e-06
     np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
-    np.allclose with mid tolerance?  (rtol=1e-03, atol=1e-04) :  True
-    np.allclose with tight tolerance?  (rtol=1e-04, atol=1e-06) :  True
+    np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) :  True
+    np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) :  True
     np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  True
     """

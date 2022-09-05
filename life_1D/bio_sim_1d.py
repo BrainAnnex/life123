@@ -252,10 +252,10 @@ class BioSim1D:
 
         print("np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) : ",
               np.allclose(state1 , state2, rtol=1e-01, atol=1e-01))
-        print("np.allclose with mid tolerance?  (rtol=1e-03, atol=1e-04) : ",
-              np.allclose(state1 , state2, rtol=1e-03, atol=1e-04))
-        print("np.allclose with tight tolerance?  (rtol=1e-04, atol=1e-06) : ",
-              np.allclose(state1 , state2, rtol=1e-04, atol=1e-06))
+        print("np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) : ",
+              np.allclose(state1 , state2, rtol=1e-02, atol=1e-03))
+        print("np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) : ",
+              np.allclose(state1 , state2, rtol=1e-03, atol=1e-05))
         print("np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) : ",
               np.allclose(state1 , state2, rtol=1e-05, atol=1e-08))
 

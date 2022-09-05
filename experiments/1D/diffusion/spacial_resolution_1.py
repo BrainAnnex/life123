@@ -13,9 +13,9 @@
 # ---
 
 # %% [markdown]
-# # Change of delta_x in diffusion computations
+# # Change of delta_x (spacial resolution) in diffusion computations
 #
-# LAST REVISED: Sep. 3, 2022
+# LAST REVISED: Sep. 4, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -56,8 +56,10 @@ lineplot_pars = {"range": [0, 150],
                 "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
                 }
 
+# %% [markdown]
+# ## Prepare the initial system
+
 # %%
-# Prepare the initial system
 chem_data = chem(names=["A"], diffusion_rates=[0.1])
 
 conc_list=[10,13,17,21,25,28,30,38,42,55,65,47,35,32,27,23,20,17,14,8,3,10,16,18,
@@ -104,7 +106,7 @@ bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_c
 bio.describe_state(concise=True)
 
 # %% [markdown]
-# # Populate the data set with more bins, using interpolated concentration values
+# ### Populate the data set with more bins, using interpolated concentration values
 # ### IMPORTANT: we're **NOT** changing spacial resolution here; we're just creating a less ragged dataset, as *our initial system state*
 
 # %%
@@ -115,10 +117,11 @@ bio.describe_state()
 bio.n_bins
 
 # %% [markdown]
-# #### This system setup will be our starting point in exploring diffusion using different spacial resolutions
+# # The STARTING POINT
+# ### This system setup will be our starting point in exploring diffusion using different spacial resolutions
 
 # %%
-original_state = bio.save_system()    # Save a copy of the system state, to do multiple runs starting from it
+original_state = bio.save_system()    # SAVE a copy of the system state, to do multiple runs starting from it
 
 # %%
 # Line plot
@@ -140,19 +143,18 @@ fig.data[0].ygap=4
 fig.show()
 
 # %% [markdown]
-# # Diffusions with dx = 1
+# # Initial Diffusions with delta_x = 1
 
 # %%
-bio.describe_state(concise=True)
+bio.describe_state(concise=True)   # Our initial state
 
 # %%
 bio.diffuse(total_duration=7, time_step=0.0005)
 bio.describe_state(concise=True)
 
 # %%
-# Save the concentrations of the single species; 
-# this is the result of diffusion with delta_x of 1 (the default value)
-diffuse_dx_1 = bio.lookup_species(species_name="A")
+# SAVE the above system data (a matrix of dimension n_species x n_bins):  this is the result of diffusion with delta_x = 1
+diffuse_dx_1 = bio.system
 
 # %%
 # Line plot
@@ -163,11 +165,11 @@ fig = px.line(data_frame=bio.system_snapshot(), y=["A"],
 fig.show()
 
 # %% [markdown]
-# ### Enough time has proceeded some smoothing, and non-puny changes in most values - but still nowhere near equilibrium
+# ### Enough time has proceeded to result in some smoothing, and non-puny changes in most values - but still nowhere near equilibrium
 
 # %% [markdown]
 # # Now restore the system to its initial (pre-diffusion) state
-# ### and then perform a diffusion over the same time span, but with double the spacial resolution
+# ### and then perform a diffusion over the same time span, but with DOUBLE the spacial resolution
 # #### delta_x will be be 1/2 instead of the original default 1
 
 # %%
@@ -193,11 +195,86 @@ bio.decrease_spacial_resolution(2)
 bio.describe_state(concise=True)
 
 # %%
-# Save the concentrations of the single species; 
-# this is the result of diffusion with delta_x of 1/2
-diffuse_dx_1_2 = bio.lookup_species(species_name="A")
+# SAVE the above system data: this is the result of diffusion with delta_x of 1/2
+diffuse_dx_1_2 = bio.system
+
+# %% [markdown]
+# ### Compare the last 2 runs (with dx=1 and dx=1/2)
 
 # %%
 bio.compare_states(diffuse_dx_1 , diffuse_dx_1_2, verbose=True)
+
+# %% [markdown]
+# # Again, restore the system to its initial (pre-diffusion) state
+# ### and then perform a diffusion over the same time span, but with QUADRUPLE the spacial resolution
+# ### delta_x will be be 1/4 instead of the original default 1
+
+# %%
+bio.restore_system(original_state)
+
+# %%
+bio.describe_state()
+
+# %%
+# Quadruple the spacial resolution
+bio.increase_spacial_resolution(4)
+bio.describe_state()
+
+# %%
+# Now repeat the idential diffusion process as before, but with 1/4 the delta_x
+bio.diffuse(total_duration=7, time_step=0.0005, delta_x=0.25)
+
+# %%
+# Finally, reduce the resolution by a factor 4, to return to the original number of bins
+bio.decrease_spacial_resolution(4)
+bio.describe_state(concise=True)
+
+# %%
+# SAVE the above system data: this is the result of diffusion with delta_x of 1/4
+diffuse_dx_1_4 = bio.system
+
+# %% [markdown]
+# ### Compare the latest 2 runs (with dx=1/2 and dx=1/4)
+
+# %%
+bio.compare_states(diffuse_dx_1_2 , diffuse_dx_1_4)
+
+# %% [markdown]
+# ### Notice how the discrepancies have gone down
+
+# %% [markdown]
+# # One last time, restore the system to its initial (pre-diffusion) state
+# ### and then perform a diffusion over the same time span, but with 10x the spacial resolution
+# ### delta_x will be be 1/10 instead of the original default 1
+
+# %%
+bio.restore_system(original_state)
+
+# Increase by a factor 10 the spacial resolution
+bio.increase_spacial_resolution(10)
+bio.n_bins
+
+# %%
+# Now repeat the idential diffusion process as before, but with 1/10 the delta_x
+bio.diffuse(total_duration=7, time_step=0.0005, delta_x=0.1)
+
+# %%
+# Finally, reduce the resolution by a factor 10, to return to the original number of bins
+bio.decrease_spacial_resolution(10)
+bio.describe_state(concise=True)
+
+# %%
+# SAVE the above system data: this is the result of diffusion with delta_x of 1/10
+diffuse_dx_1_10 = bio.system
+
+# %% [markdown]
+# ### Again, compare the latest 2 runs (with dx=1/4 and dx=1/10)
+
+# %%
+bio.compare_states(diffuse_dx_1_4 , diffuse_dx_1_10)
+
+# %% [markdown]
+# ### Notice how the discrepancies have gone down even more
+# ### This matches expectations that we're getting closer and closer to a "true" (very high precision) value, as we keep increasing the spacial resolution
 
 # %%
