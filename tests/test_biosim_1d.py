@@ -128,6 +128,14 @@ def test_inject_conc_to_bin(biomsim1D):
 
 
 
+def test_inject_sine_conc(biomsim1D):
+    chem_data = chem(names=["A"])
+    bio.system_length = 1.
+    bio.initialize_system(n_bins=3, chem_data=chem_data)
+    bio.inject_sine_conc(species_name="A", amplitude=1, bias=0, frequency=2, phase=-90, resolution=2)
+
+
+
 
 ########  DIMENSION-RELATED  ################
 

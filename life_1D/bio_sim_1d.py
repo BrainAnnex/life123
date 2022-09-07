@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import math
 from typing import Union, List, Tuple
 from modules.movies.movies import Movie
 from modules.reactions.reactions import Reactions
@@ -80,7 +81,7 @@ class BioSim1D:
 
     #########################################################################
     #                                                                       #
-    #                               SYSTEM-WIDE                             #
+    #                           SYSTEM-WIDE                                 #
     #                                                                       #
     #########################################################################
 
@@ -265,7 +266,7 @@ class BioSim1D:
 
     #########################################################################
     #                                                                       #
-    #                    SET/MODIFY CONCENTRATIONS (or membranes)           #
+    #                SET/MODIFY CONCENTRATIONS (or membranes)               #
     #                                                                       #
     #########################################################################
 
@@ -296,7 +297,6 @@ class BioSim1D:
             for bin_address in cls.bins_with_membranes():
                 if cls.membranes[bin_address]:
                     cls.system_B[species_index, bin_address] = conc
-
 
 
 
@@ -381,7 +381,7 @@ class BioSim1D:
     @classmethod
     def inject_conc_to_bin(cls, bin_address: int, species_index: int, delta_conc: float, zero_clip = False) -> None:
         """
-        Add the requested concentration to the cell with the given index, for the specified species
+        Add the requested concentration to the cell with the given address, for the specified species
 
         :param bin_address:     The zero-based bin number of the desired cell
         :param species_index:   Zero-based index to identify a specific chemical species
@@ -400,6 +400,49 @@ class BioSim1D:
 
         # Normal scenario, not leading to negative values for the final concentration
         cls.system[species_index, bin_address] += delta_conc
+
+
+
+    @classmethod
+    def inject_sine_conc(cls, species_name, amplitude, bias, frequency, phase=0, resolution=None, replace=False) -> None:
+        """
+
+        :param species_name:
+        :param amplitude:
+        :param bias:            Amount to be added to all values (akin to "DC bias" in electrical circuits)
+        :param frequency:
+        :param phase:           In degrees.  EXAMPLE: 180 to flip the Sine curve
+        :param resolution:
+        :param replace:
+        :return:                None
+        """
+        if cls.system_length is None:
+            length = cls.n_bins
+        else:
+            length = cls.system_length
+
+        period = length / frequency
+        print("period: ", period)
+
+        if resolution is None:
+            resolution = cls.n_bins
+
+        dx = length / resolution
+        #print("dx: ", dx)
+        phase_radians = phase * math.pi / 180
+
+        B = 2*math.pi / period
+        C = phase_radians / B
+
+        print("B: ", B)
+        print("C: ", C)
+
+        return
+        for i in range(resolution):
+            x = i*dx
+            c = amplitude * math.sin(B * (x - C)) + bias
+            print(c)
+
 
 
 
