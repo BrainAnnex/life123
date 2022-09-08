@@ -381,7 +381,7 @@ class BioSim1D:
     @classmethod
     def inject_conc_to_bin(cls, bin_address: int, species_index: int, delta_conc: float, zero_clip = False) -> None:
         """
-        Add the requested concentration to the cell with the given address, for the specified species
+        Add the requested concentration to the cell with the given address, for the specified chem species
 
         :param bin_address:     The zero-based bin number of the desired cell
         :param species_index:   Zero-based index to identify a specific chemical species
@@ -395,6 +395,7 @@ class BioSim1D:
         if (cls.system[species_index, bin_address] + delta_conc) < 0. :
             if zero_clip:
                 cls.system[species_index, bin_address] = 0
+                return
             else:
                 raise Exception("The requested concentration change would result in a negative final value")
 
@@ -404,44 +405,41 @@ class BioSim1D:
 
 
     @classmethod
-    def inject_sine_conc(cls, species_name, amplitude, bias, frequency, phase=0, resolution=None, replace=False) -> None:
+    def inject_sine_conc(cls, species_name, amplitude, bias, frequency, phase=0, zero_clip = False) -> None:
         """
+        Add to the concentrations of the specified chem species a sinusoidal signal across all bins
 
-        :param species_name:
-        :param amplitude:
+        Note:   A sine wave of the form   A sin(B x - C)
+                has an amplitude of A, a period of 2Pi/B and a right phase shift of C (in radians)
+
+        In Mathematica:  Plot[Sin[B x - C] /. {B -> 2 Pi, C -> 0} , {x, 0, 1}, GridLines -> Automatic]
+
+        :param species_name:    The name of the chemical species whose concentration we're modifying
+        :param amplitude:       Amplitude of the Sine wave.  Note that peak-to-peak values are double the amplitude
         :param bias:            Amount to be added to all values (akin to "DC bias" in electrical circuits)
-        :param frequency:
-        :param phase:           In degrees.  EXAMPLE: 180 to flip the Sine curve
-        :param resolution:
-        :param replace:
+        :param frequency:       Number of waves along the length of the system
+        :param phase:           In degrees: phase shift to the RIGHT.  EXAMPLE: 180 to flip the Sine curve
+        :param zero_clip:       If True, any requested increment causing a concentration dip below zero,
+                                will make the concentration zero;
+                                otherwise, an Exception will be raised
         :return:                None
         """
-        if cls.system_length is None:
-            length = cls.n_bins
-        else:
-            length = cls.system_length
+        assert cls.chem_data, f"BioSim1D.inject_sine_conc(): must first call initialize_system()"
+        species_index = cls.chem_data.get_index(species_name)
 
-        period = length / frequency
-        print("period: ", period)
+        period = cls.n_bins / frequency
+        #print("period: ", period)
 
-        if resolution is None:
-            resolution = cls.n_bins
-
-        dx = length / resolution
-        #print("dx: ", dx)
         phase_radians = phase * math.pi / 180
 
         B = 2*math.pi / period
-        C = phase_radians / B
+        #print("B: ", B)
 
-        print("B: ", B)
-        print("C: ", C)
-
-        return
-        for i in range(resolution):
-            x = i*dx
-            c = amplitude * math.sin(B * (x - C)) + bias
-            print(c)
+        for x in range(cls.n_bins):
+            conc = amplitude * math.sin(B*x - phase_radians) + bias
+            #print(conc)
+            cls.inject_conc_to_bin(bin_address = x, species_index = species_index,
+                                   delta_conc = conc, zero_clip = zero_clip)
 
 
 

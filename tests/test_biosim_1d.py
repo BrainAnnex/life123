@@ -130,9 +130,76 @@ def test_inject_conc_to_bin(biomsim1D):
 
 def test_inject_sine_conc(biomsim1D):
     chem_data = chem(names=["A"])
-    bio.system_length = 1.
-    bio.initialize_system(n_bins=3, chem_data=chem_data)
-    bio.inject_sine_conc(species_name="A", amplitude=1, bias=0, frequency=2, phase=-90, resolution=2)
+    bio.initialize_system(n_bins=8, chem_data=chem_data)
+
+    bio.inject_sine_conc(species_name="A", amplitude=5, bias=20, frequency=1, phase=0)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [20., 23.53553391, 25., 23.53553391, 20., 16.46446609, 15., 16.46446609])
+
+    # Adding a 2nd wave in opposite phase will erase everything except for the biases
+    bio.inject_sine_conc(species_name="A", amplitude=5, bias=10, frequency=1, phase=180)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [30., 30., 30., 30., 30., 30., 30., 30.])
+
+
+    bio.set_uniform_concentration(conc=0, species_name="A")     # RESET concentrations
+
+    bio.inject_sine_conc(species_name="A", amplitude=5, bias=20, frequency=1, phase=90)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [15., 16.46446609, 20., 23.53553391, 25.,  23.53553391, 20., 16.46446609])
+
+    # Adding a 2nd wave in opposite phase will erase everything except for the biases
+    bio.inject_sine_conc(species_name="A", amplitude=5, bias=10, frequency=1, phase=-90)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [30., 30., 30., 30., 30., 30., 30., 30.])
+
+
+    bio.set_uniform_concentration(conc=0, species_name="A")     # RESET concentrations
+
+    with pytest.raises(Exception):
+        bio.inject_sine_conc(species_name="A", amplitude=10, bias=0, frequency=1/2, phase=180)  # Would lead to negative values
+
+
+    bio.set_uniform_concentration(conc=0, species_name="A")     # RESET concentrations
+
+    bio.inject_sine_conc(species_name="A", amplitude=10, bias=0, frequency=1/2, phase=0)
+
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [0., 3.82683432, 7.07106781, 9.23879533, 10., 9.23879533, 7.07106781, 3.82683432])
+
+    # Adding a 2nd wave in opposite phase will erase everything except for the biases
+    bio.inject_sine_conc(species_name="A", amplitude=10, bias=30, frequency=1/2, phase=180)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [30., 30., 30., 30., 30., 30., 30., 30.])
+
+
+    bio.set_uniform_concentration(conc=0, species_name="A")     # RESET concentrations
+    bio.inject_sine_conc(species_name="A", amplitude=10, bias=30, frequency=2, phase=0)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [30., 40., 30., 20., 30., 40., 30., 20.])
+
+    bio.set_uniform_concentration(conc=0, species_name="A")     # RESET concentrations
+    bio.inject_sine_conc(species_name="A", amplitude=10, bias=30, frequency=2, phase=-90)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [40., 30., 20., 30., 40., 30., 20., 30.])
+
+    bio.set_uniform_concentration(conc=0, species_name="A")     # RESET concentrations
+    bio.inject_sine_conc(species_name="A", amplitude=10, bias=30, frequency=2, phase=90)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [20., 30., 40., 30., 20., 30., 40., 30.])
+
+    bio.set_uniform_concentration(conc=0, species_name="A")     # RESET concentrations
+    bio.inject_sine_conc(species_name="A", amplitude=10, bias=0, frequency=2, phase=0, zero_clip=True)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [0., 10., 0., 0., 0., 10., 0., 0.])
+
+    #print(bio.lookup_species(species_name="A"))
+
+    # Curves could be visualized as follows:
+    #import plotly.express as px
+    #fig = px.line(y=bio.lookup_species(species_name="A"))
+    #fig.show()
+
 
 
 
