@@ -1,5 +1,7 @@
 import pytest
 import numpy as np
+import pandas as pd
+from pandas.testing import assert_frame_equal
 from life_1D.bio_sim_1d import BioSim1D as bio
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
@@ -200,6 +202,35 @@ def test_inject_sine_conc(biomsim1D):
     #fig = px.line(y=bio.lookup_species(species_name="A"))
     #fig.show()
 
+
+
+def test_frequency_analysis(biomsim1D):
+    chem_data = chem(names=["A"])
+    bio.initialize_system(n_bins=101, chem_data=chem_data)
+
+    bio.inject_sine_conc(species_name="A", frequency=2, amplitude=1, bias=3)
+
+    result = bio.frequency_analysis(species_name="A")
+
+    expected = pd.DataFrame({"Frequency": [0,2], "Relative Amplitude": [3.0,1.0]})
+    assert_frame_equal(result, expected, check_dtype=False)
+
+    bio.inject_sine_conc(species_name="A", frequency=4, amplitude=0.5)
+    bio.inject_sine_conc(species_name="A", frequency=8, amplitude=0.2)
+
+    #import plotly.express as px
+    #fig = px.line(y=bio.lookup_species(species_name="A"))
+    #fig.show()
+
+    result = bio.frequency_analysis(species_name="A")
+    #print(result)
+    expected = pd.DataFrame({"Frequency": [0,2,4,8], "Relative Amplitude": [3.0,1.0,0.5,0.2]})
+    assert_frame_equal(result, expected, check_dtype=False)
+
+    result = bio.frequency_analysis(species_name="A", n_largest=3)  # ditch the smallest amplitude
+    #print(result)
+    expected = pd.DataFrame({"Frequency": [0,2,4], "Relative Amplitude": [3.0,1.0,0.5]})
+    assert_frame_equal(result, expected, check_dtype=False)
 
 
 

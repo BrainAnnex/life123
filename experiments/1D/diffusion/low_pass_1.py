@@ -17,7 +17,7 @@
 # ### Ultimately, the only frequency passing thru is zero! (i.e., uniform concentration at equilibrium)
 # #### We explore how an initial concentration with 3 different sinusoidal frequencies fares in the course of a diffusion to equilibrium
 #
-# LAST REVISED: Sep. 8, 2022
+# LAST REVISED: Sep. 11, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -63,7 +63,8 @@ chem_data = chem(names=["A"], diffusion_rates=[0.5])
 bio.initialize_system(n_bins=500, chem_data=chem_data)
 
 # %% [markdown]
-# ## Start with a sinusoidal concentration, with exactly 1 cycle over the length of the system
+# ## PART 1 (of 3) of Initial Preparation -
+# ### Start with a sinusoidal concentration, with exactly 1 cycle over the length of the system
 # #### (notice the bias value of 30; it will be seen at the eventual equilibrium, at the end)
 
 # %%
@@ -103,6 +104,7 @@ bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, header=f"
 bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # %% [markdown]
+# ## PART 2 (of 3) of Initial Preparation -
 # ### Now add a higher-frequency component (10 cycles over the length of the system)
 
 # %%
@@ -127,8 +129,9 @@ fig.data[0].ygap=0
 fig.show()
 
 # %% [markdown]
-# # To complete the preparation of a 3-frequency component initial state, add another, even higher, frequency component 
-# ### (40 cycles over the length of the system)
+# ## PART 3 (of 3) of Initial Preparation -
+# ### To complete the preparation of a 3-frequency component initial state, add another, even higher, frequency component 
+# #### (40 cycles over the length of the system)
 
 # %%
 bio.inject_sine_conc(species_name="A", amplitude=2, bias=0, frequency=40)
@@ -152,6 +155,8 @@ fig.data[0].ygap=0
 fig.show()
 
 # %%
+# Take a look at the frequency domain of the concentration values
+bio.frequency_analysis(species_name="A")
 
 # %% [markdown]
 # # Start the simulation steps
@@ -170,6 +175,15 @@ fig.show()
 # ### After the initial diffusion (at t=10), the highest frequency is largely gone
 
 # %%
+# Take a look at the frequency domain of the concentration values
+bio.frequency_analysis(species_name="A")
+
+# %%
+# A lot of tiny frequency components are now present; take just the largest 4
+bio.frequency_analysis(species_name="A", n_largest=4)
+
+# %%
+# Advance the diffusion
 bio.diffuse(total_duration=20, time_step=0.1)
 
 # Show as a line plot
@@ -182,8 +196,13 @@ fig.show()
 # %% [markdown]
 # ### After additional diffusion (at t=30), the highest frequency (40 cycles) can no longer be visually detected.
 # #### The 2 lower frequency are still recognizable
+# #### The 40-cycle frequency is not even among the largest of the tiny values in the spurious frequencies of the distorted signal
 
 # %%
+bio.frequency_analysis(species_name="A", n_largest=10)
+
+# %%
+# Advance the diffusion
 bio.diffuse(total_duration=90, time_step=0.1)
 
 # Show as a line plot
@@ -197,6 +216,10 @@ fig.show()
 # ### By now (at t=120), even the middle frequency (10 cycles) is notably attenuated
 
 # %%
+bio.frequency_analysis(species_name="A", n_largest=3)
+
+# %%
+# Advance the diffusion
 bio.diffuse(total_duration=100, time_step=0.1)
 
 # Show as a line plot
@@ -210,6 +233,10 @@ fig.show()
 # ### With still more diffusion (at t=220), the middle frequency is only weakly visible
 
 # %%
+bio.frequency_analysis(species_name="A", n_largest=3)
+
+# %%
+# Advance the diffusion
 bio.diffuse(total_duration=180, time_step=0.1)
 
 # Show as a line plot
@@ -223,6 +250,10 @@ fig.show()
 # ### By t=400, the middle frequency is barely noticeable.  The low frequency (1 cycle) is still prominent
 
 # %%
+bio.frequency_analysis(species_name="A", n_largest=3)
+
+# %%
+# Advance the diffusion
 bio.diffuse(total_duration=600, time_step=0.3)
 
 # Show as a line plot
@@ -233,9 +264,13 @@ fig = px.line(data_frame=bio.system_snapshot(), y=["A"],
 fig.show()
 
 # %% [markdown]
-# ### By t=1,000 there's no visual indication of the middle frequency
+# ### By t=1,000 there's no visual indication of the middle frequency (f=10)
 
 # %%
+bio.frequency_analysis(species_name="A", n_largest=10)
+
+# %%
+# Advance the diffusion
 bio.diffuse(total_duration=8000, time_step=.5)
 
 # Show as a line plot
@@ -249,6 +284,13 @@ fig.show()
 # ### By t=9,000 even the lowest frequency has lost a major part of its sinusoidal shape
 
 # %%
+bio.frequency_analysis(species_name="A", n_largest=2)
+
+# %% [markdown]
+# Note how the zero-frequency is now gaining over the baseline 1-cycle signal
+
+# %%
+# Advance the diffusion
 bio.diffuse(total_duration=91000, time_step=.5)
 
 # Show as a line plot
@@ -258,10 +300,14 @@ fig = px.line(data_frame=bio.system_snapshot(), y=["A"],
           labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
 fig.show()
 
+# %%
+bio.frequency_analysis(species_name="A", n_largest=2)
+
 # %% [markdown]
 # ### By t=100,000 the system is clearly approaching equilibrium
 
 # %%
+# Advance the diffusion
 bio.diffuse(total_duration=100000, time_step=.6)
 
 # Show as a line plot
@@ -275,3 +321,4 @@ fig.show()
 # ### By t=200,000 the system is getting close to equilibrium about the value 30, which was the original "bias" (unvarying component) of the baseline frequency (the higher-frequency signals didn't have any bias)
 
 # %%
+bio.frequency_analysis(species_name="A", n_largest=2)

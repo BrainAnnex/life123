@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import math
+from scipy.fft import rfft, rfftfreq    # Fast Fourier Transforms to extract frequency components
 from typing import Union, List, Tuple
 from modules.movies.movies import Movie
 from modules.reactions.reactions import Reactions
@@ -405,7 +406,7 @@ class BioSim1D:
 
 
     @classmethod
-    def inject_sine_conc(cls, species_name, amplitude, bias, frequency, phase=0, zero_clip = False) -> None:
+    def inject_sine_conc(cls, species_name, frequency, amplitude, bias=0, phase=0, zero_clip = False) -> None:
         """
         Add to the concentrations of the specified chem species a sinusoidal signal across all bins
 
@@ -415,9 +416,9 @@ class BioSim1D:
         In Mathematica:  Plot[Sin[B x - C] /. {B -> 2 Pi, C -> 0} , {x, 0, 1}, GridLines -> Automatic]
 
         :param species_name:    The name of the chemical species whose concentration we're modifying
+        :param frequency:       Number of waves along the length of the system
         :param amplitude:       Amplitude of the Sine wave.  Note that peak-to-peak values are double the amplitude
         :param bias:            Amount to be added to all values (akin to "DC bias" in electrical circuits)
-        :param frequency:       Number of waves along the length of the system
         :param phase:           In degrees: phase shift to the RIGHT.  EXAMPLE: 180 to flip the Sine curve
         :param zero_clip:       If True, any requested increment causing a concentration dip below zero,
                                 will make the concentration zero;
@@ -440,6 +441,85 @@ class BioSim1D:
             #print(conc)
             cls.inject_conc_to_bin(bin_address = x, species_index = species_index,
                                    delta_conc = conc, zero_clip = zero_clip)
+
+
+
+    @classmethod
+    def frequency_analysis(cls, species_name: str, threshold = 0.001, n_largest = None) -> pd.DataFrame:
+        """
+        Return the individual frequencies, and their relative amplitudes,
+        in the concentration values of the specified chemical species.
+        A Discrete Fourier Transform is used for the computation.
+
+        :param species_name:    The name of the chemical whose concentration we want to analyze
+        :param threshold:       Minimum amplitudes of the frequency components to be considered non-zero
+                                    (NOTE: these are the raw values returned by the DFT - not the normalized ones.)
+        :param n_largest:       If specified, only the rows with the given number of largest amplitudes gets returned
+                                    (if there are fewer rows to start with, they all get returned)
+
+        :return:                A Pandas dataframe with 2 columns, "Frequency" and "Relative Amplitude";
+                                    amplitudes are relative the the smallest nonzero frequency (which is taken to be 1.0)
+                                    EXAMPLE:
+                                                   Frequency  Relative Amplitude
+                                                0        0.0                 3.0
+                                                1        2.0                 1.0
+                                                2        4.0                 0.5
+                                                3        8.0                 0.2
+        """
+
+        conc_samples = cls.lookup_species(species_name=species_name)
+
+        #import plotly.express as px
+        #fig = px.line(y=conc_samples)
+        #fig.show()
+
+        # Perform a DFT, to extract the frequency components
+        # The size of the computed arrays xf and yf is  (cls.n_bins/2 + 1) if cls.n_bins is even
+        # or (cls.n_bins + 1) /2 if cls.n_bins is odd
+        xf = rfftfreq(cls.n_bins, 1 / cls.n_bins)
+        yf = rfft(conc_samples)
+        magnitude_yf = np.abs(yf)   # The magnitudes of the complex numbers in yf
+
+        #print(xf)
+        #print(magnitude_yf)
+
+        #print("Size of returned array: ", len(xf))
+
+        #fig = px.line(x=xf, y=magnitude_yf)
+        #fig.show()
+
+        above_threshold = magnitude_yf > threshold  # Numpy array of booleans,
+                                                    # indicating the positions in magnitude_yf array
+                                                    # where the value exceeds the given threshold
+        #print(above_threshold)
+
+        amps = magnitude_yf[above_threshold]        # Above-threshold amplitudes
+        freqs = xf[above_threshold]                 # Frequencies corresponding to above-threshold amplitudes
+
+        #print(freqs)
+        #print(amps)
+
+        if np.allclose(freqs[0], 0.):
+            # If there's a "DC bias" (zero-frequency component)
+            amps[0] /= 2.   # Amplitudes of the DC components show up differently;
+                            # see https://www.sjsu.edu/people/burford.furman/docs/me120/FFT_tutorial_NI.pdf
+            baseline_amp = amps[1]  # Use the first non-zero frequency as the baseline value
+        else:
+            baseline_amp = amps[0]  # Use the first non-zero frequency as the baseline value
+
+        scaled_amps = amps / baseline_amp   # Amplitudes scaled by the amplitude
+                                            #   of the first non-zero frequency
+
+        # Assemble and return as a Pandas dataframe the frequencies with amplitudes above the threshold,
+        #   together with their relative amplitudes
+        df = pd.DataFrame()
+        df['Frequency'] = freqs
+        df['Relative Amplitude'] = scaled_amps
+
+        if (n_largest is not None) and (n_largest < len(df)):
+            return df.nlargest(n=n_largest, columns="Relative Amplitude")
+
+        return df
 
 
 
