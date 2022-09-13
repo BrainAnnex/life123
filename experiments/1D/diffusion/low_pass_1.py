@@ -17,7 +17,13 @@
 # ### Ultimately, the only frequency passing thru is zero! (i.e., uniform concentration at equilibrium)
 # #### We explore how an initial concentration with 3 different sinusoidal frequencies fares in the course of a diffusion to equilibrium
 #
-# LAST REVISED: Sep. 11, 2022
+# **The initial system state will consist of:**  
+#     0 - A constant baseline of value 30  
+#     1 - A sine wave of frequency 1 (1 cycle across the system's length), of amplitude 10  
+#     2 - A sine wave of frequency 10 , of amplitude 4  
+#     3 - A sine wave of frequency 40 , of amplitude 2  
+#
+# LAST REVISED: Sep. 12, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -159,7 +165,7 @@ fig.show()
 bio.frequency_analysis(species_name="A")
 
 # %% [markdown]
-# # Start the simulation steps
+# # Start the diffusion steps
 
 # %%
 bio.diffuse(total_duration=10, time_step=0.1)

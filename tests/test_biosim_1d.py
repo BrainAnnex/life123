@@ -206,7 +206,7 @@ def test_inject_sine_conc(biomsim1D):
 
 def test_frequency_analysis(biomsim1D):
     chem_data = chem(names=["A"])
-    bio.initialize_system(n_bins=101, chem_data=chem_data)
+    bio.initialize_system(n_bins=100, chem_data=chem_data)
 
     bio.inject_sine_conc(species_name="A", frequency=2, amplitude=1, bias=3)
 

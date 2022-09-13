@@ -4,9 +4,13 @@ import pandas as pd
 class Movie:
     """
     A "movie" is a list of snapshots
-    of the state of the entire system, or of parts thereof,
+    of the state of the entire system, or of parts thereof, or any values that the user wants to preserve,
     either taken at different times,
     or resulting from varying some parameter(s)
+
+    2 modalities are allowed (to be picked at object instantiation):
+        A - a "tabular" mode.  Straightforward and convenient; it lends itself to handy Pandas dataframes
+        B - a "non-tabular" mode.  More complex: to preserve data in arbitrary formats
 
 
     MAIN DATA STRUCTURE for "tabular" mode:
@@ -55,7 +59,7 @@ class Movie:
 
 
 
-    def append(self, pars, data_snapshot, caption = "") -> None:
+    def store(self, pars, data_snapshot, caption = "") -> None:
         """
         Save up the given data snapshot
 

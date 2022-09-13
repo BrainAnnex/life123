@@ -1443,21 +1443,32 @@ class BioSim1D:
 
 
     @classmethod
-    def save_snapshot(cls, data_snapshot, caption = "") -> None:
+    def save_snapshot(cls, data_snapshot: dict, caption = "") -> None:
         """
+        Preserve some data value (passed as dictionary) in the history, to be attached to the
+        current System Time.
 
-        :param data_snapshot:
-        :param caption:
-        :return:
+        EXAMPLE:  save_snapshot(data_snapshot = {"concentration_A": 12.5, "concentration_B": 3.7},
+                                caption="Just prior to infusion")
+
+        IMPORTANT: if the data is not immutable, then it ought to be cloned first,
+                   to preserve it from possible later modifications
+
+        :param data_snapshot:   A dictionary of data to preserve for later use
+        :param caption:         Option caption to attach to this preserved data
+        :return:                None
         """
-        cls.history.append(pars=cls.system_time,
+        cls.history.store(pars=cls.system_time,
                            data_snapshot = data_snapshot, caption=caption)
+
 
 
     @classmethod
     def get_history(cls):
         """
+        Retrieve and return a Pandas dataframe with the system history that had been saved
+        using save_snapshot()
 
-        :return:
+        :return:    a Pandas dataframe
         """
         return cls.history.get()
