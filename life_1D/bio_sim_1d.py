@@ -9,74 +9,86 @@ from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
 
+
 class BioSim1D:
     """
-    Note: for at least the time being, this class does NOT get instantiated
+    1D simulations of diffusion and reactions, 
+    with an early partial implementation of membranes
     """
 
-    #####################
-    #  Class variables  #
-    #####################
 
-    verbose = False
+    def __init__(self, n_bins=None, chem_data=None, reactions=None):
+        """
 
-    n_bins = 0          # Number of spacial compartments (bins) used in the simulation
+        :param n_bins:      The number of compartments (bins) to use in the simulation
+        :param chem_data:   (OPTIONAL) Object of class "Chemicals";
+                                if not specified, it will get extracted from the "Reactions" class
+        :param reactions:   (OPTIONAL) Object of class "Reactions";
+                                if not specified, it'll get instantiated here
+        """
+        self.verbose = False
 
-    n_species = 1       # The number of (non-water) chemical species   TODO: phase out?
+        self.n_bins = 0          # Number of spacial compartments (bins) used in the simulation
 
-    chem_data = None    # Object of type "Chemicals", with info on the individual chemicals,
-                        #   incl. their names and diffusion rates
+        self.n_species = 1       # The number of (non-water) chemical species   TODO: phase out?
 
-    system_length = None    # System extension, from the middle of the leftmost bin to the middle of the rightmost one.
-                            #  The de-facto default value, though not used, is (n_bins-1)
+        self.chem_data = None   # Object of type "Chemicals", with info on the individual chemicals,
+                                #   incl. their names and diffusion rates
 
-    global_Dx = 1           # Used in cases when not using ad-hoc local changes in x-scale resolution
+        self.system_length = None   # System extension, from the middle of the leftmost bin to the middle of the rightmost one.
+                                    #  The de-facto default value, though not used, is (n_bins-1)
 
-    system = None           # Concentration data in the System we're simulating, for all the chemicals
-                            #   NumPy array of floats, of dimension: (n_species x n_bins).
-                            #   Each row represents a species
+        self.global_Dx = 1      # Used in cases when not using ad-hoc local changes in x-scale resolution
 
-    system_earlier = None   # NOT IN CURRENT USE.  Envisioned for simulations where the past 2 time states are used
-                            # to compute the state at the next time step
+        self.system = None      # Concentration data in the System we're simulating, for all the chemicals
+                                #   NumPy array of floats, of dimension: (n_species x n_bins).
+                                #   Each row represents a species
 
-    membranes = None        # NumPy boolean array of dimension n_bins;
-                            #   each boolean value marks the presence of a membrane in that bin.
-                            #   Any given bin is expected to either contain, or not contain, a single membrane passing thru it
-                            #   TODO - explore possible alternative: list of bin addresses the contains a membrane,
-                            #          or other sparse-matrix representation
+        self.system_earlier = None  # NOT IN CURRENT USE.  Envisioned for simulations where the past 2 time states are used
+                                    # to compute the state at the next time step
 
-    A_fraction = None       # NumPy array of floats, of dimension n_bins;
-                            #   each value records the fraction (between 0. and 1.) of the LEFT one
-                            #   of the 2 parts into which the membrane splits the bin.
-                            #   0. if N/A
+        self.membranes = None   # NumPy boolean array of dimension n_bins;
+                                #   each boolean value marks the presence of a membrane in that bin.
+                                #   Any given bin is expected to either contain, or not contain, a single membrane passing thru it
+                                #   TODO - explore possible alternative: list of bin addresses the contains a membrane,
+                                #          or other sparse-matrix representation
 
-    system_B = None         # Just like "system", but only for the "A" fractions of the bin, where applicable;
-                            #   0. if N/A
+        self.A_fraction = None  # NumPy array of floats, of dimension n_bins;
+                                #   each value records the fraction (between 0. and 1.) of the LEFT one
+                                #   of the 2 parts into which the membrane splits the bin.
+                                #   0. if N/A
 
-    delta_diffusion = None  # Buffer for the concentration changes from diffusion step (n_species x n_bins)
-    delta_reactions = None  # Buffer for the concentration changes from reactions step (n_species x n_bins)
+        self.system_B = None    # Just like "system", but only for the "A" fractions of the bin, where applicable;
+                                #   0. if N/A
 
-    delta_reactions_B = None    # Same as above, but for the "other sides" of bins with membranes
-                                # TODO: explore sparse-matrix representations
+        self.delta_diffusion = None  # Buffer for the concentration changes from diffusion step (n_species x n_bins)
+        self.delta_reactions = None  # Buffer for the concentration changes from reactions step (n_species x n_bins)
 
-    sealed = True           # If True, no exchange with the outside; if False, immersed in a "bath"
+        self.delta_reactions_B = None   # Same as above, but for the "other sides" of bins with membranes
+                                        # TODO: explore sparse-matrix representations
 
-    # Only applicable if "sealed" is False:
-    bath_concentrations = None      # A NumPy array for each species
-    container_diffusion = None      # A NumPy array for each species: diffusion rate in/out of the container
+        self.sealed = True           # If True, no exchange with the outside; if False, immersed in a "bath"
+    
+        # Only applicable if "sealed" is False:
+        self.bath_concentrations = None      # A NumPy array for each species
+        self.container_diffusion = None      # A NumPy array for each species: diffusion rate in/out of the container
 
-    time_step_threshold = 0.33333   # This is used to set an Upper Bound on the single time steps
-                                    #   in the diffusion process.
-                                    #   See explanation in file overly_large_single_timesteps.py
+        self.time_step_threshold = 0.33333  # This is used to set an Upper Bound on the single time steps
+                                            #   in the diffusion process.
+                                            #   See explanation in file overly_large_single_timesteps.py
 
-    all_reactions = None            # Object of class "Reactions"
+        self.all_reactions = None           # Object of class "Reactions"
 
-    history = Movie(tabular=True)   # To store user-selected snapshots of (parts of) the system,
-                                    #   whenever requested by the user
+        self.history = Movie(tabular=True)  # To store user-selected snapshots of (parts of) the system,
+                                            #   whenever requested by the user
 
-    system_time = None              # Global time of the system, from initialization on
+        self.system_time = None             # Global time of the system, from initialization on
 
-    debug = False
+        self.debug = False
+
+        if (n_bins is not None) or (chem_data is not None) or (reactions is not None):
+            self.initialize_system(n_bins=n_bins, chem_data=chem_data, reactions=reactions)
+
 
 
 
@@ -86,8 +98,8 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    @classmethod
-    def initialize_system(cls, n_bins: int, chem_data=None, reactions=None) -> None:
+    
+    def initialize_system(self, n_bins: int, chem_data=None, reactions=None) -> None:
         """
         Initialize all concentrations to zero.
         Membranes, if present, need to be set later.
@@ -109,68 +121,68 @@ class BioSim1D:
             # TODO: maybe drop this requirement?  And then set the system matrix later on?
 
         if chem_data:
-            cls.chem_data = chem_data
+            self.chem_data = chem_data
         else:
-            cls.chem_data = reactions.chem_data
+            self.chem_data = reactions.chem_data
 
         if reactions:
-            cls.all_reactions = reactions
+            self.all_reactions = reactions
         else:
-            cls.all_reactions = Reactions(chem_data=chem_data)
+            self.all_reactions = Reactions(chem_data=chem_data)
 
-        cls.n_bins = n_bins
+        self.n_bins = n_bins
 
-        cls.n_species = chem_data.n_species
+        self.n_species = chem_data.n_species
 
-        assert cls.n_species >= 1, \
+        assert self.n_species >= 1, \
             "At least 1 chemical species must be declared prior to calling initialize_system()"
 
         # Initialize all concentrations to zero
-        cls.system = np.zeros((cls.n_species, n_bins), dtype=float)
+        self.system = np.zeros((self.n_species, n_bins), dtype=float)
 
-        cls.system_time = 0             # "Start the clock"
+        self.system_time = 0             # "Start the clock"
 
 
 
-    @classmethod
-    def reset_system(cls) -> None:
+    
+    def reset_system(self) -> None:
         """
         WARNING - THIS IS VERY PARTIAL.  TODO: expand, or switch to instantiated class
         :return:
         """
-        cls.system = None
-        cls.system_earlier = None
-        cls.system_B = None
-        cls.membranes = None
-        cls.A_fraction = None
-        cls.chem_data = None
-        cls.all_reactions = None
-        cls.history = None
+        self.system = None
+        self.system_earlier = None
+        self.system_B = None
+        self.membranes = None
+        self.A_fraction = None
+        self.chem_data = None
+        self.all_reactions = None
+        self.history = None
 
-        cls.n_bins = 0
-        cls.system_length = None
-        cls.global_Dx = 1
-        cls.system_time = 0
+        self.n_bins = 0
+        self.system_length = None
+        self.global_Dx = 1
+        self.system_time = 0
 
-        cls.delta_reactions = None
-        cls.delta_reactions_B = None
+        self.delta_reactions = None
+        self.delta_reactions_B = None
 
 
 
-    @classmethod
-    def save_system(cls) -> dict:
+    
+    def save_system(self) -> dict:
         """
-        For now, just return a copy of cls.system, with a "frozen" snapshot of the current system state
+        For now, just return a copy of self.system, with a "frozen" snapshot of the current system state
         TODO: deal with membranes, and anything else needed to later restore the complete system state
 
         :return:    A dict of (for now a part of) the elements needed to later restore the complete system state
         """
-        return {"system": cls.system.copy(), "system_time": cls.system_time}
+        return {"system": self.system.copy(), "system_time": self.system_time}
 
 
 
-    @classmethod
-    def restore_system(cls, new_state: dict) -> None:
+    
+    def restore_system(self, new_state: dict) -> None:
         """
         Replace (some, for now, of) the various parts the System's internal state.
         For details of the data structure, see the class variable "system"
@@ -179,18 +191,18 @@ class BioSim1D:
         :param new_state:   Numpy array containing the desired new System's internal state
         :return:
         """
-        cls.system = new_state["system"]
-        cls.n_species, cls.n_bins = cls.system.shape     # Extract from the new state
-        assert cls.n_species == cls.chem_data.n_species, \
-            f"restore_system(): inconsistency in the number of chemical species in the specified new state ({cls.n_species}) " \
-            f"vs. what's stored in the `Chemicals` object ({cls.chem_data.n_species})"
+        self.system = new_state["system"]
+        self.n_species, self.n_bins = self.system.shape     # Extract from the new state
+        assert self.n_species == self.chem_data.n_species, \
+            f"restore_system(): inconsistency in the number of chemical species in the specified new state ({self.n_species}) " \
+            f"vs. what's stored in the `Chemicals` object ({self.chem_data.n_species})"
 
-        cls.system_time = new_state["system_time"]
+        self.system_time = new_state["system_time"]
 
 
 
-    @classmethod
-    def replace_system(cls, new_state: np.array) -> None:
+    
+    def replace_system(self, new_state: np.array) -> None:
         """
         Replace the System's internal state.
         For details of the data structure, see the class variable "system"
@@ -199,15 +211,15 @@ class BioSim1D:
         :param new_state:   Numpy array containing the desired new System's internal state
         :return:
         """
-        cls.system = new_state
-        cls.n_species, cls.n_bins = new_state.shape     # Extract from the new state
-        assert cls.n_species == cls.chem_data.n_species, \
+        self.system = new_state
+        self.n_species, self.n_bins = new_state.shape     # Extract from the new state
+        assert self.n_species == self.chem_data.n_species, \
             "replace_system(): inconsistency in the number of chemical species vs. what's stored in the `Chemicals` object"
 
 
 
-    @classmethod
-    def system_snapshot(cls) -> pd.DataFrame:
+    
+    def system_snapshot(self) -> pd.DataFrame:
         """
         Return a snapshot of all the concentrations of all the species,
         as a Pandas dataframe
@@ -216,11 +228,11 @@ class BioSim1D:
         :return:    A Pandas dataframe: each row is a bin,
                         and each column a chemical species
         """
-        all_chem_names = cls.chem_data.get_all_names()
-        if cls.system is None:
+        all_chem_names = self.chem_data.get_all_names()
+        if self.system is None:
             return pd.DataFrame(columns = all_chem_names)   # Empty dataframe
 
-        matrix = cls.system.T
+        matrix = self.system.T
 
         df = pd.DataFrame(matrix, columns = all_chem_names)
 
@@ -228,8 +240,8 @@ class BioSim1D:
 
 
 
-    @classmethod
-    def compare_states(cls, state1: np.array, state2: np.array, verbose=False):
+    
+    def compare_states(self, state1: np.array, state2: np.array, verbose=False):
         """
 
         :param state1:
@@ -271,8 +283,8 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    @classmethod
-    def set_uniform_concentration(cls, conc: float, species_index=None, species_name=None) -> None:
+    
+    def set_uniform_concentration(self, conc: float, species_index=None, species_name=None) -> None:
         """
         Assign the given concentration to all the bins of the specified species (identified by its index or name.)
         Any previous values get over-written
@@ -283,41 +295,41 @@ class BioSim1D:
         :return:                None
         """
         if species_name is not None:
-            assert cls.chem_data, f"BioSim1D.set_uniform_concentration(): must first call initialize_system()"
-            species_index = cls.chem_data.get_index(species_name)
+            assert self.chem_data, f"BioSim1D.set_uniform_concentration(): must first call initialize_system()"
+            species_index = self.chem_data.get_index(species_name)
         else:
-            cls.chem_data.assert_valid_index(species_index)
+            self.chem_data.assert_valid_index(species_index)
 
         assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
 
-        cls.system[species_index] = np.full(cls.n_bins, conc, dtype=float)
+        self.system[species_index] = np.full(self.n_bins, conc, dtype=float)
 
-        if cls.uses_membranes():
+        if self.uses_membranes():
             # If membranes are present, also set "side B" of the bins with membranes, to the same concentration
             # TODO: see if it can be done as vector operation
-            for bin_address in cls.bins_with_membranes():
-                if cls.membranes[bin_address]:
-                    cls.system_B[species_index, bin_address] = conc
+            for bin_address in self.bins_with_membranes():
+                if self.membranes[bin_address]:
+                    self.system_B[species_index, bin_address] = conc
 
 
 
-    @classmethod
-    def set_all_uniform_concentrations(cls, conc_list: Union[list, tuple]) -> None:
+    
+    def set_all_uniform_concentrations(self, conc_list: Union[list, tuple]) -> None:
         """
         Set the concentrations of all species at once, uniformly across all bins
         :param conc_list:   List or tuple of concentration values for each of the chemical species
         :return:            None
         """
-        assert len(conc_list) == cls.chem_data.n_species, \
-            f"set_all_uniform_concentrations(): the argument must be a list or tuple of size {cls.chem_data.n_species}"
+        assert len(conc_list) == self.chem_data.n_species, \
+            f"set_all_uniform_concentrations(): the argument must be a list or tuple of size {self.chem_data.n_species}"
 
         for i, conc in enumerate(conc_list):
-            cls.set_uniform_concentration(species_index=i, conc=conc)
+            self.set_uniform_concentration(species_index=i, conc=conc)
 
 
 
-    @classmethod
-    def set_bin_conc(cls, bin_address: int, conc: float, species_index=None, species_name=None,
+    
+    def set_bin_conc(self, bin_address: int, conc: float, species_index=None, species_name=None,
                      across_membrane=False, both_sides=False) -> None:
         """
         Assign the requested concentration value to the given bin, for the specified chemical species.
@@ -332,29 +344,29 @@ class BioSim1D:
         :return:                None
         """
         if species_name is not None:
-            assert cls.chem_data, f"BioSim1D.set_bin_conc(): must first call initialize_system()"
-            species_index = cls.chem_data.get_index(species_name)
+            assert self.chem_data, f"BioSim1D.set_bin_conc(): must first call initialize_system()"
+            species_index = self.chem_data.get_index(species_name)
         else:
-            cls.chem_data.assert_valid_index(species_index)
+            self.chem_data.assert_valid_index(species_index)
 
-        cls.assert_valid_bin(bin_address)
+        self.assert_valid_bin(bin_address)
 
 
         assert conc >= 0., \
             f"set_bin_conc(): the concentration must be a positive number or zero (the requested value was {conc})"
 
         if across_membrane or both_sides:
-            assert cls.system_B is not None, \
+            assert self.system_B is not None, \
                 "set_bin_conc(): the `other_side` option cannot be used unless membranes are first set"
-            cls.system_B[species_index, bin_address] = conc
+            self.system_B[species_index, bin_address] = conc
 
         if both_sides or (not across_membrane):
-            cls.system[species_index, bin_address] = conc
+            self.system[species_index, bin_address] = conc
 
 
 
-    @classmethod
-    def set_species_conc(cls, conc_list: Union[list, tuple, np.ndarray], species_index=None, species_name=None) -> None:
+    
+    def set_species_conc(self, conc_list: Union[list, tuple, np.ndarray], species_index=None, species_name=None) -> None:
         """
         Assign the requested list of concentration values to all the bins, in order, for the specified species.
 
@@ -364,23 +376,23 @@ class BioSim1D:
         :return:                None
         """
         if species_name is not None:
-            assert cls.chem_data, f"BioSim1D.set_species_conc(): must first call initialize_system()"
-            species_index = cls.chem_data.get_index(species_name)
+            assert self.chem_data, f"BioSim1D.set_species_conc(): must first call initialize_system()"
+            species_index = self.chem_data.get_index(species_name)
         else:
-            cls.chem_data.assert_valid_index(species_index)
+            self.chem_data.assert_valid_index(species_index)
 
         assert (type(conc_list) == list) or (type(conc_list) == tuple) or (type(conc_list) == np.ndarray), \
             f"set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; the passed value was {type(conc_list)})"
 
-        assert len(conc_list) == cls.n_bins, \
+        assert len(conc_list) == self.n_bins, \
             "set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the various bins (wrong length)"
 
-        cls.system[species_index] = conc_list
+        self.system[species_index] = conc_list
 
 
 
-    @classmethod
-    def inject_conc_to_bin(cls, bin_address: int, species_index: int, delta_conc: float, zero_clip = False) -> None:
+    
+    def inject_conc_to_bin(self, bin_address: int, species_index: int, delta_conc: float, zero_clip = False) -> None:
         """
         Add the requested concentration to the cell with the given address, for the specified chem species
 
@@ -391,22 +403,22 @@ class BioSim1D:
                                 otherwise, an Exception will be raised
         :return:                None
         """
-        cls.assert_valid_bin(bin_address)
+        self.assert_valid_bin(bin_address)
 
-        if (cls.system[species_index, bin_address] + delta_conc) < 0. :
+        if (self.system[species_index, bin_address] + delta_conc) < 0. :
             if zero_clip:
-                cls.system[species_index, bin_address] = 0
+                self.system[species_index, bin_address] = 0
                 return
             else:
                 raise Exception("The requested concentration change would result in a negative final value")
 
         # Normal scenario, not leading to negative values for the final concentration
-        cls.system[species_index, bin_address] += delta_conc
+        self.system[species_index, bin_address] += delta_conc
 
 
 
-    @classmethod
-    def inject_sine_conc(cls, species_name, frequency, amplitude, bias=0, phase=0, zero_clip = False) -> None:
+    
+    def inject_sine_conc(self, species_name, frequency, amplitude, bias=0, phase=0, zero_clip = False) -> None:
         """
         Add to the concentrations of the specified chem species a sinusoidal signal across all bins
 
@@ -425,10 +437,10 @@ class BioSim1D:
                                 otherwise, an Exception will be raised
         :return:                None
         """
-        assert cls.chem_data, f"BioSim1D.inject_sine_conc(): must first call initialize_system()"
-        species_index = cls.chem_data.get_index(species_name)
+        assert self.chem_data, f"BioSim1D.inject_sine_conc(): must first call initialize_system()"
+        species_index = self.chem_data.get_index(species_name)
 
-        period = cls.n_bins / frequency
+        period = self.n_bins / frequency
         #print("period: ", period)
 
         phase_radians = phase * math.pi / 180
@@ -436,16 +448,16 @@ class BioSim1D:
         B = 2*math.pi / period
         #print("B: ", B)
 
-        for x in range(cls.n_bins):
+        for x in range(self.n_bins):
             conc = amplitude * math.sin(B*x - phase_radians) + bias
             #print(conc)
-            cls.inject_conc_to_bin(bin_address = x, species_index = species_index,
+            self.inject_conc_to_bin(bin_address = x, species_index = species_index,
                                    delta_conc = conc, zero_clip = zero_clip)
 
 
 
-    @classmethod
-    def frequency_analysis(cls, species_name: str, threshold = 0.001, n_largest = None) -> pd.DataFrame:
+    
+    def frequency_analysis(self, species_name: str, threshold = 0.001, n_largest = None) -> pd.DataFrame:
         """
         Return the individual frequencies, and their relative amplitudes,
         in the concentration values of the specified chemical species.
@@ -467,16 +479,16 @@ class BioSim1D:
                                                 3        8.0                 0.2
         """
 
-        conc_samples = cls.lookup_species(species_name=species_name)
+        conc_samples = self.lookup_species(species_name=species_name)
 
         #import plotly.express as px
         #fig = px.line(y=conc_samples)
         #fig.show()
 
         # Perform a DFT, to extract the frequency components
-        # The size of the computed arrays xf and yf is  (cls.n_bins/2 + 1) if cls.n_bins is even
-        # or (cls.n_bins + 1) /2 if cls.n_bins is odd
-        xf = rfftfreq(cls.n_bins, 1 / cls.n_bins)
+        # The size of the computed arrays xf and yf is  (self.n_bins/2 + 1) if self.n_bins is even
+        # or (self.n_bins + 1) /2 if self.n_bins is odd
+        xf = rfftfreq(self.n_bins, 1 / self.n_bins)
         yf = rfft(conc_samples)
         magnitude_yf = np.abs(yf)   # The magnitudes of the complex numbers in yf
 
@@ -526,8 +538,8 @@ class BioSim1D:
 
     ########  DIMENSION-RELATED  ################
 
-    @classmethod
-    def set_dimensions(cls, length) -> None:
+    
+    def set_dimensions(self, length) -> None:
         """
         Set the overall length of the system.
         Doing so, will permit to convert bin numbers to positional values
@@ -538,50 +550,50 @@ class BioSim1D:
         assert (type(length) == float) or (type(length) == int), "set_dimensions(): length must be a number"
         assert length > 0, "set_dimensions(): length must be positive"
 
-        cls.system_length = length
-        cls.global_Dx = length / (cls.n_bins-1)
+        self.system_length = length
+        self.global_Dx = length / (self.n_bins-1)
 
 
-    @classmethod
-    def x_coord(cls, bin_address):
+    
+    def x_coord(self, bin_address):
         """"
         Return the x coordinate of the middle of the specified bin.
         By convention, for the leftmost bin, it's zero,
         and for the rightmost, it's the overall length of the system
         """
-        assert cls.system_length, "x_coord(): must first call set_dimensions()"
+        assert self.system_length, "x_coord(): must first call set_dimensions()"
 
-        return bin_address * cls.global_Dx
+        return bin_address * self.global_Dx
 
 
 
 
     ########  MEMBRANE-RELATED  ################
 
-    @classmethod
-    def uses_membranes(cls) -> bool:
+    
+    def uses_membranes(self) -> bool:
         """
         Return True if membranes are part of the system
 
         :return:
         """
-        return cls.membranes is not None
+        return self.membranes is not None
 
 
-    @classmethod
-    def bins_with_membranes(cls) -> [int]:
+    
+    def bins_with_membranes(self) -> [int]:
         """
 
         :return:
         """
-        # Create and return a list of bin numbers whose entry in cls.membranes is True
-        return [bin_number for bin_number in range(cls.n_bins)
-                if cls.membranes[bin_number]]
+        # Create and return a list of bin numbers whose entry in self.membranes is True
+        return [bin_number for bin_number in range(self.n_bins)
+                if self.membranes[bin_number]]
 
 
 
-    @classmethod
-    def set_membranes(cls, membrane_pos: Union[List, Tuple]) -> None:
+    
+    def set_membranes(self, membrane_pos: Union[List, Tuple]) -> None:
         """
         Set the presence of all membranes in the system,
         and optionally specify the fraction of the "A" part of the bin (by default 0.5)
@@ -598,10 +610,10 @@ class BioSim1D:
                                     2) OR pairs of bins numbers and fractional values
         :return:                None
         """
-        cls.membranes = np.zeros(cls.n_bins, dtype=bool)
-        cls.A_fraction = np.zeros(cls.n_bins, dtype=float)
-        if cls.system_B is None:
-            cls.system_B = np.zeros((cls.n_species, cls.n_bins), dtype=float)
+        self.membranes = np.zeros(self.n_bins, dtype=bool)
+        self.A_fraction = np.zeros(self.n_bins, dtype=float)
+        if self.system_B is None:
+            self.system_B = np.zeros((self.n_species, self.n_bins), dtype=float)
 
 
         # Loop over all the values passed as a list or tuple
@@ -621,16 +633,16 @@ class BioSim1D:
             else:
                 raise Exception("set_membranes(): the elements of the argument `membrane_pos` must be tuples or lists")
 
-            cls.assert_valid_bin(bin_number)
-            cls.membranes[bin_number] = True
-            cls.A_fraction[bin_number] = fraction
+            self.assert_valid_bin(bin_number)
+            self.membranes[bin_number] = True
+            self.A_fraction[bin_number] = fraction
 
             # Equalize all the concentrations across the compartments on both sides of the membrane
-            if cls.chem_data:
-                for chem_index in range(cls.chem_data.number_of_chemicals()):
+            if self.chem_data:
+                for chem_index in range(self.chem_data.number_of_chemicals()):
                     # TODO: do as vector operation
-                    conc = cls.bin_concentration(bin_address=bin_number, species_index=chem_index)
-                    cls.set_bin_conc(bin_address=bin_number, species_index=chem_index, conc=conc, across_membrane=True)
+                    conc = self.bin_concentration(bin_address=bin_number, species_index=chem_index)
+                    self.set_bin_conc(bin_address=bin_number, species_index=chem_index, conc=conc, across_membrane=True)
 
 
 
@@ -641,26 +653,26 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    @classmethod
-    def assert_valid_bin(cls, bin_address: int) -> None:
+    
+    def assert_valid_bin(self, bin_address: int) -> None:
         """
         Raise an Exception if the given bin number isn't valid
 
-        :param bin_address:  An integer that ought to be between 0 and (cls.n_bins-1), inclusive
+        :param bin_address:  An integer that ought to be between 0 and (self.n_bins-1), inclusive
         :return:            None
         """
         assert type(bin_address) == int, \
             f"BioSim1D: the requested bin address ({bin_address}) is not an integer; its type is {type(bin_address)}"
 
-        if bin_address < 0 or bin_address >= cls.n_bins:
+        if bin_address < 0 or bin_address >= self.n_bins:
             raise Exception(f"BioSim1D: the requested bin address ({bin_address}) is out of bounds for the system size; "
-                            f"allowed range is [0-{cls.n_bins-1}], inclusive")
+                            f"allowed range is [0-{self.n_bins-1}], inclusive")
 
 
 
 
-    @classmethod
-    def lookup_species(cls, species_index=None, species_name=None, trans_membrane=False) -> np.array:
+    
+    def lookup_species(self, species_index=None, species_name=None, trans_membrane=False) -> np.array:
         """
         Return the NumPy array of concentration values across the all bins (from left to right)
         for the single specified chemical species
@@ -673,20 +685,20 @@ class BioSim1D:
                                     the size of the array is the number of bins
         """
         if species_name is not None:
-            assert cls.chem_data, f"BioSim1D.lookup_species(): must first call initialize_system()"
-            species_index = cls.chem_data.get_index(species_name)
+            assert self.chem_data, f"BioSim1D.lookup_species(): must first call initialize_system()"
+            species_index = self.chem_data.get_index(species_name)
 
-        cls.chem_data.assert_valid_index(species_index)
+        self.chem_data.assert_valid_index(species_index)
 
         if trans_membrane:
-            return cls.system_B[species_index]
+            return self.system_B[species_index]
         else:
-            return cls.system[species_index]
+            return self.system[species_index]
 
 
 
-    @classmethod
-    def bin_concentration(cls, bin_address: int, species_index=None, species_name=None, trans_membrane=False) -> float:
+    
+    def bin_concentration(self, bin_address: int, species_index=None, species_name=None, trans_membrane=False) -> float:
         """
         Return the concentration at the requested bin of the specified species
 
@@ -697,20 +709,20 @@ class BioSim1D:
         :return:                A concentration value at the indicated bin, for the requested species
         """
         if species_name is not None:
-            assert cls.chem_data, f"BioSim1D.bin_concentration(): must first call initialize_system()"
-            species_index = cls.chem_data.get_index(species_name)
+            assert self.chem_data, f"BioSim1D.bin_concentration(): must first call initialize_system()"
+            species_index = self.chem_data.get_index(species_name)
 
-        cls.chem_data.assert_valid_index(species_index)
+        self.chem_data.assert_valid_index(species_index)
 
         if trans_membrane:
-            return cls.system_B[species_index, bin_address]
+            return self.system_B[species_index, bin_address]
         else:
-            return cls.system[species_index, bin_address]
+            return self.system[species_index, bin_address]
 
 
 
-    @classmethod
-    def bin_snapshot(cls, bin_address: int) -> dict:
+    
+    def bin_snapshot(self, bin_address: int) -> dict:
         """
         Extract the concentrations of all the chemical species at the specified bin,
         as a dict whose keys are the names of the species
@@ -722,26 +734,26 @@ class BioSim1D:
         assert type(bin_address) == int, "bin_snapshot(): the argument must be an integer"
 
         d = {}
-        for species_index in range(cls.n_species):
-            name = cls.chem_data.get_name(species_index)
-            conc = cls.bin_concentration(bin_address, species_index)
+        for species_index in range(self.n_species):
+            name = self.chem_data.get_name(species_index)
+            conc = self.bin_concentration(bin_address, species_index)
             d[name] = conc
 
         return d
 
 
 
-    @classmethod
-    def show_system_snapshot(cls) -> None:
+    
+    def show_system_snapshot(self) -> None:
         """"
         """
-        print(f"SYSTEM SNAPSHOT at time {cls.system_time}:")
-        print(cls.system_snapshot())
+        print(f"SYSTEM SNAPSHOT at time {self.system_time}:")
+        print(self.system_snapshot())
 
 
 
-    @classmethod
-    def describe_state(cls, concise=False) -> None:
+    
+    def describe_state(self, concise=False) -> None:
         """
         A simple printout of the state of the system, for now useful only for small systems
 
@@ -756,49 +768,49 @@ class BioSim1D:
         :param concise: If True, only produce a minimalist printout with just the concentration values
         :return:        None
         """
-        print(f"SYSTEM STATE at Time t = {cls.system_time}:")
+        print(f"SYSTEM STATE at Time t = {self.system_time}:")
 
         if concise:             # A minimalist printout...
-            print(cls.system)   # ...only showing the concentration data (a Numpy array)
-            if cls.uses_membranes():
+            print(self.system)   # ...only showing the concentration data (a Numpy array)
+            if self.uses_membranes():
                 print("Membranes:")
-                print(cls.system_B)
+                print(self.system_B)
             return
 
         # If we get thus far, it's a FULL printout
 
-        print(f"{cls.n_bins} bins and {cls.n_species} species:")
+        print(f"{self.n_bins} bins and {self.n_species} species:")
 
         # Show a line of line of data for each chemical species in turn
-        for species_index in range(cls.n_species):
-            name = cls.chem_data.get_name(species_index)
+        for species_index in range(self.n_species):
+            name = self.chem_data.get_name(species_index)
             if name:    # If a name was provided, show it
                 name = f" ({name})"
             else:
                 name = ""
 
-            if cls.membranes is None:
-                all_conc = cls.system[species_index]
+            if self.membranes is None:
+                all_conc = self.system[species_index]
             else:
                 all_conc = "|"
-                for bin_no in range(cls.n_bins):
-                    all_conc += str(cls.bin_concentration(bin_no, species_index=species_index))
-                    if cls.membranes[bin_no]:
+                for bin_no in range(self.n_bins):
+                    all_conc += str(self.bin_concentration(bin_no, species_index=species_index))
+                    if self.membranes[bin_no]:
                         # Add a symbol for the membrane, and the additional membrane concentration data (on the "other side")
                         all_conc += "()"    # To indicate a membrane
-                        all_conc += str(cls.bin_concentration(bin_no, species_index=species_index, trans_membrane=True))
+                        all_conc += str(self.bin_concentration(bin_no, species_index=species_index, trans_membrane=True))
                     all_conc += "|"
 
-            if cls.chem_data.diffusion_rates is None:
+            if self.chem_data.diffusion_rates is None:
                 print(f"  Species {species_index}{name}. Diff rate: NOT SET. Conc: {all_conc}")
             else:
-                print(f"  Species {species_index}{name}. Diff rate: {cls.chem_data.diffusion_rates[species_index]}. Conc: {all_conc}")
+                print(f"  Species {species_index}{name}. Diff rate: {self.chem_data.diffusion_rates[species_index]}. Conc: {all_conc}")
 
 
 
 
-    @classmethod
-    def show_membranes(cls, n_decimals=1) -> str:
+    
+    def show_membranes(self, n_decimals=1) -> str:
         """
         A simple-minded early method to visualize where the membranes are.
         Print, and return, a string with a diagram to visualize membranes and the fractions
@@ -813,15 +825,15 @@ class BioSim1D:
         :return:            A string with the character-based diagram;
                             if no membranes were defined, return an empty string
         """
-        if cls.membranes is None:
+        if self.membranes is None:
             print("No membranes present.  Call set_membranes() to set them")
             return ""
 
         # Prepare the middle line
         box_contents = "|"
-        for bin_no, val in enumerate(cls.membranes):
+        for bin_no, val in enumerate(self.membranes):
             if val:
-                fraction = round(cls.A_fraction[bin_no], n_decimals)
+                fraction = round(self.A_fraction[bin_no], n_decimals)
                 box_contents += str(fraction) + "|"
             else:
                 box_contents += "   |"
@@ -845,8 +857,8 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    @classmethod
-    def increase_spacial_resolution(cls, factor:int) -> None:
+    
+    def increase_spacial_resolution(self, factor:int) -> None:
         """
         Increase the spacial resolution of the system by cloning and repeating
         each bin, by the specified number of times.
@@ -863,13 +875,13 @@ class BioSim1D:
         :return:        None
         """
         assert type(factor) == int, "The argument `factor` must be an integer"
-        new_state = np.repeat(cls.system, factor, axis=1)
-        cls.replace_system(new_state)
+        new_state = np.repeat(self.system, factor, axis=1)
+        self.replace_system(new_state)
 
 
 
-    @classmethod
-    def decrease_spacial_resolution(cls, factor:int) -> None:
+    
+    def decrease_spacial_resolution(self, factor:int) -> None:
         """
 
         TODO: eliminate the restriction that the number of bins must be a multiple of factor
@@ -885,25 +897,25 @@ class BioSim1D:
         :return:
         """
         assert type(factor) == int, "The argument `factor` must be an integer"
-        assert cls.n_bins % factor == 0, f"The number of bins (currently {cls.n_bins}) must be a multiple of the requested scaling factor"
+        assert self.n_bins % factor == 0, f"The number of bins (currently {self.n_bins}) must be a multiple of the requested scaling factor"
 
-        reduced_n_bins = int(cls.n_bins / factor)
+        reduced_n_bins = int(self.n_bins / factor)
         # The result matrix will have the same number of chemical species, but fewer bins
-        new_state = np.zeros((cls.n_species, reduced_n_bins), dtype=float)
+        new_state = np.zeros((self.n_species, reduced_n_bins), dtype=float)
 
         for i in range(reduced_n_bins):
             start_col = factor * i      # The start column will initially be 0, and will get incremented by factor
-            col_group = cls.system[ : , start_col:start_col+factor] # Extract a submatrix containing the number of columns specified by "factor",
+            col_group = self.system[ : , start_col:start_col+factor] # Extract a submatrix containing the number of columns specified by "factor",
                                                                     # starting with the column specified by start_col
             compressed_col_group = np.sum(col_group, axis=1, keepdims=True) / factor    # Create a single column that is the average of the columns in the group
             new_state[:, [i]] = compressed_col_group                                       # Store the newly-computed column of averages in the appropriate place
                                                                                         # in the result matrix
-        cls.replace_system(new_state)
+        self.replace_system(new_state)
 
 
 
-    @classmethod
-    def smooth_spacial_resolution(cls) -> None:
+    
+    def smooth_spacial_resolution(self) -> None:
         """
         EXAMPLE: if the system is
                         [[10., 20., 30.]
@@ -914,22 +926,22 @@ class BioSim1D:
 
         :return:
         """
-        n_bins = cls.n_bins
+        n_bins = self.n_bins
         new_n_bins = n_bins * 2 - 1     # The final number of bins
-        new_state = np.zeros((cls.n_species, new_n_bins), dtype=float)
+        new_state = np.zeros((self.n_species, new_n_bins), dtype=float)
 
-        for start_col in range(n_bins-1):                           # The start column will be between 0 and (cls.n_bins-2), inclusive
-            col_group = cls.system[ : , start_col:start_col+2]      # Extract a submatrix containing 2 columns,
+        for start_col in range(n_bins-1):                           # The start column will be between 0 and (self.n_bins-2), inclusive
+            col_group = self.system[ : , start_col:start_col+2]      # Extract a submatrix containing 2 columns,
                                                                     # starting with the one in position start_col
             avg_col = np.sum(col_group, axis=1, keepdims=True) / 2. # Create a single column that is the average of the columns in the group
 
-            new_state[:, [2*start_col]] = cls.system[ : , start_col:start_col+1]   # Set one column, from the first column in the group
+            new_state[:, [2*start_col]] = self.system[ : , start_col:start_col+1]   # Set one column, from the first column in the group
             new_state[:, [2*start_col+1]] = avg_col                                # Set the next column with the newly-computed column of averages
 
 
-        new_state[ : , -1:] = cls.system[ : , -1:]                 # Set the last column of result to the last column of cls.system
+        new_state[ : , -1:] = self.system[ : , -1:]                 # Set the last column of result to the last column of self.system
 
-        cls.replace_system(new_state)
+        self.replace_system(new_state)
 
 
 
@@ -941,8 +953,8 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    @classmethod
-    def is_excessive(cls, time_step, diff_rate) -> bool:
+    
+    def is_excessive(self, time_step, diff_rate) -> bool:
         """
         Use a loose heuristic to determine if the requested time step is too long,
         given the diffusion rate
@@ -953,25 +965,25 @@ class BioSim1D:
         """
         value = time_step * diff_rate
 
-        if value > cls.time_step_threshold:
+        if value > self.time_step_threshold:
             return True
         else:
             return False
 
 
-    @classmethod
-    def max_time_step(cls, diff_rate) -> float:
+    
+    def max_time_step(self, diff_rate) -> float:
         """
         Determine a reasonable upper bound on the time step, for the given diffusion rate
         :param diff_rate:
         :return:
         """
-        return cls.time_step_threshold/diff_rate
+        return self.time_step_threshold/diff_rate
 
 
 
-    @classmethod
-    def diffuse(cls, total_duration=None, time_step=None, n_steps=None, delta_x = 1) -> dict:
+    
+    def diffuse(self, total_duration=None, time_step=None, n_steps=None, delta_x = 1) -> dict:
         """
         Uniform-step diffusion, with 2 out of 3 criteria specified:
             1) until reaching, or just exceeding, the desired time duration
@@ -984,24 +996,24 @@ class BioSim1D:
         :param delta_x:         Distance between consecutive bins
         :return:                A dictionary with data about the status of the operation
         """
-        time_step, n_steps = cls.all_reactions.specify_steps(total_duration=total_duration,
+        time_step, n_steps = self.all_reactions.specify_steps(total_duration=total_duration,
                                                              time_step=time_step,
                                                              n_steps=n_steps)
 
         for i in range(n_steps):
-            if cls.debug:
+            if self.debug:
                 if (i < 2) or (i >= n_steps-2):
                     print(f"    Performing diffusion step {i}...")
                 elif i == 2:
                     print("    ...")
 
-            cls.diffuse_step(time_step, delta_x=delta_x)
-            cls.system += cls.delta_diffusion     # Matrix operation to update all the concentrations
-            cls.system_time += time_step
+            self.diffuse_step(time_step, delta_x=delta_x)
+            self.system += self.delta_diffusion     # Matrix operation to update all the concentrations
+            self.system_time += time_step
 
-        if cls.debug:
+        if self.debug:
             print(f"\nSystem after Delta time {total_duration}, at end of {n_steps} steps of size {time_step}:")
-            cls.describe_state(concise=True)
+            self.describe_state(concise=True)
             print()
 
         status = {"steps": n_steps}
@@ -1009,8 +1021,8 @@ class BioSim1D:
 
 
 
-    @classmethod
-    def diffuse_step(cls, time_step, delta_x = 1) -> None:
+    
+    def diffuse_step(self, time_step, delta_x = 1) -> None:
         """
         Diffuse all the species by the given time step:
         clear the delta_diffusion array, and then re-compute it from all the species.
@@ -1024,20 +1036,20 @@ class BioSim1D:
         """
         # TODO: parallelize the independent computations
 
-        cls.delta_diffusion = np.zeros((cls.n_species, cls.n_bins), dtype=float)
+        self.delta_diffusion = np.zeros((self.n_species, self.n_bins), dtype=float)
 
-        for species_index in range(cls.n_species):
+        for species_index in range(self.n_species):
 
-            increment_vector = cls.diffuse_step_single_species(time_step, species_index=species_index, delta_x=delta_x)
+            increment_vector = self.diffuse_step_single_species(time_step, species_index=species_index, delta_x=delta_x)
             #print("Increment vector is: ", increment_vector)
 
             # For each bin, update the concentrations from the buffered increments
-            cls.delta_diffusion[species_index] = increment_vector      # Vector operation to a row of the matrix delta_diffusion
+            self.delta_diffusion[species_index] = increment_vector      # Vector operation to a row of the matrix delta_diffusion
 
 
 
-    @classmethod
-    def diffuse_step_single_species(cls, time_step: float, species_index=0, delta_x = 1) -> np.array:
+    
+    def diffuse_step_single_species(self, time_step: float, species_index=0, delta_x = 1) -> np.array:
         """
         Diffuse the specified single species, for the specified time step, across all bins,
         and return an array of the changes in concentration ("Delta concentration")
@@ -1056,43 +1068,43 @@ class BioSim1D:
 
         :return:                A Numpy array with the change in concentration for the given species across all bins
         """
-        assert cls.system is not None, "Must first initialize the system"
-        assert cls.n_bins > 0, "Must first set the number of bins"
-        assert cls.chem_data.diffusion_rates is not None, "Must first set the diffusion rates"
-        assert cls.sealed == True, "For now, there's no provision for exchange with the outside"
+        assert self.system is not None, "Must first initialize the system"
+        assert self.n_bins > 0, "Must first set the number of bins"
+        assert self.chem_data.diffusion_rates is not None, "Must first set the diffusion rates"
+        assert self.sealed == True, "For now, there's no provision for exchange with the outside"
 
-        increment_vector = np.zeros(cls.n_bins, dtype=float)   # One element per bin
+        increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin
 
-        if cls.n_bins == 1:
+        if self.n_bins == 1:
             return increment_vector                 # There's nothing to do in the case of just 1 cell!
 
-        diff = cls.chem_data.diffusion_rates[species_index]   # The diffusion rate of the specified single species
+        diff = self.chem_data.diffusion_rates[species_index]   # The diffusion rate of the specified single species
 
-        assert not cls.is_excessive(time_step, diff), f"Excessive large time_fraction. Should be < {cls.max_time_step(diff)}"
+        assert not self.is_excessive(time_step, diff), f"Excessive large time_fraction. Should be < {self.max_time_step(diff)}"
 
 
         # Carry out a convolution operation, with a tile of size 3 (or 2 if only 2 bins)
         #print(f"Diffusing species # {species_index}")
 
-        max_bin_number = cls.n_bins - 1     # Bin numbers range from 0 to max_bin_number, inclusive
+        max_bin_number = self.n_bins - 1     # Bin numbers range from 0 to max_bin_number, inclusive
 
         effective_diff = diff * time_step
         if delta_x != 1:
             effective_diff /= (delta_x**2)
 
 
-        for i in range(cls.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
+        for i in range(self.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
             #print(f"Processing bin number {i}")
-            current_conc = cls.system[species_index , i]
+            current_conc = self.system[species_index , i]
 
             if i == 0 :                     # Special case for the first bin (no left neighbor)
-                increment_vector[i] = effective_diff * (cls.system[species_index , 1] - current_conc)
+                increment_vector[i] = effective_diff * (self.system[species_index , 1] - current_conc)
             elif i == max_bin_number :      # Special case for the last bin (no right neighbor)
-                increment_vector[i] = effective_diff * (cls.system[species_index , i - 1] - current_conc)
+                increment_vector[i] = effective_diff * (self.system[species_index , i - 1] - current_conc)
             else:
                 increment_vector[i] = effective_diff * \
-                                        (cls.system[species_index , i + 1] - current_conc
-                                         + cls.system[species_index , i - 1] - current_conc)
+                                        (self.system[species_index , i + 1] - current_conc
+                                         + self.system[species_index , i - 1] - current_conc)
 
         return increment_vector
 
@@ -1105,8 +1117,8 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    @classmethod
-    def set_reactions(cls, reactions) -> None:
+    
+    def set_reactions(self, reactions) -> None:
         """
         Register the given set of reactions.
         Anything previously registered, will be over-written.
@@ -1114,12 +1126,12 @@ class BioSim1D:
         :param reactions:   Object of class "Reactions"
         :return:            None
         """
-        cls.all_reactions = reactions
+        self.all_reactions = reactions
 
 
 
-    @classmethod
-    def react(cls, total_duration=None, time_step=None, n_steps=None, snapshots=None) -> None:
+    
+    def react(self, total_duration=None, time_step=None, n_steps=None, snapshots=None) -> None:
         """
         Update the system concentrations as a result of all the reactions in all bins - taking
         the presence of membranes into account, if applicable.
@@ -1141,7 +1153,7 @@ class BioSim1D:
                                     EXAMPLE: snapshots={"frequency": 2, "sample_bin": 0}
         :return:                None
         """
-        time_step, n_steps = cls.all_reactions.specify_steps(total_duration=total_duration,
+        time_step, n_steps = self.all_reactions.specify_steps(total_duration=total_duration,
                                                              time_step=time_step,
                                                              n_steps=n_steps)
 
@@ -1152,21 +1164,21 @@ class BioSim1D:
             frequency = snapshots.get("frequency", 1)
 
         for i in range(n_steps):
-            cls.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
+            self.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
             # Update the state of the system
-            cls.system += cls.delta_reactions           # Matrix operation to update all the concentrations
-            if cls.uses_membranes():
-                cls.system_B += cls.delta_reactions_B   # Matrix operation to update all the concentrations
+            self.system += self.delta_reactions           # Matrix operation to update all the concentrations
+            if self.uses_membranes():
+                self.system_B += self.delta_reactions_B   # Matrix operation to update all the concentrations
 
-            cls.system_time += time_step
+            self.system_time += time_step
             # Preserve some of the data, as requested
             if (frequency is not None) and ((i+1)%frequency == 0):
-                cls.save_snapshot(cls.bin_snapshot(bin_address = snapshots["sample_bin"]))
+                self.save_snapshot(self.bin_snapshot(bin_address = snapshots["sample_bin"]))
 
 
 
-    @classmethod
-    def reaction_step(cls, delta_time: float) -> None:
+    
+    def reaction_step(self, delta_time: float) -> None:
         """
         Clear and compute the delta_reactions array (a class variable),
         based on all the reactions in all bins.
@@ -1182,47 +1194,47 @@ class BioSim1D:
         :param delta_time:
         :return:            None
         """
-        assert cls.all_reactions is not None, \
+        assert self.all_reactions is not None, \
             "reaction_step(): must first set the Reactions object"
 
-        #number_reactions = cls.all_reactions.number_of_reactions()
+        #number_reactions = self.all_reactions.number_of_reactions()
 
-        cls.delta_reactions = np.zeros((cls.n_species, cls.n_bins), dtype=float)
-        if cls.uses_membranes():
-            cls.delta_reactions_B = np.zeros((cls.n_species, cls.n_bins), dtype=float)
+        self.delta_reactions = np.zeros((self.n_species, self.n_bins), dtype=float)
+        if self.uses_membranes():
+            self.delta_reactions_B = np.zeros((self.n_species, self.n_bins), dtype=float)
 
         # For each bin
-        for bin_n in range(cls.n_bins):     # Bin number, ranging from 0 to max_bin_number, inclusive
-            if cls.verbose:
+        for bin_n in range(self.n_bins):     # Bin number, ranging from 0 to max_bin_number, inclusive
+            if self.verbose:
                 print(f"reaction_step(): processing the all the reactions in bin number {bin_n}")
 
             # Obtain the Delta-concentration for each species, for this bin
-            conc_dict = {species_index: cls.system[species_index , bin_n]
-                         for species_index in range(cls.n_species)}
+            conc_dict = {species_index: self.system[species_index , bin_n]
+                         for species_index in range(self.n_species)}
             #print(f"\nconc_dict in bin {bin_n}: ", conc_dict)
 
             # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-            increment_vector = cls.all_reactions.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=delta_time)
+            increment_vector = self.all_reactions.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=delta_time)
 
-            # Replace the "bin_n" column of the cls.delta_reactions matrix with the contents of the vector increment_vector
-            cls.delta_reactions[:, bin_n] = np.array([increment_vector])
+            # Replace the "bin_n" column of the self.delta_reactions matrix with the contents of the vector increment_vector
+            self.delta_reactions[:, bin_n] = np.array([increment_vector])
 
-            #print(cls.delta_reactions)
+            #print(self.delta_reactions)
 
 
         # Now process the "other side" of membrane-containing bins, if applicable
-        if cls.uses_membranes():
-            for bin_n in cls.bins_with_membranes():
+        if self.uses_membranes():
+            for bin_n in self.bins_with_membranes():
                 # Obtain the Delta-concentration for each species, for this bin
-                conc_dict = {species_index: cls.bin_concentration(bin_address=bin_n, species_index=species_index, trans_membrane=True)
-                             for species_index in range(cls.n_species)}
+                conc_dict = {species_index: self.bin_concentration(bin_address=bin_n, species_index=species_index, trans_membrane=True)
+                             for species_index in range(self.n_species)}
                 #print(f"\n Post-membrane side conc_dict in bin {bin_n}: ", conc_dict)
 
                 # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-                increment_vector = cls.all_reactions.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=delta_time)
+                increment_vector = self.all_reactions.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=delta_time)
 
-                # Replace the "bin_n" column of the cls.delta_reactions_B matrix with the contents of the vector increment_vector
-                cls.delta_reactions_B[:, bin_n] = np.array([increment_vector])
+                # Replace the "bin_n" column of the self.delta_reactions_B matrix with the contents of the vector increment_vector
+                self.delta_reactions_B[:, bin_n] = np.array([increment_vector])
 
 
 
@@ -1233,8 +1245,8 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    @classmethod
-    def react_diffuse(cls, total_duration=None, time_step=None, n_steps=None, delta_x = 1) -> None:
+    
+    def react_diffuse(self, total_duration=None, time_step=None, n_steps=None, delta_x = 1) -> None:
         """
         It expects 2 of the arguments:  total_duration, time_step, n_steps
         Perform a series of reaction and diffusion time steps.
@@ -1245,21 +1257,21 @@ class BioSim1D:
         :param delta_x:         Distance between consecutive bins
         :return:                None
         """
-        time_step, n_steps = cls.all_reactions.specify_steps(total_duration=total_duration,
+        time_step, n_steps = self.all_reactions.specify_steps(total_duration=total_duration,
                                                              time_step=time_step,
                                                              n_steps=n_steps)
 
         for i in range(n_steps):
             # TODO: split off the reaction step and the diffusion step to 2 different computing cores
-            cls.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
-            cls.diffuse_step(time_step, delta_x=delta_x)
+            self.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
+            self.diffuse_step(time_step, delta_x=delta_x)
             # Merge into the concentrations of the various bins/chemical species pairs,
             # the increments concentrations computed separately by the reaction and the diffusion steps
-            cls.system += cls.delta_reactions   # Matrix operation to update all the concentrations
-                                                #   from the reactions
-            cls.system += cls.delta_diffusion   # Matrix operation to update all the concentrations
-                                                #   from the diffusion
-            cls.system_time += time_step
+            self.system += self.delta_reactions     # Matrix operation to update all the concentrations
+                                                    #   from the reactions
+            self.system += self.delta_diffusion     # Matrix operation to update all the concentrations
+                                                    #   from the diffusion
+            self.system_time += time_step
 
 
 
@@ -1269,8 +1281,7 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    @classmethod
-    def single_species_heatmap(cls, species_index: int, heatmap_pars: dict, graphic_component, header=None) -> None:
+    def single_species_heatmap(self, species_index: int, heatmap_pars: dict, graphic_component, header=None) -> None:
         """
         Send to the HTML log, a heatmap representation of the concentrations of
         the single requested species.
@@ -1296,7 +1307,7 @@ class BioSim1D:
         #
 
         # List of concentrations in the various bins, for the requested species
-        species_concentrations = list(cls.lookup_species(species_index))
+        species_concentrations = list(self.lookup_species(species_index))
         #print(species_concentrations)
 
         all_data = {
@@ -1321,8 +1332,7 @@ class BioSim1D:
 
 
 
-    @classmethod
-    def single_species_line_plot(cls, species_index: int, plot_pars: dict, graphic_component, header=None) -> None:
+    def single_species_line_plot(self, species_index: int, plot_pars: dict, graphic_component, header=None) -> None:
         """
         Send to the HTML log, a line plot representation of the concentrations of
         the single requested species.  To plot more than 1 species, use line_plot() instead
@@ -1348,7 +1358,7 @@ class BioSim1D:
         #
 
         # List of concentrations in the various bins, for the requested species
-        species_concentrations = list(cls.lookup_species(species_index))
+        species_concentrations = list(self.lookup_species(species_index))
         #print(species_concentrations)
 
         all_data = {
@@ -1373,8 +1383,7 @@ class BioSim1D:
 
 
 
-    @classmethod
-    def line_plot(cls, plot_pars: dict, graphic_component, header=None, color_mapping=None) -> None:
+    def line_plot(self, plot_pars: dict, graphic_component, header=None, color_mapping=None) -> None:
         """
         Send to the HTML log, a line plot representation of the concentrations of
         all the chemical species species.
@@ -1404,11 +1413,11 @@ class BioSim1D:
         # Concentration data for the plots
         #       outer level : order of chemical-species index,
         #       inner level : in bin index order from left to right
-        species_concentrations = [list(cls.lookup_species(i)) for i in range(cls.n_species)]
+        species_concentrations = [list(self.lookup_species(i)) for i in range(self.n_species)]
         #print(species_concentrations)
 
         all_data = {
-            "curve_labels": cls.chem_data.get_all_names(),
+            "curve_labels": self.chem_data.get_all_names(),
 
             # Concentration data for the plots
             "plot_data": species_concentrations,
@@ -1442,8 +1451,8 @@ class BioSim1D:
     #########################################################################
 
 
-    @classmethod
-    def save_snapshot(cls, data_snapshot: dict, caption = "") -> None:
+    
+    def save_snapshot(self, data_snapshot: dict, caption = "") -> None:
         """
         Preserve some data value (passed as dictionary) in the history, to be attached to the
         current System Time.
@@ -1458,17 +1467,17 @@ class BioSim1D:
         :param caption:         Option caption to attach to this preserved data
         :return:                None
         """
-        cls.history.store(pars=cls.system_time,
+        self.history.store(pars=self.system_time,
                            data_snapshot = data_snapshot, caption=caption)
 
 
 
-    @classmethod
-    def get_history(cls):
+    
+    def get_history(self):
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
         using save_snapshot()
 
         :return:    a Pandas dataframe
         """
-        return cls.history.get()
+        return self.history.get()

@@ -34,7 +34,7 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from life_1D.bio_sim_1d import BioSim1D as bio
+from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -66,7 +66,7 @@ lineplot_pars = {"range": [10, 50],
 # Initialize the system.  We use a RELATIVELY LARGE NUMBER OF BINS, 
 # to captures the many changes in the high-frequency component
 chem_data = chem(names=["A"], diffusion_rates=[0.5])
-bio.initialize_system(n_bins=500, chem_data=chem_data)
+bio = BioSim1D(n_bins=500, chem_data=chem_data)
 
 # %% [markdown]
 # ## PART 1 (of 3) of Initial Preparation -

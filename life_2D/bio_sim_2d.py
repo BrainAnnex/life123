@@ -6,6 +6,7 @@ from modules.reactions.reactions import Reactions
 class BioSim2D:
     """
     Note: for at least the time being, this class doesn't get instantiated
+    TODO: turn into an instantiated class, as recently done for BioSim1D
     """
 
     #####################

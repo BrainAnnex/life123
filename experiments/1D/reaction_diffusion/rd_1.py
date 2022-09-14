@@ -27,7 +27,7 @@
 # A LOT of plots are sent to the log file from this experiment; the reason is to compare two
 # graphic elements, "vue_curves_3" and "vue_curves_4"
 #
-# LAST REVISED: Aug. 28, 2022
+# LAST REVISED: Sep. 13, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -38,7 +38,7 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from life_1D.bio_sim_1d import BioSim1D as bio
+from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
 from modules.chemicals.chemicals import Chemicals as chem
@@ -63,7 +63,7 @@ rxn = Reactions(chem_data)
 
 # Reaction A + B <-> C , with 1st-order kinetics for each species; note that it's mostly in the forward direction
 rxn.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=20., reverse_rate=2.)
-bio.initialize_system(n_bins=7, chem_data=chem_data, reactions=rxn)
+bio = BioSim1D(n_bins=7, chem_data=chem_data, reactions=rxn)
 
 # %%
 bio.show_system_snapshot()

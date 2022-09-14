@@ -26,7 +26,7 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from life_1D.bio_sim_1d import BioSim1D as bio
+from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -66,7 +66,7 @@ conc_list=[10,13,17,21,25,28,30,38,42,55,65,47,35,32,27,23,20,17,14,8,3,10,16,18
            20,25,30,35,40,65,85,115,150,92,73,69,65,50,42,36,20,45,50,55,69,82,95,
            77,60,43,37,31,25,22,20,18,15,11,9, 8]
 
-bio.initialize_system(n_bins=len(conc_list), chem_data=chem_data)
+bio = BioSim1D(n_bins=len(conc_list), chem_data=chem_data)
 
 bio.set_species_conc(species_name="A", conc_list=conc_list)
 

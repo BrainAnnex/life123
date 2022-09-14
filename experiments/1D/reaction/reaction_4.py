@@ -30,7 +30,7 @@ from experiments.get_notebook_info import get_notebook_basename
 
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
-from life_1D.bio_sim_1d import BioSim1D as bio
+from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
 from modules.html_log.html_log import HtmlLog as log
@@ -55,7 +55,7 @@ rxn = Reactions(chem_data)
 rxn.add_reaction(reactants=[("A") , ("B")], products=[("C")],
                  forward_rate=5., reverse_rate=2.)
 
-bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
+bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
 
 bio.set_uniform_concentration(species_index=0, conc=10.)
 bio.set_uniform_concentration(species_index=1, conc=50.)

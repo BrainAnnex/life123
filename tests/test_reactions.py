@@ -9,7 +9,7 @@ from modules.reactions.reactions import Reactions
 @pytest.fixture(scope="module")
 def rxn():
     chem_data = chem(names=["A", "B", "C", "D", "E", "F"])
-    #bio.initialize_system(n_bins=10, chem_data=chem_data)
+    #bio = BioSim1D(n_bins=10, chem_data=chem_data)
     rnx_obj = Reactions(chem_data)
     yield rnx_obj
 
@@ -275,7 +275,7 @@ def test_compute_all_rate_deltas():
 
     #print(result)
     """
-    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
     bio.set_all_uniform_concentrations([5., 8., 0.])
     old_result = bio.compute_rates(bin_n=0, delta_time=0.5, number_reactions=1)
     print(old_result)
