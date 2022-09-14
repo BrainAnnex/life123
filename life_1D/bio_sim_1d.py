@@ -1473,11 +1473,12 @@ class BioSim1D:
 
 
     
-    def get_history(self):
+    def get_history(self, first_n=None, last_n=None):
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
         using save_snapshot()
 
         :return:    a Pandas dataframe
         """
+        print(first_n)      # TODO: not yet implemented
         return self.history.get()
