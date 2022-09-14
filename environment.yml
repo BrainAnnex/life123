@@ -8,3 +8,4 @@ dependencies:
   - matplotlib==3.5.2
   - plotly==5.9.0
   - pandas==1.4.3
+  - scipy==1.9.1
