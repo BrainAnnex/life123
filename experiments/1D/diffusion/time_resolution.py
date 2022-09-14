@@ -29,7 +29,7 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up,
 
 # %%
 from modules.chemicals.chemicals import Chemicals as chem
-from life_1D.bio_sim_1d import BioSim1D as bio
+from life_1D.bio_sim_1d import BioSim1D
 
 
 # %%
@@ -41,7 +41,7 @@ def set_initial_condition():
 
 # %%
 chem_data = chem(diffusion_rates=[0.1])
-bio.initialize_system(n_bins=10, chem_data=chem_data)
+bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
 set_initial_condition()
 

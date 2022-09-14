@@ -34,7 +34,7 @@ from experiments.get_notebook_info import get_notebook_basename
 
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
-from life_1D.bio_sim_1d import BioSim1D as bio
+from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
 from modules.html_log.html_log import HtmlLog as log
@@ -52,7 +52,7 @@ GraphicLog.config(filename=log_file,
 # %% tags=[]
 # Initialize the system
 chem_data = chem(names=["A", "B"])       # Diffusion NOT taken into account
-bio.initialize_system(n_bins=3, chem_data=chem_data)   # We'll specify the reactions later
+bio = BioSim1D(n_bins=3, chem_data=chem_data)   # We'll specify the reactions later
 
 bio.set_uniform_concentration(species_name="A", conc=10.)
 bio.set_uniform_concentration(species_name="B", conc=50.)

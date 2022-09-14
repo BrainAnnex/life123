@@ -33,7 +33,7 @@ from experiments.get_notebook_info import get_notebook_basename
 
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
-from life_1D.bio_sim_1d import BioSim1D as bio
+from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
 from modules.html_log.html_log import HtmlLog as log
@@ -65,7 +65,7 @@ graph_data = rxn.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %%
-bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
+bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
 
 bio.set_uniform_concentration(species_name="A", conc=5.)     # Scarce
 bio.set_uniform_concentration(species_name="B", conc=100.)   # Plentiful

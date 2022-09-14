@@ -40,14 +40,14 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 
 # %%
 from modules.chemicals.chemicals import Chemicals as chem
-from life_1D.bio_sim_1d import BioSim1D as bio
+from life_1D.bio_sim_1d import BioSim1D
 
 # %%
 ###########################
 # Simulate a 2-bin system
 ###########################
 chem_data = chem(diffusion_rates=[10.])
-bio.initialize_system(n_bins=2, chem_data=chem_data)
+bio = BioSim1D(n_bins=2, chem_data=chem_data)
 bio.inject_conc_to_bin(bin_address=0, delta_conc=100., species_index=0)
 bio.describe_state()
 
@@ -67,7 +67,7 @@ print(bio.system)
 # Simulate a 3-bin system
 # with an excessive single time step
 ######################################
-bio.initialize_system(n_bins=3, chem_data=chem_data)
+bio = BioSim1D(n_bins=3, chem_data=chem_data)
 bio.inject_conc_to_bin(bin_address=1, delta_conc=100., species_index=0)
 bio.describe_state()
 #3 bins and 1 species:   [[  0. 100.   0.]]
@@ -88,7 +88,7 @@ print(bio.system)
 # Re-Simulate the 3-bin system,
 # with a somewhat smaller single time step
 #############################################
-bio.initialize_system(n_bins=3, chem_data=chem_data)
+bio = BioSim1D(n_bins=3, chem_data=chem_data)
 bio.inject_conc_to_bin(bin_address=1, delta_conc=100., species_index=0)
 bio.describe_state()
 

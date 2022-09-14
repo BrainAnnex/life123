@@ -2,26 +2,28 @@ import pytest
 import numpy as np
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
-from life_1D.bio_sim_1d import BioSim1D as bio
+from life_1D.bio_sim_1d import BioSim1D
 
 
 
 # Provide an instantiated object that can be used by the various tests that need it
 @pytest.fixture(scope="module")
 def rxn():
+    bio = BioSim1D()
     chem_data = chem()
     chem_data.set_names(["A", "B", "C", "D", "E", "F"])
 
-    bio.initialize_system(n_bins=10, chem_data=chem_data)
-
     rnx_obj = Reactions(chem_data)
-    yield rnx_obj
+    bio = BioSim1D(n_bins=10, chem_data=chem_data, reactions=rnx_obj)
+
+    yield bio
 
 
 
 def test_set_reactions():
+    bio = BioSim1D()
     chem_data = chem(names=["A", "B", "C"])
-    bio.initialize_system(n_bins=3, chem_data=chem_data)
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
     rxn = Reactions(chem_data)
     rxn.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=8., reverse_rate=2.)
@@ -33,10 +35,11 @@ def test_set_reactions():
 
 
 
-def test_reaction_step_1(rxn):
+def test_reaction_step_1():
+    bio = BioSim1D()
     # Based on experiment "reaction1"
     chem_data = chem(names=["A", "B"])
-    bio.initialize_system(n_bins=3, chem_data=chem_data)
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
@@ -56,10 +59,11 @@ def test_reaction_step_1(rxn):
 
 
 
-def test_reaction_step_1b(rxn):
+def test_reaction_step_1b():
+    bio = BioSim1D()
     # Based on experiment "reaction1"
     chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
-    bio.initialize_system(n_bins=3, chem_data=chem_data)
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
@@ -94,7 +98,8 @@ def test_reaction_step_1b(rxn):
 
 
 
-def test_react_1(rxn):
+def test_react_1():
+    bio = BioSim1D()
     # Based on experiment "reaction2"
     chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
 
@@ -104,7 +109,7 @@ def test_react_1(rxn):
     rxn.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
     assert rxn.number_of_reactions() == 1
 
-    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
@@ -116,7 +121,8 @@ def test_react_1(rxn):
 
 
 
-def test_react_2(rxn):
+def test_react_2():
+    bio = BioSim1D()
     # Based on experiment "reaction3"
     chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
 
@@ -126,7 +132,7 @@ def test_react_2(rxn):
     rxn.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
     assert rxn.number_of_reactions() == 1
 
-    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
@@ -142,7 +148,8 @@ def test_react_2(rxn):
 
 
 
-def test_react_3(rxn):
+def test_react_3():
+    bio = BioSim1D()
     # Based on experiment "reaction4"
     chem_data = chem(diffusion_rates=[0.1, 0.1, 0.1], names=["A", "B", "C"])   # NOTE: diffusion_rates not used
 
@@ -153,7 +160,7 @@ def test_react_3(rxn):
                      forward_rate=5., reverse_rate=2.)
     assert rxn.number_of_reactions() == 1
 
-    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
@@ -170,7 +177,8 @@ def test_react_3(rxn):
 
 
 
-def test_react_4(rxn):
+def test_react_4():
+    bio = BioSim1D()
     # Based on experiment "reaction5"
     chem_data = chem(diffusion_rates=[0.1, 0.1, 0.1], names=["A", "C", "D"])   # NOTE: diffusion_rates not used
 
@@ -181,7 +189,7 @@ def test_react_4(rxn):
                      forward_rate=5., reverse_rate=2.)
     assert rxn.number_of_reactions() == 1
 
-    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_all_uniform_concentrations( [4., 7., 2.] )
 
@@ -196,7 +204,8 @@ def test_react_4(rxn):
 
 
 
-def test_react_5(rxn):
+def test_react_5():
+    bio = BioSim1D()
     # Based on experiment "reaction6"
     chem_data = chem(diffusion_rates=[0.1, 0.1, 0.1, 0.1], names=["A", "B", "C", "D"])   # NOTE: diffusion_rates not used
 
@@ -207,7 +216,7 @@ def test_react_5(rxn):
                      forward_rate=5., reverse_rate=2.)
     assert rxn.number_of_reactions() == 1
 
-    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_all_uniform_concentrations( [4., 7., 5., 2.] )
 
@@ -228,7 +237,8 @@ def test_react_5(rxn):
 
 
 
-def test_react_6(rxn):
+def test_react_6():
+    bio = BioSim1D()
     # Based on experiment "reaction7"
     chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
 
@@ -238,7 +248,7 @@ def test_react_6(rxn):
     rxn.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
     assert rxn.number_of_reactions() == 1
 
-    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_all_uniform_concentrations( [3., 5.] )
 
@@ -255,7 +265,8 @@ def test_react_6(rxn):
 
 
 
-def test_react_7(rxn):
+def test_react_7():
+    bio = BioSim1D()
     # Based on experiment "reaction8"
     chem_data = chem(diffusion_rates=[.1, .1, .1, .1, .1], names=["A", "B", "C", "D", "E"])   # NOTE: diffusion_rates not used
 
@@ -266,7 +277,7 @@ def test_react_7(rxn):
     rxn.add_reaction(reactants=["C", "D"], products=["E"], forward_rate=8., reverse_rate=4.)
     assert rxn.number_of_reactions() == 2
 
-    bio.initialize_system(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
 
     bio.set_all_uniform_concentrations( [3., 5., 1., 0.4, 0.1] )
 
@@ -297,10 +308,11 @@ def test_react_7(rxn):
 
 
 
-def test_react_with_membrane(rxn):
+def test_react_with_membrane():
+    bio = BioSim1D()
     # Based on experiment "reaction/membranes_1"
     chem_data = chem(names=["A", "B", "C"])     # NOTE: Diffusion not done
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.set_membranes(membrane_pos=[1])   # A single membrane, passing thru bin 1
 

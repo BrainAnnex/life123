@@ -1,6 +1,8 @@
 import pytest
 import numpy as np
-from life_1D.bio_sim_1d import BioSim1D as bio
+import pandas as pd
+from pandas.testing import assert_frame_equal
+from life_1D.bio_sim_1d import BioSim1D
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
 
@@ -8,7 +10,8 @@ from modules.reactions.reactions import Reactions
 # Do an initialization operation for every test that uses it as argument
 @pytest.fixture()       # By default, the scope is the function
 def biomsim1D():
-    bio.reset_system()
+    pass
+    #bio.reset_system()
 
 
 
@@ -17,7 +20,9 @@ def biomsim1D():
 
 def test_initialize_system(biomsim1D):
     chem_data = chem(names=["A"])
-    bio.initialize_system(n_bins=10, chem_data=chem_data)
+    bio = BioSim1D()
+
+    bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
     assert bio.n_bins == 10
     assert bio.n_species == 1
@@ -29,10 +34,11 @@ def test_initialize_system(biomsim1D):
 
     # New test
     chem_data = chem(names=["A", "B", "C"])
-    bio.initialize_system(n_bins=15, chem_data=chem_data)
+    bio = BioSim1D(n_bins=15, chem_data=chem_data)
     bio.describe_state()
     expected = np.zeros((3,15), dtype=float)
     assert np.allclose(bio.system, expected)
+
 
 
 def test_reset_system(biomsim1D):
@@ -44,8 +50,9 @@ def test_replace_system(biomsim1D):
 
 
 def test_set_uniform_concentration(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A"])
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.set_uniform_concentration(species_index=0, conc=0.3)
     expected = np.full(5, 0.3, dtype=float)
@@ -54,7 +61,7 @@ def test_set_uniform_concentration(biomsim1D):
     # New test
     bio.reset_system()
     chem_data = chem(names=["A", "B", "C"])
-    bio.initialize_system(n_bins=15, chem_data=chem_data)
+    bio = BioSim1D(n_bins=15, chem_data=chem_data)
     bio.set_uniform_concentration(species_name="A", conc=10.)
     bio.set_uniform_concentration(species_name="B", conc=11.)
     bio.set_uniform_concentration(species_name="C", conc=12.)
@@ -66,7 +73,7 @@ def test_set_uniform_concentration(biomsim1D):
     # New test, with membranes
     bio.reset_system()
     chem_data = chem(names=["A"])
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
     bio.set_membranes(membrane_pos=[1])   # A single membrane, passing thru bin 1
 
     bio.set_uniform_concentration(species_name="A", conc=8.8)
@@ -80,8 +87,9 @@ def test_set_uniform_concentration(biomsim1D):
 
 
 def test_set_all_uniform_concentrations(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.set_all_uniform_concentrations(conc_list=[3., 7.])
     assert np.allclose(bio.lookup_species(species_name="A"), np.full(5, 3., dtype=float))
@@ -92,8 +100,9 @@ def test_set_all_uniform_concentrations(biomsim1D):
 
 
 def test_set_bin_conc(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.set_bin_conc(bin_address=2, conc=3.14, species_name="A")
     assert np.allclose(bio.lookup_species(species_name="A"), [0, 0, 3.14, 0, 0])
@@ -111,8 +120,9 @@ def test_set_species_conc(biomsim1D):
 
 
 def test_inject_conc_to_bin(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A"])
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     with pytest.raises(Exception):
         # cell_index out of bounds
@@ -128,12 +138,119 @@ def test_inject_conc_to_bin(biomsim1D):
 
 
 
+def test_inject_sine_conc(biomsim1D):
+    bio = BioSim1D()
+    chem_data = chem(names=["A"])
+    bio = BioSim1D(n_bins=8, chem_data=chem_data)
+
+    bio.inject_sine_conc(species_name="A", amplitude=5, bias=20, frequency=1, phase=0)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [20., 23.53553391, 25., 23.53553391, 20., 16.46446609, 15., 16.46446609])
+
+    # Adding a 2nd wave in opposite phase will erase everything except for the biases
+    bio.inject_sine_conc(species_name="A", amplitude=5, bias=10, frequency=1, phase=180)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [30., 30., 30., 30., 30., 30., 30., 30.])
+
+
+    bio.set_uniform_concentration(conc=0, species_name="A")     # RESET concentrations
+
+    bio.inject_sine_conc(species_name="A", amplitude=5, bias=20, frequency=1, phase=90)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [15., 16.46446609, 20., 23.53553391, 25.,  23.53553391, 20., 16.46446609])
+
+    # Adding a 2nd wave in opposite phase will erase everything except for the biases
+    bio.inject_sine_conc(species_name="A", amplitude=5, bias=10, frequency=1, phase=-90)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [30., 30., 30., 30., 30., 30., 30., 30.])
+
+
+    bio.set_uniform_concentration(conc=0, species_name="A")     # RESET concentrations
+
+    with pytest.raises(Exception):
+        bio.inject_sine_conc(species_name="A", amplitude=10, bias=0, frequency=1/2, phase=180)  # Would lead to negative values
+
+
+    bio.set_uniform_concentration(conc=0, species_name="A")     # RESET concentrations
+
+    bio.inject_sine_conc(species_name="A", amplitude=10, bias=0, frequency=1/2, phase=0)
+
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [0., 3.82683432, 7.07106781, 9.23879533, 10., 9.23879533, 7.07106781, 3.82683432])
+
+    # Adding a 2nd wave in opposite phase will erase everything except for the biases
+    bio.inject_sine_conc(species_name="A", amplitude=10, bias=30, frequency=1/2, phase=180)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [30., 30., 30., 30., 30., 30., 30., 30.])
+
+
+    bio.set_uniform_concentration(conc=0, species_name="A")     # RESET concentrations
+    bio.inject_sine_conc(species_name="A", amplitude=10, bias=30, frequency=2, phase=0)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [30., 40., 30., 20., 30., 40., 30., 20.])
+
+    bio.set_uniform_concentration(conc=0, species_name="A")     # RESET concentrations
+    bio.inject_sine_conc(species_name="A", amplitude=10, bias=30, frequency=2, phase=-90)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [40., 30., 20., 30., 40., 30., 20., 30.])
+
+    bio.set_uniform_concentration(conc=0, species_name="A")     # RESET concentrations
+    bio.inject_sine_conc(species_name="A", amplitude=10, bias=30, frequency=2, phase=90)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [20., 30., 40., 30., 20., 30., 40., 30.])
+
+    bio.set_uniform_concentration(conc=0, species_name="A")     # RESET concentrations
+    bio.inject_sine_conc(species_name="A", amplitude=10, bias=0, frequency=2, phase=0, zero_clip=True)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [0., 10., 0., 0., 0., 10., 0., 0.])
+
+    #print(bio.lookup_species(species_name="A"))
+
+    # Curves could be visualized as follows:
+    #import plotly.express as px
+    #fig = px.line(y=bio.lookup_species(species_name="A"))
+    #fig.show()
+
+
+
+def test_frequency_analysis(biomsim1D):
+    bio = BioSim1D()
+    chem_data = chem(names=["A"])
+    bio = BioSim1D(n_bins=100, chem_data=chem_data)
+
+    bio.inject_sine_conc(species_name="A", frequency=2, amplitude=1, bias=3)
+
+    result = bio.frequency_analysis(species_name="A")
+
+    expected = pd.DataFrame({"Frequency": [0,2], "Relative Amplitude": [3.0,1.0]})
+    assert_frame_equal(result, expected, check_dtype=False)
+
+    bio.inject_sine_conc(species_name="A", frequency=4, amplitude=0.5)
+    bio.inject_sine_conc(species_name="A", frequency=8, amplitude=0.2)
+
+    #import plotly.express as px
+    #fig = px.line(y=bio.lookup_species(species_name="A"))
+    #fig.show()
+
+    result = bio.frequency_analysis(species_name="A")
+    #print(result)
+    expected = pd.DataFrame({"Frequency": [0,2,4,8], "Relative Amplitude": [3.0,1.0,0.5,0.2]})
+    assert_frame_equal(result, expected, check_dtype=False)
+
+    result = bio.frequency_analysis(species_name="A", n_largest=3)  # ditch the smallest amplitude
+    #print(result)
+    expected = pd.DataFrame({"Frequency": [0,2,4], "Relative Amplitude": [3.0,1.0,0.5]})
+    assert_frame_equal(result, expected, check_dtype=False)
+
+
+
 
 ########  DIMENSION-RELATED  ################
 
 def test_set_dimensions(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A"])
-    bio.initialize_system(n_bins=4, chem_data=chem_data)
+    bio = BioSim1D(n_bins=4, chem_data=chem_data)
     bio.set_dimensions(21.)
     assert np.allclose(bio.system_length, 21.)
     assert np.allclose(bio.global_Dx, 7.)
@@ -144,8 +261,9 @@ def test_set_dimensions(biomsim1D):
 
 
 def test_x_coord(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A"])
-    bio.initialize_system(n_bins=4, chem_data=chem_data)
+    bio = BioSim1D(n_bins=4, chem_data=chem_data)
 
     with pytest.raises(Exception):
         bio.x_coord(0)      # must first call set_dimensions()
@@ -161,8 +279,9 @@ def test_x_coord(biomsim1D):
 ########  MEMBRANE-RELATED  ################
 
 def test_uses_membranes(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     assert not bio.uses_membranes()
     bio.set_membranes(membrane_pos=[2, 4])
@@ -171,8 +290,9 @@ def test_uses_membranes(biomsim1D):
 
 
 def test_bins_with_membranes(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.set_membranes(membrane_pos=[2, 4])
     assert bio.bins_with_membranes() == [2, 4]
@@ -180,8 +300,9 @@ def test_bins_with_membranes(biomsim1D):
 
 
 def test_set_membranes(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.set_membranes(membrane_pos=[2, 4])
     expected = np.array([False, False, True, False, True])
@@ -207,7 +328,7 @@ def test_set_membranes(biomsim1D):
 
     # Re-do the last setting of membrane, this time to a system that has concentration values set
     bio.reset_system()
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.set_uniform_concentration(conc=8., species_name="A")
     bio.set_uniform_concentration(conc=5., species_name="B")
@@ -237,8 +358,9 @@ def test_set_membranes(biomsim1D):
 
 
 def test_assert_valid_bin(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
-    bio.initialize_system(n_bins=3, chem_data=chem_data)
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
     with pytest.raises(Exception):
         bio.assert_valid_bin(-1)
         bio.assert_valid_bin(3)
@@ -268,9 +390,10 @@ def test_system_snapshot(biomsim1D):
 
 
 def test_show_membranes(biomsim1D):
+    bio = BioSim1D()
     print("cls.membranes: ", bio.membranes)
     chem_data = chem(names=["A"])
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     result = bio.show_membranes()
     assert result == ""
@@ -288,60 +411,76 @@ def test_show_membranes(biomsim1D):
 #######  CHANGE RESOLUTIONS #########
 
 def test_increase_spacial_resolution(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
-    bio.initialize_system(n_bins=3, chem_data=chem_data)
-    bio.set_species_conc(0, [11., 12., 13.])
-    bio.set_species_conc(1, [5., 15., 25.])
-    #bio.describe_state()
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
+    bio.set_species_conc(species_index=0, conc_list=[11., 12., 13.])
+    bio.set_species_conc(species_index=1, conc_list=[5., 15., 25.])
 
-    result = bio.increase_spacial_resolution(2)
-    #print(result)
-    assert np.allclose(result[0], [11., 11., 12., 12., 13., 13.])
-    assert np.allclose(result[1], [ 5., 5.,  15., 15., 25., 25.])
+    bio.increase_spacial_resolution(2)
+
+    assert np.allclose(bio.lookup_species(species_index=0), [11., 11., 12., 12., 13., 13.])
+    assert np.allclose(bio.lookup_species(species_name="B"), [ 5., 5.,  15., 15., 25., 25.])
+
 
 
 def test_decrease_spacial_resolution(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
-    bio.initialize_system(n_bins=6, chem_data=chem_data)
-    bio.set_species_conc(0, [10., 20., 30., 40., 50., 60.])
-    bio.set_species_conc(1, [ 2., 8.,   5., 15., 4.,   2.])
-    bio.describe_state()
+    bio = BioSim1D(n_bins=6, chem_data=chem_data)
+    bio.set_species_conc(species_index=0, conc_list=[10., 20., 30., 40., 50., 60.])
+    bio.set_species_conc(species_index=1, conc_list=[ 2., 8.,   5., 15., 4.,   2.])
+    original_state = bio.system
 
     # Group by pairs
-    result = bio.decrease_spacial_resolution(2)
-    #print(result)
-    assert np.allclose(result, [[15., 35., 55.],
-                                [ 5., 10.,  3.]])
+    bio.decrease_spacial_resolution(2)
+    assert np.allclose(bio.system, [[15., 35., 55.],
+                                    [ 5., 10.,  3.]])
 
     # Group by triplets
-    result = bio.decrease_spacial_resolution(3)
-    #print(result)
-    assert np.allclose(result, [[20., 50.],
-                                [ 5., 7.]])
+    bio.replace_system(original_state)
+    bio.decrease_spacial_resolution(3)
+    assert np.allclose(bio.system, [[20., 50.],
+                                    [ 5., 7.]])
 
     # Group into just 1 single bin
-    result = bio.decrease_spacial_resolution(6)
-    #print(result)
-    assert np.allclose(result, [[35.],
-                                [ 6.]])
+    bio.replace_system(original_state)
+    bio.decrease_spacial_resolution(6)
+    assert np.allclose(bio.system, [[35.],
+                                    [ 6.]])
+
 
 
 def test_varying_spacial_resolution(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
-    bio.initialize_system(n_bins=3, chem_data=chem_data)
-    bio.set_species_conc(0, [11., 12., 13.])
-    bio.set_species_conc(1, [5., 15., 25.])
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
+    bio.set_species_conc(species_name="A", conc_list=[11., 12., 13.])
+    bio.set_species_conc(species_name="B", conc_list=[5., 15., 25.])
 
     # First, increase the spacial resolution, after saving the original matrix
     original_state = bio.system
-    result = bio.increase_spacial_resolution(3)
-    #print(result)
-    bio.replace_system(result)
+    bio.increase_spacial_resolution(3)
 
     # Then, decrease the spacial resolution, by the same factor
-    result = bio.decrease_spacial_resolution(3)
-    #print(result)
-    assert np.allclose(result, original_state)
+    bio.decrease_spacial_resolution(3)
+    assert np.allclose(bio.system, original_state)
+
+
+
+def test_smooth_spacial_resolution(biomsim1D):
+    bio = BioSim1D()
+    chem_data = chem(names=["A", "B"])
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
+    bio.set_species_conc(species_name="A", conc_list=[10., 20., 30.])
+    bio.set_species_conc(species_name="B", conc_list=[2.,   8., 4.])
+
+    bio.smooth_spacial_resolution()
+    expected = np.array([[10., 15., 20., 25., 30.],
+                         [ 2.,  5.,  8.,  6.,  4.]])
+    assert np.allclose(bio.system, expected)
+    assert bio.n_bins == 5
+    assert bio.n_species == 2
 
 
 
@@ -349,9 +488,10 @@ def test_varying_spacial_resolution(biomsim1D):
 #########   TESTS OF DIFFUSION : single species, one step    #########
 
 def test_diffuse_step_single_species_1(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(diffusion_rates=[10.])
 
-    bio.initialize_system(n_bins=2, chem_data=chem_data)
+    bio = BioSim1D(n_bins=2, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=100.)
     bio.describe_state()
@@ -368,9 +508,10 @@ def test_diffuse_step_single_species_1(biomsim1D):
 
 
 def test_diffuse_step_single_species_1b(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(diffusion_rates=[10.])
 
-    bio.initialize_system(n_bins=2, chem_data=chem_data)
+    bio = BioSim1D(n_bins=2, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=100.)
     bio.describe_state()
@@ -388,8 +529,9 @@ def test_diffuse_step_single_species_1b(biomsim1D):
 
 
 def test_diffuse_step_single_species_2(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A"])
-    bio.initialize_system(n_bins=1, chem_data=chem_data)
+    bio = BioSim1D(n_bins=1, chem_data=chem_data)
     bio.set_uniform_concentration(species_index=0, conc=8.0)
     with pytest.raises(Exception):
         bio.diffuse_step_single_species(time_step=.001)    # Must set the diffusion rates first
@@ -404,8 +546,9 @@ def test_diffuse_step_single_species_2(biomsim1D):
 
 
 def test_diffuse_step_single_species_2b(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(names=["A"])
-    bio.initialize_system(n_bins=1, chem_data=chem_data)
+    bio = BioSim1D(n_bins=1, chem_data=chem_data)
     bio.set_uniform_concentration(species_index=0, conc=8.0)
 
     chem_data.set_diffusion_rates([20.])
@@ -418,12 +561,13 @@ def test_diffuse_step_single_species_2b(biomsim1D):
 
 
 def test_diffuse_step_single_species_3(biomsim1D):
+    bio = BioSim1D()
     bio.system = None
     with pytest.raises(Exception):
         bio.diffuse_step_single_species(time_step=.001)    # Must first initialize the system
 
     chem_data = chem(diffusion_rates=[2.78, 3.14])
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.set_uniform_concentration(species_index=0, conc=22.2)
     bio.set_uniform_concentration(species_index=1, conc=66.6)
@@ -444,9 +588,10 @@ def test_diffuse_step_single_species_3(biomsim1D):
 
 
 def test_diffuse_step_4(biomsim1D):
+    bio = BioSim1D()
     # Multiple diffusion steps, with 2 bins
     chem_data = chem(diffusion_rates=[1.])
-    bio.initialize_system(n_bins=2, chem_data=chem_data)
+    bio = BioSim1D(n_bins=2, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=10.)
     bio.describe_state()
@@ -466,9 +611,10 @@ def test_diffuse_step_4(biomsim1D):
 
 
 def test_diffuse_step_5(biomsim1D):
+    bio = BioSim1D()
     # Multiple diffusion steps, with 3 bins, and a large time step
     chem_data = chem(diffusion_rates=[.5])
-    bio.initialize_system(n_bins=3, chem_data=chem_data)
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin_address=1, species_index=0, delta_conc=10.)
     bio.describe_state()
@@ -486,9 +632,10 @@ def test_diffuse_step_5(biomsim1D):
 
 
 def test_diffuse_step_6(biomsim1D):
+    bio = BioSim1D()
     # Multiple diffusion steps, with 5 bins, and a large time step
     chem_data = chem(diffusion_rates=[.5])
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=10.)
     bio.describe_state()
@@ -505,10 +652,11 @@ def test_diffuse_step_6(biomsim1D):
 
 
 def test_diffuse_step_7(biomsim1D):
+    bio = BioSim1D()
     # Multiple diffusion steps, with 5 bins,
     # 1/2 the time step of the previous test, and double the duration
     chem_data = chem(diffusion_rates=[.5])
-    bio.initialize_system(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=10.)
     bio.describe_state()
@@ -525,9 +673,10 @@ def test_diffuse_step_7(biomsim1D):
 
 
 def test_diffuse_step_8(biomsim1D):
+    bio = BioSim1D()
     # Many diffusion steps that the system equilibrates, no matter the starting point
     chem_data = chem(diffusion_rates=[.3])
-    bio.initialize_system(n_bins=15, chem_data=chem_data)
+    bio = BioSim1D(n_bins=15, chem_data=chem_data)
 
     np.random.seed(18)
     bio.set_species_conc(species_index=0, conc_list= 100*np.random.rand(15))
@@ -555,8 +704,9 @@ def test_diffuse_step_8(biomsim1D):
 #########   TESTS OF DIFFUSION : all species, one step    #########
 
 def test_diffuse_step_1(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(diffusion_rates=[5., 20.])
-    bio.initialize_system(n_bins=3, chem_data=chem_data)
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
     with pytest.raises(Exception):
         bio.set_bin_conc(bin_address=3, species_index=0, conc=100.) # Bin number out of range
@@ -590,8 +740,9 @@ def test_diffuse_step_1(biomsim1D):
 #########   TESTS OF DIFFUSION : all species, multiple steps    #########
 
 def test_diffuse_1(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(diffusion_rates=[5., 20.])
-    bio.initialize_system(n_bins=3, chem_data=chem_data)
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_bin_conc(species_index=0, bin_address=1, conc=100.)
     bio.set_species_conc(species_index=1, conc_list=[10, 20, 50])
     bio.describe_state()
@@ -648,9 +799,10 @@ def test_diffuse_1(biomsim1D):
 
 
 def test_diffuse_2(biomsim1D):
+    bio = BioSim1D()
     chem_data = chem(diffusion_rates=[0.1])
     # Diffuse 1 species almost to equilibrium, starting from a single concentration pulse
-    bio.initialize_system(n_bins=10, chem_data=chem_data)
+    bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
     bio.set_uniform_concentration(species_index=0, conc=0.)
     bio.inject_conc_to_bin(species_index=0, bin_address=2, delta_conc=10.)
@@ -684,3 +836,70 @@ def test_diffuse_2(biomsim1D):
 
 def test_react_diffuse(biomsim1D):
     pass
+
+
+
+
+def manual_test_compare_states(biomsim1D):     # MANUAL TEST
+    bio = BioSim1D()
+    state1 = np.array([10, 20, 30])
+    state2 = np.array([10.3, 19.9, 30.2])
+
+    print()
+    bio.compare_states(state1, state2, verbose=True)
+    """
+    Max of unsigned absolute differences:  0.3000000000000007
+    Relative differences:  [-0.03        0.005      -0.00666667]
+    Max of unsigned relative differences:  0.030000000000000072
+    Mean of relative differences:  -0.010555555555555547
+    Median of relative differences:  -0.006666666666666643
+    Standard deviation of relative differences:  0.014550889837454275
+    np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
+    np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) :  False
+    np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) :  False
+    np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  False
+    """
+
+
+    state1 = np.array([[10, 20, 30],
+                       [100, 200, 300]])
+    state2 = np.array([[10.3, 19.9, 30.2],
+                       [103, 199, 302]])
+
+    print()
+    bio.compare_states(state1, state2, verbose=True)
+    """
+    Max of unsigned absolute differences:  3.0
+    Relative differences:  [[-0.03        0.005      -0.00666667]
+     [-0.03        0.005      -0.00666667]]
+    Max of unsigned relative differences:  0.030000000000000072
+    Mean of relative differences:  -0.010555555555555552
+    Median of relative differences:  -0.006666666666666655
+    Standard deviation of relative differences:  0.014550889837454246
+    np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
+    np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) :  False
+    np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) :  False
+    np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  False
+    """
+
+
+    state1 = np.array([[10, 20, 30],
+                       [100, 200, 300]])
+    state2 = np.array([[10.0001, 19.9999, 30.0001],
+                       [100.0004, 199.9985, 300.0003]])
+
+    print()
+    bio.compare_states(state1, state2, verbose=True)
+    """
+    Max of unsigned absolute differences:  0.0014999999999929514
+    Relative differences:  [[-1.00000000e-05  5.00000000e-06 -3.33333333e-06]
+     [-4.00000000e-06  7.50000000e-06 -1.00000000e-06]]
+    Max of unsigned relative differences:  9.999999999976694e-06
+    Mean of relative differences:  -9.722222222130482e-07
+    Median of relative differences:  -2.166666666632011e-06
+    Standard deviation of relative differences:  5.82651718172416e-06
+    np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
+    np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) :  True
+    np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) :  True
+    np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  True
+    """

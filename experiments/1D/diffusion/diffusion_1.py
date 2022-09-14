@@ -31,7 +31,7 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from life_1D.bio_sim_1d import BioSim1D as bio
+from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -62,9 +62,9 @@ lineplot_pars = {"range": [0, 10],
                 }
 
 # %%
-# Prepare the initial system
+# Prepare the initial system, with a single non-zero bin, near the left edge of the system
 chem_data = chem(names=["A"], diffusion_rates=[0.1])
-bio.initialize_system(n_bins=10, chem_data=chem_data)
+bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
 bio.inject_conc_to_bin(bin_address=2, species_index=0, delta_conc=10.)
 
