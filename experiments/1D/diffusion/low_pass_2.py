@@ -16,9 +16,10 @@
 # ## The attenuation over time of a single-frequency in the initial concentration
 #
 # ### The initial system state is a sine wave of frequency 2 (i.e. 2 cycles across the system's length), of amplitude 10, with a baseline (bias) of 30
+# ### Afterward, the process is restarted and repeated with a frequency 5 times larger
 #
 #
-# LAST REVISED: Sep. 13, 2022
+# LAST REVISED: Sep. 14, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

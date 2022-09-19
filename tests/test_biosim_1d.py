@@ -20,7 +20,6 @@ def biomsim1D():
 
 def test_initialize_system(biomsim1D):
     chem_data = chem(names=["A"])
-    bio = BioSim1D()
 
     bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
@@ -50,7 +49,6 @@ def test_replace_system(biomsim1D):
 
 
 def test_set_uniform_concentration(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
@@ -87,7 +85,6 @@ def test_set_uniform_concentration(biomsim1D):
 
 
 def test_set_all_uniform_concentrations(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
@@ -100,7 +97,6 @@ def test_set_all_uniform_concentrations(biomsim1D):
 
 
 def test_set_bin_conc(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
@@ -120,7 +116,6 @@ def test_set_species_conc(biomsim1D):
 
 
 def test_inject_conc_to_bin(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
@@ -139,7 +134,6 @@ def test_inject_conc_to_bin(biomsim1D):
 
 
 def test_inject_sine_conc(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=8, chem_data=chem_data)
 
@@ -214,7 +208,6 @@ def test_inject_sine_conc(biomsim1D):
 
 
 def test_frequency_analysis(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=100, chem_data=chem_data)
 
@@ -248,7 +241,6 @@ def test_frequency_analysis(biomsim1D):
 ########  DIMENSION-RELATED  ################
 
 def test_set_dimensions(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=4, chem_data=chem_data)
     bio.set_dimensions(21.)
@@ -261,7 +253,6 @@ def test_set_dimensions(biomsim1D):
 
 
 def test_x_coord(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=4, chem_data=chem_data)
 
@@ -279,7 +270,6 @@ def test_x_coord(biomsim1D):
 ########  MEMBRANE-RELATED  ################
 
 def test_uses_membranes(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
@@ -290,7 +280,6 @@ def test_uses_membranes(biomsim1D):
 
 
 def test_bins_with_membranes(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
@@ -488,7 +477,6 @@ def test_smooth_spacial_resolution(biomsim1D):
 #########   TESTS OF DIFFUSION : single species, one step    #########
 
 def test_diffuse_step_single_species_1(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(diffusion_rates=[10.])
 
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
@@ -611,7 +599,6 @@ def test_diffuse_step_4(biomsim1D):
 
 
 def test_diffuse_step_5(biomsim1D):
-    bio = BioSim1D()
     # Multiple diffusion steps, with 3 bins, and a large time step
     chem_data = chem(diffusion_rates=[.5])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
@@ -620,7 +607,7 @@ def test_diffuse_step_5(biomsim1D):
     bio.describe_state()
 
     # The time step is so large that the system immediately equilibrates
-    print("The default max allowed time step is: ", bio.max_time_step(.5))
+    print("The default max allowed time step is: ", bio.max_time_step(.5, delta_x=1))
     for i in range(3):
         bio.diffuse_step(time_step=0.6666)
         bio.system += bio.delta_diffusion
@@ -632,7 +619,6 @@ def test_diffuse_step_5(biomsim1D):
 
 
 def test_diffuse_step_6(biomsim1D):
-    bio = BioSim1D()
     # Multiple diffusion steps, with 5 bins, and a large time step
     chem_data = chem(diffusion_rates=[.5])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
@@ -640,7 +626,7 @@ def test_diffuse_step_6(biomsim1D):
     bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=10.)
     bio.describe_state()
 
-    print("The default max allowed time step is: ", bio.max_time_step(.5))
+    print("The default max allowed time step is: ", bio.max_time_step(.5, delta_x=1))
     for i in range(20):
         bio.diffuse_step(time_step=0.6666)
         bio.system += bio.delta_diffusion
@@ -652,7 +638,6 @@ def test_diffuse_step_6(biomsim1D):
 
 
 def test_diffuse_step_7(biomsim1D):
-    bio = BioSim1D()
     # Multiple diffusion steps, with 5 bins,
     # 1/2 the time step of the previous test, and double the duration
     chem_data = chem(diffusion_rates=[.5])
@@ -673,7 +658,6 @@ def test_diffuse_step_7(biomsim1D):
 
 
 def test_diffuse_step_8(biomsim1D):
-    bio = BioSim1D()
     # Many diffusion steps that the system equilibrates, no matter the starting point
     chem_data = chem(diffusion_rates=[.3])
     bio = BioSim1D(n_bins=15, chem_data=chem_data)
@@ -704,7 +688,6 @@ def test_diffuse_step_8(biomsim1D):
 #########   TESTS OF DIFFUSION : all species, one step    #########
 
 def test_diffuse_step_1(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(diffusion_rates=[5., 20.])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
 

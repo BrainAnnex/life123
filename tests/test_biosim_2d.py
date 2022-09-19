@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from life_2D.bio_sim_2d import BioSim2D as bio
+from life_2D.bio_sim_2d import BioSim2D
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
 
@@ -10,7 +10,7 @@ from modules.reactions.reactions import Reactions
 
 def test_initialize_system():
     chem_data = chem(names=["A", "B"])
-    bio = BioSim1D(n_bins=(3,5), chem_data=chem_data)
+    bio = BioSim2D(n_bins=(3,5), chem_data=chem_data)
 
     assert bio.n_bins_x == 3
     assert bio.n_bins_y == 5
@@ -24,7 +24,7 @@ def test_initialize_system():
 
 def test_set_bin_conc():
     chem_data = chem(names=["A", "B"])
-    bio = BioSim1D(n_bins=(3,4), chem_data=chem_data)
+    bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
 
     bio.set_bin_conc(bin_x=0, bin_y=2, species_index=0, conc=0.2)
     bio.describe_state()
@@ -56,7 +56,7 @@ def test_set_bin_conc():
 
 def test_set_bin_conc_all_species():
     chem_data = chem(names=["A", "B"])
-    bio = BioSim1D(n_bins=(3,4), chem_data=chem_data)
+    bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
 
     bio.set_bin_conc_all_species(bin_x=0, bin_y=2, conc_list=[0.02, 1.02])
     bio.describe_state()
@@ -86,7 +86,7 @@ def test_react():
     # Reaction A <-> B , with 1st-order kinetics in both directions
     rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
-    bio = BioSim1D(n_bins=(3,4), chem_data=chem_data, reactions=rxn)
+    bio = BioSim2D(n_bins=(3,4), chem_data=chem_data, reactions=rxn)
     bio.set_bin_conc_all_species(bin_x=0, bin_y=0, conc_list=[10.,50.])
     bio.set_bin_conc_all_species(bin_x=0, bin_y=1, conc_list=[20.,35.])
     bio.set_bin_conc_all_species(bin_x=2, bin_y=3, conc_list=[5.,100.])
@@ -116,7 +116,7 @@ def test_reaction_step():
     # Reaction A <-> B , with 1st-order kinetics in both directions
     rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
-    bio = BioSim1D(n_bins=(3,4), chem_data=chem_data, reactions=rxn)
+    bio = BioSim2D(n_bins=(3,4), chem_data=chem_data, reactions=rxn)
     bio.set_bin_conc_all_species(bin_x=0, bin_y=0, conc_list=[10.,50.])
     bio.set_bin_conc_all_species(bin_x=0, bin_y=1, conc_list=[20.,35.])
     bio.set_bin_conc_all_species(bin_x=2, bin_y=3, conc_list=[5.,100.])

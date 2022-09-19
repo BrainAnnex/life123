@@ -954,31 +954,36 @@ class BioSim1D:
     #########################################################################
 
     
-    def is_excessive(self, time_step, diff_rate) -> bool:
+    def is_excessive(self, time_step, diff_rate, delta_x) -> bool:
         """
         Use a loose heuristic to determine if the requested time step is too long,
-        given the diffusion rate
+        given the diffusion rate and delta_x.
+        This is also based on the "Von Neumann stability analysis"
+        (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
 
         :param time_step:
         :param diff_rate:
+        :param delta_x:
         :return:
         """
-        value = time_step * diff_rate
-
-        if value > self.time_step_threshold:
+        if time_step > self.max_time_step(diff_rate, delta_x):
             return True
         else:
             return False
 
 
     
-    def max_time_step(self, diff_rate) -> float:
+    def max_time_step(self, diff_rate, delta_x) -> float:
         """
-        Determine a reasonable upper bound on the time step, for the given diffusion rate
+        Determine a reasonable upper bound on the time step, for the given diffusion rate and delta_x
+        This is also based on the "Von Neumann stability analysis"
+        (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
+
         :param diff_rate:
+        :param delta_x:
         :return:
         """
-        return self.time_step_threshold/diff_rate
+        return delta_x**2 * self.time_step_threshold/diff_rate
 
 
 
@@ -1080,7 +1085,8 @@ class BioSim1D:
 
         diff = self.chem_data.diffusion_rates[species_index]   # The diffusion rate of the specified single species
 
-        assert not self.is_excessive(time_step, diff), f"Excessive large time_fraction. Should be < {self.max_time_step(diff)}"
+        assert not self.is_excessive(time_step, diff, delta_x), \
+            f"Excessive large time_fraction. Should be < {self.max_time_step(diff, delta_x)}"
 
 
         # Carry out a convolution operation, with a tile of size 3 (or 2 if only 2 bins)
