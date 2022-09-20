@@ -26,7 +26,7 @@ class BioSim1D:
         :param reactions:   (OPTIONAL) Object of class "Reactions";
                                 if not specified, it'll get instantiated here
         """
-        self.verbose = False
+        self.debug = False
 
         self.n_bins = 0          # Number of spacial compartments (bins) used in the simulation
 
@@ -84,8 +84,6 @@ class BioSim1D:
 
         self.system_time = None             # Global time of the system, from initialization on
 
-        self.debug = False
-
         if (n_bins is not None) or (chem_data is not None) or (reactions is not None):
             self.initialize_system(n_bins=n_bins, chem_data=chem_data, reactions=reactions)
 
@@ -98,7 +96,6 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    
     def initialize_system(self, n_bins: int, chem_data=None, reactions=None) -> None:
         """
         Initialize all concentrations to zero.
@@ -147,7 +144,7 @@ class BioSim1D:
     
     def reset_system(self) -> None:
         """
-        WARNING - THIS IS VERY PARTIAL.  TODO: expand, or switch to instantiated class
+        WARNING - THIS IS VERY PARTIAL.  TODO: expand, or drop (not sure if really neeeded anymore)
         :return:
         """
         self.system = None
@@ -1211,7 +1208,7 @@ class BioSim1D:
 
         # For each bin
         for bin_n in range(self.n_bins):     # Bin number, ranging from 0 to max_bin_number, inclusive
-            if self.verbose:
+            if self.debug:
                 print(f"reaction_step(): processing the all the reactions in bin number {bin_n}")
 
             # Obtain the Delta-concentration for each species, for this bin
