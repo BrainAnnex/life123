@@ -18,7 +18,7 @@
 #
 # Diffusion not done
 #
-# LAST REVISED: Aug. 31, 2022
+# LAST REVISED: Sep. 21, 2022
 # %%
 # Extend the sys.path variable, to contain the project's root directory
 import set_path
@@ -30,7 +30,7 @@ from experiments.get_notebook_info import get_notebook_basename
 
 from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
-from life_2D.bio_sim_2d import BioSim2D as bio
+from life_2D.bio_sim_2d import BioSim2D
 
 import plotly.express as px
 from modules.html_log.html_log import HtmlLog as log
@@ -53,7 +53,7 @@ rxn = Reactions(chem_data)
 # Reaction A <-> B , with 1st-order kinetics in both directions
 rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
-bio = BioSim1D(n_bins=(3,4), chem_data=chem_data, reactions=rxn)
+bio = BioSim2D(n_bins=(3,4), chem_data=chem_data, reactions=rxn)
 
 bio.set_bin_conc_all_species(bin_x=0, bin_y=0, conc_list=[10.,50.])
 bio.set_bin_conc_all_species(bin_x=0, bin_y=1, conc_list=[20.,35.])
