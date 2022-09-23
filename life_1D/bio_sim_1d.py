@@ -382,7 +382,8 @@ class BioSim1D:
             f"set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; the passed value was {type(conc_list)})"
 
         assert len(conc_list) == self.n_bins, \
-            "set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the various bins (wrong length)"
+            f"set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the various bins " \
+            f"(the length should be {self.n_bins}, rather than {len(conc_list)})"
 
         self.system[species_index] = conc_list
 
@@ -1050,8 +1051,7 @@ class BioSim1D:
 
 
 
-    
-    def diffuse_step_single_species(self, time_step: float, species_index=0, delta_x = 1) -> np.array:
+    def diffuse_step_single_species(self, time_step: float, species_index=0, delta_x=1) -> np.array:
         """
         Diffuse the specified single species, for the specified time step, across all bins,
         and return an array of the changes in concentration ("Delta concentration")
@@ -1061,14 +1061,15 @@ class BioSim1D:
 
         We're assuming an isolated environment, with nothing diffusing thru the "walls"
 
+        This approach is based on a "3+1 stencil", aka "Explicit Forward-Time Centered Space".
         EXPLANATION:  https://life123.science/diffusion
 
-        :param time_step:       Time step over which to carry out the diffusion.
-                                If too large, an Exception will be raised.
+        :param time_step:       Delta time over which to carry out this single diffusion step;
+                                    if too large, an Exception will be raised.
         :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
         :param delta_x:         Distance between consecutive bins
 
-        :return:                A Numpy array with the change in concentration for the given species across all bins
+        :return:                A Numpy array with the CHANGE in concentration for the given species across all bins
         """
         assert self.system is not None, "Must first initialize the system"
         assert self.n_bins > 0, "Must first set the number of bins"
@@ -1078,7 +1079,7 @@ class BioSim1D:
         increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin
 
         if self.n_bins == 1:
-            return increment_vector                 # There's nothing to do in the case of just 1 cell!
+            return increment_vector                 # There's nothing to do in the case of just 1 bin!
 
         diff = self.chem_data.diffusion_rates[species_index]   # The diffusion rate of the specified single species
 
@@ -1086,12 +1087,12 @@ class BioSim1D:
             f"Excessive large time_fraction. Should be < {self.max_time_step(diff, delta_x)}"
 
 
-        # Carry out a convolution operation, with a tile of size 3 (or 2 if only 2 bins)
+        # Carry out a 1-D convolution operation, with a tile of size 3 (or 2 if only 2 bins)
         #print(f"Diffusing species # {species_index}")
 
-        max_bin_number = self.n_bins - 1     # Bin numbers range from 0 to max_bin_number, inclusive
+        max_bin_number = self.n_bins - 1    # Bin numbers range from 0 to max_bin_number, inclusive
 
-        effective_diff = diff * time_step
+        effective_diff = diff * time_step   # We're calling this quantity "Effective Diffusion" (NOT a standard term)
         if delta_x != 1:
             effective_diff /= (delta_x**2)
 
@@ -1108,6 +1109,99 @@ class BioSim1D:
                 increment_vector[i] = effective_diff * \
                                         (self.system[species_index , i + 1] - current_conc
                                          + self.system[species_index , i - 1] - current_conc)
+
+        return increment_vector
+
+
+
+    def diffuse_step_single_species_5_1_stencils(self, time_step: float, species_index=0, delta_x=1) -> np.array:
+        """
+        Similar to diffuse_step_single_species(), but using a "5+1 stencil";
+        i.e. spacial derivatives are turned into finite elements using 5 adjacent bins instead of 3.
+
+        For more info, see diffuse_step_single_species()
+
+        IMPORTANT: the actual system concentrations are NOT changed.
+
+        :param time_step:       Delta time over which to carry out this single diffusion step;
+                                    if too large, an Exception will be raised.
+        :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
+        :param delta_x:         Distance between consecutive bins
+
+        :return:                A Numpy array with the CHANGE in concentration for the given species across all bins
+        """
+        assert self.system is not None, "Must first initialize the system"
+        assert self.n_bins > 0, "Must first set the number of bins"
+        assert self.n_bins >= 3, "For very small number of bins, use another method"
+        assert self.chem_data.diffusion_rates is not None, "Must first set the diffusion rates"
+        assert self.sealed == True, "For now, there's no provision for exchange with the outside"
+
+
+        increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin
+
+        if self.n_bins == 1:
+            return increment_vector                 # There's nothing to do in the case of just 1 bin!
+
+        diff = self.chem_data.diffusion_rates[species_index]   # The diffusion rate of the specified single species
+
+        # TODO: this Upper Bound is based on a *different* method, and should be made more specific to this method
+        #assert not self.is_excessive(time_step, diff, delta_x), \
+            #f"Excessive large time_fraction. Should be < {self.max_time_step(diff, delta_x)}"
+
+
+        # Carry out a 1-D convolution operation, with a tile of size 5
+
+        max_bin_number = self.n_bins - 1     # Bin numbers range from 0 to max_bin_number, inclusive
+
+        effective_diff = diff * time_step   # We're calling this quantity "Effective Diffusion" (NOT a standard term)
+        if delta_x != 1:
+            effective_diff /= (delta_x**2)
+
+        #print("effective_diff: ", effective_diff)
+
+        # The coefficients for the "Central Differences" for the spacial 2nd partial derivative,
+        #   to "accuracy 4" (using 5 term: 2 left neighbors and 2 right neighbors)
+        C2 = -1/12
+        C1 = 4/3
+        C0 = - 2.5
+
+        leftmost = self.system[species_index , 0]
+        rightmost = self.system[species_index , max_bin_number]
+
+        for i in range(self.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
+            #print(f"Processing bin number {i}")
+            C_i = self.system[species_index , i]
+
+            # The boundary conditions, at left and right edges of the system,
+            # state that the flux is zero across the boundaries
+            if i == 0:                     # Special cases for the first 2 bins
+                C_i_minus_2 = leftmost
+                C_i_minus_1 = leftmost
+            elif i == 1:
+                C_i_minus_2 = leftmost
+                C_i_minus_1 = self.system[species_index , i-1]
+            else:
+                C_i_minus_2 = self.system[species_index , i-2]
+                C_i_minus_1 = self.system[species_index , i-1]
+
+            if i == max_bin_number:      # Special cases for the last 2 bins
+                C_i_plus_1 = rightmost
+                C_i_plus_2 = rightmost
+            elif i == max_bin_number - 1:
+                C_i_plus_1 = self.system[species_index , i+1]
+                C_i_plus_2 = rightmost
+            else:
+                C_i_plus_1 = self.system[species_index , i+1]
+                C_i_plus_2 = self.system[species_index , i+2]
+
+            #print("The 5 bins under consideration: ", C_i_minus_2, C_i_minus_1, C_i, C_i_plus_1, C_i_plus_2)
+            # Compute the "Central Differences" for the 2nd partial derivative, to "accuracy 4"
+            increment_vector[i] = effective_diff * \
+                                      (  C2 * C_i_minus_2
+                                       + C1 * C_i_minus_1
+                                       + C0 * C_i
+                                       + C1 * C_i_plus_1
+                                       + C2 * C_i_plus_2)
 
         return increment_vector
 

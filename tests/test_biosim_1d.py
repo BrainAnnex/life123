@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import pandas as pd
+from scipy.ndimage import shift
 from pandas.testing import assert_frame_equal
 from life_1D.bio_sim_1d import BioSim1D
 from modules.chemicals.chemicals import Chemicals as chem
@@ -477,6 +478,42 @@ def test_smooth_spacial_resolution(biomsim1D):
 #########   TESTS OF DIFFUSION : single species, one step    #########
 
 def test_diffuse_step_single_species_1(biomsim1D):
+    delta_t = 0.01
+    delta_x = 2
+    diff = 10.
+
+    # The coefficients for the 2nd derivative of order 2
+    C1 = 1
+    C0 = -2
+    coeffs = np.array([C1, C0, C1])
+
+    chem_data = chem(diffusion_rates=[diff])
+
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
+
+    initial_concs = np.array([50, 80, 20])
+    bio.set_species_conc(species_index=0, conc_list=initial_concs)
+    #bio.describe_state()
+
+    result = bio.diffuse_step_single_species(time_step=delta_t, species_index=0, delta_x=delta_x)
+    #print(result)
+
+    # Manually computes the expected increments at each bin
+    concs = shift(initial_concs, 1, cval=initial_concs[0])      # [50, 50, 80]
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[0])
+
+    concs = initial_concs                                       # [50, 80, 20]
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[1])
+
+    concs = shift(initial_concs, -1, cval=initial_concs[-1])    # [80, 20, 20]
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[2])
+
+
+
+def test_diffuse_step_single_species_1a(biomsim1D):
     chem_data = chem(diffusion_rates=[10.])
 
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
@@ -496,7 +533,6 @@ def test_diffuse_step_single_species_1(biomsim1D):
 
 
 def test_diffuse_step_single_species_1b(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(diffusion_rates=[10.])
 
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
@@ -517,7 +553,6 @@ def test_diffuse_step_single_species_1b(biomsim1D):
 
 
 def test_diffuse_step_single_species_2(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
     bio.set_uniform_concentration(species_index=0, conc=8.0)
@@ -534,7 +569,6 @@ def test_diffuse_step_single_species_2(biomsim1D):
 
 
 def test_diffuse_step_single_species_2b(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
     bio.set_uniform_concentration(species_index=0, conc=8.0)
@@ -576,7 +610,6 @@ def test_diffuse_step_single_species_3(biomsim1D):
 
 
 def test_diffuse_step_4(biomsim1D):
-    bio = BioSim1D()
     # Multiple diffusion steps, with 2 bins
     chem_data = chem(diffusion_rates=[1.])
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
@@ -682,6 +715,55 @@ def test_diffuse_step_8(biomsim1D):
     # With such a large number of steps, all concentrations will
     # equilibrate to their average
     assert np.allclose(bio.lookup_species(0), np.full(15, avg_conc, dtype=float))
+
+
+
+###     Alternate methods to compute diffusion    ###
+
+def test_diffuse_step_single_species_5_1_stencils(biomsim1D):
+    delta_t = 0.01
+    delta_x = 2
+    diff = 10.
+
+    # The coefficients for the 2nd derivative of order 4
+    C2 = -1/12
+    C1 = 4/3
+    C0 = -5/2
+    coeffs = np.array([C2, C1, C0, C1, C2])
+
+    chem_data = chem(diffusion_rates=[diff])
+
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
+
+    initial_concs = np.array([50, 80, 40, 100, 120])
+    bio.set_species_conc(species_index=0, conc_list=initial_concs)
+
+    #bio.describe_state()
+
+    result = bio.diffuse_step_single_species_5_1_stencils(time_step=delta_t, species_index=0, delta_x=delta_x)
+    #print(result)
+
+    # Manually computes the expected increments at each bin
+    concs = shift(initial_concs, 2, cval=initial_concs[0])      # [50, 50, 50, 80, 40]
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[0])
+
+    concs = shift(initial_concs, 1, cval=initial_concs[0])      # [50, 50, 80, 40, 100]
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[1])
+
+    concs = initial_concs                                       # [50, 80, 40, 100, 120]
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[2])
+
+    concs = shift(initial_concs, -1, cval=initial_concs[-1])    # [80, 40, 100, 120, 120]
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[3])
+
+    concs = shift(initial_concs, -2, cval=initial_concs[-1])    # [40, 100, 120, 120, 120])
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[4])
+
 
 
 
