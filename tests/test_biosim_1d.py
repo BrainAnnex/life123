@@ -290,7 +290,6 @@ def test_bins_with_membranes(biomsim1D):
 
 
 def test_set_membranes(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
@@ -348,7 +347,6 @@ def test_set_membranes(biomsim1D):
 
 
 def test_assert_valid_bin(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     with pytest.raises(Exception):
@@ -401,7 +399,6 @@ def test_show_membranes(biomsim1D):
 #######  CHANGE RESOLUTIONS #########
 
 def test_increase_spacial_resolution(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_species_conc(species_index=0, conc_list=[11., 12., 13.])
@@ -414,8 +411,29 @@ def test_increase_spacial_resolution(biomsim1D):
 
 
 
+def test_double_spacial_resolution_linear_inter(biomsim1D):
+    chem_data = chem(names=["A"])
+    bio = BioSim1D(n_bins=2, chem_data=chem_data)
+    bio.set_species_conc(species_index=0, conc_list=[1., 2.])
+    bio.double_spacial_resolution_linear()
+    assert np.allclose(bio.system, [[1., 1.5, 2.]])
+
+    chem_data = chem(names=["A", "B"])
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
+    bio.set_species_conc(species_index=0, conc_list=[11., 12., 13.])
+    bio.set_species_conc(species_index=1, conc_list=[5., 15., 25.])
+    bio.double_spacial_resolution_linear()
+    assert np.allclose(bio.system, [[11.,11.5,12.,12.5,13.],
+                                    [ 5.,10. ,15.,20. ,25.]])
+
+    bio = BioSim1D(n_bins=1, chem_data=chem_data)
+    bio.set_species_conc(species_index=0, conc_list=[3.14])
+    with pytest.raises(Exception):
+        bio.double_spacial_resolution_linear()
+
+
+
 def test_decrease_spacial_resolution(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=6, chem_data=chem_data)
     bio.set_species_conc(species_index=0, conc_list=[10., 20., 30., 40., 50., 60.])
@@ -442,7 +460,6 @@ def test_decrease_spacial_resolution(biomsim1D):
 
 
 def test_varying_spacial_resolution(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_species_conc(species_name="A", conc_list=[11., 12., 13.])
@@ -459,7 +476,6 @@ def test_varying_spacial_resolution(biomsim1D):
 
 
 def test_smooth_spacial_resolution(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_species_conc(species_name="A", conc_list=[10., 20., 30.])
@@ -881,6 +897,7 @@ def test_diffuse_2(biomsim1D):
 
 
 def test_diffuse_3(biomsim1D):
+    # Compare a low-level and a higher-level function for one-step diffusion
     delta_t = 0.01
     delta_x = 2
     diff = 10.
@@ -893,7 +910,7 @@ def test_diffuse_3(biomsim1D):
     bio.set_species_conc(species_index=0, conc_list=initial_concs)
 
     bio.describe_state()
-
+    # Compute the increments to the concentrations, from a single diffusion step
     incs = bio.diffuse_step_single_species_5_1_stencils(time_step=delta_t, species_index=0, delta_x=delta_x)
 
     # Redo computations on an identical system
@@ -907,11 +924,102 @@ def test_diffuse_3(biomsim1D):
     assert np.allclose(initial_concs + incs , bio2.lookup_species(species_index=0))
 
 
-    #result = bio.diffuse_step_single_species_5_1_stencils(time_step=delta_t, species_index=0, delta_x=delta_x)
-    #print(result)   # [ 1.02083333 -2.3125      3.14583333 -1.33333333 -0.5       ]
+
+def test_diffuse_4(biomsim1D):
+    # TODO: doesn't work!
+    delta_t = 0.001
+    delta_x = 2
+    diff = 10.
+    i = 3
+    f_t = []
+
+    chem_data = chem(diffusion_rates=[diff])
+
+    bio = BioSim1D(n_bins=17, chem_data=chem_data)
+
+    initial_concs = np.array([50, 58, 65, 72, 80, 70, 60, 50, 40, 55, 70, 85, 100, 105, 110, 115, 120])
+    bio.set_species_conc(species_index=0, conc_list=initial_concs)
+    bio.describe_state()
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+
+    status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x) # , algorithm="5_1_explicit"
+    assert status["steps"] == 1
+    bio.describe_state()    # [ 51.02083333 , 77.6875 , 43.14583333 , 98.66666667 , 119.5]
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+
+    f = bio.lookup_species(species_index=0)
+    gradient_x = np.gradient(f, delta_x)
+    #print("gradient_x: ", gradient_x)   # [13.33333333, -1.96875   ,  5.24479167, 19.08854167, 10.41666667]
+    second_gradient_x = np.gradient(gradient_x, delta_x)
+    print("second_gradient_x: ", second_gradient_x) # [-7.65104167, -2.02213542,  5.26432292,  1.29296875, -4.3359375 ]
+
+    # A second diffusion step
+    status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x) # , algorithm="5_1_explicit"
+    assert status["steps"] == 1
+    bio.describe_state()    # [ 51.92612847  75.65907118  45.97243924  97.51072049 118.96462674]
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+
+    print(f"\nf_t at x{i}:", f_t)
+    print(f"df_t at x{i}:", np.gradient(f_t, delta_t))
+    print(f"df_t at x{i}, t1:", np.gradient(f_t, delta_t)[1])
+    print(f"D d2/dx2 at x{i}:", diff*second_gradient_x[i])
 
 
-    # vs. [ 50.75  78.25  42.5   99.   119.5 ]
+
+def test_diffuse_5(biomsim1D):
+    delta_t = 0.01
+    delta_x = 2
+    diff = 10.
+    i = 24
+    f_t = []
+    algorithm = "5_1_explicit"    # "5_1_explicit"
+
+    chem_data = chem(diffusion_rates=[diff], names=["A"])
+
+    bio = BioSim1D(n_bins=33, chem_data=chem_data)
+
+    initial_concs = np.array([50, 54, 58, 60, 65, 69, 72, 76, 80, 75, 70, 65, 60, 55, 50, 45, 40, 48, 55, 62, 70, 77, 85,
+                              93, 100, 102.5, 105, 108, 110, 112, 115, 118, 120])
+    '''
+    initial_concs = np.array([50.  ,       53.61241666, 56.73695644, 58.95163291, 59.95734176, 59.61825643,
+     57.98017227, 55.26432163, 51.83749518, 48.16250482, 44.73567837, 42.01982773,
+     40.38174357, 40.04265824, 41.04836709, 43.26304356, 46.38758334])
+     '''
+    bio.set_species_conc(species_name="A", conc_list=initial_concs)
+
+    bio.increase_spacial_resolution(factor=3)
+    delta_x /= 3.
+
+    #bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
+    #bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+    #bio.inject_sine_conc(species_name="A", frequency=3, amplitude=6)
+
+    bio.describe_state()
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+
+    #status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x) # , algorithm="5_1_explicit"
+    status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+    assert status["steps"] == 1
+    bio.describe_state()    # [ 51.02083333 , 77.6875 , 43.14583333 , 98.66666667 , 119.5]
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+
+    f = bio.lookup_species(species_index=0)
+    gradient_x = np.gradient(f, delta_x)
+    #print("gradient_x: ", gradient_x)   # [13.33333333, -1.96875   ,  5.24479167, 19.08854167, 10.41666667]
+    second_gradient_x = np.gradient(gradient_x, delta_x)
+    print("second_gradient_x: ", second_gradient_x) # [-7.65104167, -2.02213542,  5.26432292,  1.29296875, -4.3359375 ]
+
+    # A second diffusion step
+    #status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x) # , algorithm="5_1_explicit"
+    status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+    assert status["steps"] == 1
+    bio.describe_state()    # [ 51.92612847  75.65907118  45.97243924  97.51072049 118.96462674]
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+
+    print(f"\nf_t at x{i}:", f_t)
+    print(f"df_t at x{i}:", np.gradient(f_t, delta_t))
+    print(f"df_t at x{i}, t1:", np.gradient(f_t, delta_t)[1])
+    print(f"D d2/dx2 at x{i}:", diff*second_gradient_x[i])
 
 
 

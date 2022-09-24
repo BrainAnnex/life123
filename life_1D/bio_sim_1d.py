@@ -778,7 +778,8 @@ class BioSim1D:
         """
         Increase the spacial resolution of the system by cloning and repeating
         each bin, by the specified number of times.
-        Replace the System's internal state.
+        Replace the System's internal state
+        (note that the number of bins will increase by the requested factor)
 
         EXAMPLE: if the (2-chemicals) system is
                         [[11. 12. 13.]
@@ -794,6 +795,45 @@ class BioSim1D:
         new_state = np.repeat(self.system, factor, axis=1)
         self.replace_system(new_state)
 
+
+
+    def double_spacial_resolution_linear(self) -> None:
+        """
+        Increase the spacial resolution of the system by inserting between bins
+        their average value (of concentrations, for every chemical species.)
+        Replace the System's internal state
+        (note that if the number of bins is initially N, it'll become 2N-1).
+        If the system has fewer than 2 bins, an Exception will be raised.
+
+        EXAMPLE: if the (2-chemicals) system is
+                        [[11. 12. 13.]
+                         [ 5. 15. 25.]]
+                then the result will be
+                        [[11.  11.5 12.  12.5 13. ]
+                         [ 5.  10.  15.  20.  25. ]]
+
+        :return:    None
+        """
+        assert self.n_bins >= 2, \
+            "double_spacial_resolution_linear(): function can only be used if the system contains at least 2 bins"
+
+        new_state = np.zeros((self.n_species, self.n_bins * 2 - 1), dtype=float)
+        #print(new_state)
+
+        for i in range(self.n_bins-1):
+            two_col = self.system[ : , i:i+2 ]
+            avg_col = two_col.mean(axis=1)
+
+            print("two_col: ", two_col)
+            print("avg_col: ", avg_col)
+
+            new_state[ : , 2*i] = two_col[ : , 0]
+            new_state[ : , 2*i+1] = avg_col
+
+        new_state[ : , -1] = self.system[ : , -1]
+        print()
+        print(new_state)
+        self.replace_system(new_state)
 
 
     
