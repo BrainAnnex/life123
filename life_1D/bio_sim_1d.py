@@ -454,88 +454,8 @@ class BioSim1D:
 
 
 
-    
-    def frequency_analysis(self, species_name: str, threshold = 0.001, n_largest = None) -> pd.DataFrame:
-        """
-        Return the individual frequencies, and their relative amplitudes,
-        in the concentration values of the specified chemical species.
-        A Discrete Fourier Transform is used for the computation.
-
-        :param species_name:    The name of the chemical whose concentration we want to analyze
-        :param threshold:       Minimum amplitudes of the frequency components to be considered non-zero
-                                    (NOTE: these are the raw values returned by the DFT - not the normalized ones.)
-        :param n_largest:       If specified, only the rows with the given number of largest amplitudes gets returned
-                                    (if there are fewer rows to start with, they all get returned)
-
-        :return:                A Pandas dataframe with 2 columns, "Frequency" and "Relative Amplitude";
-                                    amplitudes are relative the the smallest nonzero frequency (which is taken to be 1.0)
-                                    EXAMPLE:
-                                                   Frequency  Relative Amplitude
-                                                0        0.0                 3.0
-                                                1        2.0                 1.0
-                                                2        4.0                 0.5
-                                                3        8.0                 0.2
-        """
-
-        conc_samples = self.lookup_species(species_name=species_name)
-
-        #import plotly.express as px
-        #fig = px.line(y=conc_samples)
-        #fig.show()
-
-        # Perform a DFT, to extract the frequency components
-        # The size of the computed arrays xf and yf is  (self.n_bins/2 + 1) if self.n_bins is even
-        # or (self.n_bins + 1) /2 if self.n_bins is odd
-        xf = rfftfreq(self.n_bins, 1 / self.n_bins)
-        yf = rfft(conc_samples)
-        magnitude_yf = np.abs(yf)   # The magnitudes of the complex numbers in yf
-
-        #print(xf)
-        #print(magnitude_yf)
-
-        #print("Size of returned array: ", len(xf))
-
-        #fig = px.line(x=xf, y=magnitude_yf)
-        #fig.show()
-
-        above_threshold = magnitude_yf > threshold  # Numpy array of booleans,
-                                                    # indicating the positions in magnitude_yf array
-                                                    # where the value exceeds the given threshold
-        #print(above_threshold)
-
-        amps = magnitude_yf[above_threshold]        # Above-threshold amplitudes
-        freqs = xf[above_threshold]                 # Frequencies corresponding to above-threshold amplitudes
-
-        #print(freqs)
-        #print(amps)
-
-        if np.allclose(freqs[0], 0.):
-            # If there's a "DC bias" (zero-frequency component)
-            amps[0] /= 2.   # Amplitudes of the DC components show up differently;
-                            # see https://www.sjsu.edu/people/burford.furman/docs/me120/FFT_tutorial_NI.pdf
-            baseline_amp = amps[1]  # Use the first non-zero frequency as the baseline value
-        else:
-            baseline_amp = amps[0]  # Use the first non-zero frequency as the baseline value
-
-        scaled_amps = amps / baseline_amp   # Amplitudes scaled by the amplitude
-                                            #   of the first non-zero frequency
-
-        # Assemble and return as a Pandas dataframe the frequencies with amplitudes above the threshold,
-        #   together with their relative amplitudes
-        df = pd.DataFrame()
-        df['Frequency'] = freqs
-        df['Relative Amplitude'] = scaled_amps
-
-        if (n_largest is not None) and (n_largest < len(df)):
-            return df.nlargest(n=n_largest, columns="Relative Amplitude")
-
-        return df
-
-
-
 
     ########  DIMENSION-RELATED  ################
-
     
     def set_dimensions(self, length) -> None:
         """
@@ -651,7 +571,6 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    
     def assert_valid_bin(self, bin_address: int) -> None:
         """
         Raise an Exception if the given bin number isn't valid
@@ -665,7 +584,6 @@ class BioSim1D:
         if bin_address < 0 or bin_address >= self.n_bins:
             raise Exception(f"BioSim1D: the requested bin address ({bin_address}) is out of bounds for the system size; "
                             f"allowed range is [0-{self.n_bins-1}], inclusive")
-
 
 
 
@@ -986,7 +904,7 @@ class BioSim1D:
 
 
     
-    def diffuse(self, total_duration=None, time_step=None, n_steps=None, delta_x = 1) -> dict:
+    def diffuse(self, total_duration=None, time_step=None, n_steps=None, delta_x=1, algorithm=None) -> dict:
         """
         Uniform-step diffusion, with 2 out of 3 criteria specified:
             1) until reaching, or just exceeding, the desired time duration
@@ -997,7 +915,10 @@ class BioSim1D:
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
         :param delta_x:         Distance between consecutive bins
+        :param algorithm:          (Optional) code specifying the method to use to solve the diffusion equation.
+                                    Currently available options: "5_1_explicit"
         :return:                A dictionary with data about the status of the operation
+                                    (for now, just the number of steps run; key: "steps")
         """
         time_step, n_steps = self.all_reactions.specify_steps(total_duration=total_duration,
                                                              time_step=time_step,
@@ -1010,7 +931,7 @@ class BioSim1D:
                 elif i == 2:
                     print("    ...")
 
-            self.diffuse_step(time_step, delta_x=delta_x)
+            self.diffuse_step(time_step, delta_x=delta_x, algorithm=algorithm)
             self.system += self.delta_diffusion     # Matrix operation to update all the concentrations
             self.system_time += time_step
 
@@ -1023,9 +944,8 @@ class BioSim1D:
         return status
 
 
-
     
-    def diffuse_step(self, time_step, delta_x = 1) -> None:
+    def diffuse_step(self, time_step, delta_x=1, algorithm=None) -> None:
         """
         Diffuse all the species by the given time step:
         clear the delta_diffusion array, and then re-compute it from all the species.
@@ -1035,6 +955,8 @@ class BioSim1D:
         :param time_step:   Time step over which to carry out the diffusion
                             If too large - as determined by the method is_excessive() - an Exception will be raised
         :param delta_x:     Distance between consecutive bins
+        :param algorithm:      (Optional) code specifying the method to use to solve the diffusion equation.
+                                Currently available options: "5_1_explicit"
         :return:            None
         """
         # TODO: parallelize the independent computations
@@ -1043,7 +965,13 @@ class BioSim1D:
 
         for species_index in range(self.n_species):
 
-            increment_vector = self.diffuse_step_single_species(time_step, species_index=species_index, delta_x=delta_x)
+            if algorithm is None:
+                increment_vector = self.diffuse_step_single_species(time_step, species_index=species_index, delta_x=delta_x)
+            elif algorithm == "5_1_explicit":
+                increment_vector = self.diffuse_step_single_species_5_1_stencils(time_step, species_index=species_index, delta_x=delta_x)
+            else:
+                raise Exception(f"diffuse_step(): unknown method: `{algorithm}`")
+
             #print("Increment vector is: ", increment_vector)
 
             # For each bin, update the concentrations from the buffered increments
@@ -1546,8 +1474,6 @@ class BioSim1D:
     #                                HISTORY                                #
     #                                                                       #
     #########################################################################
-
-
     
     def save_snapshot(self, data_snapshot: dict, caption = "") -> None:
         """
@@ -1579,3 +1505,88 @@ class BioSim1D:
         """
         print(first_n)      # TODO: not yet implemented
         return self.history.get()
+
+
+
+
+    #########################################################################
+    #                                                                       #
+    #                       FOURIER ANALYSIS                                #
+    #                                                                       #
+    #########################################################################
+
+    def frequency_analysis(self, species_name: str, threshold = 0.001, n_largest = None) -> pd.DataFrame:
+        """
+        Return the individual frequencies, and their relative amplitudes,
+        in the concentration values of the specified chemical species.
+        A Discrete Fourier Transform is used for the computation.
+
+        :param species_name:    The name of the chemical whose concentration we want to analyze
+        :param threshold:       Minimum amplitudes of the frequency components to be considered non-zero
+                                    (NOTE: these are the raw values returned by the DFT - not the normalized ones.)
+        :param n_largest:       If specified, only the rows with the given number of largest amplitudes gets returned
+                                    (if there are fewer rows to start with, they all get returned)
+
+        :return:                A Pandas dataframe with 2 columns, "Frequency" and "Relative Amplitude";
+                                    amplitudes are relative the the smallest nonzero frequency (which is taken to be 1.0)
+                                    EXAMPLE:
+                                                   Frequency  Relative Amplitude
+                                                0        0.0                 3.0
+                                                1        2.0                 1.0
+                                                2        4.0                 0.5
+                                                3        8.0                 0.2
+        """
+
+        conc_samples = self.lookup_species(species_name=species_name)
+
+        #import plotly.express as px
+        #fig = px.line(y=conc_samples)
+        #fig.show()
+
+        # Perform a DFT, to extract the frequency components
+        # The size of the computed arrays xf and yf is  (self.n_bins/2 + 1) if self.n_bins is even
+        # or (self.n_bins + 1) /2 if self.n_bins is odd
+        xf = rfftfreq(self.n_bins, 1 / self.n_bins)
+        yf = rfft(conc_samples)
+        magnitude_yf = np.abs(yf)   # The magnitudes of the complex numbers in yf
+
+        #print(xf)
+        #print(magnitude_yf)
+
+        #print("Size of returned array: ", len(xf))
+
+        #fig = px.line(x=xf, y=magnitude_yf)
+        #fig.show()
+
+        above_threshold = magnitude_yf > threshold  # Numpy array of booleans,
+        # indicating the positions in magnitude_yf array
+        # where the value exceeds the given threshold
+        #print(above_threshold)
+
+        amps = magnitude_yf[above_threshold]        # Above-threshold amplitudes
+        freqs = xf[above_threshold]                 # Frequencies corresponding to above-threshold amplitudes
+
+        #print(freqs)
+        #print(amps)
+
+        if np.allclose(freqs[0], 0.):
+            # If there's a "DC bias" (zero-frequency component)
+            amps[0] /= 2.   # Amplitudes of the DC components show up differently;
+            # see https://www.sjsu.edu/people/burford.furman/docs/me120/FFT_tutorial_NI.pdf
+            baseline_amp = amps[1]  # Use the first non-zero frequency as the baseline value
+        else:
+            baseline_amp = amps[0]  # Use the first non-zero frequency as the baseline value
+
+        scaled_amps = amps / baseline_amp   # Amplitudes scaled by the amplitude
+        #   of the first non-zero frequency
+
+        # Assemble and return as a Pandas dataframe the frequencies with amplitudes above the threshold,
+        #   together with their relative amplitudes
+        df = pd.DataFrame()
+        df['Frequency'] = freqs
+        df['Relative Amplitude'] = scaled_amps
+
+        if (n_largest is not None) and (n_largest < len(df)):
+            return df.nlargest(n=n_largest, columns="Relative Amplitude")
+
+        return df

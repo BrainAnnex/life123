@@ -486,6 +486,7 @@ def test_diffuse_step_single_species_1(biomsim1D):
     C1 = 1
     C0 = -2
     coeffs = np.array([C1, C0, C1])
+    assert np.allclose(np.sum(coeffs), 0)   # The coefficients should add up to zero
 
     chem_data = chem(diffusion_rates=[diff])
 
@@ -718,7 +719,7 @@ def test_diffuse_step_8(biomsim1D):
 
 
 
-###     Alternate methods to compute diffusion    ###
+###     Alternate methods to compute single-step diffusion    ###
 
 def test_diffuse_step_single_species_5_1_stencils(biomsim1D):
     delta_t = 0.01
@@ -730,6 +731,7 @@ def test_diffuse_step_single_species_5_1_stencils(biomsim1D):
     C1 = 4/3
     C0 = -5/2
     coeffs = np.array([C2, C1, C0, C1, C2])
+    assert np.allclose(np.sum(coeffs), 0)   # The coefficients should add up to zero
 
     chem_data = chem(diffusion_rates=[diff])
 
@@ -805,7 +807,6 @@ def test_diffuse_step_1(biomsim1D):
 #########   TESTS OF DIFFUSION : all species, multiple steps    #########
 
 def test_diffuse_1(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(diffusion_rates=[5., 20.])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_bin_conc(species_index=0, bin_address=1, conc=100.)
@@ -864,7 +865,6 @@ def test_diffuse_1(biomsim1D):
 
 
 def test_diffuse_2(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(diffusion_rates=[0.1])
     # Diffuse 1 species almost to equilibrium, starting from a single concentration pulse
     bio = BioSim1D(n_bins=10, chem_data=chem_data)
@@ -877,6 +877,41 @@ def test_diffuse_2(biomsim1D):
     assert np.allclose(bio.lookup_species(0),
                                 [1.00055275, 1.00049864, 1.00039572, 1.00025407, 1.00008755, 0.99991245,
                                  0.99974593, 0.99960428, 0.99950136, 0.99944725])
+
+
+
+def test_diffuse_3(biomsim1D):
+    delta_t = 0.01
+    delta_x = 2
+    diff = 10.
+
+    chem_data = chem(diffusion_rates=[diff])
+
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
+
+    initial_concs = np.array([50, 80, 40, 100, 120])
+    bio.set_species_conc(species_index=0, conc_list=initial_concs)
+
+    bio.describe_state()
+
+    incs = bio.diffuse_step_single_species_5_1_stencils(time_step=delta_t, species_index=0, delta_x=delta_x)
+
+    # Redo computations on an identical system
+    bio2 = BioSim1D(n_bins=5, chem_data=chem_data)
+    bio2.set_species_conc(species_index=0, conc_list=initial_concs)
+
+    status = bio2.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x, algorithm="5_1_explicit")
+    assert status["steps"] == 1
+    bio2.describe_state()
+
+    assert np.allclose(initial_concs + incs , bio2.lookup_species(species_index=0))
+
+
+    #result = bio.diffuse_step_single_species_5_1_stencils(time_step=delta_t, species_index=0, delta_x=delta_x)
+    #print(result)   # [ 1.02083333 -2.3125      3.14583333 -1.33333333 -0.5       ]
+
+
+    # vs. [ 50.75  78.25  42.5   99.   119.5 ]
 
 
 
