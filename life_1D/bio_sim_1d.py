@@ -900,49 +900,6 @@ class BioSim1D:
 
 
 
-    def gradient_order4_1d(self, arr, dx: float):
-        """
-        Compute the gradient, from the values in the given array,
-        using the 5-point Central Difference, which offers an accuracy of order 4
-
-        :param arr:
-        :param dx:
-        :return:
-        """
-        arr_size = len(arr)
-
-        result = np.zeros(arr_size, dtype=float)
-
-        # For the leftmost boundary point, use the 5-point forward difference
-        i = 0
-        result[i] =(-25*arr[i]+48*arr[i+1]-36*arr[i+2]+16*arr[i+3]-3*arr[i+4])/12
-
-        # For the 2nd leftmost boundary point, use skewed 5-point central differences
-        i = 1
-        result[i] = (-3*arr[i-1]-10*arr[i]+18*arr[i+1]-6*arr[i+2]+1*arr[i+3])/12
-
-        # Coefficients for the 2nd order central finite differences for the first derivative
-        C2 = -1/12
-        C1 = 2/3
-
-        for i in range(2, arr_size-2):
-            result[i] = -C2 * arr[i-2] \
-                        -C1 * arr[i-1] \
-                        +C1 * arr[i+1] \
-                        +C2 * arr[i+2]
-
-        # For the 2nd rightmost boundary point, use skewed 5-point central differences
-        i = arr_size-2
-        result[i] = (-arr[i-3]+6*arr[i-2]-18*arr[i-1]+10*arr[i]+3*arr[i+1])/12
-
-        # For the rightmost boundary point, use the 5-point backward difference
-        i = arr_size-1
-        result[i] =(3*arr[i-4]-16*arr[i-3]+36*arr[i-2]-48*arr[i-1]+25*arr[i])/12
-
-        return result / dx
-
-
-
 
     #########################################################################
     #                                                                       #

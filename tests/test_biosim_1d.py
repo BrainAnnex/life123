@@ -5,7 +5,6 @@ from scipy.ndimage import shift
 from pandas.testing import assert_frame_equal
 from life_1D.bio_sim_1d import BioSim1D
 from modules.chemicals.chemicals import Chemicals as chem
-from modules.reactions.reactions import Reactions
 
 
 # Do an initialization operation for every test that uses it as argument
@@ -488,19 +487,6 @@ def test_smooth_spacial_resolution(biomsim1D):
     assert np.allclose(bio.system, expected)
     assert bio.n_bins == 5
     assert bio.n_species == 2
-
-
-
-def test_gradient_order4_1d():
-    chem_data = chem(names=["A"])
-    bio = BioSim1D(n_bins=5, chem_data=chem_data)
-
-    result = bio.gradient_order4_1d([10, 20, 30, 40, 50, 60], 1)
-    assert np.allclose(result, np.full(6, 10., dtype=float))
-
-    result = bio.gradient_order4_1d([10, 80, 30, 50, 10, 90], 2)
-    #print(result)
-    assert np.allclose(result, [136.66666667, -24.16666667, -10. , -7.08333333, -17.91666667, 138.75])
 
 
 
