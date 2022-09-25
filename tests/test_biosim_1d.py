@@ -396,6 +396,7 @@ def test_show_membranes(biomsim1D):
 
 
 
+
 #######  CHANGE RESOLUTIONS #########
 
 def test_increase_spacial_resolution(biomsim1D):
@@ -487,6 +488,19 @@ def test_smooth_spacial_resolution(biomsim1D):
     assert np.allclose(bio.system, expected)
     assert bio.n_bins == 5
     assert bio.n_species == 2
+
+
+
+def test_gradient_order4_1d():
+    chem_data = chem(names=["A"])
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
+
+    result = bio.gradient_order4_1d([10, 20, 30, 40, 50, 60], 1)
+    assert np.allclose(result, np.full(6, 10., dtype=float))
+
+    result = bio.gradient_order4_1d([10, 80, 30, 50, 10, 90], 2)
+    #print(result)
+    assert np.allclose(result, [136.66666667, -24.16666667, -10. , -7.08333333, -17.91666667, 138.75])
 
 
 
@@ -967,12 +981,12 @@ def test_diffuse_4(biomsim1D):
 
 
 def test_diffuse_5(biomsim1D):
-    delta_t = 0.01
+    delta_t = 0.015
     delta_x = 2
     diff = 10.
-    i = 24
+    i = 34
     f_t = []
-    algorithm = "5_1_explicit"    # "5_1_explicit"
+    algorithm = None # "5_1_explicit"    # "5_1_explicit"
 
     chem_data = chem(diffusion_rates=[diff], names=["A"])
 
@@ -987,12 +1001,17 @@ def test_diffuse_5(biomsim1D):
      '''
     bio.set_species_conc(species_name="A", conc_list=initial_concs)
 
-    bio.increase_spacial_resolution(factor=3)
-    delta_x /= 3.
+    bio.double_spacial_resolution_linear()
+    bio.double_spacial_resolution_linear()
+
 
     #bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
     #bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
     #bio.inject_sine_conc(species_name="A", frequency=3, amplitude=6)
+
+
+    status = bio.diffuse(time_step=delta_t, n_steps=60, delta_x=delta_x , algorithm=algorithm)
+
 
     bio.describe_state()
     f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
