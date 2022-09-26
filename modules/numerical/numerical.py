@@ -1,32 +1,31 @@
 # General numerical methods
 
+from typing import Union
 import numpy as np
 
 
 class Numerical:
 
-    @classmethod
-    def foo(cls, x):
-        return x*x
-
 
     @classmethod
-    def gradient_order4_1d(cls, arr, dx: float, dtype='float'):
+    def gradient_order4_1d(cls, arr, dx=1.0, dtype='float'):
         """
         Compute the gradient, from the values in the given array,
         using the 5-point Central Difference, which produces an accuracy of order 4.
 
         At the boundary, or close to it, different 5-point stencils are used,
         still resulting in an accuracy of order 4.
+        For coefficients, see: https://web.media.mit.edu/~crtaylor/calculator.html
 
-        Returns the same shape as the input array.
+        Returns the same size as the input array.
 
         For multi-dimensional cases, use gradient_order4()
 
-        :param arr:     One-dimensional array of numbers
+        :param arr:     One-dimensional Numpy array (or list, or tuple) of numbers
         :param dx:      Delta_x (assumed constant)
         :param dtype:   Data type to use for the elements of the returned array
-        :return:
+
+        :return:        A Numpy array with the same size as the one passed in arr
         """
         arr_size = len(arr)
 
@@ -41,7 +40,7 @@ class Numerical:
         result[i] = (-3*arr[i-1] -10*arr[i] +18*arr[i+1] -6*arr[i+2] +arr[i+3])/12
 
 
-        # Now do the interior points
+        # Now process the interior points
 
         # Coefficients for the 2nd order central finite differences for the first derivative
         C2 = -1/12
@@ -67,15 +66,17 @@ class Numerical:
 
 
     @classmethod
-    def gradient_order4(cls, f, *varargs):
+    def gradient_order4(cls, f: np.array, *varargs) -> Union[np.array, list]:
         """
         Compute the gradient, from the values in the given (possibly multidimensional) array,
         using the 5-point Central Difference, which produces an accuracy of order 4.
 
-        At the boundary, simple 2-point forward or backward differences are used (accuracy order 1.)
-        TODO: clarify what's happening at the points immediately next to the boundary.
+        At the boundary, and at the points immediately adjacent to the boundary,
+        simple 2-point forward or backward differences are used (accuracy order 1.)
 
-        Returns the same shape as the input array.
+        It returns a list of ndarrays (or a single ndarray if there is only 1 dimension).
+        Each list element has the same shape as the original array,
+        and corresponds to the derivatives of the passed array with respect to each dimension.
 
         For 1-dimensional cases, can also use gradient_order4_1d(), which produces accuracy order 4 at ALL points.
 
@@ -84,7 +85,9 @@ class Numerical:
 
         :param f:       An N-dimensional array giving samples of a scalar function
         :param varargs: 0, 1, or N scalars giving the sample distances in each direction
-        :return:        N arrays of the same shape as f giving the derivative of f with respect to each dimension
+
+        :return:        A list of N numpy arrays,
+                        each of the same shape as f giving the derivative of f with respect to each dimension
         """
 
         N = len(f.shape)            # Number of dimensions
@@ -96,14 +99,15 @@ class Numerical:
         elif n_args == N:
             dx = list(varargs)
         else:
-            raise SyntaxError(f"invalid number of arguments (n_args)")
+            raise SyntaxError(f"gradient_order4(): invalid number of arguments ({n_args})")
 
 
         # Use Central Differences on interior, and first differences on endpoints
 
-        outvals = []
+        out_vals = []       # List of numpy arrays
 
-        # create slice objects --- initially all are [:, :, ..., :]
+        # Create slice objects.
+        # Initially, they all are "select everything", ie  [:, :, ..., :] across the N dimensions
         slice0 = [slice(None)]*N
         slice1 = [slice(None)]*N
         slice2 = [slice(None)]*N
@@ -112,7 +116,7 @@ class Numerical:
 
         out_type = f.dtype.char
         if out_type not in ['f', 'd', 'F', 'D']:   # float or double (real or complex)
-            out_type = 'f'      # Use single-precision floats as a default
+            out_type = 'd'      # Use double-precision floats as a default
 
         for axis in range(N):
             # select out appropriate parts for this dimension
@@ -140,9 +144,9 @@ class Numerical:
 
 
             # divide by step size
-            outvals.append(out / dx[axis])
+            out_vals.append(out / dx[axis])
 
-            # reset the slice object in this dimension to ":"
+            # Reset the slice object in this dimension to ":" (ie, "select everything")
             slice0[axis] = slice(None)
             slice1[axis] = slice(None)
             slice2[axis] = slice(None)
@@ -150,6 +154,6 @@ class Numerical:
             slice4[axis] = slice(None)
 
         if N == 1:
-            return outvals[0]
+            return out_vals[0]
         else:
-            return outvals
+            return out_vals
