@@ -12,9 +12,11 @@ class Movie:
         A - a "tabular" mode.  Straightforward and convenient; it lends itself to handy Pandas dataframes
         B - a "non-tabular" mode.  More complex: to preserve data in arbitrary formats
 
+    TODO: maybe split into 2 separate classes?
+
 
     MAIN DATA STRUCTURE for "tabular" mode:
-        A Pandas frame
+        A Pandas dataframe
 
 
     MAIN DATA STRUCTURE for "non-tabular" mode:
@@ -38,8 +40,10 @@ class Movie:
     def __init__(self, parameter_name="SYSTEM TIME", tabular=True):
         """
 
-        :param parameter_name:
-        :param tabular:
+        :param parameter_name:  Only used in the "tabular" mode, as the Pandas column name for the
+                                    parameter value attached to any particular snapshot capture
+        :param tabular:         A flag indicating whether the "tabular" format will be used in this object.
+                                    (Explained in the notes above)
         """
         self.parameter_name = parameter_name
         self.tabular = tabular
@@ -63,9 +67,9 @@ class Movie:
         """
         Save up the given data snapshot
 
-        EXAMPLE with tabular mode:
+        EXAMPLE in tabular mode:
                 append(8., {"A": 1., "B": 2.}, "State immediately after injection of 2nd reagent")
-        EXAMPLE without tabular mode:
+        EXAMPLE not using tabular mode:
                 append(8., NUMPY_ARRAY_2, "State immediately after injection of 2nd reagent")
 
         IMPORTANT:  if passing a variable pointing to an existing mutable structure (such as a list, dict, object)

@@ -108,6 +108,9 @@ class Numerical:
 
         # Create slice objects.
         # Initially, they all are "select everything", ie  [:, :, ..., :] across the N dimensions
+        # EXAMPLES:
+        #           in 1d, the 5 variables below will each be [slice(None, None, None)]
+        #           in 2d, each will be [slice(None, None, None), slice(None, None, None)]
         slice0 = [slice(None)]*N
         slice1 = [slice(None)]*N
         slice2 = [slice(None)]*N
@@ -122,28 +125,33 @@ class Numerical:
             # select out appropriate parts for this dimension
             out = np.zeros(f.shape, dtype=out_type)
 
-            slice0[axis] = slice(2, -2)
-            slice1[axis] = slice(None, -4)
-            slice2[axis] = slice(1, -3)
-            slice3[axis] = slice(3, -1)
-            slice4[axis] = slice(4, None)
-            # 1D equivalent -- out[2:-2] = (f[:4] - 8*f[1:-3] + 8*f[3:-1] - f[4:])/12.0
-            out[slice0] = (f[slice1] - 8.0*f[slice2] + 8.0*f[slice3] - f[slice4])/12.0
+            # First, process the Inner Points along this axis (i.e. not the first or last 2)
+            slice0[axis] = slice(2, -2)     # Ditch the first 2 and last 2
+            slice1[axis] = slice(None, -4)  # Ditch the last 4
+            slice2[axis] = slice(1, -3)     # Ditch the 1st and the last 3
+            slice3[axis] = slice(3, -1)     # Ditch the first 3 and the last one
+            slice4[axis] = slice(4, None)   # Ditch the first 4
+            # All the above slice objects will produce a size 4 shorter on the current axis
 
+            # 1D equivalent -- out[2:-2] = (f[:4] - 8*f[1:-3] + 8*f[3:-1] - f[4:])/12.0
+            out[slice0] = (f[tuple(slice1)] - 8.0*f[tuple(slice2)] + 8.0*f[tuple(slice3)] - f[tuple(slice4)])/12.0
+
+            # Now process the first 2 points
             slice0[axis] = slice(None, 2)
             slice1[axis] = slice(1, 3)
             slice2[axis] = slice(None, 2)
             # 1D equivalent -- out[0:2] = (f[1:3] - f[0:2])
-            out[slice0] = (f[slice1] - f[slice2])
+            out[slice0] = (f[tuple(slice1)] - f[tuple(slice2)])
 
+            # And, finally, the last 3 points
             slice0[axis] = slice(-2, None)
             slice1[axis] = slice(-2, None)
             slice2[axis] = slice(-3, -1)
-            ## 1D equivalent -- out[-2:] = (f[-2:] - f[-3:-1])
-            out[slice0] = (f[slice1] - f[slice2])
+            # 1D equivalent -- out[-2:] = (f[-2:] - f[-3:-1])
+            out[slice0] = (f[tuple(slice1)] - f[tuple(slice2)])
 
 
-            # divide by step size
+            # Divide by the step size used on this axis
             out_vals.append(out / dx[axis])
 
             # Reset the slice object in this dimension to ":" (ie, "select everything")
@@ -152,6 +160,7 @@ class Numerical:
             slice2[axis] = slice(None)
             slice3[axis] = slice(None)
             slice4[axis] = slice(None)
+        # END for axis
 
         if N == 1:
             return out_vals[0]

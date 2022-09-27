@@ -80,7 +80,8 @@ class BioSim1D:
         self.all_reactions = None           # Object of class "Reactions"
 
         self.history = Movie(tabular=True)  # To store user-selected snapshots of (parts of) the system,
-                                            #   whenever requested by the user
+                                            #   whenever requested by the user.
+                                            #   Note that we're using the "tabular" format - friendly to Pandas
 
         self.system_time = None             # Global time of the system, from initialization on
 
@@ -588,15 +589,17 @@ class BioSim1D:
 
 
     
-    def lookup_species(self, species_index=None, species_name=None, trans_membrane=False) -> np.array:
+    def lookup_species(self, species_index=None, species_name=None, trans_membrane=False, copy=False) -> np.array:
         """
         Return the NumPy array of concentration values across the all bins (from left to right)
-        for the single specified chemical species
+        for the single specified chemical species.
+        NOTE: what is being returned NOT a copy
 
         :param species_index:   The index order of the chemical species of interest
         :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
-        :param trans_membrane:  It True, consider only the "other side" of the bins, i.e. the portion across the membrane
+        :param trans_membrane:  If True, consider only the "other side" of the bins, i.e. the portion across the membrane
                                     (it will be zero for bins without membrane)
+        :param copy:            If True, an independent numpy array will be returned: a *copy* rather than a view
         :return:                A NumPy array of concentration values across the bins (from left to right);
                                     the size of the array is the number of bins
         """
@@ -607,9 +610,14 @@ class BioSim1D:
         self.chem_data.assert_valid_index(species_index)
 
         if trans_membrane:
-            return self.system_B[species_index]
+            species_conc =  self.system_B[species_index]
         else:
-            return self.system[species_index]
+            species_conc = self.system[species_index]
+
+        if copy:
+            return species_conc.copy()
+        else:
+            return species_conc
 
 
 
@@ -647,7 +655,7 @@ class BioSim1D:
         :param bin_address: An integer with the bin number
         :return:            A dict of concentration values; the keys are the names of the species
         """
-        assert type(bin_address) == int, "bin_snapshot(): the argument must be an integer"
+        self.assert_valid_bin(bin_address)
 
         d = {}
         for species_index in range(self.n_species):
@@ -1212,7 +1220,7 @@ class BioSim1D:
         :param n_steps:         The desired number of steps
         :param snapshots:       OPTIONAL dict that may contain any the following keys:
                                     "frequency", "sample_bin", "sample_species"
-                                    If provided, take a system snapshot after running a multiple of "frequency" runs.
+                                    If provided, take a system snapshot after running a multiple of "frequency" run steps.
                                     EXAMPLE: snapshots={"frequency": 2, "sample_bin": 0}
         :return:                None
         """
@@ -1509,13 +1517,13 @@ class BioSim1D:
 
     #########################################################################
     #                                                                       #
-    #                                HISTORY                                #
+    #                              HISTORY                                  #
     #                                                                       #
     #########################################################################
     
     def save_snapshot(self, data_snapshot: dict, caption = "") -> None:
         """
-        Preserve some data value (passed as dictionary) in the history, to be attached to the
+        Preserve some data value (passed as dictionary) in the history, linked to the
         current System Time.
 
         EXAMPLE:  save_snapshot(data_snapshot = {"concentration_A": 12.5, "concentration_B": 3.7},
@@ -1525,7 +1533,7 @@ class BioSim1D:
                    to preserve it from possible later modifications
 
         :param data_snapshot:   A dictionary of data to preserve for later use
-        :param caption:         Option caption to attach to this preserved data
+        :param caption:         Optional caption to attach to this preserved data
         :return:                None
         """
         self.history.store(pars=self.system_time,
@@ -1534,14 +1542,16 @@ class BioSim1D:
 
 
     
-    def get_history(self, first_n=None, last_n=None):
+    def get_history(self, first_n=None, last_n=None) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
         using save_snapshot()
 
-        :return:    a Pandas dataframe
+        :param first_n: TODO: not yet implemented
+        :param last_n:  TODO: not yet implemented
+
+        :return:        a Pandas dataframe
         """
-        print(first_n)      # TODO: not yet implemented
         return self.history.get()
 
 
