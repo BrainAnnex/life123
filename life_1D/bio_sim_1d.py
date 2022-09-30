@@ -238,42 +238,6 @@ class BioSim1D:
 
 
 
-    
-    def compare_states(self, state1: np.array, state2: np.array, verbose=False):
-        """
-
-        :param state1:
-        :param state2:
-        :param verbose:
-        :return:
-        """
-        diff = state1 - state2
-        abs_diff = abs(diff)
-        print("Max of unsigned absolute differences: ", np.max(abs_diff))
-
-        rel_diff = diff / state1
-
-        if verbose:
-            print("Relative differences: ", rel_diff)
-
-        print("Max of unsigned relative differences: ", np.max(abs(rel_diff)))
-
-        print("Mean of relative differences: ", np.mean(rel_diff))
-        print("Median of relative differences: ", np.median(rel_diff))
-        print("Standard deviation of relative differences: ", np.std(rel_diff))
-
-        print("np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) : ",
-              np.allclose(state1 , state2, rtol=1e-01, atol=1e-01))
-        print("np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) : ",
-              np.allclose(state1 , state2, rtol=1e-02, atol=1e-03))
-        print("np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) : ",
-              np.allclose(state1 , state2, rtol=1e-03, atol=1e-05))
-        print("np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) : ",
-              np.allclose(state1 , state2, rtol=1e-05, atol=1e-08))
-
-
-
-
 
     #########################################################################
     #                                                                       #
@@ -780,7 +744,6 @@ class BioSim1D:
     #                        CHANGE RESOLUTIONS                             #
     #                                                                       #
     #########################################################################
-
     
     def increase_spacial_resolution(self, factor:int) -> None:
         """
@@ -1343,6 +1306,7 @@ class BioSim1D:
             self.system += self.delta_diffusion     # Matrix operation to update all the concentrations
                                                     #   from the diffusion
             self.system_time += time_step
+
 
 
 

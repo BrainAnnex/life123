@@ -8,6 +8,43 @@ class Numerical:
 
 
     @classmethod
+    def compare_states(cls, state1: np.array, state2: np.array, verbose=False) -> None:
+        """
+        Assess, in various ways, how similar two same-sized Numpy arrays are.
+        Typically, those arrays will be system state snapshots - but could be anything.
+
+        :param state1:
+        :param state2:
+        :param verbose: If True, additional output is shown
+        :return:        None
+        """
+        diff = state1 - state2
+        abs_diff = abs(diff)
+        print("Max of unsigned absolute differences: ", np.max(abs_diff))
+
+        rel_diff = diff / state1
+
+        if verbose:
+            print("Relative differences: ", rel_diff)
+
+        print("Max of unsigned relative differences: ", np.max(abs(rel_diff)))
+
+        print("Mean of relative differences: ", np.mean(rel_diff))
+        print("Median of relative differences: ", np.median(rel_diff))
+        print("Standard deviation of relative differences: ", np.std(rel_diff))
+
+        print("np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) : ",
+              np.allclose(state1 , state2, rtol=1e-01, atol=1e-01))
+        print("np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) : ",
+              np.allclose(state1 , state2, rtol=1e-02, atol=1e-03))
+        print("np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) : ",
+              np.allclose(state1 , state2, rtol=1e-03, atol=1e-05))
+        print("np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) : ",
+              np.allclose(state1 , state2, rtol=1e-05, atol=1e-08))
+
+
+
+    @classmethod
     def gradient_order4_1d(cls, arr, dx=1.0, dtype='float'):
         """
         Compute the gradient, from the values in the given array,

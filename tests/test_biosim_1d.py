@@ -5,6 +5,7 @@ from scipy.ndimage import shift
 from pandas.testing import assert_frame_equal
 from life_1D.bio_sim_1d import BioSim1D
 from modules.chemicals.chemicals import Chemicals as chem
+from modules.numerical.numerical import Numerical as num
 
 
 # Do an initialization operation for every test that uses it as argument
@@ -1149,29 +1150,15 @@ def test_diffuse_7(biomsim1D):
     arr = bio.lookup_species(species_index=0, copy=True)
     history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
-    print(f"\nf_t at x{i}:", f_t)
-    print(f"df_t at x{i}:", np.gradient(f_t, delta_t))
-    print(f"df_t at (x{i}, t1):", np.gradient(f_t, delta_t)[1])
-    print(f"D * d2/dx2 at x{i}:", diffusion_rate*second_gradient_x[i], "\n")
+    #print(f"\nf_t at x{i}:", f_t)
+    #print(f"df_t at x{i}:", np.gradient(f_t, delta_t))
+    #print(f"df_t at (x{i}, t1):", np.gradient(f_t, delta_t)[1])
+    #print(f"D * d2/dx2 at x{i}:", diffusion_rate*second_gradient_x[i], "\n")
 
     all_history = history.get_array()
     #print(all_history)
 
-    #result = np.apply_along_axis(sorted, 1, all_history)
-    #print("Experiment: ", result)
-
-    #result = np.apply_along_axis(sum, 0, all_history)
-    #print("Experiment: \n", result)
-
-
-    def foo(v):
-        # Nested function
-        return np.gradient(v, delta_t)
-        #return v + delta_t
-
-    #print("foo: ", foo(3))
-
-    df_dt_all_bins = np.apply_along_axis(foo, 0, all_history)
+    df_dt_all_bins = np.apply_along_axis(np.gradient, 0, all_history, delta_t)
     #print("df_dt_all_bins: \n", df_dt_all_bins)
 
     print(f"df_t at t1, across all bins:", df_dt_all_bins[1])    # t1 is the middle point of 3
@@ -1192,18 +1179,8 @@ def test_diffuse_7(biomsim1D):
     print("ABS(diff): ", abs(lhs-rhs))
     print(f"ABS(diff) as %: {100 * (abs(lhs - rhs)) / lhs}")
 
-    '''
-    for j in range(bio.n_bins):
-        time_history_at_bin = all_history[:, j]     # time history at bin j
-        print(f"\ntime history at bin {j}: ", time_history_at_bin)
-        print(f"df_t at x{j}:", np.gradient(time_history_at_bin, delta_t))
-        lhs = np.gradient(time_history_at_bin, delta_t)[1]
-        rhs = diffusion_rate*second_gradient_x[j]
-        print(f"df_t at (x{j}, t1):", lhs)
-        print(f"D d2/dx2 at (x{j}, t1):", rhs)
-        print("ABS(diff): ", abs(lhs-rhs))
-        print(f"ABS(diff) as %: {100 * (abs(lhs - rhs)) / lhs}%")
-    '''
+    num.compare_states(lhs, rhs, verbose=True)
+
 
 
 
@@ -1227,70 +1204,3 @@ def test_diffuse_7(biomsim1D):
 
 def test_react_diffuse(biomsim1D):
     pass
-
-
-
-
-def manual_test_compare_states(biomsim1D):     # MANUAL TEST
-    bio = BioSim1D()
-    state1 = np.array([10, 20, 30])
-    state2 = np.array([10.3, 19.9, 30.2])
-
-    print()
-    bio.compare_states(state1, state2, verbose=True)
-    """
-    Max of unsigned absolute differences:  0.3000000000000007
-    Relative differences:  [-0.03        0.005      -0.00666667]
-    Max of unsigned relative differences:  0.030000000000000072
-    Mean of relative differences:  -0.010555555555555547
-    Median of relative differences:  -0.006666666666666643
-    Standard deviation of relative differences:  0.014550889837454275
-    np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
-    np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) :  False
-    np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) :  False
-    np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  False
-    """
-
-
-    state1 = np.array([[10, 20, 30],
-                       [100, 200, 300]])
-    state2 = np.array([[10.3, 19.9, 30.2],
-                       [103, 199, 302]])
-
-    print()
-    bio.compare_states(state1, state2, verbose=True)
-    """
-    Max of unsigned absolute differences:  3.0
-    Relative differences:  [[-0.03        0.005      -0.00666667]
-     [-0.03        0.005      -0.00666667]]
-    Max of unsigned relative differences:  0.030000000000000072
-    Mean of relative differences:  -0.010555555555555552
-    Median of relative differences:  -0.006666666666666655
-    Standard deviation of relative differences:  0.014550889837454246
-    np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
-    np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) :  False
-    np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) :  False
-    np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  False
-    """
-
-
-    state1 = np.array([[10, 20, 30],
-                       [100, 200, 300]])
-    state2 = np.array([[10.0001, 19.9999, 30.0001],
-                       [100.0004, 199.9985, 300.0003]])
-
-    print()
-    bio.compare_states(state1, state2, verbose=True)
-    """
-    Max of unsigned absolute differences:  0.0014999999999929514
-    Relative differences:  [[-1.00000000e-05  5.00000000e-06 -3.33333333e-06]
-     [-4.00000000e-06  7.50000000e-06 -1.00000000e-06]]
-    Max of unsigned relative differences:  9.999999999976694e-06
-    Mean of relative differences:  -9.722222222130482e-07
-    Median of relative differences:  -2.166666666632011e-06
-    Standard deviation of relative differences:  5.82651718172416e-06
-    np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
-    np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) :  True
-    np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) :  True
-    np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  True
-    """

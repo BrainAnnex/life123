@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from typing import Union
 
 
 class Movie:
@@ -100,9 +101,9 @@ class Movie:
 
 
 
-    def get(self) -> list:
+    def get(self) -> Union[list, pd.DataFrame]:
         """
-        Return the main data structure - the list of snapshots, with their attributes
+        Return the main data structure - the list of snapshots, with their attributes, OR a Pandas dataframe
 
         :return:
         """
@@ -113,12 +114,14 @@ class Movie:
 
 
 
+###############################################################################################################
+
 class MovieArray:
     """
     Use this structure if your "snapshots" (data to add to the cumulative collection) are Numpy arrays,
     of any dimension - but always retaining that same dimension.
 
-    Typically, the snapshots will be dump of the entire system state, or parts thereof, but could be anything.
+    Usually, the snapshots will be dump of the entire system state, or parts thereof, but could be anything.
     Typically, each snapshot is taken at a different time (for example, to create a history), but could also
     be the result of varying some parameter(s)
 
