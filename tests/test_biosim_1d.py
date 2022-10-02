@@ -1107,17 +1107,17 @@ def test_diffuse_6(biomsim1D):      #TODO: ditch
 
 def test_diffuse_7(biomsim1D):
     from modules.movies.movies import MovieArray
-    delta_t = 0.015
+    delta_t = 0.010
     delta_x = 2
     diffusion_rate = 10.
     i = 4
-    algorithm = None # "5_1_explicit"    # "5_1_explicit"
+    algorithm = None    # "5_1_explicit"    # "5_1_explicit"
     history = MovieArray()
     f_t = []
 
     chem_data = chem(diffusion_rates=[diffusion_rate], names=["A"])
 
-    bio = BioSim1D(n_bins=150, chem_data=chem_data)
+    bio = BioSim1D(n_bins=200, chem_data=chem_data)
 
     bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
     bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
@@ -1135,10 +1135,10 @@ def test_diffuse_7(biomsim1D):
     arr = bio.lookup_species(species_index=0, copy=True)
     history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
-    f = bio.lookup_species(species_index=0)
-    gradient_x = np.gradient(f, delta_x)
+    #f = bio.lookup_species(species_index=0)
+    #gradient_x = np.gradient(f, delta_x)
     #print("gradient_x: ", gradient_x)   # [13.33333333, -1.96875   ,  5.24479167, 19.08854167, 10.41666667]
-    second_gradient_x = np.gradient(gradient_x, delta_x)
+    #second_gradient_x = np.gradient(gradient_x, delta_x)
     #print("second_gradient_x: ", second_gradient_x) # [-7.65104167, -2.02213542,  5.26432292,  1.29296875, -4.3359375 ]
 
     # A second diffusion step
@@ -1159,16 +1159,26 @@ def test_diffuse_7(biomsim1D):
     #print(all_history)
 
     df_dt_all_bins = np.apply_along_axis(np.gradient, 0, all_history, delta_t)
+    print("df_dt_all_bins: \n", df_dt_all_bins)
+
+    #df_dt_all_bins = np.apply_along_axis(num.gradient_order4_1d, 0, all_history, delta_t)
     #print("df_dt_all_bins: \n", df_dt_all_bins)
 
     print(f"df_t at t1, across all bins:", df_dt_all_bins[1])    # t1 is the middle point of 3
 
     f = all_history[1]  # The middle of the 3 time snapshots
-    #print("State at Middle time: ", f)
+    print("State at Middle time: ", f)
     gradient_x = np.gradient(f, delta_x)
     second_gradient_x = np.gradient(gradient_x, delta_x)
-    #print("second_gradient_x at time t1: ", second_gradient_x)
-    print("D * second_gradient_x at time t1: ", diffusion_rate*second_gradient_x)
+    print("second_gradient_x at time t1 (Using 3-point calculations):: ", second_gradient_x)
+    #print("D * second_gradient_x at time t1: ", diffusion_rate*second_gradient_x)
+
+    '''
+    # Alternate, more precise, method of computing numeric derivatives
+    gradient_x = num.gradient_order4_1d(arr=f, dx=delta_x)
+    second_gradient_x = num.gradient_order4_1d(arr=gradient_x, dx=delta_x)
+    print("second_gradient_x at time t1 (Using 5-point calculations): ", second_gradient_x)
+    '''
 
     lhs = df_dt_all_bins[1]
     #print("lhs: ", lhs)
@@ -1176,11 +1186,220 @@ def test_diffuse_7(biomsim1D):
     rhs = diffusion_rate*second_gradient_x
     #print("rhs: ", rhs)
 
-    print("ABS(diff): ", abs(lhs-rhs))
-    print(f"ABS(diff) as %: {100 * (abs(lhs - rhs)) / lhs}")
+    #print("ABS(diff): ", abs(lhs-rhs))
+    #print(f"ABS(diff) as %: {100 * (abs(lhs - rhs)) / lhs}")
 
-    num.compare_states(lhs, rhs, verbose=True)
+    #num.compare_states(lhs, rhs, verbose=True)
 
+    print("dist: ", num.compare_vectors(lhs, rhs, trim_edges=2))
+
+
+
+def test_diffuse_8(biomsim1D):
+    from modules.movies.movies import MovieArray
+    delta_t = 0.01
+    delta_x = 2
+    diffusion_rate = 10.
+    i = 4
+    algorithm = "5_1_explicit"    # "5_1_explicit"
+    history = MovieArray()
+    f_t = []
+
+    chem_data = chem(diffusion_rates=[diffusion_rate], names=["A"])
+
+    bio = BioSim1D(n_bins=300, chem_data=chem_data)
+
+    bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
+    bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+    #bio.inject_sine_conc(species_name="A", frequency=3, amplitude=6)
+
+    print()
+    #bio.describe_state()
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+    # 1st diffusion step
+    status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+    assert status["steps"] == 1
+    #bio.describe_state()
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+    # 2nd diffusion step
+    status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+    assert status["steps"] == 1
+    #bio.describe_state()
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+    # 3rd diffusion step
+    status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+    assert status["steps"] == 1
+    #bio.describe_state()
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+    # 4th diffusion step
+    status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+    assert status["steps"] == 1
+    #bio.describe_state()
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+
+    all_history = history.get_array()
+    #print(all_history)
+
+    # Compute time derivatives (for each bin)
+    df_dt_all_bins = np.apply_along_axis(np.gradient, 0, all_history, delta_t)
+    print("df_dt across all bins (Using 3-point calculations): \n", df_dt_all_bins)
+
+    # Alternate, more precise, method of computing numeric derivatives across the TIME dimension
+    #'''
+    df_dt_all_bins = np.apply_along_axis(num.gradient_order4_1d, 0, all_history, delta_t)
+    print("df_dt_all_bins (Using 5-point calculations): \n", df_dt_all_bins)
+    #'''
+
+    print(f"df_t AT THE MIDDLE TIME POINT t2, across all bins:", df_dt_all_bins[2])    # t2 is the middle point of 5
+
+
+    f = all_history[2]  # The middle of the 5 time snapshots
+    #print("State at Middle time point t2: ", f)
+
+
+    gradient_x = np.gradient(f, delta_x)
+    second_gradient_x = np.gradient(gradient_x, delta_x)
+    #print("second_gradient_x AT THE MIDDLE TIME POINT t2 (Using 3-point calculations): ", second_gradient_x)
+    #print("D * second_gradient_x at time t2: ", diffusion_rate*second_gradient_x)
+
+    #'''
+    # Alternate, more precise, method of computing the 2nd numeric derivatives across the spacial dimension
+    gradient_x = num.gradient_order4_1d(arr=f, dx=delta_x)
+    second_gradient_x = num.gradient_order4_1d(arr=gradient_x, dx=delta_x)
+    print("second_gradient_x at time t2 (Using 5-point calculations): ", second_gradient_x)
+    #'''
+
+    lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
+    #print("lhs: ", lhs)
+
+    rhs = diffusion_rate*second_gradient_x
+    #print("rhs: ", rhs)
+
+    #print("ABS(diff): ", abs(lhs-rhs))
+    #print(f"ABS(diff) as %: {100 * (abs(lhs - rhs)) / lhs}")
+
+    #num.compare_states(lhs, rhs, verbose=True)
+
+    print("dist: ", num.compare_vectors(lhs, rhs, trim_edges=2))
+
+
+
+def test_diffuse_9_high_precision(biomsim1D):
+    from modules.movies.movies import MovieArray
+    delta_t = 0.005
+    delta_x = 2
+    diffusion_rate = 10.
+    i = 4
+    algorithm = "5_1_explicit"    # "5_1_explicit"
+    history = MovieArray()
+    f_t = []
+
+    chem_data = chem(diffusion_rates=[diffusion_rate], names=["A"])
+
+    bio = BioSim1D(n_bins=3000, chem_data=chem_data)
+
+    bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
+    bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+    #bio.inject_sine_conc(species_name="A", frequency=3, amplitude=6)
+
+    print()
+    #bio.describe_state()
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+    # 1st diffusion step
+    status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+    assert status["steps"] == 1
+    #bio.describe_state()
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+    # 2nd diffusion step
+    status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+    assert status["steps"] == 1
+    #bio.describe_state()
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+    # 3rd diffusion step
+    status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+    assert status["steps"] == 1
+    #bio.describe_state()
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+    # 4th diffusion step
+    status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+    assert status["steps"] == 1
+    #bio.describe_state()
+    f_t.append(bio.bin_concentration(bin_address=i, species_index=0))
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+
+    all_history = history.get_array()
+    #print(all_history)
+
+    # Compute time derivatives (for each bin)
+    df_dt_all_bins = np.apply_along_axis(np.gradient, 0, all_history, delta_t)
+    print("df_dt across all bins (Using 3-point calculations): \n", df_dt_all_bins)
+
+    # Alternate, more precise, method of computing numeric derivatives across the TIME dimension
+    #'''
+    df_dt_all_bins = np.apply_along_axis(num.gradient_order4_1d, 0, all_history, delta_t)
+    print("df_dt_all_bins (Using 5-point calculations): \n", df_dt_all_bins)
+    #'''
+
+    print(f"df_t AT THE MIDDLE TIME POINT t2, across all bins:", df_dt_all_bins[2])    # t2 is the middle point of 5
+
+
+    f = all_history[2]  # The middle of the 5 time snapshots
+    #print("State at Middle time point t2: ", f)
+
+
+    gradient_x = np.gradient(f, delta_x)
+    second_gradient_x = np.gradient(gradient_x, delta_x)
+    #print("second_gradient_x AT THE MIDDLE TIME POINT t2 (Using 3-point calculations): ", second_gradient_x)
+    #print("D * second_gradient_x at time t2: ", diffusion_rate*second_gradient_x)
+
+    #'''
+    # Alternate, more precise, method of computing the 2nd numeric derivatives across the spacial dimension
+    gradient_x = num.gradient_order4_1d(arr=f, dx=delta_x)
+    second_gradient_x = num.gradient_order4_1d(arr=gradient_x, dx=delta_x)
+    print("second_gradient_x at time t2 (Using 5-point calculations): ", second_gradient_x)
+    #'''
+
+    lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
+    #print("lhs: ", lhs)
+
+    rhs = diffusion_rate*second_gradient_x
+    #print("rhs: ", rhs)
+
+    #print("ABS(diff): ", abs(lhs-rhs))
+    #print(f"ABS(diff) as %: {100 * (abs(lhs - rhs)) / lhs}")
+
+    #num.compare_states(lhs, rhs, verbose=True)
+
+    print("dist: ", num.compare_vectors(lhs, rhs, trim_edges=2))
 
 
 

@@ -17,7 +17,7 @@
 # #### From the same initial setup, diffusion is carried out over a fixed time span,
 # #### at different spacial resolutions - and then the respective results are compared
 #
-# LAST REVISED: Sep. 14, 2022
+# LAST REVISED: Oct. 1, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -29,11 +29,11 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 from experiments.get_notebook_info import get_notebook_basename
 
 from life_1D.bio_sim_1d import BioSim1D
+from modules.chemicals.chemicals import Chemicals as chem
+from modules.numerical.numerical import Numerical as num
 
 import plotly.express as px
 import plotly.graph_objects as go
-
-from modules.chemicals.chemicals import Chemicals as chem
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
@@ -204,7 +204,7 @@ diffuse_dx_1_2 = bio.system
 # ### Compare the last 2 runs (with dx=1 and dx=1/2)
 
 # %%
-bio.compare_states(diffuse_dx_1 , diffuse_dx_1_2, verbose=True)
+num.compare_states(diffuse_dx_1 , diffuse_dx_1_2, verbose=True)
 
 # %% [markdown]
 # # Again, restore the system to its initial (pre-diffusion) state
@@ -239,7 +239,7 @@ diffuse_dx_1_4 = bio.system
 # ### Compare the latest 2 runs (with dx=1/2 and dx=1/4)
 
 # %%
-bio.compare_states(diffuse_dx_1_2 , diffuse_dx_1_4)
+num.compare_states(diffuse_dx_1_2 , diffuse_dx_1_4)
 
 # %% [markdown]
 # ### Notice how the discrepancies have gone down
@@ -273,7 +273,7 @@ diffuse_dx_1_10 = bio.system
 # ### Again, compare the latest 2 runs (with dx=1/4 and dx=1/10)
 
 # %%
-bio.compare_states(diffuse_dx_1_4 , diffuse_dx_1_10)
+num.compare_states(diffuse_dx_1_4 , diffuse_dx_1_10)
 
 # %% [markdown]
 # ### Notice how the discrepancies have gone down even more

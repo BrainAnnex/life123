@@ -8,9 +8,32 @@ class Numerical:
 
 
     @classmethod
+    def compare_vectors(cls, v1: np.array, v2: np.array, metric=None, trim_edges=0) -> float:
+        """
+        Return the Euclidean distance between the two given same-sized Numpy arrays
+        (TODO: offer option to use alternate metrics)
+
+        :param v1:
+        :param v2:
+        :param metric:      NOT YET USED
+        :param trim_edges:
+        :return:
+        """
+        # TODO: give a helpful error message if v1 or v2 aren't 1-d,
+        #       or if they have different dimensions
+        if trim_edges != 0:
+            v1 = v1[trim_edges : -trim_edges]
+            v2 = v2[trim_edges : -trim_edges]
+
+        diff = v1 - v2
+        return np.linalg.norm(diff, ord=None)
+
+
+
+    @classmethod
     def compare_states(cls, state1: np.array, state2: np.array, verbose=False) -> None:
         """
-        Assess, in various ways, how similar two same-sized Numpy arrays are.
+        Print out various assessments of how similar two same-sized Numpy arrays are.
         Typically, those arrays will be system state snapshots - but could be anything.
 
         :param state1:
@@ -21,6 +44,7 @@ class Numerical:
         diff = state1 - state2
         abs_diff = abs(diff)
         print("Max of unsigned absolute differences: ", np.max(abs_diff))
+        print("L2 norm of differences (vectors) / Frobenius norm (matrices): ", np.linalg.norm(diff, ord=None))
 
         rel_diff = diff / state1
 
@@ -65,6 +89,8 @@ class Numerical:
         :return:        A Numpy array with the same size as the one passed in arr
         """
         arr_size = len(arr)
+
+        assert arr_size >= 5, "gradient_order4_1d(): input numpy array must have at least 5 elements"
 
         result = np.zeros(arr_size, dtype=dtype)
 

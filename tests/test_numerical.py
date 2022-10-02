@@ -2,8 +2,39 @@ import numpy as np
 from modules.numerical.numerical import Numerical as num
 
 
+def test_compare_vectors():
+    a = np.array([4.3, 123, 5.2, 532.5, -123.42, 0, 2.3])
+    res = num.compare_vectors(a, a)
+    assert np.allclose(res, 0.)
 
-def test_compare_states():     # MANUAL TEST
+    a = np.array([25.])
+    b = np.array([26])
+    res = num.compare_vectors(a, b)
+    assert np.allclose(res, 1.)
+
+    a = np.array([15., 28])
+    b = np.array([18, 24.])
+    res = num.compare_vectors(a, b)
+    assert np.allclose(res, 5.)
+
+
+    a = np.array([4.3, 123, 5.2, 532.5, -123.42, 0, 2.3])
+    b = np.array([52.4, 25.3, -2.4, 5, 5, 9.1, -11])
+    res1 = num.compare_vectors(a, b)
+    res2 = num.compare_vectors(b, a)
+    assert np.allclose(res1, res2)
+
+
+    a = np.array([15., 28, 4])
+    b = np.array([18, 24., 10])
+    res = num.compare_vectors(a, b)
+    assert np.allclose(res, 7.810249675906654)
+    res2 = num.compare_vectors(a, b, trim_edges=1)
+    assert np.allclose(res2, 4)
+
+
+
+def manual_test_compare_states():     # MANUAL TEST
     state1 = np.array([10, 20, 30])
     state2 = np.array([10.3, 19.9, 30.2])
 
@@ -11,6 +42,7 @@ def test_compare_states():     # MANUAL TEST
     num.compare_states(state1, state2, verbose=True)
     """
     Max of unsigned absolute differences:  0.3000000000000007
+    L2 norm of differences (vectors) / Frobenius norm (matrices):  0.3741657386773947
     Relative differences:  [-0.03        0.005      -0.00666667]
     Max of unsigned relative differences:  0.030000000000000072
     Mean of relative differences:  -0.010555555555555547
@@ -32,6 +64,7 @@ def test_compare_states():     # MANUAL TEST
     num.compare_states(state1, state2, verbose=True)
     """
     Max of unsigned absolute differences:  3.0
+    L2 norm of differences (vectors) / Frobenius norm (matrices):  3.760319135392633
     Relative differences:  [[-0.03        0.005      -0.00666667]
      [-0.03        0.005      -0.00666667]]
     Max of unsigned relative differences:  0.030000000000000072
@@ -54,6 +87,7 @@ def test_compare_states():     # MANUAL TEST
     num.compare_states(state1, state2, verbose=True)
     """
     Max of unsigned absolute differences:  0.0014999999999929514
+    L2 norm of differences (vectors) / Frobenius norm (matrices):  0.001590597372048279
     Relative differences:  [[-1.00000000e-05  5.00000000e-06 -3.33333333e-06]
      [-4.00000000e-06  7.50000000e-06 -1.00000000e-06]]
     Max of unsigned relative differences:  9.999999999976694e-06
