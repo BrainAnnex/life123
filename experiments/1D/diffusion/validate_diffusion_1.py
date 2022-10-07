@@ -97,7 +97,7 @@ history.get_array()
 # %%
 # Additional parameters of the simulation run (the diffusion rate got set earlier)
 delta_t = 0.01
-delta_x = 2       # Note that the the number of bins also define the fraction of the 2Pi cycle in each bin
+delta_x = 2       # Note that the number of bins also define the fraction of the sine wave cycle in each bin
 algorithm = None  # "Explicit, with 3+1 stencil"
 
 # %%

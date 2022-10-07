@@ -18,13 +18,14 @@
 #
 # In this "PART 2", we quickly repeat all the steps discussed at length in part1,
 # but using a much-finer resolution.
-# This time, we'll use a slightly more complex initial concentrations built from 2 sine waves.
+# This time, we'll start with slightly more complex initial concentrations built from 2 superposed sine waves.
 #
 # **We'll also explore the effects of:**  
 # -Spacial resolution ("delta x")  
-# -Temporal resolution ("delta t")
+# -Temporal resolution ("delta t")    
+# -Alternate methods of estimating numerical derivatives
 #
-# LAST REVISED: Oct. 5, 2022
+# LAST REVISED: Oct. 6, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -52,37 +53,30 @@ diffusion_rate = 10.
 chem_data = chem(diffusion_rates=[diffusion_rate], names=["A"])
 
 # %% [markdown]
-# ### Prelude : start with a tiny system and directly inspect the numbers
-# #### For this small system, we'll initialize the concentrations to a sine wave with 1 cycle over the system
-# (with a bias to always keep it > 0)
+# # BASELINE
+# This will be our initial system, whose adherence to the diffusion equation we'll test.
+# Afterwards, we'll tweak individual parameters - and observed their effect on the closeness of the approximation
 
 # %%
-# Initialize the system with just a few bins
-bio = BioSim1D(n_bins=10, chem_data=chem_data)
+# Parameters of the simulation run (the diffusion rate got set earlier, and will never vary)
+delta_t = 0.01
+n_bins = 300
+delta_x = 2       # Note that the number of bins also define the fraction of the sine wave cycle in each bin
+algorithm = None  # "Explicit, with 3+1 stencil"
 
 # %%
+# Initialize the system
+bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+
+# Initialize the concentrations to 2 superposed sine waves
 bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
-
-# %%
-bio.show_system_snapshot()
+bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
 
 # %%
 fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= "Initial System State (for the tiny system)",
+              title= "Initial System State",
               color_discrete_sequence = ['red'],
               labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
-
-# %%
-# Show as heatmap
-fig = px.imshow(bio.system_snapshot().T, 
-                title= "Initial System State (for the tiny system)", 
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto=False, color_continuous_scale="gray_r") 
-
-fig.data[0].xgap=1
-fig.data[0].ygap=1
-
 fig.show()
 
 # %% [markdown]
@@ -98,21 +92,9 @@ arr = bio.lookup_species(species_index=0, copy=True)
 history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
-# Take a look at what got stored so far (a matrix whose only row is the initial state)
-history.get_array()
-
-# %%
-# Additional parameters of the simulation run (the diffusion rate got set earlier)
-delta_t = 0.01
-delta_x = 2
-algorithm = None
-
-# %%
-# Do the 4 rounds of single-step diffusion; show the system state after each step, and accumulate all data
-# in the history object
+# Do the 4 rounds of single-step diffusion; accumulate all data in the history object
 for _ in range(4):
     bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
-    bio.describe_state(concise=True)
 
     arr = bio.lookup_species(species_index=0, copy=True)
     history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
@@ -120,134 +102,397 @@ for _ in range(4):
 # %%
 # Now, let's examine the data collected at the 5 time points
 all_history = history.get_array()
-all_history
+all_history.shape   
 
-# %% [markdown]
-# #### Each row in the above matrix is a state snapshot at a different time:
-# first row is the initial state at time 0; the successive rows are t1, t2, t3, t4
+# %%
+# Compute time derivatives (for each bin)
+df_dt_all_bins = np.apply_along_axis(np.gradient, 0, all_history, delta_t)
+df_dt_all_bins.shape
 
 # %%
 # Let's consider the state at the midpoint in time (t2)
-f_at_t2 = all_history[2]
-f_at_t2
+f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
+f_at_t2.shape
+
+# %%
+# Computer the second spacial derivative (simple method)
+gradient_x_at_t2 = np.gradient(f_at_t2, delta_x)
+second_gradient_x_at_t2 = np.gradient(gradient_x_at_t2, delta_x)
+second_gradient_x_at_t2.shape
 
 # %% [markdown]
-# If one compare the above state (at t2) with the initial state (the top row in the matrix), 
-# one can see, for example, that the leftmost bin's concentration is increasing ("pulled up" by its neighbor to the right):
-# 50. has now become 50.28881576
+# #### Now, let's use the computed values to see how the left- and right-hand side of the diffusion equation compare
+# at all bins (except 2 at each edge), at the middle simulation time t2
+
+# %%
+lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
+lhs.shape
+
+# %%
+rhs = diffusion_rate*second_gradient_x_at_t2
+rhs.shape
+
+# %%
+num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidian distance, ignoring 2 edge points at each end
+
+# %% [markdown]
+# The above number is a measure of the discrepancy from the perfect match (zero distance) that an ideal solution would provide. 
 #
-# The rightmost's bin's concentration is decreasing ("pulled down" by its neighbor to the left):
-# 44.12214748 has now become 43.94505274
+# Notice how vastly closer to zero it is than the counterpart value we got with the very coarse simulation in experiment "validate_diffusion_1"
 
 # %% [markdown]
-# ### The diffusion equation states that the partial derivative of the concentration values with respect to time  must equal the (diffusion rate) times the 2nd partial derivative  with respect to space .
-# Let's see if that is the case for the values at time t2!  We are picking t2 because we need at least a value at the earlier time, and a value at the later time
-
-# %%
-# A simple-minded way of computing the 2nd spacial derivative is to use the Numpy gradient function TWICE across the x value
-# (that function approximates the derivative using differences)
-gradient_x = np.gradient(f_at_t2, delta_x)
-gradient_x
+# # VARIATIONS on the BASELINE
+# We'll now tweak some parameters, and observe the effect on the estimate of the discrepancy from the exact diffusion equation
+#
+# The baseline distance was **0.023163289760024783**
 
 # %% [markdown]
-# For example, the 2nd entry in the above array of estimated derivatives, can be manually checked from the 1st and 3rd value in the function f_at_t2(x), as follows:
+# ## Variation 1 : reduce spacial resolution
+# Expectation: greater discrepancy
 
 # %%
-(59.32979676 - 50.28881576) / (2*delta_x)    # This way of numerically estimating derivatives is called "Central Differences"
+n_bins = 100          # Reducing the spacial resolution
+
+# %%
+# Initialize the system
+bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+
+# Initialize the concentrations to 2 superposed sine waves
+bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
+bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+
+# %%
+history = MovieArray()   # All the system state will get collected in this object
+# Store the initial state
+arr = bio.lookup_species(species_index=0, copy=True)
+history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+# %%
+# Do the 4 rounds of single-step diffusion; accumulate all data in the history object
+for _ in range(4):
+    bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+# %%
+# Now, let's examine the data collected at the 5 time points
+all_history = history.get_array()
+all_history.shape   
+
+# %%
+# Compute time derivatives (for each bin) : simple method, using central differences
+df_dt_all_bins = np.apply_along_axis(np.gradient, 0, all_history, delta_t)
+
+# Let's consider the state at the midpoint in time (t2)
+f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
+f_at_t2.shape
+
+# %%
+# Computer the second spacial derivative (simple method, using central differences)
+gradient_x_at_t2 = np.gradient(f_at_t2, delta_x)
+second_gradient_x_at_t2 = np.gradient(gradient_x_at_t2, delta_x)
+second_gradient_x_at_t2.shape
+
+# %%
+# Compare the left and right hand sides of the diffusion equation
+lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
+rhs = diffusion_rate*second_gradient_x_at_t2
+
+num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidian distance, ignoring 2 edge points at each end
 
 # %% [markdown]
-# #### Now take the derivative again, with the Numpy gradient function, to arrive at a coarse estimate of the 2nd derivative with respect to x:
-
-# %%
-second_gradient_x = np.gradient(gradient_x, delta_x)
-second_gradient_x
+# #### The discrepancy value has indeed gone up from the baseline 0.023163289760024783
 
 # %% [markdown]
-# Note how the 2nd derivative is 0 at bin 5 (bins are numbered 0 thru 9): if you look at the earlier sine plot, x5 is the inflection point.
+# ## Variation 2 : increase spacial resolution
+# Expectation: smaller discrepancy
+
+# %%
+n_bins = 900          # Increasing the spacial resolution (from the baseline of 300)
+
+# %%
+# Initialize the system
+bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+
+# Initialize the concentrations to 2 superposed sine waves
+bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
+bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+
+# %%
+history = MovieArray()   # All the system state will get collected in this object
+# Store the initial state
+arr = bio.lookup_species(species_index=0, copy=True)
+history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+# %%
+# Do the 4 rounds of single-step diffusion; accumulate all data in the history object
+for _ in range(4):
+    bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+# %%
+# Now, let's examine the data collected at the 5 time points
+all_history = history.get_array()
+all_history.shape   
+
+# %%
+# Compute time derivatives (for each bin) : simple method, using central differences
+df_dt_all_bins = np.apply_along_axis(np.gradient, 0, all_history, delta_t)
+
+# Let's consider the state at the midpoint in time (t2)
+f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
+f_at_t2.shape
+
+# %%
+# Computer the second spacial derivative (simple method, using central differences)
+gradient_x_at_t2 = np.gradient(f_at_t2, delta_x)
+second_gradient_x_at_t2 = np.gradient(gradient_x_at_t2, delta_x)
+second_gradient_x_at_t2.shape
+
+# %%
+# Compare the left and right hand sides of the diffusion equation
+lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
+rhs = diffusion_rate*second_gradient_x_at_t2
+
+num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidian distance, ignoring 2 edge points at each end
 
 # %% [markdown]
-# ### Now, let's look at how concentrations change with time.  Let's first revisit the full history:
-
-# %%
-all_history
+# #### The discrepancy value has indeed gone down from the baseline 0.023163289760024783
 
 # %% [markdown]
-# #### For simplicity, let's start by just inspecting how the values change over time at the 3rd bin from the left, 
-# i.e. the 3rd *column* (index 2 because counting starts at 0) of the above matrix:
+# ## Variation 3 : reduce time resolution
+# Expectation: greater discrepancy
 
 # %%
-f_of_t_at_x2 = all_history[ : , 2]
-f_of_t_at_x2
+n_bins = 300          # Restoring the baseline number of bins
+delta_t = 0.02        # Reducing the time resolution (from baselin 0.01)
+
+# %%
+# Initialize the system
+bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+
+# Initialize the concentrations to 2 superposed sine waves
+bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
+bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+
+# %%
+history = MovieArray()   # All the system state will get collected in this object
+# Store the initial state
+arr = bio.lookup_species(species_index=0, copy=True)
+history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+# %%
+# Do the 4 rounds of single-step diffusion; accumulate all data in the history object
+for _ in range(4):
+    bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+# %%
+# Now, let's examine the data collected at the 5 time points
+all_history = history.get_array()
+all_history.shape   
+
+# %%
+# Compute time derivatives (for each bin) : simple method, using central differences
+df_dt_all_bins = np.apply_along_axis(np.gradient, 0, all_history, delta_t)
+
+# Let's consider the state at the midpoint in time (t2)
+f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
+f_at_t2.shape
+
+# %%
+# Computer the second spacial derivative (simple method, using central differences)
+gradient_x_at_t2 = np.gradient(f_at_t2, delta_x)
+second_gradient_x_at_t2 = np.gradient(gradient_x_at_t2, delta_x)
+second_gradient_x_at_t2.shape
+
+# %%
+# Compare the left and right hand sides of the diffusion equation
+lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
+rhs = diffusion_rate*second_gradient_x_at_t2
+
+num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidian distance, ignoring 2 edge points at each end
 
 # %% [markdown]
-# ### This a function of time: let's look at its time derivative:
-
-# %%
-gradient_t = np.gradient(f_of_t_at_x2, delta_t)
-gradient_t
+# #### The discrepancy value has indeed gone up from the baseline 0.023163289760024783
 
 # %% [markdown]
-# ### The above is the rate of change of the concentration, as the diffusion proceeds, at the position x2
-# At time t2, the midpoint in the simulation, the value is:
+# ## Variation 4 : increase time resolution
+# Expectation: smaller discrepancy
 
 # %%
-gradient_t[2]
+delta_t = 0.005        # Increasing the time resolution (from baselin 0.01)
+
+# %%
+# Initialize the system
+bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+
+# Initialize the concentrations to 2 superposed sine waves
+bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
+bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+
+# %%
+history = MovieArray()   # All the system state will get collected in this object
+# Store the initial state
+arr = bio.lookup_species(species_index=0, copy=True)
+history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+# %%
+# Do the 4 rounds of single-step diffusion; accumulate all data in the history object
+for _ in range(4):
+    bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+# %%
+# Now, let's examine the data collected at the 5 time points
+all_history = history.get_array()
+all_history.shape   
+
+# %%
+# Compute time derivatives (for each bin) : simple method, using central differences
+df_dt_all_bins = np.apply_along_axis(np.gradient, 0, all_history, delta_t)
+
+# Let's consider the state at the midpoint in time (t2)
+f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
+f_at_t2.shape
+
+# %%
+# Computer the second spacial derivative (simple method, using central differences)
+gradient_x_at_t2 = np.gradient(f_at_t2, delta_x)
+second_gradient_x_at_t2 = np.gradient(gradient_x_at_t2, delta_x)
+second_gradient_x_at_t2.shape
+
+# %%
+# Compare the left and right hand sides of the diffusion equation
+lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
+rhs = diffusion_rate*second_gradient_x_at_t2
+
+num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidian distance, ignoring 2 edge points at each end
 
 # %% [markdown]
-# ### All said and done, we have collected the time derivative and the 2nd spacial derivative, at the point (x2, t2).
-# Do those values satisfy the diffusion equation??  Does the 2nd spacial derivative indeed equal the diffusion rate times the time derivative?  Let's see:
-
-# %%
-gradient_t[2]
-
-# %%
-diffusion_rate * second_gradient_x[2]
+# #### The discrepancy value has indeed gone down from the baseline 0.023163289760024783
 
 # %% [markdown]
-# ## The 2 value indeed roughly match - considering the coarseness of the large spacial grid, and the coarseness of estimating the derivatives numerically
+# ## Variation 5 : Use a better (higher-order) method to numerically estimate the SPACIAL derivatives
+# Expectation: presumably smaller discrepancy (unless dwarfed by errors from approximations in the simulation)
+
+# %%
+n_bins = 300          # Restoring the baseline number of bins
+delta_t = 0.01        # Reducing the baseline time resolution
+
+# %%
+# Initialize the system
+bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+
+# Initialize the concentrations to 2 superposed sine waves
+bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
+bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+
+# %%
+history = MovieArray()   # All the system state will get collected in this object
+# Store the initial state
+arr = bio.lookup_species(species_index=0, copy=True)
+history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+# %%
+# Do the 4 rounds of single-step diffusion; accumulate all data in the history object
+for _ in range(4):
+    bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+# %%
+# Now, let's examine the data collected at the 5 time points
+all_history = history.get_array()
+all_history.shape   
+
+# %%
+# Compute time derivatives (for each bin) : simple method, using central differences
+df_dt_all_bins = np.apply_along_axis(np.gradient, 0, all_history, delta_t)
+
+# Let's consider the state at the midpoint in time (t2)
+f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
+f_at_t2.shape
+
+# %%
+# Computer the second spacial derivative (MORE SOPHISTICATED METHOD, using 5-point stencils)
+gradient_x_at_t2 = num.gradient_order4_1d(arr=f_at_t2, dx=delta_x)
+second_gradient_x_at_t2 = num.gradient_order4_1d(arr=gradient_x_at_t2, dx=delta_x)
+second_gradient_x_at_t2.shape
+
+# %%
+# Compare the left and right hand sides of the diffusion equation
+lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
+rhs = diffusion_rate*second_gradient_x_at_t2
+
+num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidian distance, ignoring 2 edge points at each end
 
 # %% [markdown]
-# #### Finally, instead of just scrutining the match at the point x2, let's do that for all the points in space at time t2, WITH THE EXCEPTION of the outmost points (because the numeric estimation of the derivatives gets very crummy at the boundary).  Let's first re-visit all the data once again:
-
-# %%
-all_history
-
-# %%
-# This is just an expanded version of what we did before; instead of just consider a column,
-# like we did before, we're now repeating the computations along all columns
-# (the computations are applied vertically, "along axis 0" in Numpy-speak)
-gradient_t = np.apply_along_axis(np.gradient, 0, all_history, delta_t)
-gradient_t
-
-# %%
-# Again, we focus on time t2 (the 3rd row), to stay away from the edges
-gradient_t_at_t2 = gradient_t[2]
-gradient_t_at_t2
+# #### Not surprisingly, the discrepancy value (in part caused by poor numeric estimation of spacial derivatives) has indeed gone down from the baseline 0.023163289760024783
 
 # %% [markdown]
-# Note the value -8.94751865, 3rd from left : that's the single value we looked at before
+# ## Variation 6 : Use a better (higher-order) method to numerically estimate the TIME derivatives
+# Expectation: presumably smaller discrepancy (unless dwarfed by errors from approximations in the simulation)
+#
+# (Note: we revert to the original method for the *spacial* derivatives)
 
 # %%
-lhs = gradient_t_at_t2   # The left-hand side of the diffusion equation, as a vector for all the spacial points at time t2
-lhs
+# Initialize the system
+bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+
+# Initialize the concentrations to 2 superposed sine waves
+bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
+bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
 
 # %%
-rhs = diffusion_rate * second_gradient_x  # Same data dimension as above, but for the RIGHT-hand side of the diffusion equation
-rhs
+history = MovieArray()   # All the system state will get collected in this object
+# Store the initial state
+arr = bio.lookup_species(species_index=0, copy=True)
+history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+# %%
+# Do the 4 rounds of single-step diffusion; accumulate all data in the history object
+for _ in range(4):
+    bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+# %%
+# Now, let's examine the data collected at the 5 time points
+all_history = history.get_array()
+all_history.shape   
+
+# %%
+# Compute time derivatives (for each bin) : MORE SOPHISTICATED METHOD, using 5-point stencils
+df_dt_all_bins = np.apply_along_axis(num.gradient_order4_1d, 0, all_history, delta_t)
+
+# Let's consider the state at the midpoint in time (t2)
+f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
+f_at_t2.shape
+
+# %%
+# Computer the second spacial derivative (BACK TO SIMPLE METHOD, using central differences)
+gradient_x_at_t2 = np.gradient(f_at_t2, delta_x)
+second_gradient_x_at_t2 = np.gradient(gradient_x_at_t2, delta_x)
+second_gradient_x_at_t2.shape
+
+# %%
+# Compare the left and right hand sides of the diffusion equation
+lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
+rhs = diffusion_rate*second_gradient_x_at_t2
+
+num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidian distance, ignoring 2 edge points at each end
 
 # %% [markdown]
-# ## The left-hand side and the right-hand side of the diffusion equation appear to generally agree, except at the boundary points, where our approximations are just too crummy
-
-# %%
-lhs - rhs
-
-# %%
-# A handy function to compare two equal-sized vector, disregarding a specified number of entries at each edge
-# It returns the Euclidian distance ("L2 norm") of the shortened vectors
-num.compare_vectors(lhs, rhs, trim_edges=1)
-
-# %% [markdown]
-# #### IMPORTANT: all values are very coarse, to utilize tiny arrays that are easy to visually inspect.
-# In part2 of the experiment ("validate_diffusion_2"), much-better approximations will get looked at
+# #### Here, the discrepancy value has remained largely the same from the baseline 0.023163289760024783
 
 # %%
