@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+from typing import Union
 
 
 class Movie:
@@ -12,9 +14,11 @@ class Movie:
         A - a "tabular" mode.  Straightforward and convenient; it lends itself to handy Pandas dataframes
         B - a "non-tabular" mode.  More complex: to preserve data in arbitrary formats
 
+    TODO: maybe split into 2 separate classes?
+
 
     MAIN DATA STRUCTURE for "tabular" mode:
-        A Pandas frame
+        A Pandas dataframe
 
 
     MAIN DATA STRUCTURE for "non-tabular" mode:
@@ -38,8 +42,10 @@ class Movie:
     def __init__(self, parameter_name="SYSTEM TIME", tabular=True):
         """
 
-        :param parameter_name:
-        :param tabular:
+        :param parameter_name:  Only used in the "tabular" mode, as the Pandas column name for the
+                                    parameter value attached to any particular snapshot capture
+        :param tabular:         A flag indicating whether the "tabular" format will be used in this object.
+                                    (Explained in the notes above)
         """
         self.parameter_name = parameter_name
         self.tabular = tabular
@@ -63,10 +69,10 @@ class Movie:
         """
         Save up the given data snapshot
 
-        EXAMPLE with tabular mode:
-                append(8., {"A": 1., "B": 2.}, "State immediately after injection of 2nd reagent")
-        EXAMPLE without tabular mode:
-                append(8., NUMPY_ARRAY_2, "State immediately after injection of 2nd reagent")
+        EXAMPLE in tabular mode:
+                store(8., {"A": 1., "B": 2.}, "State immediately after injection of 2nd reagent")
+        EXAMPLE not using tabular mode:
+                store(8., NUMPY_ARRAY_2, "State immediately after injection of 2nd reagent")
 
         IMPORTANT:  if passing a variable pointing to an existing mutable structure (such as a list, dict, object)
                     make sure to first *clone* it, to preserve it as it!
@@ -82,7 +88,7 @@ class Movie:
         else:
             if self.df is None:     # No Pandas dataframe was yet started
                 assert type(data_snapshot) == dict, \
-                    "Movie.append(): The argument `data_snapshot` must be a dictionary whenever a 'tabular' movie is created"
+                    "Movie.store(): The argument `data_snapshot` must be a dictionary whenever a 'tabular' movie is created"
                 self.df = pd.DataFrame(data_snapshot, index=[0])            # Form the initial Pandas dataframe
                 self.df[self.parameter_name] = pars                         # Add a column
                 if caption:
@@ -95,9 +101,9 @@ class Movie:
 
 
 
-    def get(self) -> list:
+    def get(self) -> Union[list, pd.DataFrame]:
         """
-        Return the main data structure - the list of snapshots, with their attributes
+        Return the main data structure - the list of snapshots, with their attributes, OR a Pandas dataframe
 
         :return:
         """
@@ -105,3 +111,81 @@ class Movie:
             return self.df
         else:
             return self.movie
+
+
+
+###############################################################################################################
+
+class MovieArray:
+    """
+    Use this structure if your "snapshots" (data to add to the cumulative collection) are Numpy arrays,
+    of any dimension - but always retaining that same dimension.
+
+    Usually, the snapshots will be dump of the entire system state, or parts thereof, but could be anything.
+    Typically, each snapshot is taken at a different time (for example, to create a history), but could also
+    be the result of varying some parameter(s)
+
+    DATA STRUCTURE:
+        A Numpy array of 1 dimension larger than that of the snapshots
+
+        EXAMPLE: if the snapshots are the 1-d numpy arrays [1., 2., 3.] and [10., 20., 30.]
+                        then the internal structure will be the matrix
+                        [[1., 2., 3.],
+                         [10., 20., 30.]]
+    """
+
+
+    def __init__(self, parameter_name="SYSTEM TIME"):
+        """
+
+        :param parameter_name:  A label explaining what the different snapshots mean
+        """
+        self.parameter_name = parameter_name
+
+        self.arr = None 
+        self.snapshot_shape = None
+        self.parameters = []
+        self.captions = []
+
+
+
+    def store(self, pars, data_snapshot: np.array, caption = "") -> None:
+        """
+        Save up the given data snapshot, and its associated parameters and optional caption
+
+        EXAMPLES:
+                store(8., np.array([1., 2., 3.]), caption = "State immediately after injection of 2nd reagent")
+                store({"a": 4., "b": 12.3}, np.array([1., 2., 3.]))
+
+        :param pars:            Typical, the System Time - but could be anything that parametrizes the snapshots
+                                    (e.g., a dictionary, or any desired data structure.)
+                                    It doesn't have to remain consistent, but it's probably good practice to keep it so
+        :param data_snapshot:   A Numpy array, of any shape - but must keep that same shape across snapshots
+        :param caption:         OPTIONAL string to describe the snapshot
+        :return:                None
+        """
+        assert type(data_snapshot) == np.ndarray, \
+            "MovieArray.store(): The argument `data_snapshot` must be a dictionary whenever a 'tabular' movie is created"
+
+
+        if self.arr is None:    # If this is the first call to this function
+            self.arr = np.array([data_snapshot])
+            self.snapshot_shape = data_snapshot.shape
+        else:                   # this is a later call, to expand existing stored data
+            assert data_snapshot.shape == self.snapshot_shape, \
+                f"MovieArray.store(): The argument `data_snapshot` must have the same shape across calls, namely {self.snapshot_shape}"
+            new_arr = [data_snapshot]
+            self.arr = np.concatenate( (self.arr, new_arr), axis=0 )    # "Stack up" along the first axis
+
+        self.parameters.append(pars)
+        self.captions.append(caption)
+
+
+
+    def get_array(self) -> np.array:
+        """
+        Return the main data structure - the Numpy Array
+
+        :return:    A Numpy Array with the main data structure
+        """
+        return self.arr

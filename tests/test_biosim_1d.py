@@ -1,10 +1,12 @@
 import pytest
 import numpy as np
 import pandas as pd
+from scipy.ndimage import shift
 from pandas.testing import assert_frame_equal
 from life_1D.bio_sim_1d import BioSim1D
 from modules.chemicals.chemicals import Chemicals as chem
-from modules.reactions.reactions import Reactions
+from modules.numerical.numerical import Numerical as num
+from modules.movies.movies import MovieArray
 
 
 # Do an initialization operation for every test that uses it as argument
@@ -20,7 +22,6 @@ def biomsim1D():
 
 def test_initialize_system(biomsim1D):
     chem_data = chem(names=["A"])
-    bio = BioSim1D()
 
     bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
@@ -50,7 +51,6 @@ def test_replace_system(biomsim1D):
 
 
 def test_set_uniform_concentration(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
@@ -87,7 +87,6 @@ def test_set_uniform_concentration(biomsim1D):
 
 
 def test_set_all_uniform_concentrations(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
@@ -100,7 +99,6 @@ def test_set_all_uniform_concentrations(biomsim1D):
 
 
 def test_set_bin_conc(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
@@ -120,7 +118,6 @@ def test_set_species_conc(biomsim1D):
 
 
 def test_inject_conc_to_bin(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
@@ -139,7 +136,6 @@ def test_inject_conc_to_bin(biomsim1D):
 
 
 def test_inject_sine_conc(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=8, chem_data=chem_data)
 
@@ -214,7 +210,6 @@ def test_inject_sine_conc(biomsim1D):
 
 
 def test_frequency_analysis(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=100, chem_data=chem_data)
 
@@ -248,7 +243,6 @@ def test_frequency_analysis(biomsim1D):
 ########  DIMENSION-RELATED  ################
 
 def test_set_dimensions(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=4, chem_data=chem_data)
     bio.set_dimensions(21.)
@@ -261,7 +255,6 @@ def test_set_dimensions(biomsim1D):
 
 
 def test_x_coord(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=4, chem_data=chem_data)
 
@@ -279,7 +272,6 @@ def test_x_coord(biomsim1D):
 ########  MEMBRANE-RELATED  ################
 
 def test_uses_membranes(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
@@ -290,7 +282,6 @@ def test_uses_membranes(biomsim1D):
 
 
 def test_bins_with_membranes(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
@@ -300,7 +291,6 @@ def test_bins_with_membranes(biomsim1D):
 
 
 def test_set_membranes(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
@@ -358,7 +348,6 @@ def test_set_membranes(biomsim1D):
 
 
 def test_assert_valid_bin(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     with pytest.raises(Exception):
@@ -408,10 +397,10 @@ def test_show_membranes(biomsim1D):
 
 
 
+
 #######  CHANGE RESOLUTIONS #########
 
 def test_increase_spacial_resolution(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_species_conc(species_index=0, conc_list=[11., 12., 13.])
@@ -424,8 +413,29 @@ def test_increase_spacial_resolution(biomsim1D):
 
 
 
+def test_double_spacial_resolution_linear_inter(biomsim1D):
+    chem_data = chem(names=["A"])
+    bio = BioSim1D(n_bins=2, chem_data=chem_data)
+    bio.set_species_conc(species_index=0, conc_list=[1., 2.])
+    bio.double_spacial_resolution_linear()
+    assert np.allclose(bio.system, [[1., 1.5, 2.]])
+
+    chem_data = chem(names=["A", "B"])
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
+    bio.set_species_conc(species_index=0, conc_list=[11., 12., 13.])
+    bio.set_species_conc(species_index=1, conc_list=[5., 15., 25.])
+    bio.double_spacial_resolution_linear()
+    assert np.allclose(bio.system, [[11.,11.5,12.,12.5,13.],
+                                    [ 5.,10. ,15.,20. ,25.]])
+
+    bio = BioSim1D(n_bins=1, chem_data=chem_data)
+    bio.set_species_conc(species_index=0, conc_list=[3.14])
+    with pytest.raises(Exception):
+        bio.double_spacial_resolution_linear()
+
+
+
 def test_decrease_spacial_resolution(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=6, chem_data=chem_data)
     bio.set_species_conc(species_index=0, conc_list=[10., 20., 30., 40., 50., 60.])
@@ -452,7 +462,6 @@ def test_decrease_spacial_resolution(biomsim1D):
 
 
 def test_varying_spacial_resolution(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_species_conc(species_name="A", conc_list=[11., 12., 13.])
@@ -469,7 +478,6 @@ def test_varying_spacial_resolution(biomsim1D):
 
 
 def test_smooth_spacial_resolution(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_species_conc(species_name="A", conc_list=[10., 20., 30.])
@@ -488,7 +496,43 @@ def test_smooth_spacial_resolution(biomsim1D):
 #########   TESTS OF DIFFUSION : single species, one step    #########
 
 def test_diffuse_step_single_species_1(biomsim1D):
-    bio = BioSim1D()
+    delta_t = 0.01
+    delta_x = 2
+    diff = 10.
+
+    # The coefficients for the 2nd derivative of order 2
+    C1 = 1
+    C0 = -2
+    coeffs = np.array([C1, C0, C1])
+    assert np.allclose(np.sum(coeffs), 0)   # The coefficients should add up to zero
+
+    chem_data = chem(diffusion_rates=[diff])
+
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
+
+    initial_concs = np.array([50, 80, 20])
+    bio.set_species_conc(species_index=0, conc_list=initial_concs)
+    #bio.describe_state()
+
+    result = bio.diffuse_step_single_species(time_step=delta_t, species_index=0, delta_x=delta_x)
+    #print(result)
+
+    # Manually computes the expected increments at each bin
+    concs = shift(initial_concs, 1, cval=initial_concs[0])      # [50, 50, 80]
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[0])
+
+    concs = initial_concs                                       # [50, 80, 20]
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[1])
+
+    concs = shift(initial_concs, -1, cval=initial_concs[-1])    # [80, 20, 20]
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[2])
+
+
+
+def test_diffuse_step_single_species_1a(biomsim1D):
     chem_data = chem(diffusion_rates=[10.])
 
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
@@ -508,7 +552,6 @@ def test_diffuse_step_single_species_1(biomsim1D):
 
 
 def test_diffuse_step_single_species_1b(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(diffusion_rates=[10.])
 
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
@@ -529,7 +572,6 @@ def test_diffuse_step_single_species_1b(biomsim1D):
 
 
 def test_diffuse_step_single_species_2(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
     bio.set_uniform_concentration(species_index=0, conc=8.0)
@@ -546,7 +588,6 @@ def test_diffuse_step_single_species_2(biomsim1D):
 
 
 def test_diffuse_step_single_species_2b(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
     bio.set_uniform_concentration(species_index=0, conc=8.0)
@@ -588,7 +629,6 @@ def test_diffuse_step_single_species_3(biomsim1D):
 
 
 def test_diffuse_step_4(biomsim1D):
-    bio = BioSim1D()
     # Multiple diffusion steps, with 2 bins
     chem_data = chem(diffusion_rates=[1.])
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
@@ -611,7 +651,6 @@ def test_diffuse_step_4(biomsim1D):
 
 
 def test_diffuse_step_5(biomsim1D):
-    bio = BioSim1D()
     # Multiple diffusion steps, with 3 bins, and a large time step
     chem_data = chem(diffusion_rates=[.5])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
@@ -620,7 +659,7 @@ def test_diffuse_step_5(biomsim1D):
     bio.describe_state()
 
     # The time step is so large that the system immediately equilibrates
-    print("The default max allowed time step is: ", bio.max_time_step(.5))
+    print("The default max allowed time step is: ", bio.max_time_step(.5, delta_x=1))
     for i in range(3):
         bio.diffuse_step(time_step=0.6666)
         bio.system += bio.delta_diffusion
@@ -632,7 +671,6 @@ def test_diffuse_step_5(biomsim1D):
 
 
 def test_diffuse_step_6(biomsim1D):
-    bio = BioSim1D()
     # Multiple diffusion steps, with 5 bins, and a large time step
     chem_data = chem(diffusion_rates=[.5])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
@@ -640,7 +678,7 @@ def test_diffuse_step_6(biomsim1D):
     bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=10.)
     bio.describe_state()
 
-    print("The default max allowed time step is: ", bio.max_time_step(.5))
+    print("The default max allowed time step is: ", bio.max_time_step(.5, delta_x=1))
     for i in range(20):
         bio.diffuse_step(time_step=0.6666)
         bio.system += bio.delta_diffusion
@@ -652,7 +690,6 @@ def test_diffuse_step_6(biomsim1D):
 
 
 def test_diffuse_step_7(biomsim1D):
-    bio = BioSim1D()
     # Multiple diffusion steps, with 5 bins,
     # 1/2 the time step of the previous test, and double the duration
     chem_data = chem(diffusion_rates=[.5])
@@ -673,7 +710,6 @@ def test_diffuse_step_7(biomsim1D):
 
 
 def test_diffuse_step_8(biomsim1D):
-    bio = BioSim1D()
     # Many diffusion steps that the system equilibrates, no matter the starting point
     chem_data = chem(diffusion_rates=[.3])
     bio = BioSim1D(n_bins=15, chem_data=chem_data)
@@ -701,10 +737,59 @@ def test_diffuse_step_8(biomsim1D):
 
 
 
+###     Alternate methods to compute single-step diffusion    ###
+
+def test_diffuse_step_single_species_5_1_stencils(biomsim1D):
+    delta_t = 0.01
+    delta_x = 2
+    diff = 10.
+
+    # The coefficients for the 2nd derivative of order 4
+    C2 = -1/12
+    C1 = 4/3
+    C0 = -5/2
+    coeffs = np.array([C2, C1, C0, C1, C2])
+    assert np.allclose(np.sum(coeffs), 0)   # The coefficients should add up to zero
+
+    chem_data = chem(diffusion_rates=[diff])
+
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
+
+    initial_concs = np.array([50, 80, 40, 100, 120])
+    bio.set_species_conc(species_index=0, conc_list=initial_concs)
+
+    #bio.describe_state()
+
+    result = bio.diffuse_step_single_species_5_1_stencils(time_step=delta_t, species_index=0, delta_x=delta_x)
+    #print(result)
+
+    # Manually computes the expected increments at each bin
+    concs = shift(initial_concs, 2, cval=initial_concs[0])      # [50, 50, 50, 80, 40]
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[0])
+
+    concs = shift(initial_concs, 1, cval=initial_concs[0])      # [50, 50, 80, 40, 100]
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[1])
+
+    concs = initial_concs                                       # [50, 80, 40, 100, 120]
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[2])
+
+    concs = shift(initial_concs, -1, cval=initial_concs[-1])    # [80, 40, 100, 120, 120]
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[3])
+
+    concs = shift(initial_concs, -2, cval=initial_concs[-1])    # [40, 100, 120, 120, 120])
+    incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
+    assert np.allclose(incr, result[4])
+
+
+
+
 #########   TESTS OF DIFFUSION : all species, one step    #########
 
 def test_diffuse_step_1(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(diffusion_rates=[5., 20.])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
@@ -740,7 +825,6 @@ def test_diffuse_step_1(biomsim1D):
 #########   TESTS OF DIFFUSION : all species, multiple steps    #########
 
 def test_diffuse_1(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(diffusion_rates=[5., 20.])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_bin_conc(species_index=0, bin_address=1, conc=100.)
@@ -799,7 +883,6 @@ def test_diffuse_1(biomsim1D):
 
 
 def test_diffuse_2(biomsim1D):
-    bio = BioSim1D()
     chem_data = chem(diffusion_rates=[0.1])
     # Diffuse 1 species almost to equilibrium, starting from a single concentration pulse
     bio = BioSim1D(n_bins=10, chem_data=chem_data)
@@ -812,6 +895,153 @@ def test_diffuse_2(biomsim1D):
     assert np.allclose(bio.lookup_species(0),
                                 [1.00055275, 1.00049864, 1.00039572, 1.00025407, 1.00008755, 0.99991245,
                                  0.99974593, 0.99960428, 0.99950136, 0.99944725])
+
+
+
+def test_diffuse_3(biomsim1D):
+    # Compare a low-level and a higher-level function for one-step diffusion
+    delta_t = 0.01
+    delta_x = 2
+    diff = 10.
+
+    chem_data = chem(diffusion_rates=[diff])
+
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
+
+    initial_concs = np.array([50, 80, 40, 100, 120])
+    bio.set_species_conc(species_index=0, conc_list=initial_concs)
+
+    bio.describe_state()
+    # Compute the increments to the concentrations, from a single diffusion step
+    incs = bio.diffuse_step_single_species_5_1_stencils(time_step=delta_t, species_index=0, delta_x=delta_x)
+
+    # Redo computations on an identical system
+    bio2 = BioSim1D(n_bins=5, chem_data=chem_data)
+    bio2.set_species_conc(species_index=0, conc_list=initial_concs)
+
+    status = bio2.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x, algorithm="5_1_explicit")
+    assert status["steps"] == 1
+    bio2.describe_state()
+
+    assert np.allclose(initial_concs + incs , bio2.lookup_species(species_index=0))
+
+
+
+def test_diffuse_4(biomsim1D):
+    # Based on experiment 1D/diffusion/validate_diffusion_3
+
+    # Parameters of the simulation run.  We'll be considering just 1 chemical species, "A"
+    diffusion_rate = 10.
+    delta_t = 0.01
+    n_bins = 5000
+    delta_x = 2
+    algorithm = None    # This corresponds to a 3+1 stencil, explicit method
+
+    chem_data = chem(diffusion_rates=[diffusion_rate], names=["A"])
+
+    bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+
+    bio.inject_sine_conc(species_name="A", frequency=1, amplitude=12, bias=40)
+    bio.inject_sine_conc(species_name="A", frequency=2, amplitude=10)
+    bio.inject_sine_conc(species_name="A", frequency=16, amplitude=5)
+
+    history = MovieArray()   # All the system state will get collected in this object
+
+    # Store the initial state
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+    # Do the 4 rounds of single-step diffusion; accumulate all data in the history object
+    for _ in range(4):
+        status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+        assert status["steps"] == 1
+
+        arr = bio.lookup_species(species_index=0, copy=True)
+        history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+
+    # Now, let's examine the data collected at the 5 time points
+    all_history = history.get_array()
+    assert all_history.shape == (5, n_bins)
+
+    # Compute time derivatives (for each bin), using 5-point stencils
+    df_dt_all_bins = np.apply_along_axis(num.gradient_order4_1d, 0, all_history, delta_t)
+
+    # Let's consider the state at the midpoint in time (t2)
+    f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
+    assert f_at_t2.shape == (n_bins, )
+
+    # Computer the second spacial derivative, using 5-point stencils
+    gradient_x_at_t2 = num.gradient_order4_1d(arr=f_at_t2, dx=delta_x)
+    second_gradient_x_at_t2 = num.gradient_order4_1d(arr=gradient_x_at_t2, dx=delta_x)
+    assert second_gradient_x_at_t2.shape == (n_bins, )
+
+    # Compare the left and right hand sides of the diffusion equation
+    lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
+    rhs = diffusion_rate*second_gradient_x_at_t2
+
+    dist = num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
+    assert np.allclose(dist, 0.0017647994920801059)
+
+
+
+def test_diffuse_5(biomsim1D):
+    # Based on experiment 1D/diffusion/validate_diffusion_3
+    # Identical to test_diffuse_4(), but for a different diffusion-computing algorithm
+
+    # Parameters of the simulation run.  We'll be considering just 1 chemical species, "A"
+    diffusion_rate = 10.
+    delta_t = 0.01
+    n_bins = 5000
+    delta_x = 2
+    algorithm = "5_1_explicit"  # A 5+1 stencil, explicit method
+
+    chem_data = chem(diffusion_rates=[diffusion_rate], names=["A"])
+
+    bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+
+    bio.inject_sine_conc(species_name="A", frequency=1, amplitude=12, bias=40)
+    bio.inject_sine_conc(species_name="A", frequency=2, amplitude=10)
+    bio.inject_sine_conc(species_name="A", frequency=16, amplitude=5)
+
+    history = MovieArray()   # All the system state will get collected in this object
+
+    # Store the initial state
+    arr = bio.lookup_species(species_index=0, copy=True)
+    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+    # Do the 4 rounds of single-step diffusion; accumulate all data in the history object
+    for _ in range(4):
+        status = bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
+        assert status["steps"] == 1
+
+        arr = bio.lookup_species(species_index=0, copy=True)
+        history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+
+
+    # Now, let's examine the data collected at the 5 time points
+    all_history = history.get_array()
+    assert all_history.shape == (5, n_bins)
+
+    # Compute time derivatives (for each bin), using 5-point stencils
+    df_dt_all_bins = np.apply_along_axis(num.gradient_order4_1d, 0, all_history, delta_t)
+
+    # Let's consider the state at the midpoint in time (t2)
+    f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
+    assert f_at_t2.shape == (n_bins, )
+
+    # Computer the second spacial derivative, using 5-point stencils
+    gradient_x_at_t2 = num.gradient_order4_1d(arr=f_at_t2, dx=delta_x)
+    second_gradient_x_at_t2 = num.gradient_order4_1d(arr=gradient_x_at_t2, dx=delta_x)
+    assert second_gradient_x_at_t2.shape == (n_bins, )
+
+    # Compare the left and right hand sides of the diffusion equation
+    lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
+    rhs = diffusion_rate*second_gradient_x_at_t2
+
+    dist = num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
+    assert np.allclose(dist, 0.003517310789846865)
+
 
 
 
@@ -836,70 +1066,3 @@ def test_diffuse_2(biomsim1D):
 
 def test_react_diffuse(biomsim1D):
     pass
-
-
-
-
-def manual_test_compare_states(biomsim1D):     # MANUAL TEST
-    bio = BioSim1D()
-    state1 = np.array([10, 20, 30])
-    state2 = np.array([10.3, 19.9, 30.2])
-
-    print()
-    bio.compare_states(state1, state2, verbose=True)
-    """
-    Max of unsigned absolute differences:  0.3000000000000007
-    Relative differences:  [-0.03        0.005      -0.00666667]
-    Max of unsigned relative differences:  0.030000000000000072
-    Mean of relative differences:  -0.010555555555555547
-    Median of relative differences:  -0.006666666666666643
-    Standard deviation of relative differences:  0.014550889837454275
-    np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
-    np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) :  False
-    np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) :  False
-    np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  False
-    """
-
-
-    state1 = np.array([[10, 20, 30],
-                       [100, 200, 300]])
-    state2 = np.array([[10.3, 19.9, 30.2],
-                       [103, 199, 302]])
-
-    print()
-    bio.compare_states(state1, state2, verbose=True)
-    """
-    Max of unsigned absolute differences:  3.0
-    Relative differences:  [[-0.03        0.005      -0.00666667]
-     [-0.03        0.005      -0.00666667]]
-    Max of unsigned relative differences:  0.030000000000000072
-    Mean of relative differences:  -0.010555555555555552
-    Median of relative differences:  -0.006666666666666655
-    Standard deviation of relative differences:  0.014550889837454246
-    np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
-    np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) :  False
-    np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) :  False
-    np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  False
-    """
-
-
-    state1 = np.array([[10, 20, 30],
-                       [100, 200, 300]])
-    state2 = np.array([[10.0001, 19.9999, 30.0001],
-                       [100.0004, 199.9985, 300.0003]])
-
-    print()
-    bio.compare_states(state1, state2, verbose=True)
-    """
-    Max of unsigned absolute differences:  0.0014999999999929514
-    Relative differences:  [[-1.00000000e-05  5.00000000e-06 -3.33333333e-06]
-     [-4.00000000e-06  7.50000000e-06 -1.00000000e-06]]
-    Max of unsigned relative differences:  9.999999999976694e-06
-    Mean of relative differences:  -9.722222222130482e-07
-    Median of relative differences:  -2.166666666632011e-06
-    Standard deviation of relative differences:  5.82651718172416e-06
-    np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) :  True
-    np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) :  True
-    np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) :  True
-    np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) :  True
-    """

@@ -26,7 +26,7 @@ class BioSim1D:
         :param reactions:   (OPTIONAL) Object of class "Reactions";
                                 if not specified, it'll get instantiated here
         """
-        self.verbose = False
+        self.debug = False
 
         self.n_bins = 0          # Number of spacial compartments (bins) used in the simulation
 
@@ -80,11 +80,10 @@ class BioSim1D:
         self.all_reactions = None           # Object of class "Reactions"
 
         self.history = Movie(tabular=True)  # To store user-selected snapshots of (parts of) the system,
-                                            #   whenever requested by the user
+                                            #   whenever requested by the user.
+                                            #   Note that we're using the "tabular" format - friendly to Pandas
 
         self.system_time = None             # Global time of the system, from initialization on
-
-        self.debug = False
 
         if (n_bins is not None) or (chem_data is not None) or (reactions is not None):
             self.initialize_system(n_bins=n_bins, chem_data=chem_data, reactions=reactions)
@@ -98,7 +97,6 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    
     def initialize_system(self, n_bins: int, chem_data=None, reactions=None) -> None:
         """
         Initialize all concentrations to zero.
@@ -147,7 +145,7 @@ class BioSim1D:
     
     def reset_system(self) -> None:
         """
-        WARNING - THIS IS VERY PARTIAL.  TODO: expand, or switch to instantiated class
+        WARNING - THIS IS VERY PARTIAL.  TODO: expand, or drop (not sure if really neeeded anymore)
         :return:
         """
         self.system = None
@@ -237,42 +235,6 @@ class BioSim1D:
         df = pd.DataFrame(matrix, columns = all_chem_names)
 
         return df
-
-
-
-    
-    def compare_states(self, state1: np.array, state2: np.array, verbose=False):
-        """
-
-        :param state1:
-        :param state2:
-        :param verbose:
-        :return:
-        """
-        diff = state1 - state2
-        abs_diff = abs(diff)
-        print("Max of unsigned absolute differences: ", np.max(abs_diff))
-
-        rel_diff = diff / state1
-
-        if verbose:
-            print("Relative differences: ", rel_diff)
-
-        print("Max of unsigned relative differences: ", np.max(abs(rel_diff)))
-
-        print("Mean of relative differences: ", np.mean(rel_diff))
-        print("Median of relative differences: ", np.median(rel_diff))
-        print("Standard deviation of relative differences: ", np.std(rel_diff))
-
-        print("np.allclose with lax tolerance?  (rtol=1e-01, atol=1e-01) : ",
-              np.allclose(state1 , state2, rtol=1e-01, atol=1e-01))
-        print("np.allclose with mid tolerance?  (rtol=1e-02, atol=1e-03) : ",
-              np.allclose(state1 , state2, rtol=1e-02, atol=1e-03))
-        print("np.allclose with tight tolerance?  (rtol=1e-03, atol=1e-05) : ",
-              np.allclose(state1 , state2, rtol=1e-03, atol=1e-05))
-        print("np.allclose with extra-tight tolerance?  (rtol=1e-05, atol=1e-08) : ",
-              np.allclose(state1 , state2, rtol=1e-05, atol=1e-08))
-
 
 
 
@@ -385,7 +347,8 @@ class BioSim1D:
             f"set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; the passed value was {type(conc_list)})"
 
         assert len(conc_list) == self.n_bins, \
-            "set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the various bins (wrong length)"
+            f"set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the various bins " \
+            f"(the length should be {self.n_bins}, rather than {len(conc_list)})"
 
         self.system[species_index] = conc_list
 
@@ -456,88 +419,8 @@ class BioSim1D:
 
 
 
-    
-    def frequency_analysis(self, species_name: str, threshold = 0.001, n_largest = None) -> pd.DataFrame:
-        """
-        Return the individual frequencies, and their relative amplitudes,
-        in the concentration values of the specified chemical species.
-        A Discrete Fourier Transform is used for the computation.
-
-        :param species_name:    The name of the chemical whose concentration we want to analyze
-        :param threshold:       Minimum amplitudes of the frequency components to be considered non-zero
-                                    (NOTE: these are the raw values returned by the DFT - not the normalized ones.)
-        :param n_largest:       If specified, only the rows with the given number of largest amplitudes gets returned
-                                    (if there are fewer rows to start with, they all get returned)
-
-        :return:                A Pandas dataframe with 2 columns, "Frequency" and "Relative Amplitude";
-                                    amplitudes are relative the the smallest nonzero frequency (which is taken to be 1.0)
-                                    EXAMPLE:
-                                                   Frequency  Relative Amplitude
-                                                0        0.0                 3.0
-                                                1        2.0                 1.0
-                                                2        4.0                 0.5
-                                                3        8.0                 0.2
-        """
-
-        conc_samples = self.lookup_species(species_name=species_name)
-
-        #import plotly.express as px
-        #fig = px.line(y=conc_samples)
-        #fig.show()
-
-        # Perform a DFT, to extract the frequency components
-        # The size of the computed arrays xf and yf is  (self.n_bins/2 + 1) if self.n_bins is even
-        # or (self.n_bins + 1) /2 if self.n_bins is odd
-        xf = rfftfreq(self.n_bins, 1 / self.n_bins)
-        yf = rfft(conc_samples)
-        magnitude_yf = np.abs(yf)   # The magnitudes of the complex numbers in yf
-
-        #print(xf)
-        #print(magnitude_yf)
-
-        #print("Size of returned array: ", len(xf))
-
-        #fig = px.line(x=xf, y=magnitude_yf)
-        #fig.show()
-
-        above_threshold = magnitude_yf > threshold  # Numpy array of booleans,
-                                                    # indicating the positions in magnitude_yf array
-                                                    # where the value exceeds the given threshold
-        #print(above_threshold)
-
-        amps = magnitude_yf[above_threshold]        # Above-threshold amplitudes
-        freqs = xf[above_threshold]                 # Frequencies corresponding to above-threshold amplitudes
-
-        #print(freqs)
-        #print(amps)
-
-        if np.allclose(freqs[0], 0.):
-            # If there's a "DC bias" (zero-frequency component)
-            amps[0] /= 2.   # Amplitudes of the DC components show up differently;
-                            # see https://www.sjsu.edu/people/burford.furman/docs/me120/FFT_tutorial_NI.pdf
-            baseline_amp = amps[1]  # Use the first non-zero frequency as the baseline value
-        else:
-            baseline_amp = amps[0]  # Use the first non-zero frequency as the baseline value
-
-        scaled_amps = amps / baseline_amp   # Amplitudes scaled by the amplitude
-                                            #   of the first non-zero frequency
-
-        # Assemble and return as a Pandas dataframe the frequencies with amplitudes above the threshold,
-        #   together with their relative amplitudes
-        df = pd.DataFrame()
-        df['Frequency'] = freqs
-        df['Relative Amplitude'] = scaled_amps
-
-        if (n_largest is not None) and (n_largest < len(df)):
-            return df.nlargest(n=n_largest, columns="Relative Amplitude")
-
-        return df
-
-
-
 
     ########  DIMENSION-RELATED  ################
-
     
     def set_dimensions(self, length) -> None:
         """
@@ -653,7 +536,6 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    
     def assert_valid_bin(self, bin_address: int) -> None:
         """
         Raise an Exception if the given bin number isn't valid
@@ -670,17 +552,18 @@ class BioSim1D:
 
 
 
-
     
-    def lookup_species(self, species_index=None, species_name=None, trans_membrane=False) -> np.array:
+    def lookup_species(self, species_index=None, species_name=None, trans_membrane=False, copy=False) -> np.array:
         """
         Return the NumPy array of concentration values across the all bins (from left to right)
-        for the single specified chemical species
+        for the single specified chemical species.
+        NOTE: what is being returned NOT a copy
 
         :param species_index:   The index order of the chemical species of interest
         :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
-        :param trans_membrane:  It True, consider only the "other side" of the bins, i.e. the portion across the membrane
+        :param trans_membrane:  If True, consider only the "other side" of the bins, i.e. the portion across the membrane
                                     (it will be zero for bins without membrane)
+        :param copy:            If True, an independent numpy array will be returned: a *copy* rather than a view
         :return:                A NumPy array of concentration values across the bins (from left to right);
                                     the size of the array is the number of bins
         """
@@ -691,9 +574,14 @@ class BioSim1D:
         self.chem_data.assert_valid_index(species_index)
 
         if trans_membrane:
-            return self.system_B[species_index]
+            species_conc =  self.system_B[species_index]
         else:
-            return self.system[species_index]
+            species_conc = self.system[species_index]
+
+        if copy:
+            return species_conc.copy()
+        else:
+            return species_conc
 
 
 
@@ -731,7 +619,7 @@ class BioSim1D:
         :param bin_address: An integer with the bin number
         :return:            A dict of concentration values; the keys are the names of the species
         """
-        assert type(bin_address) == int, "bin_snapshot(): the argument must be an integer"
+        self.assert_valid_bin(bin_address)
 
         d = {}
         for species_index in range(self.n_species):
@@ -856,13 +744,13 @@ class BioSim1D:
     #                        CHANGE RESOLUTIONS                             #
     #                                                                       #
     #########################################################################
-
     
     def increase_spacial_resolution(self, factor:int) -> None:
         """
         Increase the spacial resolution of the system by cloning and repeating
         each bin, by the specified number of times.
-        Replace the System's internal state.
+        Replace the System's internal state
+        (note that the number of bins will increase by the requested factor)
 
         EXAMPLE: if the (2-chemicals) system is
                         [[11. 12. 13.]
@@ -878,6 +766,44 @@ class BioSim1D:
         new_state = np.repeat(self.system, factor, axis=1)
         self.replace_system(new_state)
 
+
+
+    def double_spacial_resolution_linear(self) -> None:
+        """
+        Increase the spacial resolution of the system by inserting between bins
+        their average value (of concentrations, for every chemical species.)
+        Replace the System's internal state
+        (note that if the number of bins is initially N, it'll become 2N-1).
+        If the system has fewer than 2 bins, an Exception will be raised.
+
+        EXAMPLE: if the (2-chemicals) system is
+                        [[11. 12. 13.]
+                         [ 5. 15. 25.]]
+                then the result will be
+                        [[11.  11.5 12.  12.5 13. ]
+                         [ 5.  10.  15.  20.  25. ]]
+
+        :return:    None
+        """
+        assert self.n_bins >= 2, \
+            "double_spacial_resolution_linear(): function can only be used if the system contains at least 2 bins"
+
+        new_state = np.zeros((self.n_species, self.n_bins * 2 - 1), dtype=float)
+        #print(new_state)
+
+        for i in range(self.n_bins-1):
+            two_col = self.system[ : , i:i+2 ]
+            avg_col = two_col.mean(axis=1)
+
+            #print("two_col: ", two_col)
+            #print("avg_col: ", avg_col)
+
+            new_state[ : , 2*i] = two_col[ : , 0]
+            new_state[ : , 2*i+1] = avg_col
+
+        new_state[ : , -1] = self.system[ : , -1]
+
+        self.replace_system(new_state)
 
 
     
@@ -946,7 +872,6 @@ class BioSim1D:
 
 
 
-
     #########################################################################
     #                                                                       #
     #                               DIFFUSION                               #
@@ -954,36 +879,41 @@ class BioSim1D:
     #########################################################################
 
     
-    def is_excessive(self, time_step, diff_rate) -> bool:
+    def is_excessive(self, time_step, diff_rate, delta_x) -> bool:
         """
         Use a loose heuristic to determine if the requested time step is too long,
-        given the diffusion rate
+        given the diffusion rate and delta_x.
+        This is also based on the "Von Neumann stability analysis"
+        (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
 
         :param time_step:
         :param diff_rate:
+        :param delta_x:
         :return:
         """
-        value = time_step * diff_rate
-
-        if value > self.time_step_threshold:
+        if time_step > self.max_time_step(diff_rate, delta_x):
             return True
         else:
             return False
 
 
     
-    def max_time_step(self, diff_rate) -> float:
+    def max_time_step(self, diff_rate, delta_x) -> float:
         """
-        Determine a reasonable upper bound on the time step, for the given diffusion rate
+        Determine a reasonable upper bound on the time step, for the given diffusion rate and delta_x
+        This is also based on the "Von Neumann stability analysis"
+        (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
+
         :param diff_rate:
+        :param delta_x:
         :return:
         """
-        return self.time_step_threshold/diff_rate
+        return delta_x**2 * self.time_step_threshold/diff_rate
 
 
 
     
-    def diffuse(self, total_duration=None, time_step=None, n_steps=None, delta_x = 1) -> dict:
+    def diffuse(self, total_duration=None, time_step=None, n_steps=None, delta_x=1, algorithm=None) -> dict:
         """
         Uniform-step diffusion, with 2 out of 3 criteria specified:
             1) until reaching, or just exceeding, the desired time duration
@@ -994,7 +924,10 @@ class BioSim1D:
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
         :param delta_x:         Distance between consecutive bins
+        :param algorithm:          (Optional) code specifying the method to use to solve the diffusion equation.
+                                    Currently available options: "5_1_explicit"
         :return:                A dictionary with data about the status of the operation
+                                    (for now, just the number of steps run; key: "steps")
         """
         time_step, n_steps = self.all_reactions.specify_steps(total_duration=total_duration,
                                                              time_step=time_step,
@@ -1007,7 +940,7 @@ class BioSim1D:
                 elif i == 2:
                     print("    ...")
 
-            self.diffuse_step(time_step, delta_x=delta_x)
+            self.diffuse_step(time_step, delta_x=delta_x, algorithm=algorithm)
             self.system += self.delta_diffusion     # Matrix operation to update all the concentrations
             self.system_time += time_step
 
@@ -1020,9 +953,8 @@ class BioSim1D:
         return status
 
 
-
     
-    def diffuse_step(self, time_step, delta_x = 1) -> None:
+    def diffuse_step(self, time_step, delta_x=1, algorithm=None) -> None:
         """
         Diffuse all the species by the given time step:
         clear the delta_diffusion array, and then re-compute it from all the species.
@@ -1032,6 +964,8 @@ class BioSim1D:
         :param time_step:   Time step over which to carry out the diffusion
                             If too large - as determined by the method is_excessive() - an Exception will be raised
         :param delta_x:     Distance between consecutive bins
+        :param algorithm:      (Optional) code specifying the method to use to solve the diffusion equation.
+                                Currently available options: "5_1_explicit"
         :return:            None
         """
         # TODO: parallelize the independent computations
@@ -1040,7 +974,13 @@ class BioSim1D:
 
         for species_index in range(self.n_species):
 
-            increment_vector = self.diffuse_step_single_species(time_step, species_index=species_index, delta_x=delta_x)
+            if algorithm is None:
+                increment_vector = self.diffuse_step_single_species(time_step, species_index=species_index, delta_x=delta_x)
+            elif algorithm == "5_1_explicit":
+                increment_vector = self.diffuse_step_single_species_5_1_stencils(time_step, species_index=species_index, delta_x=delta_x)
+            else:
+                raise Exception(f"diffuse_step(): unknown method: `{algorithm}`")
+
             #print("Increment vector is: ", increment_vector)
 
             # For each bin, update the concentrations from the buffered increments
@@ -1048,8 +988,7 @@ class BioSim1D:
 
 
 
-    
-    def diffuse_step_single_species(self, time_step: float, species_index=0, delta_x = 1) -> np.array:
+    def diffuse_step_single_species(self, time_step: float, species_index=0, delta_x=1) -> np.array:
         """
         Diffuse the specified single species, for the specified time step, across all bins,
         and return an array of the changes in concentration ("Delta concentration")
@@ -1059,14 +998,15 @@ class BioSim1D:
 
         We're assuming an isolated environment, with nothing diffusing thru the "walls"
 
+        This approach is based on a "3+1 stencil", aka "Explicit Forward-Time Centered Space".
         EXPLANATION:  https://life123.science/diffusion
 
-        :param time_step:       Time step over which to carry out the diffusion.
-                                If too large, an Exception will be raised.
+        :param time_step:       Delta time over which to carry out this single diffusion step;
+                                    if too large, an Exception will be raised.
         :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
         :param delta_x:         Distance between consecutive bins
 
-        :return:                A Numpy array with the change in concentration for the given species across all bins
+        :return:                A Numpy array with the CHANGE in concentration for the given species across all bins
         """
         assert self.system is not None, "Must first initialize the system"
         assert self.n_bins > 0, "Must first set the number of bins"
@@ -1076,19 +1016,20 @@ class BioSim1D:
         increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin
 
         if self.n_bins == 1:
-            return increment_vector                 # There's nothing to do in the case of just 1 cell!
+            return increment_vector                 # There's nothing to do in the case of just 1 bin!
 
         diff = self.chem_data.diffusion_rates[species_index]   # The diffusion rate of the specified single species
 
-        assert not self.is_excessive(time_step, diff), f"Excessive large time_fraction. Should be < {self.max_time_step(diff)}"
+        assert not self.is_excessive(time_step, diff, delta_x), \
+            f"Excessive large time_fraction. Should be < {self.max_time_step(diff, delta_x)}"
 
 
-        # Carry out a convolution operation, with a tile of size 3 (or 2 if only 2 bins)
+        # Carry out a 1-D convolution operation, with a tile of size 3 (or 2 if only 2 bins)
         #print(f"Diffusing species # {species_index}")
 
-        max_bin_number = self.n_bins - 1     # Bin numbers range from 0 to max_bin_number, inclusive
+        max_bin_number = self.n_bins - 1    # Bin numbers range from 0 to max_bin_number, inclusive
 
-        effective_diff = diff * time_step
+        effective_diff = diff * time_step   # We're calling this quantity "Effective Diffusion" (NOT a standard term)
         if delta_x != 1:
             effective_diff /= (delta_x**2)
 
@@ -1105,6 +1046,99 @@ class BioSim1D:
                 increment_vector[i] = effective_diff * \
                                         (self.system[species_index , i + 1] - current_conc
                                          + self.system[species_index , i - 1] - current_conc)
+
+        return increment_vector
+
+
+
+    def diffuse_step_single_species_5_1_stencils(self, time_step: float, species_index=0, delta_x=1) -> np.array:
+        """
+        Similar to diffuse_step_single_species(), but using a "5+1 stencil";
+        i.e. spacial derivatives are turned into finite elements using 5 adjacent bins instead of 3.
+
+        For more info, see diffuse_step_single_species()
+
+        IMPORTANT: the actual system concentrations are NOT changed.
+
+        :param time_step:       Delta time over which to carry out this single diffusion step;
+                                    if too large, an Exception will be raised.
+        :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
+        :param delta_x:         Distance between consecutive bins
+
+        :return:                A Numpy array with the CHANGE in concentration for the given species across all bins
+        """
+        assert self.system is not None, "Must first initialize the system"
+        assert self.n_bins > 0, "Must first set the number of bins"
+        assert self.n_bins >= 3, "For very small number of bins, use another method"
+        assert self.chem_data.diffusion_rates is not None, "Must first set the diffusion rates"
+        assert self.sealed == True, "For now, there's no provision for exchange with the outside"
+
+
+        increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin
+
+        if self.n_bins == 1:
+            return increment_vector                 # There's nothing to do in the case of just 1 bin!
+
+        diff = self.chem_data.diffusion_rates[species_index]   # The diffusion rate of the specified single species
+
+        # TODO: this Upper Bound is based on a *different* method, and should be made more specific to this method
+        #assert not self.is_excessive(time_step, diff, delta_x), \
+            #f"Excessive large time_fraction. Should be < {self.max_time_step(diff, delta_x)}"
+
+
+        # Carry out a 1-D convolution operation, with a tile of size 5
+
+        max_bin_number = self.n_bins - 1     # Bin numbers range from 0 to max_bin_number, inclusive
+
+        effective_diff = diff * time_step   # We're calling this quantity "Effective Diffusion" (NOT a standard term)
+        if delta_x != 1:
+            effective_diff /= (delta_x**2)
+
+        #print("effective_diff: ", effective_diff)
+
+        # The coefficients for the "Central Differences" for the spacial 2nd partial derivative,
+        #   to "accuracy 4" (using 5 term: 2 left neighbors and 2 right neighbors)
+        C2 = -1/12
+        C1 = 4/3
+        C0 = - 2.5
+
+        leftmost = self.system[species_index , 0]
+        rightmost = self.system[species_index , max_bin_number]
+
+        for i in range(self.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
+            #print(f"Processing bin number {i}")
+            C_i = self.system[species_index , i]
+
+            # The boundary conditions, at left and right edges of the system,
+            # state that the flux is zero across the boundaries
+            if i == 0:                     # Special cases for the first 2 bins
+                C_i_minus_2 = leftmost
+                C_i_minus_1 = leftmost
+            elif i == 1:
+                C_i_minus_2 = leftmost
+                C_i_minus_1 = self.system[species_index , i-1]
+            else:
+                C_i_minus_2 = self.system[species_index , i-2]
+                C_i_minus_1 = self.system[species_index , i-1]
+
+            if i == max_bin_number:      # Special cases for the last 2 bins
+                C_i_plus_1 = rightmost
+                C_i_plus_2 = rightmost
+            elif i == max_bin_number - 1:
+                C_i_plus_1 = self.system[species_index , i+1]
+                C_i_plus_2 = rightmost
+            else:
+                C_i_plus_1 = self.system[species_index , i+1]
+                C_i_plus_2 = self.system[species_index , i+2]
+
+            #print("The 5 bins under consideration: ", C_i_minus_2, C_i_minus_1, C_i, C_i_plus_1, C_i_plus_2)
+            # Compute the "Central Differences" for the 2nd partial derivative, to "accuracy 4"
+            increment_vector[i] = effective_diff * \
+                                      (  C2 * C_i_minus_2
+                                       + C1 * C_i_minus_1
+                                       + C0 * C_i
+                                       + C1 * C_i_plus_1
+                                       + C2 * C_i_plus_2)
 
         return increment_vector
 
@@ -1149,7 +1183,7 @@ class BioSim1D:
         :param n_steps:         The desired number of steps
         :param snapshots:       OPTIONAL dict that may contain any the following keys:
                                     "frequency", "sample_bin", "sample_species"
-                                    If provided, take a system snapshot after running a multiple of "frequency" runs.
+                                    If provided, take a system snapshot after running a multiple of "frequency" run steps.
                                     EXAMPLE: snapshots={"frequency": 2, "sample_bin": 0}
         :return:                None
         """
@@ -1205,7 +1239,7 @@ class BioSim1D:
 
         # For each bin
         for bin_n in range(self.n_bins):     # Bin number, ranging from 0 to max_bin_number, inclusive
-            if self.verbose:
+            if self.debug:
                 print(f"reaction_step(): processing the all the reactions in bin number {bin_n}")
 
             # Obtain the Delta-concentration for each species, for this bin
@@ -1272,6 +1306,7 @@ class BioSim1D:
             self.system += self.delta_diffusion     # Matrix operation to update all the concentrations
                                                     #   from the diffusion
             self.system_time += time_step
+
 
 
 
@@ -1446,15 +1481,13 @@ class BioSim1D:
 
     #########################################################################
     #                                                                       #
-    #                                HISTORY                                #
+    #                              HISTORY                                  #
     #                                                                       #
     #########################################################################
-
-
     
     def save_snapshot(self, data_snapshot: dict, caption = "") -> None:
         """
-        Preserve some data value (passed as dictionary) in the history, to be attached to the
+        Preserve some data value (passed as dictionary) in the history, linked to the
         current System Time.
 
         EXAMPLE:  save_snapshot(data_snapshot = {"concentration_A": 12.5, "concentration_B": 3.7},
@@ -1464,7 +1497,7 @@ class BioSim1D:
                    to preserve it from possible later modifications
 
         :param data_snapshot:   A dictionary of data to preserve for later use
-        :param caption:         Option caption to attach to this preserved data
+        :param caption:         Optional caption to attach to this preserved data
         :return:                None
         """
         self.history.store(pars=self.system_time,
@@ -1473,12 +1506,99 @@ class BioSim1D:
 
 
     
-    def get_history(self, first_n=None, last_n=None):
+    def get_history(self, first_n=None, last_n=None) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
         using save_snapshot()
 
-        :return:    a Pandas dataframe
+        :param first_n: TODO: not yet implemented
+        :param last_n:  TODO: not yet implemented
+
+        :return:        a Pandas dataframe
         """
-        print(first_n)      # TODO: not yet implemented
         return self.history.get()
+
+
+
+
+    #########################################################################
+    #                                                                       #
+    #                       FOURIER ANALYSIS                                #
+    #                                                                       #
+    #########################################################################
+
+    def frequency_analysis(self, species_name: str, threshold = 0.001, n_largest = None) -> pd.DataFrame:
+        """
+        Return the individual frequencies, and their relative amplitudes,
+        in the concentration values of the specified chemical species.
+        A Discrete Fourier Transform is used for the computation.
+
+        :param species_name:    The name of the chemical whose concentration we want to analyze
+        :param threshold:       Minimum amplitudes of the frequency components to be considered non-zero
+                                    (NOTE: these are the raw values returned by the DFT - not the normalized ones.)
+        :param n_largest:       If specified, only the rows with the given number of largest amplitudes gets returned
+                                    (if there are fewer rows to start with, they all get returned)
+
+        :return:                A Pandas dataframe with 2 columns, "Frequency" and "Relative Amplitude";
+                                    amplitudes are relative the the smallest nonzero frequency (which is taken to be 1.0)
+                                    EXAMPLE:
+                                                   Frequency  Relative Amplitude
+                                                0        0.0                 3.0
+                                                1        2.0                 1.0
+                                                2        4.0                 0.5
+                                                3        8.0                 0.2
+        """
+
+        conc_samples = self.lookup_species(species_name=species_name)
+
+        #import plotly.express as px
+        #fig = px.line(y=conc_samples)
+        #fig.show()
+
+        # Perform a DFT, to extract the frequency components
+        # The size of the computed arrays xf and yf is  (self.n_bins/2 + 1) if self.n_bins is even
+        # or (self.n_bins + 1) /2 if self.n_bins is odd
+        xf = rfftfreq(self.n_bins, 1 / self.n_bins)
+        yf = rfft(conc_samples)
+        magnitude_yf = np.abs(yf)   # The magnitudes of the complex numbers in yf
+
+        #print(xf)
+        #print(magnitude_yf)
+
+        #print("Size of returned array: ", len(xf))
+
+        #fig = px.line(x=xf, y=magnitude_yf)
+        #fig.show()
+
+        above_threshold = magnitude_yf > threshold  # Numpy array of booleans,
+        # indicating the positions in magnitude_yf array
+        # where the value exceeds the given threshold
+        #print(above_threshold)
+
+        amps = magnitude_yf[above_threshold]        # Above-threshold amplitudes
+        freqs = xf[above_threshold]                 # Frequencies corresponding to above-threshold amplitudes
+
+        #print(freqs)
+        #print(amps)
+
+        if np.allclose(freqs[0], 0.):
+            # If there's a "DC bias" (zero-frequency component)
+            amps[0] /= 2.   # Amplitudes of the DC components show up differently;
+            # see https://www.sjsu.edu/people/burford.furman/docs/me120/FFT_tutorial_NI.pdf
+            baseline_amp = amps[1]  # Use the first non-zero frequency as the baseline value
+        else:
+            baseline_amp = amps[0]  # Use the first non-zero frequency as the baseline value
+
+        scaled_amps = amps / baseline_amp   # Amplitudes scaled by the amplitude
+        #   of the first non-zero frequency
+
+        # Assemble and return as a Pandas dataframe the frequencies with amplitudes above the threshold,
+        #   together with their relative amplitudes
+        df = pd.DataFrame()
+        df['Frequency'] = freqs
+        df['Relative Amplitude'] = scaled_amps
+
+        if (n_largest is not None) and (n_largest < len(df)):
+            return df.nlargest(n=n_largest, columns="Relative Amplitude")
+
+        return df
