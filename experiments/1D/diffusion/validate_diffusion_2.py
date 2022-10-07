@@ -133,7 +133,7 @@ rhs = diffusion_rate*second_gradient_x_at_t2
 rhs.shape
 
 # %%
-num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidian distance, ignoring 2 edge points at each end
+num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
 # The above number is a measure of the discrepancy from the perfect match (zero distance) that an ideal solution would provide. 
@@ -199,7 +199,7 @@ second_gradient_x_at_t2.shape
 lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
 rhs = diffusion_rate*second_gradient_x_at_t2
 
-num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidian distance, ignoring 2 edge points at each end
+num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
 # #### The discrepancy value has indeed gone up from the baseline 0.023163289760024783
@@ -257,7 +257,7 @@ second_gradient_x_at_t2.shape
 lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
 rhs = diffusion_rate*second_gradient_x_at_t2
 
-num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidian distance, ignoring 2 edge points at each end
+num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
 # #### The discrepancy value has indeed gone down from the baseline 0.023163289760024783
@@ -316,7 +316,7 @@ second_gradient_x_at_t2.shape
 lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
 rhs = diffusion_rate*second_gradient_x_at_t2
 
-num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidian distance, ignoring 2 edge points at each end
+num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
 # #### The discrepancy value has indeed gone up from the baseline 0.023163289760024783
@@ -374,7 +374,7 @@ second_gradient_x_at_t2.shape
 lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
 rhs = diffusion_rate*second_gradient_x_at_t2
 
-num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidian distance, ignoring 2 edge points at each end
+num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
 # #### The discrepancy value has indeed gone down from the baseline 0.023163289760024783
@@ -433,7 +433,7 @@ second_gradient_x_at_t2.shape
 lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
 rhs = diffusion_rate*second_gradient_x_at_t2
 
-num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidian distance, ignoring 2 edge points at each end
+num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
 # #### Not surprisingly, the discrepancy value (in part caused by poor numeric estimation of spacial derivatives) has indeed gone down from the baseline 0.023163289760024783
@@ -490,7 +490,7 @@ second_gradient_x_at_t2.shape
 lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
 rhs = diffusion_rate*second_gradient_x_at_t2
 
-num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidian distance, ignoring 2 edge points at each end
+num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
 # #### Here, the discrepancy value has remained largely the same from the baseline 0.023163289760024783

@@ -249,9 +249,9 @@ rhs
 lhs - rhs
 
 # %%
-# Here we usea handy function to compare two equal-sized vectors, 
-# while optiong to disregarding a specified number of entries at each edge.
-# It returns the Euclidian distance ("L2 norm") of the shortened vectors
+# Here we use a handy function to compare two equal-sized vectors,
+# while opting to disregarding a specified number of entries at each edge.
+# It returns the Euclidean distance ("L2 norm") of the shortened vectors
 num.compare_vectors(lhs, rhs, trim_edges=1)
 
 # %% [markdown]
