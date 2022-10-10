@@ -135,6 +135,34 @@ def test_inject_conc_to_bin(biomsim1D):
 
 
 
+def test_inject_gradient(biomsim1D):
+    chem_data = chem(names=["A", "B"])
+    bio = BioSim1D(n_bins=8, chem_data=chem_data)
+
+    with pytest.raises(Exception):
+        bio.inject_gradient("B", conc_left = 10., conc_right = 20.)     # Non-existent chemical species
+
+        bio.inject_gradient("A", conc_left = -10., conc_right = 20.)    # Negative concentration
+        bio.inject_gradient("A", conc_left = 10., conc_right = -20.)    # Negative concentration
+
+    bio.inject_gradient("A", conc_left = 11., conc_right = 18.)
+    assert np.allclose(bio.lookup_species(species_name="A"), [11., 12., 13., 14., 15., 16., 17., 18.])
+
+    bio.inject_gradient("A", conc_left = 18., conc_right = 11.)
+    assert np.allclose(bio.lookup_species(species_name="A"), [29., 29., 29., 29., 29., 29., 29., 29.])
+
+    bio = BioSim1D(n_bins=1, chem_data=chem_data)
+    with pytest.raises(Exception):
+        bio.inject_gradient("A", conc_left = 11., conc_right = 18.)     # Too few bins in system
+
+    #print(bio.lookup_species(species_name="A"))
+    # Curves could be visualized as follows:
+    #import plotly.express as px
+    #fig = px.line(y=bio.lookup_species(species_name="A"))
+    #fig.show()
+
+
+
 def test_inject_sine_conc(biomsim1D):
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=8, chem_data=chem_data)

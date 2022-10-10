@@ -5,6 +5,9 @@ import numpy as np
 
 
 class Numerical:
+    """
+    Assorted, general numerical methods
+    """
 
 
     @classmethod

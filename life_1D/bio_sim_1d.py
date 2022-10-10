@@ -257,7 +257,6 @@ class BioSim1D:
         :return:                None
         """
         if species_name is not None:
-            assert self.chem_data, f"BioSim1D.set_uniform_concentration(): must first call initialize_system()"
             species_index = self.chem_data.get_index(species_name)
         else:
             self.chem_data.assert_valid_index(species_index)
@@ -306,7 +305,6 @@ class BioSim1D:
         :return:                None
         """
         if species_name is not None:
-            assert self.chem_data, f"BioSim1D.set_bin_conc(): must first call initialize_system()"
             species_index = self.chem_data.get_index(species_name)
         else:
             self.chem_data.assert_valid_index(species_index)
@@ -327,7 +325,6 @@ class BioSim1D:
 
 
 
-    
     def set_species_conc(self, conc_list: Union[list, tuple, np.ndarray], species_index=None, species_name=None) -> None:
         """
         Assign the requested list of concentration values to all the bins, in order, for the specified species.
@@ -338,7 +335,6 @@ class BioSim1D:
         :return:                None
         """
         if species_name is not None:
-            assert self.chem_data, f"BioSim1D.set_species_conc(): must first call initialize_system()"
             species_index = self.chem_data.get_index(species_name)
         else:
             self.chem_data.assert_valid_index(species_index)
@@ -351,7 +347,6 @@ class BioSim1D:
             f"(the length should be {self.n_bins}, rather than {len(conc_list)})"
 
         self.system[species_index] = conc_list
-
 
 
     
@@ -369,6 +364,7 @@ class BioSim1D:
         self.assert_valid_bin(bin_address)
 
         if (self.system[species_index, bin_address] + delta_conc) < 0. :
+            # Take special action if the requested change would make the bin concentration negative
             if zero_clip:
                 self.system[species_index, bin_address] = 0
                 return
@@ -380,7 +376,31 @@ class BioSim1D:
 
 
 
-    
+
+    def inject_gradient(self, species_name, conc_left = 0., conc_right = 0.) -> None:
+        """
+        Add to the concentrations of the specified chem species a linear gradient spanning across all bins,
+        with the specified values at the endpoints of the system.
+
+        :param species_name:    The name of the chemical species whose concentration we're modifying
+        :param conc_left:       The desired amount of concentration to add to the leftmost bin (the start of the gradient)
+        :param conc_right:      The desired amount of concentration to add to the rightmost bin (the end of the gradient)
+        :return:                None
+        """
+        assert conc_left >= 0. and conc_right >= 0., \
+                    f"BioSim1D.inject_gradient(): the concentration values cannot be negative"
+
+        assert self.n_bins > 1, \
+                    f"BioSim1D.inject_gradient(): minimum system size must be 2 bins"
+
+        species_index = self.chem_data.get_index(species_name)
+
+        increments_arr = np.linspace(conc_left, conc_right, self.n_bins)
+
+        self.system[species_index] += increments_arr
+
+
+
     def inject_sine_conc(self, species_name, frequency, amplitude, bias=0, phase=0, zero_clip = False) -> None:
         """
         Add to the concentrations of the specified chem species a sinusoidal signal across all bins
@@ -395,12 +415,11 @@ class BioSim1D:
         :param amplitude:       Amplitude of the Sine wave.  Note that peak-to-peak values are double the amplitude
         :param bias:            Amount to be added to all values (akin to "DC bias" in electrical circuits)
         :param phase:           In degrees: phase shift to the RIGHT.  EXAMPLE: 180 to flip the Sine curve
-        :param zero_clip:       If True, any requested increment causing a concentration dip below zero,
+        :param zero_clip:       If True, any requested change causing a concentration dip below zero,
                                 will make the concentration zero;
                                 otherwise, an Exception will be raised
         :return:                None
         """
-        assert self.chem_data, f"BioSim1D.inject_sine_conc(): must first call initialize_system()"
         species_index = self.chem_data.get_index(species_name)
 
         period = self.n_bins / frequency
@@ -412,6 +431,7 @@ class BioSim1D:
         #print("B: ", B)
 
         for x in range(self.n_bins):
+            # Update each bin concentration in turn
             conc = amplitude * math.sin(B*x - phase_radians) + bias
             #print(conc)
             self.inject_conc_to_bin(bin_address = x, species_index = species_index,
@@ -568,7 +588,6 @@ class BioSim1D:
                                     the size of the array is the number of bins
         """
         if species_name is not None:
-            assert self.chem_data, f"BioSim1D.lookup_species(): must first call initialize_system()"
             species_index = self.chem_data.get_index(species_name)
 
         self.chem_data.assert_valid_index(species_index)
@@ -597,7 +616,6 @@ class BioSim1D:
         :return:                A concentration value at the indicated bin, for the requested species
         """
         if species_name is not None:
-            assert self.chem_data, f"BioSim1D.bin_concentration(): must first call initialize_system()"
             species_index = self.chem_data.get_index(species_name)
 
         self.chem_data.assert_valid_index(species_index)
