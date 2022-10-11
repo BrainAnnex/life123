@@ -237,6 +237,41 @@ def test_inject_sine_conc(biomsim1D):
 
 
 
+def test_inject_bell_curve(biomsim1D):
+    chem_data = chem(names=["A"])
+
+    bio = BioSim1D(n_bins=10, chem_data=chem_data)
+
+    with pytest.raises(Exception):
+        bio.inject_bell_curve(species_name="A", bias=-100)      # Negative bias
+        bio.inject_bell_curve(species_name="A", amplitude=-1)   # Negative amplitude
+
+    bio.inject_bell_curve(species_name="A", mean=0.5, sd=0.15, amplitude=1., bias=0)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [0.01028186, 0.09231148, 0.47878856, 1.43461641, 2.48331496, 2.48331496,
+                        1.43461641, 0.47878856, 0.09231148, 0.01028186])
+
+    bio = BioSim1D(n_bins=10, chem_data=chem_data)
+    bio.inject_bell_curve(species_name="A", mean=0.5, sd=0.05, amplitude=2., bias=10)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [10., 10., 10.00000317, 10.06169116, 18.60769844, 18.60769844,
+                         10.06169116, 10.00000317, 10., 10.])
+
+    bio = BioSim1D(n_bins=20, chem_data=chem_data)
+    bio.inject_bell_curve(species_name="A", mean=0.2, sd=0.05, amplitude=2., bias=10)
+    assert np.allclose(bio.lookup_species(species_name="A"),
+                       [10.00535321, 10.20730806, 12.65097387, 21.19391452, 25.60794776, 17.18616024,
+                        11.09253477, 10.05484802, 10.00090923, 10.00000498, 10.00000001, 10.,
+                        10., 10.,  10.,  10.,  10.,  10., 10.,  10.])
+
+    # print(bio.lookup_species(species_name="A"))
+    # Curves could be visualized as follows:
+    #import plotly.express as px
+    #fig = px.line(y=bio.lookup_species(species_name="A"))
+    #fig.show()
+
+
+
 def test_frequency_analysis(biomsim1D):
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=100, chem_data=chem_data)

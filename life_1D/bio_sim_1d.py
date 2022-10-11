@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import math
 from scipy.fft import rfft, rfftfreq    # Fast Fourier Transforms to extract frequency components
+from scipy.stats import norm
 from typing import Union, List, Tuple
 from modules.movies.movies import Movie
 from modules.reactions.reactions import Reactions
@@ -379,8 +380,8 @@ class BioSim1D:
 
     def inject_gradient(self, species_name, conc_left = 0., conc_right = 0.) -> None:
         """
-        Add to the concentrations of the specified chem species a linear gradient spanning across all bins,
-        with the specified values at the endpoints of the system.
+        Add to the concentrations of the specified chemical species a linear gradient spanning across all bins,
+        with the indicated values at the endpoints of the system.
 
         :param species_name:    The name of the chemical species whose concentration we're modifying
         :param conc_left:       The desired amount of concentration to add to the leftmost bin (the start of the gradient)
@@ -395,17 +396,21 @@ class BioSim1D:
 
         species_index = self.chem_data.get_index(species_name)
 
+        # Create an array of equally-spaced values from conc_left to conc_right
+        # Size of array is same as the number of bins in the system
         increments_arr = np.linspace(conc_left, conc_right, self.n_bins)
 
+        # Update the concentrations across all bins, for the requested chemical species
+        # Note: all the values we're adding are non-negative; so, no danger of creating negative concentrations
         self.system[species_index] += increments_arr
 
 
 
     def inject_sine_conc(self, species_name, frequency, amplitude, bias=0, phase=0, zero_clip = False) -> None:
         """
-        Add to the concentrations of the specified chem species a sinusoidal signal across all bins
+        Add to the concentrations of the specified chemical species a sinusoidal signal across all bins.
 
-        Note:   A sine wave of the form   A sin(B x - C)
+        Note:   A sine wave of the form  f(x) = A sin(B x - C)
                 has an amplitude of A, a period of 2Pi/B and a right phase shift of C (in radians)
 
         In Mathematica:  Plot[Sin[B x - C] /. {B -> 2 Pi, C -> 0} , {x, 0, 1}, GridLines -> Automatic]
@@ -433,10 +438,45 @@ class BioSim1D:
         for x in range(self.n_bins):
             # Update each bin concentration in turn
             conc = amplitude * math.sin(B*x - phase_radians) + bias
-            #print(conc)
             self.inject_conc_to_bin(bin_address = x, species_index = species_index,
                                    delta_conc = conc, zero_clip = zero_clip)
 
+
+
+    def inject_bell_curve(self, species_name, mean=0.5, sd=0.15, amplitude=1., bias=0) -> None:
+        """
+        Add to the concentrations of the specified chemical species a signal across all bins in the shape of a Bell curve.
+        The default values provide bell shape centered in the middle of the system, and fairly spread out
+        (but pretty close to zero at the endpoints)
+
+        :param species_name:    The name of the chemical species whose concentration we're modifying
+        :param mean:            A value, generally between 0 and 1, indication the position of the mean relative to the system;
+                                    if less than 0 or greater than 1, only one tail of the curve will be seen
+        :param sd:              Standard deviation, in units of the system length
+        :param amplitude:       Amount by which to multiply the signal
+        :param bias:            Positive amount to be added to all values (akin to "DC bias" in electrical circuits)
+        :return:                None
+        """
+        assert bias >= 0, \
+            f"BioSim1D.inject_bell_curve(): the value for the `bias` ({bias}) cannot be negative"
+
+        assert amplitude >= 0, \
+            f"BioSim1D.inject_bell_curve(): the value for the `amplitude` ({amplitude}) cannot be negative"
+
+        species_index = self.chem_data.get_index(species_name)
+
+        # Create an array of equally-spaced values from 0. to 1.
+        # Size of array is same as the number of bins in the system
+        x = np.linspace(0, 1, self.n_bins)
+
+        # Create a range of y-values that correspond to normal pdf with the given mean and SD
+        increments_arr = norm.pdf(x, mean, sd)
+
+        # Stretch and shift the normal pdf, as requested;
+        # use those values to update the concentrations across all bins,
+        # for the requested chemical species
+        # Note: all the values we're adding are non-negative; so, no danger of creating negative concentrations
+        self.system[species_index] += amplitude * increments_arr + bias
 
 
 
