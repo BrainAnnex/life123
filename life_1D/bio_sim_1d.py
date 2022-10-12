@@ -1079,7 +1079,7 @@ class BioSim1D:
         diff = self.chem_data.diffusion_rates[species_index]   # The diffusion rate of the specified single species
 
         assert not self.is_excessive(time_step, diff, delta_x), \
-            f"Excessive large time_fraction. Should be < {self.max_time_step(diff, delta_x)}"
+            f"Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"
 
 
         # Carry out a 1-D convolution operation, with a tile of size 3 (or 2 if only 2 bins)
