@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## Diffusion of a bell-shaped initial concentration along a gradient
+# ## Diffusion of a bell-shaped initial concentration along an initial gradient
 # A single chemical, whose initial concentration is a mix of a bell shape and a gradient.   
 # Contrary to perhaps an intuition of a "pile sliding down a sand dune as a unit", the concentration peak
 # remains in place, and simply spreads out from there
@@ -44,10 +44,7 @@ bio.inject_bell_curve(species_name="A", mean=0.25, sd=0.1, amplitude=20., bias=0
 
 # %%
 # Visualize the system state so far
-fig = px.line(y=bio.lookup_species(species_name="A"), 
-              title= f"System snapshot at time t={bio.system_time}",
-              labels={"y":"concentration", "x":"Bin number"},)
-fig.show()
+bio.visualize_system(caption="Preparations in progress")
 
 # %%
 # Complete the initial-system preparation by adding a gradient slanting to the right
@@ -55,28 +52,19 @@ bio.inject_gradient("A", conc_left = 50., conc_right = 0.)
 
 # %%
 # Visualize the complete initial state
-fig = px.line(y=bio.lookup_species(species_name="A"), 
-              title= f"System snapshot at time t={bio.system_time}",
-              labels={"y":"[A]", "x":"Bin number"},)
-fig.show()
+bio.visualize_system()
 
 # %%
 # Do several round of diffusion, over relatively small times
 for _ in range(5):
     bio.diffuse(total_duration=20, n_steps=1000)
-    fig = px.line(y=bio.lookup_species(species_name="A"), 
-                  title= f"System snapshot at time t={bio.system_time}",
-                  labels={"y":"[A]", "x":"Bin number"},)
-    fig.show()
+    bio.visualize_system()
 
 # %%
 # Do more rounds of diffusion, over large times spans
 for _ in range(9):
     bio.diffuse(total_duration=300, n_steps=10000)
-    fig = px.line(y=bio.lookup_species(species_name="A"), 
-                  title= f"System snapshot at time t={bio.system_time}",
-                  labels={"y":"[A]", "x":"Bin number"},)
-    fig.show()
+    bio.visualize_system()
 
 # %% [markdown]
 # The system is **approaching equilibrium** at a value a little less than 45.   

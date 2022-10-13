@@ -6,6 +6,7 @@ from scipy.stats import norm
 from typing import Union, List, Tuple
 from modules.movies.movies import Movie
 from modules.reactions.reactions import Reactions
+import plotly.express as px
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
@@ -143,7 +144,15 @@ class BioSim1D:
 
 
 
-    
+    def system_size(self) -> int:
+        """
+        Note: the bin numbers will range between 0 and system_size - 1
+        :return:
+        """
+        return self.n_bins
+
+
+
     def reset_system(self) -> None:
         """
         WARNING - THIS IS VERY PARTIAL.  TODO: expand, or drop (not sure if really neeeded anymore)
@@ -1373,6 +1382,38 @@ class BioSim1D:
     #                           VISUALIZATION                               #
     #                                                                       #
     #########################################################################
+
+    def visualize_system(self, caption=None, colors=None):
+        """
+        Visualize the current state of the system as a line plot
+
+        :param caption: Optional caption to prefix to the default one
+        :param colors:
+        :return:
+        """
+        title = f"System snapshot at time t={self.system_time}"
+        if caption:
+            title = caption + ".  " + title
+
+        if self.n_species == 1:
+            chem_name = self.chem_data.get_name(species_index=0)      # The only chemical in the system
+
+            fig = px.line(y=self.lookup_species(species_name=chem_name),
+                          title= title,
+                          labels={"y": f"[{chem_name}]", "x":"Bin number"},)
+            fig.show()
+        else:
+            print("NOT YET IMPLEMENTED")
+            '''
+            #TODO: generalize
+            fig = px.line(data_frame=self.system_snapshot(), y=["A"],
+                          title= f"Diffusion. System snapshot at time t={self.system_time}",
+                          color_discrete_sequence = ['red'],
+                          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})                        
+            fig.show()
+            '''
+
+
 
     def single_species_heatmap(self, species_index: int, heatmap_pars: dict, graphic_component, header=None) -> None:
         """
