@@ -30,9 +30,9 @@ class BioSim1D:
         """
         self.debug = False
 
-        self.n_bins = 0          # Number of spacial compartments (bins) used in the simulation
+        self.n_bins = 0         # Number of spacial compartments (bins) used in the simulation
 
-        self.n_species = 1       # The number of (non-water) chemical species   TODO: phase out?
+        self.n_species = 1      # The number of (non-water) chemical species   TODO: phase out?
 
         self.chem_data = None   # Object of type "Chemicals", with info on the individual chemicals,
                                 #   incl. their names and diffusion rates
@@ -1057,8 +1057,8 @@ class BioSim1D:
 
     def diffuse_step_single_species(self, time_step: float, species_index=0, delta_x=1) -> np.array:
         """
-        Diffuse the specified single species, for the specified time step, across all bins,
-        and return an array of the changes in concentration ("Delta concentration")
+        Diffuse the specified single chemical species, for the given time step, across all bins,
+        and return a 1-D array of the changes in concentration ("Delta concentration")
         for the given species across all bins.
 
         IMPORTANT: the actual system concentrations are NOT changed.
@@ -1073,19 +1073,19 @@ class BioSim1D:
         :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
         :param delta_x:         Distance between consecutive bins
 
-        :return:                A Numpy array with the CHANGE in concentration for the given species across all bins
+        :return:                A 1-D Numpy array with the CHANGE in concentration for the given species across all bins
         """
         assert self.system is not None, "Must first initialize the system"
         assert self.n_bins > 0, "Must first set the number of bins"
         assert self.chem_data.diffusion_rates is not None, "Must first set the diffusion rates"
         assert self.sealed == True, "For now, there's no provision for exchange with the outside"
 
-        increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin
+        increment_vector = np.zeros(self.n_bins, dtype=float)       # One element per bin
 
         if self.n_bins == 1:
-            return increment_vector                 # There's nothing to do in the case of just 1 bin!
+            return increment_vector                                 # There's nothing to do in the case of just 1 bin!
 
-        diff = self.chem_data.diffusion_rates[species_index]   # The diffusion rate of the specified single species
+        diff = self.chem_data.get_diffusion_rate(species_index)     # The diffusion rate of the specified single species
 
         assert not self.is_excessive(time_step, diff, delta_x), \
             f"Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"
@@ -1103,7 +1103,7 @@ class BioSim1D:
 
         for i in range(self.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
             #print(f"Processing bin number {i}")
-            current_conc = self.system[species_index , i]
+            current_conc = self.system[species_index , i]   # Concentration in the center of the convolution tile
 
             if i == 0 :                     # Special case for the first bin (no left neighbor)
                 increment_vector[i] = effective_diff * (self.system[species_index , 1] - current_conc)
@@ -1144,9 +1144,9 @@ class BioSim1D:
         increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin
 
         if self.n_bins == 1:
-            return increment_vector                 # There's nothing to do in the case of just 1 bin!
+            return increment_vector                             # There's nothing to do in the case of just 1 bin!
 
-        diff = self.chem_data.diffusion_rates[species_index]   # The diffusion rate of the specified single species
+        diff = self.chem_data.get_diffusion_rate(species_index)     # The diffusion rate of the specified single species
 
         # TODO: this Upper Bound is based on a *different* method, and should be made more specific to this method
         #assert not self.is_excessive(time_step, diff, delta_x), \

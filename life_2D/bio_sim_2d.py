@@ -12,7 +12,7 @@ class BioSim2D:
     def __init__(self, n_bins=None, chem_data=None, reactions=None):
         """
 
-        :param n_bins:      A pair
+        :param n_bins:      A pair with the bin size in the x- and y- coordinates
         :param chem_data:
         :param reactions:
         """
@@ -173,7 +173,79 @@ class BioSim2D:
     #                                                                       #
     #########################################################################
 
-    # TODO: TBA
+    def diffuse_step_single_species(self, time_step: float, delta_s: float, species_index=0, ) -> np.array:
+        """
+        Diffuse the specified single chemical species, for the given time step, across all bins,
+        and return a 2-D array of the changes in concentration ("Delta concentration")
+        for the given species across all bins.
+
+        IMPORTANT: the actual system concentrations are NOT changed.
+
+        We're assuming an isolated environment, with nothing diffusing thru the "walls"
+
+        EXPLANATION about the methodology:  https://life123.science/diffusion
+
+        :param time_step:       Delta time over which to carry out this single diffusion step;
+                                    TODO: add - if too large, an Exception will be raised.
+        :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
+        :param delta_s:         Distance between consecutive bins, ASSUMED the same in both directions
+
+        :return:                A 2-D Numpy array with the CHANGE in concentration for the given species across all bins
+        """
+        assert self.system is not None, "Must first initialize the system"
+        assert self.n_bins_x > 0 and self.n_bins_y > 0, "Must first set the number of bins"
+        assert self.chem_data.diffusion_rates is not None, "Must first set the diffusion rates"
+        assert self.sealed == True, "For now, there's no provision for exchange with the outside"
+
+        increment_vector = np.zeros((self.n_bins_x, self.n_bins_y), dtype=float)   # One element per bin
+
+        if self.n_bins_x and self.n_bins_y == 1:
+            return increment_vector                                 # There's nothing to do in the case of just 1 bin!
+
+        diff = self.chem_data.get_diffusion_rate(species_index)     # The diffusion rate of the specified single species
+
+        #assert not self.is_excessive(time_step, diff, delta_x), \  # TODO: implement
+            #f"Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"
+
+
+        # Carry out a 2-D convolution operation, with a tile of size 3
+
+        max_bin_x = self.n_bins_x - 1    # Bin numbers range from 0 to max_bin_x, inclusive (in x-direction)
+        max_bin_y = self.n_bins_y - 1    # Bin numbers range from 0 to max_bin_y, inclusive (in y-direction)
+
+        # We're calling the following quantity "Effective Diffusion" (NOT a standard term)
+        effective_diff = diff * time_step / (delta_s**2)
+
+        for i in range(self.n_bins_x):          # From 0 to max_bin_x, inclusive
+            for j in range(self.n_bins_y):      # From 0 to max_bin_y, inclusive
+                C_ij = self.system[species_index, i, j]     # Concentration in the center of the convolution tile
+
+                # The boundary conditions state that the flux is zero across boundaries
+                if i == 0:
+                    C_left = self.system[species_index, 0, j]
+                else:
+                    C_left = self.system[species_index, i-1, j]
+
+                if i == max_bin_x:
+                    C_right = self.system[species_index, max_bin_x, j]
+                else:
+                    C_right = self.system[species_index, i+1, j]
+
+                if j == 0:
+                    C_above = self.system[species_index, i, 0]
+                else:
+                    C_above = self.system[species_index, i, j-1]
+
+                if j == max_bin_y:
+                    C_below = self.system[species_index, i, max_bin_y]
+                else:
+                    C_below = self.system[species_index, i, j+1]
+
+
+                increment_vector[i, j] = effective_diff * \
+                                         (C_above + C_below + C_left + C_right - 4 * C_ij)
+
+        return increment_vector
 
 
 
@@ -247,7 +319,7 @@ class BioSim2D:
                     print(f"reaction_step(): processing the all the reactions in bin number ({bin_n_x}, {bin_n_y})")
 
                 # Obtain the Delta-concentration for each species, for this bin
-                conc_dict = {species_index: self.system[species_index , bin_n_x, bin_n_y]
+                conc_dict = {species_index: self.system[species_index, bin_n_x, bin_n_y]
                              for species_index in range(self.n_species)}
                 if self.debug:
                     print(f"\nconc_dict in bin ({bin_n_x}, {bin_n_y}): ", conc_dict)
