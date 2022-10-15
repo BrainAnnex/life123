@@ -1,3 +1,6 @@
+# These are tests specifically for reactions in 1D;
+# for general tests of 1D system, see test_biosim_1d.py
+
 import pytest
 import numpy as np
 from modules.chemicals.chemicals import Chemicals as chem
@@ -21,7 +24,6 @@ def rxn():
 
 
 def test_set_reactions():
-    bio = BioSim1D()
     chem_data = chem(names=["A", "B", "C"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
@@ -36,7 +38,6 @@ def test_set_reactions():
 
 
 def test_reaction_step_1():
-    bio = BioSim1D()
     # Based on experiment "reaction1"
     chem_data = chem(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
@@ -60,7 +61,6 @@ def test_reaction_step_1():
 
 
 def test_reaction_step_1b():
-    bio = BioSim1D()
     # Based on experiment "reaction1"
     chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
@@ -99,7 +99,6 @@ def test_reaction_step_1b():
 
 
 def test_react_1():
-    bio = BioSim1D()
     # Based on experiment "reaction2"
     chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
 
@@ -122,7 +121,6 @@ def test_react_1():
 
 
 def test_react_2():
-    bio = BioSim1D()
     # Based on experiment "reaction3"
     chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
 
@@ -149,7 +147,6 @@ def test_react_2():
 
 
 def test_react_3():
-    bio = BioSim1D()
     # Based on experiment "reaction4"
     chem_data = chem(diffusion_rates=[0.1, 0.1, 0.1], names=["A", "B", "C"])   # NOTE: diffusion_rates not used
 
@@ -178,7 +175,6 @@ def test_react_3():
 
 
 def test_react_4():
-    bio = BioSim1D()
     # Based on experiment "reaction5"
     chem_data = chem(diffusion_rates=[0.1, 0.1, 0.1], names=["A", "C", "D"])   # NOTE: diffusion_rates not used
 
@@ -205,7 +201,6 @@ def test_react_4():
 
 
 def test_react_5():
-    bio = BioSim1D()
     # Based on experiment "reaction6"
     chem_data = chem(diffusion_rates=[0.1, 0.1, 0.1, 0.1], names=["A", "B", "C", "D"])   # NOTE: diffusion_rates not used
 
@@ -238,7 +233,6 @@ def test_react_5():
 
 
 def test_react_6():
-    bio = BioSim1D()
     # Based on experiment "reaction7"
     chem_data = chem(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
 
@@ -266,7 +260,6 @@ def test_react_6():
 
 
 def test_react_7():
-    bio = BioSim1D()
     # Based on experiment "reaction8"
     chem_data = chem(diffusion_rates=[.1, .1, .1, .1, .1], names=["A", "B", "C", "D", "E"])   # NOTE: diffusion_rates not used
 
@@ -309,7 +302,6 @@ def test_react_7():
 
 
 def test_react_with_membrane():
-    bio = BioSim1D()
     # Based on experiment "reaction/membranes_1"
     chem_data = chem(names=["A", "B", "C"])     # NOTE: Diffusion not done
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
