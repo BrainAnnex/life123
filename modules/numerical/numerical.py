@@ -232,3 +232,30 @@ class Numerical:
             return out_vals[0]
         else:
             return out_vals
+
+
+
+    @classmethod
+    def expand_matrix_boundary(cls, m):
+        """
+        Add a row at the top and at the bottom, and also add a column to the left and to the right,
+        repeating the edge values of the matrix
+        EXAMPLE:  [[1, 2],
+                   [3, 4]]
+                 will turn to
+                  [[1, 1, 2, 2],
+                   [1, 1, 2, 2],
+                   [3, 3, 4, 4],
+                   [3, 3, 4, 4]]
+                 Note how the original matrix is "embedded" in the center of the larger one
+
+        :param m:   A Numpy matrix
+        :return:
+        """
+        # Stack up the first row, the matrix, and the last row
+        tall = np.concatenate( ([m[0, :]] , m , [m[-1, :]]) )
+        #print(tall)
+
+        # Align sideways the 1st column, the matrix and the last column
+        wide = np.concatenate( (tall[:,[0]] , tall , tall[:,[-1]]) , axis=1)
+        return wide

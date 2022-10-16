@@ -208,13 +208,20 @@ class BioSim2D:
     
     def describe_state(self, concise=False) -> None:
         """
+        For each chemical species, show its name (or index, if name is missing),
+        followed by the matrix of concentrations values for that chemical
 
-        :param concise:
-        :return:
+        :param concise:     Not yet used
+        :return:            None
         """
         print(f"SYSTEM STATE at Time t = {self.system_time}:")
         for species_index in range(self.n_species):
-            print(f"Species `{self.chem_data.get_name(species_index)}`:")
+            chem_name = self.chem_data.get_name(species_index)
+            if chem_name is None:
+                print(f"Species {species_index}:")      # Use the index, if the name isn't available
+            else:
+                print(f"Species `{chem_name}`:")
+
             print(self.system[species_index])
 
 
@@ -254,7 +261,7 @@ class BioSim2D:
     #                                                                       #
     #########################################################################
 
-    def diffuse_step_single_species(self, time_step: float, delta_s: float, species_index=0, ) -> np.array:
+    def diffuse_step_single_species(self, time_step: float, h: float, species_index=0) -> np.array:
         """
         Diffuse the specified single chemical species, for the given time step, across all bins,
         and return a 2-D array of the changes in concentration ("Delta concentration")
@@ -269,7 +276,7 @@ class BioSim2D:
         :param time_step:       Delta time over which to carry out this single diffusion step;
                                     TODO: add - if too large, an Exception will be raised.
         :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
-        :param delta_s:         Distance between consecutive bins, ASSUMED the same in both directions
+        :param h:         Distance between consecutive bins, ASSUMED the same in both directions
 
         :return:                A 2-D Numpy array with the CHANGE in concentration for the given species across all bins
         """
@@ -295,7 +302,7 @@ class BioSim2D:
         max_bin_y = self.n_bins_y - 1    # Bin numbers range from 0 to max_bin_y, inclusive (in y-direction)
 
         # We're calling the following quantity "Effective Diffusion" (NOT a standard term)
-        effective_diff = diff * time_step / (delta_s**2)
+        effective_diff = diff * time_step / (h ** 2)
 
         for i in range(self.n_bins_x):          # From 0 to max_bin_x, inclusive
             for j in range(self.n_bins_y):      # From 0 to max_bin_y, inclusive

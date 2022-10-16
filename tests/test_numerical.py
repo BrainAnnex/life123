@@ -137,3 +137,48 @@ def test_gradient_order4():
     result_1d = num.gradient_order4_1d(arr, dx=dx)
     assert np.allclose(result[2], result_1d[2])
     assert np.allclose(result[3], result_1d[3])
+
+
+
+def test_expand_matrix():
+    m = np.array([[1, 2],
+                  [3, 4]])
+    result = num.expand_matrix_boundary(m)
+    assert np.allclose(result ,
+                       [[1, 1, 2, 2],
+                        [1, 1, 2, 2],
+                        [3, 3, 4, 4],
+                        [3, 3, 4, 4]])
+
+    m = np.array([[1]])
+    result = num.expand_matrix_boundary(m)
+    assert np.allclose(result ,
+                       [[1, 1, 1],
+                        [1, 1, 1],
+                        [1, 1, 1]])
+
+    m = np.array([[1, 2, 3]])
+    result = num.expand_matrix_boundary(m)
+    assert np.allclose(result ,
+                       [[1, 1, 2, 3, 3],
+                        [1, 1, 2, 3, 3],
+                        [1, 1, 2, 3, 3]])
+
+    m = np.array([[1, 2, 3]]).T     # Transpose
+    result = num.expand_matrix_boundary(m)
+    assert np.allclose(result ,
+                       [[1, 1, 1],
+                        [1, 1, 1],
+                        [2, 2, 2],
+                        [3, 3, 3],
+                        [3, 3, 3]])
+
+    m = np.array([[1, 2, 3],
+                  [4, 5, 6]])
+    result = num.expand_matrix_boundary(m)
+    assert np.allclose(result ,
+                       [[1, 1, 2, 3, 3],
+                        [1, 1, 2, 3, 3],
+                        [4, 4, 5, 6, 6],
+                        [4, 4, 5, 6, 6]
+                        ])
