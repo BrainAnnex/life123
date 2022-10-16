@@ -111,9 +111,28 @@ def test_set_bin_conc(biomsim1D):
 
 
 
-
 def test_set_species_conc(biomsim1D):
-    pass
+    chem_data = chem(names=["A"])
+    bio = BioSim1D(n_bins=4, chem_data=chem_data)
+    bio.set_species_conc(conc_list=[1., 2., 3., 4.], species_index=0)
+    assert np.allclose(bio.lookup_species(species_name="A") , [1., 2., 3., 4.])
+
+    bio.set_species_conc(conc_list=[1., 2., 3., 4.], species_name="A")
+    assert np.allclose(bio.lookup_species(species_index=0) , [1., 2., 3., 4.])
+
+    bio.set_species_conc(conc_list=(1., 2., 3., 4.), species_name="A")      # Tuple instead of list
+    assert np.allclose(bio.lookup_species(species_index=0) , [1., 2., 3., 4.])
+
+    bio.set_species_conc(conc_list=np.array([1., 2., 3., 4.]), species_name="A")
+    assert np.allclose(bio.lookup_species(species_index=0) , [1., 2., 3., 4.])
+
+    with pytest.raises(Exception):
+        bio.set_species_conc(conc_list=[1., 2., 3., 4.])    # Missing chemical
+        bio.set_species_conc(conc_list="Do I look like a list??", species_name="A")
+        bio.set_species_conc(conc_list=[1., 2., 3.], species_name="A")                  # Wrong size
+        bio.set_species_conc(conc_list=np.array([1., 2.]), species_name="A")            # Wrong size
+        bio.set_species_conc(conc_list=[1., -0.09, 3., 4.], species_name="A")           # Negative concentrations
+        bio.set_species_conc(conc_list=np.array([1., -0.08, 3., 4.]), species_name="A") # Negative concentrations
 
 
 

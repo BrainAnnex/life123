@@ -53,7 +53,7 @@ class Chemicals:
         """
         assert (species_index is not None) and (type(species_index) == int) and \
                 0 <= species_index < self.n_species, \
-            f"The requested species index ({species_index}) must be in the range [0 - {self.n_species - 1}], inclusive"
+            f"The requested species index ({species_index}) is not the expected integer the range [0 - {self.n_species - 1}], inclusive"
 
 
 

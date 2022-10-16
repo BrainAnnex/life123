@@ -337,25 +337,36 @@ class BioSim1D:
 
     def set_species_conc(self, conc_list: Union[list, tuple, np.ndarray], species_index=None, species_name=None) -> None:
         """
-        Assign the requested list of concentration values to all the bins, in order, for the specified species.
+        Assign the requested list of concentration values to all the bins, in bin order, for the single specified species.
 
-        :param conc_list:       A list, tuple or Numpy array with the desired concentration value to assign to the specified location
+        :param conc_list:       A list, tuple or Numpy array with the desired concentration values
+                                    to assign to all the bins.
+                                    The dimensions must match the system's dimensions.
         :param species_index:   Zero-based index to identify a specific chemical species
         :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
         :return:                None
         """
         if species_name is not None:
+            # If the chemical is being identified by name, look up its index
             species_index = self.chem_data.get_index(species_name)
+        elif species_index is None:
+            raise Exception("set_species_conc(): must provide a `species_name` or `species_index`")
         else:
             self.chem_data.assert_valid_index(species_index)
 
         assert (type(conc_list) == list) or (type(conc_list) == tuple) or (type(conc_list) == np.ndarray), \
-            f"set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; the passed value was {type(conc_list)})"
+            f"set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
+            f"the passed value was of type {type(conc_list)})"
 
         assert len(conc_list) == self.n_bins, \
-            f"set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the various bins " \
+            f"set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the bins " \
             f"(the length should be {self.n_bins}, rather than {len(conc_list)})"
 
+        # Verify that none of the concentrations are negative
+        assert min(conc_list) >= 0, \
+            f"set_species_conc(): concentrations cannot be negative (values like {min(conc_list)} aren't permissible)"
+
+        # Update the system state
         self.system[species_index] = conc_list
 
 
@@ -618,7 +629,6 @@ class BioSim1D:
         if bin_address < 0 or bin_address >= self.n_bins:
             raise Exception(f"BioSim1D: the requested bin address ({bin_address}) is out of bounds for the system size; "
                             f"allowed range is [0-{self.n_bins-1}], inclusive")
-
 
 
     

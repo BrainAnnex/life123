@@ -26,24 +26,23 @@ def test_diffuse_step_single_species_1(biomsim1D):
     delta_x = 2
     diff = 10.
 
+    # Initialize the system
+    chem_data = chem(diffusion_rates=[diff])    # Just 1 chemical species
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
+    initial_concs = np.array([50, 80, 20])
+    bio.set_species_conc(species_index=0, conc_list=initial_concs)
+    #bio.describe_state()
+
     # The coefficients for the 2nd derivative of order 2
     C1 = 1
     C0 = -2
     coeffs = np.array([C1, C0, C1])
     assert np.allclose(np.sum(coeffs), 0)   # The coefficients should add up to zero
 
-    chem_data = chem(diffusion_rates=[diff])
-
-    bio = BioSim1D(n_bins=3, chem_data=chem_data)
-
-    initial_concs = np.array([50, 80, 20])
-    bio.set_species_conc(species_index=0, conc_list=initial_concs)
-    #bio.describe_state()
-
     result = bio.diffuse_step_single_species(time_step=delta_t, species_index=0, delta_x=delta_x)
     #print(result)
 
-    # Manually computes the expected increments at each bin
+    # MANUALLY computes the expected increments at each bin (i.e. manually do a convolution operation)
     concs = shift(initial_concs, 1, cval=initial_concs[0])      # [50, 50, 80]
     incr = np.dot(concs, coeffs) * diff * delta_t / (delta_x)**2
     assert np.allclose(incr, result[0])

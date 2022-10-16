@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Union, List, Tuple
 from modules.movies.movies import Movie
 from modules.reactions.reactions import Reactions
 
@@ -143,6 +144,50 @@ class BioSim2D:
         for i, conc in enumerate(conc_list):
             assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
             self.system[i, bin_x, bin_y] = conc
+
+
+
+    def set_species_conc(self, conc_list: Union[list, tuple, np.ndarray], species_index=None, species_name=None) -> None:
+        """
+        For the single specified species, assign the requested list of concentration values to all the bins,
+        in row order first (top to bottom) and then in column order.
+
+        EXAMPLE:  set_species_conc([[1, 2, 3], [4, 5, 6]], species_index=0)
+                  will set the system state, for the specified chemical, to:
+                            [1, 2, 3]
+                            [4, 5, 6]
+
+        :param conc_list:       A list, tuple or Numpy array with the desired concentration values
+                                    to assign to all the bins.
+                                    The dimensions must match the system's dimensions.
+        :param species_index:   Zero-based index to identify a specific chemical species
+        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
+        :return:                None
+        """
+        if species_name is not None:
+            # If the chemical is being identified by name, look up its index
+            species_index = self.chem_data.get_index(species_name)
+        else:
+            self.chem_data.assert_valid_index(species_index)
+
+        assert (type(conc_list) == list) or (type(conc_list) == tuple) or (type(conc_list) == np.ndarray), \
+                    f"set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
+                    f"the passed value was of type {type(conc_list)})"
+
+        if type(conc_list) == np.ndarray:
+            assert conc_list.shape == (self.n_bins_x, self.n_bins_y), \
+                    f"set_species_conc(): the numpy array `conc_list` must have dimensions {(self.n_bins_x, self.n_bins_y)}; instead, it was {conc_list.shape}"
+        else:
+            # Verify that the list or tuple corresponds to a matrix of the right size
+            assert len(conc_list) == self.n_bins_y, \
+                    f"set_species_conc(): the argument `conc_list` must represent a matrix with {self.n_bins_y} rows (found {len(conc_list)})"
+            assert all((type(ele) == list or type(ele) == tuple) for ele in conc_list), \
+                    f"set_species_conc(): the argument `conc_list` must represent a matrix: all its elements must be lists or tuples"
+            assert all(len(ele)==self.n_bins_x for ele in conc_list), \
+                f"set_species_conc(): the argument `conc_list` must represent a matrix with {self.n_bins_x} columns"
+
+        # TODO: verify that none of the concentrations are negative
+        self.system[species_index] = conc_list
 
 
 
