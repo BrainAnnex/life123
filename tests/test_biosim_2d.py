@@ -78,6 +78,35 @@ def test_set_bin_conc_all_species():
 
 
 
+def test_set_species_conc():
+    chem_data = chem(names=["A"])
+    bio = BioSim2D(n_bins=(2,3), chem_data=chem_data)   # 2 rows and 3 columns
+    conc_matrix = [[50, 80, 20], [10, 60, 0]]
+
+    bio.set_species_conc(conc_data=conc_matrix, species_index=0)
+    #bio.describe_state()
+    assert np.allclose(bio.lookup_species(species_name="A") , conc_matrix)
+
+    bio.set_species_conc(conc_data=conc_matrix, species_name="A")
+    assert np.allclose(bio.lookup_species(species_index=0) , conc_matrix)
+
+    bio.set_species_conc(conc_data=((50, 80, 20), (10, 60, 0)), species_name="A")      # Tuple instead of list
+    assert np.allclose(bio.lookup_species(species_index=0) , conc_matrix)
+
+    bio.set_species_conc(conc_data=np.array(conc_matrix), species_name="A")
+    assert np.allclose(bio.lookup_species(species_index=0) , conc_matrix)
+
+    with pytest.raises(Exception):
+        bio.set_species_conc(conc_data=conc_matrix)    # Missing chemical species
+        bio.set_species_conc(conc_data="Do I look like a list??", species_name="A")
+        bio.set_species_conc(conc_data=[1., 2., 3.], species_name="A")                  # Not a matrix
+        bio.set_species_conc(conc_data=[[1., 2., 3.]], species_name="A")                # Wrong number of rows
+        bio.set_species_conc(conc_data=[[1., 2.], [3., 4.]], species_name="A")          # Wrong number of columns
+        bio.set_species_conc(conc_data=[[50, -80, 20], [10, 60, 0]], species_name="A")  # Negative concentrations
+        bio.set_species_conc(conc_data=np.array([[50, 80, 20], [10, 60, -0.01]]), species_name="A")  # Negative concentrations
+
+
+
 
 #########################################################################
 #                                                                       #

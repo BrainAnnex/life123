@@ -350,21 +350,21 @@ class BioSim1D:
             # If the chemical is being identified by name, look up its index
             species_index = self.chem_data.get_index(species_name)
         elif species_index is None:
-            raise Exception("set_species_conc(): must provide a `species_name` or `species_index`")
+            raise Exception("BioSim1D.set_species_conc(): must provide a `species_name` or `species_index`")
         else:
             self.chem_data.assert_valid_index(species_index)
 
         assert (type(conc_list) == list) or (type(conc_list) == tuple) or (type(conc_list) == np.ndarray), \
-            f"set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
+            f"BioSim1D.set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
             f"the passed value was of type {type(conc_list)})"
 
         assert len(conc_list) == self.n_bins, \
-            f"set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the bins " \
+            f"BioSim1D.set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the bins " \
             f"(the length should be {self.n_bins}, rather than {len(conc_list)})"
 
         # Verify that none of the concentrations are negative
         assert min(conc_list) >= 0, \
-            f"set_species_conc(): concentrations cannot be negative (values like {min(conc_list)} aren't permissible)"
+            f"BioSim1D.set_species_conc(): concentrations cannot be negative (values like {min(conc_list)} aren't permissible)"
 
         # Update the system state
         self.system[species_index] = conc_list
@@ -636,20 +636,20 @@ class BioSim1D:
         """
         Return the NumPy array of concentration values across the all bins (from left to right)
         for the single specified chemical species.
-        NOTE: what is being returned NOT a copy
+        NOTE: what is being returned NOT a copy, unless specifically requested
 
         :param species_index:   The index order of the chemical species of interest
         :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
         :param trans_membrane:  If True, consider only the "other side" of the bins, i.e. the portion across the membrane
                                     (it will be zero for bins without membrane)
         :param copy:            If True, an independent numpy array will be returned: a *copy* rather than a view
-        :return:                A NumPy array of concentration values across the bins (from left to right);
+        :return:                A NumPy 1-D array of concentration values across the bins (from left to right);
                                     the size of the array is the number of bins
         """
         if species_name is not None:
             species_index = self.chem_data.get_index(species_name)
-
-        self.chem_data.assert_valid_index(species_index)
+        else:
+            self.chem_data.assert_valid_index(species_index)
 
         if trans_membrane:
             species_conc =  self.system_B[species_index]

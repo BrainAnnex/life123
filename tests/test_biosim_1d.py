@@ -127,7 +127,7 @@ def test_set_species_conc(biomsim1D):
     assert np.allclose(bio.lookup_species(species_index=0) , [1., 2., 3., 4.])
 
     with pytest.raises(Exception):
-        bio.set_species_conc(conc_list=[1., 2., 3., 4.])    # Missing chemical
+        bio.set_species_conc(conc_list=[1., 2., 3., 4.])     # Missing chemical species
         bio.set_species_conc(conc_list="Do I look like a list??", species_name="A")
         bio.set_species_conc(conc_list=[1., 2., 3.], species_name="A")                  # Wrong size
         bio.set_species_conc(conc_list=np.array([1., 2.]), species_name="A")            # Wrong size

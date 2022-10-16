@@ -20,5 +20,5 @@ def test_diffuse_step_single_species_1():
     chem_data = chem(diffusion_rates=[diff])    # Just 1 chemical species
     bio = BioSim2D(n_bins=(3,3), chem_data=chem_data)
     initial_concs = np.array([[50, 80, 20], [10, 60, 0], [30, 15, 100]])
-    bio.set_species_conc(species_index=0, conc_list=initial_concs)
+    bio.set_species_conc(species_index=0, conc_data=initial_concs)
     #bio.describe_state()

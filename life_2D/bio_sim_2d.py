@@ -147,7 +147,7 @@ class BioSim2D:
 
 
 
-    def set_species_conc(self, conc_list: Union[list, tuple, np.ndarray], species_index=None, species_name=None) -> None:
+    def set_species_conc(self, conc_data: Union[list, tuple, np.ndarray], species_index=None, species_name=None) -> None:
         """
         For the single specified species, assign the requested list of concentration values to all the bins,
         in row order first (top to bottom) and then in column order.
@@ -157,7 +157,7 @@ class BioSim2D:
                             [1, 2, 3]
                             [4, 5, 6]
 
-        :param conc_list:       A list, tuple or Numpy array with the desired concentration values
+        :param conc_data:       A list, tuple or Numpy array with the desired concentration values
                                     to assign to all the bins.
                                     The dimensions must match the system's dimensions.
         :param species_index:   Zero-based index to identify a specific chemical species
@@ -167,27 +167,35 @@ class BioSim2D:
         if species_name is not None:
             # If the chemical is being identified by name, look up its index
             species_index = self.chem_data.get_index(species_name)
+        elif species_index is None:
+            raise Exception("BioSim2D.set_species_conc(): must provide a `species_name` or `species_index`")
         else:
             self.chem_data.assert_valid_index(species_index)
 
-        assert (type(conc_list) == list) or (type(conc_list) == tuple) or (type(conc_list) == np.ndarray), \
-                    f"set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
-                    f"the passed value was of type {type(conc_list)})"
+        assert (type(conc_data) == list) or (type(conc_data) == tuple) or (type(conc_data) == np.ndarray), \
+                    f"BioSim2D.set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
+                    f"the passed value was of type {type(conc_data)})"
 
-        if type(conc_list) == np.ndarray:
-            assert conc_list.shape == (self.n_bins_x, self.n_bins_y), \
-                    f"set_species_conc(): the numpy array `conc_list` must have dimensions {(self.n_bins_x, self.n_bins_y)}; instead, it was {conc_list.shape}"
+        if type(conc_data) == np.ndarray:
+            assert conc_data.shape == (self.n_bins_x, self.n_bins_y), \
+                f"set_species_conc(): the numpy array `conc_list` must have dimensions {(self.n_bins_x, self.n_bins_y)}; instead, it was {conc_data.shape}"
         else:
-            # Verify that the list or tuple corresponds to a matrix of the right size
-            assert len(conc_list) == self.n_bins_y, \
-                    f"set_species_conc(): the argument `conc_list` must represent a matrix with {self.n_bins_y} rows (found {len(conc_list)})"
-            assert all((type(ele) == list or type(ele) == tuple) for ele in conc_list), \
-                    f"set_species_conc(): the argument `conc_list` must represent a matrix: all its elements must be lists or tuples"
-            assert all(len(ele)==self.n_bins_x for ele in conc_list), \
-                f"set_species_conc(): the argument `conc_list` must represent a matrix with {self.n_bins_x} columns"
+            # Verify that the list or tuple corresponds to a matrix of the correct size
+            assert all((type(ele) == list or type(ele) == tuple) for ele in conc_data), \
+                f"BioSim2D.set_species_conc(): the argument `conc_list` must represent a matrix: all its elements must be lists or tuples"
+            assert len(conc_data) == self.n_bins_x, \
+                f"BioSim2D.set_species_conc(): the argument `conc_list` must represent a matrix with {self.n_bins_x} rows (found {len(conc_data)})"
+            assert all(len(ele) == self.n_bins_y for ele in conc_data), \
+                f"BioSim2D.set_species_conc(): the argument `conc_list` must represent a matrix with {self.n_bins_y} columns"
 
-        # TODO: verify that none of the concentrations are negative
-        self.system[species_index] = conc_list
+            conc_data = np.array(conc_data, dtype=float)
+
+        # Verify that none of the concentrations are negative
+        assert conc_data.min() >= 0, \
+            f"BioSim2D.set_species_conc(): concentrations cannot be negative (values like {conc_data.min()} aren't permissible)"
+
+        # Update the system state
+        self.system[species_index] = conc_data
 
 
 
@@ -208,6 +216,34 @@ class BioSim2D:
         for species_index in range(self.n_species):
             print(f"Species `{self.chem_data.get_name(species_index)}`:")
             print(self.system[species_index])
+
+
+
+    def lookup_species(self, species_index=None, species_name=None, copy=False) -> np.array:
+        """
+        Return the NumPy array of concentration values across the all bins
+        (from top to bottom, and then left to right),
+        for the single specified chemical species.
+        NOTE: what is being returned NOT a copy, unless specifically requested
+
+        :param species_index:   The index order of the chemical species of interest
+        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
+        :param copy:            If True, an independent numpy array will be returned: a *copy* rather than a view
+        :return:                A NumPy 2-D array of concentration values across the bins
+                                    (from top to bottom, and then left to right);
+                                    the size of the array is (n_bins_y x n_bins_x)
+        """
+        if species_name is not None:
+            species_index = self.chem_data.get_index(species_name)
+        else:
+            self.chem_data.assert_valid_index(species_index)
+
+        species_conc = self.system[species_index]
+
+        if copy:
+            return species_conc.copy()
+        else:
+            return species_conc
 
 
 
