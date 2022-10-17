@@ -147,7 +147,7 @@ class BioSim1D:
     def system_size(self) -> int:
         """
         Note: the bin numbers will range between 0 and system_size - 1
-        :return:
+        :return:    The number of bins in the system
         """
         return self.n_bins
 
@@ -662,7 +662,6 @@ class BioSim1D:
             return species_conc
 
 
-
     
     def bin_concentration(self, bin_address: int, species_index=None, species_name=None, trans_membrane=False) -> float:
         """
@@ -686,7 +685,6 @@ class BioSim1D:
 
 
 
-    
     def bin_snapshot(self, bin_address: int) -> dict:
         """
         Extract the concentrations of all the chemical species at the specified bin,
@@ -705,7 +703,6 @@ class BioSim1D:
             d[name] = conc
 
         return d
-
 
 
     
@@ -773,8 +770,6 @@ class BioSim1D:
 
 
 
-
-    
     def show_membranes(self, n_decimals=1) -> str:
         """
         A simple-minded early method to visualize where the membranes are.

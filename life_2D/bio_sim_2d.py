@@ -101,6 +101,17 @@ class BioSim2D:
 
 
 
+    def system_size(self) -> (int, int):
+        """
+        Return a pair of integers with the system size in the x- and y-dimensions
+        Note: the bin numbers will range between 0 and system_size - 1
+
+        :return:    The pair (x-dimension, y-dimension)
+        """
+        return (self.n_bins_x, self.n_bins_y)
+
+
+
 
     #########################################################################
     #                                                                       #
