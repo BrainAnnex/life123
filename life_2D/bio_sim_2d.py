@@ -272,7 +272,79 @@ class BioSim2D:
     #                                                                       #
     #########################################################################
 
-    def diffuse_step_single_species(self, time_step: float, h: float, species_index=0) -> np.array:
+
+    def diffuse(self, total_duration=None, time_step=None, n_steps=None, h=1, algorithm="5_point") -> dict:
+        """
+        Uniform-step diffusion, with 2 out of 3 criteria specified:
+            1) until reaching, or just exceeding, the desired time duration
+            2) using the given time step
+            3) carrying out the specified number of steps
+
+        :param total_duration:  The overall time advance (i.e. time_step * n_steps)
+        :param time_step:       The size of each time step
+        :param n_steps:         The desired number of steps
+        :param h:               Distance between consecutive bins in both the x- and y-directions
+                                    (For now, they must be equal)
+        :param algorithm:       (OPTIONAL) String with a name specifying the method to use to solve the diffusion equation.
+                                    Currently available options: "5_point"
+        :return:                A dictionary with data about the status of the operation
+                                    (for now, just the number of steps run; key: "steps")
+        """
+        time_step, n_steps = self.all_reactions.specify_steps(total_duration=total_duration,
+                                                              time_step=time_step,
+                                                              n_steps=n_steps)
+        for i in range(n_steps):
+            if self.debug:
+                if (i < 2) or (i >= n_steps-2):
+                    print(f"    Performing diffusion step {i}...")
+                elif i == 2:
+                    print("    ...")
+
+            self.diffuse_step(time_step, h=h, algorithm=algorithm)
+            self.system += self.delta_diffusion     # Array operation to update all the concentrations
+            self.system_time += time_step
+
+        if self.debug:
+            print(f"\nSystem after Delta time {total_duration}, at end of {n_steps} steps of size {time_step}:")
+            self.describe_state(concise=True)
+            print()
+
+        status = {"steps": n_steps}
+        return status
+
+
+
+    def diffuse_step(self, time_step, h=1, algorithm="5_point") -> None:
+        """
+        Diffuse all the species for the given time step, across all bins;
+        clear the delta_diffusion array, and then re-compute it from all the species.
+
+        IMPORTANT: the actual system concentrations are NOT changed.
+
+        :param time_step:   Time step over which to carry out the diffusion
+                            If too large - as determined by the method is_excessive() - an Exception will be raised
+        :param h:           Distance between consecutive bins in both the x- and y-directions
+                                (For now, they must be equal)
+        :param algorithm:   String with a name specifying the method to use to solve the diffusion equation.
+                                Currently available options: "5_point"
+        :return:            None (the array in the class variable "delta_diffusion" gets set)
+        """
+        # TODO: parallelize the independent computations
+
+        # 3-D array of incremental changes at every bin, for each chemical species
+        self.delta_diffusion = np.zeros((self.n_species, self.n_bins_x, self.n_bins_y), dtype=float)
+
+        for species_index in range(self.n_species):
+            increment_matrix = self.diffuse_step_single_species(time_step=time_step, h=h, species_index=species_index, algorithm=algorithm)
+
+            #print("Increment vector is: ", increment_vector)
+
+            # For each bin, update the concentrations from the buffered increments
+            self.delta_diffusion[species_index] = increment_matrix      # Matrix operation to a plane of the 3-D array delta_diffusion
+
+
+
+    def diffuse_step_single_species(self, time_step: float, h: float, species_index=0, algorithm="5_point") -> np.array:
         """
         Diffuse the specified single chemical species, for the given time step, across all bins,
         and return a 2-D array of the changes in concentration ("Delta concentration")
@@ -282,38 +354,55 @@ class BioSim2D:
 
         We're assuming an isolated environment, with nothing diffusing thru the "walls"
 
-        EXPLANATION about the methodology:  https://life123.science/diffusion
+        EXPLANATION of the methodology:  https://life123.science/diffusion
 
         :param time_step:       Delta time over which to carry out this single diffusion step;
                                     TODO: add - if too large, an Exception will be raised.
         :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
-        :param h:         Distance between consecutive bins, ASSUMED the same in both directions
+        :param h:               Distance between consecutive bins, ASSUMED the same in both directions
+        :param algorithm:       String with a name specifying the method to use to solve the diffusion equation.
+                                    Currently available options: "5_point"
 
         :return:                A 2-D Numpy array with the CHANGE in concentration for the given species across all bins
         """
-        assert self.system is not None, "Must first initialize the system"
-        assert self.n_bins_x > 0 and self.n_bins_y > 0, "Must first set the number of bins"
-        assert self.chem_data.diffusion_rates is not None, "Must first set the diffusion rates"
-        assert self.sealed == True, "For now, there's no provision for exchange with the outside"
+        assert self.system is not None, "diffuse_step_single_species(): Must first initialize the system"
+        assert self.chem_data.diffusion_rates is not None, "diffuse_step_single_species(): Must first set the diffusion rates"
+        assert self.sealed == True, "diffuse_step_single_species(): For now, there's no provision for exchange with the outside"
 
-        increment_vector = np.zeros((self.n_bins_x, self.n_bins_y), dtype=float)   # One element per bin
+        increment_matrix = np.zeros((self.n_bins_x, self.n_bins_y), dtype=float)   # One element per bin
 
         if self.n_bins_x and self.n_bins_y == 1:
-            return increment_vector                                 # There's nothing to do in the case of just 1 bin!
+            return increment_matrix                                 # There's nothing to do in the case of just 1 bin!
 
         diff = self.chem_data.get_diffusion_rate(species_index)     # The diffusion rate of the specified single species
 
         #assert not self.is_excessive(time_step, diff, delta_x), \  # TODO: implement
             #f"Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"
 
-
-        # Carry out a 2-D convolution operation, with a tile of size 3
-
-        max_bin_x = self.n_bins_x - 1    # Bin numbers range from 0 to max_bin_x, inclusive (in x-direction)
-        max_bin_y = self.n_bins_y - 1    # Bin numbers range from 0 to max_bin_y, inclusive (in y-direction)
-
         # We're calling the following quantity "Effective Diffusion" (NOT a standard term)
         effective_diff = diff * time_step / (h ** 2)
+
+        if algorithm == "5_point":
+            self.convolution_5_point_stencil(increment_matrix, species_index, effective_diff)
+        else:
+            raise Exception(f"diffuse_step_single_species(): Unknown algorithm: `{algorithm}`")
+
+        return increment_matrix
+
+
+
+    def convolution_5_point_stencil(self, increment_matrix, species_index, effective_diff) -> None:
+        """
+        Carry out a 2-D convolution operation on increment_matrix,
+        with a tile of size 3 that implements a 5-point stencil
+
+        :param increment_matrix:
+        :param species_index:
+        :param effective_diff:
+        :return:                None (increment_matrix gets modified)
+        """
+        max_bin_x = self.n_bins_x - 1    # Bin numbers range from 0 to max_bin_x, inclusive (in x-direction)
+        max_bin_y = self.n_bins_y - 1    # Bin numbers range from 0 to max_bin_y, inclusive (in y-direction)
 
         for i in range(self.n_bins_x):          # From 0 to max_bin_x, inclusive
             for j in range(self.n_bins_y):      # From 0 to max_bin_y, inclusive
@@ -341,10 +430,10 @@ class BioSim2D:
                     C_below = self.system[species_index, i, j+1]
 
 
-                increment_vector[i, j] = effective_diff * \
+                # Convolution with a 5-point stencil
+                increment_matrix[i, j] = effective_diff * \
                                          (C_above + C_below + C_left + C_right - 4 * C_ij)
 
-        return increment_vector
 
 
 

@@ -1004,7 +1004,6 @@ class BioSim1D:
         time_step, n_steps = self.all_reactions.specify_steps(total_duration=total_duration,
                                                              time_step=time_step,
                                                              n_steps=n_steps)
-
         for i in range(n_steps):
             if self.debug:
                 if (i < 2) or (i >= n_steps-2):
@@ -1028,7 +1027,7 @@ class BioSim1D:
     
     def diffuse_step(self, time_step, delta_x=1, algorithm=None) -> None:
         """
-        Diffuse all the species by the given time step:
+        Diffuse all the species for the given time step, across all bins;
         clear the delta_diffusion array, and then re-compute it from all the species.
 
         IMPORTANT: the actual system concentrations are NOT changed.
@@ -1038,10 +1037,11 @@ class BioSim1D:
         :param delta_x:     Distance between consecutive bins
         :param algorithm:      (Optional) code specifying the method to use to solve the diffusion equation.
                                 Currently available options: "5_1_explicit"
-        :return:            None
+        :return:            None (the array in the class variable "delta_diffusion" gets set)
         """
         # TODO: parallelize the independent computations
 
+        # 2-D array of incremental changes at every bin, for each chemical species
         self.delta_diffusion = np.zeros((self.n_species, self.n_bins), dtype=float)
 
         for species_index in range(self.n_species):
@@ -1080,10 +1080,9 @@ class BioSim1D:
 
         :return:                A 1-D Numpy array with the CHANGE in concentration for the given species across all bins
         """
-        assert self.system is not None, "Must first initialize the system"
-        assert self.n_bins > 0, "Must first set the number of bins"
-        assert self.chem_data.diffusion_rates is not None, "Must first set the diffusion rates"
-        assert self.sealed == True, "For now, there's no provision for exchange with the outside"
+        assert self.system is not None, "diffuse_step_single_species(): Must first initialize the system"
+        assert self.chem_data.diffusion_rates is not None, "diffuse_step_single_species(): Must first set the diffusion rates"
+        assert self.sealed == True, "diffuse_step_single_species(): For now, there's no provision for exchange with the outside"
 
         increment_vector = np.zeros(self.n_bins, dtype=float)       # One element per bin
 
@@ -1093,7 +1092,7 @@ class BioSim1D:
         diff = self.chem_data.get_diffusion_rate(species_index)     # The diffusion rate of the specified single species
 
         assert not self.is_excessive(time_step, diff, delta_x), \
-            f"Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"
+            f"diffuse_step_single_species(): Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"
 
 
         # Carry out a 1-D convolution operation, with a tile of size 3 (or 2 if only 2 bins)
