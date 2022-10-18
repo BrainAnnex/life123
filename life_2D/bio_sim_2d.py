@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+from typing import Union, List, Tuple
 from modules.movies.movies import Movie
 from modules.reactions.reactions import Reactions
 
@@ -12,7 +14,7 @@ class BioSim2D:
     def __init__(self, n_bins=None, chem_data=None, reactions=None):
         """
 
-        :param n_bins:      A pair
+        :param n_bins:      A pair with the bin size in the x- and y- coordinates
         :param chem_data:
         :param reactions:
         """
@@ -100,6 +102,35 @@ class BioSim2D:
 
 
 
+    def system_size(self) -> (int, int):
+        """
+        Return a pair of integers with the system size in the x- and y-dimensions
+        Note: the bin numbers will range between 0 and system_size - 1
+
+        :return:    The pair (x-dimension, y-dimension)
+        """
+        return (self.n_bins_x, self.n_bins_y)
+
+
+
+    def system_snapshot(self, species_index=0) -> pd.DataFrame:
+        """
+        Return a snapshot of all the concentrations of the given species, across all bins,
+        as a Pandas dataframe
+
+        :return:    A Pandas dataframe with the concentration data for the single specified chemical;
+                    rows and columns correspond to the system's rows and columns
+        """
+        # TODO: validation for species_index
+
+        matrix = self.system[species_index]
+
+        df = pd.DataFrame(matrix)
+
+        return df
+
+
+
 
     #########################################################################
     #                                                                       #
@@ -146,6 +177,86 @@ class BioSim2D:
 
 
 
+    def set_species_conc(self, conc_data: Union[list, tuple, np.ndarray], species_index=None, species_name=None) -> None:
+        """
+        For the single specified species, assign the requested list of concentration values to all the bins,
+        in row order first (top to bottom) and then in column order.
+
+        EXAMPLE:  set_species_conc([[1, 2, 3], [4, 5, 6]], species_index=0)
+                  will set the system state, for the specified chemical, to:
+                            [1, 2, 3]
+                            [4, 5, 6]
+
+        :param conc_data:       A list, tuple or Numpy array with the desired concentration values
+                                    to assign to all the bins.
+                                    The dimensions must match the system's dimensions.
+        :param species_index:   Zero-based index to identify a specific chemical species
+        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
+        :return:                None
+        """
+        if species_name is not None:
+            # If the chemical is being identified by name, look up its index
+            species_index = self.chem_data.get_index(species_name)
+        elif species_index is None:
+            raise Exception("BioSim2D.set_species_conc(): must provide a `species_name` or `species_index`")
+        else:
+            self.chem_data.assert_valid_index(species_index)
+
+        assert (type(conc_data) == list) or (type(conc_data) == tuple) or (type(conc_data) == np.ndarray), \
+                    f"BioSim2D.set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
+                    f"the passed value was of type {type(conc_data)})"
+
+        if type(conc_data) == np.ndarray:
+            assert conc_data.shape == (self.n_bins_x, self.n_bins_y), \
+                f"set_species_conc(): the numpy array `conc_list` must have dimensions {(self.n_bins_x, self.n_bins_y)}; instead, it was {conc_data.shape}"
+        else:
+            # Verify that the list or tuple corresponds to a matrix of the correct size
+            assert all((type(ele) == list or type(ele) == tuple) for ele in conc_data), \
+                f"BioSim2D.set_species_conc(): the argument `conc_list` must represent a matrix: all its elements must be lists or tuples"
+            assert len(conc_data) == self.n_bins_x, \
+                f"BioSim2D.set_species_conc(): the argument `conc_list` must represent a matrix with {self.n_bins_x} rows (found {len(conc_data)})"
+            assert all(len(ele) == self.n_bins_y for ele in conc_data), \
+                f"BioSim2D.set_species_conc(): the argument `conc_list` must represent a matrix with {self.n_bins_y} columns"
+
+            conc_data = np.array(conc_data, dtype=float)
+
+        # Verify that none of the concentrations are negative
+        assert conc_data.min() >= 0, \
+            f"BioSim2D.set_species_conc(): concentrations cannot be negative (values like {conc_data.min()} aren't permissible)"
+
+        # Update the system state
+        self.system[species_index] = conc_data
+
+
+
+    def inject_conc_to_bin(self, bin_address: (int, int), species_index: int, delta_conc: float, zero_clip = False) -> None:
+        """
+        Add the requested concentration to the cell with the given address, for the specified chem species
+
+        :param bin_address:     A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
+        :param species_index:   Zero-based index to identify a specific chemical species
+        :param delta_conc:      The concentration to add to the specified location
+        :param zero_clip:       If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
+                                otherwise, an Exception will be raised
+        :return:                None
+        """
+        #self.assert_valid_bin(bin_address)     #TODO: define
+
+        bin_x, bin_y = bin_address  # Unpack the bin address
+
+        if (self.system[species_index, bin_x, bin_y] + delta_conc) < 0. :
+            # Take special action if the requested change would make the bin concentration negative
+            if zero_clip:
+                self.system[species_index, bin_x, bin_y] = 0
+                return
+            else:
+                raise Exception("inject_conc_to_bin(): The requested concentration change would result in a negative final value")
+
+        # Normal scenario, not leading to negative values for the final concentration
+        self.system[species_index, bin_x, bin_y] += delta_conc
+
+
+
 
     #########################################################################
     #                                                                       #
@@ -155,14 +266,51 @@ class BioSim2D:
     
     def describe_state(self, concise=False) -> None:
         """
+        For each chemical species, show its name (or index, if name is missing),
+        followed by the matrix of concentrations values for that chemical
 
-        :param concise:
-        :return:
+        :param concise:     Not yet used
+        :return:            None
         """
+        #np.set_printoptions(linewidth=125)
         print(f"SYSTEM STATE at Time t = {self.system_time}:")
         for species_index in range(self.n_species):
-            print(f"Species `{self.chem_data.get_name(species_index)}`:")
-            print(self.system[species_index])
+            chem_name = self.chem_data.get_name(species_index)
+            if chem_name is None:
+                print(f"Species {species_index}:")      # Use the index, if the name isn't available
+            else:
+                print(f"Species `{chem_name}`:")
+
+            #print(self.system[species_index])
+            print(self.system_snapshot(species_index))
+
+
+
+    def lookup_species(self, species_index=None, species_name=None, copy=False) -> np.array:
+        """
+        Return the NumPy array of concentration values across the all bins
+        (from top to bottom, and then left to right),
+        for the single specified chemical species.
+        NOTE: what is being returned NOT a copy, unless specifically requested
+
+        :param species_index:   The index order of the chemical species of interest
+        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
+        :param copy:            If True, an independent numpy array will be returned: a *copy* rather than a view
+        :return:                A NumPy 2-D array of concentration values across the bins
+                                    (from top to bottom, and then left to right);
+                                    the size of the array is (n_bins_y x n_bins_x)
+        """
+        if species_name is not None:
+            species_index = self.chem_data.get_index(species_name)
+        else:
+            self.chem_data.assert_valid_index(species_index)
+
+        species_conc = self.system[species_index]
+
+        if copy:
+            return species_conc.copy()
+        else:
+            return species_conc
 
 
 
@@ -173,7 +321,173 @@ class BioSim2D:
     #                                                                       #
     #########################################################################
 
-    # TODO: TBA
+
+    def diffuse(self, total_duration=None, time_step=None, n_steps=None, h=1, algorithm="5_point") -> dict:
+        """
+        Uniform-step diffusion, with 2 out of 3 criteria specified:
+            1) until reaching, or just exceeding, the desired time duration
+            2) using the given time step
+            3) carrying out the specified number of steps
+
+        :param total_duration:  The overall time advance (i.e. time_step * n_steps)
+        :param time_step:       The size of each time step
+        :param n_steps:         The desired number of steps
+        :param h:               Distance between consecutive bins in both the x- and y-directions
+                                    (For now, they must be equal)
+        :param algorithm:       (OPTIONAL) String with a name specifying the method to use to solve the diffusion equation.
+                                    Currently available options: "5_point"
+        :return:                A dictionary with data about the status of the operation
+                                    (for now, just the number of steps run; key: "steps")
+        """
+        time_step, n_steps = self.all_reactions.specify_steps(total_duration=total_duration,
+                                                              time_step=time_step,
+                                                              n_steps=n_steps)
+        for i in range(n_steps):
+            if self.debug:
+                if (i < 2) or (i >= n_steps-2):
+                    print(f"    Performing diffusion step {i}...")
+                elif i == 2:
+                    print("    ...")
+
+            self.diffuse_step(time_step, h=h, algorithm=algorithm)
+            self.system += self.delta_diffusion     # Array operation to update all the concentrations
+            self.system_time += time_step
+
+        if self.debug:
+            print(f"\nSystem after Delta time {total_duration}, at end of {n_steps} steps of size {time_step}:")
+            self.describe_state(concise=True)
+            print()
+
+        status = {"steps": n_steps}
+        return status
+
+
+
+    def diffuse_step(self, time_step, h=1, algorithm="5_point") -> None:
+        """
+        Diffuse all the species for the given time step, across all bins;
+        clear the delta_diffusion array, and then re-compute it from all the species.
+
+        IMPORTANT: the actual system concentrations are NOT changed.
+
+        :param time_step:   Time step over which to carry out the diffusion
+                            If too large - as determined by the method is_excessive() - an Exception will be raised
+        :param h:           Distance between consecutive bins in both the x- and y-directions
+                                (For now, they must be equal)
+        :param algorithm:   String with a name specifying the method to use to solve the diffusion equation.
+                                Currently available options: "5_point"
+        :return:            None (the array in the class variable "delta_diffusion" gets set)
+        """
+        # TODO: parallelize the independent computations
+
+        # 3-D array of incremental changes at every bin, for each chemical species
+        self.delta_diffusion = np.zeros((self.n_species, self.n_bins_x, self.n_bins_y), dtype=float)
+
+        for species_index in range(self.n_species):
+            increment_matrix = self.diffuse_step_single_species(time_step=time_step, h=h, species_index=species_index, algorithm=algorithm)
+
+            #print("Increment vector is: ", increment_vector)
+
+            # For each bin, update the concentrations from the buffered increments
+            self.delta_diffusion[species_index] = increment_matrix      # Matrix operation to a plane of the 3-D array delta_diffusion
+
+
+
+    def diffuse_step_single_species(self, time_step: float, h: float, species_index=0, algorithm="5_point") -> np.array:
+        """
+        Diffuse the specified single chemical species, for the given time step, across all bins,
+        and return a 2-D array of the changes in concentration ("Delta concentration")
+        for the given species across all bins.
+
+        IMPORTANT: the actual system concentrations are NOT changed.
+
+        We're assuming an isolated environment, with nothing diffusing thru the "walls"
+
+        EXPLANATION of the methodology:  https://life123.science/diffusion
+
+        TODO: also test on tiny systems smaller than 3x3
+
+        :param time_step:       Delta time over which to carry out this single diffusion step;
+                                    TODO: add - if too large, an Exception will be raised.
+        :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
+        :param h:               Distance between consecutive bins, ASSUMED the same in both directions
+        :param algorithm:       String with a name specifying the method to use to solve the diffusion equation.
+                                    Currently available options: "5_point"
+
+        :return:                A 2-D Numpy array with the CHANGE in concentration for the given species across all bins
+        """
+        assert self.system is not None, "diffuse_step_single_species(): Must first initialize the system"
+        assert self.chem_data.diffusion_rates is not None, "diffuse_step_single_species(): Must first set the diffusion rates"
+        assert self.sealed == True, "diffuse_step_single_species(): For now, there's no provision for exchange with the outside"
+
+        increment_matrix = np.zeros((self.n_bins_x, self.n_bins_y), dtype=float)   # One element per bin
+
+        if self.n_bins_x and self.n_bins_y == 1:
+            return increment_matrix                                 # There's nothing to do in the case of just 1 bin!
+
+        diff = self.chem_data.get_diffusion_rate(species_index)     # The diffusion rate of the specified single species
+
+        #assert not self.is_excessive(time_step, diff, delta_x), \  # TODO: implement
+            #f"Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"
+
+        # We're calling the following quantity "Effective Diffusion" (NOT a standard term)
+        effective_diff = diff * time_step / (h ** 2)
+
+        if algorithm == "5_point":
+            self.convolution_5_point_stencil(increment_matrix, species_index, effective_diff)
+        else:
+            raise Exception(f"diffuse_step_single_species(): Unknown algorithm: `{algorithm}`")
+
+        return increment_matrix
+
+
+
+    def convolution_5_point_stencil(self, increment_matrix, species_index, effective_diff) -> None:
+        """
+        Carry out a 2-D convolution operation on increment_matrix,
+        with a tile of size 3 that implements a 5-point stencil
+
+        TODO: maybe pass self.system[species_index] as argument
+        TODO: move the x effective_diff to the calling function
+
+        :param increment_matrix:
+        :param species_index:
+        :param effective_diff:
+        :return:                None (increment_matrix gets modified)
+        """
+        max_bin_x = self.n_bins_x - 1    # Bin numbers range from 0 to max_bin_x, inclusive (in x-direction)
+        max_bin_y = self.n_bins_y - 1    # Bin numbers range from 0 to max_bin_y, inclusive (in y-direction)
+
+        for i in range(self.n_bins_x):          # From 0 to max_bin_x, inclusive
+            for j in range(self.n_bins_y):      # From 0 to max_bin_y, inclusive
+                C_ij = self.system[species_index, i, j]     # Concentration in the center of the convolution tile
+
+                # The boundary conditions state that the flux is zero across boundaries
+                if i == 0:
+                    C_left = self.system[species_index, 0, j]
+                else:
+                    C_left = self.system[species_index, i-1, j]
+
+                if i == max_bin_x:
+                    C_right = self.system[species_index, max_bin_x, j]
+                else:
+                    C_right = self.system[species_index, i+1, j]
+
+                if j == 0:
+                    C_above = self.system[species_index, i, 0]
+                else:
+                    C_above = self.system[species_index, i, j-1]
+
+                if j == max_bin_y:
+                    C_below = self.system[species_index, i, max_bin_y]
+                else:
+                    C_below = self.system[species_index, i, j+1]
+
+
+                # Convolution with a 5-point stencil
+                increment_matrix[i, j] = effective_diff * \
+                                         (C_above + C_below + C_left + C_right - 4 * C_ij)
+
 
 
 
@@ -247,7 +561,7 @@ class BioSim2D:
                     print(f"reaction_step(): processing the all the reactions in bin number ({bin_n_x}, {bin_n_y})")
 
                 # Obtain the Delta-concentration for each species, for this bin
-                conc_dict = {species_index: self.system[species_index , bin_n_x, bin_n_y]
+                conc_dict = {species_index: self.system[species_index, bin_n_x, bin_n_y]
                              for species_index in range(self.n_species)}
                 if self.debug:
                     print(f"\nconc_dict in bin ({bin_n_x}, {bin_n_y}): ", conc_dict)

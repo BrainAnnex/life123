@@ -23,13 +23,13 @@
 #     some 3-bin systems equilibrate in a single step
 #
 # So, (0.33333 / diffusion rate) is a - rather lax - upper bound for
-# sensible single time steps!  This is when delta_x is 1; in general, multiply by delta_x**2
+# sensible single time steps!  
 #
-# The "Von Neumann stability analysis", which provides a slighly looser max value of time steps, is also discussed.
+# IMPORTANT: The above is for delta_x = 1; in general, multiply by delta_x**2
+#
+# The **"Von Neumann stability analysis"**, which provides a slighly looser max value of time steps, is also discussed.
 #
 # That value of 0.33333 is saved in the Class variable "time_step_threshold"
-#
-# *NO log file.*
 #
 # LAST REVISED: Sep. 18, 2022
 

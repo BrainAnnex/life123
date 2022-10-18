@@ -196,6 +196,6 @@ for i in range(50):
 # %% [markdown]
 # ## All bins now have essentially uniform concentration
 #
-# The "10 units of concentration" are now uniformly spread across the 10 bins, leading to a near-constant concentration of 10/10 = **1.0**
+# **Mass conservations**: The "10 units of concentration" are now uniformly spread across the 10 bins, leading to a near-constant concentration of 10/10 = **1.0**
 
 # %%

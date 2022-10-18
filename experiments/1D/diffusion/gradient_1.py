@@ -19,7 +19,7 @@
 # The system starts out with a uniform concentration.  
 # Then identical concentrations are repeatedly *injected to the left* and *drained from the right*
 #
-# LAST REVISED: Sep. 2, 2022
+# LAST REVISED: Oct. 12, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -71,11 +71,8 @@ bio.describe_state()
 bio.show_system_snapshot()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= f"Diffusion. System snapshot at time t={bio.system_time}",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+# Visualize the system's initial state
+bio.visualize_system(caption="Diffusion")
 
 # %%
 # Show as heatmap
@@ -124,12 +121,8 @@ for i in range(501):
         print()
         bio.describe_state(concise=True)
         
-        # Show as a line plot
-        fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-                  title= f"Diffusion. System snapshot at time t={bio.system_time}",
-                  color_discrete_sequence = ['red'],
-                  labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-        fig.show()
+        # Show the system state as a line plot
+        bio.visualize_system(caption="Diffusion")
         
         # Show as heatmap
         fig = px.imshow(bio.system_snapshot().T, 
