@@ -210,6 +210,34 @@ class BioSim2D:
 
 
 
+    def inject_conc_to_bin(self, bin_address: (int, int), species_index: int, delta_conc: float, zero_clip = False) -> None:
+        """
+        Add the requested concentration to the cell with the given address, for the specified chem species
+
+        :param bin_address:     A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
+        :param species_index:   Zero-based index to identify a specific chemical species
+        :param delta_conc:      The concentration to add to the specified location
+        :param zero_clip:       If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
+                                otherwise, an Exception will be raised
+        :return:                None
+        """
+        #self.assert_valid_bin(bin_address)     #TODO: define
+
+        bin_x, bin_y = bin_address  # Unpack the bin address
+
+        if (self.system[species_index, bin_x, bin_y] + delta_conc) < 0. :
+            # Take special action if the requested change would make the bin concentration negative
+            if zero_clip:
+                self.system[species_index, bin_x, bin_y] = 0
+                return
+            else:
+                raise Exception("inject_conc_to_bin(): The requested concentration change would result in a negative final value")
+
+        # Normal scenario, not leading to negative values for the final concentration
+        self.system[species_index, bin_x, bin_y] += delta_conc
+
+
+
 
     #########################################################################
     #                                                                       #
@@ -356,6 +384,8 @@ class BioSim2D:
 
         EXPLANATION of the methodology:  https://life123.science/diffusion
 
+        TODO: also test on tiny systems smaller than 3x3
+
         :param time_step:       Delta time over which to carry out this single diffusion step;
                                     TODO: add - if too large, an Exception will be raised.
         :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
@@ -395,6 +425,9 @@ class BioSim2D:
         """
         Carry out a 2-D convolution operation on increment_matrix,
         with a tile of size 3 that implements a 5-point stencil
+
+        TODO: maybe pass self.system[species_index] as argument
+        TODO: move the x effective_diff to the calling function
 
         :param increment_matrix:
         :param species_index:

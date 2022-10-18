@@ -390,7 +390,7 @@ class BioSim1D:
                 self.system[species_index, bin_address] = 0
                 return
             else:
-                raise Exception("The requested concentration change would result in a negative final value")
+                raise Exception("inject_conc_to_bin(): The requested concentration change would result in a negative final value")
 
         # Normal scenario, not leading to negative values for the final concentration
         self.system[species_index, bin_address] += delta_conc
