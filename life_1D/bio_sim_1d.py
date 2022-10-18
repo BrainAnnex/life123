@@ -229,7 +229,7 @@ class BioSim1D:
     
     def system_snapshot(self) -> pd.DataFrame:
         """
-        Return a snapshot of all the concentrations of all the species,
+        Return a snapshot of all the concentrations of all the species, across all bins
         as a Pandas dataframe
         TODO: make allowance for membranes
 

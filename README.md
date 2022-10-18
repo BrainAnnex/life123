@@ -1,4 +1,4 @@
-### VERSION 1.0-beta16 IN_PROGRESS
+### VERSION 1.0-beta16
 
 
 

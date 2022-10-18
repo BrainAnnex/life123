@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from typing import Union, List, Tuple
 from modules.movies.movies import Movie
 from modules.reactions.reactions import Reactions
@@ -109,6 +110,24 @@ class BioSim2D:
         :return:    The pair (x-dimension, y-dimension)
         """
         return (self.n_bins_x, self.n_bins_y)
+
+
+
+    def system_snapshot(self, species_index=0) -> pd.DataFrame:
+        """
+        Return a snapshot of all the concentrations of the given species, across all bins,
+        as a Pandas dataframe
+
+        :return:    A Pandas dataframe with the concentration data for the single specified chemical;
+                    rows and columns correspond to the system's rows and columns
+        """
+        # TODO: validation for species_index
+
+        matrix = self.system[species_index]
+
+        df = pd.DataFrame(matrix)
+
+        return df
 
 
 
@@ -253,6 +272,7 @@ class BioSim2D:
         :param concise:     Not yet used
         :return:            None
         """
+        #np.set_printoptions(linewidth=125)
         print(f"SYSTEM STATE at Time t = {self.system_time}:")
         for species_index in range(self.n_species):
             chem_name = self.chem_data.get_name(species_index)
@@ -261,7 +281,8 @@ class BioSim2D:
             else:
                 print(f"Species `{chem_name}`:")
 
-            print(self.system[species_index])
+            #print(self.system[species_index])
+            print(self.system_snapshot(species_index))
 
 
 

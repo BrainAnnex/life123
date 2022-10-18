@@ -40,12 +40,26 @@ from modules.chemicals.chemicals import Chemicals as chem
 
 # %%
 # Prepare the initial system, with a single non-zero bin, near the left edge of the system, positioned halfway vertically
-chem_data = chem(names=["A"], diffusion_rates=[0.1])
-bio = BioSim2D(n_bins=(7, 10), chem_data=chem_data)
+chem_data = chem(names=["A"], diffusion_rates=[0.02])
+bio = BioSim2D(n_bins=(5, 8), chem_data=chem_data)
 
-bio.inject_conc_to_bin(bin_address=(3, 2), species_index=0, delta_conc=10.)
+bio.inject_conc_to_bin(bin_address=(2, 1), species_index=0, delta_conc=10.)
 
 bio.describe_state()
+
+# %%
+bio.system_snapshot()
+
+# %%
+fig = px.imshow(bio.system_snapshot(), 
+                title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
+                labels=dict(x="x (col. number)", y="y (row number)", color="Concentration"),
+                text_auto=True, color_continuous_scale="gray_r")         # text_auto=’.2f’
+
+fig.data[0].xgap=2
+fig.data[0].ygap=2
+
+fig.show()
 
 # %% [markdown]
 # # Initial Diffusion Step
@@ -58,23 +72,45 @@ print("\n", status)
 
 bio.describe_state()
 
+# %%
+fig = px.imshow(bio.system_snapshot(), 
+                title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
+                labels=dict(x="x (col. number)", y="y (row number)", color="Concentration"),
+                text_auto='.2f', color_continuous_scale="gray_r")
+
+fig.data[0].xgap=2
+fig.data[0].ygap=2
+
+fig.show()
+
 # %% [markdown]
 # ## This is still an early stage in the diffusion process; let's advance it more... (Visualization from results shown at selected times)
 
 # %% tags=[]
-for i in range(80):
+for i in range(200):
     status = bio.diffuse(total_duration=delta_time, time_step=0.1)
 
-    if i<2 or i==6 or i>=79:
+    if i<2 or i==6 or i>=199:
         bio.describe_state()
+        fig = px.imshow(bio.system_snapshot(), 
+                title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
+                labels=dict(x="x (col. number)", y="y (row number)", color="Concentration"),
+                text_auto='.2f', color_continuous_scale="gray_r")
+
+        fig.data[0].xgap=2
+        fig.data[0].ygap=2
+
+        fig.show()
 
 
 # %% [markdown]
 # ## All bins now have essentially uniform concentration
 #
-# The "10 units of concentration" are now uniformly spread across the 70 bins, leading to a near-constant concentration of 10/70
+# Notice the continued symmetry across the mid-row.
+#
+# **Mass conservations**: the "10. units of concentration" are now uniformly spread across the 40 bins, leading to a near-constant concentration of 10./40
 
 # %%
-10/70.
+10./40
 
 # %%
