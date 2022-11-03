@@ -4,7 +4,6 @@ from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
 
 
-#TODO: BEING OBSOLETED
 
 # Provide an instantiated object that can be used by the various tests that need it
 @pytest.fixture(scope="module")

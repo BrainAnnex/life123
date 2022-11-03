@@ -5,15 +5,14 @@ import numpy as np
 
 class ReactionData:
     """
-    TODO: In progress
-    NOTE: This is the merger of the 2 former classes Reaction and Chemicals
+    TODO: Being phase in
+        NOTE: This is the merger of the 2 former classes Reaction and Chemicals
 
     Data about all applicable chemicals and (if applicable) reactions,
     including names, diffusion rates, stoichiometry,
     kinetic data (reaction rates, reaction orders,
     and thermodynamic data (temperature, changes in enthalpy, entropy)
 
-    TODO (in-progress): add general methods to carry out reactions (currently in BioSim1D)
 
     Note: for now, the temperature is assumed constant everywhere, and unvarying (or very slowly varying)
 
@@ -415,7 +414,8 @@ class ReactionData:
                 "ReactionData.add_chemical(): the diffusion rate argument cannot be negative"
 
         assert type(name) == str, \
-            f"ReactionData.add_chemical(): a name must be provided, as a string value.  Value passed was of type {type(name)}"
+            f"ReactionData.add_chemical(): a name must be provided, as a string value.  " \
+            f"Value passed was of type {type(name)}"
 
         if diffusion_rate:
             self.chemical_data.append({"name": name, "diff": diffusion_rate})
@@ -579,6 +579,97 @@ class ReactionData:
 
         return " + ".join(formula_list)
 
+
+
+
+    #########################################################################
+    #                                                                       #
+    #              SUPPORT FOR CREATION OF NETWORK DIAGRAMS                 #
+    #                                                                       #
+    #########################################################################
+
+    def prepare_graph_network(self) -> dict:
+        """
+
+        :return:
+        """
+        return {
+            # Data to define the nodes and edges of the network
+            'graph': self.create_graph_network_data(),
+
+            # Mapping the node label to its interior color
+            'color_mapping': self.assign_color_mapping()
+        }
+
+
+
+    def create_graph_network_data(self) -> [{}]:
+        """
+        Encode the reaction data in a form suitable for visualization
+        with the graph module "vue_cytoscape"
+
+        TODO:   assign a new, separate node label to chemicals that are both reagents and product
+                Ditch all None values
+
+        :return:    A list of dictionaries.  Each dictionary must have an 'id' key with a unique value
+        """
+        graph_data = []
+        species_in_graph = []
+
+        # Note: the species index of the various chemicals is a UNIQUE number; so, it's suitable to be used as an ID for the nodes
+        #       For the reaction nodes, use numbers from a range starting just above the end-range of the numbers for the chemicals
+        next_available_id = self.number_of_chemicals()
+
+        for i, rxn in enumerate(self.reaction_list):
+            print("\n", rxn, "\n")
+            # Add a node representing the reaction
+            rxn_id = next_available_id
+            next_available_id += 1
+            graph_data.append({'id': rxn_id, 'label': 'Reaction', 'name': 'RXN',
+                               'kF': self.extract_forward_rate(rxn), 'kB': self.extract_back_rate(rxn)})
+
+            # Process all products
+            products = self.extract_products(rxn)
+            for term in products:
+                species_index = term[1]
+                # Add each product to the graph as a node (if not already present)
+                if species_index not in species_in_graph:
+                    graph_data.append({'id': species_index, 'label': 'Product',
+                                       'name': self.get_name(species_index),
+                                       'diff_rate': self.get_diffusion_rate(species_index),
+                                       'stoich': self.extract_stoichiometry(term),
+                                       'rxn_order': self.extract_rxn_order(term)
+                                       })
+                # Append edge from "reaction node" to product
+                graph_data.append({'id': next_available_id, 'source': rxn_id, 'target': species_index, 'name': 'produces'})
+                next_available_id += 1
+
+            # Process all reactants
+            reactants = self.extract_reactants(rxn)
+            for term in reactants:
+                species_index = term[1]
+                # Add each reactant to the graph as a node (if not already present)
+                if species_index not in species_in_graph:
+                    graph_data.append({'id': species_index, 'label': 'Reactant',
+                                       'name': self.get_name(species_index),
+                                       'diff_rate': self.get_diffusion_rate(species_index),
+                                       'stoich': self.extract_stoichiometry(term),
+                                       'rxn_order': self.extract_rxn_order(term)
+                                       })
+                # Append edge from reactant to "reaction node"
+                graph_data.append({'id': next_available_id, 'source': species_index, 'target': rxn_id, 'name': 'reacts'})
+                next_available_id += 1
+
+        return graph_data
+
+
+
+    def assign_color_mapping(self):
+        return {
+            'Reactant': 'neo4j_green',
+            'Product': 'neo4j_red',
+            'Reaction': 'neo4j_lightbrown'
+        }
 
 
 
