@@ -2,6 +2,7 @@ from typing import Union
 import numpy as np
 
 
+# TODO: in the process of being obsoleted
 class Chemicals:
     """
     Object with info on the individual chemicals, incl. their Names and Diffusion rates.
@@ -68,15 +69,15 @@ class Chemicals:
         """
         # Validate
         assert self.diffusion_rates is None, \
-            f"Chemicals.set_diffusion_rates(): can be invoked only if no diffusion rates were previously set"
+            f"Chemicals.init_diffusion_rates(): can be invoked only if no diffusion rates were previously set"
 
         arg_type = type(diff_list)
         assert arg_type == list or arg_type == tuple,   \
-            f"Chemicals.set_diffusion_rates(): the diffusion rates must be a list or tuple.  What was passed was of type {arg_type}"
+            f"Chemicals.init_diffusion_rates(): the diffusion rates must be a list or tuple.  What was passed was of type {arg_type}"
 
         if self.names is not None:
             assert len(diff_list) == len(self.names), \
-                f"Chemicals.set_diffusion_rates(): the number of the passed diffusion rates ({len(diff_list)}) " \
+                f"Chemicals.init_diffusion_rates(): the number of the passed diffusion rates ({len(diff_list)}) " \
                 f"doesn't match that of the registered chemicals ({len(self.names)})"
 
 
@@ -97,15 +98,15 @@ class Chemicals:
         """
         # Validate
         assert self.names is None, \
-            f"Chemicals.set_names(): can be invoked only if no names for the chemical species were previously set"
+            f"Chemicals.init_chemical_data(): can be invoked only if no names for the chemical species were previously set"
 
         arg_type = type(name_list)
         assert arg_type == list or arg_type == tuple, \
-            f"Chemicals.set_names(): the names must be a list or tuple.  What was passed was of type {arg_type}"
+            f"Chemicals.init_chemical_data(): the names must be a list or tuple.  What was passed was of type {arg_type}"
 
         if self.diffusion_rates is not None:
             assert len(name_list) == len(self.diffusion_rates), \
-                f"Chemicals.set_names(): the number of the passed names ({len(name_list)}) " \
+                f"Chemicals.init_chemical_data(): the number of the passed names ({len(name_list)}) " \
                 f"doesn't match that of the registered diffusion rates ({len(self.diffusion_rates)})"
 
 
@@ -194,7 +195,7 @@ class Chemicals:
         """
         Register one more chemical species, with a name and a diffusion rate.
         This can only be done if an EQUAL number of names and diffusion rates were set;
-        if not the case, use set_names() or set_diffusion_rates() instead
+        if not the case, use init_chemical_data() or init_diffusion_rates() instead
 
         :param name:            Name of the chemical species to add to this object
         :param diffusion_rate:  Float value for the diffusion rate (in water) of this chemical
