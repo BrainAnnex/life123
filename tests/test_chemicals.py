@@ -3,7 +3,8 @@ import numpy as np
 from modules.chemicals.chemicals import Chemicals as chem
 
 
-#TODO: BEING OBSOLETED
+# *********  TODO: BEING OBSOLETED  *********
+
 
 def test_initialize():
 

@@ -1,145 +1,20 @@
 import pytest
 import numpy as np
-from modules.chemicals.chemicals import Chemicals as chem
-from modules.reactions.reactions import Reactions
+from modules.reactions.reaction_data import ReactionData
+from modules.reactions.reaction_dynamics import ReactionDynamics
+#from modules.chemicals.chemicals import Chemicals as chem
+#from modules.reactions.reactions import Reactions
 
 
 
 # Provide an instantiated object that can be used by the various tests that need it
 @pytest.fixture(scope="module")
 def rxn():
-    chem_data = chem(names=["A", "B", "C", "D", "E", "F"])
-    rnx_obj = Reactions(chem_data)
-    yield rnx_obj
+    reaction_data = ReactionData(names=["A", "B", "C", "D", "E", "F"])
+    #rnx_obj = ReactionDynamics(reaction_data)
+    #yield rnx_obj
+    yield reaction_data
 
-
-
-
-def test_parse_reaction_term(rxn):
-    assert rxn._parse_reaction_term(5) == (1, 5, 1)
-    assert rxn._parse_reaction_term("F") == (1, 5, 1)
-
-    assert rxn._parse_reaction_term( (3, 5) ) == (3, 5, 1)
-    assert rxn._parse_reaction_term( (3, "F") ) == (3, 5, 1)
-
-    assert rxn._parse_reaction_term( (3, 5, 2) ) == (3, 5, 2)
-    assert rxn._parse_reaction_term( (3, "F", 2) ) == (3, 5, 2)
-
-
-
-def test_add_reaction(rxn):
-    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-
-    assert rxn.number_of_reactions() == 1
-    r = rxn.get_reaction(0)
-    assert np.allclose(r["Rf"] , 3.)
-    assert np.allclose(r["Rb"] , 2.)
-    assert np.allclose(r["K"] , 3./2.)
-    assert r["reactants"] == [(1, 0, 1)]
-    assert r["products"] == [(1, 1, 1)]
-    assert r["Delta_H"] is None
-    assert r["Delta_S"] is None
-    assert r["Delta_G"] is None
-
-    assert rxn.get_reactants(0) == [(1, 0, 1)]
-    assert rxn.get_reactants_formula(0) == "A"
-
-    assert rxn.get_products(0) == [(1, 1, 1)]
-    assert rxn.get_products_formula(0) == "B"
-
-    assert rxn.get_forward_rate(0) == 3.
-    assert rxn.get_back_rate(0) == 2.
-
-    # Another reaction (reaction 1)
-    rxn.add_reaction(reactants=[(2, "B")], products=[(5, "C")], forward_rate=9., reverse_rate=7.)
-
-    assert rxn.number_of_reactions() == 2
-
-    r = rxn.get_reaction(0)
-    assert np.allclose(r["Rf"] , 3.)
-    assert np.allclose(r["Rb"] , 2.)
-    assert np.allclose(r["K"] , 3./2.)
-    assert r["reactants"] == [(1, 0, 1)]
-    assert r["products"] == [(1, 1, 1)]
-    assert r["Delta_H"] is None
-    assert r["Delta_S"] is None
-    assert r["Delta_G"] is None
-
-    r = rxn.get_reaction(1)
-    assert np.allclose(r["Rf"] , 9.)
-    assert np.allclose(r["Rb"] , 7.)
-    assert np.allclose(r["K"] , 9./7.)
-    assert r["reactants"] == [(2, 1, 1)]
-    assert r["products"] == [(5, 2, 1)]
-    assert r["Delta_H"] is None
-    assert r["Delta_S"] is None
-    assert r["Delta_G"] is None
-
-    # Add another reaction (reaction index 2).  This time, first set the temperature
-    rxn.temp = 200
-    rxn.add_reaction(reactants=[(2, "D", 3)], products=[(1, "C", 2)], forward_rate=11., reverse_rate=13.)
-    assert rxn.number_of_reactions() == 3
-
-    r = rxn.get_reaction(2)
-    assert np.allclose(r["Rf"] , 11.)
-    assert np.allclose(r["Rb"] , 13.)
-    assert np.allclose(r["K"] , 11./13.)
-    assert r["reactants"] == [(2, 3, 3)]
-    assert r["products"] == [(1, 2, 2)]
-    assert r["Delta_H"] is None
-    assert r["Delta_S"] is None
-    assert np.allclose(r["Delta_G"], 277.7928942715384)   # - RT log(K)
-
-    # Add a multi-term reaction (reaction index 3)
-    rxn.add_reaction(reactants=["A", (2, "B")], products=[(3, "C", 2), "D"], forward_rate=5., reverse_rate=1.)
-    assert rxn.number_of_reactions() == 4
-
-    r = rxn.get_reaction(3)
-    assert np.allclose(r["Rf"] , 5.)
-    assert np.allclose(r["Rb"] , 1.)
-    assert np.allclose(r["K"] , 5./1.)
-    assert r["reactants"] == [(1, 0, 1), (2, 1, 1)]
-    assert r["products"] == [(3, 2, 2), (1, 3, 1)]
-    assert r["Delta_H"] is None
-    assert r["Delta_S"] is None
-    assert np.allclose(r["Delta_G"], -2676.321364705849)   # - RT log(K)
-
-    # Check the descriptions we has so far
-    rxn_list = rxn.describe_reactions(return_as_list=True)
-    assert rxn_list[0] == '0: A <-> B  (Rf = 3.0 / Rb = 2.0)'
-    assert rxn_list[1] == '1: 2 B <-> 5 C  (Rf = 9.0 / Rb = 7.0)'
-    assert rxn_list[2] == '2: 2 D <-> C  (Rf = 11.0 / Rb = 13.0) | 3-th order in reactant D | 2-th order in product C'
-    assert rxn_list[3] == '3: A + 2 B <-> 3 C + D  (Rf = 5.0 / Rb = 1.0) | 2-th order in product C'
-
-    # Add another reaction (reaction index 4), this time with thermodynamic data, and the reverse rate computed from it
-    rxn.add_reaction(reactants=["A"], products=[(2, "B")], forward_rate=10.,
-                     Delta_H = 5., Delta_S = 0.4)
-    assert rxn.number_of_reactions() == 5
-
-    r = rxn.get_reaction(4)
-    assert r["reactants"] == [(1, 0, 1)]
-    assert r["products"] == [(2, 1, 1)]
-    assert r["Delta_H"] == 5.
-    assert r["Delta_S"] == 0.4
-    assert np.allclose(r["Delta_G"], -75.0)         # 5 - 200 * 0.4
-    assert np.allclose(r["K"], 1.0461347154679432)  # exp(75/(8.3144598 * 200))
-    assert np.allclose(r["Rf"] , 10.)
-    assert np.allclose(r["Rb"] , 9.558998331803693) # 10. / 1.0461347154679432
-
-
-
-def test_create_graph_network_data(rxn):
-    rxn.clear_reactions()
-    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-    network_data = rxn.create_graph_network_data()
-    print(network_data)
-    expected = [{'id': 6, 'label': 'Reaction', 'name': 'RXN', 'Rf': 3.0, 'Rb': 2.0},
-                {'id': 1, 'label': 'Product', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
-                {'id': 7, 'name': 'produces', 'source': 6, 'target': 1},
-                {'id': 0, 'label': 'Reactant', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
-                {'id': 8, 'name': 'reacts', 'source': 0, 'target': 6}
-                ]
-    assert network_data == expected
 
 
 

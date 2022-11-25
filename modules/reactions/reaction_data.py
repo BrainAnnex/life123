@@ -5,13 +5,16 @@ import numpy as np
 
 class ReactionData:
     """
-    TODO: Being phase in
-        NOTE: This is the merger of the 2 former classes Reaction and Chemicals
+    TODO: Being phased in
+          NOTE - This is the merger of the 2 former classes Reaction and Chemicals
 
     Data about all applicable chemicals and (if applicable) reactions,
-    including names, diffusion rates, stoichiometry,
-    kinetic data (reaction rates, reaction orders,
-    and thermodynamic data (temperature, changes in enthalpy, entropy)
+    including:
+        - names
+        - diffusion rates
+        - stoichiometry of reactions
+        - kinetic data (reaction rates, reaction orders)
+        - thermodynamic data (temperature, changes in enthalpy/entropy/Gibbs Free Energy)
 
 
     Note: for now, the temperature is assumed constant everywhere, and unvarying (or very slowly varying)
@@ -19,22 +22,22 @@ class ReactionData:
     DATA STRUCTURE:
 
         The chemicals are assigned an index position (starting from zero)
-        based on order with which they were first added.
+        based on the order with which they were first added.
 
-        List of reactions.
+        List of reactions (Note: this will eventually be stored in a Neo4j graph database)
         Each reaction is a Python dictionary with 4 keys:
             "reactants"
             "products"
             "kF"    (forward reaction rate constant)    Formerly "Rf"  TODO: rename
             "kR"    (reverse reaction rate constant)    Formerly "Rb"  TODO: rename
-            "Delta_H" (change in Enthalpy)          TODO: being implemented
+            "K"     (equilibrium constant - from either kinetic or thermodynamic data; if both present, they must match up!)
+            "Delta_H" (change in Enthalpy: Enthalpy of Products - Enthalpy of Reactants)     TODO: being implemented
             "Delta_S" (change in Entropy)           TODO: being implemented
             "Delta_G" (change in Gibbs Free Energy) TODO: being implemented
                         Note - at constant temperature T :  Delta_G = Delta_H - T * Delta_S
-            "equil_const" (the reaction equilibrium constant, from thermodynamic considerations)
-                        Note - equil_const = exp(-Delta_G / RT)
+                        Equilibrium constant = exp(-Delta_G / RT)
 
-        Each reactant and each product is a triplet of the form: (stoichiometry, species index, reaction order).
+        Each Reactant and each Product is a triplet of the form: (stoichiometry, species index, reaction order).
         The "reaction order" refers to the forward reaction for reactants, and the reverse reaction for products.
     """
 
@@ -45,16 +48,18 @@ class ReactionData:
         It's ok not to pass any data, and later add it.
         Reactions can be added later by means of calls to add_reaction()
 
-        :param diffusion_rates: A list or tuple with the diffusion rates of the chemicals
-        :param names:           A list with the names of the chemicals
+        :param names:           [OPTIONAL] A list with the names of the chemicals
+        :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals
+        :param n_species:       [OPTIONAL] The number of chemicals, exclusive of water
+
         """
         self.n_species = n_species if (n_species is not None) else 0   # The number of chemicals - exclusive of water
 
         self.chemical_data = []     # EXAMPLE: [{"name": "A", "diff": 6.4} ,
-                                    #           {"name": "B", "diff": 12., "note": "some note"}]
+                                    #           {"name": "B", "diff": 12.0, "note": "some note"}]
                                     # TODO: maybe use a Pandas dataframe
 
-        self.name_dict = {}         # To map assigned names to their positional index (in the list of chemicals);
+        self.name_dict = {}         # To map assigned names to their positional index (in the ordered list of chemicals);
                                     # this is automatically set and maintained
                                     # EXAMPLE: {"A": 0, "B": 1, "C": 2}
 
@@ -64,7 +69,7 @@ class ReactionData:
         self.temp = None            # Temperature in Kelvins.
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
 
-        self.R = 8.3144598          # In units of Joules * moles / Kelvin
+        self.R = 8.314462           # Ideal gas constant, in units of Joules / (Kelvin * Mole)
 
         self.debug = False
 
@@ -107,10 +112,14 @@ class ReactionData:
         """
         Raise an Exception if the specified diffusion value isn't valid
 
-        :param diff:
-        :return:                None
+        :param diff:    Diffusion rate
+        :return:        None
         """
-        assert type(diff) == float or type(diff) == int, f"The value {diff} is not a number"
+        assert type(diff) == float or type(diff) == int, \
+            f"ReactionData.assert_valid_diffusion(): The value for the diffusion rate ({diff}) is not a number (float or int)"
+        
+        assert diff >= 0., \
+            f"ReactionData.assert_valid_diffusion(): the diffusion rate ({diff}) cannot be negative"
 
 
 
@@ -173,7 +182,7 @@ class ReactionData:
 
     def get_all_diffusion_rates(self) -> list:
         """
-        Return a list of diffusion rates, in the order of the chemical indexes.
+        Return a list of all the diffusion rates, in the order of the chemical indexes.
         If any value is missing, None is used for it
         :return:
         """
@@ -326,23 +335,23 @@ class ReactionData:
 
 
 
-    #########################################################################
-    #                                                                       #
-    #                                TO SET DATA                            #
-    #                                                                       #
-    #########################################################################
-
-
+    ############################################################################
+    #                                                                          #
+    #                                TO SET DATA                               #
+    #                                                                          #
+    ############################################################################
 
     def init_chemical_data(self, names=None, diffusion_rates=None)  -> None:
         """
         Initialize the names (if provided) and diffusion rates (if provided)
         of all the chemical species, in the given order.
-        If no names are provided, the strings "Chemical 1", "Chemical 2", ... are used
+        If no names are provided, the strings "Chemical 1", "Chemical 2", ..., are used
 
-        :param names:           List or tuple of the names of the chemical species, in index order
-        :param diffusion_rates: A list or tuple with the diffusion rates of the chemicals,
-                                in the same order as the names
+        IMPORTANT: this function can be invoked only once, before any chemical data is set
+
+        :param names:           [OPTIONAL] List or tuple of the names of the chemical species
+        :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals,
+                                           in the same order as the names
         :return:                None
         """
         # Validate
@@ -355,7 +364,8 @@ class ReactionData:
                 f"ReactionData.init_chemical_data(): the names must be a list or tuple.  What was passed was of type {arg_type}"
             if self.n_species != 0:
                 assert len(names) == self.n_species, \
-                    "ReactionData.init_chemical_data(): the passed number of names doesn't match the previously-set number of chemical species"
+                    f"ReactionData.init_chemical_data(): the passed number of names ({len(names)}) " \
+                    f"doesn't match the previously-set number of chemical species (self.n_species)"
 
         if diffusion_rates:
             arg_type = type(diffusion_rates)
@@ -363,7 +373,8 @@ class ReactionData:
                 f"ReactionData.init_chemical_data(): the diffusion_rates must be a list or tuple.  What was passed was of type {arg_type}"
             if self.n_species != 0:
                 assert len(diffusion_rates) == self.n_species, \
-                    "ReactionData.init_chemical_data(): the passed number of diffusion rates doesn't match the previously-set number of chemical species"
+                    f"ReactionData.init_chemical_data(): the passed number of diffusion rates ({len(diffusion_rates)}) " \
+                    f"doesn't match the previously-set number of chemical species (self.n_species)"
 
         if diffusion_rates and names:
             assert len(names) == len(diffusion_rates), \
@@ -373,57 +384,65 @@ class ReactionData:
 
         # Populate the data structure
         if names is None:
-            if diffusion_rates is None:
+            if diffusion_rates is None:   # The strings "Chemical 1", "Chemical 2", ..., will be used as names
                 for i in range(self.n_species):
-                    self.chemical_data.append({"name": f"Chemical {i}"})   # The strings "Chemical 1", "Chemical 2", ... are being used as names
-                    self.name_dict[f"Chemical {i}"] = i
+                    assigned_name = f"Chemical {i+1}"
+                    self.chemical_data.append({"name": assigned_name})
+                    self.name_dict[assigned_name] = i
             else:
                 for i, diff in enumerate(diffusion_rates):
+                    assigned_name = f"Chemical {i+1}"
                     self.assert_valid_diffusion(diff)
-                    self.chemical_data.append({"name": f"Chemical {i}", "diff": diff})
-                    self.name_dict[f"Chemical {i}"] = i
+                    self.chemical_data.append({"name": assigned_name, "diff": diff})
+                    self.name_dict[assigned_name] = i
 
         else:   # names is not None
-            for i, n in enumerate(names):
+            for i, chem_name in enumerate(names):
+                assert type(chem_name) == str, \
+                    f"ReactionData.init_chemical_data(): all the names must be strings.  The passed value ({chem_name}) is of type {type(chem_name)}"
                 if diffusion_rates is None:
-                    self.chemical_data.append({"name": n})
+                    self.chemical_data.append({"name": chem_name})
                 else:
                     diff = diffusion_rates[i]
                     self.assert_valid_diffusion(diff)
-                    self.chemical_data.append({"name": n, "diff": diff})
+                    self.chemical_data.append({"name": chem_name, "diff": diff})
 
-                self.name_dict[n] = i
+                self.name_dict[chem_name] = i
 
         self.n_species = len(self.chemical_data)
 
 
 
-    def add_chemical(self, name: str, diffusion_rate: float) -> None:
+    def add_chemical(self, name: str, diffusion_rate: float, note=None) -> None:
         """
         Register one more chemical species, with a name and (optionally) a diffusion rate.
 
         :param name:            Name of the chemical species to add to this object
-        :param diffusion_rate:  (OPTIONAL) Float number with the diffusion rate (in water) of this chemical
+        :param diffusion_rate:  [OPTIONAL] Floating-point number with the diffusion rate (in water) of this chemical
+        :param note:            [OPTIONAL] Note to attach to the chemical
         :return:                None
         """
-        assert type(diffusion_rate) == int or type(diffusion_rate) == float, \
-            "ReactionData.add_chemical(): the diffusion rate argument, if provided, must be a number"
-
-        if diffusion_rate:
-            assert diffusion_rate >= 0., \
-                "ReactionData.add_chemical(): the diffusion rate argument cannot be negative"
-
         assert type(name) == str, \
             f"ReactionData.add_chemical(): a name must be provided, as a string value.  " \
-            f"Value passed was of type {type(name)}"
+            f"What was passed was of type {type(name)}"
+        
+        if diffusion_rate:  
+            self.assert_valid_diffusion(diffusion_rate)
 
+        # Prepare the data structure for the new chemical
+        new_data = {"name": name}
+        
         if diffusion_rate:
-            self.chemical_data.append({"name": name, "diff": diffusion_rate})
-        else:
-            self.chemical_data.append({"name": name})
+            new_data["diff"] = diffusion_rate
+            
+        if note:
+            new_data["note"] = note
+
+        # Save the data structure for the new chemical
+        self.chemical_data.append(new_data)
 
 
-        self.name_dict[name] = len(self.chemical_data) - 1     # The next available positional index
+        self.name_dict[name] = len(self.chemical_data) - 1     # The next available positional index (for the mapping of names to indices)
 
         self.n_species += 1
 
@@ -433,9 +452,10 @@ class ReactionData:
                              forward_rate=None, reverse_rate=None,
                              Delta_H=None, Delta_S=None) -> None:
         """
-        Add the parameters of a SINGLE reaction, optionally including kinetic and thermodynamic data
+        Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data
 
         NOTE: in the next 2 arguments, if the stoichiometry and/or reaction order aren't specified, they're assumed to be 1
+
         :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
                                     or simplified terms, as shown in _parse_reaction_term()
         :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction),
@@ -488,7 +508,7 @@ class ReactionData:
                 else:
                     # The kinetic data was incomplete; fill in the missing parts from the thermodynamic data
                     rxn["Delta_G"] = Delta_G
-                    equil_const = math.exp(- Delta_G / (self.R * self.temp))    # The equilibrium constant
+                    equil_const = math.exp(- Delta_G / (self.R * self.temp))    # Compute the equilibrium constant (from the thermodynamic data)
                     rxn["K"] = equil_const
                     # If only one of the Forward or Reverse rates was provided, compute the other one
                     if (rxn["kF"] is None) and (rxn["kR"] is not None):
@@ -504,7 +524,7 @@ class ReactionData:
     def clear_reactions(self) -> None:
         """
         Get rid of all reactions; start again with "an empty slate" (but still with reference
-        to the same "Chemicals" object)
+        to the same data about the chemicals)
         :return:    None
         """
         self.reaction_list = []
@@ -591,7 +611,7 @@ class ReactionData:
     def prepare_graph_network(self) -> dict:
         """
 
-        :return:
+        :return:    A dictionary with 2 keys: 'graph' and 'color_mapping'
         """
         return {
             # Data to define the nodes and edges of the network
@@ -626,7 +646,7 @@ class ReactionData:
             rxn_id = next_available_id
             next_available_id += 1
             graph_data.append({'id': rxn_id, 'label': 'Reaction', 'name': 'RXN',
-                               'kF': self.extract_forward_rate(rxn), 'kB': self.extract_back_rate(rxn)})
+                               'kF': self.extract_forward_rate(rxn), 'kR': self.extract_back_rate(rxn)})
 
             # Process all products
             products = self.extract_products(rxn)

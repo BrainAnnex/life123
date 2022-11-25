@@ -4,7 +4,7 @@ from modules.chemicals.chemicals import Chemicals as chem
 from modules.reactions.reactions import Reactions
 
 
-#TODO: BEING OBSOLETED
+# *************** TODO: BEING OBSOLETED ***************
 
 # Provide an instantiated object that can be used by the various tests that need it
 @pytest.fixture(scope="module")
@@ -143,6 +143,12 @@ def test_create_graph_network_data(rxn):
     assert network_data == expected
 
 
+
+
+
+
+
+##################   TESTS FOR REACTION DYNAMICS   ##################
 
 def test_specify_steps():
     rxn = Reactions(None)
