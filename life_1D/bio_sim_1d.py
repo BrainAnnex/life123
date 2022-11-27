@@ -5,7 +5,7 @@ from scipy.fft import rfft, rfftfreq    # Fast Fourier Transforms to extract fre
 from scipy.stats import norm
 from typing import Union, List, Tuple
 from modules.movies.movies import Movie
-from modules.reactions.reactions import Reactions
+from modules.reactions.reaction_dynamics import ReactionDynamics
 import plotly.express as px
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
@@ -23,10 +23,10 @@ class BioSim1D:
         """
 
         :param n_bins:      The number of compartments (bins) to use in the simulation
-        :param chem_data:   (OPTIONAL) Object of class "Chemicals";
-                                if not specified, it will get extracted from the "Reactions" class
-        :param reactions:   (OPTIONAL) Object of class "Reactions";
-                                if not specified, it'll get instantiated here
+        :param chem_data:   (OPTIONAL) Object of class "ReactionData";
+                                if not specified, it will get extracted from the "ReactionDynamics" class
+        :param reactions:   (OPTIONAL) Object of class "ReactionDynamics";
+                                if not specified, it'll get instantiated here   TODO: maybe no longer necessary
         """
         self.debug = False
 
@@ -79,7 +79,7 @@ class BioSim1D:
                                             #   in the diffusion process.
                                             #   See explanation in file overly_large_single_timesteps.py
 
-        self.all_reactions = None           # Object of class "Reactions"
+        self.reaction_dynamics = None           # Object of class "ReactionDynamics"
 
         self.history = Movie(tabular=True)  # To store user-selected snapshots of (parts of) the system,
                                             #   whenever requested by the user.
@@ -108,9 +108,9 @@ class BioSim1D:
               and let it create and return the "Chemicals" object in that case
 
         :param n_bins:      The number of compartments (bins) to use in the simulation
-        :param chem_data:   (OPTIONAL) Object of class "Chemicals";
-                                if not specified, it will get extracted from the "Reactions" class
-        :param reactions:   (OPTIONAL) Object of class "Reactions";
+        :param chem_data:   (OPTIONAL) Object of class "ReactionData";
+                                if not specified, it will get extracted from the "ReactionDynamics" class
+        :param reactions:   (OPTIONAL) Object of class "ReactionDynamics";
                                 if not specified, it'll get instantiated here
         :return:            None
         """
@@ -123,12 +123,12 @@ class BioSim1D:
         if chem_data:
             self.chem_data = chem_data
         else:
-            self.chem_data = reactions.chem_data
+            self.chem_data = reactions.reaction_data
 
         if reactions:
-            self.all_reactions = reactions
+            self.reaction_dynamics = reactions
         else:
-            self.all_reactions = Reactions(chem_data=chem_data)
+            self.reaction_dynamics = ReactionDynamics(reaction_data=chem_data)
 
         self.n_bins = n_bins
 
@@ -164,7 +164,7 @@ class BioSim1D:
         self.membranes = None
         self.A_fraction = None
         self.chem_data = None
-        self.all_reactions = None
+        self.reaction_dynamics = None
         self.history = None
 
         self.n_bins = 0
@@ -255,7 +255,6 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    
     def set_uniform_concentration(self, conc: float, species_index=None, species_name=None) -> None:
         """
         Assign the given concentration to all the bins of the specified species (identified by its index or name.)
@@ -1001,7 +1000,7 @@ class BioSim1D:
         :return:                A dictionary with data about the status of the operation
                                     (for now, just the number of steps run; key: "steps")
         """
-        time_step, n_steps = self.all_reactions.specify_steps(total_duration=total_duration,
+        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
                                                              time_step=time_step,
                                                              n_steps=n_steps)
         for i in range(n_steps):
@@ -1222,20 +1221,19 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    
-    def set_reactions(self, reactions) -> None:
+    '''    
+    def set_reactions(self, reactions) -> None:     #    TODO: maybe no longer necessary
         """
-        Register the given set of reactions.
+        Register the object used for the Reaction Dynamics.
         Anything previously registered, will be over-written.
 
-        :param reactions:   Object of class "Reactions"
+        :param reactions:   Object of class "ReactionDynamics"
         :return:            None
         """
-        self.all_reactions = reactions
+        self.reaction_dynamics = reactions
+    '''
 
 
-
-    
     def react(self, total_duration=None, time_step=None, n_steps=None, snapshots=None) -> None:
         """
         Update the system concentrations as a result of all the reactions in all bins - taking
@@ -1258,7 +1256,7 @@ class BioSim1D:
                                     EXAMPLE: snapshots={"frequency": 2, "sample_bin": 0}
         :return:                None
         """
-        time_step, n_steps = self.all_reactions.specify_steps(total_duration=total_duration,
+        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
                                                              time_step=time_step,
                                                              n_steps=n_steps)
 
@@ -1299,10 +1297,10 @@ class BioSim1D:
         :param delta_time:
         :return:            None
         """
-        assert self.all_reactions is not None, \
+        assert self.reaction_dynamics is not None, \
             "reaction_step(): must first set the Reactions object"
 
-        #number_reactions = self.all_reactions.number_of_reactions()
+        #number_reactions = self.reaction_dynamics.number_of_reactions()
 
         self.delta_reactions = np.zeros((self.n_species, self.n_bins), dtype=float)
         if self.uses_membranes():
@@ -1319,7 +1317,7 @@ class BioSim1D:
             #print(f"\nconc_dict in bin {bin_n}: ", conc_dict)
 
             # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-            increment_vector = self.all_reactions.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=delta_time)
+            increment_vector = self.reaction_dynamics.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=delta_time)
 
             # Replace the "bin_n" column of the self.delta_reactions matrix with the contents of the vector increment_vector
             self.delta_reactions[:, bin_n] = np.array([increment_vector])
@@ -1336,7 +1334,7 @@ class BioSim1D:
                 #print(f"\n Post-membrane side conc_dict in bin {bin_n}: ", conc_dict)
 
                 # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-                increment_vector = self.all_reactions.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=delta_time)
+                increment_vector = self.reaction_dynamics.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=delta_time)
 
                 # Replace the "bin_n" column of the self.delta_reactions_B matrix with the contents of the vector increment_vector
                 self.delta_reactions_B[:, bin_n] = np.array([increment_vector])
@@ -1362,7 +1360,7 @@ class BioSim1D:
         :param delta_x:         Distance between consecutive bins
         :return:                None
         """
-        time_step, n_steps = self.all_reactions.specify_steps(total_duration=total_duration,
+        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
                                                              time_step=time_step,
                                                              n_steps=n_steps)
 

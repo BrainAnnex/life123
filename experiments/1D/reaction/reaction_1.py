@@ -68,21 +68,21 @@ bio.get_history()
 
 # %%
 # Specify the reaction
-rxn = Reactions(chem_data)
+#rxn = Reactions(chem_data)     # OBSOLETED
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
-bio.set_reactions(rxn)
+#bio.set_reactions(rxn)     # OBSOLETED
 
-print("Number of reactions: ", rxn.number_of_reactions())
+print("Number of reactions: ", chem_data.number_of_reactions())
 
 # %%
-rxn.describe_reactions()
+chem_data.describe_reactions()
 
 # %%
 # Send the plot to the HTML log file
-graph_data = rxn.prepare_graph_network()
+graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown] tags=[]
