@@ -78,7 +78,7 @@ class BioSim1D:
                                             #   in the diffusion process.
                                             #   See explanation in file overly_large_single_timesteps.py
 
-        self.reaction_dynamics = None           # Object of class "ReactionDynamics"
+        self.reaction_dynamics = None       # Object of class "ReactionDynamics"
 
         self.history = Movie(tabular=True)  # To store user-selected snapshots of (parts of) the system,
                                             #   whenever requested by the user.

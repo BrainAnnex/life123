@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 from typing import Union, List, Tuple
 from modules.movies.movies import Movie
-from modules.reactions.reactions import Reactions
-
+#from modules.reactions.reactions import Reactions
+from modules.reactions.reaction_dynamics import ReactionDynamics
 
 
 class BioSim2D:
@@ -25,8 +25,7 @@ class BioSim2D:
 
         self.n_species = 1      # The number of (non-water) chemical species    TODO: phase out?
 
-        self.chem_data = None   # Object of type "Chemicals", with info on the individual chemicals,
-                                #   incl. their names and diffusion rates
+        self.chem_data = None   # Object of type "ReactionData", with info on the individual chemicals and their reactions
 
         self.system = None      # Concentration data in the System we're simulating, for all the chemicals
                                 #   NumPy array of dimension (n_species x n_bins_x x n_bins_y)
@@ -43,7 +42,7 @@ class BioSim2D:
         self.container_diffusion = None      # A NumPy array for each species: diffusion rate in/out of the container
 
 
-        self.all_reactions = None            # Object of class "Reactions"
+        self.reaction_dynamics = None        # Object of class "ReactionDynamics"
 
         self.system_time = None              # Global time of the system, from initialization on
 
@@ -86,9 +85,9 @@ class BioSim2D:
             self.chem_data = reactions.chem_data
 
         if reactions:
-            self.all_reactions = reactions
+            self.reaction_dynamics = reactions
         else:
-            self.all_reactions = Reactions(chem_data=chem_data)
+            self.reaction_dynamics = ReactionDynamics(reaction_data=chem_data)
 
         self.n_bins_x = n_cells_x
         self.n_bins_y = n_cells_y
@@ -339,7 +338,7 @@ class BioSim2D:
         :return:                A dictionary with data about the status of the operation
                                     (for now, just the number of steps run; key: "steps")
         """
-        time_step, n_steps = self.all_reactions.specify_steps(total_duration=total_duration,
+        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
                                                               time_step=time_step,
                                                               n_steps=n_steps)
         for i in range(n_steps):
@@ -518,7 +517,7 @@ class BioSim2D:
         :return:                None
         """
 
-        time_step, n_steps = self.all_reactions.specify_steps(total_duration=total_duration,
+        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
                                                              time_step=time_step,
                                                              n_steps=n_steps)
         #if snapshots is None:
@@ -549,7 +548,7 @@ class BioSim2D:
         :param delta_time:
         :return:            None
         """
-        assert self.all_reactions is not None, \
+        assert self.reaction_dynamics is not None, \
             "reaction_step(): must first set the Reactions object"
 
         self.delta_reactions = np.zeros((self.n_species, self.n_bins_x, self.n_bins_y), dtype=float)
@@ -568,7 +567,7 @@ class BioSim2D:
 
 
                 # Obtain the Delta-conc for each species, for the current bin
-                increment_vector = self.all_reactions.single_compartment_reaction_step(conc_dict=conc_dict,
+                increment_vector = self.reaction_dynamics.single_compartment_reaction_step(conc_dict=conc_dict,
                                                                                       delta_time=delta_time)
 
                 # Replace the appropriate column of the self.delta_reactions matrix
