@@ -57,6 +57,7 @@ class ReactionData:
 
         self.chemical_data = []     # EXAMPLE: [{"name": "A", "diff": 6.4} ,
                                     #           {"name": "B", "diff": 12.0, "note": "some note"}]
+                                    # The position in the list is referred to as the "index" of that chemical
                                     # TODO: maybe use a Pandas dataframe
 
         self.name_dict = {}         # To map assigned names to their positional index (in the ordered list of chemicals);
@@ -191,6 +192,17 @@ class ReactionData:
         """
         return [c.get("diff", None) for c in self.chemical_data]      # If any value is not present, None is used
 
+
+    def missing_diffusion_rate(self) -> bool:
+        """
+        Return True if any of the diffusion rates is missing; False otherwise
+        :return:
+        """
+        for c in self.chemical_data:
+            if "diff" not in c:
+                return True
+
+        return False
 
 
 
@@ -448,6 +460,20 @@ class ReactionData:
         self.name_dict[name] = len(self.chemical_data) - 1     # The next available positional index (for the mapping of names to indices)
 
         self.n_species += 1
+
+
+    def set_diffusion_rate(self, name, diff_rate):
+        """
+        Set the diffusion rate of the given chemical species
+
+        :param name:
+        :param diff_rate:
+        :return:
+        """
+        self.assert_valid_diffusion(diff_rate)
+        index = self.get_index(name)
+        data = self.chemical_data[index]
+        data["diff"] = diff_rate
 
 
 

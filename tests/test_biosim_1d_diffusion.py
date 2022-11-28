@@ -6,22 +6,15 @@ import pytest
 import numpy as np
 from scipy.ndimage import shift
 from life_1D.bio_sim_1d import BioSim1D
-from modules.chemicals.chemicals import Chemicals as chem
+from modules.reactions.reaction_data import ReactionData as chem
 from modules.numerical.numerical import Numerical as num
 from modules.movies.movies import MovieArray
-
-
-# Do an initialization operation for every test that uses it as argument
-@pytest.fixture()       # By default, the scope is the function
-def biomsim1D():
-    pass
-    #bio.reset_system()
 
 
 
 #########   TESTS OF DIFFUSION : single species, one step    #########
 
-def test_diffuse_step_single_species_1(biomsim1D):
+def test_diffuse_step_single_species_1():
     delta_t = 0.01
     delta_x = 2
     diff = 10.
@@ -57,7 +50,7 @@ def test_diffuse_step_single_species_1(biomsim1D):
 
 
 
-def test_diffuse_step_single_species_1a(biomsim1D):
+def test_diffuse_step_single_species_1a():
     chem_data = chem(diffusion_rates=[10.])
 
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
@@ -76,7 +69,7 @@ def test_diffuse_step_single_species_1a(biomsim1D):
 
 
 
-def test_diffuse_step_single_species_1b(biomsim1D):
+def test_diffuse_step_single_species_1b():
     chem_data = chem(diffusion_rates=[10.])
 
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
@@ -96,14 +89,14 @@ def test_diffuse_step_single_species_1b(biomsim1D):
 
 
 
-def test_diffuse_step_single_species_2(biomsim1D):
+def test_diffuse_step_single_species_2():
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
     bio.set_uniform_concentration(species_index=0, conc=8.0)
     with pytest.raises(Exception):
         bio.diffuse_step_single_species(time_step=.001)    # Must set the diffusion rates first
 
-    chem_data.set_diffusion_rates([20.])
+    chem_data.set_diffusion_rate(name="A", diff_rate = 20.)
     bio.describe_state()    # 1 bins and 1 species:  [[8.]]
 
     increment_vector = bio.diffuse_step_single_species(time_step=3)    # With just 1 bin, nothing happens
@@ -112,12 +105,12 @@ def test_diffuse_step_single_species_2(biomsim1D):
 
 
 
-def test_diffuse_step_single_species_2b(biomsim1D):
+def test_diffuse_step_single_species_2b():
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
     bio.set_uniform_concentration(species_index=0, conc=8.0)
 
-    chem_data.set_diffusion_rates([20.])
+    chem_data.set_diffusion_rate(name="A", diff_rate = 20.)
     bio.describe_state()    # 1 bins and 1 species:  [[8.]]
 
     bio.diffuse(time_step=3, n_steps=1)    # With just 1 bin, nothing happens
@@ -126,7 +119,7 @@ def test_diffuse_step_single_species_2b(biomsim1D):
 
 
 
-def test_diffuse_step_single_species_3(biomsim1D):
+def test_diffuse_step_single_species_3():
     bio = BioSim1D()
     bio.system = None
     with pytest.raises(Exception):
@@ -153,7 +146,7 @@ def test_diffuse_step_single_species_3(biomsim1D):
 
 
 
-def test_diffuse_step_4(biomsim1D):
+def test_diffuse_step_4():
     # Multiple diffusion steps, with 2 bins
     chem_data = chem(diffusion_rates=[1.])
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
@@ -175,7 +168,7 @@ def test_diffuse_step_4(biomsim1D):
 
 
 
-def test_diffuse_step_5(biomsim1D):
+def test_diffuse_step_5():
     # Multiple diffusion steps, with 3 bins, and a large time step
     chem_data = chem(diffusion_rates=[.5])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
@@ -195,7 +188,7 @@ def test_diffuse_step_5(biomsim1D):
 
 
 
-def test_diffuse_step_6(biomsim1D):
+def test_diffuse_step_6():
     # Multiple diffusion steps, with 5 bins, and a large time step
     chem_data = chem(diffusion_rates=[.5])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
@@ -214,7 +207,7 @@ def test_diffuse_step_6(biomsim1D):
 
 
 
-def test_diffuse_step_7(biomsim1D):
+def test_diffuse_step_7():
     # Multiple diffusion steps, with 5 bins,
     # 1/2 the time step of the previous test, and double the duration
     chem_data = chem(diffusion_rates=[.5])
@@ -234,7 +227,7 @@ def test_diffuse_step_7(biomsim1D):
 
 
 
-def test_diffuse_step_8(biomsim1D):
+def test_diffuse_step_8():
     # Many diffusion steps that the system equilibrates, no matter the starting point
     chem_data = chem(diffusion_rates=[.3])
     bio = BioSim1D(n_bins=15, chem_data=chem_data)
@@ -264,7 +257,7 @@ def test_diffuse_step_8(biomsim1D):
 
 ###     Alternate methods to compute single-step diffusion    ###
 
-def test_diffuse_step_single_species_5_1_stencils(biomsim1D):
+def test_diffuse_step_single_species_5_1_stencils():
     delta_t = 0.01
     delta_x = 2
     diff = 10.
@@ -314,7 +307,7 @@ def test_diffuse_step_single_species_5_1_stencils(biomsim1D):
 
 #########   TESTS OF DIFFUSION : all species, one step    #########
 
-def test_diffuse_step_1(biomsim1D):
+def test_diffuse_step_1():
     chem_data = chem(diffusion_rates=[5., 20.])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
@@ -349,7 +342,7 @@ def test_diffuse_step_1(biomsim1D):
 
 #########   TESTS OF DIFFUSION : all species, multiple steps    #########
 
-def test_diffuse_1(biomsim1D):
+def test_diffuse_1():
     chem_data = chem(diffusion_rates=[5., 20.])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_bin_conc(species_index=0, bin_address=1, conc=100.)
@@ -407,7 +400,7 @@ def test_diffuse_1(biomsim1D):
 
 
 
-def test_diffuse_2(biomsim1D):
+def test_diffuse_2():
     chem_data = chem(diffusion_rates=[0.1])
     # Diffuse 1 species almost to equilibrium, starting from a single concentration pulse
     bio = BioSim1D(n_bins=10, chem_data=chem_data)
@@ -423,7 +416,7 @@ def test_diffuse_2(biomsim1D):
 
 
 
-def test_diffuse_3(biomsim1D):
+def test_diffuse_3():
     # Compare a low-level and a higher-level function for one-step diffusion
     delta_t = 0.01
     delta_x = 2
@@ -452,7 +445,7 @@ def test_diffuse_3(biomsim1D):
 
 
 
-def test_diffuse_4(biomsim1D):
+def test_diffuse_4():
     # Based on experiment 1D/diffusion/validate_diffusion_3
 
     # Parameters of the simulation run.  We'll be considering just 1 chemical species, "A"
@@ -510,7 +503,7 @@ def test_diffuse_4(biomsim1D):
 
 
 
-def test_diffuse_5(biomsim1D):
+def test_diffuse_5():
     # Based on experiment 1D/diffusion/validate_diffusion_3
     # Identical to test_diffuse_4(), but for a different diffusion-computing algorithm
 

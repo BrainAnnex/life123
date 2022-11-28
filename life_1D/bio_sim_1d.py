@@ -1079,7 +1079,7 @@ class BioSim1D:
         :return:                A 1-D Numpy array with the CHANGE in concentration for the given species across all bins
         """
         assert self.system is not None, "BioSim1D.diffuse_step_single_species(): Must first initialize the system"
-        assert not self.chem_data.get_all_diffusion_rates(), "BioSim1D.diffuse_step_single_species(): Must first set the diffusion rates"
+        assert not self.chem_data.missing_diffusion_rate(), "BioSim1D.diffuse_step_single_species(): Must first set the diffusion rates"
         assert self.sealed == True, "BioSim1D.diffuse_step_single_species(): For now, there's no provision for exchange with the outside"
 
         increment_vector = np.zeros(self.n_bins, dtype=float)       # One element per bin
@@ -1139,7 +1139,7 @@ class BioSim1D:
         assert self.system is not None, "Must first initialize the system"
         assert self.n_bins > 0, "Must first set the number of bins"
         assert self.n_bins >= 3, "For very small number of bins, use another method"
-        assert self.chem_data.diffusion_rates is not None, "Must first set the diffusion rates"
+        assert not self.chem_data.missing_diffusion_rate(), "Must first set the diffusion rates"
         assert self.sealed == True, "For now, there's no provision for exchange with the outside"
 
 
