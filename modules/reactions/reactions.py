@@ -3,12 +3,12 @@ import math
 import numpy as np
 
 
-# TODO: in the process of being obsoleted
+# TODO: **************  in the process of being obsoleted   **************
+
 class Reactions:
     """
     Data about all applicable reactions,
     including stoichiometry, reaction rates and reaction orders.
-    TODO (in-progress): add general methods to carry out reactions (currently in BioSim1D)
 
     Note: for now, the temperature is assumed constant everywhere, and unvarying (or very slowly varying)
 
@@ -36,6 +36,10 @@ class Reactions:
 
         :param chem_data:
         """
+        print("\n******************* WARNING: the class 'Reactions' is DEPRECATED \n"
+              "and will be removed in the next release. \n"
+              "Please use the new class 'ReactionData' instead\n\n")
+
         self.reaction_list = []     # List of dicts.  Each item represents a reaction, incl. its reverse
                                     # Reactions should be added by means of calls to add_reaction()
 

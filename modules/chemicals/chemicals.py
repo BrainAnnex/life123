@@ -2,7 +2,8 @@ from typing import Union
 import numpy as np
 
 
-# TODO: in the process of being obsoleted
+# TODO: **************  in the process of being obsoleted   **************
+
 class Chemicals:
     """
     Object with info on the individual chemicals, incl. their Names and Diffusion rates.
@@ -20,6 +21,10 @@ class Chemicals:
         :param diffusion_rates: A list or tuple with the diffusion rates of the chemicals
         :param names:           A list with the names of the chemicals
         """
+        print("\n******************* WARNING: the class 'Chemicals' is DEPRECATED \n"
+              "and will be removed in the next release. \n"
+              "Please use the new class 'ReactionData' instead\n\n")
+
         self.diffusion_rates = None     # NumPy array of diffusion rates for the various species
         self.names = None               # List of the names of the various species
         self.name_dict = {}             # To map assigned names to their positional index (in the list of chemicals)

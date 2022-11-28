@@ -34,8 +34,7 @@ class BioSim1D:
 
         self.n_species = 1      # The number of (non-water) chemical species   TODO: phase out?
 
-        self.chem_data = None   # Object of type "Chemicals", with info on the individual chemicals,
-                                #   incl. their names and diffusion rates
+        self.chem_data = None   # Object of type "ReactionData", with info on the individual chemicals and their reactions
 
         self.system_length = None   # System extension, from the middle of the leftmost bin to the middle of the rightmost one.
                                     #  The de-facto default value, though not used, is (n_bins-1)
@@ -762,10 +761,10 @@ class BioSim1D:
                         all_conc += str(self.bin_concentration(bin_no, species_index=species_index, trans_membrane=True))
                     all_conc += "|"
 
-            if self.chem_data.diffusion_rates is None:
+            if not self.chem_data.get_all_diffusion_rates():
                 print(f"  Species {species_index}{name}. Diff rate: NOT SET. Conc: {all_conc}")
             else:
-                print(f"  Species {species_index}{name}. Diff rate: {self.chem_data.diffusion_rates[species_index]}. Conc: {all_conc}")
+                print(f"  Species {species_index}{name}. Diff rate: {self.chem_data.get_diffusion_rate(species_index)}. Conc: {all_conc}")
 
 
 
@@ -1079,9 +1078,9 @@ class BioSim1D:
 
         :return:                A 1-D Numpy array with the CHANGE in concentration for the given species across all bins
         """
-        assert self.system is not None, "diffuse_step_single_species(): Must first initialize the system"
-        assert self.chem_data.diffusion_rates is not None, "diffuse_step_single_species(): Must first set the diffusion rates"
-        assert self.sealed == True, "diffuse_step_single_species(): For now, there's no provision for exchange with the outside"
+        assert self.system is not None, "BioSim1D.diffuse_step_single_species(): Must first initialize the system"
+        assert not self.chem_data.get_all_diffusion_rates(), "BioSim1D.diffuse_step_single_species(): Must first set the diffusion rates"
+        assert self.sealed == True, "BioSim1D.diffuse_step_single_species(): For now, there's no provision for exchange with the outside"
 
         increment_vector = np.zeros(self.n_bins, dtype=float)       # One element per bin
 

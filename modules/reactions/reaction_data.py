@@ -182,9 +182,12 @@ class ReactionData:
 
     def get_all_diffusion_rates(self) -> list:
         """
-        Return a list of all the diffusion rates, in the order of the chemical indexes.
+        Return a list of the diffusion rates of all the chemicals,
+        in the order of their indexes.
+
         If any value is missing, None is used for it
-        :return:
+
+        :return:    A list of numbers with the diffusion rates
         """
         return [c.get("diff", None) for c in self.chemical_data]      # If any value is not present, None is used
 
