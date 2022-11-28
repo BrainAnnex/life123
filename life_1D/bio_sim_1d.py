@@ -1220,29 +1220,21 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    '''    
-    def set_reactions(self, reactions) -> None:     #    TODO: maybe no longer necessary
-        """
-        Register the object used for the Reaction Dynamics.
-        Anything previously registered, will be over-written.
-
-        :param reactions:   Object of class "ReactionDynamics"
-        :return:            None
-        """
-        self.reaction_dynamics = reactions
-    '''
-
-
     def react(self, total_duration=None, time_step=None, n_steps=None, snapshots=None) -> None:
         """
         Update the system concentrations as a result of all the reactions in all bins - taking
         the presence of membranes into account, if applicable.
         CAUTION : NO diffusion is performed.
 
+        The duration and granularity of the reactions is specified with 2 out of the 3 parameters:
+            total_duration, time_step, n_steps
+
         For each bin, or each membrane-separated side of bin, (or combined group of bins - not currently implemented),
         process all the reactions in it - based on
         the INITIAL concentrations (prior to this reaction step),
         which are used as the basis for all the reactions.
+
+        Optionally, save some data from the individual reaction steps
 
         TODO: in case of any Exception, the state of the system is still valid, as of the time before this call
 
@@ -1279,11 +1271,15 @@ class BioSim1D:
 
 
 
-    
     def reaction_step(self, delta_time: float) -> None:
         """
-        Clear and compute the delta_reactions array (a class variable),
-        based on all the reactions in all bins.
+        Compute and store the incremental concentration changes in all bins,
+        from all reactions,
+        for a single time step of duration delta_time.
+
+        The incremental concentration changes are stored in the class variable
+        "delta_reactions", which contains a Numpy array that gets cleared and set.
+
         IMPORTANT: the actual system concentrations are NOT changed.
 
         For each bin, process all the reactions in it - based on
@@ -1293,8 +1289,9 @@ class BioSim1D:
         TODO: parallelize the computation over the separate bins
         TODO: explore looping over reactions first, and then over bins
 
-        :param delta_time:
-        :return:            None
+        :param delta_time:  The time duration of the reaction step - assumed to be small enough that the
+                            concentration won't vary significantly during this span
+        :return:            None (note: the class variable "delta_reactions" gets updated)
         """
         assert self.reaction_dynamics is not None, \
             "reaction_step(): must first set the Reactions object"
@@ -1308,7 +1305,7 @@ class BioSim1D:
         # For each bin
         for bin_n in range(self.n_bins):     # Bin number, ranging from 0 to max_bin_number, inclusive
             if self.debug:
-                print(f"reaction_step(): processing the all the reactions in bin number {bin_n}")
+                print(f"BioSim1D.reaction_step(): processing the all the reactions in bin number {bin_n}")
 
             # Obtain the Delta-concentration for each species, for this bin
             conc_dict = {species_index: self.system[species_index , bin_n]

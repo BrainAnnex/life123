@@ -5,13 +5,9 @@ import numpy as np
 
 class ReactionDynamics:
     """
-    TODO: In progress
-    NOTE: This is the merger of the 2 former classes Reaction and Chemicals
+    Used to simulate the dynamics of reactions
 
-    Carry out the reactions
-    
-    TODO (in-progress): add general methods to carry out reactions (currently in BioSim1D)
-
+    NOTE: derived from the former class "Reactions"
     """
 
     def __init__(self, reaction_data):
@@ -24,10 +20,9 @@ class ReactionDynamics:
 
 
 
-
     #########################################################################
     #                                                                       #
-    #                   TO CARRY OUT AND EXAMINE REACTIONS                  #
+    #                       TO PERFORM THE REACTIONS                        #
     #                                                                       #
     #########################################################################
 
@@ -44,10 +39,10 @@ class ReactionDynamics:
         :return:                The pair (time_step, n_steps)
         """
         assert (not total_duration or not time_step or not n_steps), \
-            "specify_steps(): cannot specify all 3 arguments: `total_duration`, `time_step`, `n_steps` (should specify any 2 of them)"
+            "ReactionDynamics.specify_steps(): cannot specify all 3 arguments: `total_duration`, `time_step`, `n_steps` (should specify any 2 of them)"
 
         assert (total_duration and time_step) or (total_duration and n_steps) or (time_step and n_steps), \
-            "specify_steps(): must provide exactly 2 arguments from:  `total_duration`, `time_step`, `n_steps`"
+            "ReactionDynamics.specify_steps(): must provide exactly 2 arguments from:  `total_duration`, `time_step`, `n_steps`"
 
         if not time_step:
             time_step = total_duration / n_steps
@@ -56,6 +51,48 @@ class ReactionDynamics:
             n_steps = math.ceil(total_duration / time_step)
 
         return (time_step, n_steps)     # Note: could opt to also return total_duration is there's a need for it
+
+
+
+    def single_compartment_react(self, conc_array: np.array,
+                                 total_duration=None, time_step=None, n_steps=None,
+                                 snapshots=None) -> np.array:
+        """
+        TODO: this is an experimental method NOT YET TESTED
+
+        :param conc_array:      A Numpy array of the initial concentrations of all the chemical species, in their index order
+        :param total_duration:  The overall time advance (i.e. time_step * n_steps)
+        :param time_step:       The size of each time step
+        :param n_steps:         The desired number of steps
+        :param snapshots:       OPTIONAL dict that may contain any the following keys:
+                                    "frequency", "sample_bin", "sample_species"
+                                    If provided, take a system snapshot after running a multiple of "frequency" run steps.
+                                    EXAMPLE: snapshots={"frequency": 2, "sample_bin": 0}
+
+        :return:                A Numpy array of the final concentrations of all the chemical species, in their index order
+        """
+        time_step, n_steps = self.specify_steps(total_duration=total_duration,
+                                                time_step=time_step,
+                                                n_steps=n_steps)
+
+        if snapshots is None:
+            frequency = None
+        else:
+            frequency = snapshots.get("frequency", 1)
+
+        conc_dict = {}
+        for index in range(len(conc_array)):
+            conc_dict[index] = conc_array[index]
+
+        for i in range(n_steps):
+            delta_concentrations = self.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=time_step)
+            conc_array += delta_concentrations
+            # Preserve some of the data, as requested
+            if (frequency is not None) and ((i+1)%frequency == 0):
+                #self.save_snapshot(self.bin_snapshot(bin_address = snapshots["sample_bin"]))
+                pass
+
+        return conc_array
 
 
 
@@ -70,13 +107,17 @@ class ReactionDynamics:
 
         NOTES:  - the actual system concentrations are NOT changed
                 - "compartments" may or may not correspond to the "bins" of the higher layers;
-                  the calling code might have opted to merge some bins into a single compartment
+                  the calling code might have opted to merge some bins into a single "compartment"
 
-        :param conc_dict:           EXAMPLE: {3: 16.3, 8: 0.53, 12: 1.78}
-        :param delta_time:
-        :return:                    The increment vector for all the chemical species concentrations
-                                    in the compartment
-                                    EXAMPLE (for 2 species with a 3:1 stoichiometry):   [7. , -21.]
+        :param conc_dict:   Concentrations of the applicable chemicals,
+                            as a dict where the key value is the chemicals index
+                            EXAMPLE: {3: 16.3, 8: 0.53, 12: 1.78}
+                            TODO: maybe switch to a Numpy array of ALL concentrations, in index order
+        :param delta_time:  The time duration of the reaction step - assumed to be small enough that the
+                            concentration won't vary significantly during this span
+        :return:            The increment vector for all the chemical species concentrations
+                            in the compartment
+                            EXAMPLE (for a reactant and product with a 3:1 stoichiometry):   [7. , -21.]
         """
         # Compute the forward and back conversions of all the reactions
         delta_list = self.compute_all_rate_deltas(conc_dict=conc_dict, delta_time=delta_time)
@@ -84,7 +125,6 @@ class ReactionDynamics:
             print(f"    delta_list: {delta_list}")
 
 
-        #increment_vector = np.zeros((self.reaction_data.number_of_chemicals(), 1), dtype=float)       # One element per chemical species
         increment_vector = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
 
         # For each reaction, adjust the concentrations of the reactants and products,
@@ -129,12 +169,16 @@ class ReactionDynamics:
 
     def compute_all_rate_deltas(self, conc_dict: dict, delta_time: float) -> list:
         """
-        For all the reactions.  Return a list with an entry for each reaction
+        For an explanation of the "rate delta", see compute_rate_delta().
+        Compute the "rate delta" for all the reactions.  Return a list with an entry for each reaction
 
-        :param conc_dict:    EXAMPLE: {3: 16.3, 8: 0.53, 12: 1.78}
-        :param delta_time:
+        :param conc_dict:   Concentrations of the applicable chemicals,
+                            as a dict where the key value is the chemicals index
+                            EXAMPLE: {3: 16.3, 8: 0.53, 12: 1.78}
+        :param delta_time:  The time duration of the reaction step - assumed to be small enough that the
+                            concentration won't vary significantly during this span
 
-        :return:              A list of the differences between forward and reverse conversions;
+        :return:              A list of the differences between forward and reverse "conversions";
                                     each list has 1 entry per reaction, in the index order of the reactions
         """
         delta_list = []            # It will have 1 entry per reaction
@@ -150,17 +194,21 @@ class ReactionDynamics:
 
 
 
-
     def compute_rate_delta(self, rxn_index: int, conc_dict: dict, delta_time: float) -> float:
         """
-        For the specified reaction, compute the difference of its forward and back "contributions",
-        i.e. delta_time * reaction_rate * (concentration ** reaction_order)
+        For the given time interval and the single specified reaction,
+        compute the difference of the reaction's forward and back "conversions",
+        i.e. delta_time * reaction_rate_constant * (concentration ** reaction_order)
 
-        :param rxn_index:
-        :param conc_dict:    EXAMPLE: {3: 16.3, 8: 0.53, 12: 1.78}
-        :param delta_time:
+        :param rxn_index:   An integer that indexes the reaction of interest
+        :param conc_dict:   Concentrations of the applicable chemicals,
+                            as a dict where the key value is the chemicals index
+                            EXAMPLE: {3: 16.3, 8: 0.53, 12: 1.78}
+        :param delta_time:  The time duration of the reaction step - assumed to be small enough that the
+                            concentration won't vary significantly during this span
 
-        :return:            The differences between forward and reverse conversions
+        :return:            The differences between forward and reverse "conversions" (rates * delta_time),
+                            for the given reaction during the specified time span
                             TODO: also, make a note of large relative increments (to guide future time-step choices)
         """
 
@@ -171,7 +219,8 @@ class ReactionDynamics:
         fwd_rate_coeff = self.reaction_data.get_forward_rate(rxn_index)
         back_rate_coeff = self.reaction_data.get_back_rate(rxn_index)
 
-        delta_fwd = delta_time * fwd_rate_coeff         # TODO: save, to avoid re-computing at each bin
+        delta_fwd = delta_time * fwd_rate_coeff         # TODO: save, to avoid re-computing at each bin.
+                                                        #       Better yet, factor our the entire x delta_time
         for r in reactants:
             stoichiometry, species_index, order = r
             conc = conc_dict.get(species_index)
