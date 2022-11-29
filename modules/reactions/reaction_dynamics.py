@@ -55,9 +55,17 @@ class ReactionDynamics:
 
     def single_compartment_react(self, conc_array: np.array,
                                  total_duration=None, time_step=None, n_steps=None,
-                                 snapshots=None) -> np.array:
+                                 snapshots=None) -> None:
         """
-        TODO: this is an experimental method NOT YET TESTED
+        Using the given concentration data for all the chemical species in a single compartment,
+        perform ALL the reactions -
+        based on the INITIAL concentrations,
+        which are used as the basis for all the reactions.
+
+        Modify the "conc_array" argument, which contains the concentrations of all the chemical species, in their index order
+
+        NOTES:  - "compartments" may or may not correspond to the "bins" of the higher layers;
+                  the calling code might have opted to merge some bins into a single "compartment"
 
         :param conc_array:      A Numpy array of the initial concentrations of all the chemical species, in their index order
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
@@ -68,7 +76,7 @@ class ReactionDynamics:
                                     If provided, take a system snapshot after running a multiple of "frequency" run steps.
                                     EXAMPLE: snapshots={"frequency": 2, "sample_bin": 0}
 
-        :return:                A Numpy array of the final concentrations of all the chemical species, in their index order
+        :return:                None
         """
         time_step, n_steps = self.specify_steps(total_duration=total_duration,
                                                 time_step=time_step,
@@ -79,23 +87,17 @@ class ReactionDynamics:
         else:
             frequency = snapshots.get("frequency", 1)
 
-        conc_dict = {}
-        for index in range(len(conc_array)):
-            conc_dict[index] = conc_array[index]
-
         for i in range(n_steps):
-            delta_concentrations = self.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=time_step)
+            delta_concentrations = self.single_compartment_reaction_step(conc_array=conc_array, delta_time=time_step)
             conc_array += delta_concentrations
             # Preserve some of the data, as requested
             if (frequency is not None) and ((i+1)%frequency == 0):
-                #self.save_snapshot(self.bin_snapshot(bin_address = snapshots["sample_bin"]))
+                #self.save_snapshot(self.bin_snapshot(bin_address = snapshots["sample_bin"]))   # TODO: add
                 pass
 
-        return conc_array
 
 
-
-    def single_compartment_reaction_step(self, conc_dict: dict, delta_time: float) -> np.array:
+    def single_compartment_reaction_step(self, delta_time: float, conc_dict=None, conc_array=None) -> np.array:
         """
         Using the given concentration data for all the applicable species in a single compartment,
         do a single reaction time step for ALL the reactions -
@@ -108,16 +110,29 @@ class ReactionDynamics:
                 - "compartments" may or may not correspond to the "bins" of the higher layers;
                   the calling code might have opted to merge some bins into a single "compartment"
 
+        :param delta_time:  The time duration of the reaction step - assumed to be small enough that the
+                            concentration won't vary significantly during this span
+
         :param conc_dict:   Concentrations of the applicable chemicals,
                             as a dict where the key value is the chemicals index
                             EXAMPLE: {3: 16.3, 8: 0.53, 12: 1.78}
-                            TODO: maybe switch to a Numpy array of ALL concentrations, in index order
-        :param delta_time:  The time duration of the reaction step - assumed to be small enough that the
-                            concentration won't vary significantly during this span
+        :param conc_array:  ALTERNATE way to specify all concentrations,
+                            as a Numpy array of the initial concentrations of all the chemical species, in their index order
+                            NOTE: if both conc_dict and conc_array are specified, an Exception is raised
+
         :return:            The increment vector for all the chemical species concentrations
                             in the compartment
                             EXAMPLE (for a reactant and product with a 3:1 stoichiometry):   [7. , -21.]
         """
+        if conc_array is not None:
+            assert conc_dict is None,\
+                "single_compartment_reaction_step(): Cannot specify both arguments conc_dict and conc_array"
+
+            conc_dict = {}
+            for index in range(len(conc_array)):
+                conc_dict[index] = conc_array[index]
+
+
         # Compute the forward and back conversions of all the reactions
         delta_list = self.compute_all_rate_deltas(conc_dict=conc_dict, delta_time=delta_time)
         if self.debug:
@@ -245,7 +260,8 @@ class ReactionDynamics:
         Ascertain whether the given concentrations are in equilibrium for the specified reaction
 
         :param rxn_index:   The index (0-based) to identify the reaction of interest
-        :param conc:        Dict with the concentrations of the species involved in the reaction
+        :param conc:        Dict with the concentrations of the species involved in the reaction.
+                            The keys are the chemical names
                                 EXAMPLE: {'A': 23.9, 'B': 36.1}
         :param tolerance:   Allowable absolute tolerance, to establish satisfactory equality
         :param explain:     If True, print out the formula being used.
