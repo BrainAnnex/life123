@@ -49,13 +49,13 @@ GraphicLog.config(filename=log_file,
 # Initialize the system
 chem_data = chem(names=["A", "C", "D"])     # NOTE: Diffusion not applicable (just 1 bin)
 
-rxn = Reactions(chem_data)
+
 
 # Reaction A <-> 2C + D , with 1st-order kinetics for each species
-rxn.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
+chem_data.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
                  forward_rate=5., reverse_rate=2.)
 
-bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
+bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
 bio.set_all_uniform_concentrations( [4., 7., 2.] )
 
@@ -67,11 +67,11 @@ bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
-rxn.describe_reactions()
+chem_data.describe_reactions()
 
 # %%
 # Send the plot to the HTML log file
-graph_data = rxn.prepare_graph_network()
+graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown] tags=[]

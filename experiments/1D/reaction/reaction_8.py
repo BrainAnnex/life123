@@ -53,13 +53,13 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["A", "B", "C", "D", "E"])     # NOTE: Diffusion not applicable (just 1 bin)
 
 # Specify the reactions
-rxn = Reactions(chem_data)
+
 
 # Reactions A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species
-rxn.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=5., reverse_rate=2.)
-rxn.add_reaction(reactants=["C", "D"], products=["E"], forward_rate=8., reverse_rate=4.)
+chem_data.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=5., reverse_rate=2.)
+chem_data.add_reaction(reactants=["C", "D"], products=["E"], forward_rate=8., reverse_rate=4.)
 
-bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
+bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
 bio.set_all_uniform_concentrations( [3., 5., 1., 0.4, 0.1] )
 
@@ -71,14 +71,14 @@ bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
-rxn.describe_reactions()
+chem_data.describe_reactions()
 
 # %%
 # Send a header and a plot to the HTML log file
 log.write("2 COUPLED reactions:  A + B <-> C  and  C + D <-> E",
           style=log.h2)
 # Send the plot to the HTML log file
-graph_data = rxn.prepare_graph_network()
+graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown] tags=[]

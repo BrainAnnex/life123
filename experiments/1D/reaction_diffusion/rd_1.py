@@ -59,11 +59,11 @@ GraphicLog.config(filename=log_file,
 # Initialize the system
 chem_data = chem(names=["A", "B", "C"], diffusion_rates=[50., 50., 1.])
 
-rxn = Reactions(chem_data)
+
 
 # Reaction A + B <-> C , with 1st-order kinetics for each species; note that it's mostly in the forward direction
 rxn.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=20., reverse_rate=2.)
-bio = BioSim1D(n_bins=7, chem_data=chem_data, reactions=rxn)
+bio = BioSim1D(n_bins=7, chem_data=chem_data)
 
 # %%
 bio.show_system_snapshot()

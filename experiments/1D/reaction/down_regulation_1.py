@@ -20,7 +20,7 @@
 #
 # Single-bin reaction
 #
-# LAST REVISED: Aug. 28, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -52,20 +52,18 @@ GraphicLog.config(filename=log_file,
 # Initialize the system
 chem_data = chem(names=["A", "B", "Y"])     # NOTE: Diffusion not applicable (just 1 bin)
 
-rxn = Reactions(chem_data)
-
 # Reaction A + X <-> 2B , with 1st-order kinetics for all species
-rxn.add_reaction(reactants=[("A") , (2, "B")], products=[("Y")],
-                 forward_rate=8., reverse_rate=2.)
+chem_data.add_reaction(reactants=[("A") , (2, "B")], products=[("Y")],
+                       forward_rate=8., reverse_rate=2.)
 
-rxn.describe_reactions()
+chem_data.describe_reactions()
 
 # Send the plot of the reaction network to the HTML log file
-graph_data = rxn.prepare_graph_network()
+graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %%
-bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
+bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
 bio.set_uniform_concentration(species_name="A", conc=5.)     # Scarce
 bio.set_uniform_concentration(species_name="B", conc=100.)   # Plentiful

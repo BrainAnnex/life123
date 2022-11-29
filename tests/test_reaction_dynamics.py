@@ -191,7 +191,7 @@ def test_compute_all_rate_deltas():
 
     #print(result)
     """
-    bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
+    bio = BioSim1D(n_bins=1, chem_data=chem_data)
     bio.set_all_uniform_concentrations([5., 8., 0.])
     old_result = bio.compute_rates(bin_n=0, delta_time=0.5, number_reactions=1)
     print(old_result)

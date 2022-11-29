@@ -52,12 +52,12 @@ GraphicLog.config(filename=log_file,
 # Initialize the system
 chem_data = chem(names=["A", "B"])     # NOTE: Diffusion not applicable (just 1 bin)
 
-rxn = Reactions(chem_data)
+
 
 # Reaction  2A <-> B , FOR NOW with 1st-order kinetics in both directions
-rxn.add_reaction(reactants=[(2, "A")], products=["B"], forward_rate=5., reverse_rate=2.)
+chem_data.add_reaction(reactants=[(2, "A")], products=["B"], forward_rate=5., reverse_rate=2.)
 
-bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
+bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
 bio.set_all_uniform_concentrations( [3., 5.] )
 
@@ -69,17 +69,17 @@ bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
-rxn.describe_reactions()
+chem_data.describe_reactions()
 
 # %%
-rxn._internal_reactions_data()    # Low-level view of the reactions data
+chem_data._internal_reactions_data()    # Low-level view of the reactions data
 
 # %%
 # Send a header and a plot to the HTML log file
 log.write("Reaction 2A <-> B is 1st order in all species:",
           style=log.h2)
 
-graph_data = rxn.prepare_graph_network()
+graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %%
@@ -129,11 +129,11 @@ fig.show()
 # # STARTING OVER, this time with 2nd-order kinetics in the forward reaction
 
 # %%
-rxn.clear_reactions()
+chem_data.clear_reactions()
 
 # %%
 # Reaction  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction
-rxn.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
+chem_data.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
 
 # %%
 # RESET the concentrations to their original values
@@ -148,16 +148,16 @@ bio.save_snapshot(bio.bin_snapshot(bin_address = 0),
 bio.get_history()
 
 # %%
-rxn.describe_reactions()
+chem_data.describe_reactions()
 
 # %%
-rxn._internal_reactions_data()    # Low-level view of the reactions data
+chem_data._internal_reactions_data()    # Low-level view of the reactions data
 
 # %%
 # Send a header and a plot to the HTML log file
 log.write("Reaction 2A <-> B is 2nd order in A, and 1st order in B:",
           style=log.h2)
-graph_data = rxn.prepare_graph_network()
+graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %%

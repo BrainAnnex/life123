@@ -176,5 +176,5 @@ def test_reaction_step():
     #bio.describe_state()
 
     #conc_dict = {0: 5., 1: 100.}
-    #result = rxn.compute_all_rate_deltas(conc_dict=conc_dict, delta_time=0.1)
+    #result = chem_data.compute_all_rate_deltas(conc_dict=conc_dict, delta_time=0.1)
     #print(result)

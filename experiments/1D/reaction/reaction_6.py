@@ -50,13 +50,13 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["A", "B", "C", "D"])     # NOTE: Diffusion not applicable (just 1 bin)
 
 # Specify the reaction
-rxn = Reactions(chem_data)
+
 
 # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
 rxn.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
                  forward_rate=5., reverse_rate=2.)
 
-bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
+bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
 bio.set_all_uniform_concentrations( [4., 7., 5., 2.] )
 
