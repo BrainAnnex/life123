@@ -18,7 +18,7 @@
 # Contrary to perhaps an intuition of a "pile sliding down a sand dune as a unit", the concentration peak
 # remains in place, and simply spreads out from there
 #
-# LAST REVISED: Oct. 11, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

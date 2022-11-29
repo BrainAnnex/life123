@@ -19,7 +19,7 @@
 # In this "PART 1", we'll be looking at a tiny system with just 10 bins, to easily inspect the numbers directly.
 # We'll use concentrations initialized to an upward-shifted sine wave with 1 cycle over the length system
 #
-# LAST REVISED: Oct. 5, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

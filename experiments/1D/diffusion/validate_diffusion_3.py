@@ -20,7 +20,7 @@
 # with an even finer resolution, and more complex initial concentrations,
 # repeated for 2 different diffusion algorithms.
 #
-# LAST REVISED: Oct. 6, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

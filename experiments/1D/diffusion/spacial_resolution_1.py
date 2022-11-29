@@ -15,9 +15,9 @@
 # %% [markdown]
 # # Exploring the change of delta_x (spacial resolution) in diffusion accuracy.
 # #### From the same initial setup, diffusion is carried out over a fixed time span,
-# #### at different spacial resolutions - and then the respective results are compared
+# #### at different spatial resolutions - and then the respective results are compared
 #
-# LAST REVISED: Oct. 1, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

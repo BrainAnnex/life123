@@ -16,7 +16,7 @@
 # ### Exploring the data structures of MEMBRANES, and reactions in them 
 # #### - with NO DIFFUSION
 #
-# LAST REVISED: Aug. 31, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -57,9 +57,9 @@ bio.describe_state()
 
 # %%
 # Reaction A + B <-> C , with 1st-order kinetics in both directions, mostly forward
-bio.all_reactions.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=8., reverse_rate=2.)
+bio.chem_data.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=8., reverse_rate=2.)
 
-bio.all_reactions.describe_reactions()
+bio.chem_data.describe_reactions()
 
 # %%
 bio.react(time_step=0.002, n_steps=1)
@@ -83,15 +83,15 @@ bio.describe_state()
 # Verify the equilibrium in each of the active bins
 
 # %%
-bio.all_reactions.is_in_equilibrium(rxn_index=0, conc={"A": 0.7932534523016195, "B": 4.793253452301622, "C": 15.206746547698396})
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc={"A": 0.7932534523016195, "B": 4.793253452301622, "C": 15.206746547698396})
 # A was largely the limiting reagent
 
 # %%
-bio.all_reactions.is_in_equilibrium(rxn_index=0, conc={"A": 0.897094737056602, "B": 10.897094737056594, "C": 39.10290526294337})
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc={"A": 0.897094737056602, "B": 10.897094737056594, "C": 39.10290526294337})
 # A was largely the limiting reagent
 
 # %%
-bio.all_reactions.is_in_equilibrium(rxn_index=0, conc={"A": 47.20020986266437, "B": 0.20020986266437912, "C": 37.79979013733563})
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc={"A": 47.20020986266437, "B": 0.20020986266437912, "C": 37.79979013733563})
 # This time, with ample [A], the limiting reagent was B
 
 # %%

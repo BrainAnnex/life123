@@ -20,7 +20,7 @@
 #
 # **EXTRA OUTPUT (incl. graphics):** overwritten into the .htm file with the same base name.
 #
-# LAST REVISED: Aug. 28, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

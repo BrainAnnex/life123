@@ -25,7 +25,7 @@
 # -Temporal resolution ("delta t")    
 # -Alternate methods of estimating numerical derivatives
 #
-# LAST REVISED: Oct. 6, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

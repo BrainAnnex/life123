@@ -18,7 +18,7 @@
 #
 # Diffusion not done
 #
-# LAST REVISED: Sep. 21, 2022
+# LAST REVISED: Nov. 28, 2022
 # %%
 # Extend the sys.path variable, to contain the project's root directory
 import set_path
@@ -111,12 +111,12 @@ bio.describe_state()
 # Verify the equilibrium in each of the active bins
 
 # %%
-bio.all_reactions.is_in_equilibrium(rxn_index=0, conc={"A": 23.99998665, "B": 36.00001335})
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc={"A": 23.99998665, "B": 36.00001335})
 
 # %%
-bio.all_reactions.is_in_equilibrium(rxn_index=0, conc={"A": 21.99999809, "B": 33.00000191})
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc={"A": 21.99999809, "B": 33.00000191})
 
 # %%
-bio.all_reactions.is_in_equilibrium(rxn_index=0, conc={"A": 41.99996471, "B": 63.00003529}, explain=False)
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc={"A": 41.99996471, "B": 63.00003529}, explain=False)
 
 # %%

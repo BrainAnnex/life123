@@ -17,7 +17,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Aug. 22, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -51,10 +51,9 @@ chem_data = chem(names=["A", "B", "C", "D"])     # NOTE: Diffusion not applicabl
 
 # Specify the reaction
 
-
 # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
-rxn.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
-                 forward_rate=5., reverse_rate=2.)
+chem_data.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
+                       forward_rate=5., reverse_rate=2.)
 
 bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
@@ -68,13 +67,13 @@ bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
-rxn.describe_reactions()
+chem_data.describe_reactions()
 
 # %%
 # Send a header and a plot to the HTML log file
 log.write("Reaction 2 A + 5 B <-> 4 C + 3 D",
           style=log.h2)
-graph_data = rxn.prepare_graph_network()
+graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown] tags=[]

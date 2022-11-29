@@ -18,7 +18,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Aug. 22, 2022
+# LAST REVISED: Nov. 28, 2022
 #
 # * [First Step](#sec_2_first_step)
 # * [Numerous more steps](#sec_2)
@@ -53,8 +53,6 @@ GraphicLog.config(filename=log_file,
 # %%
 # Initialize the system
 chem_data = chem(names=["A", "B"])     # NOTE: Diffusion not applicable (just 1 bin)
-
-
 
 # Reaction A <-> 3B , with 1st-order kinetics in both directions
 chem_data.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)

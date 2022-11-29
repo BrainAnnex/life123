@@ -19,7 +19,7 @@
 # ### Afterward, the process is restarted and repeated with a frequency 5 times larger
 #
 #
-# LAST REVISED: Sep. 14, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

@@ -25,7 +25,7 @@
 # Just as seen in the case of *diffusion_along_gradient_1*, the concentration peak
 # remains in place, and simply spreads out from there
 #
-# LAST REVISED: Oct. 12, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
