@@ -121,7 +121,7 @@ bio.describe_state()
 
 # %%
 # Verify that the reaction has reached equilibrium
-rxn.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
 # Save the state of the concentrations of all species at bin 0

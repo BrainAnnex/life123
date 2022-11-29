@@ -91,7 +91,7 @@ bio.get_history()
 
 # %%
 # Verify that the reaction has reached equilibrium
-rxn.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %% [markdown] tags=[]
 # # Plots of changes of concentration with time

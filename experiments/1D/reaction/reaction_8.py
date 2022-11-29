@@ -141,10 +141,10 @@ bio.describe_state()
 
 # %%
 # Verify that each reaction has reached equilibrium
-rxn.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
-rxn.is_in_equilibrium(rxn_index=1, conc=bio.bin_snapshot(bin_address = 0))
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=1, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
 # Do a consistent check with the equilibrium concentrations:
