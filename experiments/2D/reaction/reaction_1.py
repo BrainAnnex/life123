@@ -18,7 +18,7 @@
 #
 # Diffusion not done
 #
-# LAST REVISED: Sep. 21, 2022
+# LAST REVISED: Nov. 28, 2022
 # %%
 # Extend the sys.path variable, to contain the project's root directory
 import set_path
@@ -28,8 +28,8 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.chemicals.chemicals import Chemicals as chem
-from modules.reactions.reactions import Reactions
+from modules.reactions.reaction_data import ReactionData as chem
+from modules.reactions.reaction_dynamics import ReactionDynamics
 from life_2D.bio_sim_2d import BioSim2D
 
 import plotly.express as px
@@ -48,12 +48,12 @@ GraphicLog.config(filename=log_file,
 # Initialize the system
 chem_data = chem(names=["A", "B"])     # NOTE: Diffusion not done
 
-rxn = Reactions(chem_data)
+
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
-bio = BioSim2D(n_bins=(3,4), chem_data=chem_data, reactions=rxn)
+bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
 
 bio.set_bin_conc_all_species(bin_x=0, bin_y=0, conc_list=[10.,50.])
 bio.set_bin_conc_all_species(bin_x=0, bin_y=1, conc_list=[20.,35.])
@@ -62,11 +62,11 @@ bio.set_bin_conc_all_species(bin_x=2, bin_y=3, conc_list=[5.,100.])
 bio.describe_state()
 
 # %%
-rxn.describe_reactions()
+chem_data.describe_reactions()
 
 # %%
 # Send the plot to the HTML log file
-graph_data = rxn.prepare_graph_network()
+graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown] tags=[]
@@ -111,12 +111,12 @@ bio.describe_state()
 # Verify the equilibrium in each of the active bins
 
 # %%
-bio.all_reactions.is_in_equilibrium(rxn_index=0, conc={"A": 23.99998665, "B": 36.00001335})
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc={"A": 23.99998665, "B": 36.00001335})
 
 # %%
-bio.all_reactions.is_in_equilibrium(rxn_index=0, conc={"A": 21.99999809, "B": 33.00000191})
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc={"A": 21.99999809, "B": 33.00000191})
 
 # %%
-bio.all_reactions.is_in_equilibrium(rxn_index=0, conc={"A": 41.99996471, "B": 63.00003529}, explain=False)
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc={"A": 41.99996471, "B": 63.00003529}, explain=False)
 
 # %%

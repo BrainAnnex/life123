@@ -19,7 +19,7 @@
 # In this "PART 1", we'll be looking at a tiny system with just 10 bins, to easily inspect the numbers directly.
 # We'll use concentrations initialized to an upward-shifted sine wave with 1 cycle over the length system
 #
-# LAST REVISED: Oct. 5, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -31,7 +31,7 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 from experiments.get_notebook_info import get_notebook_basename
 
 from life_1D.bio_sim_1d import BioSim1D
-from modules.chemicals.chemicals import Chemicals as chem
+from modules.reactions.reaction_data import ReactionData as chem
 from modules.movies.movies import MovieArray
 from modules.numerical.numerical import Numerical as num
 

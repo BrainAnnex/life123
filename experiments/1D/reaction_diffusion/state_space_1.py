@@ -20,7 +20,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Sep. 13, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -31,8 +31,8 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.chemicals.chemicals import Chemicals as chem
-from modules.reactions.reactions import Reactions
+from modules.reactions.reaction_data import ReactionData as chem
+from modules.reactions.reaction_dynamics import ReactionDynamics
 from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
@@ -53,12 +53,12 @@ GraphicLog.config(filename=log_file,
 # Initialize the system
 chem_data = chem(names=["A", "B"])     # NOTE: Diffusion not applicable (just 1 bin)
 
-rxn = Reactions(chem_data)
+
 
 # Reaction A <-> 3B , with 1st-order kinetics in both directions
-rxn.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
+chem_data.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
 
-bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
+bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
 bio.set_uniform_concentration(species_index=0, conc=10.)
 bio.set_uniform_concentration(species_index=1, conc=50.)
@@ -66,7 +66,7 @@ bio.set_uniform_concentration(species_index=1, conc=50.)
 bio.describe_state()
 
 # %%
-rxn.describe_reactions()
+chem_data.describe_reactions()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
@@ -75,7 +75,7 @@ bio.get_history()
 
 # %%
 # Send the plot to the HTML log file
-graph_data = rxn.prepare_graph_network()
+graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown] tags=[]
@@ -91,7 +91,7 @@ bio.get_history()
 
 # %%
 # Verify that the reaction has reached equilibrium
-rxn.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %% [markdown] tags=[]
 # # Plots of changes of concentration with time

@@ -19,7 +19,7 @@
 # The system starts out with a uniform concentration.  
 # Then identical concentrations are repeatedly *injected to the left* and *drained from the right*
 #
-# LAST REVISED: Oct. 12, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -35,7 +35,7 @@ from life_1D.bio_sim_1d import BioSim1D
 import plotly.express as px
 import plotly.graph_objects as go
 
-from modules.chemicals.chemicals import Chemicals as chem
+from modules.reactions.reaction_data import ReactionData as chem
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 

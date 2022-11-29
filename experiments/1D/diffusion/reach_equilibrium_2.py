@@ -19,7 +19,7 @@
 #
 # EXTRA OUTPUT (incl. graphics): overwritten into the .htm file with the same base name. Visualized with heatmaps and line curves.
 #
-# LAST REVISED: Aug. 28, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -34,7 +34,7 @@ from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
 
-from modules.chemicals.chemicals import Chemicals as chem
+from modules.reactions.reaction_data import ReactionData as chem
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 

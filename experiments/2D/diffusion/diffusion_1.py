@@ -20,7 +20,7 @@
 #
 # (Note: this is the 2D counterpart of the 1D experiment by the same name)
 #
-# LAST REVISED: Oct. 17, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -36,7 +36,7 @@ from life_2D.bio_sim_2d import BioSim2D
 import plotly.express as px
 import plotly.graph_objects as go
 
-from modules.chemicals.chemicals import Chemicals as chem
+from modules.reactions.reaction_data import ReactionData as chem
 
 # %%
 # Prepare the initial system, with a single non-zero bin, near the left edge of the system, positioned halfway vertically

@@ -1,8 +1,7 @@
 import pytest
 import numpy as np
 from life_2D.bio_sim_2d import BioSim2D
-from modules.chemicals.chemicals import Chemicals as chem
-from modules.reactions.reactions import Reactions
+from modules.reactions.reaction_data import ReactionData as chem
 
 
 
@@ -128,12 +127,10 @@ def test_set_species_conc():
 def test_react():
     chem_data = chem(names=["A", "B"])
 
-    rxn = Reactions(chem_data)
-
     # Reaction A <-> B , with 1st-order kinetics in both directions
-    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
-    bio = BioSim2D(n_bins=(3,4), chem_data=chem_data, reactions=rxn)
+    bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
     bio.set_bin_conc_all_species(bin_x=0, bin_y=0, conc_list=[10.,50.])
     bio.set_bin_conc_all_species(bin_x=0, bin_y=1, conc_list=[20.,35.])
     bio.set_bin_conc_all_species(bin_x=2, bin_y=3, conc_list=[5.,100.])
@@ -158,12 +155,10 @@ def test_react():
 def test_reaction_step():
     chem_data = chem(names=["A", "B"])
 
-    rxn = Reactions(chem_data)
-
     # Reaction A <-> B , with 1st-order kinetics in both directions
-    rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
-    bio = BioSim2D(n_bins=(3,4), chem_data=chem_data, reactions=rxn)
+    bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
     bio.set_bin_conc_all_species(bin_x=0, bin_y=0, conc_list=[10.,50.])
     bio.set_bin_conc_all_species(bin_x=0, bin_y=1, conc_list=[20.,35.])
     bio.set_bin_conc_all_species(bin_x=2, bin_y=3, conc_list=[5.,100.])
@@ -181,5 +176,5 @@ def test_reaction_step():
     #bio.describe_state()
 
     #conc_dict = {0: 5., 1: 100.}
-    #result = rxn.compute_all_rate_deltas(conc_dict=conc_dict, delta_time=0.1)
+    #result = chem_data.compute_all_rate_deltas(conc_dict=conc_dict, delta_time=0.1)
     #print(result)

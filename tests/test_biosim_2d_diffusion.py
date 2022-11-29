@@ -2,10 +2,9 @@
 # for general tests of 2D system, see test_biosim_2d.py
 
 
-import pytest
 import numpy as np
 from life_2D.bio_sim_2d import BioSim2D
-from modules.chemicals.chemicals import Chemicals as chem
+from modules.reactions.reaction_data import ReactionData as chem
 from modules.numerical.numerical import Numerical as num
 
 
@@ -43,7 +42,7 @@ def evaluate_diffusion(bio, initial_concs, diff, delta_t, delta_s):
 
 
 
-#########   TESTS OF DIFFUSION : all species, mutliple steps    #########
+#########   TESTS OF DIFFUSION : all species, multiple steps    #########
 
 def test_diffuse_1():
     delta_t = 0.01

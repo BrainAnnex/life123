@@ -3,11 +3,14 @@ import math
 import numpy as np
 
 
+# TODO: **************  in the process of being obsoleted   **************
+
 class Reactions:
     """
     Data about all applicable reactions,
     including stoichiometry, reaction rates and reaction orders.
-    TODO (in-progress): add general methods to carry out reactions (currently in BioSim1D)
+
+    Note: for now, the temperature is assumed constant everywhere, and unvarying (or very slowly varying)
 
     DATA STRUCTURE:
         List of reactions.
@@ -15,9 +18,15 @@ class Reactions:
             "reactants"
             "products"
             "Rf"    (forward reaction rate)
-            "Rb"    (back reaction rate)
+            "Rb"    (back reaction rate)        TODO: maybe rename "Rr" (for reverse), or use kF / kR for Forward/Reverse rate constants
+            "Delta_H" (change in Enthalpy)          TODO: being implemented
+            "Delta_S" (change in Entropy)           TODO: being implemented
+            "Delta_G" (change in Gibbs Free Energy) TODO: being implemented
+                        Note - at constant temperature T :  Delta_G = Delta_H - T * Delta_S
+            "equil_const" (the reaction equilibrium constant, from thermodynamic considerations)
+                        Note - equil_const = exp(-Delta_G / RT)
 
-        Both reactants and products are triplets consisting of (stoichiometry, species index, reaction order).
+        Each reactant and each product is a triplet of the form: (stoichiometry, species index, reaction order).
         The "reaction order" refers to the forward reaction for reactants, and the reverse reaction for products.
     """
 
@@ -27,10 +36,18 @@ class Reactions:
 
         :param chem_data:
         """
+        print("\n******************* WARNING: the class 'Reactions' is DEPRECATED \n"
+              "and will be removed in the next release. \n"
+              "Please use the new class 'ReactionData' instead\n\n")
+
         self.reaction_list = []     # List of dicts.  Each item represents a reaction, incl. its reverse
                                     # Reactions should be added by means of calls to add_reaction()
 
         self.chem_data = chem_data  # Object with info on the individual chemicals, incl. their names
+
+        self.temp = None            # Temperature in Kelvins.  For now, assumed constant everywhere, and unvarying (or very slowly varying)
+
+        self.R = 8.3144598          # In units of Joules * moles / Kelvin
 
         self.debug = False
 
@@ -116,7 +133,7 @@ class Reactions:
         rxn = self.get_reaction(i)
         return rxn["Rf"]
 
-    def get_back_rate(self, i: int) -> float:
+    def get_reverse_rate(self, i: int) -> float:
         rxn = self.get_reaction(i)
         return rxn["Rb"]
 
@@ -165,27 +182,74 @@ class Reactions:
 
 
 
-    def add_reaction(self, reactants: list, products: list, forward_rate: float, reverse_rate: float) -> None:
+    def add_reaction(self, reactants: Union[int, str, tuple, list], products: Union[int, str, tuple, list],
+                             forward_rate=None, reverse_rate=None,
+                             Delta_H=None, Delta_S=None) -> None:
         """
-        Add the parameters of a SINGLE reaction, including its reverse rate
+        Add the parameters of a SINGLE reaction, optionally including kinetic and thermodynamic data
 
-        NOTE: in the next 2 parameters, if the stoichiometry and/or reaction order aren't specified, they're assumed to be 1
+        NOTE: in the next 2 arguments, if the stoichiometry and/or reaction order aren't specified, they're assumed to be 1
         :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
                                     or simplified terms, as shown in _parse_reaction_term()
         :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction),
                                     or simplified terms, as shown in _parse_reaction_term()
-        :param forward_rate:
-        :param reverse_rate:
+        :param forward_rate:    [OPTIONAL] Forward reaction rate constant
+        :param reverse_rate:    [OPTIONAL] Reverse reaction rate constant
+        :param Delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
+        :param Delta_S          [OPTIONAL] Change in Entropy (from reactants to products)
         :return:                None
         """
-        assert type(reactants) == list, "add_reaction(): argument `reactants` must be a list"
         reactant_list = [self._parse_reaction_term(r, "reactant") for r in reactants]
-
-        assert type(products) == list, "add_reaction(): argument `products` must be a list"
         product_list = [self._parse_reaction_term(r, "product") for r in products]
 
 
-        rxn = {"reactants": reactant_list, "products": product_list, "Rf": forward_rate, "Rb": reverse_rate}
+        rxn = {"reactants": reactant_list, "products": product_list,
+               "Rf": None, "Rb": None,
+               "Delta_H": None, "Delta_S": None, "Delta_G": None,
+               "K": None
+               }
+
+
+        # Process kinetic data, if available
+        if forward_rate:
+            rxn["Rf"] = forward_rate
+
+        if reverse_rate:
+            rxn["Rb"] = reverse_rate
+            if forward_rate:
+                # If all the kinetic data is available...
+                equil_const = forward_rate / reverse_rate    # ...compute the equilibrium constant (from kinetic data)
+                rxn["K"] = equil_const
+                if self.temp:
+                    rxn["Delta_G"] = - self.R * self.temp * math.log(equil_const)   # the change in Gibbs Free Energy
+
+
+        # Process thermodynamic data, if available
+        if Delta_H is not None:
+            rxn["Delta_H"] = Delta_H
+
+        if Delta_S is not None:
+            rxn["Delta_S"] = Delta_S
+            if (self.temp is not None) and (Delta_H is not None):
+                # If all the thermodynamic data is available...
+                Delta_G = Delta_H - self.temp * Delta_S                  # ...compute the change in Gibbs Free Energy
+
+                if rxn["Delta_G"] is not None:      # If already set from kinetic data, make sure that the two match!
+                    assert np.allclose(Delta_G, rxn["Delta_G"]), \
+                        f"add_reaction(): Kinetic data (leading to Delta_G {rxn['Delta_G']}) " \
+                        f"is inconsistent with thermodynamic data (leading to Delta_G {Delta_G})"
+                else:
+                    # The kinetic data was incomplete; fill in the missing parts from the thermodynamic data
+                    rxn["Delta_G"] = Delta_G
+                    equil_const = math.exp(- Delta_G / (self.R * self.temp))    # The equilibrium constant
+                    rxn["K"] = equil_const
+                    # If only one of the Forward or Reverse rates was provided, compute the other one
+                    if (rxn["Rf"] is None) and (rxn["Rb"] is not None):
+                        rxn["Rf"] = equil_const * rxn["Rb"]
+                    if (rxn["Rb"] is None) and (rxn["Rf"] is not None):
+                        rxn["Rb"] = rxn["Rf"] / equil_const
+
+
         self.reaction_list.append(rxn)
 
 
@@ -406,7 +470,7 @@ class Reactions:
         reactants = self.get_reactants(rxn_index)
         products = self.get_products(rxn_index)
         fwd_rate_coeff = self.get_forward_rate(rxn_index)
-        back_rate_coeff = self.get_back_rate(rxn_index)
+        back_rate_coeff = self.get_reverse_rate(rxn_index)
 
         delta_fwd = delta_time * fwd_rate_coeff         # TODO: save, to avoid re-computing at each bin
         for r in reactants:
@@ -597,25 +661,28 @@ class Reactions:
         :return:    None
         """
         for i in range(self.number_of_reactions()):
-            print(f"{i}: {self.get_reactants(i)} <-> {self.get_products(i)}   ; Fwd: {self.get_forward_rate(i)} / Back: {self.get_back_rate(i)}")
+            print(f"{i}: {self.get_reactants(i)} <-> {self.get_products(i)}   ; Fwd: {self.get_forward_rate(i)} / Back: {self.get_reverse_rate(i)}")
 
 
 
     def _parse_reaction_term(self, term: Union[int, str, tuple, list], name="term") -> (int, int, int):
         """
-        Accept various ways to specify a reaction term, and return a standardized tuple form.
+        Accept various ways to specify a reaction term, and return a standardized tuple form of it.
+        In the tuples or lists, the 1st entry is the stoichiometry, the 2nd one is the chemical name or index,
+        and the option 3rd one is the reaction order
 
-        EXAMPLES (*assuming* that the species with index 5 is called "F"):
-            5               (1, 5, 1)
-            "F"             (1, 5, 1)
-            (3, 5)          (3, 5, 1)
-            (3, "F")        (3, 5, 1)
-            (3, 5, 2)       (3, 5, 2)
-            (3, "F", 2)     (3, 5, 2)
+        EXAMPLES (*assuming* that the chemical species with index 5 is called "F"):
+            5       gets turned into:   (1, 5, 1)
+            "F"                         (1, 5, 1)
+            (3, 5)                      (3, 5, 1)
+            (3, "F")                    (3, 5, 1)
+            (3, 5, 2)                   (3, 5, 2)
+            (3, "F", 2)                 (3, 5, 2)
             Same if lists were used in lieu of tuples
 
         :param term:    An integer or string or tuple or list
         :param name:    An optional nickname to refer to this term in error messages, if applicable
+                            (for example, "reactant" or "product")
         :return:        A standardized tuple form, of the form (stoichiometry, species, reaction_order),
                             where all terms are integers
         """
@@ -625,7 +692,7 @@ class Reactions:
         elif type(term) == str:
             return  (1, self.chem_data.get_index(term), 1)
         elif type(term) != tuple and type(term) != list:
-            raise Exception(f"_parse_reaction_term(): {name} must be either an integer string, or a pair or a triplet. Instead, it is {type(term)}")
+            raise Exception(f"_parse_reaction_term(): {name} must be either an integer, or a string, or a pair or a triplet. Instead, it is {type(term)}")
 
         # If we get thus far, term is either a tuple or a list
         if len(term) != 3 and len(term) != 2:

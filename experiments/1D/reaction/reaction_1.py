@@ -19,7 +19,7 @@
 #
 # Diffusion NOT taken into account
 #
-# LAST REVISED: Aug. 22, 2022
+# LAST REVISED: Nov. 28, 2022
 #
 # * [First Step](#sec_1)
 
@@ -32,8 +32,8 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.chemicals.chemicals import Chemicals as chem
-from modules.reactions.reactions import Reactions
+from modules.reactions.reaction_data import ReactionData as chem
+from modules.reactions.reaction_dynamics import ReactionDynamics
 from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
@@ -51,7 +51,7 @@ GraphicLog.config(filename=log_file,
 
 # %% tags=[]
 # Initialize the system
-chem_data = chem(names=["A", "B"])       # Diffusion NOT taken into account
+chem_data = chem(names=["A", "B"])              # Diffusion NOT taken into account
 bio = BioSim1D(n_bins=3, chem_data=chem_data)   # We'll specify the reactions later
 
 bio.set_uniform_concentration(species_name="A", conc=10.)
@@ -68,21 +68,18 @@ bio.get_history()
 
 # %%
 # Specify the reaction
-rxn = Reactions(chem_data)
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-rxn.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
-bio.set_reactions(rxn)
-
-print("Number of reactions: ", rxn.number_of_reactions())
+print("Number of reactions: ", chem_data.number_of_reactions())
 
 # %%
-rxn.describe_reactions()
+chem_data.describe_reactions()
 
 # %%
 # Send the plot to the HTML log file
-graph_data = rxn.prepare_graph_network()
+graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown] tags=[]
@@ -132,12 +129,12 @@ bio.bin_snapshot(bin_address = 0)
 # Verify that the reaction has reached equilibrium
 A_eq = bio.bin_concentration(0, 0)
 B_eq = bio.bin_concentration(0, 1)
-print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_back_rate(0)}")
+print(f"Ratio of forward/reverse rates: {chem_data.get_forward_rate(0) / chem_data.get_reverse_rate(0)}")
 print(f"Ratio of equilibrium concentrations: {B_eq / A_eq}")
 
 # %%
 # A handy way to do the above
-rxn.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
 # Save the state of the concentrations of all species at bin 0

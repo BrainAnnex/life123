@@ -20,7 +20,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Aug. 22, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -31,8 +31,8 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.chemicals.chemicals import Chemicals as chem
-from modules.reactions.reactions import Reactions
+from modules.reactions.reaction_data import ReactionData as chem
+from modules.reactions.reaction_dynamics import ReactionDynamics
 from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
@@ -53,13 +53,13 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["A", "B", "C", "D", "E"])     # NOTE: Diffusion not applicable (just 1 bin)
 
 # Specify the reactions
-rxn = Reactions(chem_data)
+
 
 # Reactions A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species
-rxn.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=5., reverse_rate=2.)
-rxn.add_reaction(reactants=["C", "D"], products=["E"], forward_rate=8., reverse_rate=4.)
+chem_data.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=5., reverse_rate=2.)
+chem_data.add_reaction(reactants=["C", "D"], products=["E"], forward_rate=8., reverse_rate=4.)
 
-bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
+bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
 bio.set_all_uniform_concentrations( [3., 5., 1., 0.4, 0.1] )
 
@@ -71,14 +71,14 @@ bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
-rxn.describe_reactions()
+chem_data.describe_reactions()
 
 # %%
 # Send a header and a plot to the HTML log file
 log.write("2 COUPLED reactions:  A + B <-> C  and  C + D <-> E",
           style=log.h2)
 # Send the plot to the HTML log file
-graph_data = rxn.prepare_graph_network()
+graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown] tags=[]
@@ -141,10 +141,10 @@ bio.describe_state()
 
 # %%
 # Verify that each reaction has reached equilibrium
-rxn.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
-rxn.is_in_equilibrium(rxn_index=1, conc=bio.bin_snapshot(bin_address = 0))
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=1, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
 # Do a consistent check with the equilibrium concentrations:
@@ -155,11 +155,11 @@ C_eq = bio.bin_concentration(0, 2)
 D_eq = bio.bin_concentration(0, 3)
 E_eq = bio.bin_concentration(0, 4)
 
-Rf0 = rxn.get_forward_rate(0)
-Rb0 = rxn.get_back_rate(0)
+Rf0 = chem_data.get_forward_rate(0)
+Rb0 = chem_data.get_reverse_rate(0)
 
-Rf1 = rxn.get_forward_rate(1)
-Rb1 = rxn.get_back_rate(1)
+Rf1 = chem_data.get_forward_rate(1)
+Rb1 = chem_data.get_reverse_rate(1)
 
 equil = -(Rf0 * A_eq * B_eq - Rf1 * C_eq * D_eq) + (Rb0 * C_eq - Rb1 * E_eq)
 

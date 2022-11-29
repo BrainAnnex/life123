@@ -27,7 +27,7 @@
 # A LOT of plots are sent to the log file from this experiment; the reason is to compare two
 # graphic elements, "vue_curves_3" and "vue_curves_4"
 #
-# LAST REVISED: Sep. 13, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -41,8 +41,8 @@ from experiments.get_notebook_info import get_notebook_basename
 from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
-from modules.chemicals.chemicals import Chemicals as chem
-from modules.reactions.reactions import Reactions
+from modules.reactions.reaction_data import ReactionData as chem
+from modules.reactions.reaction_dynamics import ReactionDynamics
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
@@ -59,23 +59,23 @@ GraphicLog.config(filename=log_file,
 # Initialize the system
 chem_data = chem(names=["A", "B", "C"], diffusion_rates=[50., 50., 1.])
 
-rxn = Reactions(chem_data)
+
 
 # Reaction A + B <-> C , with 1st-order kinetics for each species; note that it's mostly in the forward direction
-rxn.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=20., reverse_rate=2.)
-bio = BioSim1D(n_bins=7, chem_data=chem_data, reactions=rxn)
+chem_data.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=20., reverse_rate=2.)
+bio = BioSim1D(n_bins=7, chem_data=chem_data)
 
 # %%
 bio.show_system_snapshot()
 
 # %%
-rxn.describe_reactions()
+chem_data.describe_reactions()
 
 # %%
 # Send a header and a plot to the HTML log file
 log.write("Reaction:  A + B <-> C",
           style=log.h2)
-graph_data = rxn.prepare_graph_network()
+graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %%
@@ -433,7 +433,7 @@ A_eq = bio.bin_concentration(0, 0)
 B_eq = bio.bin_concentration(0, 1)
 C_eq = bio.bin_concentration(0, 2)
 print(f"\nRatio of equilibrium concentrations ((C_eq) / (A_eq * B_eq)) : {(C_eq) / (A_eq * B_eq)}")
-print(f"Ratio of forward/reverse rates: {rxn.get_forward_rate(0) / rxn.get_back_rate(0)}")
+print(f"Ratio of forward/reverse rates: {chem_data.get_forward_rate(0) / chem_data.get_reverse_rate(0)}")
 # Both are essentially equal, as expected
 
 # %% [markdown] tags=[]

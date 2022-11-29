@@ -20,7 +20,7 @@
 #
 # Single-bin reaction
 #
-# LAST REVISED: Aug. 28, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -31,8 +31,8 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.chemicals.chemicals import Chemicals as chem
-from modules.reactions.reactions import Reactions
+from modules.reactions.reaction_data import ReactionData as chem
+from modules.reactions.reaction_dynamics import ReactionDynamics
 from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
@@ -52,20 +52,18 @@ GraphicLog.config(filename=log_file,
 # Initialize the system
 chem_data = chem(names=["A", "B", "Y"])     # NOTE: Diffusion not applicable (just 1 bin)
 
-rxn = Reactions(chem_data)
-
 # Reaction A + X <-> 2B , with 1st-order kinetics for all species
-rxn.add_reaction(reactants=[("A") , (2, "B")], products=[("Y")],
-                 forward_rate=8., reverse_rate=2.)
+chem_data.add_reaction(reactants=[("A") , (2, "B")], products=[("Y")],
+                       forward_rate=8., reverse_rate=2.)
 
-rxn.describe_reactions()
+chem_data.describe_reactions()
 
 # Send the plot of the reaction network to the HTML log file
-graph_data = rxn.prepare_graph_network()
+graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %%
-bio = BioSim1D(n_bins=1, chem_data=chem_data, reactions=rxn)
+bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
 bio.set_uniform_concentration(species_name="A", conc=5.)     # Scarce
 bio.set_uniform_concentration(species_name="B", conc=100.)   # Plentiful
@@ -100,7 +98,7 @@ bio.get_history()
 
 # %%
 # Verify that the reaction has reached equilibrium
-rxn.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %% [markdown] tags=[]
 # # Plots of changes of concentration with time
@@ -143,7 +141,7 @@ A_eq = bio.bin_concentration(0, 0)
 X_eq = bio.bin_concentration(0, 1)
 B_eq = bio.bin_concentration(0, 2)
 print("Ratio of equilibrium concentrations (B_eq / (A_eq * X_eq)): ", (B_eq / (A_eq * X_eq)))
-print("Ratio of forward/reverse rates: ", rxn.get_forward_rate(0) / rxn.get_back_rate(0))
+print("Ratio of forward/reverse rates: ", chem_data.get_forward_rate(0) / chem_data.get_reverse_rate(0))
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "Y"], 
@@ -181,7 +179,7 @@ A_eq = bio.bin_concentration(0, 0)
 X_eq = bio.bin_concentration(0, 1)
 B_eq = bio.bin_concentration(0, 2)
 print("Ratio of equilibrium concentrations (B_eq / (A_eq * X_eq)): ", (B_eq / (A_eq * X_eq)))
-print("Ratio of forward/reverse rates: ", rxn.get_forward_rate(0) / rxn.get_back_rate(0))
+print("Ratio of forward/reverse rates: ", chem_data.get_forward_rate(0) / chem_data.get_reverse_rate(0))
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "Y"], 

@@ -31,7 +31,7 @@
 #
 # That value of 0.33333 is saved in the Class variable "time_step_threshold"
 #
-# LAST REVISED: Sep. 18, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 import set_path
@@ -39,7 +39,7 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
                                          # to reach the project's home from the folder containing this notebook
 
 # %%
-from modules.chemicals.chemicals import Chemicals as chem
+from modules.reactions.reaction_data import ReactionData as chem
 from life_1D.bio_sim_1d import BioSim1D
 
 # %%

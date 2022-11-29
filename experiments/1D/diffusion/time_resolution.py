@@ -20,7 +20,7 @@
 #
 # NO log file.
 #
-# LAST REVISED: Aug. 28, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 import set_path
@@ -28,7 +28,7 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up,
                                          # to reach the project's home from the folder containing this notebook
 
 # %%
-from modules.chemicals.chemicals import Chemicals as chem
+from modules.reactions.reaction_data import ReactionData as chem
 from life_1D.bio_sim_1d import BioSim1D
 
 
@@ -45,30 +45,32 @@ bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
 set_initial_condition()
 
-bio.describe_state(show_diffusion_rates=True)
+bio.describe_state()
 
 # %%
 t_final = 33.3
 
-bio.diffuse(total_duration=t_final, n_steps=10, verbose=True)
+bio.debug = True
+
+bio.diffuse(total_duration=t_final, n_steps=10)
 
 set_initial_condition()     # Reset the concentrations
-bio.diffuse(total_duration=t_final, n_steps=20, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=20)
 
 set_initial_condition()     # Reset the concentrations
-bio.diffuse(total_duration=t_final, n_steps=30, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=30)
 
 set_initial_condition()     # Reset the concentrations
-bio.diffuse(total_duration=t_final, n_steps=50, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=50)
 
 set_initial_condition()     # Reset the concentrations
-bio.diffuse(total_duration=t_final, n_steps=100, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=100)
 
 set_initial_condition()     # Reset the concentrations
-bio.diffuse(total_duration=t_final, n_steps=1000, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=1000)
 
 set_initial_condition()     # Reset the concentrations
-bio.diffuse(total_duration=t_final, n_steps=10000, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=10000)
 
 set_initial_condition()     # Reset the concentrations
-bio.diffuse(total_duration=t_final, n_steps=100000, verbose=True)
+bio.diffuse(total_duration=t_final, n_steps=100000)

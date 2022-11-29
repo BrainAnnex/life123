@@ -19,7 +19,7 @@
 # ### Afterward, the process is restarted and repeated with a frequency 5 times larger
 #
 #
-# LAST REVISED: Sep. 14, 2022
+# LAST REVISED: Nov. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -35,7 +35,7 @@ from life_1D.bio_sim_1d import BioSim1D
 import plotly.express as px
 import plotly.graph_objects as go
 
-from modules.chemicals.chemicals import Chemicals as chem
+from modules.reactions.reaction_data import ReactionData as chem
 
 # %%
 # Initialize the system.  We use a RELATIVELY LARGE NUMBER OF BINS, 
