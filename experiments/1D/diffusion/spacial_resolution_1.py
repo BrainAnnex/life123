@@ -29,7 +29,7 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 from experiments.get_notebook_info import get_notebook_basename
 
 from life_1D.bio_sim_1d import BioSim1D
-from modules.chemicals.chemicals import Chemicals as chem
+from modules.reactions.reaction_data import ReactionData as chem
 from modules.numerical.numerical import Numerical as num
 
 import plotly.express as px

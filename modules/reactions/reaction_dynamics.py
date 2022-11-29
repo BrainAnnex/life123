@@ -1,11 +1,10 @@
-from typing import Union, List
 import math
 import numpy as np
 
 
 class ReactionDynamics:
     """
-    Used to simulate the dynamics of reactions
+    Used to simulate the dynamics of reactions (in a single compartment)
 
     NOTE: derived from the former class "Reactions"
     """
