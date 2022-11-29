@@ -143,7 +143,7 @@ A_eq = bio.bin_concentration(0, 0)
 X_eq = bio.bin_concentration(0, 1)
 B_eq = bio.bin_concentration(0, 2)
 print("Ratio of equilibrium concentrations (B_eq / (A_eq * X_eq)): ", (B_eq / (A_eq * X_eq)))
-print("Ratio of forward/reverse rates: ", rxn.get_forward_rate(0) / rxn.get_reverse_rate(0))
+print("Ratio of forward/reverse rates: ", chem_data.get_forward_rate(0) / chem_data.get_reverse_rate(0))
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "X", "B"], 
@@ -181,7 +181,7 @@ A_eq = bio.bin_concentration(0, 0)
 X_eq = bio.bin_concentration(0, 1)
 B_eq = bio.bin_concentration(0, 2)
 print("Ratio of equilibrium concentrations (B_eq / (A_eq * X_eq)): ", (B_eq / (A_eq * X_eq)))
-print("Ratio of forward/reverse rates: ", rxn.get_forward_rate(0) / rxn.get_reverse_rate(0))
+print("Ratio of forward/reverse rates: ", chem_data.get_forward_rate(0) / chem_data.get_reverse_rate(0))
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "X", "B"], 
