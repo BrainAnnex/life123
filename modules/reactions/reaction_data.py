@@ -5,8 +5,7 @@ import numpy as np
 
 class ReactionData:
     """
-    TODO: Being phased in
-          NOTE - This is the merger of the 2 former classes Reaction and Chemicals
+    NOTE - This is the merger of the 2 deprecated classes "Reactions" and "Chemicals"
 
     Data about all applicable chemicals and (if applicable) reactions,
     including:
