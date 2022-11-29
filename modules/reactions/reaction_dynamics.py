@@ -216,7 +216,7 @@ class ReactionDynamics:
         reactants = self.reaction_data.get_reactants(rxn_index)
         products = self.reaction_data.get_products(rxn_index)
         fwd_rate_coeff = self.reaction_data.get_forward_rate(rxn_index)
-        back_rate_coeff = self.reaction_data.get_back_rate(rxn_index)
+        back_rate_coeff = self.reaction_data.get_reverse_rate(rxn_index)
 
         delta_fwd = delta_time * fwd_rate_coeff         # TODO: save, to avoid re-computing at each bin.
                                                         #       Better yet, factor our the entire x delta_time

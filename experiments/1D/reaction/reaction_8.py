@@ -156,10 +156,10 @@ D_eq = bio.bin_concentration(0, 3)
 E_eq = bio.bin_concentration(0, 4)
 
 Rf0 = rxn.get_forward_rate(0)
-Rb0 = rxn.get_back_rate(0)
+Rb0 = rxn.get_reverse_rate(0)
 
 Rf1 = rxn.get_forward_rate(1)
-Rb1 = rxn.get_back_rate(1)
+Rb1 = rxn.get_reverse_rate(1)
 
 equil = -(Rf0 * A_eq * B_eq - Rf1 * C_eq * D_eq) + (Rb0 * C_eq - Rb1 * E_eq)
 

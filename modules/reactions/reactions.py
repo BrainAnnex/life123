@@ -133,7 +133,7 @@ class Reactions:
         rxn = self.get_reaction(i)
         return rxn["Rf"]
 
-    def get_back_rate(self, i: int) -> float:
+    def get_reverse_rate(self, i: int) -> float:
         rxn = self.get_reaction(i)
         return rxn["Rb"]
 
@@ -470,7 +470,7 @@ class Reactions:
         reactants = self.get_reactants(rxn_index)
         products = self.get_products(rxn_index)
         fwd_rate_coeff = self.get_forward_rate(rxn_index)
-        back_rate_coeff = self.get_back_rate(rxn_index)
+        back_rate_coeff = self.get_reverse_rate(rxn_index)
 
         delta_fwd = delta_time * fwd_rate_coeff         # TODO: save, to avoid re-computing at each bin
         for r in reactants:
@@ -661,7 +661,7 @@ class Reactions:
         :return:    None
         """
         for i in range(self.number_of_reactions()):
-            print(f"{i}: {self.get_reactants(i)} <-> {self.get_products(i)}   ; Fwd: {self.get_forward_rate(i)} / Back: {self.get_back_rate(i)}")
+            print(f"{i}: {self.get_reactants(i)} <-> {self.get_products(i)}   ; Fwd: {self.get_forward_rate(i)} / Back: {self.get_reverse_rate(i)}")
 
 
 

@@ -49,7 +49,7 @@ def test_add_reaction(rxn):
     assert rxn.get_products_formula(0) == "B"
 
     assert rxn.get_forward_rate(0) == 3.
-    assert rxn.get_back_rate(0) == 2.
+    assert rxn.get_reverse_rate(0) == 2.
 
     # Another reaction (reaction 1)
     rxn.add_reaction(reactants=[(2, "B")], products=[(5, "C")], forward_rate=9., reverse_rate=7.)

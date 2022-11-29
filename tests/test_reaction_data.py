@@ -164,7 +164,7 @@ def test_add_reaction():
     assert chem.get_products_formula(0) == "B"
 
     assert np.allclose(chem.get_forward_rate(0), 3.)
-    assert np.allclose(chem.get_back_rate(0),  2.)
+    assert np.allclose(chem.get_reverse_rate(0),  2.)
 
 
     # Another reaction (reaction 1)

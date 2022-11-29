@@ -276,21 +276,21 @@ class ReactionData:
     def get_forward_rate(self, i: int) -> float:
         """
 
-        :param i:   The index (0-based) to identify the reaction of interest
-        :return:
+        :param i:   The integer index (0-based) to identify the reaction of interest
+        :return:    The value of the forward rate constant for the above reaction
         """
         rxn = self.get_reaction(i)
         return rxn["kF"]
 
-    def get_back_rate(self, i: int) -> float:
+
+    def get_reverse_rate(self, i: int) -> float:
         """
 
-        :param i:   The index (0-based) to identify the reaction of interest
-        :return:
+        :param i:   The integer index (0-based) to identify the reaction of interest
+        :return:    he value of the reverse (back) rate constant for the above reaction
         """
         rxn = self.get_reaction(i)
         return rxn["kR"]
-
 
 
     def extract_reactants(self, rxn: dict) -> [(int, int, int)]:
@@ -735,7 +735,7 @@ class ReactionData:
         :return:    None
         """
         for i in range(self.number_of_reactions()):
-            print(f"{i}: {self.get_reactants(i)} <-> {self.get_products(i)}   ; Fwd: {self.get_forward_rate(i)} / Back: {self.get_back_rate(i)}")
+            print(f"{i}: {self.get_reactants(i)} <-> {self.get_products(i)}   ; Fwd: {self.get_forward_rate(i)} / Back: {self.get_reverse_rate(i)}")
 
 
 
