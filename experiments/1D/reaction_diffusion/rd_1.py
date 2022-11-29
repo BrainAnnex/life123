@@ -42,7 +42,7 @@ from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
 from modules.reactions.reaction_data import ReactionData as chem
-from modules.reactions.reactions import Reactions
+from modules.reactions.reaction_dynamics import ReactionDynamics
 from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 

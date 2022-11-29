@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from typing import Union, List, Tuple
 from modules.movies.movies import Movie
-#from modules.reactions.reactions import Reactions
+#from modules.reactions.reaction_dynamics import ReactionDynamics
 from modules.reactions.reaction_dynamics import ReactionDynamics
 
 
