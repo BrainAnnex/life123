@@ -30,7 +30,7 @@ class BioSim1D:
         """
         self.debug = False
 
-        self.n_bins = 0         # Number of spacial compartments (bins) used in the simulation
+        self.n_bins = 0         # Number of spatial compartments (bins) used in the simulation
 
         self.n_species = 1      # The number of (non-water) chemical species   TODO: phase out?
 
@@ -815,9 +815,9 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
     
-    def increase_spacial_resolution(self, factor:int) -> None:
+    def increase_spatial_resolution(self, factor:int) -> None:
         """
-        Increase the spacial resolution of the system by cloning and repeating
+        Increase the spatial resolution of the system by cloning and repeating
         each bin, by the specified number of times.
         Replace the System's internal state
         (note that the number of bins will increase by the requested factor)
@@ -838,9 +838,9 @@ class BioSim1D:
 
 
 
-    def double_spacial_resolution_linear(self) -> None:
+    def double_spatial_resolution_linear(self) -> None:
         """
-        Increase the spacial resolution of the system by inserting between bins
+        Increase the spatial resolution of the system by inserting between bins
         their average value (of concentrations, for every chemical species.)
         Replace the System's internal state
         (note that if the number of bins is initially N, it'll become 2N-1).
@@ -856,7 +856,7 @@ class BioSim1D:
         :return:    None
         """
         assert self.n_bins >= 2, \
-            "double_spacial_resolution_linear(): function can only be used if the system contains at least 2 bins"
+            "double_spatial_resolution_linear(): function can only be used if the system contains at least 2 bins"
 
         new_state = np.zeros((self.n_species, self.n_bins * 2 - 1), dtype=float)
         #print(new_state)
@@ -877,7 +877,7 @@ class BioSim1D:
 
 
     
-    def decrease_spacial_resolution(self, factor:int) -> None:
+    def decrease_spatial_resolution(self, factor:int) -> None:
         """
 
         TODO: eliminate the restriction that the number of bins must be a multiple of factor
@@ -911,7 +911,7 @@ class BioSim1D:
 
 
     
-    def smooth_spacial_resolution(self) -> None:
+    def smooth_spatial_resolution(self) -> None:
         """
         EXAMPLE: if the system is
                         [[10., 20., 30.]
@@ -1123,7 +1123,7 @@ class BioSim1D:
     def diffuse_step_single_species_5_1_stencils(self, time_step: float, species_index=0, delta_x=1) -> np.array:
         """
         Similar to diffuse_step_single_species(), but using a "5+1 stencil";
-        i.e. spacial derivatives are turned into finite elements using 5 adjacent bins instead of 3.
+        i.e. spatial derivatives are turned into finite elements using 5 adjacent bins instead of 3.
 
         For more info, see diffuse_step_single_species()
 
@@ -1165,7 +1165,7 @@ class BioSim1D:
 
         #print("effective_diff: ", effective_diff)
 
-        # The coefficients for the "Central Differences" for the spacial 2nd partial derivative,
+        # The coefficients for the "Central Differences" for the spatial 2nd partial derivative,
         #   to "accuracy 4" (using 5 term: 2 left neighbors and 2 right neighbors)
         C2 = -1/12
         C1 = 4/3

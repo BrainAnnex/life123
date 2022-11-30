@@ -17,7 +17,7 @@
 # #### From the same initial setup, diffusion is carried out over a fixed time span,
 # #### at different spatial resolutions - and then the respective results are compared
 #
-# LAST REVISED: Nov. 28, 2022
+# LAST REVISED: Nov. 29, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -112,7 +112,7 @@ bio.describe_state(concise=True)
 # ### IMPORTANT: we're **NOT** changing spacial resolution here; we're just creating a less ragged dataset, as *our initial system state*
 
 # %%
-bio.smooth_spacial_resolution()
+bio.smooth_spatial_resolution()
 bio.describe_state()
 
 # %%
@@ -182,7 +182,7 @@ bio.describe_state()
 
 # %%
 # Double the spacial resolution
-bio.increase_spacial_resolution(2)
+bio.increase_spatial_resolution(2)
 bio.describe_state()
 
 # %%
@@ -191,7 +191,7 @@ bio.diffuse(total_duration=7, time_step=0.0005, delta_x=0.5)
 
 # %%
 # Finally, halve the resolution, to return to the original number of bins
-bio.decrease_spacial_resolution(2)
+bio.decrease_spatial_resolution(2)
 
 # %%
 bio.describe_state(concise=True)
@@ -219,7 +219,7 @@ bio.describe_state()
 
 # %%
 # Quadruple the spacial resolution
-bio.increase_spacial_resolution(4)
+bio.increase_spatial_resolution(4)
 bio.describe_state()
 
 # %%
@@ -228,7 +228,7 @@ bio.diffuse(total_duration=7, time_step=0.0005, delta_x=0.25)
 
 # %%
 # Finally, reduce the resolution by a factor 4, to return to the original number of bins
-bio.decrease_spacial_resolution(4)
+bio.decrease_spatial_resolution(4)
 bio.describe_state(concise=True)
 
 # %%
@@ -253,7 +253,7 @@ num.compare_states(diffuse_dx_1_2 , diffuse_dx_1_4)
 bio.restore_system(original_state)
 
 # Increase by a factor 10 the spacial resolution
-bio.increase_spacial_resolution(10)
+bio.increase_spatial_resolution(10)
 bio.n_bins
 
 # %%
@@ -262,7 +262,7 @@ bio.diffuse(total_duration=7, time_step=0.0005, delta_x=0.1)
 
 # %%
 # Finally, reduce the resolution by a factor 10, to return to the original number of bins
-bio.decrease_spacial_resolution(10)
+bio.decrease_spatial_resolution(10)
 bio.describe_state(concise=True)
 
 # %%

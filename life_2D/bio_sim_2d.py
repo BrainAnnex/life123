@@ -20,8 +20,8 @@ class BioSim2D:
         """
         self.debug = False
 
-        self.n_bins_x = 0       # Number of x-direction spacial compartments (bins) used in the simulation
-        self.n_bins_y = 0       # Number of y-direction spacial compartments (bins) used in the simulation
+        self.n_bins_x = 0       # Number of x-direction spatial compartments (bins) used in the simulation
+        self.n_bins_y = 0       # Number of y-direction spatial compartments (bins) used in the simulation
 
         self.n_species = 1      # The number of (non-water) chemical species    TODO: phase out?
 

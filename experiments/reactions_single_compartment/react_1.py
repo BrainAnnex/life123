@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ### A simple A <-> B reaction between 2 species with initial uniform concentrations across 3 bins,
+# ### A simple A <-> B reaction between 2 species,
 # with 1st-order kinetics in both directions, taken to equilibrium
 #
 # Based on the experiment _"1D/reactions/reaction_1"_ ; this is simply the "single-compartment" version of it.
