@@ -5,9 +5,7 @@ import numpy as np
 
 class ReactionData:
     """
-    NOTE - This is the merger of the 2 deprecated classes "Reactions" and "Chemicals"
-
-    Data about all applicable chemicals and (if applicable) reactions,
+    Data about all the chemicals and (if applicable) reactions,
     including:
         - names
         - diffusion rates
@@ -27,8 +25,8 @@ class ReactionData:
         Each reaction is a Python dictionary with 4 keys:
             "reactants"
             "products"
-            "kF"    (forward reaction rate constant)    Formerly "Rf"  TODO: rename
-            "kR"    (reverse reaction rate constant)    Formerly "Rb"  TODO: rename
+            "kF"    (forward reaction rate constant)
+            "kR"    (reverse reaction rate constant)
             "K"     (equilibrium constant - from either kinetic or thermodynamic data; if both present, they must match up!)
             "Delta_H" (change in Enthalpy: Enthalpy of Products - Enthalpy of Reactants)     TODO: being implemented
             "Delta_S" (change in Entropy)           TODO: being implemented

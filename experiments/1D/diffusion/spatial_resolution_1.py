@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# # Exploring the change of delta_x (spacial resolution) in diffusion accuracy.
+# # Exploring the change of delta_x (spatial resolution) in diffusion accuracy.
 # #### From the same initial setup, diffusion is carried out over a fixed time span,
 # #### at different spatial resolutions - and then the respective results are compared
 #

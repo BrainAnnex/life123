@@ -5,8 +5,6 @@ import numpy as np
 class ReactionDynamics:
     """
     Used to simulate the dynamics of reactions (in a single compartment)
-
-    NOTE: derived from the former class "Reactions"
     """
 
     def __init__(self, reaction_data):

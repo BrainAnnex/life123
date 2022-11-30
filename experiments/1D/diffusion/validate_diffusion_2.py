@@ -21,7 +21,7 @@
 # This time, we'll start with slightly more complex initial concentrations built from 2 superposed sine waves.
 #
 # **We'll also explore the effects of:**  
-# -Spacial resolution ("delta x")  
+# -Spatial resolution ("delta x")  
 # -Temporal resolution ("delta t")    
 # -Alternate methods of estimating numerical derivatives
 #
@@ -115,7 +115,7 @@ f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
 f_at_t2.shape
 
 # %%
-# Computer the second spacial derivative (simple method)
+# Computer the second spatial derivative (simple method)
 gradient_x_at_t2 = np.gradient(f_at_t2, delta_x)
 second_gradient_x_at_t2 = np.gradient(gradient_x_at_t2, delta_x)
 second_gradient_x_at_t2.shape
@@ -147,11 +147,11 @@ num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 ed
 # The baseline distance was **0.023163289760024783**
 
 # %% [markdown]
-# ## Variation 1 : reduce spacial resolution
+# ## Variation 1 : reduce spatial resolution
 # Expectation: greater discrepancy
 
 # %%
-n_bins = 100          # Reducing the spacial resolution
+n_bins = 100          # Reducing the spatial resolution
 
 # %%
 # Initialize the system
@@ -189,7 +189,7 @@ f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
 f_at_t2.shape
 
 # %%
-# Computer the second spacial derivative (simple method, using central differences)
+# Computer the second spatial derivative (simple method, using central differences)
 gradient_x_at_t2 = np.gradient(f_at_t2, delta_x)
 second_gradient_x_at_t2 = np.gradient(gradient_x_at_t2, delta_x)
 second_gradient_x_at_t2.shape
@@ -205,11 +205,11 @@ num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 ed
 # #### The discrepancy value has indeed gone up from the baseline 0.023163289760024783
 
 # %% [markdown]
-# ## Variation 2 : increase spacial resolution
+# ## Variation 2 : increase spatial resolution
 # Expectation: smaller discrepancy
 
 # %%
-n_bins = 900          # Increasing the spacial resolution (from the baseline of 300)
+n_bins = 900          # Increasing the spatial resolution (from the baseline of 300)
 
 # %%
 # Initialize the system
@@ -247,7 +247,7 @@ f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
 f_at_t2.shape
 
 # %%
-# Computer the second spacial derivative (simple method, using central differences)
+# Computer the second spatial derivative (simple method, using central differences)
 gradient_x_at_t2 = np.gradient(f_at_t2, delta_x)
 second_gradient_x_at_t2 = np.gradient(gradient_x_at_t2, delta_x)
 second_gradient_x_at_t2.shape
@@ -306,7 +306,7 @@ f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
 f_at_t2.shape
 
 # %%
-# Computer the second spacial derivative (simple method, using central differences)
+# Computer the second spatial derivative (simple method, using central differences)
 gradient_x_at_t2 = np.gradient(f_at_t2, delta_x)
 second_gradient_x_at_t2 = np.gradient(gradient_x_at_t2, delta_x)
 second_gradient_x_at_t2.shape
@@ -364,7 +364,7 @@ f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
 f_at_t2.shape
 
 # %%
-# Computer the second spacial derivative (simple method, using central differences)
+# Computer the second spatial derivative (simple method, using central differences)
 gradient_x_at_t2 = np.gradient(f_at_t2, delta_x)
 second_gradient_x_at_t2 = np.gradient(gradient_x_at_t2, delta_x)
 second_gradient_x_at_t2.shape
@@ -380,7 +380,7 @@ num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 ed
 # #### The discrepancy value has indeed gone down from the baseline 0.023163289760024783
 
 # %% [markdown]
-# ## Variation 5 : Use a better (higher-order) method to numerically estimate the SPACIAL derivatives
+# ## Variation 5 : Use a better (higher-order) method to numerically estimate the SPATIAL derivatives
 # Expectation: presumably smaller discrepancy (unless dwarfed by errors from approximations in the simulation)
 
 # %%
@@ -423,7 +423,7 @@ f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
 f_at_t2.shape
 
 # %%
-# Computer the second spacial derivative (MORE SOPHISTICATED METHOD, using 5-point stencils)
+# Computer the second spatial derivative (MORE SOPHISTICATED METHOD, using 5-point stencils)
 gradient_x_at_t2 = num.gradient_order4_1d(arr=f_at_t2, dx=delta_x)
 second_gradient_x_at_t2 = num.gradient_order4_1d(arr=gradient_x_at_t2, dx=delta_x)
 second_gradient_x_at_t2.shape
@@ -436,13 +436,13 @@ rhs = diffusion_rate*second_gradient_x_at_t2
 num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
-# #### Not surprisingly, the discrepancy value (in part caused by poor numeric estimation of spacial derivatives) has indeed gone down from the baseline 0.023163289760024783
+# #### Not surprisingly, the discrepancy value (in part caused by poor numeric estimation of spatial derivatives) has indeed gone down from the baseline 0.023163289760024783
 
 # %% [markdown]
 # ## Variation 6 : Use a better (higher-order) method to numerically estimate the TIME derivatives
 # Expectation: presumably smaller discrepancy (unless dwarfed by errors from approximations in the simulation)
 #
-# (Note: we revert to the original method for the *spacial* derivatives)
+# (Note: we revert to the original method for the *spatial* derivatives)
 
 # %%
 # Initialize the system
@@ -480,7 +480,7 @@ f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
 f_at_t2.shape
 
 # %%
-# Computer the second spacial derivative (BACK TO SIMPLE METHOD, using central differences)
+# Computer the second spatial derivative (BACK TO SIMPLE METHOD, using central differences)
 gradient_x_at_t2 = np.gradient(f_at_t2, delta_x)
 second_gradient_x_at_t2 = np.gradient(gradient_x_at_t2, delta_x)
 second_gradient_x_at_t2.shape
