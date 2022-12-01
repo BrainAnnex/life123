@@ -18,7 +18,7 @@
 #
 # Based on the experiment _"1D/reactions/reaction_1"_ ; this is simply the "single-compartment" version of it.
 #
-# LAST REVISED: Nov. 30, 2022
+# LAST REVISED: Dec. 1, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -63,6 +63,9 @@ dynamics.single_compartment_react(time_step=0.1, n_steps=1,
 dynamics.single_compartment_react(time_step=0.1, n_steps=10,
                                   snapshots=None)
 
+# %%
+dynamics.get_conc(form="DICT")
+
 # %% [markdown]
 # NOTE: Consistent with the 3/2 ratio of forward/reverse rates (and the 1st order reactions),
 #  the systems settles in the following equilibrium:
@@ -73,6 +76,6 @@ dynamics.single_compartment_react(time_step=0.1, n_steps=10,
 #
 
 # %%
-dynamics.is_in_equilibrium(rxn_index=0, conc={"A": dynamics.system[0], "B": dynamics.system[1]})
+dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc(form="DICT"))
 
 # %%

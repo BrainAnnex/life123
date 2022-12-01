@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from typing import Union, List, Tuple
+from typing import Union
 
 
 class ReactionDynamics:
@@ -29,21 +29,42 @@ class ReactionDynamics:
 
     #############################################################################################
     #                                                                                           #
-    #                                   ~  TO SET DATA  ~                                       #
+    #                                ~  TO SET/READ DATA  ~                                     #
     #                                                                                           #
     #############################################################################################
 
-    def set_conc(self, conc: Union[list, tuple]):
+    def set_conc(self, conc: Union[list, tuple]) -> None:
         """
+        Set the concentrations of all the chemicals
 
-        :param conc:
-        :return:
+        :param conc:    A list or tuple (TODO: also allow a Numpy array)
+        :return:        None
         """
+        # TODO: more validations, incl. of being positive
+        
         assert len(conc) == self.reaction_data.number_of_chemicals(), \
             f"set_conc(): The number of concentrations ({len(conc)}) " \
             f"must match the number of declared chemicals ({self.reaction_data.number_of_chemicals()})"
 
         self.system = np.array(conc)
+
+
+
+    def get_conc(self, form="DICT"):
+        """
+        Retrieve the concentrations of all the chemicals
+
+        :param form:    Either "ARRAY"  (EXAMPLE: array([12.3, 4.56]))
+                            or "DICT"   (EXAMPLE: {"A": 12.3, "B": 4.56})
+        :return:
+        """
+        if form == "ARRAY":
+            return self.system
+        elif form == "DICT":
+            return {self.reaction_data.get_name(index): self.system[index]
+                                                                for index, conc in enumerate(self.system)}
+        else:
+            raise Exception(f"get_conc(): Unknown option for the `form` argument ({form}).  Allowed values are 'ARRAY' and 'DICT'")
 
 
 
