@@ -18,7 +18,7 @@
 #
 # Based on the experiment _"1D/reactions/reaction_1"_ ; this is simply the "single-compartment" version of it.
 #
-# LAST REVISED: Nov. 28, 2022
+# LAST REVISED: Nov. 30, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -52,17 +52,15 @@ dynamics = ReactionDynamics(reaction_data=chem_data)
 
 # %%
 # Initial concentrations of all the chemicals, in index order
-conc = np.array([10., 50.])
+dynamics.set_conc([10., 50.])
 
 # First step of reaction
-dynamics.single_compartment_react(conc_array = conc,
-                                  time_step=0.1, n_steps=1,
+dynamics.single_compartment_react(time_step=0.1, n_steps=1,
                                   snapshots=None)
 
 # %%
 # Numerous more steps
-dynamics.single_compartment_react(conc_array = conc,
-                                  time_step=0.1, n_steps=10,
+dynamics.single_compartment_react(time_step=0.1, n_steps=10,
                                   snapshots=None)
 
 # %% [markdown]
@@ -75,6 +73,6 @@ dynamics.single_compartment_react(conc_array = conc,
 #
 
 # %%
-dynamics.is_in_equilibrium(rxn_index=0, conc={"A": conc[0], "B": conc[1]})
+dynamics.is_in_equilibrium(rxn_index=0, conc={"A": dynamics.system[0], "B": dynamics.system[1]})
 
 # %%

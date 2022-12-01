@@ -1,27 +1,58 @@
 import math
 import numpy as np
+from typing import Union, List, Tuple
 
 
 class ReactionDynamics:
     """
-    Used to simulate the dynamics of reactions (in a single compartment)
+    Used to simulate the dynamics of reactions (in a single compartment.)
+    In the context of Life123, this may be thought of as a zero-dimensional system.
     """
 
     def __init__(self, reaction_data):
         """
         
-        :param reaction_data:   Object of type "ReactionData" (with data about chemicals and reactions)
+        :param reaction_data:   Object of type "ReactionData" (with data about the chemicals and their reactions)
         """
         self.reaction_data = reaction_data
+
+        self.system = None  # Concentration data in the single compartment we're simulating, for all the chemicals
+                            # A Numpy array of the initial concentrations of all the chemical species, in their index order
+                            # 1-dimensional NumPy array of floats, of size: n_species
+                            # Each entry is the concentration of the species with that index (in the "ReactionData" object)
+                            # Note that this is the counterpart - with 1 less dimension - of the array by the same name
+                            #       in the class BioSim1D
+
         self.debug = False
 
 
 
-    #########################################################################
-    #                                                                       #
-    #                       TO PERFORM THE REACTIONS                        #
-    #                                                                       #
-    #########################################################################
+    #############################################################################################
+    #                                                                                           #
+    #                                   ~  TO SET DATA  ~                                       #
+    #                                                                                           #
+    #############################################################################################
+
+    def set_conc(self, conc: Union[list, tuple]):
+        """
+
+        :param conc:
+        :return:
+        """
+        assert len(conc) == self.reaction_data.number_of_chemicals(), \
+            f"set_conc(): The number of concentrations ({len(conc)}) " \
+            f"must match the number of declared chemicals ({self.reaction_data.number_of_chemicals()})"
+
+        self.system = np.array(conc)
+
+
+
+
+    #############################################################################################
+    #                                                                                           #
+    #                                TO PERFORM THE REACTIONS                                   #
+    #                                                                                           #
+    #############################################################################################
 
     def specify_steps(self, total_duration=None, time_step=None, n_steps=None) -> (float, int):
         """
@@ -36,7 +67,7 @@ class ReactionDynamics:
         :return:                The pair (time_step, n_steps)
         """
         assert (not total_duration or not time_step or not n_steps), \
-            "ReactionDynamics.specify_steps(): cannot specify all 3 arguments: `total_duration`, `time_step`, `n_steps` (should specify any 2 of them)"
+            "ReactionDynamics.specify_steps(): cannot specify all 3 arguments: `total_duration`, `time_step`, `n_steps` (specify only any 2 of them)"
 
         assert (total_duration and time_step) or (total_duration and n_steps) or (time_step and n_steps), \
             "ReactionDynamics.specify_steps(): must provide exactly 2 arguments from:  `total_duration`, `time_step`, `n_steps`"
@@ -51,9 +82,8 @@ class ReactionDynamics:
 
 
 
-    def single_compartment_react(self, conc_array: np.array,
-                                 total_duration=None, time_step=None, n_steps=None,
-                                 snapshots=None) -> None:
+    def single_compartment_react(self, total_duration=None, time_step=None, n_steps=None,
+                                snapshots=None) -> None:
         """
         Using the given concentration data for all the chemical species in a single compartment,
         perform ALL the reactions -
@@ -65,7 +95,6 @@ class ReactionDynamics:
         NOTES:  - "compartments" may or may not correspond to the "bins" of the higher layers;
                   the calling code might have opted to merge some bins into a single "compartment"
 
-        :param conc_array:      A Numpy array of the initial concentrations of all the chemical species, in their index order
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
@@ -86,12 +115,13 @@ class ReactionDynamics:
             frequency = snapshots.get("frequency", 1)
 
         for i in range(n_steps):
-            delta_concentrations = self.single_compartment_reaction_step(conc_array=conc_array, delta_time=time_step)
-            conc_array += delta_concentrations
+            delta_concentrations = self.single_compartment_reaction_step(conc_array=self.system, delta_time=time_step)
+            self.system += delta_concentrations
             # Preserve some of the data, as requested
             if (frequency is not None) and ((i+1)%frequency == 0):
                 #self.save_snapshot(self.bin_snapshot(bin_address = snapshots["sample_bin"]))   # TODO: add
                 pass
+
 
 
 
