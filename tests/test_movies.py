@@ -3,7 +3,13 @@ import numpy as np
 from modules.movies.movies import Movie, MovieArray
 
 
-###  For class MovieArray  ###
+###  For class MovieGeneral  ###
+
+# TODO
+
+
+
+###  For class MovieTabular  ###
 
 # TODO
 
@@ -18,23 +24,23 @@ def test_store():
     assert m.parameters == [1]
     assert m.captions == ["first entry"]
     assert m.snapshot_shape == (3,)
-    assert np.allclose(m.arr, [[1., 2., 3.]])
+    assert np.allclose(m.movie, [[1., 2., 3.]])
 
     m.store(pars=2, data_snapshot=np.array([10., 11., 12.]), caption="second entry")
 
     assert m.parameters == [1, 2]
     assert m.captions == ["first entry", "second entry"]
     assert m.snapshot_shape == (3,)
-    assert np.allclose(m.arr, [[1., 2., 3.],
-                               [10., 11., 12.]])
+    assert np.allclose(m.movie, [[1., 2., 3.],
+                                 [10., 11., 12.]])
 
     m.store(pars=3, data_snapshot=np.array([-10., -11., -12.]))
     assert m.parameters == [1, 2, 3]
     assert m.captions == ["first entry", "second entry", ""]
     assert m.snapshot_shape == (3,)
-    assert np.allclose(m.arr, [[1., 2., 3.],
-                               [10., 11., 12.],
-                               [-10., -11., -12.]])
+    assert np.allclose(m.movie, [[1., 2., 3.],
+                                 [10., 11., 12.],
+                                 [-10., -11., -12.]])
 
     with pytest.raises(Exception):
         m.store(pars=666, data_snapshot=np.array([1., 2., 3., 4., 5.]),
@@ -50,8 +56,8 @@ def test_store():
     assert m_2D.parameters == [{"a": 4., "b": 12.3}]
     assert m_2D.captions == [""]
     assert m_2D.snapshot_shape == (2, 3)
-    assert np.allclose(m_2D.arr, [[1., 2., 3.],
-                                  [10., 11., 12.]])
+    assert np.allclose(m_2D.movie, [[1., 2., 3.],
+                                    [10., 11., 12.]])
 
     m_2D.store(pars={"a": 400., "b": 123},
                data_snapshot=np.array([[-1., -2., -3.],
@@ -69,7 +75,7 @@ def test_store():
                              [-10., -11., -12.]]
                         ])
 
-    assert np.allclose(m_2D.arr, expected)
+    assert np.allclose(m_2D.movie, expected)
 
     with pytest.raises(Exception):
         m_2D.store(pars=666, data_snapshot=np.array([10., 11., 12.]), caption="wrong shape!")

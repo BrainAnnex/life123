@@ -41,7 +41,7 @@ class ReactionDynamics:
         :return:        None
         """
         # TODO: more validations, incl. of being positive
-        
+
         assert len(conc) == self.reaction_data.number_of_chemicals(), \
             f"set_conc(): The number of concentrations ({len(conc)}) " \
             f"must match the number of declared chemicals ({self.reaction_data.number_of_chemicals()})"
@@ -54,9 +54,9 @@ class ReactionDynamics:
         """
         Retrieve the concentrations of all the chemicals
 
-        :param form:    Either "ARRAY"  (EXAMPLE: array([12.3, 4.56]))
-                            or "DICT"   (EXAMPLE: {"A": 12.3, "B": 4.56})
-        :return:
+        :param form:    Either "ARRAY"  (EXAMPLE of returned value: array([12.3, 4.56]))
+                            or "DICT"   (EXAMPLE: {"X": 12.3, "Y": 4.56}, where the keys are the names of the chemicals)
+        :return:        Either a Numpy array or a dictionary
         """
         if form == "ARRAY":
             return self.system
