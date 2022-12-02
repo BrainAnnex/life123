@@ -60,7 +60,9 @@ class MovieGeneral:
         IMPORTANT:  if passing a variable pointing to an existing mutable structure (such as a list, dict, object)
                     make sure to first *clone* it, to preserve it as it!
 
-        :param pars:            Typical, the System Time... but could be anything that parametrizes the snapshots
+        :param pars:            Typical, the System Time - but could be anything that parametrizes the snapshots
+                                    (e.g., a dictionary, or any desired data structure.)
+                                    It doesn't have to remain consistent, but it's probably good practice to keep it so
         :param data_snapshot:   Data in any format (such as a Numpy array, or an object)
         :param caption:         OPTIONAL string to describe the snapshot
         :return:                None
@@ -125,7 +127,9 @@ class MovieTabular:
         EXAMPLE :
                 store(8., {"A": 1., "B": 2.}, "State immediately before injection of 2nd reagent")
 
-        :param pars:            Typical, the System Time... but could be anything that parametrizes the snapshots
+        :param pars:            Typical, the System Time - but could be anything that parametrizes the snapshots
+                                    (e.g., a dictionary, or any desired data structure.)
+                                    It doesn't have to remain consistent, but it's probably good practice to keep it so
         :param data_snapshot:   A dict
         :param caption:         OPTIONAL string to describe the snapshot
         :return:                None
@@ -189,6 +193,19 @@ class MovieArray:
 
 
 
+    def __len__(self):
+        # Return the number of snapshots comprising the movie
+        return self.movie.shape[0]
+
+
+    def __str__(self):
+        return f"MovieArray object with {self.__len__()} snapshot(s) parametrized by `{self.parameter_name}`"
+
+
+    #def foo(self):
+        #return f"foo(): {self.movie.shape} Array Movie object with {self.movie.shape[0]}"
+
+
     def store(self, pars, data_snapshot: np.array, caption = "") -> None:
         """
         Save up the given data snapshot, and its associated parameters and optional caption
@@ -247,6 +264,14 @@ class MovieArray:
         :return:    A list with the captions
         """
         return self.captions
+
+
+    def get_shape(self) -> tuple:
+        """
+
+        :return:    A tuple with the shape of the snapshots
+        """
+        return self.snapshot_shape
 
 
 
