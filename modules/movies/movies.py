@@ -1,88 +1,9 @@
+# 3 CLASSES: MovieTabular, MovieArray, MovieGeneral
+
 import pandas as pd
 import numpy as np
 from typing import Union
 
-
-class MovieGeneral:
-    """
-    A "general movie" is a list of snapshots of any values that the user wants to preserve,
-    such as the state of the entire system, or of parts thereof,
-    either taken at different times,
-    or resulting from varying some parameter(s)
-
-    This class accept data in arbitrary formats
-
-    MAIN DATA STRUCTURE:
-        A list of triplets.
-        Each triplet is of the form (parameter value, caption, snapshot_data)
-            1) The "parameter" is typically time, but could be anything.
-               (a descriptive meaning of this parameter is stored in the object attribute "parameter_name")
-            2) "caption" is just a string with an optional label.
-            3) "snapshot_data" can be anything of interest, typically a clone of some data element.
-
-        If the "parameter" is time, it's assumed to be in increasing order
-
-        EXAMPLE:
-            [
-                (0., "Initial state", DATA_STRUCTURE_1),
-                (8., "State immediately after injection of 2nd reagent", DATA_STRUCTURE_2)
-            ]
-    """
-
-    def __init__(self, parameter_name="SYSTEM TIME"):
-        """
-        :param parameter_name:  A label explaining what the snapshot parameter is.
-                                Typically it's "SYSTEM TIME" (default), but could be anything
-        """
-        self.parameter_name = parameter_name
-
-        self.movie = []     # List of triples
-
-
-
-    def __len__(self):
-        return len(self.movie)
-
-
-
-    def __str__(self):
-        return f"General-type Movie object with {len(self.movie)} snapshots parametrized by `{self.parameter_name}`"
-
-
-
-    def store(self, pars, data_snapshot, caption = "") -> None:
-        """
-        Save up the given data snapshot
-
-        EXAMPLE:
-                store(8., NUMPY_ARRAY_2, "State immediately before injection of 2nd reagent")
-
-        IMPORTANT:  if passing a variable pointing to an existing mutable structure (such as a list, dict, object)
-                    make sure to first *clone* it, to preserve it as it!
-
-        :param pars:            Typical, the System Time - but could be anything that parametrizes the snapshots
-                                    (e.g., a dictionary, or any desired data structure.)
-                                    It doesn't have to remain consistent, but it's probably good practice to keep it so
-        :param data_snapshot:   Data in any format (such as a Numpy array, or an object)
-        :param caption:         OPTIONAL string to describe the snapshot
-        :return:                None
-        """
-        self.movie.append( (pars, caption, data_snapshot) )
-
-
-
-    def get(self) -> list:
-        """
-        Return the main data structure - the list of snapshots, with their attributes
-
-        :return:
-        """
-        return self.movie
-
-
-
-
-###############################################################################
 
 class MovieTabular:
     """
@@ -91,13 +12,14 @@ class MovieTabular:
     either taken at different times,
     or resulting from varying some parameter(s)
 
-    Each snapshot will constitute a "row" in a tabular format
+    Each snapshot - incl. its parameter values and optional captions -
+    will constitute a "row" in a tabular format
 
     MAIN DATA STRUCTURE for "tabular" mode:
         A Pandas dataframe
     """
 
-    def __init__(self, parameter_name="SYSTEM TIME", tabular=True):
+    def __init__(self, parameter_name="SYSTEM TIME"):
         """
         :param parameter_name:  A label explaining what the snapshot parameter is.
                                 Typically it's "SYSTEM TIME" (default), but could be anything
@@ -116,18 +38,18 @@ class MovieTabular:
 
 
     def __str__(self):
-        return f"Tabular Movie object with {len(self.movie)} snapshots parametrized by `{self.parameter_name}`"
+        return f"MovieTabular object with {len(self.movie)} snapshot(s) parametrized by `{self.parameter_name}`"
 
 
 
-    def store(self, pars, data_snapshot: dict, caption = "") -> None:
+    def store(self, par, data_snapshot: dict, caption ="") -> None:
         """
         Save up the given data snapshot
 
         EXAMPLE :
                 store(8., {"A": 1., "B": 2.}, "State immediately before injection of 2nd reagent")
 
-        :param pars:            Typical, the System Time - but could be anything that parametrizes the snapshots
+        :param par:             Typically, the System Time - but could be anything that parametrizes the snapshots
                                     (e.g., a dictionary, or any desired data structure.)
                                     It doesn't have to remain consistent, but it's probably good practice to keep it so
         :param data_snapshot:   A dict
@@ -136,15 +58,14 @@ class MovieTabular:
         """
         if self.movie is None:     # No Pandas dataframe was yet started
             assert type(data_snapshot) == dict, \
-                "Movie.store(): The argument `data_snapshot` must be a dictionary whenever a 'tabular' movie is created"
-            self.movie = pd.DataFrame(data_snapshot, index=[0])            # Form the initial Pandas dataframe
-            self.movie[self.parameter_name] = pars                         # Add a column
-            if caption:
-                self.movie["caption"] = caption                            # Add a column
-        else:
-            data_snapshot[self.parameter_name] = pars                   # Expand the snapshot dict
-            if caption:
-                data_snapshot["caption"] = caption                      # Expand the snapshot dict
+                "MovieTabular.store(): The argument `data_snapshot` must be a dictionary"
+
+            self.movie = pd.DataFrame(data_snapshot, index=[0])     # Form the initial Pandas dataframe (zero refers to the initial row)
+            self.movie.insert(0, self.parameter_name, par)          # Add a column at the beginning
+            self.movie["caption"] = caption                         # Add a column at the end
+        else:                       # The Pandas dataframe was already started
+            data_snapshot[self.parameter_name] = par                # Expand the snapshot dict
+            data_snapshot["caption"] = caption                      # Expand the snapshot dict
             self.movie = pd.concat([self.movie, pd.DataFrame([data_snapshot])], ignore_index=True)    # Append new row to dataframe
 
 
@@ -156,6 +77,7 @@ class MovieTabular:
         :return:
         """
         return self.movie
+
 
 
 
@@ -202,19 +124,16 @@ class MovieArray:
         return f"MovieArray object with {self.__len__()} snapshot(s) parametrized by `{self.parameter_name}`"
 
 
-    #def foo(self):
-        #return f"foo(): {self.movie.shape} Array Movie object with {self.movie.shape[0]}"
 
-
-    def store(self, pars, data_snapshot: np.array, caption = "") -> None:
+    def store(self, par, data_snapshot: np.array, caption = "") -> None:
         """
         Save up the given data snapshot, and its associated parameters and optional caption
 
         EXAMPLES:
-                store(8., np.array([1., 2., 3.]), caption = "State immediately after injection of 2nd reagent")
-                store({"a": 4., "b": 12.3}, np.array([1., 2., 3.]))
+                store(par = 8., data_snapshot = np.array([1., 2., 3.]), caption = "State after injection of 2nd reagent")
+                store(par = {"a": 4., "b": 12.3}, data_snapshot = np.array([1., 2., 3.]))
 
-        :param pars:            Typical, the System Time - but could be anything that parametrizes the snapshots
+        :param par:             Typically, the System Time - but could be anything that parametrizes the snapshots
                                     (e.g., a dictionary, or any desired data structure.)
                                     It doesn't have to remain consistent, but it's probably good practice to keep it so
         :param data_snapshot:   A Numpy array, of any shape - but must keep that same shape across snapshots
@@ -234,7 +153,7 @@ class MovieArray:
             new_arr = [data_snapshot]
             self.movie = np.concatenate((self.movie, new_arr), axis=0)    # "Stack up" along the first axis
 
-        self.parameters.append(pars)
+        self.parameters.append(par)
         self.captions.append(caption)
 
 
@@ -276,6 +195,120 @@ class MovieArray:
 
 
 
+###############################################################################################################
+
+class MovieGeneral:
+    """
+    A "general movie" is a list of snapshots of any values that the user wants to preserve,
+    such as the state of the entire system, or of parts thereof,
+    either taken at different times,
+    or resulting from varying some parameter(s)
+
+    This class accept data in arbitrary formats
+
+    MAIN DATA STRUCTURE:
+        A list of triplets.
+        Each triplet is of the form (parameter value, caption, snapshot_data)
+            1) The "parameter" is typically time, but could be anything.
+               (a descriptive meaning of this parameter is stored in the object attribute "parameter_name")
+            2) "snapshot_data" can be anything of interest, typically a clone of some data element.
+            3) "caption" is just a string with an optional label.
+
+        If the "parameter" is time, it's assumed to be in increasing order
+
+        EXAMPLE:
+            [
+                (0., DATA_STRUCTURE_1, "Initial state"),
+                (8., DATA_STRUCTURE_2, "State immediately after injection of 2nd reagent")
+            ]
+    """
+
+    def __init__(self, parameter_name="SYSTEM TIME"):
+        """
+        :param parameter_name:  A label explaining what the snapshot parameter is.
+                                Typically it's "SYSTEM TIME" (default), but could be anything
+        """
+        self.parameter_name = parameter_name
+
+        self.movie = []     # List of triples
+
+
+
+    def __len__(self):
+        return len(self.movie)
+
+
+
+    def __str__(self):
+        return f"MovieGeneral object with {len(self.movie)} snapshot(s) parametrized by `{self.parameter_name}`"
+
+
+
+    def store(self, par, data_snapshot, caption = "") -> None:
+        """
+        Save up the given data snapshot
+
+        EXAMPLE:
+                store(par = 8.,
+                      data_snapshot = {"c1": 10., "c2": 20.},
+                      caption = "State immediately before injection of 2nd reagent")
+
+                store(par = {"a": 4., "b": 12.3},
+                     data_snapshot = [999., 111.],
+                     caption = "Parameter is a dict; data is a list")
+
+        IMPORTANT:  if passing a variable pointing to an existing mutable structure (such as a list, dict, object)
+                    make sure to first *clone* it, to preserve it as it!
+
+        :param par:             Typically, the System Time - but could be anything that parametrizes the snapshots
+                                    (e.g., a dictionary, or any desired data structure.)
+                                    It doesn't have to remain consistent, but it's probably good practice to keep it so
+        :param data_snapshot:   Data in any format (such as a Numpy array, or an object)
+        :param caption:         OPTIONAL string to describe the snapshot
+        :return:                None
+        """
+        self.movie.append((par, data_snapshot, caption))
+
+
+
+    def get(self) -> list:
+        """
+        Return the main data structure - the list of snapshots, with their attributes
+
+        :return:
+        """
+        return self.movie
+
+
+
+    def get_data(self) -> list:
+        """
+        Return a list of all the snapshots
+
+        :return:    A list of all the snapshots
+        """
+        return [triplet[1] for triplet in self.movie]
+
+
+    def get_parameters(self) -> list:
+        """
+        Return all the parameter values
+
+        :return:    A list with all the parameter values
+        """
+        return [triplet[0] for triplet in self.movie]
+
+
+    def get_captions(self) -> [str]:
+        """
+        Return all the captions
+
+        :return:    A list with all the captions
+        """
+        return [triplet[2] for triplet in self.movie]
+
+
+
 
 #############    *** BEING PHASED OUT ***    ##############################
 
@@ -289,8 +322,6 @@ class Movie:
     2 modalities are allowed (to be picked at object instantiation):
         A - a "tabular" mode.  Straightforward and convenient; it lends itself to handy Pandas dataframes
         B - a "non-tabular" mode.  More complex: to preserve data in arbitrary formats
-
-    TODO: maybe split into 2 separate classes?  (IN-PROGRESS!)
 
 
     MAIN DATA STRUCTURE for "tabular" mode:
@@ -323,6 +354,7 @@ class Movie:
         :param tabular:         A flag indicating whether the "tabular" format will be used in this object.
                                     (Explained in the notes above)
         """
+        print("\n***********  DEPRECATED CLASS!   Use MovieTabular, MovieArray, or MovieGeneral instead  ***********\n")
         self.parameter_name = parameter_name
         self.tabular = tabular
 

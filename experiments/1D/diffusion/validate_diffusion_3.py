@@ -80,7 +80,7 @@ fig.show()
 history = MovieArray()   # All the system state will get collected in this object
 # Store the initial state
 arr = bio.lookup_species(species_index=0, copy=True)
-history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %% tags=[]
 # Do the 4 rounds of single-step diffusion; accumulate all data in the history object
@@ -88,7 +88,7 @@ for _ in range(4):
     bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
 
     arr = bio.lookup_species(species_index=0, copy=True)
-    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+    history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
 # Now, let's examine the data collected at the 5 time points
@@ -141,7 +141,7 @@ bio.inject_sine_conc(species_name="A", frequency=16, amplitude=5)
 history = MovieArray()   # All the system state will get collected in this object
 # Store the initial state
 arr = bio.lookup_species(species_index=0, copy=True)
-history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %% tags=[]
 # Do the 4 rounds of single-step diffusion; accumulate all data in the history object
@@ -149,7 +149,7 @@ for _ in range(4):
     bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
 
     arr = bio.lookup_species(species_index=0, copy=True)
-    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+    history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
 # Now, let's examine the data collected at the 5 time points

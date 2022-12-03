@@ -88,7 +88,7 @@ history = MovieArray()
 # %%
 # Store the initial state
 arr = bio.lookup_species(species_index=0, copy=True)
-history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
 # Take a look at what got stored so far (a matrix whose only row is the initial state)
@@ -108,7 +108,7 @@ for _ in range(4):
     bio.describe_state(concise=True)
 
     arr = bio.lookup_species(species_index=0, copy=True)
-    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+    history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
 # Now, let's examine the data collected at the 5 time points
