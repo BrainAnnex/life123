@@ -1,6 +1,7 @@
 import math
 import numpy as np
 from typing import Union
+from modules.movies.movies import MovieTabular
 
 
 class ReactionDynamics:
@@ -22,6 +23,11 @@ class ReactionDynamics:
                             # Each entry is the concentration of the species with that index (in the "ReactionData" object)
                             # Note that this is the counterpart - with 1 less dimension - of the array by the same name
                             #       in the class BioSim1D
+
+        self.system_time = 0.   # Global time of the system, from initialization on
+
+        self.history = MovieTabular()   # To store user-selected snapshots of (some of) the chemical concentrations,
+                                        #   whenever requested by the user.
 
         self.debug = False
 
@@ -52,7 +58,7 @@ class ReactionDynamics:
 
     def get_conc(self, form="DICT"):
         """
-        Retrieve the concentrations of all the chemicals
+        Retrieve the concentrations of ALL the chemicals
 
         :param form:    Either "ARRAY"  (EXAMPLE of returned value: array([12.3, 4.56]))
                             or "DICT"   (EXAMPLE: {"X": 12.3, "Y": 4.56}, where the keys are the names of the chemicals)
@@ -65,6 +71,78 @@ class ReactionDynamics:
                                                                 for index, conc in enumerate(self.system)}
         else:
             raise Exception(f"get_conc(): Unknown option for the `form` argument ({form}).  Allowed values are 'ARRAY' and 'DICT'")
+
+
+
+
+    #############################################################################################
+    #                                                                                           #
+    #                                   TO VISUALIZE SYSTEM                                     #
+    #                                                                                           #
+    #############################################################################################
+
+    def describe_state(self) -> None:
+        """
+        A simple printout of the state of the system
+        :return:        None
+        """
+        print(f"SYSTEM STATE at Time t = {self.system_time}:")
+
+        n_species = self.reaction_data.number_of_chemicals()
+        print(f"{n_species} species:")
+
+        # Show a line of line of data for each chemical species in turn
+        for species_index, name in enumerate(self.reaction_data.get_all_names()):
+            if name:    # If a name was provided, show it
+                name = f" ({name})"
+            else:
+                name = ""
+
+            print(f"  Species {species_index}{name}.Conc: {self.system[species_index]}")
+
+        """        
+        for species_index in range(n_species):
+            name = self.reaction_data.get_name(species_index)
+            if name:    # If a name was provided, show it
+                name = f" ({name})"
+            else:
+                name = ""
+
+
+            print(f"  Species {species_index}{name}.Conc: {self.system[species_index]}")
+        """
+
+
+
+
+    #############################################################################################
+    #                                                                                           #
+    #                                       HISTORY                                             #
+    #                                                                                           #
+    #############################################################################################
+
+    def add_snapshot(self, species=None, caption ="") -> None:
+        """
+        Preserve some or all the chemical concentrations into the history, linked to the
+        current System Time, with an optional caption.
+
+        EXAMPLE:  create_snapshot(species=['A', 'B'])
+                                  caption="Just prior to infusion")
+
+        :param species: (OPTIONAL) list of name of the chemical species whose concentrations we want to preserve for later use.
+                            If not specified, save all
+        :param caption: (OPTIONAL) caption to attach to this preserved data
+        :return:        None
+        """
+        if species is None:
+            data_snapshot = self.get_conc(form="DICT")
+        else:
+            data_snapshot = {}
+            for species_index, name in enumerate(species):
+                data_snapshot[name] = self.system[species_index]
+
+        self.history.store(par=self.system_time,
+                           data_snapshot = data_snapshot, caption=caption)
 
 
 
