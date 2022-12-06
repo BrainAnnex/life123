@@ -39,12 +39,13 @@ class ReactionDynamics:
     #                                                                                           #
     #############################################################################################
 
-    def set_conc(self, conc: Union[list, tuple]) -> None:
+    def set_conc(self, conc: Union[list, tuple], snapshot=False) -> None:
         """
         Set the concentrations of all the chemicals
 
-        :param conc:    A list or tuple (TODO: also allow a Numpy array)
-        :return:        None
+        :param conc:        A list or tuple (TODO: also allow a Numpy array)
+        :param snapshot:    (OPTIONAL)
+        :return:            None
         """
         # TODO: more validations, incl. of being positive
 
@@ -53,6 +54,9 @@ class ReactionDynamics:
             f"must match the number of declared chemicals ({self.reaction_data.number_of_chemicals()})"
 
         self.system = np.array(conc)
+
+        if snapshot:
+            self.add_snapshot(caption="Initial state")
 
 
 
@@ -100,18 +104,6 @@ class ReactionDynamics:
 
             print(f"  Species {species_index}{name}.Conc: {self.system[species_index]}")
 
-        """        
-        for species_index in range(n_species):
-            name = self.reaction_data.get_name(species_index)
-            if name:    # If a name was provided, show it
-                name = f" ({name})"
-            else:
-                name = ""
-
-
-            print(f"  Species {species_index}{name}.Conc: {self.system[species_index]}")
-        """
-
 
 
 
@@ -121,7 +113,7 @@ class ReactionDynamics:
     #                                                                                           #
     #############################################################################################
 
-    def add_snapshot(self, species=None, caption ="") -> None:
+    def add_snapshot(self, species=None, caption="") -> None:
         """
         Preserve some or all the chemical concentrations into the history, linked to the
         current System Time, with an optional caption.
@@ -198,9 +190,13 @@ class ReactionDynamics:
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
         :param snapshots:       OPTIONAL dict that may contain any the following keys:
-                                    "frequency", "sample_bin", "sample_species"
-                                    If provided, take a system snapshot after running a multiple of "frequency" run steps.
-                                    EXAMPLE: snapshots={"frequency": 2, "sample_bin": 0}
+                                        -"frequency" (default 1)
+                                        -"species" (default all)
+                                        -"initial_caption" (default blank)
+                                        -"final_caption" (default blank)
+                                    If provided, take a system snapshot after running a multiple
+                                    of "frequency" reaction steps (default 1, i.e. at every step.)
+                                    EXAMPLE: snapshots={"frequency": 2, "species": ["A", "H"]}
 
         :return:                None
         """
@@ -208,19 +204,26 @@ class ReactionDynamics:
                                                 time_step=time_step,
                                                 n_steps=n_steps)
 
-        if snapshots is None:
-            frequency = None
-        else:
-            frequency = snapshots.get("frequency", 1)
+        if snapshots:
+            frequency = snapshots.get("frequency", 1)   # Default is 1
+            species = snapshots.get("species")          # Default is None
+            first_snapshot = True
+
 
         for i in range(n_steps):
             delta_concentrations = self.single_compartment_reaction_step(conc_array=self.system, delta_time=time_step)
             self.system += delta_concentrations
+            self.system_time += time_step
             # Preserve some of the data, as requested
-            if (frequency is not None) and ((i+1)%frequency == 0):
-                #self.save_snapshot(self.bin_snapshot(bin_address = snapshots["sample_bin"]))   # TODO: add
-                pass
+            if snapshots and ((i+1)%frequency == 0):
+                if first_snapshot and "initial_caption" in snapshots:
+                    self.add_snapshot(species=species, caption=snapshots["initial_caption"])
+                    first_snapshot = False
+                else:
+                    self.add_snapshot(species=species)
 
+        if snapshots and "final_caption" in snapshots:
+            self.history.set_caption_last_snapshot(snapshots["final_caption"])
 
 
 

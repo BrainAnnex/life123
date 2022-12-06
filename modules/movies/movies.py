@@ -80,6 +80,19 @@ class MovieTabular:
 
 
 
+    def set_caption_last_snapshot(self, caption: str):
+        """
+        Set the caption field of the last (most recent) snapshot to the given value.
+        Any previous value gets over-written
+
+        :param caption:
+        :return:
+        """
+        index = len(self.movie) - 1
+        self.movie.loc[index, "caption"] = caption
+
+
+
 
 ###############################################################################################################
 

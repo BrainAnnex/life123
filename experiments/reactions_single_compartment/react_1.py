@@ -18,7 +18,7 @@
 #
 # Based on the experiment _"1D/reactions/reaction_1"_ ; this is simply the "single-compartment" version of it.
 #
-# LAST REVISED: Dec. 4, 2022
+# LAST REVISED: Dec. 5, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -52,13 +52,10 @@ dynamics = ReactionDynamics(reaction_data=chem_data)
 
 # %%
 # Initial concentrations of all the chemicals, in index order
-dynamics.set_conc([10., 50.])
+dynamics.set_conc([10., 50.], snapshot=True)
 
 # %%
 dynamics.describe_state()
-
-# %%
-dynamics.add_snapshot(caption="Initial state")
 
 # %%
 dynamics.history.get()
@@ -66,12 +63,19 @@ dynamics.history.get()
 # %%
 # First step of reaction
 dynamics.single_compartment_react(time_step=0.1, n_steps=1,
-                                  snapshots=None)
+                                  snapshots={"initial_caption": "first reaction step"})
+
+# %%
+dynamics.history.get()
 
 # %%
 # Numerous more steps
 dynamics.single_compartment_react(time_step=0.1, n_steps=10,
-                                  snapshots=None)
+                                  snapshots={"initial_caption": "2nd reaction step",
+                                             "final_caption": "last reaction step"})
+
+# %%
+dynamics.history.get()
 
 # %%
 dynamics.get_conc(form="DICT")

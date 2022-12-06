@@ -53,16 +53,26 @@ def test_MovieTabular():
 
     values.append({"SYSTEM TIME": 50, "A": 8, "B": 88, "C": 888, "D": 1, "caption": "notice the newly-appeared D"})
     expected = pd.DataFrame(values)
-    assert_frame_equal(df, expected, check_dtype=False)     # To allow for floating-point slight discrepancies
+    assert_frame_equal(df, expected, check_dtype=False)    # To allow for floating-point slight discrepancies
                                                            # (ints get converted to floats in columns with Nan's)
-"""
-   SYSTEM TIME    A    B      C                      caption    D
-0           10    1    2    3.0                  first entry  NaN
-1           20   10   20   30.0                 second entry  NaN
-2           30   -1   -2   -3.0                               NaN
-3           40  111  222    NaN     notice that C is missing  NaN
-4           50    8   88  888.0  notice the newly-appeared D  1.0
-"""
+    """
+       SYSTEM TIME    A    B      C                      caption    D
+    0           10    1    2    3.0                  first entry  NaN
+    1           20   10   20   30.0                 second entry  NaN
+    2           30   -1   -2   -3.0                               NaN
+    3           40  111  222    NaN     notice that C is missing  NaN
+    4           50    8   88  888.0  notice the newly-appeared D  1.0
+    """
+
+
+def test_set_caption_last_snapshot():
+    m = MovieTabular()
+    m.store(par=100, data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")
+    m.store(par=200, data_snapshot={"A": 10, "B": 20, "C": 30})
+    m.set_caption_last_snapshot("End of experiment")
+    #print(m.movie)
+    last_row = list(m.movie.loc[1])
+    assert last_row == [200, 10, 20, 30, 'End of experiment']
 
 
 
