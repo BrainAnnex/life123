@@ -22,7 +22,7 @@ class ReactionData:
         based on the order with which they were first added.
 
         List of reactions (Note: this will eventually be stored in a Neo4j graph database)
-        Each reaction is a Python dictionary with 4 keys:
+        Each reaction is a Python dictionary with the following keys:
             "reactants"
             "products"
             "kF"    (forward reaction rate constant)
@@ -64,7 +64,7 @@ class ReactionData:
         self.reaction_list = []     # List of dicts.  Each item represents a reaction, incl. its reverse
                                     # Reactions should be added by means of calls to add_reaction()
 
-        self.temp = None            # Temperature in Kelvins.
+        self.temp = 298.15          # Temperature in Kelvins.  (By default, 25 C)
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
 
         self.R = 8.314462           # Ideal gas constant, in units of Joules / (Kelvin * Mole)
@@ -474,6 +474,17 @@ class ReactionData:
 
 
 
+    def set_temp(self, temp, units="K"):
+        """
+
+        :param temp:    Temperature, in Kelvins, or None
+        :param units:   Not yet implemented
+        :return:
+        """
+        self.temp = temp
+
+
+
     def add_reaction(self, reactants: Union[int, str, tuple, list], products: Union[int, str, tuple, list],
                              forward_rate=None, reverse_rate=None,
                              Delta_H=None, Delta_S=None) -> None:
@@ -566,34 +577,47 @@ class ReactionData:
 
     def describe_reactions(self, concise=False, return_as_list=False) -> Union[None, List[str]]:
         """
-        Print out and return a listing with a user-friendly plain-text form of all the reactions
+        Print out, and optionally return a list of, a user-friendly plain-text form of all the reactions
         EXAMPLE:  ["(0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 , kR = 2.0)"]
 
         :param concise:         If True, less detail is shown
-        :param return_as_list:  If True, in addition to being printed, a list of reaction listings gets returned
+        :param return_as_list:  If True, in addition to being printed, a list of reaction descriptions gets returned
         :return:                Either None or a list of strings, based on the flag return_as_list
         """
-        print("Number of reactions: ", self.number_of_reactions())
+        print(f"Number of reactions: {self.number_of_reactions()} (at temp. {self.temp - 273.15:,.4g} C)")
 
-        out = []    # Output list being built (and printed out item-wise)
-        for i, rxn in enumerate(self.reaction_list):
+        out = []    # Output list being built (and printed out, item-wise)
+        for i, rxn in enumerate(self.reaction_list):    # Loop over all the registered reactions
             reactants = self.extract_reactants(rxn)
             products = self.extract_products(rxn)
 
-            left = self.standard_form_chem_eqn(reactants)       # Left side of the equation
+            left = self.standard_form_chem_eqn(reactants)       # Left side of the equation, as a user-friendly string
             right = self.standard_form_chem_eqn(products)       # Right side of the equation
 
-            rxn_description = f"{i}: {left} <-> {right}"        # Initial brief description of the reaction
-            if not concise:     # Add more detail
-                rxn_description += f"  (kF = {rxn['kF']} / kR = {rxn['kR']})"
+            rxn_description = f"{i}: {left} <-> {right}"        # Concise start point for a description of the reaction
+
+            if not concise:     # Append more detail
+                details = []
+                for k,v in rxn.items():
+                    if k not in ("reactants", "products") and (rxn[k] is not None):
+                        details.append(f"{k} = {rxn[k]:,.6g}")          # EXAMPLE: "kF = 3"
+
+                rxn_description += "  (" + ' / '.join(details) + ")"    # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
+
+                high_order = False      # Is there any term whose order is greater than 1 ?
                 for r in reactants:
                     if r[2] > 1:
                         rxn_description += f" | {r[2]}-th order in reactant {self.get_name(r[1])}"
+                        high_order = True
                 for p in products:
                     if p[2] > 1:
                         rxn_description += f" | {p[2]}-th order in product {self.get_name(p[1])}"
+                        high_order = True
 
-            print(rxn_description)
+                if not high_order:
+                    rxn_description += " | 1st order in all reactants & products"
+
+            print(rxn_description)          # Print each reaction on a separate line
             out.append(rxn_description)
 
         if return_as_list:
