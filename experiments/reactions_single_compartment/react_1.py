@@ -18,7 +18,7 @@
 #
 # Based on the experiment _"1D/reactions/reaction_1"_ ; this is simply the "single-compartment" version of it.
 #
-# LAST REVISED: Dec. 5, 2022
+# LAST REVISED: Dec. 6, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -34,6 +34,19 @@ from modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
 import plotly.express as px
+from modules.visualization.graphic_log import GraphicLog
+
+# %% tags=[]
+# Initialize the HTML logging (for the graphics)
+log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
+
+# Set up the use of some specified graphic (Vue) components
+GraphicLog.config(filename=log_file,
+                  components=["vue_cytoscape_1"],
+                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
+
+# %% [markdown]
+# # Initialize the System
 
 # %% tags=[]
 # Initialize the reaction
@@ -48,6 +61,14 @@ print("Number of reactions: ", chem_data.number_of_reactions())
 chem_data.describe_reactions()
 
 # %%
+# Send a plot of the network of reactions to the HTML log file
+graph_data = chem_data.prepare_graph_network()
+GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
+
+# %% [markdown]
+# # Start the simulation
+
+# %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
 
 # %%
@@ -59,6 +80,9 @@ dynamics.describe_state()
 
 # %%
 dynamics.history.get()
+
+# %% [markdown] tags=[]
+# ## Start the reaction
 
 # %%
 # First step of reaction
@@ -91,5 +115,15 @@ dynamics.get_conc(form="DICT")
 
 # %%
 dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc(form="DICT"))
+
+# %% [markdown] tags=[]
+# ## Plots of changes of concentration with time
+
+# %%
+fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B"], 
+              title="Changes in concentrations with time",
+              color_discrete_sequence = ['navy', 'darkorange'],
+              labels={"value":"concentration", "variable":"Chemical"})
+fig.show()
 
 # %%

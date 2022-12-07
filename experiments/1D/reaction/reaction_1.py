@@ -19,9 +19,7 @@
 #
 # Diffusion NOT taken into account
 #
-# LAST REVISED: Nov. 28, 2022
-#
-# * [First Step](#sec_1)
+# LAST REVISED: Dec. 6, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -41,7 +39,7 @@ from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
-# Initialize the HTML logging
+# Initialize the HTML logging (for the graphics)
 log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
 
 # Set up the use of some specified graphic (Vue) components
@@ -78,7 +76,7 @@ print("Number of reactions: ", chem_data.number_of_reactions())
 chem_data.describe_reactions()
 
 # %%
-# Send the plot to the HTML log file
+# Send a plot of the network of reactions to the HTML log file
 graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
@@ -142,11 +140,11 @@ bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% [markdown] tags=[]
-# # Plots of changes of concentration with time
+# ## Plots of changes of concentration with time
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="Changes in concentrations",
+              title="Changes in concentrations with time",
               color_discrete_sequence = ['navy', 'darkorange'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
@@ -154,7 +152,7 @@ fig.show()
 # %%
 # Same plot, but with smooth line
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="Changes in concentrations",
+              title="Changes in concentrations with time",
               color_discrete_sequence = ['navy', 'darkorange'],
               labels={"value":"concentration", "variable":"Chemical"},
               line_shape="spline")

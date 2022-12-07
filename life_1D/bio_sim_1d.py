@@ -1604,13 +1604,10 @@ class BioSim1D:
 
 
     
-    def get_history(self, first_n=None, last_n=None) -> pd.DataFrame:
+    def get_history(self) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
         using save_snapshot()
-
-        :param first_n: TODO: not yet implemented
-        :param last_n:  TODO: not yet implemented
 
         :return:        a Pandas dataframe
         """

@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import pandas as pd
 from typing import Union
 from modules.movies.movies import MovieTabular
 
@@ -135,6 +136,18 @@ class ReactionDynamics:
 
         self.history.store(par=self.system_time,
                            data_snapshot = data_snapshot, caption=caption)
+
+
+
+    def get_history(self) -> pd.DataFrame:
+        """
+        Retrieve and return a Pandas dataframe with the system history that had been saved
+
+        using save_snapshot()
+
+        :return:        a Pandas dataframe
+        """
+        return self.history.get()
 
 
 
