@@ -18,7 +18,7 @@
 #
 # Based on the experiment _"1D/reactions/reaction_1"_ ; this is simply the "single-compartment" version of it.
 #
-# LAST REVISED: Dec. 6, 2022
+# LAST REVISED: Dec. 7, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

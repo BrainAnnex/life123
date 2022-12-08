@@ -263,6 +263,18 @@ def test_describe_reactions():
 def test_standard_form_chem_eqn():
     pass
 
+def test_extract_rxn_properties():
+    chem = ReactionData(names=["A", "B"])
+    chem.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    rxn = chem.get_reaction(0)
+
+    result = chem.extract_rxn_properties(rxn)
+    #print(result)
+    assert np.allclose(result["kF"] , 3.)
+    assert np.allclose(result["kR"] , 2.)
+    assert np.allclose(result["K"] , 1.5)
+    assert np.allclose(result["Delta_G"] , -1005.1305052750387)
+
 
 
 
@@ -273,10 +285,10 @@ def test_create_graph_network_data():
     chem.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
     network_data = chem.create_graph_network_data()
     #print(network_data)
-    expected = [{'id': 2, 'label': 'Reaction', 'name': 'RXN', 'kF': 3.0, 'kR': 2.0},
-                {'id': 1, 'label': 'Product', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
+    expected = [{'id': 2, 'label': 'Reaction', 'name': 'RXN', 'kF': '3', 'kR': '2', 'Delta_G': '-1,005.13','K': '1.5'},
+                {'id': 1, 'label': 'Chemical', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
                 {'id': 3, 'name': 'produces', 'source': 2, 'target': 1},
-                {'id': 0, 'label': 'Reactant', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
+                {'id': 0, 'label': 'Chemical', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
                 {'id': 4, 'name': 'reacts', 'source': 0, 'target': 2}
                 ]
     assert network_data == expected

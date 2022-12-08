@@ -28,9 +28,9 @@ class ReactionData:
             "kF"    (forward reaction rate constant)
             "kR"    (reverse reaction rate constant)
             "K"     (equilibrium constant - from either kinetic or thermodynamic data; if both present, they must match up!)
-            "Delta_H" (change in Enthalpy: Enthalpy of Products - Enthalpy of Reactants)     TODO: being implemented
-            "Delta_S" (change in Entropy)           TODO: being implemented
-            "Delta_G" (change in Gibbs Free Energy) TODO: being implemented
+            "Delta_H" (change in Enthalpy: Enthalpy of Products - Enthalpy of Reactants)
+            "Delta_S" (change in Entropy)
+            "Delta_G" (change in Gibbs Free Energy)
                         Note - at constant temperature T :  Delta_G = Delta_H - T * Delta_S
                         Equilibrium constant = exp(-Delta_G / RT)
 
@@ -346,6 +346,22 @@ class ReactionData:
 
 
 
+    def extract_rxn_properties(self, rxn: dict) -> {}:
+        """
+        Create a dictionary with the numerical properties of the given reaction (skipping any None values)
+
+        :param rxn: A dictionary with all the reaction data
+        :return:    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'Delta_G': -1005.1305052750387, 'K': 1.5}
+        """
+        properties = {}
+        for k,v in rxn.items():
+            if k not in ("reactants", "products") and (v is not None):
+                properties[k] = v
+
+        return properties
+
+
+
 
     ############################################################################
     #                                                                          #
@@ -598,9 +614,9 @@ class ReactionData:
 
             if not concise:     # Append more detail
                 details = []
-                for k,v in rxn.items():
-                    if k not in ("reactants", "products") and (rxn[k] is not None):
-                        details.append(f"{k} = {rxn[k]:,.6g}")          # EXAMPLE: "kF = 3"
+                rxn_properties = self.extract_rxn_properties(rxn)
+                for k,v in rxn_properties.items():
+                    details.append(f"{k} = {v:,.6g}")          # EXAMPLE: "kF = 3"
 
                 rxn_description += "  (" + ' / '.join(details) + ")"    # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
 
@@ -678,10 +694,16 @@ class ReactionData:
         Encode the reaction data in a form suitable for visualization
         with the graph module "vue_cytoscape"
 
-        TODO:   assign a new, separate node label to chemicals that are both reagents and product
-                Ditch all None values
+        :return:    A list of dictionaries.  Each dictionary must have an 'id' key with a unique value.
+                    EXAMPLE, for an  A <-> B reaction:
+                       [{'id': 0, 'label': 'Chemical', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
+                        {'id': 1, 'label': 'Chemical', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
 
-        :return:    A list of dictionaries.  Each dictionary must have an 'id' key with a unique value
+                        {'id': 2, 'label': 'Reaction', 'name': 'RXN', 'kF': 3.0, 'kR': 2.0, 'K': 1.5, 'Delta_G': -1005.13},
+
+                        {'id': 3, 'name': 'produces', 'source': 2, 'target': 1},
+                        {'id': 4, 'name': 'reacts', 'source': 0, 'target': 2}
+                       ]
         """
         graph_data = []
         species_in_graph = []
@@ -690,13 +712,18 @@ class ReactionData:
         #       For the reaction nodes, use numbers from a range starting just above the end-range of the numbers for the chemicals
         next_available_id = self.number_of_chemicals()
 
-        for i, rxn in enumerate(self.reaction_list):
-            print("\n", rxn, "\n")
+        for i, rxn in enumerate(self.reaction_list):    # Consider each reaction in turn
             # Add a node representing the reaction
             rxn_id = next_available_id
             next_available_id += 1
-            graph_data.append({'id': rxn_id, 'label': 'Reaction', 'name': 'RXN',
-                               'kF': self.extract_forward_rate(rxn), 'kR': self.extract_back_rate(rxn)})
+            node_data = {'id': rxn_id, 'label': 'Reaction', 'name': 'RXN'}
+
+            rxn_properties = self.extract_rxn_properties(rxn)
+            for k,v in rxn_properties.items():
+                node_data[k] = f"{v:,.6g}"
+                               #'kF': self.extract_forward_rate(rxn), 'kR': self.extract_back_rate(rxn)})
+
+            graph_data.append(node_data)
 
             # Process all products
             products = self.extract_products(rxn)
@@ -704,7 +731,7 @@ class ReactionData:
                 species_index = term[1]
                 # Add each product to the graph as a node (if not already present)
                 if species_index not in species_in_graph:
-                    graph_data.append({'id': species_index, 'label': 'Product',
+                    graph_data.append({'id': species_index, 'label': 'Chemical',
                                        'name': self.get_name(species_index),
                                        'diff_rate': self.get_diffusion_rate(species_index),
                                        'stoich': self.extract_stoichiometry(term),
@@ -720,7 +747,7 @@ class ReactionData:
                 species_index = term[1]
                 # Add each reactant to the graph as a node (if not already present)
                 if species_index not in species_in_graph:
-                    graph_data.append({'id': species_index, 'label': 'Reactant',
+                    graph_data.append({'id': species_index, 'label': 'Chemical',
                                        'name': self.get_name(species_index),
                                        'diff_rate': self.get_diffusion_rate(species_index),
                                        'stoich': self.extract_stoichiometry(term),
@@ -736,8 +763,8 @@ class ReactionData:
 
     def assign_color_mapping(self):
         return {
-            'Reactant': 'neo4j_green',
-            'Product': 'neo4j_red',
+            'Chemical': 'neo4j_green',
+            #'Product': 'neo4j_red',
             'Reaction': 'neo4j_lightbrown'
         }
 
