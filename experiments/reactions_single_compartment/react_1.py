@@ -127,3 +127,60 @@ fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B"],
 fig.show()
 
 # %%
+df = dynamics.history.get()
+
+# %%
+df
+
+# %%
+A = list(df.A)
+
+# %%
+A
+
+# %%
+len(A)
+
+# %%
+type(A)
+
+# %%
+np.gradient(A, 0.1)
+
+# %%
+np.gradient(A, [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+
+# %%
+np.gradient(A, [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1], edge_order=2)
+
+# %%
+steps = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+
+# %%
+steps
+
+# %%
+np.gradient(A, steps)
+
+# %%
+len(steps)
+
+# %%
+np.gradient(A, steps, edge_order=2)
+
+# %%
+x = [1, 2, 3, 4, 5]
+
+# %%
+np.gradient(x)
+
+# %%
+np.gradient(x, [1., 1., 1., 1., 1.])
+
+# %%
+np.gradient(x, [1., 10., 2., 5., 4.])
+
+# %%
+np.gradient(x, [1., 1., 2., 5., 4.])
+
+# %%

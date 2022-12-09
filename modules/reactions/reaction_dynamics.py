@@ -187,21 +187,24 @@ class ReactionDynamics:
 
 
     def single_compartment_react(self, total_duration=None, time_step=None, n_steps=None,
-                                snapshots=None) -> None:
+                                 dynamic_step = 1,
+                                 snapshots=None) -> None:
         """
-        Using the given concentration data for all the chemical species in a single compartment,
-        perform ALL the reactions -
+        Perform ALL the reactions in the single compartment -
         based on the INITIAL concentrations,
         which are used as the basis for all the reactions.
 
-        Modify the "conc_array" argument, which contains the concentrations of all the chemical species, in their index order
-
-        NOTES:  - "compartments" may or may not correspond to the "bins" of the higher layers;
-                  the calling code might have opted to merge some bins into a single "compartment"
+        NOTES: When calling this method in the context of 1D, 2D or 3D systems (as opposed to single-compartment experiments),
+                    "compartments" may or may not correspond to the "bins" of the higher layers;
+                    the calling code might have opted to merge some bins into a single "compartment"
 
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
+        :param dynamic_step:    An integer >= 1.  If > 1, individual steps may get divided by that factor,
+                                    on a reaction-by-reaction basis,
+                                    if that reaction has fast dynamics,
+                                    or multiplied by that factor, if that reaction has slow dynamics
         :param snapshots:       OPTIONAL dict that may contain any the following keys:
                                         -"frequency" (default 1)
                                         -"species" (default all)
@@ -224,7 +227,7 @@ class ReactionDynamics:
 
 
         for i in range(n_steps):
-            delta_concentrations = self.single_compartment_reaction_step(conc_array=self.system, delta_time=time_step)
+            delta_concentrations = self.single_compartment_reaction_step(conc_array=self.system, delta_time=time_step, dynamic_step=dynamic_step)
             self.system += delta_concentrations
             self.system_time += time_step
             # Preserve some of the data, as requested
@@ -240,7 +243,7 @@ class ReactionDynamics:
 
 
 
-    def single_compartment_reaction_step(self, delta_time: float, conc_dict=None, conc_array=None) -> np.array:
+    def single_compartment_reaction_step(self, delta_time: float, conc_dict=None, conc_array=None, dynamic_step=1) -> np.array:
         """
         Using the given concentration data for all the applicable species in a single compartment,
         do a single reaction time step for ALL the reactions -
@@ -262,6 +265,7 @@ class ReactionDynamics:
         :param conc_array:  ALTERNATE way to specify all concentrations,
                             as a Numpy array of the initial concentrations of all the chemical species, in their index order
                             NOTE: if both conc_dict and conc_array are specified, an Exception is raised
+        :param dynamic_step: TODO: not yet in use
 
         :return:            The increment vector for all the chemical species concentrations
                             in the compartment
@@ -286,7 +290,7 @@ class ReactionDynamics:
 
         # For each reaction, adjust the concentrations of the reactants and products,
         # based on the forward and back rates of the reaction
-        for i in range(self.reaction_data.number_of_reactions()):
+        for i in range(self.reaction_data.number_of_reactions()):   # For each reaction
             if self.debug:
                 print(f"    adjusting the species concentrations based on reaction number {i}")
 
@@ -339,8 +343,7 @@ class ReactionDynamics:
                                     each list has 1 entry per reaction, in the index order of the reactions
         """
         delta_list = []            # It will have 1 entry per reaction
-        for i in range(self.reaction_data.number_of_reactions()):
-        # Consider each reaction in turn
+        for i in range(self.reaction_data.number_of_reactions()):   # Consider each reaction in turn
             if self.debug:
                 print(f"    evaluating the rates for reaction number {i}")
 
@@ -353,7 +356,7 @@ class ReactionDynamics:
 
     def compute_rate_delta(self, rxn_index: int, conc_dict: dict, delta_time: float) -> float:
         """
-        For the given time interval and the single specified reaction,
+        For the given time interval and the SINGLE specified reaction,
         compute the difference of the reaction's forward and back "conversions",
         i.e. delta_time * reaction_rate_constant * (concentration ** reaction_order)
 
