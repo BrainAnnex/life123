@@ -307,9 +307,9 @@ class ReactionDynamics:
                 stoichiometry, species_index, order = r
                 increment_vector[species_index] += stoichiometry * (- delta_list[i])
 
-                if (conc_dict[species_index] + increment_vector[species_index]) < 0:
+                if (conc_dict[species_index] + increment_vector[species_index]) < 0:    # TODO: maybe do at the very end
                     raise Exception(f"The given time interval ({delta_time}) "
-                                    f"leads to negative concentrations in reactions: make it smaller!")
+                                    f"leads to negative concentrations in reactants: make it smaller!")
 
 
             #   The products increase based on the forward reaction,
@@ -318,9 +318,9 @@ class ReactionDynamics:
                 stoichiometry, species_index, order = p
                 increment_vector[species_index] += stoichiometry * delta_list[i]
 
-                if (conc_dict[species_index] + increment_vector[species_index]) < 0:
+                if (conc_dict[species_index] + increment_vector[species_index]) < 0:    # TODO: maybe do at the very end
                     raise Exception(f"The given time interval ({delta_time}) "
-                                    f"leads to negative concentrations in reactions: make it smaller!")
+                                    f"leads to negative concentrations in reaction products: make it smaller!")
 
         # END for
 
@@ -356,48 +356,50 @@ class ReactionDynamics:
 
     def compute_rate_delta(self, rxn_index: int, conc_dict: dict, delta_time: float) -> float:
         """
-        For the given time interval and the SINGLE specified reaction,
+        For the given time interval, the SINGLE specified reaction, and the specified concentrations of chemicals,
         compute the difference of the reaction's forward and back "conversions",
-        i.e. delta_time * reaction_rate_constant * (concentration ** reaction_order)
+        a non-standard term we're using here to refer to delta_time * (Forward_Rate − Reverse_Rate)
+
+        For background info: https://life123.science/reactions
+        What we're computing here, is referred to as:  (Δt)∗delta_forward(n)
 
         :param rxn_index:   An integer that indexes the reaction of interest
         :param conc_dict:   Concentrations of the applicable chemicals,
-                            as a dict where the key value is the chemicals index
+                            as a dict where the key value is the chemical's index
                             EXAMPLE: {3: 16.3, 8: 0.53, 12: 1.78}
         :param delta_time:  The time duration of the reaction step - assumed to be small enough that the
                             concentration won't vary significantly during this span
 
-        :return:            The differences between forward and reverse "conversions" (rates * delta_time),
+        :return:            The differences between forward and reverse "conversions",
+                            a non-standard term we're using here to refer to delta_time * (Forward_Rate − Reverse_Rate),
                             for the given reaction during the specified time span
                             TODO: also, make a note of large relative increments (to guide future time-step choices)
         """
 
         # TODO: turn into a more efficient single step, as as:
-        #(reactants, products, fwd_rate_coeff, back_rate_coeff) = cls.all_reactions.unpack_reaction(i)
+        #(reactants, products, fwd_rate_constant, rev_rate_constant) = cls.all_reactions.unpack_reaction(i)
         reactants = self.reaction_data.get_reactants(rxn_index)
         products = self.reaction_data.get_products(rxn_index)
-        fwd_rate_coeff = self.reaction_data.get_forward_rate(rxn_index)
-        back_rate_coeff = self.reaction_data.get_reverse_rate(rxn_index)
+        fwd_rate_constant = self.reaction_data.get_forward_rate(rxn_index)
+        rev_rate_constant = self.reaction_data.get_reverse_rate(rxn_index)
 
-        delta_fwd = delta_time * fwd_rate_coeff         # TODO: save, to avoid re-computing at each bin.
-                                                        #       Better yet, factor our the entire x delta_time
+        forward_rate = fwd_rate_constant
         for r in reactants:
-            stoichiometry, species_index, order = r
+            stoichiometry, species_index, order = r     # Unpack the data of the reactant r
             conc = conc_dict.get(species_index)
             assert conc is not None,\
-                f"compute_rate_diff(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
-            delta_fwd *= conc ** order      # Raise to power
+                f"ReactionDynamics.compute_rate_delta(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
+            forward_rate *= conc ** order      # Raise to power
 
-        delta_back = delta_time * back_rate_coeff       # TODO: save, to avoid re-computing at each bin
+        reverse_rate = rev_rate_constant
         for p in products:
-            stoichiometry, species_index, order = p
+            stoichiometry, species_index, order = p     # Unpack the data of the reaction product p
             conc = conc_dict.get(species_index)
             assert conc is not None, \
-                f"compute_rate_diff(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
-            delta_back *= conc ** order     # Raise to power
+                f"ReactionDynamics.compute_rate_delta(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
+            reverse_rate *= conc ** order     # Raise to power
 
-        #print(f"    delta_fwd: {delta_fwd} | delta_back: {delta_back}")
-        return delta_fwd - delta_back
+        return delta_time * (forward_rate - reverse_rate)
 
 
 
