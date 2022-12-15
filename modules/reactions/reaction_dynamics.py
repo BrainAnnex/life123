@@ -227,8 +227,10 @@ class ReactionDynamics:
 
 
         for i in range(n_steps):
+            #self.reaction_step_orchestrator(delta_time=time_step, dynamic_step=dynamic_step)   # TODO: new approach, to replace the next 2 lines
             delta_concentrations = self.single_compartment_reaction_step(conc_array=self.system, delta_time=time_step, dynamic_step=dynamic_step)
             self.system += delta_concentrations
+
             self.system_time += time_step
             # Preserve some of the data, as requested
             if snapshots and ((i+1)%frequency == 0):
@@ -240,6 +242,100 @@ class ReactionDynamics:
 
         if snapshots and "final_caption" in snapshots:
             self.history.set_caption_last_snapshot(snapshots["final_caption"])
+
+
+
+
+    def reaction_step_orchestrator(self, delta_time: float, dynamic_step=1) -> None:
+        """
+        """
+        if dynamic_step == 1 or self.all_slow_rxns():
+            conc_array = self.system
+            delta_concentrations = self.single_reaction_step_NEW(delta_time=delta_time, conc_array=conc_array, rxn_list=None)
+            self.system += delta_concentrations
+        else:
+            slow_rxns = self.slow_rxns()
+            conc_array = self.system.copy()
+            delta_concentrations_slow = self.single_reaction_step_NEW(delta_time=delta_time, conc_array=conc_array, rxn_list=slow_rxns)
+
+            fast_rxns = self.fast_rxns()
+            conc_array = self.system.copy()
+            delta_concentrations_fast = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
+            for i in range(dynamic_step):
+                incr_vector = self.single_reaction_step_NEW(delta_time=delta_time, conc_array=conc_array, rxn_list=fast_rxns)
+                conc_array += incr_vector
+                delta_concentrations_fast += incr_vector
+
+
+            self.system =  delta_concentrations_slow + delta_concentrations_fast - self.system
+            # The above is a simplification of:
+            # self.system = self.system + (delta_concentrations_slow - self.system) + (delta_concentrations_fast - self.system)
+
+
+
+
+    def single_reaction_step_NEW(self, delta_time: float, conc_array=None, rxn_list=None) -> np.array:
+        """
+        :param delta_time:  The time duration of the reaction step - assumed to be small enough that the
+                                concentration won't vary significantly during this span
+        :param conc_array:  All concentrations at the start of the reaction step,
+                                as a Numpy array of the initial concentrations of all the chemical species, in their index order (the "SYSTEM STATE")
+        :param rxn_list:    OPTIONAL list of reactions (specified by index); EXAMPLE: [1, 3, 7]
+                                If None, do all the reactions.
+
+        :return:            The increment vector for all the chemical species concentrations
+                            in the compartment
+                            EXAMPLE (for a reactant and product with a 3:1 stoichiometry):   [7. , -21.]
+        """
+        # Compute the forward and back "conversions" of all the applicable reactions
+        delta_list = self.compute_all_reaction_deltas(conc_array=conc_array, delta_time=delta_time, rxn_list=rxn_list)
+        if self.debug:
+            print(f"    delta_list: {delta_list}")
+
+
+        increment_vector = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
+
+
+        if rxn_list is None:    # Meaning ALL reactions
+            rxn_list = range(self.reaction_data.number_of_reactions())
+
+
+        # For each applicable reaction, adjust the concentrations of the reactants and products,
+        # based on the forward and back rates of the reaction
+        for rxn_index in rxn_list:      # Consider each reaction in turn
+            if self.debug:
+                print(f"    adjusting the species concentrations based on reaction number {rxn_index}")
+
+            # TODO: turn into a more efficient single step, as as:
+            #(reactants, products) = cls.all_reactions.unpack_terms(i)
+            reactants = self.reaction_data.get_reactants(rxn_index)
+            products = self.reaction_data.get_products(rxn_index)
+
+            # Determine the concentration adjustments
+
+            #   The reactants decrease based on the (forward reaction - reverse reaction)
+            for r in reactants:
+                stoichiometry, species_index, order = r
+                delta_conc = stoichiometry * (- delta_list[rxn_index])  # Increment to this reactant from the reaction being considered
+                if (conc_array[species_index] + delta_conc) < 0:
+                    raise Exception(f"The given time interval ({delta_time}) "
+                                    f"leads to negative concentrations in reactant {species_index} in reaction {rxn_index}: make it smaller!")
+
+                increment_vector[species_index] += delta_conc
+
+
+            #   The reaction products increase based on the (forward reaction - reverse reaction)
+            for p in products:
+                stoichiometry, species_index, order = p
+                delta_conc = stoichiometry * delta_list[rxn_index]  # Increment to this reaction product from the reaction being considered
+                increment_vector[species_index] += delta_conc
+                if (conc_array[species_index] + delta_conc) < 0:
+                    raise Exception(f"The given time interval ({delta_time}) "
+                                    f"leads to negative concentrations in reaction products {species_index} in reaction {rxn_index}: make it smaller!")
+        # END for
+
+        return increment_vector
+
 
 
 
@@ -281,7 +377,7 @@ class ReactionDynamics:
 
 
         # Compute the forward and back conversions of all the reactions
-        delta_list = self.compute_all_rate_deltas(conc_dict=conc_dict, delta_time=delta_time)
+        delta_list = self.compute_all_reaction_deltas(conc_dict=conc_dict, delta_time=delta_time)
         if self.debug:
             print(f"    delta_list: {delta_list}")
 
@@ -328,33 +424,53 @@ class ReactionDynamics:
 
 
 
-    def compute_all_rate_deltas(self, conc_dict: dict, delta_time: float) -> list:
+    def compute_all_reaction_deltas(self, delta_time: float, conc_dict=None, conc_array=None, rxn_list=None) -> [float]:
         """
-        For an explanation of the "rate delta", see compute_rate_delta().
-        Compute the "rate delta" for all the reactions.  Return a list with an entry for each reaction
+        For an explanation of the "reaction delta", see compute_reaction_delta().
+        Compute the "reaction delta" for all the reactions, or for all the specified ones.
+        Return a list with an entry for each reaction
+
+        For background info: https://life123.science/reactions
 
         :param conc_dict:   Concentrations of the applicable chemicals,
-                            as a dict where the key value is the chemicals index
-                            EXAMPLE: {3: 16.3, 8: 0.53, 12: 1.78}
+                            as a dict where the key value is the chemical's index
+                            EXAMPLE: {3: 16.3, 8: 0.53, 12: 1.78}       # TODO: phase out
+        :param conc_array:  ALTERNATE way to specify all concentrations,
+                            as a Numpy array of the initial concentrations of all the chemical species, in their index order
+                            NOTE: if both conc_dict and conc_array are specified, an Exception is raised
         :param delta_time:  The time duration of the reaction step - assumed to be small enough that the
                             concentration won't vary significantly during this span
+        :param rxn_list:    OPTIONAL list of reactions (specified by index);
+                                if None, do all the reactions.  EXAMPLE: [1, 3, 7]
 
-        :return:              A list of the differences between forward and reverse "conversions";
-                                    each list has 1 entry per reaction, in the index order of the reactions
+        :return:            A list of the differences between forward and reverse "conversions" -
+                                for explanation, see compute_reaction_delta();
+                                each list has 1 entry per reaction, in the index order of the reactions
         """
-        delta_list = []            # It will have 1 entry per reaction
-        for i in range(self.reaction_data.number_of_reactions()):   # Consider each reaction in turn
-            if self.debug:
-                print(f"    evaluating the rates for reaction number {i}")
+        if conc_array is not None:
+            assert conc_dict is None, \
+                "single_compartment_reaction_step(): Cannot specify both arguments conc_dict and conc_array"
 
-            delta = self.compute_rate_delta(rxn_index=i, conc_dict=conc_dict, delta_time=delta_time)
+            conc_dict = {}
+            for index in range(len(conc_array)):
+                conc_dict[index] = conc_array[index]
+
+
+        delta_list = []         # It will have 1 entry per reaction
+
+        if rxn_list is None:    # Meaning ALL reactions
+            rxn_list = range(self.reaction_data.number_of_reactions())
+
+        # Process the requested reactions
+        for i in rxn_list:      # Consider each reaction in turn
+            delta = self.compute_reaction_delta(rxn_index=i, conc_dict=conc_dict, delta_time=delta_time)
             delta_list.append(delta)
 
-        return( delta_list )
+        return delta_list
 
 
 
-    def compute_rate_delta(self, rxn_index: int, conc_dict: dict, delta_time: float) -> float:
+    def compute_reaction_delta(self, rxn_index: int, conc_dict: dict, delta_time: float) -> float:
         """
         For the given time interval, the SINGLE specified reaction, and the specified concentrations of chemicals,
         compute the difference of the reaction's forward and back "conversions",
@@ -370,7 +486,7 @@ class ReactionDynamics:
         :param delta_time:  The time duration of the reaction step - assumed to be small enough that the
                             concentration won't vary significantly during this span
 
-        :return:            The differences between forward and reverse "conversions",
+        :return:            The differences between the reaction's forward and reverse "conversions",
                             a non-standard term we're using here to refer to delta_time * (Forward_Rate − Reverse_Rate),
                             for the given reaction during the specified time span
                             TODO: also, make a note of large relative increments (to guide future time-step choices)
