@@ -276,7 +276,11 @@ class ReactionDynamics:
         return len(self.slow_rxns()) == self.reaction_data.number_of_reactions()
 
 
-    def mark_rxn_speed(self, rxn_index: int, speed: str) -> None:
+
+    def get_rxn_speed(self, rxn_index: int) -> None:
+        return self.reaction_speeds[rxn_index]
+
+    def set_rxn_speed(self, rxn_index: int, speed: str) -> None:
         assert speed in ["S", "F"], "speed argument must be either 'S' or 'F'"
         self.reaction_data.assert_valid_rxn_index(rxn_index)
         self.reaction_speeds[rxn_index] = speed
@@ -412,15 +416,19 @@ class ReactionDynamics:
         :param delta_time:
         :return:
         """
-        THRESHOLD = 0.05
+        #THRESHOLD = 0.05
+        THRESHOLD = 20
         if (baseline_conc + delta_conc) < 0:
             raise Exception(f"The given time interval ({delta_time}) "
                             f"leads to negative concentrations of the chemical species {species_index} in reaction {rxn_index}: must make it smaller!")
 
-        if delta_conc / baseline_conc > THRESHOLD:
-            self.mark_rxn_speed(rxn_index, "F")
-            if self.debug:
-                print(f"    Reaction number {rxn_index} marked as 'Fast'")
+        if self.get_rxn_speed(rxn_index) == "S":
+            # If the reaction is tentatively assigned as "Slow", decide whether to flip it to "Fast"
+            #if abs(delta_conc) / baseline_conc > THRESHOLD:
+            if abs(delta_conc) * THRESHOLD > baseline_conc:     # To avoid time-consuming divisions
+                self.set_rxn_speed(rxn_index, "F")
+                if self.debug:
+                    print(f"    Reaction number {rxn_index} marked as 'Fast'")
 
 
 

@@ -296,7 +296,7 @@ def test_reaction_speeds():
     assert rxn.fast_rxns() == [0]
     assert not rxn.are_all_slow_rxns()
 
-    rxn.mark_rxn_speed(0, "S")          # Mark the lone reaction as "Slow"
+    rxn.set_rxn_speed(0, "S")          # Mark the lone reaction as "Slow"
     assert rxn.slow_rxns() == [0]
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
