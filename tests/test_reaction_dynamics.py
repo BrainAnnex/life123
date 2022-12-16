@@ -282,3 +282,21 @@ def test_is_in_equilibrium():
     chem_data.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
     c = {'A': 1.51554944, 'B': 5.74222528}
     assert rxn.is_in_equilibrium(rxn_index = 1, conc = c)
+
+
+
+def test_reaction_speeds():
+    chem_data = ReactionData(names=["A", "B", "C"])
+    rxn = ReactionDynamics(chem_data)
+    assert rxn.slow_rxns() == []        # There are no reactions yet
+    assert rxn.fast_rxns() == []        # There are no reactions yet
+
+    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    assert rxn.slow_rxns() == []        # The one reaction present is assumed to be fast
+    assert rxn.fast_rxns() == [0]
+    assert not rxn.are_all_slow_rxns()
+
+    rxn.mark_rxn_speed(0, "S")          # Mark the lone reaction as "Slow"
+    assert rxn.slow_rxns() == [0]
+    assert rxn.fast_rxns() == []
+    assert rxn.are_all_slow_rxns()

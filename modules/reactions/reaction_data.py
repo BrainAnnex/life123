@@ -100,9 +100,15 @@ class ReactionData:
         :param species_index:
         :return:                None
         """
-        assert (species_index is not None) and (type(species_index) == int) and \
+        assert (type(species_index) == int) and \
                0 <= species_index < self.n_species, \
             f"The requested species index ({species_index}) is not the expected integer the range [0 - {self.n_species - 1}], inclusive"
+
+
+    def assert_valid_rxn_index(self, index):
+        assert (type(index) == int) and \
+               0 <= index < self.number_of_reactions(), \
+            f"The requested reaction index ({index}) is not the expected integer the range [0 - {self.number_of_reactions() - 1}], inclusive"
 
 
 

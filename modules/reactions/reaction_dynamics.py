@@ -32,6 +32,9 @@ class ReactionDynamics:
 
         self.debug = False
 
+        self.reaction_speeds = {}       # A dictionary.  EXAMPLE : { 1: "F", 4: "S", 5: "F" , 8: "S" }
+                                        # Anything missing is assumed to be "F" (Fast)
+
 
 
     #############################################################################################
@@ -244,33 +247,74 @@ class ReactionDynamics:
             self.history.set_caption_last_snapshot(snapshots["final_caption"])
 
 
+    def slow_rxns(self) -> [int]:
+        """
+        Return a list of all the reactions that are marked as "slow"
+        :return:
+        """
+        return [k  for k, v in self.reaction_speeds.items()  if v == "S"]
+        # Alternate approach:
+        # return list(filter(lambda k:self.reaction_speeds[k] == "S", d ))
+
+    def fast_rxns(self) -> [int]:
+        """
+        Return a list of all the reactions that are marked as "fast"
+        :return:
+        """
+        return [i for i in range(self.reaction_data.number_of_reactions())
+                    if i not in self.slow_rxns()]
+        # Alternate way:
+        # return list(set(range(self.reaction_data.number_of_reactions()).difference(self.slow_rxns()))
 
 
-    def reaction_step_orchestrator(self, delta_time: float, dynamic_step=1) -> None:
+
+    def are_all_slow_rxns(self) -> bool:
         """
+        Return True iff all the reactions are marked as "slow"
+        :return:
         """
-        if dynamic_step == 1 or self.all_slow_rxns():
-            conc_array = self.system
+        return len(self.slow_rxns()) == self.reaction_data.number_of_reactions()
+
+
+    def mark_rxn_speed(self, rxn_index: int, speed: str) -> None:
+        assert speed in ["S", "F"], "speed argument must be either 'S' or 'F'"
+        self.reaction_data.assert_valid_rxn_index(rxn_index)
+        self.reaction_speeds[rxn_index] = speed
+
+
+    def reaction_step_orchestrator(self, delta_time: float, conc_array, dynamic_step=1) -> np.array:
+        """
+        TODO: This method will become the common entry point for both single-compartment reactions,
+              and the reaction part of reaction-diffusions
+        """
+
+        if dynamic_step == 1 or self.are_all_slow_rxns():
+            #conc_array = self.system
             delta_concentrations = self.single_reaction_step_NEW(delta_time=delta_time, conc_array=conc_array, rxn_list=None)
-            self.system += delta_concentrations
+            #self.system += delta_concentrations
         else:
+            # Process all the slow reactions
             slow_rxns = self.slow_rxns()
-            conc_array = self.system.copy()
+            #conc_array = self.system.copy()
             delta_concentrations_slow = self.single_reaction_step_NEW(delta_time=delta_time, conc_array=conc_array, rxn_list=slow_rxns)
 
+            # Process all the fast reactions
             fast_rxns = self.fast_rxns()
-            conc_array = self.system.copy()
+            local_init_conc_array = conc_array.copy()   # Saved as an unchanging baseline copy
+            #conc_array = self.system.copy()
             delta_concentrations_fast = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
             for i in range(dynamic_step):
-                incr_vector = self.single_reaction_step_NEW(delta_time=delta_time, conc_array=conc_array, rxn_list=fast_rxns)
-                conc_array += incr_vector
+                incr_vector = self.single_reaction_step_NEW(delta_time=delta_time, conc_array=local_init_conc_array, rxn_list=fast_rxns)
+                local_init_conc_array += incr_vector
                 delta_concentrations_fast += incr_vector
 
-
-            self.system =  delta_concentrations_slow + delta_concentrations_fast - self.system
+            # Combine the results of the slow and fast reactions
+            delta_concentrations = delta_concentrations_slow + delta_concentrations_fast - local_init_conc_array
             # The above is a simplification of:
             # self.system = self.system + (delta_concentrations_slow - self.system) + (delta_concentrations_fast - self.system)
+        # END IF
 
+        return  delta_concentrations
 
 
 
@@ -284,7 +328,6 @@ class ReactionDynamics:
                                 If None, do all the reactions.
 
         :return:            The increment vector for all the chemical species concentrations
-                            in the compartment
                             EXAMPLE (for a reactant and product with a 3:1 stoichiometry):   [7. , -21.]
         """
         # Compute the forward and back "conversions" of all the applicable reactions
@@ -303,6 +346,8 @@ class ReactionDynamics:
         # For each applicable reaction, adjust the concentrations of the reactants and products,
         # based on the forward and back rates of the reaction
         for rxn_index in rxn_list:      # Consider each reaction in turn
+            self.reaction_speeds[rxn_index] = "S"   # Tentative assignment, to be changed if ANY species experiences significant concentration changes
+
             if self.debug:
                 print(f"    adjusting the species concentrations based on reaction number {rxn_index}")
 
@@ -317,10 +362,18 @@ class ReactionDynamics:
             for r in reactants:
                 stoichiometry, species_index, order = r
                 delta_conc = stoichiometry * (- delta_list[rxn_index])  # Increment to this reactant from the reaction being considered
+
+                self.examine_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
+                                       species_index=species_index, rxn_index=rxn_index, delta_time=delta_time)
+
+                '''
                 if (conc_array[species_index] + delta_conc) < 0:
                     raise Exception(f"The given time interval ({delta_time}) "
                                     f"leads to negative concentrations in reactant {species_index} in reaction {rxn_index}: make it smaller!")
-
+                
+                if delta_conc / conc_array[species_index] > 0.05:
+                    self.reaction_speeds[rxn_index] = "F"
+                '''
                 increment_vector[species_index] += delta_conc
 
 
@@ -328,18 +381,50 @@ class ReactionDynamics:
             for p in products:
                 stoichiometry, species_index, order = p
                 delta_conc = stoichiometry * delta_list[rxn_index]  # Increment to this reaction product from the reaction being considered
-                increment_vector[species_index] += delta_conc
+
+                self.examine_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
+                                       species_index=species_index, rxn_index=rxn_index, delta_time=delta_time)
+
+                '''
                 if (conc_array[species_index] + delta_conc) < 0:
                     raise Exception(f"The given time interval ({delta_time}) "
                                     f"leads to negative concentrations in reaction products {species_index} in reaction {rxn_index}: make it smaller!")
+
+                if delta_conc / conc_array[species_index] > 0.05:
+                    self.reaction_speeds[rxn_index] = "F"
+                '''
+                increment_vector[species_index] += delta_conc
         # END for
 
         return increment_vector
 
 
 
+    def examine_increment(self, delta_conc: float, baseline_conc: float, species_index: int, rxn_index: int, delta_time) -> None:
+        """
+        Examine the computed concentration value delta_conc, relative to the baseline (pre-reaction) value baseline_conc,
+        for the given chemical species and reaction.
 
-    def single_compartment_reaction_step(self, delta_time: float, conc_dict=None, conc_array=None, dynamic_step=1) -> np.array:
+        :param delta_conc:
+        :param baseline_conc:
+        :param species_index:
+        :param rxn_index:
+        :param delta_time:
+        :return:
+        """
+        THRESHOLD = 0.05
+        if (baseline_conc + delta_conc) < 0:
+            raise Exception(f"The given time interval ({delta_time}) "
+                            f"leads to negative concentrations of the chemical species {species_index} in reaction {rxn_index}: must make it smaller!")
+
+        if delta_conc / baseline_conc > THRESHOLD:
+            self.mark_rxn_speed(rxn_index, "F")
+            if self.debug:
+                print(f"    Reaction number {rxn_index} marked as 'Fast'")
+
+
+
+    def single_compartment_reaction_step(self, delta_time: float, conc_dict=None, conc_array=None, dynamic_step=1) -> np.array: # TODO: phase out, in favor of single_reaction_step_NEW()
         """
         Using the given concentration data for all the applicable species in a single compartment,
         do a single reaction time step for ALL the reactions -
