@@ -300,3 +300,33 @@ def test_reaction_speeds():
     assert rxn.slow_rxns() == [0]
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
+
+
+
+def test_examine_increment():
+    chem_data = ReactionData(names=["A", "B", "C"])
+    rxn = ReactionDynamics(chem_data)
+    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    rxn.set_rxn_speed(0, "S")          # Mark the lone reaction as "Slow"
+    assert rxn.are_all_slow_rxns()
+
+
+    rxn.FAST_THRESHOLD = 20
+
+    rxn.examine_increment(delta_conc=4.98, baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment(delta_conc=5.01, baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
+    assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large delta_conc
+
+    rxn.set_rxn_speed(0, "S")          # Reset the lone reaction to "Slow"
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment(delta_conc=-4.98, baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment(delta_conc=-5.01, baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
+    assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc)
+
+    with pytest.raises(Exception):
+        rxn.examine_increment(delta_conc=-100.01, baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
