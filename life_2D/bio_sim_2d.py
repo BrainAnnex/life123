@@ -313,6 +313,22 @@ class BioSim2D:
 
 
 
+    def bin_snapshot_array(self, bin_address: (int, int)) -> np.array:
+        """
+        Extract the concentrations of all the chemical species at the specified bin,
+        as a Numpy array in the index order of the species
+        EXAMPLE: np.array([10., 50.)]
+
+        :param bin_address:     A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
+        :return:                A Numpy array  of concentration values, in the index order of the species
+        """
+        bin_x, bin_y = bin_address      # Unpack the bin address
+
+
+        return self.system[:, bin_x, bin_y]
+
+
+
 
     #########################################################################
     #                                                                       #
@@ -570,15 +586,14 @@ class BioSim2D:
                           f"in bin number ({bin_n_x}, {bin_n_y})")
 
                 # Obtain the Delta-concentration for each species, for this bin
-                conc_dict = {species_index: self.system[species_index, bin_n_x, bin_n_y]
-                             for species_index in range(self.n_species)}
+                conc_array = self.bin_snapshot_array(bin_address=(bin_n_x, bin_n_y))
                 if self.debug:
-                    print(f"\nconc_dict in bin ({bin_n_x}, {bin_n_y}): ", conc_dict)
+                    print(f"\nconc_dict in bin ({bin_n_x}, {bin_n_y}): ", conc_array)
 
 
                 # Obtain the Delta-conc for each species, for the current bin
-                increment_vector = self.reaction_dynamics.single_compartment_reaction_step_OBSOLETE(conc_dict=conc_dict,
-                                                                                                    delta_time=delta_time)
+                increment_vector = self.reaction_dynamics.single_reaction_step(delta_time=delta_time, conc_array=conc_array)
+                                                                                                    #delta_time=delta_time)
 
                 # Replace the appropriate column of the self.delta_reactions matrix
                 # with the contents of the vector increment_vector

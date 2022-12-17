@@ -704,18 +704,22 @@ class BioSim1D:
 
 
 
-    def bin_snapshot_array(self, bin_address: int) -> np.array:
+    def bin_snapshot_array(self, bin_address: int, trans_membrane=False) -> np.array:
         """
         Extract the concentrations of all the chemical species at the specified bin,
         as a Numpy array in the index order of the species
         EXAMPLE: np.array([10., 50.)]
 
-        :param bin_address: An integer with the bin number
-        :return:            A Numpy array  of concentration values, in the index order of the species
+        :param bin_address:     An integer with the bin number
+        :param trans_membrane:  If True, consider the "other side" of the bin, i.e. the portion across the membrane
+        :return:                A Numpy array  of concentration values, in the index order of the species
         """
         self.assert_valid_bin(bin_address)
 
-        return self.system.T[bin_address]       # Transpose
+        if trans_membrane:
+            return self.system_B[:, bin_address]
+        else:
+            return self.system[: , bin_address]
 
 
 
@@ -1324,8 +1328,6 @@ class BioSim1D:
                 print(f"BioSim1D.reaction_step(): processing the all the reactions in bin number {bin_n}")
 
             # Obtain the Delta-concentration for each species, for this bin
-            conc_dict = {species_index: self.system[species_index , bin_n]
-                         for species_index in range(self.n_species)}
             conc_array = self.bin_snapshot_array(bin_address=bin_n)
             #print(f"\conc_array in bin {bin_n}: ", conc_array)
 
@@ -1342,12 +1344,11 @@ class BioSim1D:
         if self.uses_membranes():
             for bin_n in self.bins_with_membranes():
                 # Obtain the Delta-concentration for each species, for this bin
-                conc_dict = {species_index: self.bin_concentration(bin_address=bin_n, species_index=species_index, trans_membrane=True)
-                             for species_index in range(self.n_species)}    # TODO: fix, to computer the conc_array instead
+                conc_array = self.bin_snapshot_array(bin_address=bin_n, trans_membrane=True)
                 #print(f"\n Post-membrane side conc_dict in bin {bin_n}: ", conc_dict)
 
                 # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-                increment_vector = self.reaction_dynamics.single_compartment_reaction_step_OBSOLETE(conc_dict=conc_dict, delta_time=delta_time)
+                increment_vector = self.reaction_dynamics.single_reaction_step(delta_time=delta_time, conc_array=conc_array)
 
                 # Replace the "bin_n" column of the self.delta_reactions_B matrix with the contents of the vector increment_vector
                 self.delta_reactions_B[:, bin_n] = np.array([increment_vector])

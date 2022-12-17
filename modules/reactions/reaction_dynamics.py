@@ -446,7 +446,7 @@ class ReactionDynamics:
 
 
 
-    def single_compartment_reaction_step_OBSOLETE(self, delta_time: float, conc_dict=None, conc_array=None, dynamic_step=1) -> np.array:
+    def single_compartment_reaction_step_OBSOLETE_INACTIVE(self, delta_time: float, conc_dict=None, conc_array=None, dynamic_step=1) -> np.array:
         # TODO: phased out, in favor of    single_reaction_step()
         """
         Using the given concentration data for all the applicable species in a single compartment,
