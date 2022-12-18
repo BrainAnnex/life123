@@ -156,34 +156,34 @@ def test_compute_all_rate_deltas():
     chem_data = ReactionData(names=["A", "B", "C", "D"])
     rxn = ReactionDynamics(chem_data)
 
-    # Reaction A <-> B , with 1st-order kinetics in both directions
+    # Start with reaction A <-> B , with 1st-order kinetics in both directions
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=20., reverse_rate=2.)
     conc_array = np.array([5., 8.])
     result = rxn.compute_all_reaction_deltas(conc_array=conc_array, delta_time=0.5)
     assert np.allclose(result, [42.0])
 
-    # Reaction 2B <-> 3C , with 1st-order kinetics in both directions
+    # Add reaction 2B <-> 3C , with 1st-order kinetics in both directions
     chem_data.add_reaction(reactants=[(2, "B")], products=[(3, "C")], forward_rate=10., reverse_rate=25.)
     conc_array = np.array([5., 8., 15.])
     result = rxn.compute_all_reaction_deltas(conc_array=conc_array, delta_time=0.5)
     assert np.allclose(result, [42.0, -147.5])
 
-    # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
+    # Add reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
     chem_data.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
                      forward_rate=5., reverse_rate=2.)
     conc_array = np.array([5., 8., 15., 7.])
     result = rxn.compute_all_reaction_deltas(conc_array=conc_array, delta_time=0.5)
     assert np.allclose(result, [42.0, -147.5, -5.0])
 
-    # Reaction  2A <-> B , with 2nd-order kinetics in the forward direction
+    # Add reaction  2A <-> B , with 2nd-order kinetics in the forward direction
     chem_data.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=3., reverse_rate=2.)
     conc_array = np.array([5., 8., 15., 7.])
     result = rxn.compute_all_reaction_deltas(conc_array=conc_array, delta_time=0.5)
     assert np.allclose(result, [42.0, -147.5, -5.0, 29.5])
 
-    # FLUSH OUT ALL REACTIONS
+    # FLUSH OUT ALL REACTIONS (to start over)
     chem_data.clear_reactions()
-    # Reaction A <-> B , with 1st-order kinetics in both directions
+    # Start with reaction A <-> B , with 1st-order kinetics in both directions
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=20., reverse_rate=2.)
     conc_array = np.array([5., 8.])
     result = rxn.compute_all_reaction_deltas(conc_array=conc_array, delta_time=0.25)
@@ -301,7 +301,6 @@ def test_examine_increment():
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
     rxn.set_rxn_speed(0, "S")          # Mark the lone reaction as "Slow"
     assert rxn.are_all_slow_rxns()
-
 
     rxn.FAST_THRESHOLD = 20
 
