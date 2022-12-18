@@ -429,21 +429,33 @@ class ReactionDynamics:
 
 
 
-    def examine_increment(self, delta_conc: float, baseline_conc: float, species_index: int, rxn_index: int, delta_time) -> None:
+    def examine_increment(self, delta_conc: float, baseline_conc: float, rxn_index: int,
+                                species_index: int, delta_time) -> None:
         """
-        Examine the computed concentration value passed by delta_conc,
+        Examine the requested concentration change given by delta_conc
+        (typically, as computed by an ode solver),
         relative to the baseline (pre-reaction) value baseline_conc,
         for the given chemical species and reaction.
 
-        :param delta_conc:
-        :param baseline_conc:
-        :param species_index:
-        :param rxn_index:
-        :param delta_time:
-        :return:
+        If the concentration change is large, relative to its baseline value,
+        then mark the given reaction as "Fast" (in its data structure);
+        this will over-ride any previous annotation about the speed of that reaction.
+        Note: it doesn't matter which of the chemicals in the reaction leads to this.
+
+        If the concentration change would render the concentration negative,
+        raise an Exception
+
+        :param delta_conc:      The change in concentration computed by the ode solver
+                                    (for a particular chemical and reaction)
+        :param baseline_conc:   The initial concentration
+        :param rxn_index:       The index (0-based) to identify the reaction of interest
+
+                                [The remaining arguments are just for error messages, if applicable]
+        :param species_index:   The index (0-based) to identify the chemical species of interest. ONLY USED for error printing
+        :param delta_time:      The time duration of the reaction step. ONLY USED for error printing
+
+        :return:                None (the equation is marked as "Fast", if appropriate, in its data structure
         """
-        #THRESHOLD = 0.05
-        #THRESHOLD = 20
         if (baseline_conc + delta_conc) < 0:
             raise Exception(f"The given time interval ({delta_time}) "
                             f"leads to a negative concentration of the chemical species {species_index} in reaction {rxn_index}: "

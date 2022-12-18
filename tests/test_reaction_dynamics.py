@@ -278,10 +278,13 @@ def test_is_in_equilibrium():
 
 
 def test_reaction_speeds():
+    # To test that newly-added reactions are automatically tentatively marked "Fast",
+    # and to test the methods managing the "Slow/Fast" data structure
     chem_data = ReactionData(names=["A", "B", "C"])
     rxn = ReactionDynamics(chem_data)
     assert rxn.slow_rxns() == []        # There are no reactions yet
     assert rxn.fast_rxns() == []        # There are no reactions yet
+    assert rxn.are_all_slow_rxns()
 
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
     assert rxn.slow_rxns() == []        # The one reaction present is assumed to be fast
@@ -293,14 +296,35 @@ def test_reaction_speeds():
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
 
+    chem_data.add_reaction(reactants=["B"], products=["C"], forward_rate=13., reverse_rate=12.)
+    assert rxn.reaction_data.number_of_reactions() == 2
+    assert rxn.slow_rxns() == [0]
+    assert rxn.fast_rxns() == [1]       # The newly-added one
+    rxn.set_rxn_speed(1, "S")
+    assert rxn.slow_rxns() == [0, 1]
+    assert rxn.fast_rxns() == []
+    assert rxn.are_all_slow_rxns()
+
+    rxn.set_rxn_speed(0, "F")
+    assert not rxn.are_all_slow_rxns()
+    rxn.set_rxn_speed(1, "F")
+    assert rxn.slow_rxns() == []
+    assert rxn.fast_rxns() == [0, 1]
+    assert not rxn.are_all_slow_rxns()
+
 
 
 def test_examine_increment():
     chem_data = ReactionData(names=["A", "B", "C"])
     rxn = ReactionDynamics(chem_data)
+
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
     rxn.set_rxn_speed(0, "S")          # Mark the lone reaction as "Slow"
     assert rxn.are_all_slow_rxns()
+
+    with pytest.raises(Exception):      # Attempt to make a concentration negative
+        rxn.examine_increment(delta_conc=-100.01, baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
+
 
     rxn.FAST_THRESHOLD = 20
 
@@ -308,9 +332,10 @@ def test_examine_increment():
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment(delta_conc=5.01, baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
-    assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large delta_conc
+    assert rxn.fast_rxns() == [0]       # The one reaction present got marked as "Fast" b/c of large delta_conc
+    assert not rxn.are_all_slow_rxns()
 
-    rxn.set_rxn_speed(0, "S")          # Reset the lone reaction to "Slow"
+    rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment(delta_conc=-4.98, baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
@@ -319,5 +344,45 @@ def test_examine_increment():
     rxn.examine_increment(delta_conc=-5.01, baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
     assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc)
 
-    with pytest.raises(Exception):
-        rxn.examine_increment(delta_conc=-100.01, baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
+    rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment(delta_conc=-5.01, baseline_conc=100., species_index=2, rxn_index=0, delta_time=0.5)
+    assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc),
+                                        # no matter which chemical species is being affected
+
+
+    rxn.FAST_THRESHOLD = 10             # NEW THRESHOLD
+
+    chem_data.add_reaction(reactants=["B"], products=["C"], forward_rate=13., reverse_rate=12.)
+    assert rxn.reaction_data.number_of_reactions() == 2
+    assert rxn.fast_rxns() == [0, 1]
+
+    rxn.set_rxn_speed(0, "S")           # Reset reactions to "Slow"
+    rxn.set_rxn_speed(1, "S")
+    assert rxn.slow_rxns() == [0, 1]
+    assert rxn.fast_rxns() == []
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment(delta_conc=5.01, baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
+    assert rxn.slow_rxns() == [0, 1]    # No change, because the threshold is now higher
+    assert rxn.fast_rxns() == []
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment(delta_conc=9.99,  baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
+    rxn.examine_increment(delta_conc=-9.99, baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
+    rxn.examine_increment(delta_conc=9.99,  baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
+    rxn.examine_increment(delta_conc=-9.99, baseline_conc=100., species_index=0, rxn_index=0, delta_time=0.5)
+    assert rxn.slow_rxns() == [0, 1]    # Still no change, because all the abs(delta_conc) still below threshold
+    assert rxn.fast_rxns() == []
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment(delta_conc=10.01,  baseline_conc=100., species_index=0, rxn_index=1, delta_time=0.5)
+    assert rxn.slow_rxns() == [0]       # The straw that broke the camel's back for reaction 1 !
+    assert rxn.fast_rxns() == [1]
+    assert not rxn.are_all_slow_rxns()
+
+    rxn.examine_increment(delta_conc=-10.01, baseline_conc=100., species_index=2, rxn_index=0, delta_time=0.5)
+    assert rxn.slow_rxns() == []        # The straw that broke the camel's back for reaction 0 !
+    assert rxn.fast_rxns() == [0, 1]
+    assert not rxn.are_all_slow_rxns()
