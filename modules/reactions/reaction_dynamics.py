@@ -289,9 +289,10 @@ class ReactionDynamics:
         self.reaction_speeds[rxn_index] = speed
 
 
+
     def reaction_step_orchestrator(self, delta_time: float, conc_array, dynamic_step=1) -> np.array:
         """
-        TODO: This method will become the common entry point for both single-compartment reactions,
+        This is the common entry point for both single-compartment reactions,
         and the reaction part of reaction-diffusions
 
         :param delta_time:      The requested time duration of the reaction step,
