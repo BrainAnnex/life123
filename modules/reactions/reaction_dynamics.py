@@ -85,6 +85,59 @@ class ReactionDynamics:
 
 
 
+    def slow_rxns(self) -> [int]:
+        """
+        Return a list of all the reactions that are marked as "slow"
+        :return:
+        """
+        return [k  for k, v in self.reaction_speeds.items()  if v == "S"]
+        # Alternate approach:
+        # return list(filter(lambda k:self.reaction_speeds[k] == "S", d ))
+
+
+    def fast_rxns(self) -> [int]:
+        """
+        Return a list of all the reactions that are marked as "fast"
+        :return:
+        """
+        return [i for i in range(self.reaction_data.number_of_reactions())
+                if i not in self.slow_rxns()]
+        # Alternate way:
+        # return list(set(range(self.reaction_data.number_of_reactions()).difference(self.slow_rxns()))
+
+
+
+    def are_all_slow_rxns(self) -> bool:
+        """
+        Return True iff all the reactions are marked as "slow"
+        :return:
+        """
+        return len(self.slow_rxns()) == self.reaction_data.number_of_reactions()
+
+
+
+    def get_rxn_speed(self, rxn_index: int) -> str:
+        """
+
+        :param rxn_index:   The index (0-based) to identify the reaction of interest
+        :return:            A 1-letter string with the code "F" (for Fast) or "S" (Slow)
+        """
+        return self.reaction_speeds[rxn_index]
+
+
+    def set_rxn_speed(self, rxn_index: int, speed: str) -> None:
+        """
+
+        :param rxn_index:   The index (0-based) to identify the reaction of interest
+        :param speed:       A 1-letter string with the code "F" (for Fast) or "S" (Slow)
+        :return:            None
+        """
+        assert speed in ["S", "F"], "speed argument must be either 'S' or 'F'"
+        self.reaction_data.assert_valid_rxn_index(rxn_index)
+        self.reaction_speeds[rxn_index] = speed
+
+
+
 
     #############################################################################################
     #                                                                                           #
@@ -193,8 +246,7 @@ class ReactionDynamics:
 
 
     def single_compartment_react(self, total_duration=None, time_step=None, n_steps=None,
-                                 dynamic_step = 1,
-                                 snapshots=None) -> None:
+                                 dynamic_step = 1, snapshots=None) -> None:
         """
         Perform ALL the reactions in the single compartment -
         based on the INITIAL concentrations,
@@ -213,6 +265,7 @@ class ReactionDynamics:
                                     or multiplied by that factor, if that reaction has slow dynamics
         :param snapshots:       OPTIONAL dict that may contain any the following keys:
                                         -"frequency" (default 1)
+                                        -"show_intermediates" (default False)
                                         -"species" (default all)
                                         -"initial_caption" (default blank)
                                         -"final_caption" (default blank)
@@ -233,10 +286,9 @@ class ReactionDynamics:
 
 
         for i in range(n_steps):
-             #delta_concentrations = self.single_compartment_reaction_step(conc_array=self.system, delta_time=time_step, dynamic_step=dynamic_step)  # *** OLD APPROACH
-            delta_concentrations = self.reaction_step_orchestrator(delta_time=time_step, conc_array=self.system, dynamic_step=dynamic_step)  # *** NEW APPROACH TODO: verify
+            delta_concentrations = self.reaction_step_orchestrator(delta_time=time_step, conc_array=self.system,
+                                                                   dynamic_step=dynamic_step, snapshots=snapshots)
             self.system += delta_concentrations
-
             self.system_time += time_step
             # Preserve some of the data, as requested
             if snapshots and ((i+1)%frequency == 0):
@@ -250,47 +302,9 @@ class ReactionDynamics:
             self.history.set_caption_last_snapshot(snapshots["final_caption"])
 
 
-    def slow_rxns(self) -> [int]:
-        """
-        Return a list of all the reactions that are marked as "slow"
-        :return:
-        """
-        return [k  for k, v in self.reaction_speeds.items()  if v == "S"]
-        # Alternate approach:
-        # return list(filter(lambda k:self.reaction_speeds[k] == "S", d ))
 
-    def fast_rxns(self) -> [int]:
-        """
-        Return a list of all the reactions that are marked as "fast"
-        :return:
-        """
-        return [i for i in range(self.reaction_data.number_of_reactions())
-                    if i not in self.slow_rxns()]
-        # Alternate way:
-        # return list(set(range(self.reaction_data.number_of_reactions()).difference(self.slow_rxns()))
-
-
-
-    def are_all_slow_rxns(self) -> bool:
-        """
-        Return True iff all the reactions are marked as "slow"
-        :return:
-        """
-        return len(self.slow_rxns()) == self.reaction_data.number_of_reactions()
-
-
-
-    def get_rxn_speed(self, rxn_index: int) -> None:
-        return self.reaction_speeds[rxn_index]
-
-    def set_rxn_speed(self, rxn_index: int, speed: str) -> None:
-        assert speed in ["S", "F"], "speed argument must be either 'S' or 'F'"
-        self.reaction_data.assert_valid_rxn_index(rxn_index)
-        self.reaction_speeds[rxn_index] = speed
-
-
-
-    def reaction_step_orchestrator(self, delta_time: float, conc_array, dynamic_step=1) -> np.array:
+    def reaction_step_orchestrator(self, delta_time: float, conc_array,
+                                   dynamic_step=1, snapshots=None) -> np.array:
         """
         This is the common entry point for both single-compartment reactions,
         and the reaction part of reaction-diffusions.
@@ -323,19 +337,15 @@ class ReactionDynamics:
         assert dynamic_step >= 1, "the argument 'dynamic_step' must be an integer greater or equal than 1"
 
         if dynamic_step == 1 or self.are_all_slow_rxns():
-            #conc_array = self.system
             delta_concentrations = self.single_reaction_step(delta_time=delta_time, conc_array=conc_array, rxn_list=None)
-            #self.system += delta_concentrations
         else:
             # Process all the slow reactions
             slow_rxns = self.slow_rxns()
-            #conc_array = self.system.copy()
             delta_concentrations_slow = self.single_reaction_step(delta_time=delta_time, conc_array=conc_array, rxn_list=slow_rxns)
 
             # Process all the fast reactions
             fast_rxns = self.fast_rxns()
             local_init_conc_array = conc_array.copy()   # Saved as an unchanging baseline copy
-            #conc_array = self.system.copy()
             delta_concentrations_fast = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
             for i in range(dynamic_step):
                 incr_vector = self.single_reaction_step(delta_time=delta_time, conc_array=local_init_conc_array, rxn_list=fast_rxns)
@@ -344,7 +354,7 @@ class ReactionDynamics:
 
             # Combine the results of the slow and fast reactions
             delta_concentrations = delta_concentrations_slow + delta_concentrations_fast - local_init_conc_array
-            # The above is a simplification of:
+            # The above is based on:
             # self.system = self.system + (delta_concentrations_slow - self.system) + (delta_concentrations_fast - self.system)
         # END IF
 
@@ -454,7 +464,7 @@ class ReactionDynamics:
         :param species_index:   The index (0-based) to identify the chemical species of interest. ONLY USED for error printing
         :param delta_time:      The time duration of the reaction step. ONLY USED for error printing
 
-        :return:                None (the equation is marked as "Fast", if appropriate, in its data structure
+        :return:                None (the equation is marked as "Fast", if appropriate, in its data structure)
         """
         if (baseline_conc + delta_conc) < 0:
             raise Exception(f"The given time interval ({delta_time}) "
