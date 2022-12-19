@@ -67,7 +67,7 @@ class ReactionDynamics:
 
 
 
-    def get_conc(self, form="DICT"):
+    def get_conc(self, form="DICT"):    # TODO: ditch the "DICT" option
         """
         Retrieve the concentrations of ALL the chemicals
 
@@ -82,6 +82,25 @@ class ReactionDynamics:
                                                                 for index, conc in enumerate(self.system)}
         else:
             raise Exception(f"get_conc(): Unknown option for the `form` argument ({form}).  Allowed values are 'ARRAY' and 'DICT'")
+
+
+
+    def get_conc_dict(self, species=None, system_data=None) ->[]:     # TODO: test; add system_data option
+        """
+        Retrieve the concentrations of the requested chemicals (by default all),
+        as a dictionary
+
+        :param species: (OPTIONAL) list of name of the chemical species, or None (meaning all)
+        :return:        A dictionary, index by chemical name, of the concentration values
+        """
+        if species is None:
+            return {self.reaction_data.get_name(index): self.system[index]
+                           for index, conc in enumerate(self.system)}
+        else:
+            conc_dict = {}
+            for name in enumerate(species):
+                species_index = self.reaction_data.get_index(name)
+                conc_dict[name] = self.system[species_index]
 
 
 
@@ -173,10 +192,11 @@ class ReactionDynamics:
     #                                                                                           #
     #############################################################################################
 
-    def add_snapshot(self, species=None, caption="") -> None:
+    def add_snapshot(self, species=None, caption="", time=None, system_data=None) -> None:  # TODO: add system_data option
         """
-        Preserve some or all the chemical concentrations into the history, linked to the
-        current System Time, with an optional caption.
+        Preserve some or all the chemical concentrations into the history,
+        linked to the passed time (by default the current System Time),
+        with an optional caption.
 
         EXAMPLE:  create_snapshot(species=['A', 'B'])
                                   caption="Just prior to infusion")
@@ -184,8 +204,10 @@ class ReactionDynamics:
         :param species: (OPTIONAL) list of name of the chemical species whose concentrations we want to preserve for later use.
                             If not specified, save all
         :param caption: (OPTIONAL) caption to attach to this preserved data
+        :param time:    (OPTIONAL) time value to attach to the snapshot (default: current System Time)
         :return:        None
         """
+        # TODO: replace if with call to get_conc_dict()
         if species is None:
             data_snapshot = self.get_conc(form="DICT")
         else:
@@ -193,7 +215,10 @@ class ReactionDynamics:
             for species_index, name in enumerate(species):
                 data_snapshot[name] = self.system[species_index]
 
-        self.history.store(par=self.system_time,
+        if time is None:
+            time = self.system_time
+
+        self.history.store(par=time,
                            data_snapshot = data_snapshot, caption=caption)
 
 
@@ -328,6 +353,7 @@ class ReactionDynamics:
                                     this can be thought of as the "SYSTEM STATE"
         :param dynamic_step:    An integer by which to subdivide the time intervals for "fast" reactions;
                                     default 1, i.e. no subdivisions
+        :param snapshots:
 
         :return:                The increment vector for the concentrations of ALL the chemical species,
                                     as a Numpy array for all the chemical species, in their index order
@@ -345,15 +371,23 @@ class ReactionDynamics:
 
             # Process all the fast reactions
             fast_rxns = self.fast_rxns()
-            local_init_conc_array = conc_array.copy()   # Saved as an unchanging baseline copy
+            local_conc_array = conc_array.copy()   # Saved as an unchanging baseline copy
             delta_concentrations_fast = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
-            for i in range(dynamic_step):
-                incr_vector = self.single_reaction_step(delta_time=delta_time, conc_array=local_init_conc_array, rxn_list=fast_rxns)
-                local_init_conc_array += incr_vector
+            reduced_time_step = delta_time / dynamic_step
+            for substep in range(dynamic_step):
+                incr_vector = self.single_reaction_step(delta_time=reduced_time_step, conc_array=local_conc_array, rxn_list=fast_rxns)
+                local_conc_array += incr_vector
                 delta_concentrations_fast += incr_vector
+                # Preserve the intermediate-state data, if requested
+                if snapshots and snapshots.get("show_intermediates"):
+                    species_to_show = snapshots.get("species")          # Default is None
+                    time = self.system_time + (substep+1) * reduced_time_step
+                    self.add_snapshot(time=time, species=species_to_show,
+                                      system_data=local_conc_array,
+                                      caption=f"Intermediate step, from fast reactions: {fast_rxns}")
 
-            # Combine the results of the slow and fast reactions
-            delta_concentrations = delta_concentrations_slow + delta_concentrations_fast - local_init_conc_array
+            # Combine the results of all the slow reactions and all the fast reactions
+            delta_concentrations = delta_concentrations_slow + delta_concentrations_fast - local_conc_array
             # The above is based on:
             # self.system = self.system + (delta_concentrations_slow - self.system) + (delta_concentrations_fast - self.system)
         # END IF
