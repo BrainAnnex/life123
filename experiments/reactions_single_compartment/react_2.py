@@ -16,7 +16,7 @@
 # ### A simple A <-> B reaction between 2 species,
 # with 1st-order kinetics in both directions, taken to equilibrium
 #
-# Based on the experiment _"1D/reactions/reaction_1"_ ; this is simply the "single-compartment" version of it.
+# Same as the experiment _"react1"_ , but with a variable time scale
 #
 # LAST REVISED: Dec. 19, 2022
 
@@ -85,9 +85,13 @@ dynamics.history.get()
 # ## Start the reaction
 
 # %%
+dynamics.debug = True    # ********  TEMPORARY   ******** 
+
+# %%
 # First step of reaction
 dynamics.single_compartment_react(time_step=0.1, n_steps=1,
-                                  snapshots={"initial_caption": "first reaction step"})
+                                  snapshots={"initial_caption": "first reaction step"},
+                                  dynamic_step=2)
 
 # %%
 dynamics.history.get()
@@ -96,7 +100,8 @@ dynamics.history.get()
 # Numerous more steps
 dynamics.single_compartment_react(time_step=0.1, n_steps=10,
                                   snapshots={"initial_caption": "2nd reaction step",
-                                             "final_caption": "last reaction step"})
+                                             "final_caption": "last reaction step"},
+                                  dynamic_step=2)
 
 # %%
 dynamics.history.get()
@@ -131,36 +136,5 @@ df = dynamics.history.get()
 
 # %%
 df
-
-# %% [markdown]
-# ### Now investigate A_dot, i.e. d[A]/dt
-
-# %%
-A = list(df.A)
-
-# %%
-A
-
-# %%
-len(A)
-
-# %%
-A_dot = np.gradient(A, 0.1)      # 0.1 is the constant step size
-
-# %%
-A_dot
-
-# %%
-df['A_dot'] = A_dot
-
-# %%
-df
-
-# %%
-fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "A_dot"], 
-              title="Changes in concentration of A with time (blue) , and changes in its rate of change (orange)",
-              color_discrete_sequence = ['navy', 'darkorange'],
-              labels={"value":"concentration (blue) /<br> concentration per unit time (orange)", "variable":"Chemical"})
-fig.show()
 
 # %%

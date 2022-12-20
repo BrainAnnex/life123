@@ -32,6 +32,8 @@ class ReactionDynamics:
 
         self.debug = False
 
+        self.debug_code = None
+
         self.reaction_speeds = {}       # A dictionary.  EXAMPLE : { 1: "F", 4: "S", 5: "F" , 8: "S" }
                                         # Anything missing is assumed to be "F" (Fast)
 
@@ -209,7 +211,7 @@ class ReactionDynamics:
     #                                                                                           #
     #############################################################################################
 
-    def add_snapshot(self, species=None, caption="", time=None, system_data=None) -> None:  # TODO: add system_data option
+    def add_snapshot(self, species=None, caption="", time=None, system_data=None) -> None:
         """
         Preserve some or all the chemical concentrations into the history,
         linked to the passed time (by default the current System Time),
@@ -218,24 +220,24 @@ class ReactionDynamics:
         EXAMPLE:  create_snapshot(species=['A', 'B'])
                                   caption="Just prior to infusion")
 
-        :param species: (OPTIONAL) list of name of the chemical species whose concentrations we want to preserve for later use.
-                            If not specified, save all
-        :param caption: (OPTIONAL) caption to attach to this preserved data
-        :param time:    (OPTIONAL) time value to attach to the snapshot (default: current System Time)
-        :return:        None
+        :param species:     (OPTIONAL) list of name of the chemical species whose concentrations we want to preserve for later use.
+                                If not specified, save all
+        :param caption:     (OPTIONAL) caption to attach to this preserved data
+        :param time:        (OPTIONAL) time value to attach to the snapshot (default: current System Time)
+        :param system_data: (OPTIONAL) a Numpy array of concentration values, in the same order as the
+                                index of the chemical species; by default, use the SYSTEM DATA
+                                (which is set and managed by various functions)
+        :return:            None
         """
-        if species is None:
-            data_snapshot = self.get_conc_dict()
-        else:
-            data_snapshot = {}
-            for species_index, name in enumerate(species):
-                data_snapshot[name] = self.system[species_index]
+
+        data_snapshot = self.get_conc_dict(species=species, system_data=system_data)
+
 
         if time is None:
             time = self.system_time
 
         self.history.store(par=time,
-                           data_snapshot = data_snapshot, caption=caption)
+                           data_snapshot=data_snapshot, caption=caption)
 
 
 
@@ -287,7 +289,7 @@ class ReactionDynamics:
 
 
     def single_compartment_react(self, total_duration=None, time_step=None, n_steps=None,
-                                 dynamic_step = 1, snapshots=None) -> None:
+                                 dynamic_step=1, snapshots=None) -> None:
         """
         Perform ALL the reactions in the single compartment -
         based on the INITIAL concentrations,
@@ -306,8 +308,8 @@ class ReactionDynamics:
                                     or multiplied by that factor, if that reaction has slow dynamics
         :param snapshots:       OPTIONAL dict that may contain any the following keys:
                                         -"frequency" (default 1)
-                                        -"show_intermediates" (default False)
-                                        -"species" (default all)
+                                        -"show_intermediates" (default True)
+                                        -"species" (default None, meaning all species)
                                         -"initial_caption" (default blank)
                                         -"final_caption" (default blank)
                                     If provided, take a system snapshot after running a multiple
@@ -322,9 +324,15 @@ class ReactionDynamics:
 
         if snapshots:
             frequency = snapshots.get("frequency", 1)   # Default is 1
-            species = snapshots.get("species")          # Default is None
+            species = snapshots.get("species")          # If not present, it will be None (meaning show all)
             first_snapshot = True
-
+            if not snapshots.get("show_intermediates"):
+                snapshots["show_intermediates"] = True
+        else:
+            snapshots = {"frequency": 1, "show_intermediates": True, "species": None, "first_snapshot": True}
+            frequency = 1
+            species = None
+            first_snapshot = True
 
         for i in range(n_steps):
             delta_concentrations = self.reaction_step_orchestrator(delta_time=time_step, conc_array=self.system,
@@ -395,24 +403,27 @@ class ReactionDynamics:
                 local_conc_array += incr_vector
                 delta_concentrations_fast += incr_vector
                 # Preserve the intermediate-state data, if requested
-                if snapshots and snapshots.get("show_intermediates"):
-                    species_to_show = snapshots.get("species")          # Default is None
+                if snapshots and snapshots.get("show_intermediates") and substep < dynamic_step-1:  # Skip the last one, which will be handled by the caller
+                    species_to_show = snapshots.get("species")          # If not present, it will be None (meaning show all)
                     time = self.system_time + (substep+1) * reduced_time_step
                     self.add_snapshot(time=time, species=species_to_show,
                                       system_data=local_conc_array,
-                                      caption=f"Intermediate step, from fast reactions: {fast_rxns}")
+                                      caption=f"Interm. step, from following fast reactions: {fast_rxns}")
 
             # Combine the results of all the slow reactions and all the fast reactions
-            delta_concentrations = delta_concentrations_slow + delta_concentrations_fast - local_conc_array
-            # The above is based on:
-            # self.system = self.system + (delta_concentrations_slow - self.system) + (delta_concentrations_fast - self.system)
+            if self.debug_code == 1:
+                print("delta_time: ", delta_time)
+                print("    delta_concentrations_slow: ", delta_concentrations_slow)
+                print("    delta_concentrations_fast: ", delta_concentrations_fast)
+
+            delta_concentrations = delta_concentrations_slow + delta_concentrations_fast
         # END IF
 
         return  delta_concentrations
 
 
 
-    def single_reaction_step(self, delta_time: float, conc_array=None, rxn_list=None) -> np.array:
+    def single_reaction_step(self, delta_time: float, conc_array=None, rxn_list=None, dynamic_step=1) -> np.array:
         """
         Using the given concentration data for ALL the chemical species,
         do the specified SINGLE TIME STEP for the requested reactions (by default all).
@@ -469,7 +480,8 @@ class ReactionDynamics:
                 delta_conc = stoichiometry * (- delta_list[rxn_index])  # Increment to this reactant from the reaction being considered
 
                 self.examine_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
-                                       species_index=species_index, rxn_index=rxn_index, delta_time=delta_time)
+                                       species_index=species_index, rxn_index=rxn_index, delta_time=delta_time,
+                                       dynamic_step=dynamic_step)
 
                 increment_vector[species_index] += delta_conc
 
@@ -480,7 +492,8 @@ class ReactionDynamics:
                 delta_conc = stoichiometry * delta_list[rxn_index]  # Increment to this reaction product from the reaction being considered
 
                 self.examine_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
-                                       species_index=species_index, rxn_index=rxn_index, delta_time=delta_time)
+                                       species_index=species_index, rxn_index=rxn_index, delta_time=delta_time,
+                                       dynamic_step=dynamic_step)
 
                 increment_vector[species_index] += delta_conc
         # END for
@@ -490,7 +503,7 @@ class ReactionDynamics:
 
 
     def examine_increment(self, delta_conc: float, baseline_conc: float, rxn_index: int,
-                                species_index: int, delta_time) -> None:
+                                species_index: int, delta_time, dynamic_step) -> None:
         """
         Examine the requested concentration change given by delta_conc
         (typically, as computed by an ode solver),
@@ -513,6 +526,7 @@ class ReactionDynamics:
                                 [The remaining arguments are just for error messages, if applicable]
         :param species_index:   The index (0-based) to identify the chemical species of interest. ONLY USED for error printing
         :param delta_time:      The time duration of the reaction step. ONLY USED for error printing
+        :param dynamic_step:    TODO: test!
 
         :return:                None (the equation is marked as "Fast", if appropriate, in its data structure)
         """
@@ -523,8 +537,8 @@ class ReactionDynamics:
 
         if self.get_rxn_speed(rxn_index) == "S":
             # If the reaction is tentatively assigned as "Slow", decide whether to flip it to "Fast"
-            #if abs(delta_conc) / baseline_conc > THRESHOLD:
-            if abs(delta_conc) * self.FAST_THRESHOLD > baseline_conc:     # To avoid time-consuming divisions
+            #if abs(delta_conc) / baseline_conc > THRESHOLD_PERC / dynamic_step
+            if abs(delta_conc) * self.FAST_THRESHOLD * dynamic_step > baseline_conc:     # To avoid time-consuming divisions
                 self.set_rxn_speed(rxn_index, "F")
                 if self.debug:
                     print(f"Reaction # {rxn_index} marked as 'Fast', "
