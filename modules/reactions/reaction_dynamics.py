@@ -51,14 +51,20 @@ class ReactionDynamics:
         Set the concentrations of all the chemicals
 
         :param conc:        A list or tuple (TODO: also allow a Numpy array)
-        :param snapshot:    (OPTIONAL)
+        :param snapshot:    (OPTIONAL) boolean: if True, add to the history
+                            a snapshot of this initial state being set.  Default: False
         :return:            None
         """
-        # TODO: more validations, incl. of being positive
+        # TODO: more validations, incl. of individual values being wrong data type
 
         assert len(conc) == self.reaction_data.number_of_chemicals(), \
-            f"set_conc(): The number of concentrations ({len(conc)}) " \
+            f"ReactionDynamics.set_conc(): The number of passed concentration values ({len(conc)}) " \
             f"must match the number of declared chemicals ({self.reaction_data.number_of_chemicals()})"
+
+        assert min(conc) >= 0, \
+            f"ReactionDynamics.set_conc(): Values meant to be chemical concentrations cannot be negative " \
+            f"(such as the passed value {min(conc)})"
+
 
         self.system = np.array(conc)
 
@@ -67,40 +73,51 @@ class ReactionDynamics:
 
 
 
-    def get_conc(self, form="DICT"):    # TODO: ditch the "DICT" option
+    def get_system_conc(self) -> np.array:
         """
-        Retrieve the concentrations of ALL the chemicals
+        Retrieve the concentrations of ALL the chemicals as a Numpy array
 
-        :param form:    Either "ARRAY"  (EXAMPLE of returned value: array([12.3, 4.56]))
-                            or "DICT"   (EXAMPLE: {"X": 12.3, "Y": 4.56}, where the keys are the names of the chemicals)
-        :return:        Either a Numpy array or a dictionary
+        :return:        Either a Numpy array with the concentrations of ALL the chemicals, in their index order
+                            EXAMPLE:  array([12.3, 4.56, 0.12])    The 0-th chemical has concentration 12.3, and so on...
         """
-        if form == "ARRAY":
-            return self.system
-        elif form == "DICT":
-            return {self.reaction_data.get_name(index): self.system[index]
-                                                                for index, conc in enumerate(self.system)}
-        else:
-            raise Exception(f"get_conc(): Unknown option for the `form` argument ({form}).  Allowed values are 'ARRAY' and 'DICT'")
+        return self.system
 
 
 
-    def get_conc_dict(self, species=None, system_data=None) ->[]:     # TODO: test; add system_data option
+    def get_conc_dict(self, species=None, system_data=None) ->[]:
         """
         Retrieve the concentrations of the requested chemicals (by default all),
         as a dictionary
 
-        :param species: (OPTIONAL) list of name of the chemical species, or None (meaning all)
-        :return:        A dictionary, index by chemical name, of the concentration values
+        :param species:     (OPTIONAL) list or tuple of names of the chemical species; by default, return all
+        :param system_data: (OPTIONAL) a Numpy array of concentration values, in the same order as the
+                                index of the chemical species; by default, use the SYSTEM DATA
+                                (which is set and managed by various functions)
+        :return:            A dictionary, indexed by chemical name, of the concentration values;
+                                EXAMPLE: {"A": 1.2, "D": 4.67}
         """
-        if species is None:
-            return {self.reaction_data.get_name(index): self.system[index]
-                           for index, conc in enumerate(self.system)}
+        if system_data is None:
+            system_data = self.system
         else:
+            assert system_data.size == self.reaction_data.number_of_chemicals(),\
+                f"ReactionDynamics.get_conc_dict(): the argument `system_data` must be a 1-D Numpy array with as many entries " \
+                f"as the declared number of chemicals ({self.reaction_data.number_of_chemicals()})"
+
+
+        if species is None:
+            return {self.reaction_data.get_name(index): system_data[index]
+                           for index, conc in enumerate(system_data)}
+        else:
+            assert type(species) == list or  type(species) == tuple, \
+                f"ReactionDynamics.get_conc_dict(): the argument `species` must be a list or tuple" \
+                f" (it was of type {type(species)})"
+
             conc_dict = {}
-            for name in enumerate(species):
+            for name in species:
                 species_index = self.reaction_data.get_index(name)
-                conc_dict[name] = self.system[species_index]
+                conc_dict[name] = system_data[species_index]
+
+            return conc_dict
 
 
 
@@ -207,9 +224,8 @@ class ReactionDynamics:
         :param time:    (OPTIONAL) time value to attach to the snapshot (default: current System Time)
         :return:        None
         """
-        # TODO: replace if with call to get_conc_dict()
         if species is None:
-            data_snapshot = self.get_conc(form="DICT")
+            data_snapshot = self.get_conc_dict()
         else:
             data_snapshot = {}
             for species_index, name in enumerate(species):

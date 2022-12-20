@@ -5,6 +5,58 @@ from modules.reactions.reaction_dynamics import ReactionDynamics
 
 
 
+def test_set_conc():
+    #TODO: test the snapshot argument
+    chem_data = ReactionData(names=["A", "B", "C"])
+    rxn = ReactionDynamics(chem_data)
+
+    with pytest.raises(Exception):
+        rxn.set_conc(conc=[1, 2, 3, 4])         # Wrong number of entries
+        rxn.set_conc(conc=[1., -2., -3.])       # Negative values
+        rxn.set_conc(conc=(10., 20., -0.01))    # Negative values
+
+    rxn.set_conc(conc=[1., 2., 3.])
+    assert np.allclose(rxn.system, [1., 2., 3.])
+
+    rxn.set_conc(conc=(10., 20., 30.))
+    assert np.allclose(rxn.system, [10., 20., 30.])
+
+
+def test_get_conc():
+    chem_data = ReactionData(names=["A", "B", "C"])
+    rxn = ReactionDynamics(chem_data)
+    rxn.set_conc(conc=(10., 20., 30.))
+
+    result = rxn.get_system_conc()
+    assert np.allclose(result, [10., 20., 30.])
+
+
+def test_set_conc():
+    chem_data = ReactionData(names=["A", "B", "C", "D"])
+    rxn = ReactionDynamics(chem_data)
+    rxn.set_conc(conc=(100, 200, 300, 400))
+
+    result = rxn.get_conc_dict()
+    assert result == {"A": 100, "B": 200, "C": 300, "D": 400}
+
+    result = rxn.get_conc_dict(species=["D", "A"])
+    assert result == {"A": 100, "D": 400}
+
+    result = rxn.get_conc_dict(species=("C",))      # Tuple with 1 element
+    assert result == {"C": 300}
+
+    with pytest.raises(Exception):
+        rxn.get_conc_dict(species="C")                      # Wrong data type
+        rxn.get_conc_dict(system_data=np.array([1, 2]))     # Wrong number of entries
+
+    result = rxn.get_conc_dict(system_data=np.array([1, 2, 3, 4]))
+    assert result == {"A": 1, "B": 2, "C": 3, "D": 4}
+
+    result = rxn.get_conc_dict(species=["B"], system_data=np.array([1, 2, 3, 4]))
+    assert result == {"B": 2}
+
+
+
 def test_specify_steps():
     rxn = ReactionDynamics(None)
 

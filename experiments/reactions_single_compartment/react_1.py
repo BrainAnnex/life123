@@ -102,7 +102,7 @@ dynamics.single_compartment_react(time_step=0.1, n_steps=10,
 dynamics.history.get()
 
 # %%
-dynamics.get_conc(form="DICT")
+dynamics.get_system_conc()
 
 # %% [markdown]
 # NOTE: Consistent with the 3/2 ratio of forward/reverse rates (and the 1st order reactions),
@@ -114,7 +114,7 @@ dynamics.get_conc(form="DICT")
 #
 
 # %%
-dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc(form="DICT"))
+dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_system_conc())
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time
