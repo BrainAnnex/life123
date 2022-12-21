@@ -14,11 +14,11 @@
 
 # %% [markdown]
 # ### A simple A <-> B reaction between 2 species,
-# with 1st-order kinetics in both directions, taken to equilibrium
+# with 1st-order kinetics in both directions, taken to equilibrium (using a varible time scale)
 #
 # Same as the experiment _"react1"_ , but with a variable time scale
 #
-# LAST REVISED: Dec. 19, 2022
+# LAST REVISED: Dec. 20, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -82,26 +82,16 @@ dynamics.describe_state()
 dynamics.history.get()
 
 # %% [markdown] tags=[]
-# ## Start the reaction
+# ## Run the reaction
 
 # %%
-dynamics.debug = True    # ********  TEMPORARY   ******** 
-
-# %%
-# First step of reaction
-dynamics.single_compartment_react(time_step=0.1, n_steps=1,
-                                  snapshots={"initial_caption": "first reaction step"},
-                                  dynamic_step=2)
-
-# %%
-dynamics.history.get()
-
-# %%
-# Numerous more steps
-dynamics.single_compartment_react(time_step=0.1, n_steps=10,
-                                  snapshots={"initial_caption": "2nd reaction step",
+dynamics.single_compartment_react(time_step=0.1, n_steps=11,
+                                  snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   dynamic_step=2)
+
+# %% [markdown]
+# # The argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is fast
 
 # %%
 dynamics.history.get()
@@ -130,11 +120,5 @@ fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B"],
               color_discrete_sequence = ['navy', 'darkorange'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
-
-# %%
-df = dynamics.history.get()
-
-# %%
-df
 
 # %%

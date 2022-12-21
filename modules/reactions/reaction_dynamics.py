@@ -41,6 +41,7 @@ class ReactionDynamics:
         self.FAST_THRESHOLD = 20        # The minimum relative size of the concentration baseline over its change,
                                         #   for a reaction to be regarded as "Slow"
                                         #   IMPORTANT: this refer to the FULL step size
+                                        #   TODO: being turned into an argument passed to methods
 
 
 
