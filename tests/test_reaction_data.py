@@ -142,6 +142,7 @@ def test_add_chemical():
 
 def test_add_reaction():
     chem = ReactionData(names=["A", "B", "C", "D", "E", "F"])
+    chem.set_temp(None)
 
     # Add the first (0-th) reaction
     chem.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
@@ -225,10 +226,10 @@ def test_add_reaction():
 
     # Check the descriptions we has so far
     rxn_list = chem.describe_reactions(return_as_list=True)
-    assert rxn_list[0] == '0: A <-> B  (kF = 3.0 / kR = 2.0)'
-    assert rxn_list[1] == '1: 2 B <-> 5 C  (kF = 9.0 / kR = 7.0)'
-    assert rxn_list[2] == '2: 2 D <-> C  (kF = 11.0 / kR = 13.0) | 3-th order in reactant D | 2-th order in product C'
-    assert rxn_list[3] == '3: A + 2 B <-> 3 C + D  (kF = 5.0 / kR = 1.0) | 2-th order in product C'
+    assert rxn_list[0] == '0: A <-> B  (kF = 3 / kR = 2 / K = 1.5) | 1st order in all reactants & products'
+    assert rxn_list[1] == '1: 2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.28571) | 1st order in all reactants & products'
+    assert rxn_list[2] == '2: 2 D <-> C  (kF = 11 / kR = 13 / Delta_G = 277.793 / K = 0.846154) | 3-th order in reactant D | 2-th order in product C'
+    assert rxn_list[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / Delta_G = -2,676.32 / K = 5) | 2-th order in product C'
 
 
     # Add another reaction (reaction index 4), this time with thermodynamic data;
@@ -262,6 +263,18 @@ def test_describe_reactions():
 def test_standard_form_chem_eqn():
     pass
 
+def test_extract_rxn_properties():
+    chem = ReactionData(names=["A", "B"])
+    chem.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    rxn = chem.get_reaction(0)
+
+    result = chem.extract_rxn_properties(rxn)
+    #print(result)
+    assert np.allclose(result["kF"] , 3.)
+    assert np.allclose(result["kR"] , 2.)
+    assert np.allclose(result["K"] , 1.5)
+    assert np.allclose(result["Delta_G"] , -1005.1305052750387)
+
 
 
 
@@ -272,10 +285,10 @@ def test_create_graph_network_data():
     chem.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
     network_data = chem.create_graph_network_data()
     #print(network_data)
-    expected = [{'id': 2, 'label': 'Reaction', 'name': 'RXN', 'kF': 3.0, 'kR': 2.0},
-                {'id': 1, 'label': 'Product', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
+    expected = [{'id': 2, 'label': 'Reaction', 'name': 'RXN', 'kF': '3', 'kR': '2', 'Delta_G': '-1,005.13','K': '1.5'},
+                {'id': 1, 'label': 'Chemical', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
                 {'id': 3, 'name': 'produces', 'source': 2, 'target': 1},
-                {'id': 0, 'label': 'Reactant', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
+                {'id': 0, 'label': 'Chemical', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
                 {'id': 4, 'name': 'reacts', 'source': 0, 'target': 2}
                 ]
     assert network_data == expected

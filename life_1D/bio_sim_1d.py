@@ -30,7 +30,7 @@ class BioSim1D:
         """
         self.debug = False
 
-        self.n_bins = 0         # Number of spacial compartments (bins) used in the simulation
+        self.n_bins = 0         # Number of spatial compartments (bins) used in the simulation
 
         self.n_species = 1      # The number of (non-water) chemical species   TODO: phase out?
 
@@ -154,7 +154,7 @@ class BioSim1D:
 
     def reset_system(self) -> None:
         """
-        WARNING - THIS IS VERY PARTIAL.  TODO: expand, or drop (not sure if really neeeded anymore)
+        WARNING - THIS IS VERY PARTIAL.  TODO: expand, or drop (not sure if really needed anymore)
         :return:
         """
         self.system = None
@@ -703,7 +703,26 @@ class BioSim1D:
         return d
 
 
-    
+
+    def bin_snapshot_array(self, bin_address: int, trans_membrane=False) -> np.array:
+        """
+        Extract the concentrations of all the chemical species at the specified bin,
+        as a Numpy array in the index order of the species
+        EXAMPLE: np.array([10., 50.)]
+
+        :param bin_address:     An integer with the bin number
+        :param trans_membrane:  If True, consider the "other side" of the bin, i.e. the portion across the membrane
+        :return:                A Numpy array  of concentration values, in the index order of the species
+        """
+        self.assert_valid_bin(bin_address)
+
+        if trans_membrane:
+            return self.system_B[:, bin_address]
+        else:
+            return self.system[: , bin_address]
+
+
+
     def show_system_snapshot(self) -> None:
         """"
         """
@@ -815,9 +834,9 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
     
-    def increase_spacial_resolution(self, factor:int) -> None:
+    def increase_spatial_resolution(self, factor:int) -> None:
         """
-        Increase the spacial resolution of the system by cloning and repeating
+        Increase the spatial resolution of the system by cloning and repeating
         each bin, by the specified number of times.
         Replace the System's internal state
         (note that the number of bins will increase by the requested factor)
@@ -838,9 +857,9 @@ class BioSim1D:
 
 
 
-    def double_spacial_resolution_linear(self) -> None:
+    def double_spatial_resolution_linear(self) -> None:
         """
-        Increase the spacial resolution of the system by inserting between bins
+        Increase the spatial resolution of the system by inserting between bins
         their average value (of concentrations, for every chemical species.)
         Replace the System's internal state
         (note that if the number of bins is initially N, it'll become 2N-1).
@@ -856,7 +875,7 @@ class BioSim1D:
         :return:    None
         """
         assert self.n_bins >= 2, \
-            "double_spacial_resolution_linear(): function can only be used if the system contains at least 2 bins"
+            "double_spatial_resolution_linear(): function can only be used if the system contains at least 2 bins"
 
         new_state = np.zeros((self.n_species, self.n_bins * 2 - 1), dtype=float)
         #print(new_state)
@@ -877,7 +896,7 @@ class BioSim1D:
 
 
     
-    def decrease_spacial_resolution(self, factor:int) -> None:
+    def decrease_spatial_resolution(self, factor:int) -> None:
         """
 
         TODO: eliminate the restriction that the number of bins must be a multiple of factor
@@ -911,7 +930,7 @@ class BioSim1D:
 
 
     
-    def smooth_spacial_resolution(self) -> None:
+    def smooth_spatial_resolution(self) -> None:
         """
         EXAMPLE: if the system is
                         [[10., 20., 30.]
@@ -1123,7 +1142,7 @@ class BioSim1D:
     def diffuse_step_single_species_5_1_stencils(self, time_step: float, species_index=0, delta_x=1) -> np.array:
         """
         Similar to diffuse_step_single_species(), but using a "5+1 stencil";
-        i.e. spacial derivatives are turned into finite elements using 5 adjacent bins instead of 3.
+        i.e. spatial derivatives are turned into finite elements using 5 adjacent bins instead of 3.
 
         For more info, see diffuse_step_single_species()
 
@@ -1165,7 +1184,7 @@ class BioSim1D:
 
         #print("effective_diff: ", effective_diff)
 
-        # The coefficients for the "Central Differences" for the spacial 2nd partial derivative,
+        # The coefficients for the "Central Differences" for the spatial 2nd partial derivative,
         #   to "accuracy 4" (using 5 term: 2 left neighbors and 2 right neighbors)
         C2 = -1/12
         C1 = 4/3
@@ -1243,7 +1262,8 @@ class BioSim1D:
         :param n_steps:         The desired number of steps
         :param snapshots:       OPTIONAL dict that may contain any the following keys:
                                     "frequency", "sample_bin", "sample_species"
-                                    If provided, take a system snapshot after running a multiple of "frequency" run steps.
+                                    If provided, take a system snapshot after running a multiple
+                                    of "frequency" run steps (default 1, i.e. at every step.)
                                     EXAMPLE: snapshots={"frequency": 2, "sample_bin": 0}
         :return:                None
         """
@@ -1308,12 +1328,11 @@ class BioSim1D:
                 print(f"BioSim1D.reaction_step(): processing the all the reactions in bin number {bin_n}")
 
             # Obtain the Delta-concentration for each species, for this bin
-            conc_dict = {species_index: self.system[species_index , bin_n]
-                         for species_index in range(self.n_species)}
-            #print(f"\nconc_dict in bin {bin_n}: ", conc_dict)
+            conc_array = self.bin_snapshot_array(bin_address=bin_n)
+            #print(f"\conc_array in bin {bin_n}: ", conc_array)
 
             # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-            increment_vector = self.reaction_dynamics.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=delta_time)
+            increment_vector = self.reaction_dynamics.reaction_step_orchestrator(delta_time=delta_time, conc_array=conc_array)
 
             # Replace the "bin_n" column of the self.delta_reactions matrix with the contents of the vector increment_vector
             self.delta_reactions[:, bin_n] = np.array([increment_vector])
@@ -1325,12 +1344,11 @@ class BioSim1D:
         if self.uses_membranes():
             for bin_n in self.bins_with_membranes():
                 # Obtain the Delta-concentration for each species, for this bin
-                conc_dict = {species_index: self.bin_concentration(bin_address=bin_n, species_index=species_index, trans_membrane=True)
-                             for species_index in range(self.n_species)}
+                conc_array = self.bin_snapshot_array(bin_address=bin_n, trans_membrane=True)
                 #print(f"\n Post-membrane side conc_dict in bin {bin_n}: ", conc_dict)
 
                 # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-                increment_vector = self.reaction_dynamics.single_compartment_reaction_step(conc_dict=conc_dict, delta_time=delta_time)
+                increment_vector = self.reaction_dynamics.reaction_step_orchestrator(delta_time=delta_time, conc_array=conc_array)
 
                 # Replace the "bin_n" column of the self.delta_reactions_B matrix with the contents of the vector increment_vector
                 self.delta_reactions_B[:, bin_n] = np.array([increment_vector])
@@ -1344,7 +1362,6 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    
     def react_diffuse(self, total_duration=None, time_step=None, n_steps=None, delta_x = 1) -> None:
         """
         It expects 2 of the arguments:  total_duration, time_step, n_steps
@@ -1603,13 +1620,10 @@ class BioSim1D:
 
 
     
-    def get_history(self, first_n=None, last_n=None) -> pd.DataFrame:
+    def get_history(self) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
         using save_snapshot()
-
-        :param first_n: TODO: not yet implemented
-        :param last_n:  TODO: not yet implemented
 
         :return:        a Pandas dataframe
         """

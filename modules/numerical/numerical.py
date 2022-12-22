@@ -79,13 +79,15 @@ class Numerical:
 
         At the boundary, or close to it, different 5-point stencils are used,
         still resulting in an accuracy of order 4.
-        For coefficients, see: https://web.media.mit.edu/~crtaylor/calculator.html
+        For the coefficients, see: https://web.media.mit.edu/~crtaylor/calculator.html
 
         Returns the same size as the input array.
 
         For multi-dimensional cases, use gradient_order4()
+        For a simpler, but less accurate (order 2) approach, simply use Numpy gradient()
 
-        :param arr:     One-dimensional Numpy array (or list, or tuple) of numbers
+        :param arr:     One-dimensional Numpy array (or list, or tuple) of numbers,
+                        with at least 5 elements
         :param dx:      Delta_x (assumed constant)
         :param dtype:   Data type to use for the elements of the returned array
 
@@ -99,9 +101,9 @@ class Numerical:
 
         # For the leftmost boundary point, use the 5-point forward difference
         i = 0
-        result[i] =(-25*arr[i] +48*arr[i+1] -36*arr[i+2] +16*arr[i+3] -3*arr[i+4])/12
+        result[i] = (-25*arr[i] +48*arr[i+1] -36*arr[i+2] +16*arr[i+3] -3*arr[i+4])/12
 
-        # For the 2nd leftmost boundary point, use skewed 5-point central differences
+        # For the 2nd leftmost boundary point, use the skewed 5-point central differences
         i = 1
         result[i] = (-3*arr[i-1] -10*arr[i] +18*arr[i+1] -6*arr[i+2] +arr[i+3])/12
 
@@ -119,13 +121,13 @@ class Numerical:
                         +C2 * arr[i+2]
 
 
-        # For the 2nd rightmost boundary point, use skewed 5-point central differences
+        # For the 2nd rightmost boundary point, use the skewed 5-point central differences
         i = arr_size-2
         result[i] = (-arr[i-3] +6*arr[i-2] -18*arr[i-1] +10*arr[i] +3*arr[i+1])/12
 
         # For the rightmost boundary point, use the 5-point backward difference
         i = arr_size-1
-        result[i] =(3*arr[i-4] -16*arr[i-3] +36*arr[i-2] -48*arr[i-1] +25*arr[i])/12
+        result[i] = (3*arr[i-4] -16*arr[i-3] +36*arr[i-2] -48*arr[i-1] +25*arr[i])/12
 
         return result / dx
 

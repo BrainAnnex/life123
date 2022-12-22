@@ -5,9 +5,7 @@ import numpy as np
 
 class ReactionData:
     """
-    NOTE - This is the merger of the 2 deprecated classes "Reactions" and "Chemicals"
-
-    Data about all applicable chemicals and (if applicable) reactions,
+    Data about all the chemicals and (if applicable) reactions,
     including:
         - names
         - diffusion rates
@@ -24,15 +22,15 @@ class ReactionData:
         based on the order with which they were first added.
 
         List of reactions (Note: this will eventually be stored in a Neo4j graph database)
-        Each reaction is a Python dictionary with 4 keys:
+        Each reaction is a Python dictionary with the following keys:
             "reactants"
             "products"
-            "kF"    (forward reaction rate constant)    Formerly "Rf"  TODO: rename
-            "kR"    (reverse reaction rate constant)    Formerly "Rb"  TODO: rename
+            "kF"    (forward reaction rate constant)
+            "kR"    (reverse reaction rate constant)
             "K"     (equilibrium constant - from either kinetic or thermodynamic data; if both present, they must match up!)
-            "Delta_H" (change in Enthalpy: Enthalpy of Products - Enthalpy of Reactants)     TODO: being implemented
-            "Delta_S" (change in Entropy)           TODO: being implemented
-            "Delta_G" (change in Gibbs Free Energy) TODO: being implemented
+            "Delta_H" (change in Enthalpy: Enthalpy of Products - Enthalpy of Reactants)
+            "Delta_S" (change in Entropy)
+            "Delta_G" (change in Gibbs Free Energy)
                         Note - at constant temperature T :  Delta_G = Delta_H - T * Delta_S
                         Equilibrium constant = exp(-Delta_G / RT)
 
@@ -66,7 +64,7 @@ class ReactionData:
         self.reaction_list = []     # List of dicts.  Each item represents a reaction, incl. its reverse
                                     # Reactions should be added by means of calls to add_reaction()
 
-        self.temp = None            # Temperature in Kelvins.
+        self.temp = 298.15          # Temperature in Kelvins.  (By default, 25 C)
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
 
         self.R = 8.314462           # Ideal gas constant, in units of Joules / (Kelvin * Mole)
@@ -102,9 +100,15 @@ class ReactionData:
         :param species_index:
         :return:                None
         """
-        assert (species_index is not None) and (type(species_index) == int) and \
+        assert (type(species_index) == int) and \
                0 <= species_index < self.n_species, \
             f"The requested species index ({species_index}) is not the expected integer the range [0 - {self.n_species - 1}], inclusive"
+
+
+    def assert_valid_rxn_index(self, index):
+        assert (type(index) == int) and \
+               0 <= index < self.number_of_reactions(), \
+            f"The requested reaction index ({index}) is not the expected integer the range [0 - {self.number_of_reactions() - 1}], inclusive"
 
 
 
@@ -348,6 +352,22 @@ class ReactionData:
 
 
 
+    def extract_rxn_properties(self, rxn: dict) -> {}:
+        """
+        Create a dictionary with the numerical properties of the given reaction (skipping any None values)
+
+        :param rxn: A dictionary with all the reaction data
+        :return:    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'Delta_G': -1005.1305052750387, 'K': 1.5}
+        """
+        properties = {}
+        for k,v in rxn.items():
+            if k not in ("reactants", "products") and (v is not None):
+                properties[k] = v
+
+        return properties
+
+
+
 
     ############################################################################
     #                                                                          #
@@ -476,6 +496,17 @@ class ReactionData:
 
 
 
+    def set_temp(self, temp, units="K"):
+        """
+
+        :param temp:    Temperature, in Kelvins, or None
+        :param units:   Not yet implemented
+        :return:
+        """
+        self.temp = temp
+
+
+
     def add_reaction(self, reactants: Union[int, str, tuple, list], products: Union[int, str, tuple, list],
                              forward_rate=None, reverse_rate=None,
                              Delta_H=None, Delta_S=None) -> None:
@@ -568,34 +599,47 @@ class ReactionData:
 
     def describe_reactions(self, concise=False, return_as_list=False) -> Union[None, List[str]]:
         """
-        Print out and return a listing with a user-friendly plain-text form of all the reactions
+        Print out, and optionally return a list of, a user-friendly plain-text form of all the reactions
         EXAMPLE:  ["(0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 , kR = 2.0)"]
 
         :param concise:         If True, less detail is shown
-        :param return_as_list:  If True, in addition to being printed, a list of reaction listings gets returned
+        :param return_as_list:  If True, in addition to being printed, a list of reaction descriptions gets returned
         :return:                Either None or a list of strings, based on the flag return_as_list
         """
-        print("Number of reactions: ", self.number_of_reactions())
+        print(f"Number of reactions: {self.number_of_reactions()} (at temp. {self.temp - 273.15:,.4g} C)")
 
-        out = []    # Output list being built (and printed out item-wise)
-        for i, rxn in enumerate(self.reaction_list):
+        out = []    # Output list being built (and printed out, item-wise)
+        for i, rxn in enumerate(self.reaction_list):    # Loop over all the registered reactions
             reactants = self.extract_reactants(rxn)
             products = self.extract_products(rxn)
 
-            left = self.standard_form_chem_eqn(reactants)       # Left side of the equation
+            left = self.standard_form_chem_eqn(reactants)       # Left side of the equation, as a user-friendly string
             right = self.standard_form_chem_eqn(products)       # Right side of the equation
 
-            rxn_description = f"{i}: {left} <-> {right}"        # Initial brief description of the reaction
-            if not concise:     # Add more detail
-                rxn_description += f"  (kF = {rxn['kF']} / kR = {rxn['kR']})"
+            rxn_description = f"{i}: {left} <-> {right}"        # Concise start point for a description of the reaction
+
+            if not concise:     # Append more detail
+                details = []
+                rxn_properties = self.extract_rxn_properties(rxn)
+                for k,v in rxn_properties.items():
+                    details.append(f"{k} = {v:,.6g}")          # EXAMPLE: "kF = 3"
+
+                rxn_description += "  (" + ' / '.join(details) + ")"    # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
+
+                high_order = False      # Is there any term whose order is greater than 1 ?
                 for r in reactants:
                     if r[2] > 1:
                         rxn_description += f" | {r[2]}-th order in reactant {self.get_name(r[1])}"
+                        high_order = True
                 for p in products:
                     if p[2] > 1:
                         rxn_description += f" | {p[2]}-th order in product {self.get_name(p[1])}"
+                        high_order = True
 
-            print(rxn_description)
+                if not high_order:
+                    rxn_description += " | 1st order in all reactants & products"
+
+            print(rxn_description)          # Print each reaction on a separate line
             out.append(rxn_description)
 
         if return_as_list:
@@ -656,10 +700,16 @@ class ReactionData:
         Encode the reaction data in a form suitable for visualization
         with the graph module "vue_cytoscape"
 
-        TODO:   assign a new, separate node label to chemicals that are both reagents and product
-                Ditch all None values
+        :return:    A list of dictionaries.  Each dictionary must have an 'id' key with a unique value.
+                    EXAMPLE, for an  A <-> B reaction:
+                       [{'id': 0, 'label': 'Chemical', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
+                        {'id': 1, 'label': 'Chemical', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
 
-        :return:    A list of dictionaries.  Each dictionary must have an 'id' key with a unique value
+                        {'id': 2, 'label': 'Reaction', 'name': 'RXN', 'kF': 3.0, 'kR': 2.0, 'K': 1.5, 'Delta_G': -1005.13},
+
+                        {'id': 3, 'name': 'produces', 'source': 2, 'target': 1},
+                        {'id': 4, 'name': 'reacts', 'source': 0, 'target': 2}
+                       ]
         """
         graph_data = []
         species_in_graph = []
@@ -668,13 +718,18 @@ class ReactionData:
         #       For the reaction nodes, use numbers from a range starting just above the end-range of the numbers for the chemicals
         next_available_id = self.number_of_chemicals()
 
-        for i, rxn in enumerate(self.reaction_list):
-            print("\n", rxn, "\n")
+        for i, rxn in enumerate(self.reaction_list):    # Consider each reaction in turn
             # Add a node representing the reaction
             rxn_id = next_available_id
             next_available_id += 1
-            graph_data.append({'id': rxn_id, 'label': 'Reaction', 'name': 'RXN',
-                               'kF': self.extract_forward_rate(rxn), 'kR': self.extract_back_rate(rxn)})
+            node_data = {'id': rxn_id, 'label': 'Reaction', 'name': 'RXN'}
+
+            rxn_properties = self.extract_rxn_properties(rxn)
+            for k,v in rxn_properties.items():
+                node_data[k] = f"{v:,.6g}"
+                               #'kF': self.extract_forward_rate(rxn), 'kR': self.extract_back_rate(rxn)})
+
+            graph_data.append(node_data)
 
             # Process all products
             products = self.extract_products(rxn)
@@ -682,7 +737,7 @@ class ReactionData:
                 species_index = term[1]
                 # Add each product to the graph as a node (if not already present)
                 if species_index not in species_in_graph:
-                    graph_data.append({'id': species_index, 'label': 'Product',
+                    graph_data.append({'id': species_index, 'label': 'Chemical',
                                        'name': self.get_name(species_index),
                                        'diff_rate': self.get_diffusion_rate(species_index),
                                        'stoich': self.extract_stoichiometry(term),
@@ -698,7 +753,7 @@ class ReactionData:
                 species_index = term[1]
                 # Add each reactant to the graph as a node (if not already present)
                 if species_index not in species_in_graph:
-                    graph_data.append({'id': species_index, 'label': 'Reactant',
+                    graph_data.append({'id': species_index, 'label': 'Chemical',
                                        'name': self.get_name(species_index),
                                        'diff_rate': self.get_diffusion_rate(species_index),
                                        'stoich': self.extract_stoichiometry(term),
@@ -714,8 +769,8 @@ class ReactionData:
 
     def assign_color_mapping(self):
         return {
-            'Reactant': 'neo4j_green',
-            'Product': 'neo4j_red',
+            'Chemical': 'neo4j_green',
+            #'Product': 'neo4j_red',
             'Reaction': 'neo4j_lightbrown'
         }
 

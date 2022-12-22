@@ -1,10 +1,11 @@
-# To simplify use of HtmlLog and Vue components from within this project
-
 from typing import Union, List
 from modules.html_log.html_log import HtmlLog as log
 
 
 class GraphicLog:
+    """
+    To simplify use of HtmlLog and Vue components from within this project
+    """
 
     ###  START OF CONFIGURATION  ###
     LOCAL_FILES_ROOT = None     # This needs to be set by config().   EXAMPLE: "../../../"

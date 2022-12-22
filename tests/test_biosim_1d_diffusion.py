@@ -467,7 +467,7 @@ def test_diffuse_4():
 
     # Store the initial state
     arr = bio.lookup_species(species_index=0, copy=True)
-    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+    history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
     # Do the 4 rounds of single-step diffusion; accumulate all data in the history object
     for _ in range(4):
@@ -475,7 +475,7 @@ def test_diffuse_4():
         assert status["steps"] == 1
 
         arr = bio.lookup_species(species_index=0, copy=True)
-        history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+        history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 
     # Now, let's examine the data collected at the 5 time points
@@ -526,7 +526,7 @@ def test_diffuse_5():
 
     # Store the initial state
     arr = bio.lookup_species(species_index=0, copy=True)
-    history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+    history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
     # Do the 4 rounds of single-step diffusion; accumulate all data in the history object
     for _ in range(4):
@@ -534,7 +534,7 @@ def test_diffuse_5():
         assert status["steps"] == 1
 
         arr = bio.lookup_species(species_index=0, copy=True)
-        history.store(pars=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
+        history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 
     # Now, let's examine the data collected at the 5 time points

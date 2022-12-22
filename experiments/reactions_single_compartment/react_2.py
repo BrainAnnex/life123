@@ -13,10 +13,10 @@
 # ---
 
 # %% [markdown]
-# ### A simple A <-> B reaction between 2 species,
+# ### Adaptive variable time resolution on reaction A <-> B  between 2 species,
 # with 1st-order kinetics in both directions, taken to equilibrium
 #
-# Based on the experiment _"1D/reactions/reaction_1"_ ; this is simply the "single-compartment" version of it.
+# Same as the experiment _"react_1"_ , but with an adaptive variable time scale
 #
 # LAST REVISED: Dec. 21, 2022
 
@@ -82,24 +82,57 @@ dynamics.describe_state()
 dynamics.history.get()
 
 # %% [markdown] tags=[]
-# ## Start the reaction
+# ## Run the reaction
 
 # %%
-# First step of reaction
-dynamics.single_compartment_react(time_step=0.1, n_steps=1,
-                                  snapshots={"initial_caption": "first reaction step"})
+dynamics.single_compartment_react(time_step=0.1, n_steps=11,
+                                  snapshots={"initial_caption": "1st reaction step",
+                                             "final_caption": "last reaction step"},
+                                  dynamic_step=2)      
+                                  # Accepting the default:  fast_threshold=5
+
+# %% [markdown]
+# ## The argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using fast_threshold=5)
 
 # %%
-dynamics.history.get()
+df = dynamics.history.get()
+df
+
+# %% [markdown]
+# ## Notice how the reaction proceeds in smaller steps in the early times, when [A] and [B] are changing much more rapidly
+#
+# * For example, upon completing the half step to t=0.30, i.e. **going from 0.25 to 0.30**, the last change in [A] was (21.508301 - 20.677734) = 0.830567  
+# Relative to the [A] baseline of 20.677734, that change is **4.02%**.  The DEFAULT threshold for a reaction to be considered fast is 5% per full step, for any of the involved chemicals.  For a half step, that corresponds to 2.5%... and abs(4.02%) is LARGER than that.  
+# The reaction is therefore marked "FAST" (as it has been so far), and the simulation then proceeds in a half step, to t=0.35
+
+# %% [markdown]
+# * (Note: at t=0, in the absence of any simulation data, ALL reactions are _assumed_ to be fast)
+
+# %% [markdown]
+# * By contrast, upon completing the half step to t=0.40, i.e. **going from 0.35 to 0.40**, the following changes occur in [A] and [B]:  
 
 # %%
-# Numerous more steps
-dynamics.single_compartment_react(time_step=0.1, n_steps=10,
-                                  snapshots={"initial_caption": "2nd reaction step",
-                                             "final_caption": "last reaction step"})
+df.iloc[7]
 
 # %%
-dynamics.history.get()
+df.iloc[8]
+
+# %%
+s_0_35 = df.iloc[7][['A', 'B']].to_numpy()
+s_0_35     # Concentrations of A and B at t=0.35
+
+# %%
+s_0_40 = df.iloc[8][['A', 'B']].to_numpy()
+s_0_40     # Concentrations of A and B at t=0.40
+
+# %%
+(s_0_40 - s_0_35) / s_0_35 * 100
+
+# %% [markdown]
+# The DEFAULT threshold for a reaction to be considered fast is 5% per full step, for any of the involved chemicals.  
+# For a half step, that corresponds to 2.5%.   
+# BOTH A's change of abs(2.11%) AND B's change of abs(-1.23%) are SMALLER than that.   
+# The reaction is therefore marked "SLOW", and the simulation then proceeds in a _full step_ (i.e. a more relaxed time resolution), to t=0.50
 
 # %% [markdown]
 # ### Check the final equilibrium
@@ -119,9 +152,6 @@ dynamics.get_system_conc()
 # %%
 dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc_dict())
 
-# %% [markdown]
-# #### Note that, because of the high initial concentration of B relative to A, the overall reaction has proceeded **in reverse**
-
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time
 
@@ -133,47 +163,6 @@ fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B"],
 fig.show()
 
 # %% [markdown]
-# ### Note the raggedness of the left-side (early times) of the curves.  In experiment "react_2" this simulation gets repeated with an adaptive variable time resolution that takes smaller steps at the beginning, when the reaction is proceeding faster
-
-# %%
-df = dynamics.history.get()
-
-# %%
-df
-
-# %% [markdown]
-# ## Now investigate A_dot, i.e. d[A]/dt
-
-# %%
-A = list(df.A)
-
-# %%
-A
-
-# %%
-len(A)
-
-# %%
-A_dot = np.gradient(A, 0.1)      # 0.1 is the constant step size
-
-# %%
-A_dot
-
-# %%
-df['A_dot'] = A_dot
-
-# %%
-df
-
-# %%
-fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "A_dot"], 
-              title="Changes in concentration of A with time (blue) , and changes in its rate of change (brown)",
-              color_discrete_sequence = ['navy', 'brown'],
-              labels={"value":"concentration (blue) /<br> concentration change per unit time (brown)", "variable":"Chemical"})
-fig.show()
-
-# %% [markdown]
-# ### At t=0, [A]=10 and [A] has a high rate of change (70);  
-# ### as the system approaches equilibrium, [A] approaches a value of 24, and its rate of change decays to zero.
+# ## Note how the left-hand side of this plot is much smoother than it was in experiment "react_1", where no adaptive time substeps were used!
 
 # %%
