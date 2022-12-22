@@ -18,7 +18,7 @@
 #
 # Based on the experiment _"1D/reactions/reaction_1"_ ; this is simply the "single-compartment" version of it.
 #
-# LAST REVISED: Dec. 19, 2022
+# LAST REVISED: Dec. 21, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -101,6 +101,9 @@ dynamics.single_compartment_react(time_step=0.1, n_steps=10,
 # %%
 dynamics.history.get()
 
+# %% [markdown]
+# ### Check the final equilibrium
+
 # %%
 dynamics.get_system_conc()
 
@@ -116,6 +119,9 @@ dynamics.get_system_conc()
 # %%
 dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc_dict())
 
+# %% [markdown]
+# #### Note that, because of the high initial concentration of B relative to A, the overall reaction has proceeded **in reverse**
+
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time
 
@@ -126,6 +132,9 @@ fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B"],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
+# %% [markdown]
+# ### Note the raggedness of the left-side (early times) of the curves.  In experiment "react_2" this simulation gets repeated with an adaptive variable time resolution that takes smaller steps at the beginning, when the reaction is proceeding faster
+
 # %%
 df = dynamics.history.get()
 
@@ -133,7 +142,7 @@ df = dynamics.history.get()
 df
 
 # %% [markdown]
-# ### Now investigate A_dot, i.e. d[A]/dt
+# ## Now investigate A_dot, i.e. d[A]/dt
 
 # %%
 A = list(df.A)
@@ -158,9 +167,13 @@ df
 
 # %%
 fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "A_dot"], 
-              title="Changes in concentration of A with time (blue) , and changes in its rate of change (orange)",
-              color_discrete_sequence = ['navy', 'darkorange'],
-              labels={"value":"concentration (blue) /<br> concentration per unit time (orange)", "variable":"Chemical"})
+              title="Changes in concentration of A with time (blue) , and changes in its rate of change (brown)",
+              color_discrete_sequence = ['navy', 'brown'],
+              labels={"value":"concentration (blue) /<br> concentration change per unit time (brown)", "variable":"Chemical"})
 fig.show()
+
+# %% [markdown]
+# ### At t=0, [A]=10 and [A] has a high rate of change (70);  
+# ### as the system approaches equilibrium, [A] approaches a value of 24, and its rate of change decays to zero.
 
 # %%
