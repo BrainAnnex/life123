@@ -16,7 +16,7 @@
 # ### A simple A <-> B reaction between 2 species,
 # with 1st-order kinetics in both directions, taken to equilibrium
 #
-# Based on the experiment _"1D/reactions/reaction_1"_ ; this is simply the "single-compartment" version of it.
+# See also the experiment _"1D/reactions/reaction_1"_ ; this is the "single-compartment" version of it.
 #
 # LAST REVISED: Dec. 21, 2022
 

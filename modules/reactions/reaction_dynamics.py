@@ -31,12 +31,13 @@ class ReactionDynamics:
         self.history = MovieTabular()   # To store user-selected snapshots of (some of) the chemical concentrations,
                                         #   whenever requested by the user.
 
-        self.debug = False              # TODO: Being phased out
-
-        self.debug_code = None          # MAX value currently used: 2
+        self.verbose_list = []          # A list of integers with the codes of the desired verbose checkpoints
+                                        #   EXAMPLE: [1, 3] to invoke sections of code marked as 1 or 3
+                                        #   Those sections will have entry points such as "if 1 in self.verbose_list"
+                                        #   MAX code currently used: 4
 
         self.reaction_speeds = {}       # A dictionary.  EXAMPLE : { 1: "F", 4: "S", 5: "F" , 8: "S" }
-                                        # Anything missing is regarded to be "F" (Fast)
+                                        #   Anything missing is regarded to be "F" (Fast)
 
 
 
@@ -396,7 +397,7 @@ class ReactionDynamics:
         assert fast_threshold > 0, "the argument 'fast_threshold' must be greater than 0"
 
         fast_threshold_fraction = fast_threshold / 100.
-        if self.debug_code == 2:
+        if 2 in self.verbose_list:
             print(f"************ SYSTEM TIME: {self.system_time:,.4g}")
 
         if dynamic_step == 1 or self.are_all_slow_rxns():
@@ -405,7 +406,7 @@ class ReactionDynamics:
         else:
             # Process all the slow reactions
             slow_rxns = self.slow_rxns()
-            if self.debug_code == 2:
+            if 2 in self.verbose_list:
                 print(f"    Slow reactions: {slow_rxns}")
                 print(f"    Processing SLOW reactions")
 
@@ -414,14 +415,14 @@ class ReactionDynamics:
 
             # Process all the fast reactions
             fast_rxns = self.fast_rxns()
-            if self.debug_code == 2:
+            if 2 in self.verbose_list:
                 print(f"    Fast reactions: {fast_rxns}")
 
             local_conc_array = conc_array.copy()   # Saved as an unchanging baseline copy
             delta_concentrations_fast = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
             reduced_time_step = delta_time / dynamic_step
             for substep in range(dynamic_step):
-                if self.debug_code == 2:
+                if 2 in self.verbose_list:
                     print(f"    - substep: {substep} in processing of FAST reactions")
 
                 incr_vector = self.single_reaction_step(delta_time=reduced_time_step, time_subdivision=dynamic_step, fast_threshold_fraction=fast_threshold_fraction,
@@ -437,7 +438,7 @@ class ReactionDynamics:
                                       caption=f"Interm. step, from following fast reactions: {fast_rxns}")
 
             # Combine the results of all the slow reactions and all the fast reactions
-            if self.debug_code == 1:
+            if 1 in self.verbose_list:
                 print("delta_time: ", delta_time)
                 print("    delta_concentrations_slow: ", delta_concentrations_slow)
                 print("    delta_concentrations_fast: ", delta_concentrations_fast)
@@ -478,7 +479,7 @@ class ReactionDynamics:
         """
         # Compute the forward and back "conversions" of all the applicable reactions
         delta_list = self.compute_all_reaction_deltas(conc_array=conc_array, delta_time=delta_time, rxn_list=rxn_list)
-        if self.debug:
+        if 3 in self.verbose_list:
             print(f"delta_list: {delta_list}")
 
 
@@ -492,7 +493,7 @@ class ReactionDynamics:
         # For each applicable reaction, adjust the concentrations of the reactants and products,
         # based on the forward and back rates of the reaction
         for rxn_index in rxn_list:      # Consider each reaction in turn
-            if self.debug:
+            if 4 in self.verbose_list:
                 print(f"adjusting the species concentrations as a result of reaction number {rxn_index}")
 
             # TODO: turn into a more efficient single step, as as:
@@ -583,7 +584,7 @@ class ReactionDynamics:
             if abs(delta_conc) * time_subdivision > fast_threshold_fraction * baseline_conc:
                 self.set_rxn_speed(rxn_index, "F")
 
-            if self.debug_code == 2:
+            if 2 in self.verbose_list:
                 print(f"      Reaction # {rxn_index} determined to be '{self.get_rxn_speed(rxn_index)}', "
                       f"based on a change of {delta_conc:.6g} (relative to its baseline of {baseline_conc:.7g}) "
                       f"for the conc. of chem species # {species_index}: "
