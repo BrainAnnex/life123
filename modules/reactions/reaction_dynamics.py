@@ -202,7 +202,7 @@ class ReactionDynamics:
             else:
                 name = ""
 
-            print(f"  Species {species_index}{name}.Conc: {self.system[species_index]}")
+            print(f"  Species {species_index}{name}. Conc: {self.system[species_index]}")
 
 
 
@@ -297,7 +297,7 @@ class ReactionDynamics:
         based on the INITIAL concentrations,
         which are used as the basis for all the reactions.
 
-        :param total_duration:  The overall time advance (i.e. time_step * n_steps)
+        :param total_duration:  The overall time advance (i.e. time_step * n_steps)     TODO: maybe also offer a "final_time" (or "stop_time") option
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
 
@@ -335,6 +335,10 @@ class ReactionDynamics:
             frequency = 1
             species = None
             first_snapshot = True
+
+
+        assert self.system is not None, "ReactionDynamics.single_compartment_react(): " \
+                                        "the concentration values of the various chemicals must be set first"
 
         for i in range(n_steps):
             delta_concentrations = self.reaction_step_orchestrator(delta_time=time_step, conc_array=self.system,
@@ -388,9 +392,10 @@ class ReactionDynamics:
                                     as a Numpy array for all the chemical species, in their index order
                                     EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):   array([7. , -21.])
         """
-        assert type(dynamic_step) == int, "the argument 'dynamic_step' must be an integer"
-        assert dynamic_step >= 1, "the argument 'dynamic_step' must be an integer greater or equal than 1"
-        assert fast_threshold > 0, "the argument 'fast_threshold' must be greater than 0"
+        assert type(dynamic_step) == int, "reaction_step_orchestrator(): the argument 'dynamic_step' must be an integer"
+        assert dynamic_step >= 1, "reaction_step_orchestrator(): the argument 'dynamic_step' must be an integer greater or equal than 1"
+        assert fast_threshold > 0, "reaction_step_orchestrator(): the argument 'fast_threshold' must be greater than 0"
+        assert conc_array is not None, "reaction_step_orchestrator(): the argument 'conc_array' must be set to a Numpy array"
 
         fast_threshold_fraction = fast_threshold / 100.
         if 2 in self.verbose_list:
@@ -431,7 +436,7 @@ class ReactionDynamics:
                     time = self.system_time + (substep+1) * reduced_time_step
                     self.add_snapshot(time=time, species=species_to_show,
                                       system_data=local_conc_array,
-                                      caption=f"Interm. step, from following fast reactions: {fast_rxns}")
+                                      caption=f"Interm. step, due to the fast rxns: {fast_rxns}")
 
             # Combine the results of all the slow reactions and all the fast reactions
             if 1 in self.verbose_list:

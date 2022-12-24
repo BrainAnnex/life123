@@ -18,7 +18,9 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Nov. 28, 2022
+# See also the experiment _"reactions_single_compartment/react_3"_ 
+#
+# LAST REVISED: Dec. 24, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -34,7 +36,7 @@ from modules.reactions.reaction_dynamics import ReactionDynamics
 from life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
-from modules.html_log.html_log import HtmlLog as log
+#from modules.html_log.html_log import HtmlLog as log
 from modules.visualization.graphic_log import GraphicLog
 
 # %%
@@ -47,15 +49,18 @@ GraphicLog.config(filename=log_file,
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
-# Initialize the system
-chem_data = chem(names=["A", "B", "C"])     # NOTE: Diffusion not applicable (just 1 bin)
-
+# Specify the chemicals
+chem_data = chem(names=["A", "B", "C"])     # NOTE: Diffusion not applicable (using just 1 bin)
 
 
 # Reaction A + B <-> C , with 1st-order kinetics for each species
-chem_data.add_reaction(reactants=[("A") , ("B")], products=[("C")],
-                 forward_rate=5., reverse_rate=2.)
+chem_data.add_reaction(reactants=["A" , "B"], products=["C"],
+                       forward_rate=5., reverse_rate=2.)
 
+chem_data.describe_reactions()
+
+# %%
+# Initialize the system
 bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
 bio.set_uniform_concentration(species_index=0, conc=10.)
@@ -68,9 +73,6 @@ bio.describe_state()
 # Save the state of the concentrations of all species at bin 0
 bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
-
-# %%
-chem_data.describe_reactions()
 
 # %%
 # Send the plot to the HTML log file
@@ -121,16 +123,19 @@ bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% [markdown]
-# # Note: "A" (now almost completely depleted) is largely the limiting reagent
+# ## Note: "A" (now largely depleted) is largely the limiting reagent
 
 # %% [markdown] tags=[]
-# # Plots of changes of concentration with time
+# ## Plots of changes of concentration with time
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "C"], 
-              title="Reaction A + B <-> C .  Changes in concentrations",
-              color_discrete_sequence = ['navy', 'violet', 'red'],
+              title="Reaction A + B <-> C .  Changes in concentrations with time",
+              color_discrete_sequence = ['red', 'violet', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
+
+# %% [markdown]
+# ## For more in-depth analysis of this reaction, including variable time steps, see the experiment _"reactions_single_compartment/react_3"_ 
 
 # %%

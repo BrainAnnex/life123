@@ -17,7 +17,7 @@
 # #### with 1st-order kinetics for each species, taken to equilibrium
 # (Adaptive variable time resolution is used)
 #
-# LAST REVISED: Dec. 23, 2022  ************ IN-PROGRESS  ************
+# LAST REVISED: Dec. 24, 2022  ************ IN-PROGRESS  ************
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -46,13 +46,15 @@ GraphicLog.config(filename=log_file,
 
 # %% [markdown]
 # # Initialize the System
+# Specify the chemicals and the reactions
 
 # %% tags=[]
-# Initialize the reaction
-chem_data = chem(names=["A", "B"])
+# Specify the chemicals
+chem_data = chem(names=["A", "B", "C"])
 
-# Reaction A <-> B , with 1st-order kinetics in both directions
-chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+# Reaction A + B <-> C , with 1st-order kinetics for each species
+chem_data.add_reaction(reactants=["A" , "B"], products=["C"],
+                       forward_rate=5., reverse_rate=2.)
 
 print("Number of reactions: ", chem_data.number_of_reactions())
 
@@ -72,7 +74,7 @@ dynamics = ReactionDynamics(reaction_data=chem_data)
 
 # %%
 # Initial concentrations of all the chemicals, in index order
-dynamics.set_conc([10., 50.], snapshot=True)
+dynamics.set_conc([10., 50., 20.], snapshot=True)
 
 # %%
 dynamics.describe_state()
@@ -84,54 +86,24 @@ dynamics.history.get()
 # ## Run the reaction
 
 # %%
-dynamics.single_compartment_react(time_step=0.1, n_steps=11,
+dynamics.single_compartment_react(time_step=0.004, total_duration=0.06,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   dynamic_step=2)      
                                   # Accepting the default:  fast_threshold=5
 
 # %% [markdown]
-# ## The argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using fast_threshold=5)
+# ### Note: the argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using fast_threshold=5)
 
 # %%
 df = dynamics.history.get()
 df
 
 # %% [markdown]
-# ## Notice how the reaction proceeds in smaller steps in the early times, when [A] and [B] are changing much more rapidly
-#
-# * For example, upon completing the half step to t=0.30, i.e. **going from 0.25 to 0.30**, the last change in [A] was (21.508301 - 20.677734) = 0.830567  
-# Relative to the [A] baseline of 20.677734, that change is **4.02%**.  The DEFAULT threshold for a reaction to be considered fast is 5% per full step, for any of the involved chemicals.  For a half step, that corresponds to 2.5%... and abs(4.02%) is LARGER than that.  
-# The reaction is therefore marked "FAST" (as it has been so far), and the simulation then proceeds in a half step, to t=0.35
+# ### Notice how the reaction proceeds in smaller steps in the early times, when the concentrations are changing much more rapidly
 
 # %% [markdown]
-# * (Note: at t=0, in the absence of any simulation data, ALL reactions are _assumed_ to be fast)
-
-# %% [markdown]
-# * By contrast, upon completing the half step to t=0.40, i.e. **going from 0.35 to 0.40**, the following changes occur in [A] and [B]:  
-
-# %%
-df.iloc[7]
-
-# %%
-df.iloc[8]
-
-# %%
-s_0_35 = df.iloc[7][['A', 'B']].to_numpy()
-s_0_35     # Concentrations of A and B at t=0.35
-
-# %%
-s_0_40 = df.iloc[8][['A', 'B']].to_numpy()
-s_0_40     # Concentrations of A and B at t=0.40
-
-# %%
-(s_0_40 - s_0_35) / s_0_35 * 100
-
-# %% [markdown]
-# The DEFAULT threshold for a reaction to be considered fast is 5% per full step, for any of the involved chemicals.  
-# For a half step, that corresponds to 2.5%.   
-# BOTH A's change of abs(2.11%) AND B's change of abs(-1.23%) are SMALLER than that.   
-# The reaction is therefore marked "SLOW", and the simulation then proceeds in a _full step_ (i.e. a more relaxed time resolution), to t=0.50
+# ## Note: "A" (now largely depleted) is largely the limiting reagent
 
 # %% [markdown]
 # ### Check the final equilibrium
@@ -140,28 +112,24 @@ s_0_40     # Concentrations of A and B at t=0.40
 dynamics.get_system_conc()
 
 # %% [markdown]
-# NOTE: Consistent with the 3/2 ratio of forward/reverse rates (and the 1st order reactions),
+# NOTE: Consistent with the 3/2 ratio of forward/reverse rates (and the 1st order reactions),  
 #  the systems settles in the following equilibrium:
 #
-# [A] = 23.99316406
-#  
-# [B] = 36.00683594
+# [A] = 0.29487741 , [B] = 40.29487741 , [C] = 29.70512259
 #
 
 # %%
+# Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc_dict())
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="Changes in concentrations with time",
-              color_discrete_sequence = ['navy', 'darkorange'],
+fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B", "C"], 
+              title="Reaction A + B <-> C .  Changes in concentrations with time",
+              color_discrete_sequence = ['red', 'violet', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
-
-# %% [markdown]
-# ## Note how the left-hand side of this plot is much smoother than it was in experiment "react_1", where no adaptive time substeps were used!
 
 # %%

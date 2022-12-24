@@ -47,9 +47,10 @@ GraphicLog.config(filename=log_file,
 
 # %% [markdown]
 # # Initialize the System
+# Specify the chemicals and the reactions
 
 # %% tags=[]
-# Initialize the reaction
+# Specify the chemicals
 chem_data = chem(names=["A", "B"])
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
@@ -150,6 +151,7 @@ dynamics.get_system_conc()
 #
 
 # %%
+# Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc_dict())
 
 # %% [markdown] tags=[]
@@ -157,7 +159,7 @@ dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc_dict())
 
 # %%
 fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="Changes in concentrations with time",
+              title="Reaction A <-> B .  Changes in concentrations with time",
               color_discrete_sequence = ['navy', 'darkorange'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()

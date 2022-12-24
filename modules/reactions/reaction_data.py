@@ -508,17 +508,17 @@ class ReactionData:
 
 
     def add_reaction(self, reactants: Union[int, str, tuple, list], products: Union[int, str, tuple, list],
-                             forward_rate=None, reverse_rate=None,
-                             Delta_H=None, Delta_S=None) -> None:
+                           forward_rate=None, reverse_rate=None,
+                           Delta_H=None, Delta_S=None) -> None:
         """
         Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data
 
         NOTE: in the next 2 arguments, if the stoichiometry and/or reaction order aren't specified, they're assumed to be 1
 
         :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
-                                    or simplified terms, as shown in _parse_reaction_term()
+                                    or simplified terms; for details, see _parse_reaction_term()
         :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction),
-                                    or simplified terms, as shown in _parse_reaction_term()
+                                    or simplified terms; for details, see _parse_reaction_term()
         :param forward_rate:    [OPTIONAL] Forward reaction rate constant
         :param reverse_rate:    [OPTIONAL] Reverse reaction rate constant
         :param Delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)

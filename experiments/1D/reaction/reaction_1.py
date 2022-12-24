@@ -164,6 +164,6 @@ fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"],
 fig.show()
 
 # %% [markdown]
-# ## For more in-depth analysis of this reactiom, see the experiment _"reactions_single_compartment/react_1"_ 
+# ## For more in-depth analysis of this reaction, see the experiment _"reactions_single_compartment/react_1"_ 
 
 # %%
