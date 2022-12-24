@@ -13,7 +13,8 @@
 # ---
 
 # %% [markdown]
-# ## One-bin A + B <-> C, with 1st-order kinetics for each species, taken to equilibrium
+# ## One-bin Association/Dissociation reaction A + B <-> C
+# ### with 1st-order kinetics for each species, taken to equilibrium
 #
 # Diffusion not applicable (just 1 bin)
 #

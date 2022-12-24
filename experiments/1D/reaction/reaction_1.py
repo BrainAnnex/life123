@@ -19,7 +19,9 @@
 #
 # Diffusion NOT taken into account
 #
-# LAST REVISED: Dec. 6, 2022
+# See also the experiment _"reactions_single_compartment/react_1"_ 
+#
+# LAST REVISED: Dec. 23, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -46,6 +48,9 @@ log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filen
 GraphicLog.config(filename=log_file,
                   components=["vue_cytoscape_1"],
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
+
+# %% [markdown]
+# # Initialize the System
 
 # %% tags=[]
 # Initialize the system
@@ -150,12 +155,15 @@ fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"],
 fig.show()
 
 # %%
-# Same plot, but with smooth line
+# Same plot, but with a smoothed line
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="Changes in concentrations with time",
+              title="Changes in concentrations with time (smoothed)",
               color_discrete_sequence = ['navy', 'darkorange'],
               labels={"value":"concentration", "variable":"Chemical"},
               line_shape="spline")
 fig.show()
+
+# %% [markdown]
+# ## For more in-depth analysis of this reactiom, see the experiment _"reactions_single_compartment/react_1"_ 
 
 # %%

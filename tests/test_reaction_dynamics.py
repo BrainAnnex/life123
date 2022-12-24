@@ -81,7 +81,8 @@ def test_single_reaction_step_1():
 
     conc_array = np.array([10., 50.])
 
-    # Reaction A <-> B , with 1st-order kinetics in both directions.  Based on experiment "reaction1"
+    # Reaction A <-> B , with 1st-order kinetics in both directions.
+    # Based on experiment "reactions_single_compartment/react_1"
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
     result = rxn.single_reaction_step(delta_time=0.1, conc_array=conc_array)
@@ -90,7 +91,8 @@ def test_single_reaction_step_1():
 
 
     chem_data.clear_reactions()   # Re-start with a blank slate of reactions
-    # Reaction A <-> 3B , with 1st-order kinetics in both directions.  Based on experiment "reaction2"
+    # Reaction A <-> 3B , with 1st-order kinetics in both directions.
+    # Based on experiment "1D/reactions/reaction2"
     chem_data.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
 
     result = rxn.single_reaction_step(delta_time=0.1, conc_array=conc_array)
@@ -99,7 +101,8 @@ def test_single_reaction_step_1():
 
 
     chem_data.clear_reactions()   # Re-start with a blank slate of reactions
-    # Reaction 2A <-> 3B , with 1st-order kinetics in both directions.  Based on experiment "reaction3"
+    # Reaction 2A <-> 3B , with 1st-order kinetics in both directions.
+    # Based on experiment "1D/reactions/reaction3"
     chem_data.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
 
     result = rxn.single_reaction_step(delta_time=0.1, conc_array=conc_array)
@@ -114,16 +117,18 @@ def test_single_reaction_step_2():
 
     conc_array = np.array([10., 50., 20.])
 
-    # Reaction A <-> B , with 1st-order kinetics in both directions.  Based on experiment "reaction1"
+    # Reaction A <-> B , with 1st-order kinetics in both directions.
+    # # Based on experiment "reactions_single_compartment/react_1"
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
     result = rxn.single_reaction_step(delta_time=0.1, conc_array=conc_array)
-    assert np.allclose(result, [ 7. , -7. , 0.])
+    assert np.allclose(result, [ 7. , -7. , 0.])    # Chemical "C" not participating in this reaction; its delta conc. is 0
     assert result[0] == - result[1]         # From the stoichiometry
 
 
     chem_data.clear_reactions()   # Re-start with a blank slate of reactions
-    # Reaction A + B <-> C , with 1st-order kinetics for each species.  Based on experiment "reaction4"
+    # Reaction A + B <-> C , with 1st-order kinetics for each species.
+    # Based on experiment "1D/reactions/reaction4"
     chem_data.add_reaction(reactants=[("A") , ("B")], products=[("C")],
                      forward_rate=5., reverse_rate=2.)
 
@@ -140,7 +145,8 @@ def test_single_reaction_step_3():
 
     conc_array = np.array([4., 7., 2.])
 
-    # Reaction A <-> 2C + D , with 1st-order kinetics for each species.  Based on experiment "reaction5"
+    # Reaction A <-> 2C + D , with 1st-order kinetics for each species.
+    # Based on experiment "1D/reactions/reaction5"
     chem_data.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
                      forward_rate=5., reverse_rate=2.)
 
@@ -157,7 +163,8 @@ def test_single_reaction_step_4():
 
     conc_array = np.array([4., 7., 5., 2.])
 
-    # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species.  Based on experiment "reaction6"
+    # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species.
+    # Based on experiment "1D/reactions/reaction6"
     chem_data.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
                      forward_rate=5., reverse_rate=2.)
 
@@ -175,7 +182,8 @@ def test_single_reaction_step_5():
 
     conc_array = np.array([3., 5.])
 
-    # Reaction  2A <-> B , with 2nd-order kinetics in forward reaction, and 1st-order in reverse.  Based on experiment "reaction7"
+    # Reaction  2A <-> B , with 2nd-order kinetics in forward reaction, and 1st-order in reverse.
+    # Based on experiment "1D/reactions/reaction7"
     chem_data.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
 
     result = rxn.single_reaction_step(delta_time=0.02, conc_array=conc_array)
@@ -190,7 +198,8 @@ def test_single_reaction_step_6():
 
     conc_array = np.array([3., 5., 1., 0.4, 0.1])
 
-    # Coupled reactions A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species.  Based on experiment "reaction8"
+    # Coupled reactions A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species.
+    # Based on experiment "1D/reactions/reaction8"
     chem_data.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=5., reverse_rate=2.)
     chem_data.add_reaction(reactants=["C", "D"], products=["E"], forward_rate=8., reverse_rate=4.)
     assert chem_data.number_of_reactions() == 2
@@ -202,6 +211,50 @@ def test_single_reaction_step_6():
     assert  np.allclose(result[0] + result[4], -result[2])      # From the stoichiometry
                                                                 # The increase in [A] and [E] combined
                                                                 # must match the decrease in [C]
+
+
+
+def test_adaptive_time_resolution_1():
+    chem_data = ReactionData(names=["A", "B"])
+    rxn = ReactionDynamics(chem_data)
+
+    conc_array = np.array([10., 50.])
+
+    # Reaction A <-> B , with 1st-order kinetics in both directions.
+    # Based on experiment "reactions_single_compartment/react_2"
+    kF = 3.
+    kR = 2.
+    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=kF, reverse_rate=kR)
+
+    # Start testing the lower-level functions, and then proceed to testing progressively higher-level ones
+    result = rxn.single_reaction_step(delta_time=0.05, conc_array=conc_array,
+                                      time_subdivision=2, fast_threshold_fraction=0.05)
+    # Check the calculations, based on the forward Euler method
+    fwd_delta = 0.05 * (-kF * conc_array[0] + kR * conc_array[1])   # 3.5
+    rev_delta = -fwd_delta   # From the stoichiometry
+    assert np.allclose(result, [fwd_delta ,rev_delta])    # [3.5 , -3.5]
+
+
+    # Repeat at the next-higher level
+    result = rxn.reaction_step_orchestrator(delta_time=0.1, conc_array=conc_array,
+                                            dynamic_step=2, fast_threshold=5)
+    # Check the calculations, based on the forward Euler method
+    half_step_conc = conc_array + [fwd_delta ,rev_delta]    # [13.5 46.5]   . This are the conc's at t=0.05
+    new_fwd_delta = 0.05 * (-kF * half_step_conc[0] + kR * half_step_conc[1])   # 2.625
+    new_rev_delta = -new_fwd_delta   # From the stoichiometry
+    fwd_delta += new_fwd_delta  # 6.125
+    rev_delta += new_rev_delta  # - 6.125
+    assert np.allclose(result, [fwd_delta ,rev_delta])  # [6.125, -6.125]
+
+
+    # Repeat at the yet-next-higher level
+    rxn.system = conc_array.copy()      # The copy() is to avoid messing up conc_array
+    rxn.system_time = 0.
+    rxn.single_compartment_react(total_duration=0.1, n_steps=1, dynamic_step=2, fast_threshold=5)
+
+    assert np.allclose(rxn.system_time, 0.1)
+    assert np.allclose(rxn.system, conc_array + np.array([fwd_delta ,rev_delta]))     # [16.125, 43.875]
+
 
 
 def test_compute_all_rate_deltas():

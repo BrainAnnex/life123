@@ -52,7 +52,7 @@ class ReactionDynamics:
         """
         Set the concentrations of all the chemicals
 
-        :param conc:        A list or tuple (TODO: also allow a Numpy array)
+        :param conc:        A list or tuple (TODO: also allow a Numpy array; make sure to do a copy() to it!)
         :param snapshot:    (OPTIONAL) boolean: if True, add to the history
                             a snapshot of this initial state being set.  Default: False
         :return:            None
@@ -297,10 +297,6 @@ class ReactionDynamics:
         based on the INITIAL concentrations,
         which are used as the basis for all the reactions.
 
-        NOTES: When calling this method in the context of 1D, 2D or 3D systems (as opposed to single-compartment experiments),
-                    "compartments" may or may not correspond to the "bins" of the higher layers;
-                    the calling code might have opted to merge some bins into a single "compartment"
-
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
@@ -322,7 +318,7 @@ class ReactionDynamics:
         :param fast_threshold:  The minimum relative size of the concentration baseline over its change, AS A PERCENTAGE,
                                 for a reaction to be regarded as "Slow".  IMPORTANT: this refer to the FULL step size
 
-        :return:                None
+        :return:                None.   The object attributes self.system and self.system_time get updated
         """
         time_step, n_steps = self.specify_steps(total_duration=total_duration,
                                                 time_step=time_step,
@@ -363,7 +359,7 @@ class ReactionDynamics:
                                    snapshots=None, dynamic_step=1, fast_threshold=5) -> np.array:
         """
         This is the common entry point for both single-compartment reactions,
-        and the reaction part of reaction-diffusions.
+        and the reaction part of reaction-diffusions in 1D, 2D and 3D.
 
         "Compartments" may or may not correspond to the "bins" of the higher layers;
         the calling code might have opted to merge some bins into a single "compartment"
@@ -450,7 +446,8 @@ class ReactionDynamics:
 
 
 
-    def single_reaction_step(self, delta_time, time_subdivision=1, fast_threshold_fraction=0.05, conc_array=None, rxn_list=None) -> np.array:
+    def single_reaction_step(self, delta_time, conc_array, time_subdivision=1, fast_threshold_fraction=0.05,
+                             rxn_list=None) -> np.array:
         """
         Using the given concentration data for ALL the chemical species,
         do the specified SINGLE TIME STEP for the requested reactions (by default all).
@@ -463,8 +460,9 @@ class ReactionDynamics:
 
         :param delta_time:              The time duration of the reaction step - assumed to be small enough that the
                                             concentration won't vary significantly during this span
-        :param time_subdivision:        Integer with the number of subdivisions currently used for delta_time;
-                                            used for adaptive variable time resolution
+        :param time_subdivision:        Integer with the number of subdivisions currently being used for the "main" time step;
+                                            used for adaptive variable time resolution.
+                                            (Note: the "main" time step of the calling function will be delta_time * time_subdivision)
         :param fast_threshold_fraction: The minimum relative size of the concentration baseline over its change, AS A FRACTION,
                                             for a reaction to be regarded as "Slow".  IMPORTANT: this refer to the FULL step size
         :param conc_array:              All initial concentrations at the start of the reaction step,
@@ -487,7 +485,7 @@ class ReactionDynamics:
 
 
         if rxn_list is None:    # Meaning ALL reactions
-            rxn_list = range(self.reaction_data.number_of_reactions())
+            rxn_list = range(self.reaction_data.number_of_reactions())  # This will be a list of all the reaction index numbers
 
 
         # For each applicable reaction, adjust the concentrations of the reactants and products,
