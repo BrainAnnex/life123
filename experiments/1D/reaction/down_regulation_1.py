@@ -73,7 +73,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0 (the only bin in this system)
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% [markdown] tags=[]
@@ -119,7 +119,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0 (the only bin in this system)
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% [markdown]
@@ -159,7 +159,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0 (the only bin in this system)
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 
 # %% [markdown]
 # ### Yet again, take the system to equilibrium

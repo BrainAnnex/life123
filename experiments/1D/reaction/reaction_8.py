@@ -67,7 +67,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
@@ -99,7 +99,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
@@ -117,7 +117,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% [markdown]
@@ -167,7 +167,7 @@ print("\nAt equilibrium: ", equil, " (this should be close to 0 at equilibrium)"
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% [markdown] tags=[]

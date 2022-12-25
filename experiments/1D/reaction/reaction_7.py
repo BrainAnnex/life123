@@ -65,7 +65,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
@@ -92,7 +92,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
@@ -112,7 +112,7 @@ bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_a
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% tags=[]
@@ -143,8 +143,8 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0), 
-                  caption = "RESET all concentrations to initial values")
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0),
+                 caption = "RESET all concentrations to initial values")
 bio.get_history()
 
 # %%
@@ -171,7 +171,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
@@ -189,7 +189,7 @@ bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_a
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%

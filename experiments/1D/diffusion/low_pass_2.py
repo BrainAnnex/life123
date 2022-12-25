@@ -83,7 +83,7 @@ ratio = frequency_data.loc[1, "Relative Amplitude"] / frequency_data.loc[0, "Rel
 ratio
 
 # %%
-bio.save_snapshot(data_snapshot={"ratio": ratio})
+bio.add_snapshot(data_snapshot={"ratio": ratio})
 bio.get_history()
 
 # %% [markdown]
@@ -102,7 +102,7 @@ ratio = frequency_data.loc[2, "Relative Amplitude"] / frequency_data.loc[0, "Rel
 ratio
 
 # %%
-bio.save_snapshot(data_snapshot={"ratio": ratio})
+bio.add_snapshot(data_snapshot={"ratio": ratio})
 bio.get_history()
 
 # %% [markdown]
@@ -113,7 +113,7 @@ for i in range(49):
     bio.diffuse(total_duration=10, n_steps=100)
     frequency_data = bio.frequency_analysis(species_name="A")
     ratio = frequency_data.loc[2, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
-    bio.save_snapshot(data_snapshot={"ratio": ratio})
+    bio.add_snapshot(data_snapshot={"ratio": ratio})
 
 # %%
 bio.get_history()
@@ -136,7 +136,7 @@ for i in range(150):
     bio.diffuse(total_duration=10, n_steps=75)    # Notice the gradual decreas of the number of intermediate steps, given the smaller gradient
     frequency_data = bio.frequency_analysis(species_name="A")
     ratio = frequency_data.loc[2, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
-    bio.save_snapshot(data_snapshot={"ratio": ratio})
+    bio.add_snapshot(data_snapshot={"ratio": ratio})
 
 # %%
 bio.get_history()
@@ -159,7 +159,7 @@ for i in range(800):
     bio.diffuse(total_duration=10, n_steps=20)   # Note how we're gradually increasing the time steps, because the gradiants are now smaller
     frequency_data = bio.frequency_analysis(species_name="A")
     ratio = frequency_data.loc[2, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
-    bio.save_snapshot(data_snapshot={"ratio": ratio})
+    bio.add_snapshot(data_snapshot={"ratio": ratio})
 
 # %%
 bio.get_history()
@@ -234,7 +234,7 @@ ratio = frequency_data.loc[1, "Relative Amplitude"] / frequency_data.loc[0, "Rel
 ratio
 
 # %%
-bio.save_snapshot(data_snapshot={"ratio": ratio})
+bio.add_snapshot(data_snapshot={"ratio": ratio})
 bio.get_history()
 
 # %%
@@ -250,7 +250,7 @@ ratio = frequency_data.loc[10, "Relative Amplitude"] / frequency_data.loc[0, "Re
 ratio
 
 # %%
-bio.save_snapshot(data_snapshot={"ratio": ratio})
+bio.add_snapshot(data_snapshot={"ratio": ratio})
 bio.get_history()
 
 # %%
@@ -265,7 +265,7 @@ for i in range(4):
     bio.diffuse(total_duration=10, n_steps=100)
     frequency_data = bio.frequency_analysis(species_name="A")
     ratio = frequency_data.loc[10, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
-    bio.save_snapshot(data_snapshot={"ratio": ratio})
+    bio.add_snapshot(data_snapshot={"ratio": ratio})
 
 # %%
 fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
@@ -282,7 +282,7 @@ for i in range(10):
     bio.diffuse(total_duration=10, n_steps=100)
     frequency_data = bio.frequency_analysis(species_name="A")
     ratio = frequency_data.loc[10, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
-    bio.save_snapshot(data_snapshot={"ratio": ratio})
+    bio.add_snapshot(data_snapshot={"ratio": ratio})
 
 # %%
 fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
@@ -299,7 +299,7 @@ for i in range(35):
     bio.diffuse(total_duration=10, n_steps=100)
     frequency_data = bio.frequency_analysis(species_name="A")
     ratio = frequency_data.loc[10, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
-    bio.save_snapshot(data_snapshot={"ratio": ratio})
+    bio.add_snapshot(data_snapshot={"ratio": ratio})
 
 # %%
 fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
@@ -316,7 +316,7 @@ for i in range(50):
     bio.diffuse(total_duration=10, n_steps=100)
     frequency_data = bio.frequency_analysis(species_name="A")
     ratio = frequency_data.loc[10, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
-    bio.save_snapshot(data_snapshot={"ratio": ratio})
+    bio.add_snapshot(data_snapshot={"ratio": ratio})
 
 # %%
 fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 

@@ -1245,7 +1245,9 @@ class BioSim1D:
         """
         Update the system concentrations as a result of all the reactions in all bins - taking
         the presence of membranes into account, if applicable.
-        CAUTION : NO diffusion is performed.
+
+        CAUTION : NO diffusion is performed. Use this function
+                  only if you intend to do reactions without diffusion!
 
         The duration and granularity of the reactions is specified with 2 out of the 3 parameters:
             total_duration, time_step, n_steps
@@ -1263,7 +1265,11 @@ class BioSim1D:
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
         :param snapshots:       OPTIONAL dict that may contain any the following keys:
-                                    "frequency", "sample_bin", "sample_species"
+                                        -"frequency"
+                                        -"sample_bin" (Required integer; if not present, no snapshots are taken)
+                                        -"species" (NOT YET IMPLEMENTED)
+                                        -"initial_caption" (default blank. NOT YET IMPLEMENTED)
+                                        -"final_caption" (default blank. NOT YET IMPLEMENTED)
                                     If provided, take a system snapshot after running a multiple
                                     of "frequency" run steps (default 1, i.e. at every step.)
                                     EXAMPLE: snapshots={"frequency": 2, "sample_bin": 0}
@@ -1273,11 +1279,15 @@ class BioSim1D:
                                                              time_step=time_step,
                                                              n_steps=n_steps)
 
-        # TODO: validation; also, implement "sample_species" option for snapshots
-        if snapshots is None:
-            frequency = None
+        # TODO: validation; also, implement "species" option for snapshots
+        first_snapshot = True
+        if snapshots:
+            frequency = snapshots.get("frequency", 1)   # If not present, it will be 1
+            sample_bin = snapshots.get("sample_bin", None)   # If not present, it will be None
         else:
-            frequency = snapshots.get("frequency", 1)
+            frequency = None
+            sample_bin = None
+
 
         for i in range(n_steps):
             self.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
@@ -1288,8 +1298,8 @@ class BioSim1D:
 
             self.system_time += time_step
             # Preserve some of the data, as requested
-            if (frequency is not None) and ((i+1)%frequency == 0):
-                self.save_snapshot(self.bin_snapshot(bin_address = snapshots["sample_bin"]))
+            if snapshots and ((i+1)%frequency == 0) and (sample_bin is not None):
+                self.add_snapshot(self.bin_snapshot(bin_address = snapshots["sample_bin"]))
 
 
 
@@ -1601,12 +1611,12 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
     
-    def save_snapshot(self, data_snapshot: dict, caption = "") -> None:
+    def add_snapshot(self, data_snapshot: dict, caption ="") -> None:
         """
         Preserve some data value (passed as dictionary) in the history, linked to the
         current System Time.
 
-        EXAMPLE:  save_snapshot(data_snapshot = {"concentration_A": 12.5, "concentration_B": 3.7},
+        EXAMPLE:  add_snapshot(data_snapshot = {"concentration_A": 12.5, "concentration_B": 3.7},
                                 caption="Just prior to infusion")
 
         IMPORTANT: if the data is not immutable, then it ought to be cloned first,
@@ -1625,7 +1635,7 @@ class BioSim1D:
     def get_history(self) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
-        using save_snapshot()
+        using add_snapshot()
 
         :return:        a Pandas dataframe
         """

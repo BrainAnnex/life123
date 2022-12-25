@@ -219,7 +219,7 @@ class ReactionDynamics:
         linked to the passed time (by default the current System Time),
         with an optional caption.
 
-        EXAMPLE:  create_snapshot(species=['A', 'B'])
+        EXAMPLE:  add_snapshot(species=['A', 'B'])
                                   caption="Just prior to infusion")
 
         :param species:     (OPTIONAL) list of name of the chemical species whose concentrations we want to preserve for later use.
@@ -247,7 +247,7 @@ class ReactionDynamics:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
 
-        using save_snapshot()
+        using add_snapshot()
 
         :return:        a Pandas dataframe
         """
@@ -325,7 +325,7 @@ class ReactionDynamics:
                                                 n_steps=n_steps)
 
         if snapshots:
-            frequency = snapshots.get("frequency", 1)   # Default is 1
+            frequency = snapshots.get("frequency", 1)   # If not present, it will be 1
             species = snapshots.get("species")          # If not present, it will be None (meaning show all)
             first_snapshot = True
             if not snapshots.get("show_intermediates"):
