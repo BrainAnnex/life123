@@ -4,7 +4,8 @@ import math
 from scipy.fft import rfft, rfftfreq    # Fast Fourier Transforms to extract frequency components
 from scipy.stats import norm
 from typing import Union, List, Tuple
-from modules.movies.movies import Movie
+#from modules.movies.movies import Movie    # OBSOLETED
+from modules.movies.movies import MovieTabular
 from modules.reactions.reaction_dynamics import ReactionDynamics
 import plotly.express as px
 from modules.html_log.html_log import HtmlLog as log
@@ -80,7 +81,8 @@ class BioSim1D:
 
         self.reaction_dynamics = None       # Object of class "ReactionDynamics"
 
-        self.history = Movie(tabular=True)  # To store user-selected snapshots of (parts of) the system,
+        self.history = MovieTabular()
+        #self.history = Movie(tabular=True)  # To store user-selected snapshots of (parts of) the system,
                                             #   whenever requested by the user.
                                             #   Note that we're using the "tabular" format - friendly to Pandas
 
@@ -1614,7 +1616,7 @@ class BioSim1D:
         :param caption:         Optional caption to attach to this preserved data
         :return:                None
         """
-        self.history.store(pars=self.system_time,
+        self.history.store(par=self.system_time,
                            data_snapshot = data_snapshot, caption=caption)
 
 

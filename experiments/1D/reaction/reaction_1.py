@@ -21,7 +21,7 @@
 #
 # See also the experiment _"reactions_single_compartment/react_1"_ 
 #
-# LAST REVISED: Dec. 23, 2022
+# LAST REVISED: Dec. 25, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -95,8 +95,8 @@ bio.describe_state()
 
 # %% [markdown]
 # NOTE: the concentration of species A is increasing, while that of species B is decreasing.
-# All bins have identical concentrations; so, there's no diffusion (and we're not attempting to compute it):
-# [[17. 17. 17.]
+# All bins have identical concentrations; so, there's no diffusion (and we're not attempting to compute it):  
+# [[17. 17. 17.]  
 #  [43. 43. 43.]]
 
 # %%
