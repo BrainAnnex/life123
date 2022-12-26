@@ -17,7 +17,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Nov. 28, 2022
+# LAST REVISED: Dec. 25, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -63,7 +63,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0), caption="Initial state")
 bio.get_history()
 
 # %%
@@ -98,7 +98,7 @@ bio.get_history()
 
 # %%
 # Numerous more steps
-bio.react(time_step=0.001, n_steps=40)
+bio.react(time_step=0.001, n_steps=40, snapshots={"sample_bin": 0})
 
 bio.describe_state()
 
@@ -115,8 +115,6 @@ bio.describe_state()
 bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% [markdown]
@@ -129,18 +127,9 @@ bio.get_history()
 
 # %% tags=[]
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "C", "D"], 
-              title="Changes in concentrations",
+              title="Changes in concentrations with time",
               color_discrete_sequence = ['navy', 'cyan', 'red', 'orange'],
               labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
-
-# %%
-# Same plot, but with smooth line
-fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "C", "D"], 
-              title="Changes in concentrations",
-              color_discrete_sequence = ['navy', 'cyan', 'red', 'orange'],
-              labels={"value":"concentration", "variable":"Chemical"},
-              line_shape="spline")
 fig.show()
 
 # %%

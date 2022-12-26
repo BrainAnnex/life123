@@ -749,7 +749,7 @@ class BioSim1D:
         :param concise: If True, only produce a minimalist printout with just the concentration values
         :return:        None
         """
-        print(f"SYSTEM STATE at Time t = {self.system_time}:")
+        print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
 
         if concise:             # A minimalist printout...
             print(self.system)   # ...only showing the concentration data (a Numpy array)

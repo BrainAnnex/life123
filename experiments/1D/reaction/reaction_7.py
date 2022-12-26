@@ -17,7 +17,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Nov. 28, 2022
+# LAST REVISED: Dec. 25, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -65,7 +65,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0), caption="Initial state")
 bio.get_history()
 
 # %%
@@ -84,20 +84,18 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %%
 # First step
-bio.react(time_step=0.02, n_steps=1)
+bio.react(time_step=0.02, n_steps=1, snapshots={"sample_bin": 0})
 bio.describe_state()
 
 # %% [markdown]
 # Small conc. changes so far:  [A] = 2.8 , [B] = 5.1
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
 # Numerous more steps, to equilibrium
-bio.react(time_step=0.02, n_steps=20)
+bio.react(time_step=0.02, n_steps=20, snapshots={"sample_bin": 0})
 
 bio.describe_state()
 
@@ -111,13 +109,11 @@ bio.describe_state()
 bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% tags=[]
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="2A <-> B : changes in concentrations",
+              title="2A <-> B : changes in concentrations with time",
               color_discrete_sequence = ['navy', 'orange'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
@@ -162,7 +158,7 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %%
 # First step
-bio.react(time_step=0.02, n_steps=1)
+bio.react(time_step=0.02, n_steps=1, snapshots={"sample_bin": 0})
 bio.describe_state()
 
 # %% [markdown]
@@ -170,13 +166,11 @@ bio.describe_state()
 # _(Contrast with the counterpart in the 1st order kinetics:  [A] = 2.8 , [B] = 5.1)_
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
 # Numerous more steps
-bio.react(time_step=0.02, n_steps=20)
+bio.react(time_step=0.02, n_steps=20, snapshots={"sample_bin": 0})
 
 bio.describe_state()
 
@@ -188,18 +182,16 @@ bio.describe_state()
 bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="2A <-> B : changes in concentrations",
+              title="2A <-> B : changes in concentrations (the jump at 0.42 is the concentration reset)",
               color_discrete_sequence = ['navy', 'orange'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
 # %% [markdown]
-# Compared to first-order kinetics in A, the reaction now takes place much more quickly, and proceeds to almost complete depletion of A
+# **Compared to first-order kinetics in A**, the reaction now takes place much more quickly, and proceeds to almost complete depletion of A
 
 # %%

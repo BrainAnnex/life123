@@ -13,11 +13,14 @@
 # ---
 
 # %% [markdown]
-# ## Association/Dissociation reaction A + B <-> C
-# #### with 1st-order kinetics for each species, taken to equilibrium
-# (Adaptive variable time resolution is used)
+# ## Association/Dissociation reaction 2A <-> C
+# #### with 2nd-order kinetics for A,  
+# #### and 1-st order kinetics for C
 #
-# LAST REVISED: Dec. 24, 2022
+# Compare with experiment "react_3"
+#
+#
+# LAST REVISED: Dec. 25, 2022  ************* IN-PROGRESS  **********
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -50,11 +53,12 @@ GraphicLog.config(filename=log_file,
 
 # %% tags=[]
 # Specify the chemicals
-chem_data = chem(names=["A", "B", "C"])
+chem_data = chem(names=["A", "C"])
 
-# Reaction A + B <-> C , with 1st-order kinetics for each species
-chem_data.add_reaction(reactants=["A" , "B"], products=["C"],
-                       forward_rate=5., reverse_rate=2.)
+# Reaction 2A <-> C , with 2nd-order kinetics for A, and 1st-order kinetics for C
+chem_data.add_reaction(reactants=[(2, "A", 2)], products=["C"],
+                       forward_rate=5., reverse_rate=2.)   
+# Note: the first 2 in (2, "A", 2) is the stoichiometry coefficient, while the other one is the order
 
 print("Number of reactions: ", chem_data.number_of_reactions())
 
@@ -74,7 +78,7 @@ dynamics = ReactionDynamics(reaction_data=chem_data)
 
 # %%
 # Initial concentrations of all the chemicals, in index order
-dynamics.set_conc([10., 50., 20.], snapshot=True)
+dynamics.set_conc([60., 20.], snapshot=True)
 
 # %%
 dynamics.describe_state()
@@ -86,7 +90,7 @@ dynamics.history.get()
 # ## Run the reaction
 
 # %%
-dynamics.single_compartment_react(time_step=0.004, total_duration=0.06,
+dynamics.single_compartment_react(time_step=0.001, total_duration=0.06,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   dynamic_step=2)      
@@ -111,13 +115,6 @@ df
 # %%
 dynamics.get_system_conc()
 
-# %% [markdown]
-# NOTE: Consistent with the 3/2 ratio of forward/reverse rates (and the 1st order reactions),  
-#  the systems settles in the following equilibrium:
-#
-# [A] = 0.29487741 , [B] = 40.29487741 , [C] = 29.70512259
-#
-
 # %%
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc_dict())
@@ -126,9 +123,9 @@ dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc_dict())
 # ## Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B", "C"], 
-              title="Reaction A + B <-> C .  Changes in concentrations with time",
-              color_discrete_sequence = ['red', 'violet', 'green'],
+fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "C"], 
+              title="Reaction 2A <-> C  (2nd order in A).  Changes in concentrations with time",
+              color_discrete_sequence = ['red', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 

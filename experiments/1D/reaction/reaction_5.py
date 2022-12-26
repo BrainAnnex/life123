@@ -17,7 +17,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Nov. 28, 2022
+# LAST REVISED: Dec. 25, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -63,7 +63,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0), caption="Initial state")
 bio.get_history()
 
 # %%
@@ -107,7 +107,7 @@ bio.get_history()
 
 # %%
 # Numerous more steps
-bio.react(time_step=0.05, n_steps=30)
+bio.react(time_step=0.05, n_steps=30, snapshots={"sample_bin": 0})
 
 bio.describe_state()
 
@@ -124,8 +124,6 @@ bio.describe_state()
 bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% [markdown]
@@ -143,6 +141,6 @@ fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "C", "D"],
 fig.show()
 
 # %% [markdown]
-# #### Notice the wild overshoot present at t=0.2
+# ### Notice the **wild overshoot** present at t=0.2 !  (Too large a time step, early in the reaction!)
 
 # %%

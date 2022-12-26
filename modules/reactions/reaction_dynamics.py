@@ -190,7 +190,7 @@ class ReactionDynamics:
         A simple printout of the state of the system
         :return:        None
         """
-        print(f"SYSTEM STATE at Time t = {self.system_time}:")
+        print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
 
         n_species = self.reaction_data.number_of_chemicals()
         print(f"{n_species} species:")
@@ -735,7 +735,7 @@ class ReactionDynamics:
 
         if explain:
             print(f"Ratio of forward/reverse reaction rates: {rate_ratio}")
-            print(f"Ratio of reactant/product concentrations, adjusted for reaction orders: {conc_ratio}")
+            print(f"Ratio of reactant/product concentrations, adjusted for reaction orders: {conc_ratio:,.6g}")
             print(f"    {numerator} / {denominator}")
 
         return np.allclose(conc_ratio, rate_ratio, atol=tolerance)

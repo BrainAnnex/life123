@@ -71,7 +71,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0), caption="Initial state")
 bio.get_history()
 
 # %%
@@ -101,7 +101,7 @@ bio.get_history()
 
 # %%
 # Numerous more steps
-bio.react(time_step=0.002, n_steps=40)
+bio.react(time_step=0.002, n_steps=29, snapshots={"sample_bin": 0})
 
 bio.describe_state()
 
@@ -111,7 +111,7 @@ bio.describe_state()
 # %% [markdown]
 # Consistent with the 5/2 ratio of forward/reverse rates (and the 1st order reactions),
 # the systems settles in the following equilibrium:  
-# [A] = 0.29487741 , [B] = 40.29487741 , [C] = 29.70512259
+# [A] = 0.29487831 , [B] = 40.29487831 , [C] = 29.70512169
 
 # %%
 # Verify that the reaction has reached equilibrium
@@ -119,7 +119,6 @@ bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_a
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% [markdown]
