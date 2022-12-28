@@ -17,7 +17,9 @@
 # #### with 1st-order kinetics for each species, taken to equilibrium
 # (Adaptive variable time resolution is used)
 #
-# LAST REVISED: Dec. 24, 2022
+# _See also the experiment "1D/reactions/reaction_4"_ 
+#
+# LAST REVISED: Dec. 27, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -86,7 +88,7 @@ dynamics.history.get()
 # ## Run the reaction
 
 # %%
-dynamics.single_compartment_react(time_step=0.004, total_duration=0.06,
+dynamics.single_compartment_react(time_step=0.004, reaction_duration=0.06,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   dynamic_step=2)      

@@ -90,7 +90,7 @@ dynamics.history.get()
 # ## Run the reaction
 
 # %%
-dynamics.single_compartment_react(time_step=0.001, total_duration=0.06,
+dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.06,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   dynamic_step=2)      
