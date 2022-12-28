@@ -513,21 +513,26 @@ class ReactionData:
         """
         Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data
 
-        NOTE: in the next 2 arguments, if the stoichiometry and/or reaction order aren't specified, they're assumed to be 1
+        NOTE: in the reactants and products, if the stoichiometry and/or reaction order aren't specified, they're assumed to be 1
 
         :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
-                                    or simplified terms; for details, see _parse_reaction_term()
+                                    or simplified terms in various formats; for details, see _parse_reaction_term()
         :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction),
-                                    or simplified terms; for details, see _parse_reaction_term()
+                                    or simplified terms in various formats; for details, see _parse_reaction_term()
         :param forward_rate:    [OPTIONAL] Forward reaction rate constant
         :param reverse_rate:    [OPTIONAL] Reverse reaction rate constant
         :param Delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
         :param Delta_S          [OPTIONAL] Change in Entropy (from reactants to products)
         :return:                None
         """
-        reactant_list = [self._parse_reaction_term(r, "reactant") for r in reactants]
-        product_list = [self._parse_reaction_term(r, "product") for r in products]
+        reactant_list = [self._parse_reaction_term(r, "reactant") for r in reactants]   # A list of triples of integers
+        product_list = [self._parse_reaction_term(r, "product") for r in products]      # A list of triples of integers
 
+        # TODO: use a more sophisticated approach to catch indentical reaction sides even if
+        #       terms are reshuffled
+        assert reactant_list != product_list, \
+            f"ReactionData.add_reaction(): the reactants and the products can't be identical! " \
+            f"Internal structure: {reactant_list}"
 
         rxn = {"reactants": reactant_list, "products": product_list,
                "kF": None, "kR": None,
@@ -796,8 +801,10 @@ class ReactionData:
     def _parse_reaction_term(self, term: Union[int, str, tuple, list], name="term") -> (int, int, int):
         """
         Accept various ways to specify a reaction term, and return a standardized tuple form of it.
-        In the tuples or lists, the 1st entry is the stoichiometry, the 2nd one is the chemical name or index,
-        and the option 3rd one is the reaction order
+        In the tuples or lists:
+            - 1st entry is the stoichiometry
+            - 2nd one is the chemical name or index,
+            - optional 3rd one is the reaction order
 
         EXAMPLES (*assuming* that the chemical species with index 5 is called "F"):
             5       gets turned into:   (1, 5, 1)

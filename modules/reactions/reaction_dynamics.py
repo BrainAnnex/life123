@@ -750,3 +750,23 @@ class ReactionDynamics:
             print(f"    {numerator} / {denominator}")
 
         return np.allclose(conc_ratio, rate_ratio, atol=tolerance)
+
+
+
+    def stoichiometry_checker(self, rxn_index, conc_arr_before, conc_arr_after) -> bool:
+        # delta_t, chem_name, single_delta_conc
+        """
+        For the indicated reaction, given the change in the concentration of the involved chemicals
+        ascertain whether that change is consistent with the reaction's stoichiometry.
+        See https://life123.science/reactions
+
+        :param rxn_index:
+        :param conc_arr_before:
+        :param conc_arr_after:
+        #:param delta_t:
+        #:param chem_name:
+        #:param single_delta_conc:
+        :return:                    True if the change in reactant/product concentrations is consistent with the
+                                        reaction's stoichiometry, or False otherwise
+        """
+        pass
