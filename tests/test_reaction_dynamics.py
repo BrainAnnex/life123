@@ -491,6 +491,21 @@ def test_reaction_speeds():
 
 
 
+def test_validate_increment():
+    chem_data = ReactionData(names=["A", "B", "C"])
+    rxn = ReactionDynamics(chem_data)
+
+    chem_data.add_reaction(reactants=["A"], products=["B"])
+
+    rxn.validate_increment(delta_conc=50., baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.02)
+    rxn.validate_increment(delta_conc=-9.99, baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.02)
+
+    with pytest.raises(Exception):      # Would lead to a negative concentration
+        rxn.validate_increment(delta_conc=-10.01, baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.02)
+
+
+
+
 def test_examine_increment():
     chem_data = ReactionData(names=["A", "B", "C"])
     rxn = ReactionDynamics(chem_data)
@@ -499,43 +514,40 @@ def test_examine_increment():
     rxn.set_rxn_speed(0, "S")          # Mark the lone reaction as "Slow"
     assert rxn.are_all_slow_rxns()
 
-    with pytest.raises(Exception):     # Attempt to make a concentration negative
-        rxn.examine_increment(rxn_index=0, species_index=0, delta_conc=-100.01, time_subdivision=1, baseline_conc=100., delta_time=0.542, fast_threshold_fraction=0.05)
-
 
     # INITIAL THRESHOLD (fast_threshold_fraction=0.05)
 
-    rxn.examine_increment(rxn_index=0, species_index=0, delta_conc=4.98, baseline_conc=100., delta_time=12.53, time_subdivision=1, fast_threshold_fraction=0.05)
-    # NOTE: species_index and delta_time are ONLY used for error messages, and don't affect function
+    rxn.examine_increment(rxn_index=0, species_index=0, delta_conc=4.98, baseline_conc=100., time_subdivision=1, fast_threshold_fraction=0.05)
+    # NOTE: species_index is ONLY used for error messages, and don't affect function
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag
 
-    rxn.examine_increment(rxn_index=0, species_index=2, delta_conc=5.01, baseline_conc=100., delta_time=693.2, time_subdivision=1,fast_threshold_fraction=0.05)
+    rxn.examine_increment(rxn_index=0, species_index=2, delta_conc=5.01, baseline_conc=100., time_subdivision=1, fast_threshold_fraction=0.05)
     assert rxn.fast_rxns() == [0]       # The one reaction present got marked as "Fast" b/c of large delta_conc
     assert not rxn.are_all_slow_rxns()
 
     rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment(rxn_index=0, species_index=1, delta_conc=-4.98, baseline_conc=100., delta_time=0.5, time_subdivision=1, fast_threshold_fraction=0.05)
+    rxn.examine_increment(rxn_index=0, species_index=1, delta_conc=-4.98, baseline_conc=100., time_subdivision=1, fast_threshold_fraction=0.05)
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment(rxn_index=0, species_index=0, delta_conc=-5.01, baseline_conc=100., delta_time=0.5, time_subdivision=1, fast_threshold_fraction=0.05)
+    rxn.examine_increment(rxn_index=0, species_index=0, delta_conc=-5.01, baseline_conc=100., time_subdivision=1, fast_threshold_fraction=0.05)
     assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc)
 
     rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment(rxn_index=0, species_index=2, delta_conc=-5.01, baseline_conc=100., delta_time=0.5, time_subdivision=1, fast_threshold_fraction=0.05)
+    rxn.examine_increment(rxn_index=0, species_index=2, delta_conc=-5.01, baseline_conc=100., time_subdivision=1, fast_threshold_fraction=0.05)
     assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc),
                                         # no matter which chemical species is being affected
 
     rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment(rxn_index=0, species_index=0, delta_conc=2.49, baseline_conc=100., delta_time=0.5, time_subdivision=2, fast_threshold_fraction=0.05)
+    rxn.examine_increment(rxn_index=0, species_index=0, delta_conc=2.49, baseline_conc=100., time_subdivision=2, fast_threshold_fraction=0.05)
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag
 
-    rxn.examine_increment(rxn_index=0, species_index=1, delta_conc=2.51, baseline_conc=100., delta_time=0.5, time_subdivision=2, fast_threshold_fraction=0.05)
+    rxn.examine_increment(rxn_index=0, species_index=1, delta_conc=2.51, baseline_conc=100., time_subdivision=2, fast_threshold_fraction=0.05)
     assert rxn.fast_rxns() == [0]       # The reaction got marked as "Fast" b/c of large delta_conc for a time_subdivision of 2
     assert not rxn.are_all_slow_rxns()
 
@@ -552,25 +564,25 @@ def test_examine_increment():
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment(rxn_index=0, species_index=2, delta_conc=5.01, baseline_conc=100., delta_time=0.5, time_subdivision=1, fast_threshold_fraction=0.1)
+    rxn.examine_increment(rxn_index=0, species_index=2, delta_conc=5.01, baseline_conc=100., time_subdivision=1, fast_threshold_fraction=0.1)
     assert rxn.slow_rxns() == [0, 1]    # No change, because the threshold is now higher
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment(rxn_index=0, species_index=1, delta_conc=9.99,  baseline_conc=100., delta_time=0.5, time_subdivision=1, fast_threshold_fraction=0.1)
-    rxn.examine_increment(rxn_index=0, species_index=2, delta_conc=-9.99,  baseline_conc=100., delta_time=0.5, time_subdivision=1, fast_threshold_fraction=0.1)
-    rxn.examine_increment(rxn_index=0, species_index=0, delta_conc=9.99,  baseline_conc=100., delta_time=0.5, time_subdivision=1, fast_threshold_fraction=0.1)
-    rxn.examine_increment(rxn_index=0, species_index=1, delta_conc=-9.99,  baseline_conc=100., delta_time=0.5, time_subdivision=1, fast_threshold_fraction=0.1)
+    rxn.examine_increment(rxn_index=0, species_index=1, delta_conc=9.99, baseline_conc=100., time_subdivision=1, fast_threshold_fraction=0.1)
+    rxn.examine_increment(rxn_index=0, species_index=2, delta_conc=-9.99, baseline_conc=100., time_subdivision=1, fast_threshold_fraction=0.1)
+    rxn.examine_increment(rxn_index=0, species_index=0, delta_conc=9.99, baseline_conc=100., time_subdivision=1, fast_threshold_fraction=0.1)
+    rxn.examine_increment(rxn_index=0, species_index=1, delta_conc=-9.99, baseline_conc=100., time_subdivision=1, fast_threshold_fraction=0.1)
     assert rxn.slow_rxns() == [0, 1]    # Still no change, because all the abs(delta_conc) still below threshold
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment(rxn_index=1, species_index=0, delta_conc=10.01, baseline_conc=100., delta_time=0.5, time_subdivision=1, fast_threshold_fraction=0.1)
+    rxn.examine_increment(rxn_index=1, species_index=0, delta_conc=10.01, baseline_conc=100., time_subdivision=1, fast_threshold_fraction=0.1)
     assert rxn.slow_rxns() == [0]       # The straw that broke the camel's back for reaction 1 !
     assert rxn.fast_rxns() == [1]
     assert not rxn.are_all_slow_rxns()
 
-    rxn.examine_increment(rxn_index=0, species_index=2, delta_conc=-10.01, baseline_conc=100., delta_time=0.5, time_subdivision=1, fast_threshold_fraction=0.1)
+    rxn.examine_increment(rxn_index=0, species_index=2, delta_conc=-10.01, baseline_conc=100., time_subdivision=1, fast_threshold_fraction=0.1)
     assert rxn.slow_rxns() == []        # The straw that broke the camel's back for reaction 0 !
     assert rxn.fast_rxns() == [0, 1]
     assert not rxn.are_all_slow_rxns()
@@ -579,16 +591,16 @@ def test_examine_increment():
     rxn.set_rxn_speed(1, "S")
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment(rxn_index=0, species_index=2, delta_conc=3.32, baseline_conc=100., delta_time=0.123, time_subdivision=3, fast_threshold_fraction=0.1)
+    rxn.examine_increment(rxn_index=0, species_index=2, delta_conc=3.32, baseline_conc=100., time_subdivision=3, fast_threshold_fraction=0.1)
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag for reaction 0
 
-    rxn.examine_increment(rxn_index=0, species_index=1, delta_conc=3.34, baseline_conc=100., delta_time=0.123, time_subdivision=3, fast_threshold_fraction=0.1)
+    rxn.examine_increment(rxn_index=0, species_index=1, delta_conc=3.34, baseline_conc=100., time_subdivision=3, fast_threshold_fraction=0.1)
     assert rxn.fast_rxns() == [0]       # Reaction 0 got marked as "Fast" b/c of large delta_conc for a time_subdivision of 3
 
-    rxn.examine_increment(rxn_index=1, species_index=0, delta_conc=-0.99, baseline_conc=100., delta_time=0.123, time_subdivision=10, fast_threshold_fraction=0.1)
+    rxn.examine_increment(rxn_index=1, species_index=0, delta_conc=-0.99, baseline_conc=100., time_subdivision=10, fast_threshold_fraction=0.1)
     assert rxn.fast_rxns() == [0]       # The small increment didn't trip the current "slow reaction" tag for reaction 1
 
-    rxn.examine_increment(rxn_index=1, species_index=1, delta_conc=-1.01, baseline_conc=100., delta_time=0.123, time_subdivision=10, fast_threshold_fraction=0.1)
+    rxn.examine_increment(rxn_index=1, species_index=1, delta_conc=-1.01, baseline_conc=100., time_subdivision=10, fast_threshold_fraction=0.1)
     assert rxn.fast_rxns() == [0, 1]    # Reaction 1 got marked as "Fast" b/c of large delta_conc for a time_subdivision of 3
 
 

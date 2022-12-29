@@ -542,10 +542,14 @@ class ReactionDynamics:
             for r in reactants:
                 stoichiometry, species_index, order = r
                 delta_conc = stoichiometry * (- delta_list[rxn_index])  # Increment to this reactant from the reaction being considered
-                # Mark the reaction "fast", if appropriate (and also do a validation check to avoid negative concentration)
+                # Do a validation check to avoid negative concentrations
+                self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
+                                        rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
+
+                # Mark the reaction "fast", if appropriate
                 self.examine_increment(rxn_index=rxn_index, species_index=species_index,
                                        delta_conc=delta_conc, baseline_conc=conc_array[species_index],
-                                       delta_time=delta_time, time_subdivision=time_subdivision,
+                                       time_subdivision=time_subdivision,
                                        fast_threshold_fraction=fast_threshold_fraction)
 
                 increment_vector[species_index] += delta_conc
@@ -555,31 +559,65 @@ class ReactionDynamics:
             for p in products:
                 stoichiometry, species_index, order = p
                 delta_conc = stoichiometry * delta_list[rxn_index]  # Increment to this reaction product from the reaction being considered
-                # Mark the reaction "fast", if appropriate (and also do a validation check to avoid negative concentration)
+                # Do a validation check to avoid negative concentrations
+                self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
+                                        rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
+
+                # Mark the reaction "fast", if appropriate
                 self.examine_increment(rxn_index=rxn_index, species_index=species_index,
                                        delta_conc=delta_conc, baseline_conc=conc_array[species_index],
-                                       delta_time=delta_time, time_subdivision=time_subdivision,
+                                       time_subdivision=time_subdivision,
                                        fast_threshold_fraction=fast_threshold_fraction)
 
                 increment_vector[species_index] += delta_conc
 
-            data_snapshot = self.get_conc_dict(system_data=increment_vector)    # This will be a dict of conc values
-            data_snapshot["reaction"] = rxn_index
-            data_snapshot["substep"] = substep_number
-            data_snapshot["time_subdivision"] = time_subdivision
-            self.debug_data.store(par=self.system_time, data_snapshot=data_snapshot, caption=f"delta_time: {delta_time}")
+            if 2 in self.verbose_list:
+                #TODO: split the reactions into separate data frames (one per reaction)?
+                data_snapshot = self.get_conc_dict(system_data=increment_vector)    # This will be a dict of conc values
+                data_snapshot["reaction"] = rxn_index
+                data_snapshot["substep"] = substep_number
+                data_snapshot["time_subdivision"] = time_subdivision
+                self.debug_data.store(par=self.system_time, data_snapshot=data_snapshot, caption=f"delta_time: {delta_time}")
         # END for (over rxn_list)
 
         return increment_vector
 
 
 
+    def validate_increment(self,  delta_conc, baseline_conc: float,
+                           rxn_index: int, species_index: int, delta_time) -> None:
+        """
+        Examine the requested concentration change given by delta_conc
+        (typically, as computed by an ode solver),
+        relative to the baseline (pre-reaction) value baseline_conc,
+        for the given SINGLE chemical species and SINGLE reaction.
+
+        If the concentration change would render the concentration negative,
+        raise an Exception
+
+        :param delta_conc:              The change in concentration computed by the ode solver
+                                            (for the specified chemical, in the given reaction)
+        :param baseline_conc:           The initial concentration
+
+        [The remaining arguments are ONLY USED for error printing]
+        :param rxn_index:               The index (0-based) to identify the reaction of interest (ONLY USED for error printing)
+        :param species_index:           The index (0-based) to identify the chemical species of interest (ONLY USED for error printing)
+        :param delta_time:              The time duration of the reaction step. (ONLY USED for error printing)
+
+        :return:                        None (an Exception is raised if a negative concentration is detected)
+        """
+        if (baseline_conc + delta_conc) < 0:
+            raise Exception(f"The chosen time interval ({delta_time}) "
+                            f"leads to a NEGATIVE concentration of the chemical species {species_index} from reaction {rxn_index}: "
+                            f"must make the interval smaller!")
+
+
+
     def examine_increment(self, rxn_index: int, species_index: int,
                           delta_conc, baseline_conc: float,
-                          delta_time, time_subdivision: int,
+                          time_subdivision: int,
                           fast_threshold_fraction) -> None:
         """
-        TODO: split into negative-conc checker and reaction-speed determiner
         Examine the requested concentration change given by delta_conc
         (typically, as computed by an ode solver),
         relative to the baseline (pre-reaction) value baseline_conc,
@@ -590,9 +628,6 @@ class ReactionDynamics:
         this will OVER-RIDE any previous annotation about the speed of that reaction.
         Note: it doesn't matter which of the chemicals in the reaction leads to this.
 
-        If the concentration change would render the concentration negative,
-        raise an Exception
-
         :param rxn_index:               The index (0-based) to identify the reaction of interest
         :param species_index:           The index (0-based) to identify the chemical species of interest. (ONLY USED for error printing)
 
@@ -600,7 +635,6 @@ class ReactionDynamics:
                                             (for the above chemical, in the above reaction)
         :param baseline_conc:           The initial concentration
 
-        :param delta_time:              The time duration of the reaction step. (ONLY USED for error printing)
         :param time_subdivision:        Integer with the number of subdivisions currently used for delta_time;
                                             used for adaptive variable time resolution
 
@@ -612,10 +646,6 @@ class ReactionDynamics:
 
         :return:                        None (the equation is marked as "Fast", if appropriate, in its data structure)
         """
-        if (baseline_conc + delta_conc) < 0:
-            raise Exception(f"The given time interval ({delta_time}) "
-                            f"leads to a negative concentration of the chemical species {species_index} in reaction {rxn_index}: "
-                            f"must make the interval smaller!")
 
         # If the reaction was (tentatively) labeled as "Slow", decide whether to flip it to "Fast"
         #   Note: the status will be used for the current simulation sub-cycle
