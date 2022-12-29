@@ -753,8 +753,7 @@ class ReactionDynamics:
 
 
 
-    def stoichiometry_checker(self, rxn_index, conc_arr_before, conc_arr_after) -> bool:
-        # delta_t, chem_name, single_delta_conc
+    def stoichiometry_checker(self, rxn_index: int, conc_arr_before, conc_arr_after) -> bool:
         """
         For the indicated reaction, given the change in the concentration of the involved chemicals
         ascertain whether that change is consistent with the reaction's stoichiometry.
@@ -763,10 +762,36 @@ class ReactionDynamics:
         :param rxn_index:
         :param conc_arr_before:
         :param conc_arr_after:
-        #:param delta_t:
-        #:param chem_name:
-        #:param single_delta_conc:
-        :return:                    True if the change in reactant/product concentrations is consistent with the
-                                        reaction's stoichiometry, or False otherwise
+        :return:                True if the change in reactant/product concentrations is consistent with the
+                                    reaction's stoichiometry, or False otherwise
         """
-        pass
+        self.reaction_data.assert_valid_rxn_index(rxn_index)
+
+        reactants = self.reaction_data.get_reactants(rxn_index)
+        products = self.reaction_data.get_products(rxn_index)
+
+        # Pick (arbitrarily) the first reactant, to establish a baseline
+        baseline_term = reactants[0]
+        baseline_species = self.reaction_data.extract_species_index(baseline_term)
+        baseline_stoichiometry = self.reaction_data.extract_stoichiometry(baseline_term)
+        baseline_ratio =  (conc_arr_after[baseline_species] - conc_arr_before[baseline_species]) / baseline_stoichiometry
+        #print("baseline_ratio: ", baseline_ratio)
+
+        for i, term in enumerate(reactants):
+            if i != 0:
+                species = self.reaction_data.extract_species_index(term)
+                stoichiometry = self.reaction_data.extract_stoichiometry(term)
+                ratio =  (conc_arr_after[species] - conc_arr_before[species]) / stoichiometry
+                #print(f"ratio for `{self.reaction_data.get_name(species)}`: {ratio}")
+                if not np.allclose(ratio, baseline_ratio):
+                    return False
+
+        for term in products:
+            species = self.reaction_data.extract_species_index(term)
+            stoichiometry = self.reaction_data.extract_stoichiometry(term)
+            ratio =  - (conc_arr_after[species] - conc_arr_before[species]) / stoichiometry # The minus in front is b/c we're on the other side of the eqn
+            #print(f"ratio for `{self.reaction_data.get_name(species)}`: {ratio}")
+            if not np.allclose(ratio, baseline_ratio):
+                return False
+
+        return True

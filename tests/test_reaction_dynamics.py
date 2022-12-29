@@ -12,7 +12,9 @@ def test_set_conc():
 
     with pytest.raises(Exception):
         rxn.set_conc(conc=[1, 2, 3, 4])         # Wrong number of entries
+    with pytest.raises(Exception):
         rxn.set_conc(conc=[1., -2., -3.])       # Negative values
+    with pytest.raises(Exception):
         rxn.set_conc(conc=(10., 20., -0.01))    # Negative values
 
     rxn.set_conc(conc=[1., 2., 3.])
@@ -588,3 +590,54 @@ def test_examine_increment():
 
     rxn.examine_increment(rxn_index=1, species_index=1, delta_conc=-1.01, baseline_conc=100., delta_time=0.123, time_subdivision=10, fast_threshold_fraction=0.1)
     assert rxn.fast_rxns() == [0, 1]    # Reaction 1 got marked as "Fast" b/c of large delta_conc for a time_subdivision of 3
+
+
+
+def test_stoichiometry_checker():
+    chem = ReactionData(names=["A", "B", "C", "D"])
+    rxn = ReactionDynamics(chem)
+
+    chem.add_reaction(reactants=["A"], products=["B"])          # Reaction 0:   A <--> B
+
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 50, 0, 0]), conc_arr_after=np.array([10, 40, 0, 0]))
+    assert not rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 50, 0, 0]), conc_arr_after=np.array([10, 39.9, 0, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([90, 10, 0, 0]))
+
+
+    chem.add_reaction(reactants=[(2, "A")], products=["B"])     # Reaction 1:   2A <--> B
+
+    assert rxn.stoichiometry_checker(rxn_index=1, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=1, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([80, 10, 0, 0]))
+    assert not rxn.stoichiometry_checker(rxn_index=1, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([80, 10.1, 0, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=1, conc_arr_before=np.array([0, 50, 0, 0]), conc_arr_after=np.array([10, 45, 0, 0]))
+
+
+    chem.add_reaction(reactants=["A", "B"], products=["C"])     # Reaction 2:   A + B <--> C
+
+    assert rxn.stoichiometry_checker(rxn_index=2, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=2, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 40, 10, 0]))
+    assert not rxn.stoichiometry_checker(rxn_index=2, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 40, 9.9, 0]))
+
+
+    chem.add_reaction(reactants=["A", (3, "B")], products=["C"])     # Reaction 3:   A + 3B <--> C
+
+    assert rxn.stoichiometry_checker(rxn_index=3, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=3, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 10, 0]))
+    assert not rxn.stoichiometry_checker(rxn_index=3, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 9.9, 0]))
+
+
+    chem.add_reaction(reactants=["A", (3, "B")], products=[(4, "C")])                   # Reaction 4:   A + 3B <--> 4C
+
+    assert rxn.stoichiometry_checker(rxn_index=4, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=4, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 40, 0]))
+    assert not rxn.stoichiometry_checker(rxn_index=4, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 39.9, 0]))
+
+
+    chem.add_reaction(reactants=[(2, "A"), (3, "B")], products=[(4, "C"), (5, "D")])     # Reaction 5:   2A + 3B <--> 4C + 5D
+    assert rxn.stoichiometry_checker(rxn_index=5, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=5, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([120, 130, 60, 50]))
+    assert not rxn.stoichiometry_checker(rxn_index=5, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([120.1, 130, 60, 50]))
+    assert rxn.stoichiometry_checker(rxn_index=5, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([80, 70, 140, 150]))
+    assert not rxn.stoichiometry_checker(rxn_index=5, conc_arr_before=np.array([100, 100, 100, 100.1]), conc_arr_after=np.array([80, 70, 140, 150]))
+

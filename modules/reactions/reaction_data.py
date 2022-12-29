@@ -106,6 +106,12 @@ class ReactionData:
 
 
     def assert_valid_rxn_index(self, index):
+        """
+        Raise an Exception if the specified reaction index isn't valid
+        
+        :param index:
+        :return:
+        """
         assert (type(index) == int) and \
                0 <= index < self.number_of_reactions(), \
             f"The requested reaction index ({index}) is not the expected integer the range [0 - {self.number_of_reactions() - 1}], inclusive"
@@ -228,12 +234,12 @@ class ReactionData:
 
 
 
-    def get_reactants(self, i: int) -> (int, int, int):
+    def get_reactants(self, i: int) -> [(int, int, int)]:
         """
-        Return a triplet with details of the reactants of the i-th reaction
+        Return a list of triplets with details of the reactants of the i-th reaction
 
         :param i:   The index (0-based) to identify the reaction of interest
-        :return:    A triplet (stoichiometry, species index, reaction order)
+        :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
         """
         rxn = self.get_reaction(i)
         return rxn["reactants"]
@@ -252,12 +258,12 @@ class ReactionData:
 
 
 
-    def get_products(self, i: int) -> (int, int, int):
+    def get_products(self, i: int) -> [(int, int, int)]:
         """
-        Return a triplet with details of the products of the i-th reaction
+        Return a list of triplets with details of the products of the i-th reaction
 
         :param i:   The index (0-based) to identify the reaction of interest
-        :return:    A triplet (stoichiometry, species index, reaction order)
+        :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
         """
         rxn = self.get_reaction(i)
         return rxn["products"]
@@ -307,7 +313,7 @@ class ReactionData:
 
 
 
-    def extract_stoichiometry(self, term) -> int:
+    def extract_stoichiometry(self, term: (int, int, int)) -> int:
         """
 
         :param term:
@@ -315,10 +321,10 @@ class ReactionData:
         """
         return term[0]
 
-    def extract_species_index(self, term) -> int:
+    def extract_species_index(self, term: (int, int, int)) -> int:
         return term[1]
 
-    def extract_rxn_order(self, term) -> int:
+    def extract_rxn_order(self, term: (int, int, int)) -> int:
         return term[2]
 
 
