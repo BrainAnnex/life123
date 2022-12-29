@@ -108,7 +108,7 @@ class ReactionData:
     def assert_valid_rxn_index(self, index):
         """
         Raise an Exception if the specified reaction index isn't valid
-        
+
         :param index:
         :return:
         """

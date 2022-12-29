@@ -19,7 +19,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_4"_ 
 #
-# LAST REVISED: Dec. 27, 2022
+# LAST REVISED: Dec. 28, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -88,6 +88,7 @@ dynamics.history.get()
 # ## Run the reaction
 
 # %%
+dynamics.verbose_list = [2]
 dynamics.single_compartment_react(time_step=0.004, reaction_duration=0.06,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
@@ -133,5 +134,128 @@ fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B", "
               color_discrete_sequence = ['red', 'violet', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
+
+# %%
+df.loc[10]
+
+# %%
+df.iloc[10]
+
+# %%
+list(df.loc[10])
+
+# %%
+list(df.loc[11])
+
+# %%
+a2 = df.loc[11].to_numpy()
+a2
+
+# %%
+a1 = df.loc[10].to_numpy()
+a1
+
+# %%
+a2 = df.iloc[11][['A', 'B', 'C']].to_numpy()
+a2
+
+# %%
+a1 = df.iloc[10][['A', 'B', 'C']].to_numpy()
+a1
+
+# %%
+a2 - a1
+
+# %%
+(a2 - a1) / a1 * 100.
+
+# %%
+abs(a2 - a1) / a1 * 100.
+
+# %%
+max(abs(a2 - a1) / a1 * 100.)
+
+# %%
+i = 0
+
+# %%
+before = df.iloc[i][['A', 'B', 'C']].to_numpy()
+before
+
+# %%
+after = df.iloc[i+1][['A', 'B', 'C']].to_numpy()
+after
+
+# %%
+max(abs(after - before) / before * 100.)
+
+# %%
+for i in range(22):
+    print(f"---- {i} ----")
+    before = df.iloc[i][['A', 'B', 'C']].to_numpy()
+    print(before)
+    after = df.iloc[i+1][['A', 'B', 'C']].to_numpy()
+    print(after)
+    print(after - before)
+    print(abs(after - before) / before * 100.)
+    largest_rel_change = max(abs(after - before) / before * 100.)
+    print(largest_rel_change)
+
+# %%
+df
+
+# %%
+debug_df = dynamics.debug_data.get()
+debug_df
+
+# %%
+i = 0
+
+delta = debug_df.iloc[i][['A', 'B', 'C']].to_numpy()
+print(delta)
+
+baseline = df.iloc[i][['A', 'B', 'C']].to_numpy()
+print(baseline)
+
+ratio = delta / baseline * 100.
+print(ratio)
+print(max(abs(ratio)))
+
+# %%
+i = 1
+
+delta = debug_df.iloc[i][['A', 'B', 'C']].to_numpy()
+print(delta)
+
+baseline = df.iloc[i][['A', 'B', 'C']].to_numpy()
+print(baseline)
+
+ratio = delta / baseline * 100.
+print(ratio)
+print(max(abs(ratio)))
+
+# %%
+for i in range(21):
+    print(f"---- {i} ----")
+    debug_time = debug_df.iloc[i]['TIME']
+    print(f"debug_time: {debug_time:.5g} (Start of main t interval)")
+
+    time_subdivision = debug_df.iloc[i]['time_subdivision']
+    print(f"time_subdivision: {time_subdivision}")
+    
+    delta = debug_df.iloc[i][['A', 'B', 'C']].to_numpy()
+    print("Delta:", delta)
+
+    baseline = df.iloc[i][['A', 'B', 'C']].to_numpy()
+    print("Baseline:", baseline)
+
+    ratio = delta / baseline * 100.
+    print("Ratio:", ratio)
+    print("Max abs:", max(abs(ratio))) 
+    print("Comparing the above against ", 5/time_subdivision)
+    if max(abs(ratio)) > 5/time_subdivision:
+        print("FAST")
+    else:
+        print("Slow")
 
 # %%
