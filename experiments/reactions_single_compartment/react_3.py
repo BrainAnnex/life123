@@ -19,7 +19,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_4"_ 
 #
-# LAST REVISED: Dec. 28, 2022
+# LAST REVISED: Dec. 29, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

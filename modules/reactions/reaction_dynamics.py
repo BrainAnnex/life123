@@ -450,7 +450,7 @@ class ReactionDynamics:
             reduced_time_step = delta_time_full / dynamic_step
             for substep in range(dynamic_step):
                 if 2 in self.verbose_list:
-                    print(f"    - substep: {substep} in processing of FAST reactions")
+                    print(f"    - substep: {substep} (in processing of FAST reactions)")
 
                 incr_vector = self.single_reaction_step(delta_time=reduced_time_step, time_subdivision=dynamic_step, fast_threshold_fraction=fast_threshold_fraction,
                                                         conc_array=local_conc_array, rxn_list=fast_rxns, substep_number=substep)
@@ -478,10 +478,14 @@ class ReactionDynamics:
 
 
     def single_reaction_step(self, delta_time, conc_array, time_subdivision=1, fast_threshold_fraction=0.05,
-                             rxn_list=None, substep_number=1) -> np.array:
+                             rxn_list=None, substep_number=0) -> np.array:
         """
         Using the given concentration data of ALL the chemical species,
         do the specified SINGLE TIME STEP for ONLY the requested reactions (by default all).
+
+        NOTE: this time step might be the "full" time step of the calling function,
+              or a substep (if adaptive variable time resolution is being used)
+
         All computations are based on the INITIAL concentrations (prior to this reaction step),
         which are used as the basis for all the reactions (in "forward Euler" approach.)
 
@@ -491,19 +495,22 @@ class ReactionDynamics:
         NOTE: the actual system concentrations are NOT changed
 
         :param delta_time:              The time duration of this individual reaction step - assumed to be small enough that the
-                                            concentration won't vary significantly during this span
-        :param time_subdivision:        Integer with the number of subdivisions currently being used for the "main" time step
-                                            of the high-level function;
-                                            used for adaptive variable time resolution.
-                                            (Note: the "main" time step of the calling function will be delta_time * time_subdivision)
+                                            concentration won't vary significantly during this span.
+                                            NOTE: this may be a "full step" or a "substep", depending on the adaptive time scale
+                                                  being used by the caller function
+        :param time_subdivision:        Integer with the number of subdivisions currently being used for the "full" time step
+                                            of the caller function;
+                                            if > 1, it means we're using an adaptive variable time resolution.
+                                            (Note: the "full" time step of the calling function will be delta_time * time_subdivision)
         :param fast_threshold_fraction: The minimum relative size of the concentration baseline over its change, AS A FRACTION,
-                                            for a reaction to be regarded as "Slow".  IMPORTANT: this refer to the FULL step size
+                                            for a reaction to be regarded as "Slow".  IMPORTANT: this refers to the FULL step size
+
         :param conc_array:              All initial concentrations at the start of the reaction step,
                                             as a Numpy array for all the chemical species, in their index order;
                                             this can be thought of as the "SYSTEM STATE"
-        :param rxn_list:                OPTIONAL list of reactions (specified by index); EXAMPLE: [1, 3, 7]
+        :param rxn_list:                OPTIONAL list of reactions (specified by index) to include in this simulation step ; EXAMPLE: [1, 3, 7]
                                             If None, do all the reactions.
-        :param substep_number:          Only used for debugging the variable time resolution mode
+        :param substep_number:          Only used for variable time resolution mode.  Zero-based counting
 
         :return:            The increment vector for the concentrations of ALL the chemical species,
                                 as a Numpy array for all the chemical species, in their index order
@@ -524,8 +531,8 @@ class ReactionDynamics:
         # For each applicable reaction, adjust the concentrations of the reactants and products,
         # based on the forward and back rates of the reaction
         for rxn_index in rxn_list:      # Consider each reaction in turn
-            if 4 in self.verbose_list:
-                print(f"adjusting the species concentrations as a result of reaction number {rxn_index}")
+            if 2 in self.verbose_list:
+                print(f"      Determining the concentrations changes as a result of reaction number {rxn_index}")
 
             # TODO: turn into a more efficient single step, as as:
             #(reactants, products) = cls.all_reactions.unpack_terms(i)
@@ -546,11 +553,16 @@ class ReactionDynamics:
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
-                # Mark the reaction "fast", if appropriate
-                self.examine_increment(rxn_index=rxn_index, species_index=species_index,
-                                       delta_conc=delta_conc, baseline_conc=conc_array[species_index],
-                                       time_subdivision=time_subdivision,
-                                       fast_threshold_fraction=fast_threshold_fraction)
+                # If we are at the last of the substeps...  TODO: skip if caller function not using variable time resolution mode; however, this CANNOT be detected by just looking at time_subdivision == 1
+                if substep_number == time_subdivision-1:
+                    # Mark the reaction "fast", if appropriate
+                    self.examine_increment(rxn_index=rxn_index, species_index=species_index,
+                                           delta_conc=delta_conc, baseline_conc=conc_array[species_index],
+                                           time_subdivision=time_subdivision,
+                                           fast_threshold_fraction=fast_threshold_fraction)
+                elif 2 in self.verbose_list:
+                    print(f"        Skipping evaluation of reaction speed for chemical `{self.reaction_data.get_name(species_index)}` "
+                          f"(substep_number = {substep_number}, time_subdivision = {time_subdivision})")
 
                 increment_vector[species_index] += delta_conc
 
@@ -563,11 +575,16 @@ class ReactionDynamics:
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
-                # Mark the reaction "fast", if appropriate
-                self.examine_increment(rxn_index=rxn_index, species_index=species_index,
-                                       delta_conc=delta_conc, baseline_conc=conc_array[species_index],
-                                       time_subdivision=time_subdivision,
-                                       fast_threshold_fraction=fast_threshold_fraction)
+                # If we are at the last of the substeps...
+                if substep_number == time_subdivision-1:
+                    # Mark the reaction "fast", if appropriate
+                    self.examine_increment(rxn_index=rxn_index, species_index=species_index,
+                                           delta_conc=delta_conc, baseline_conc=conc_array[species_index],
+                                           time_subdivision=time_subdivision,
+                                           fast_threshold_fraction=fast_threshold_fraction)
+                elif 2 in self.verbose_list:
+                    print(f"        Skipping evaluation of reaction speed for chemical `{self.reaction_data.get_name(species_index)}` "
+                          f"(substep_number = {substep_number}, time_subdivision = {time_subdivision})")
 
                 increment_vector[species_index] += delta_conc
 
@@ -655,7 +672,7 @@ class ReactionDynamics:
                 self.set_rxn_speed(rxn_index, "F")
 
             if 2 in self.verbose_list:
-                print(f"      Reaction # {rxn_index} determined to be '{self.get_rxn_speed(rxn_index)}', "
+                print(f"        Reaction # {rxn_index} determined to be '{self.get_rxn_speed(rxn_index)}', "
                       f"based on a change of {delta_conc:.6g} (relative to its baseline of {baseline_conc:.7g}) "
                       f"for the conc. of chem species # {species_index}: "
                       f"comparing abs({100 * delta_conc / baseline_conc:.3g}%) vs. ({100 * fast_threshold_fraction:.3g}% /{time_subdivision})")
