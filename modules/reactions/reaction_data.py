@@ -591,7 +591,7 @@ class ReactionData:
 
 
 
-    def clear_reactions(self) -> None:
+    def clear_reactions_data(self) -> None:
         """
         Get rid of all reactions; start again with "an empty slate" (but still with reference
         to the same data about the chemicals)

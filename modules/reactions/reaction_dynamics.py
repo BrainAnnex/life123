@@ -179,6 +179,17 @@ class ReactionDynamics:
 
 
 
+    def clear_reactions(self) -> None:
+        """
+        Get rid of all reactions; start again with "an empty slate" (but still with reference
+        to the same data about the chemicals)
+
+        :return:    None
+        """
+        self.reaction_data.clear_reactions_data()
+        self.reaction_speeds = {}
+
+
 
     #############################################################################################
     #                                                                                           #
@@ -299,6 +310,7 @@ class ReactionDynamics:
         which are used as the basis for all the reactions.
 
         Update the system state and the system time accordingly
+        (object attributes self.system and self.system_time)
 
         :param reaction_duration:  The overall time advance for the reactions (i.e. time_step * n_steps)
                                 TODO: maybe also offer a "final_time" (or "stop_time") option
@@ -372,7 +384,7 @@ class ReactionDynamics:
         and the reaction part of reaction-diffusions in 1D, 2D and 3D.
 
         "Compartments" may or may not correspond to the "bins" of the higher layers;
-        the calling code might have opted to merge some bins into a single "compartment"
+        the calling code might have opted to merge some bins into a single "compartment".
 
         Using the given concentration data for all the applicable species in a single compartment,
         do a single reaction time step for ALL the reactions -

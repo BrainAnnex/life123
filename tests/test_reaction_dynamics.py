@@ -92,7 +92,7 @@ def test_single_reaction_step_1():
     assert result[0] == - result[1]         # From the stoichiometry
 
 
-    chem_data.clear_reactions()   # Re-start with a blank slate of reactions
+    chem_data.clear_reactions_data()   # Re-start with a blank slate of reactions
     # Reaction A <-> 3B , with 1st-order kinetics in both directions.
     # Based on experiment "1D/reactions/reaction2"
     chem_data.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
@@ -102,7 +102,7 @@ def test_single_reaction_step_1():
     assert -3 * result[0] == result[1]      # From the stoichiometry
 
 
-    chem_data.clear_reactions()   # Re-start with a blank slate of reactions
+    chem_data.clear_reactions_data()   # Re-start with a blank slate of reactions
     # Reaction 2A <-> 3B , with 1st-order kinetics in both directions.
     # Based on experiment "1D/reactions/reaction3"
     chem_data.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
@@ -128,7 +128,7 @@ def test_single_reaction_step_2():
     assert result[0] == - result[1]         # From the stoichiometry
 
 
-    chem_data.clear_reactions()   # Re-start with a blank slate of reactions
+    chem_data.clear_reactions_data()   # Re-start with a blank slate of reactions
     # Reaction A + B <-> C , with 1st-order kinetics for each species.
     # Based on experiment "1D/reactions/reaction4"
     chem_data.add_reaction(reactants=[("A") , ("B")], products=[("C")],
@@ -228,9 +228,11 @@ def test_adaptive_time_resolution_1():
     kR = 2.
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=kF, reverse_rate=kR)
 
-    # Start testing the lower-level functions, and then proceed to testing progressively higher-level ones
+    # Start testing the lowest-level function, and then proceed to testing progressively higher-level ones
+    #rxn.verbose_list = [2]
     result = rxn.single_reaction_step(delta_time=0.05, conc_array=conc_array,
                                       time_subdivision=2, fast_threshold_fraction=0.05)
+    # The above call is just 1 time step
     # Check the calculations, based on the forward Euler method
     fwd_delta = 0.05 * (-kF * conc_array[0] + kR * conc_array[1])   # 3.5
     rev_delta = -fwd_delta   # From the stoichiometry
@@ -238,8 +240,12 @@ def test_adaptive_time_resolution_1():
 
 
     # Repeat at the next-higher level
+    rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
+    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=kF, reverse_rate=kR)   # Re-add same reaction
+
     result = rxn.reaction_step_orchestrator(delta_time_full=0.1, conc_array=conc_array,
                                             dynamic_step=2, fast_threshold=5)
+    # The above call results in 2 time steps
     # Check the calculations, based on the forward Euler method
     half_step_conc = conc_array + [fwd_delta ,rev_delta]    # [13.5 46.5]   These are the conc's at t=0.05
     new_fwd_delta = 0.05 * (-kF * half_step_conc[0] + kR * half_step_conc[1])   # 2.625
@@ -250,12 +256,15 @@ def test_adaptive_time_resolution_1():
 
 
     # Repeat at the yet-next-higher level
+    rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
+    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=kF, reverse_rate=kR)   # Re-add same reaction
     rxn.system = conc_array.copy()      # The copy() is to avoid messing up conc_array
     rxn.system_time = 0.
     rxn.single_compartment_react(time_step=0.1, n_steps=1, dynamic_step=2, fast_threshold=5)
 
     assert np.allclose(rxn.system_time, 0.1)
     assert np.allclose(rxn.system, conc_array + np.array([fwd_delta ,rev_delta]))     # [16.125, 43.875]
+    # Note: in the previous scenario, we had computed the "delta's"; now, we're looking at the updated system state
 
 
 
@@ -275,7 +284,7 @@ def test_adaptive_time_resolution_2():
     delta_time_subinterval = delta_time_full_interval /time_subdivision
 
     chem_data.add_reaction(reactants=["A" , "B"], products=["C"],
-                       forward_rate=5., reverse_rate=2.)
+                           forward_rate=5., reverse_rate=2.)
 
     # Start testing the lower-level functions, and then proceed to testing progressively higher-level ones
     result = rxn.single_reaction_step(delta_time=delta_time_subinterval, conc_array=conc_array,
@@ -288,6 +297,9 @@ def test_adaptive_time_resolution_2():
 
 
     # Repeat at the next-higher level
+    rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
+    chem_data.add_reaction(reactants=["A" , "B"], products=["C"],
+                           forward_rate=5., reverse_rate=2.)        # Re-add the reaction
     result = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
                                             dynamic_step=time_subdivision, fast_threshold=5)
     # Check the calculations, based on the forward Euler method
@@ -305,6 +317,9 @@ def test_adaptive_time_resolution_2():
 
 
     # Repeat at the yet-next-higher level
+    rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
+    chem_data.add_reaction(reactants=["A" , "B"], products=["C"],
+                           forward_rate=5., reverse_rate=2.)        # Re-add the reaction
     rxn.system = conc_array.copy()      # The copy() is to avoid messing up conc_array
     rxn.system_time = 0.
     rxn.single_compartment_react(time_step=delta_time_full_interval, n_steps=1, dynamic_step=time_subdivision, fast_threshold=5)
@@ -359,7 +374,7 @@ def test_compute_all_rate_deltas():
     assert np.allclose(result, [42.0, -147.5, -5.0, 29.5])
 
     # FLUSH OUT ALL REACTIONS (to start over)
-    chem_data.clear_reactions()
+    chem_data.clear_reactions_data()
     # Start with reaction A <-> B , with 1st-order kinetics in both directions
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=20., reverse_rate=2.)
     conc_array = np.array([5., 8.])
@@ -440,7 +455,7 @@ def test_is_in_equilibrium():
     assert rxn.is_in_equilibrium(rxn_index = 5, conc = c)
 
 
-    chem_data.clear_reactions()   # This will reset the reaction count to 0
+    chem_data.clear_reactions_data()   # This will reset the reaction count to 0
 
     # Reaction  2A <-> B , with 1st-order kinetics in both directions
     chem_data.add_reaction(reactants=[(2, "A")], products=["B"], forward_rate=5., reverse_rate=2.)

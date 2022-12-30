@@ -125,7 +125,7 @@ fig.show()
 # # STARTING OVER, this time with 2nd-order kinetics in the forward reaction
 
 # %%
-chem_data.clear_reactions()
+chem_data.clear_reactions_data()
 
 # %%
 # Reaction  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction
