@@ -136,64 +136,19 @@ fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B", "
 fig.show()
 
 # %% [markdown]
-# ### The following is a technical analysis of the adaptive variable time steps, from the run data
-# (Only usable with single-reaction runs)
+# ## Everthing below is just for diagnostic insight into the adaptive variable time steps
 
 # %%
+# This approach, from the run data, is only usable with single-reaction runs
 dynamics.examine_run(df=df, time_step=0.004)
 
 # %%
-debug_df = dynamics.debug_data.get()
-debug_df
+# Take a peek at internal diagnostic data from the reactions
+diagnostic_df = dynamics.debug_data.get()
+diagnostic_df
 
 # %%
-i = 0
-
-delta = debug_df.iloc[i][['A', 'B', 'C']].to_numpy()
-print(delta)
-
-baseline = df.iloc[i][['A', 'B', 'C']].to_numpy()
-print(baseline)
-
-ratio = delta / baseline * 100.
-print(ratio)
-print(max(abs(ratio)))
-
-# %%
-i = 1
-
-delta = debug_df.iloc[i][['A', 'B', 'C']].to_numpy()
-print(delta)
-
-baseline = df.iloc[i][['A', 'B', 'C']].to_numpy()
-print(baseline)
-
-ratio = delta / baseline * 100.
-print(ratio)
-print(max(abs(ratio)))
-
-# %%
-for i in range(21):
-    print(f"---- {i} ----")
-    debug_time = debug_df.iloc[i]['TIME']
-    print(f"debug_time: {debug_time:.5g} (Start of main t interval)")
-
-    time_subdivision = debug_df.iloc[i]['time_subdivision']
-    print(f"time_subdivision: {time_subdivision}")
-    
-    delta = debug_df.iloc[i][['A', 'B', 'C']].to_numpy()
-    print("Delta:", delta)
-
-    baseline = df.iloc[i][['A', 'B', 'C']].to_numpy()
-    print("Baseline:", baseline)
-
-    ratio = delta / baseline * 100.
-    print("Ratio:", ratio)
-    print("Max abs:", max(abs(ratio))) 
-    print("Comparing the above against ", 5/time_subdivision)
-    if max(abs(ratio)) > 5/time_subdivision:
-        print("FAST")
-    else:
-        print("Slow")
+# This approach, from internal diagnostic data, is more generally applicable to runs with multiple reactions as well
+dynamics.diagnose_variable_time_steps(df)
 
 # %%

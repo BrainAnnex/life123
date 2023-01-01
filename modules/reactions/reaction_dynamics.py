@@ -989,7 +989,7 @@ class ReactionDynamics:
     def examine_run(self, df, time_step, fast_threshold=5) -> None:
         """
         Analyze, primarily for debugging purposes, the data produced by a run of single_compartment_react()
-        The primary focus is a technical analysis of the adaptive variable time steps.
+        The primary focus is for diagnostic information of the adaptive variable time steps.
 
         CAUTION: this approach is only usable with single-reaction runs or non-overlapping multiple reactions,
                  because it looks into concentration changes of the various chemicals,
@@ -1046,3 +1046,41 @@ class ReactionDynamics:
                     print(f"Since {largest_abs_rel_change:.3g} > ({fast_threshold}% over {divisor}), the reaction is classified as *FAST*")
                 else:
                     print(f"Since {largest_abs_rel_change:.3g} < ({fast_threshold}% over {divisor}), the reaction is classified as *Slow*")
+
+
+
+    def diagnose_variable_time_steps(self, df, fast_threshold=5) -> None:
+        """
+
+        :param df:
+        :param fast_threshold:
+        :return:
+        """
+        diagnostic_df = self.debug_data.get()
+        number_diagnostic_points = len(diagnostic_df)
+
+        chemical_list = self.reaction_data.get_all_names()
+        print("Examining the reactions' diagnostic data for the chemicals: ", chemical_list)
+
+        for i in range(number_diagnostic_points):
+            print(f"\n---- {i} ----")
+            debug_time = diagnostic_df.iloc[i]['TIME']
+            print(f"debug_time: {debug_time:.5g} (Start of main t interval)")
+
+            time_subdivision = diagnostic_df.iloc[i]['time_subdivision']
+            print(f"time_subdivision: {time_subdivision}")
+
+            delta = diagnostic_df.iloc[i][chemical_list].to_numpy()
+            print("Delta:", delta)
+
+            baseline = df.iloc[i][chemical_list].to_numpy()   # TODO: this may not always work!
+            print("Baseline:", baseline)
+
+            ratio = delta / baseline * 100.
+            print("Ratio:", ratio)
+            print("Max abs:", max(abs(ratio)))
+            print("Comparing the above against ", fast_threshold/time_subdivision)
+            if max(abs(ratio)) > fast_threshold/time_subdivision:
+                print("FAST")
+            else:
+                print("Slow")
