@@ -14,12 +14,13 @@
 
 # %% [markdown]
 # ## Association/Dissociation reaction A + B <-> C
-# #### with 1st-order kinetics for each species, taken to equilibrium
+# #### with 1st-order kinetics for each species, taken to equilibrium.
+# #### Exploration of debugging and diagnostics options
 # (Adaptive variable time resolution is used)
 #
 # _See also the experiment "1D/reactions/reaction_4"_ 
 #
-# LAST REVISED: Dec. 31, 2022
+# LAST REVISED: Jan. 1, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -88,6 +89,7 @@ dynamics.history.get()
 # ## Run the reaction
 
 # %%
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 dynamics.verbose_list = [1]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 dynamics.single_compartment_react(time_step=0.004, reaction_duration=0.06,
                                   snapshots={"initial_caption": "1st reaction step",
@@ -142,13 +144,17 @@ fig.show()
 # This approach, from the run data, is only usable with single-reaction runs
 dynamics.examine_run(df=df, time_step=0.004)
 
-# %%
-# Take a peek at internal diagnostic data from the reactions
-diagnostic_df = dynamics.debug_data.get()
-diagnostic_df
+# %% [markdown]
+# # Take a peek at internal diagnostic data from the reactions
 
 # %%
 # This approach, from internal diagnostic data, is more generally applicable to runs with multiple reactions as well
-dynamics.diagnose_variable_time_steps(df)
+dynamics.diagnose_variable_time_steps()
+
+# %% [markdown]
+# ### The above diagnostics are based on the following diagnostic data
+
+# %%
+dynamics.debug_data.get()
 
 # %%

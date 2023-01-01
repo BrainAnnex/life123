@@ -46,8 +46,6 @@ class ReactionDynamics:
 
 
 
-
-
     #############################################################################################
     #                                                                                           #
     #                                ~  TO SET/READ DATA  ~                                     #
@@ -473,7 +471,8 @@ class ReactionDynamics:
             reduced_time_step = delta_time_full / dynamic_step
             for substep in range(dynamic_step):
                 if 1 in self.verbose_list:
-                    print(f"    - substep: {substep} (in processing of FAST reactions).  'Local' system time: {self.system_time + substep * reduced_time_step}")
+                    local_system_time = self.system_time + substep * reduced_time_step
+                    print(f"    - substep: {substep} (in processing of FAST reactions).  'Local' system time: {local_system_time:,.4g}")
 
                 incr_vector = self.single_reaction_step_VARIABLE_RESOLUTION(delta_time=reduced_time_step, time_subdivision=dynamic_step, fast_threshold_fraction=fast_threshold_fraction,
                                                                             conc_array=local_conc_array, rxn_list=fast_rxns, substep_number=substep)
@@ -1054,20 +1053,33 @@ class ReactionDynamics:
 
 
 
-    def diagnose_variable_time_steps(self, df, fast_threshold=5) -> None:
+    def set_diagnostics(self):
+        self.diagnostics = True
+
+    def unset_diagnostics(self):
+        self.diagnostics = False
+
+
+
+    def diagnose_variable_time_steps(self, fast_threshold=5) -> None:
         """
         Analyze, primarily for debugging purposes, the diagnostics data produced
-        when the self.diagnostics attribute is set to True.
+        when the self.diagnostics attribute is set to True prior to running single_compartment_react().
 
         The primary focus is for diagnostic information of the adaptive variable time steps.
 
-        This approach is suitable for any type of reaction simulations.
+        This approach will be suitable for any type of reaction simulations. TODO: generalize to multiple reactions
 
-        :param df:              A Pandas data frame, as created by single_compartment_react()
         :param fast_threshold:  The same value (for the FULL STEP size) that was used in single_compartment_react()
 
         :return:                None
         """
+        if not self.diagnostics:
+            print("No diagnostic information is available:\nIn order to run diagnose_variable_time_steps(), "
+                  "call set_diagnostics() prior to running single_compartment_react()")
+            return
+
+        df = self.history.get()
         diagnostic_df = self.debug_data.get()
         number_diagnostic_points = len(diagnostic_df)
 
@@ -1077,22 +1089,27 @@ class ReactionDynamics:
         for i in range(number_diagnostic_points):
             print(f"\n---- {i} ----")
             debug_time = diagnostic_df.iloc[i]['TIME']
-            print(f"debug_time: {debug_time:.5g} (Start of main t interval)")
+            print(f"debug_time: {debug_time:.5g} (Start of Full time interval)")
 
             time_subdivision = diagnostic_df.iloc[i]['time_subdivision']
             print(f"time_subdivision: {time_subdivision}")
 
+            substep = diagnostic_df.iloc[i]['substep']
+            if substep < time_subdivision - 1:
+                print("This is an INTERMEDIATE SUBSTEP. Therefore, no evaluations of reaction speeds")
+                continue
+
             delta = diagnostic_df.iloc[i][chemical_list].to_numpy()
-            print("Delta:", delta)
+            print("Delta conc's:", delta)
 
             baseline = df.iloc[i][chemical_list].to_numpy()   # TODO: this may not always work!
-            print("Baseline:", baseline)
+            print("Baseline conc's:", baseline)
 
             ratio = delta / baseline * 100.
-            print("Ratio:", ratio)
-            print("Max abs:", max(abs(ratio)))
-            print("Comparing the above against ", fast_threshold/time_subdivision)
+            print("Ratios (%):", ratio)
+            print("Max abs ratio (%):", max(abs(ratio)))
+            print(f"Comparing the above value against ({fast_threshold}% /{time_subdivision})")
             if max(abs(ratio)) > fast_threshold/time_subdivision:
-                print("FAST")
+                print("FAST reaction")
             else:
-                print("Slow")
+                print("Slow reaction")
