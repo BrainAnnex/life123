@@ -173,7 +173,7 @@ class ReactionDynamics:
         :param speed:       A 1-letter string with the code "F" (for Fast) or "S" (Slow)
         :return:            None
         """
-        assert speed in ["S", "F"], "speed argument must be either 'S' or 'F'"
+        assert speed in ["S", "F"], "set_rxn_speed(): `speed` argument must be either 'S' or 'F'"
         self.reaction_data.assert_valid_rxn_index(rxn_index)
         self.reaction_speeds[rxn_index] = speed
 
@@ -468,7 +468,7 @@ class ReactionDynamics:
             reduced_time_step = delta_time_full / dynamic_step
             for substep in range(dynamic_step):
                 if 1 in self.verbose_list:
-                    print(f"    - substep: {substep} (in processing of FAST reactions)")
+                    print(f"    - substep: {substep} (in processing of FAST reactions).  'Local' system time: {self.system_time + substep * reduced_time_step}")
 
                 incr_vector = self.single_reaction_step_VARIABLE_RESOLUTION(delta_time=reduced_time_step, time_subdivision=dynamic_step, fast_threshold_fraction=fast_threshold_fraction,
                                                                             conc_array=local_conc_array, rxn_list=fast_rxns, substep_number=substep)
@@ -538,7 +538,7 @@ class ReactionDynamics:
         # based on the forward and back rates of the reaction
         for rxn_index in rxn_list:      # Consider each reaction in turn
             if 1 in self.verbose_list:
-                print(f"      Determining the concentrations changes as a result of reaction number {rxn_index}")
+                print(f"      Determining the conc.'s changes as a result of rxn # {rxn_index}")
 
             # TODO: turn into a more efficient single step, as as:
             #(reactants, products) = cls.all_reactions.unpack_terms(i)
@@ -558,7 +558,7 @@ class ReactionDynamics:
                 increment_vector[species_index] += delta_conc
 
 
-            #   The reaction products increase based on the (forward reaction - reverse reaction)
+            # The reaction products increase based on the (forward reaction - reverse reaction)
             for p in products:
                 stoichiometry, species_index, order = p
                 delta_conc = stoichiometry * delta_list[rxn_index]  # Increment to this reaction product from the reaction being considered
@@ -630,7 +630,7 @@ class ReactionDynamics:
         # based on the forward and back rates of the reaction
         for rxn_index in rxn_list:      # Consider each reaction in turn
             if 1 in self.verbose_list:
-                print(f"      Determining the concentrations changes as a result of reaction number {rxn_index}")
+                print(f"      Determining the conc.'s changes as a result of rxn # {rxn_index}")
 
             # TODO: turn into a more efficient single step, as as:
             #(reactants, products) = cls.all_reactions.unpack_terms(i)
@@ -639,14 +639,17 @@ class ReactionDynamics:
 
             # Determine the concentration adjustments (and label the reaction as "Slow" or "Fast" accordingly)
 
-            # If we are at the last of the substeps
+            # If we are at the LAST of the substeps
             if substep_number == time_subdivision-1:
                 # NOTE: NO NEED TO COMPUTE THE REACTION SPEEDS, EXCEPT IN FINAL SUBSTEPS
                 # (which might double as main steps, if there's no further subdivision)
                 self.set_rxn_speed(rxn_index, "S")      # TENTATIVE assignment, that will be changed
                                                         #   if ANY chemical experiences significant concentration changes
+                if 1 in self.verbose_list:
+                    print(f"      (in the last substep: tentatively tagging rxn #{rxn_index} as 'S')")
 
-            #   The reactants decrease based on the (forward reaction - reverse reaction)
+
+        #   The reactants decrease based on the (forward reaction - reverse reaction)
             for r in reactants:
                 stoichiometry, species_index, order = r
                 delta_conc = stoichiometry * (- delta_list[rxn_index])  # Increment to this reactant from the reaction being considered
@@ -662,7 +665,7 @@ class ReactionDynamics:
                                            time_subdivision=time_subdivision,
                                            fast_threshold_fraction=fast_threshold_fraction)
                 elif 1 in self.verbose_list:
-                    print(f"        Skipping evaluation of reaction speed for chemical `{self.reaction_data.get_name(species_index)}` "
+                    print(f"        Skipping evaluation of rxn speed for reagent `{self.reaction_data.get_name(species_index)}` because NOT at last substep "
                           f"(substep_number = {substep_number}, time_subdivision = {time_subdivision})")
 
                 increment_vector[species_index] += delta_conc
@@ -684,7 +687,7 @@ class ReactionDynamics:
                                            time_subdivision=time_subdivision,
                                            fast_threshold_fraction=fast_threshold_fraction)
                 elif 1 in self.verbose_list:
-                    print(f"        Skipping evaluation of reaction speed for chemical `{self.reaction_data.get_name(species_index)}` "
+                    print(f"        Skipping evaluation of rxn speed for product `{self.reaction_data.get_name(species_index)}` because NOT at last substep "
                           f"(substep_number = {substep_number}, time_subdivision = {time_subdivision})")
 
                 increment_vector[species_index] += delta_conc
@@ -767,16 +770,24 @@ class ReactionDynamics:
 
         # If the reaction was (tentatively) labeled as "Slow", decide whether to flip it to "Fast"
         #   Note: the status will be used for the current simulation sub-cycle
-        if self.get_rxn_speed(rxn_index) == "S":    # TODO: maybe skip this step if adaptive variable time resolution isn't being used
+        if self.get_rxn_speed(rxn_index) == "S":
             #if abs(delta_conc) / baseline_conc > fast_threshold_fraction / time_subdivision # To avoid time-consuming divisions, re-formulated as below:
             if abs(delta_conc) * time_subdivision > fast_threshold_fraction * baseline_conc:
                 self.set_rxn_speed(rxn_index, "F")
 
             if 1 in self.verbose_list:
-                print(f"        Reaction # {rxn_index} determined to be '{self.get_rxn_speed(rxn_index)}', "
-                      f"based on a change of {delta_conc:.6g} (relative to its baseline of {baseline_conc:.7g}) "
-                      f"for the conc. of chem species # {species_index}: "
-                      f"comparing abs({100 * delta_conc / baseline_conc:.3g}%) vs. ({100 * fast_threshold_fraction:.3g}% /{time_subdivision})")
+                if self.get_rxn_speed(rxn_index) == "S":
+                    msg = "left tagged as 'S'"
+                else:
+                    msg = "flipped tag to 'F'"
+                if abs(delta_conc / baseline_conc) > (fast_threshold_fraction / time_subdivision):
+                    sign = ">"
+                else:
+                    sign = "<"
+                print(f"        Rxn # {rxn_index} {msg}, "
+                      f"based on a change of {delta_conc:.5g} (rel. to baseline of {baseline_conc:.6g}) "
+                      f"for the conc. of `{self.reaction_data.get_name(species_index)}`: "
+                      f"abs({100 * delta_conc / baseline_conc:.3g}%) {sign} ({100 * fast_threshold_fraction:.3g}% /{time_subdivision})")
 
 
 
@@ -975,17 +986,63 @@ class ReactionDynamics:
 
 
 
-    def debug(self, code):      # Experimental
+    def examine_run(self, df, time_step, fast_threshold=5) -> None:
         """
-        Usage example:  if self.debug(3):
-                            # DO SOMETHING
-        :param code:
-        :return:
+        Analyze, primarily for debugging purposes, the data produced by a run of single_compartment_react()
+        The primary focus is a technical analysis of the adaptive variable time steps.
+
+        CAUTION: this approach is only usable with single-reaction runs or non-overlapping multiple reactions,
+                 because it looks into concentration changes of the various chemicals,
+                 which in the case of multiple coupled reactions can be attributed to multiple reactions
+
+        :param df:              A Pandas data frame, as created by single_compartment_react()
+        :param time_step:       The same value (for the FULL STEP size) that was used in single_compartment_react()
+        :param fast_threshold:  The same value (for the FULL STEP size) that was used in single_compartment_react()
+        :return:                None
         """
-        if type(self.verbose_list) == list and code in self.verbose_list:
-            return True
+        number_datapoints = len(df)
+        chemical_list = self.reaction_data.get_all_names()
+        print("Examining the reaction data for the chemicals: ", chemical_list)
 
-        if type(self.verbose_list) == int and code in self.verbose_list:
-            return True
+        if self.reaction_data.number_of_reactions() > 1:
+            print(f"*** WARNING: {self.reaction_data.number_of_reactions()} reactions are present.  "
+                  f"The analysis below won't be meaningful if any of the reactions are coupled!")
 
-        return False
+        for i in range(number_datapoints - 1):   # The -1 is b/c this analysis needs to look ahead to following data point
+            sys_time = df.iloc[i]['SYSTEM TIME']
+            print(f"\n------ Reaction step OR substep {i} (Initial SYSTEM TIME: {sys_time:,.4g}) ------")
+
+            before = df.iloc[i][chemical_list].to_numpy()       # Concentrations at the start of this step/substep
+            print("Baseline conc's at start: ", before)
+
+            after = df.iloc[i+1][chemical_list].to_numpy()      # Concentrations at the end of this step/substep
+
+            rel_changes = (after - before) / before * 100.      # Relative conc. changes (in %)
+            largest_abs_rel_change = max(abs(rel_changes))      # Max of absolute values of % relative conc. changes
+
+            duration = df.iloc[i+1]['SYSTEM TIME'] - df.iloc[i]['SYSTEM TIME']  # Duration of this step or substep
+            divisor = round(time_step / duration)               # An integer, indicating how many of current step or substep
+                                                                #   will fit in the full time interval of the simulation
+
+            next_time = df.iloc[i+1]['SYSTEM TIME']             # Time of the next step/substep.  This is used to determine
+                                                                #   if we are at the last substep of a full time interval
+            time_ratio = next_time / time_step                  # If this is an integer, it means that a full time interval is coming to an end
+            multiple_of_time_step = np.allclose(time_ratio, round(time_ratio))  # A Boolean that will be True iff time_ratio is an integer
+
+            if (divisor > 1) and (not multiple_of_time_step):
+                print("This is an INTERMEDIATE SUBSTEP. Therefore, no evaluations of reaction speeds")
+            else:
+                if divisor == 1:
+                    print("This is a FULL STEP")
+                else:
+                    print("This is a FINAL SUBSTEP")
+
+                print("Final conc's: ", after)
+                print("Delta conc's: ", after - before)
+                print("Relative conc. changes (%): ", rel_changes)
+                print(f"Largest MAX rel. change in abs. value (%):  {largest_abs_rel_change:.3g}")
+
+                if largest_abs_rel_change > fast_threshold / divisor:
+                    print(f"Since {largest_abs_rel_change:.3g} > ({fast_threshold}% over {divisor}), the reaction is classified as *FAST*")
+                else:
+                    print(f"Since {largest_abs_rel_change:.3g} < ({fast_threshold}% over {divisor}), the reaction is classified as *Slow*")

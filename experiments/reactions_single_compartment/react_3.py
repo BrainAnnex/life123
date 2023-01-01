@@ -19,7 +19,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_4"_ 
 #
-# LAST REVISED: Dec. 29, 2022
+# LAST REVISED: Dec. 31, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -88,7 +88,7 @@ dynamics.history.get()
 # ## Run the reaction
 
 # %%
-dynamics.verbose_list = [2]
+dynamics.verbose_list = [1]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 dynamics.single_compartment_react(time_step=0.004, reaction_duration=0.06,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
@@ -135,74 +135,12 @@ fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B", "
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
-# %%
-df.loc[10]
+# %% [markdown]
+# ### The following is a technical analysis of the adaptive variable time steps, from the run data
+# (Only usable with single-reaction runs)
 
 # %%
-df.iloc[10]
-
-# %%
-list(df.loc[10])
-
-# %%
-list(df.loc[11])
-
-# %%
-a2 = df.loc[11].to_numpy()
-a2
-
-# %%
-a1 = df.loc[10].to_numpy()
-a1
-
-# %%
-a2 = df.iloc[11][['A', 'B', 'C']].to_numpy()
-a2
-
-# %%
-a1 = df.iloc[10][['A', 'B', 'C']].to_numpy()
-a1
-
-# %%
-a2 - a1
-
-# %%
-(a2 - a1) / a1 * 100.
-
-# %%
-abs(a2 - a1) / a1 * 100.
-
-# %%
-max(abs(a2 - a1) / a1 * 100.)
-
-# %%
-i = 0
-
-# %%
-before = df.iloc[i][['A', 'B', 'C']].to_numpy()
-before
-
-# %%
-after = df.iloc[i+1][['A', 'B', 'C']].to_numpy()
-after
-
-# %%
-max(abs(after - before) / before * 100.)
-
-# %%
-for i in range(22):
-    print(f"---- {i} ----")
-    before = df.iloc[i][['A', 'B', 'C']].to_numpy()
-    print(before)
-    after = df.iloc[i+1][['A', 'B', 'C']].to_numpy()
-    print(after)
-    print(after - before)
-    print(abs(after - before) / before * 100.)
-    largest_rel_change = max(abs(after - before) / before * 100.)
-    print(largest_rel_change)
-
-# %%
-df
+dynamics.examine_run(df=df, time_step=0.004)
 
 # %%
 debug_df = dynamics.debug_data.get()
