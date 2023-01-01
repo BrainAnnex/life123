@@ -31,14 +31,19 @@ class ReactionDynamics:
         self.history = MovieTabular()   # To store user-selected snapshots of (some of) the chemical concentrations,
                                         #   whenever requested by the user.
 
+        self.reaction_speeds = {}       # A dictionary.  EXAMPLE : { 1: "F", 4: "S", 5: "F" , 8: "S" }
+                                        #   Anything missing is regarded to be "F" (Fast)
+
         self.verbose_list = []          # A list of integers with the codes of the desired verbose checkpoints
                                         #   EXAMPLE: [1, 3] to invoke sections of code marked as 1 or 3
                                         #   Those sections will have entry points such as "if 1 in self.verbose_list"
                                         #   MAX code currently used: 5
+
         self.debug_data = MovieTabular(parameter_name="TIME")
 
-        self.reaction_speeds = {}       # A dictionary.  EXAMPLE : { 1: "F", 4: "S", 5: "F" , 8: "S" }
-                                        #   Anything missing is regarded to be "F" (Fast)
+        self.diagnostics = False
+
+
 
 
 
@@ -692,7 +697,7 @@ class ReactionDynamics:
 
                 increment_vector[species_index] += delta_conc
 
-            if 1 in self.verbose_list:
+            if self.diagnostics:
                 #TODO: split the reactions into separate data frames (one per reaction)?
                 data_snapshot = self.get_conc_dict(system_data=increment_vector)    # This will be a dict of conc values
                 data_snapshot["reaction"] = rxn_index
@@ -1051,10 +1056,17 @@ class ReactionDynamics:
 
     def diagnose_variable_time_steps(self, df, fast_threshold=5) -> None:
         """
+        Analyze, primarily for debugging purposes, the diagnostics data produced
+        when the self.diagnostics attribute is set to True.
 
-        :param df:
-        :param fast_threshold:
-        :return:
+        The primary focus is for diagnostic information of the adaptive variable time steps.
+
+        This approach is suitable for any type of reaction simulations.
+
+        :param df:              A Pandas data frame, as created by single_compartment_react()
+        :param fast_threshold:  The same value (for the FULL STEP size) that was used in single_compartment_react()
+
+        :return:                None
         """
         diagnostic_df = self.debug_data.get()
         number_diagnostic_points = len(diagnostic_df)
