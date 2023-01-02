@@ -90,7 +90,7 @@ dynamics.history.get()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-dynamics.verbose_list = [1]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
+#dynamics.verbose_list = [1]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 dynamics.single_compartment_react(time_step=0.004, reaction_duration=0.06,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
@@ -137,8 +137,11 @@ fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B", "
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
+# %%
+
 # %% [markdown]
-# ## Everthing below is just for diagnostic insight into the adaptive variable time steps
+# # Everthing below is just for diagnostic insight 
+# # into the adaptive variable time steps
 
 # %%
 # This approach, from the run data, is only usable with single-reaction runs
@@ -148,13 +151,17 @@ dynamics.examine_run(df=df, time_step=0.004)
 # # Take a peek at internal diagnostic data from the reactions
 
 # %%
-# This approach, from internal diagnostic data, is more generally applicable to runs with multiple reactions as well
+# This approach, from internal diagnostic data, 
+# is more generally applicable also to runs with multiple reactions
 dynamics.diagnose_variable_time_steps()
 
 # %% [markdown]
 # ### The above diagnostics are based on the following diagnostic data
 
 # %%
-dynamics.debug_data.get()
+dynamics.diagnostic_data.get()
+
+# %%
+dynamics.diagnostic_data_baselines.get()
 
 # %%
