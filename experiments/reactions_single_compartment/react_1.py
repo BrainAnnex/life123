@@ -176,5 +176,7 @@ fig.show()
 # %% [markdown]
 # ### At t=0, [A]=10 and [A] has a high rate of change (70);  
 # ### as the system approaches equilibrium, [A] approaches a value of 24, and its rate of change decays to zero.
+#
+# The curves are jagged because of limitations of numerically estimating derivatives.
 
 # %%

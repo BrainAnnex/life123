@@ -91,6 +91,7 @@ dynamics.history.get()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 #dynamics.verbose_list = [1]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
+
 dynamics.single_compartment_react(time_step=0.004, reaction_duration=0.06,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
@@ -108,7 +109,7 @@ df
 # ### Notice how the reaction proceeds in smaller steps in the early times, when the concentrations are changing much more rapidly
 
 # %% [markdown]
-# ## Note: "A" (now largely depleted) is largely the limiting reagent
+# ## Note: "A" (now largely depleted) is the limiting reagent
 
 # %% [markdown]
 # ### Check the final equilibrium
@@ -146,6 +147,7 @@ fig.show()
 # %%
 # This approach, from the run data, is only usable with single-reaction runs
 dynamics.examine_run(df=df, time_step=0.004)
+# the time step MUST match the value used in call to single_compartment_react()
 
 # %% [markdown]
 # # Take a peek at internal diagnostic data from the reactions

@@ -17,10 +17,10 @@
 # #### with 2nd-order kinetics for A,  
 # #### and 1-st order kinetics for C
 #
-# Compare with experiment "react_3"
+# _See also the experiment "1D/reactions/reaction_7"_ 
 #
 #
-# LAST REVISED: Dec. 25, 2022  ************* IN-PROGRESS  **********
+# LAST REVISED: Jan. 2, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -57,7 +57,7 @@ chem_data = chem(names=["A", "C"])
 
 # Reaction 2A <-> C , with 2nd-order kinetics for A, and 1st-order kinetics for C
 chem_data.add_reaction(reactants=[(2, "A", 2)], products=["C"],
-                       forward_rate=5., reverse_rate=2.)   
+                       forward_rate=3., reverse_rate=2.)   
 # Note: the first 2 in (2, "A", 2) is the stoichiometry coefficient, while the other one is the order
 
 print("Number of reactions: ", chem_data.number_of_reactions())
@@ -78,7 +78,7 @@ dynamics = ReactionDynamics(reaction_data=chem_data)
 
 # %%
 # Initial concentrations of all the chemicals, in index order
-dynamics.set_conc([60., 20.], snapshot=True)
+dynamics.set_conc([200., 40.], snapshot=True)
 
 # %%
 dynamics.describe_state()
@@ -90,14 +90,19 @@ dynamics.history.get()
 # ## Run the reaction
 
 # %%
-dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.06,
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+#dynamics.verbose_list = [1]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
+
+# The changes of concentrations vary very rapidly early on; so, we'll be using dynamic_step=4 , i.e. increase time resolution
+# by x4 initially, as long as the reaction remains "fast" (based on a threshold of 5% change)
+dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.04,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_step=2)      
+                                  dynamic_step=4)      
                                   # Accepting the default:  fast_threshold=5
 
 # %% [markdown]
-# ### Note: the argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using fast_threshold=5)
+# ### Note: the argument _dynamic_step=4_ splits the time steps in 4 whenever the reaction is "fast" (as determined using fast_threshold=5)
 
 # %%
 df = dynamics.history.get()
@@ -106,8 +111,26 @@ df
 # %% [markdown]
 # ### Notice how the reaction proceeds in smaller steps in the early times, when the concentrations are changing much more rapidly
 
+# %%
+# Let's look at the first two arrays of concentrations
+arr0 = df.loc[0][['A', 'C']].to_numpy()
+arr1 = df.loc[1][['A', 'C']].to_numpy()
+arr0, arr1
+
+# %%
+# Let's verify that the stoichiometry is being respected
+dynamics.stoichiometry_checker(rxn_index=0, 
+                               conc_arr_before = arr0, 
+                               conc_arr_after = arr1)
+
 # %% [markdown]
-# ## Note: "A" (now largely depleted) is largely the limiting reagent
+# #### Indeed, it can be easy checked that the drop in [A] is -119.920000 , twice the 59.96 increase in [C], as dictated by the stoichiometry
+
+# %%
+dynamics.diagnostic_data.get().loc[0]    # Conveniently seen in the diagnostic data
+
+# %% [markdown]
+# ## Note: "A" (now largely depleted) is the limiting reagent
 
 # %% [markdown]
 # ### Check the final equilibrium
@@ -128,5 +151,20 @@ fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "C"],
               color_discrete_sequence = ['red', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
+
+# %% [markdown]
+# #### For diagnostic insight, uncomment the following lines:
+
+# %%
+#dynamics.examine_run(df=df, time_step=0.002)  
+# the time step MUST match the value used in call to single_compartment_react()
+
+#dynamics.diagnose_variable_time_steps()
+
+#dynamics.diagnostic_data.get()
+
+#dynamics.diagnostic_data_baselines.get()
+
+# %%
 
 # %%

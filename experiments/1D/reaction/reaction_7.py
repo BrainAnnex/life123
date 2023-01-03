@@ -17,6 +17,8 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
+# See also the experiment _"reactions_single_compartment/react_4"_ 
+#
 # LAST REVISED: Dec. 25, 2022
 
 # %%
@@ -192,6 +194,6 @@ fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"],
 fig.show()
 
 # %% [markdown]
-# **Compared to first-order kinetics in A**, the reaction now takes place much more quickly, and proceeds to almost complete depletion of A
+# **Compared to first-order kinetics in A**, the (2nd order in A) reaction now takes place much more quickly, and proceeds to almost complete depletion of A
 
 # %%
