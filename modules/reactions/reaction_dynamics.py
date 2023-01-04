@@ -261,12 +261,30 @@ class ReactionDynamics:
     def get_history(self) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
-
         using add_snapshot()
 
         :return:        a Pandas dataframe
         """
         return self.history.get()
+
+
+
+    def get_historical_concentrations(self, row: int, df=None) -> np.array:
+        """
+        Return, a Numpy array with ALL the chemical concentrations (in their index order)
+        from the specified row number of given Pandas data frame (by default, the system history)
+
+        :param row: Integer with the zero-based row number of the system history (which is a Pandas data frame)
+        :param df:  (OPTIONAL) A Pandas data frame with concentration information in columns that have
+                        the names of the chemicals (if None, the system history is used)
+        :return:    A Numpy array.  EXAMPLE: array([200., 40.5])
+        """
+        if df is None:
+            df = self.get_history()
+
+        chem_list = self.reaction_data.get_all_names()  # List of all the chemicals' names
+        arr = df.loc[row][chem_list].to_numpy()
+        return arr
 
 
 

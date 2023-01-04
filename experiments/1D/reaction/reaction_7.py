@@ -19,7 +19,7 @@
 #
 # See also the experiment _"reactions_single_compartment/react_4"_ 
 #
-# LAST REVISED: Dec. 25, 2022
+# LAST REVISED: Jan. 3, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -111,7 +111,8 @@ bio.describe_state()
 bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
-bio.get_history()
+df = bio.get_history()
+df
 
 # %% tags=[]
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
@@ -122,6 +123,20 @@ fig.show()
 
 # %% [markdown]
 # A gets depleted, while B gets produced.
+
+# %% [markdown]
+# #### Let's verify that the stoichiometry is being respected
+
+# %%
+# We'll check the first two arrays of concentrations, from the run's history
+arr0 = bio.reaction_dynamics.get_historical_concentrations(row=0, df=df)
+arr1 = bio.reaction_dynamics.get_historical_concentrations(row=1, df=df)
+arr0, arr1
+
+# %%
+bio.reaction_dynamics.stoichiometry_checker(rxn_index=0, 
+                               conc_arr_before = arr0, 
+                               conc_arr_after = arr1)
 
 # %% [markdown]
 # # STARTING OVER, this time with 2nd-order kinetics in the forward reaction
@@ -184,7 +199,8 @@ bio.describe_state()
 bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
-bio.get_history()
+df2 = bio.get_history()
+df2
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
@@ -195,5 +211,19 @@ fig.show()
 
 # %% [markdown]
 # **Compared to first-order kinetics in A**, the (2nd order in A) reaction now takes place much more quickly, and proceeds to almost complete depletion of A
+
+# %% [markdown]
+# #### Let's verify that the stoichiometry is still being respected
+
+# %%
+# We'll check the first two arrays of concentrations, from the run's history
+arr0 = bio.reaction_dynamics.get_historical_concentrations(row=22, df=df2)  # Row 22 is the conc. reset
+arr1 = bio.reaction_dynamics.get_historical_concentrations(row=23, df=df2)
+arr0, arr1
+
+# %%
+bio.reaction_dynamics.stoichiometry_checker(rxn_index=0, 
+                               conc_arr_before = arr0, 
+                               conc_arr_after = arr1)
 
 # %%

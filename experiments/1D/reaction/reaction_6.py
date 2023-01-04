@@ -17,7 +17,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Dec. 25, 2022
+# LAST REVISED: Jan. 3, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -115,12 +115,34 @@ bio.describe_state()
 bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
-bio.get_history()
+df = bio.get_history()
+df
 
 # %% [markdown]
 # A and B get depleted, while C and D get produced.
 #
 # **2A + 5B <-> 4C + 3D**
+
+# %% [markdown]
+# #### Let's verify that the stoichiometry is being respected
+
+# %%
+# We'll check the first two arrays of concentrations, from the run's history
+arr0 = bio.reaction_dynamics.get_historical_concentrations(row=0, df=df)
+arr1 = bio.reaction_dynamics.get_historical_concentrations(row=1, df=df)
+arr0, arr1
+
+# %%
+bio.reaction_dynamics.stoichiometry_checker(rxn_index=0, 
+                               conc_arr_before = arr0, 
+                               conc_arr_after = arr1)
+
+# %% [markdown]
+# Indeed, the change in [A] is -2 x 0.12, and the change in [B] is -5 X 0.12,  
+#   while the change in [C] is  4 x 0.12, and the change in [D] is  3 X 0.12
+
+# %%
+(arr1 - arr0) / 0.12
 
 # %% [markdown] tags=[]
 # # Plots of changes of concentration with time
