@@ -20,7 +20,7 @@
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #
 #
-# LAST REVISED: Jan. 2, 2023
+# LAST REVISED: Jan. 3, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -112,9 +112,9 @@ df
 # ### Notice how the reaction proceeds in smaller steps in the early times, when the concentrations are changing much more rapidly
 
 # %%
-# Let's look at the first two arrays of concentrations
-arr0 = df.loc[0][['A', 'C']].to_numpy()
-arr1 = df.loc[1][['A', 'C']].to_numpy()
+# Let's look at the first two arrays of concentrations, from the run's history
+arr0 = dynamics.get_historical_concentrations(0)
+arr1 = dynamics.get_historical_concentrations(1)
 arr0, arr1
 
 # %%
@@ -164,7 +164,5 @@ fig.show()
 #dynamics.diagnostic_data.get()
 
 #dynamics.diagnostic_data_baselines.get()
-
-# %%
 
 # %%

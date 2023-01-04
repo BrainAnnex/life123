@@ -283,7 +283,7 @@ def test_adaptive_time_resolution_1():
                                             dynamic_step=2, fast_threshold=5)
     # The above call results in 2 time steps
     # Check the calculations, based on the forward Euler method
-    half_step_conc = conc_array + [fwd_delta ,rev_delta]    # [13.5 46.5]   These are the conc's at t=0.05
+    half_step_conc = conc_array + [fwd_delta ,rev_delta]    # [13.5 46.5]   These are the conc's halfway thru delta_time_full
     new_fwd_delta = 0.05 * (-kF * half_step_conc[0] + kR * half_step_conc[1])   # 2.625
     new_rev_delta = -new_fwd_delta  # From the stoichiometry
     fwd_delta += new_fwd_delta      # 6.125
@@ -320,7 +320,7 @@ def test_adaptive_time_resolution_2():
     delta_time_subinterval = delta_time_full_interval /time_subdivision
 
     chem_data.add_reaction(reactants=["A" , "B"], products=["C"],
-                           forward_rate=5., reverse_rate=2.)
+                           forward_rate=kF, reverse_rate=kR)
 
     # Start testing the lower-level functions, and then proceed to testing progressively higher-level ones
     result = rxn.single_reaction_step_VARIABLE_RESOLUTION(delta_time=delta_time_subinterval, conc_array=conc_array,
@@ -335,11 +335,11 @@ def test_adaptive_time_resolution_2():
     # Repeat at the next-higher level
     rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
     chem_data.add_reaction(reactants=["A" , "B"], products=["C"],
-                           forward_rate=5., reverse_rate=2.)        # Re-add the reaction
+                           forward_rate=kF, reverse_rate=kR)        # Re-add the reaction
     result = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
                                             dynamic_step=time_subdivision, fast_threshold=5)
     # Check the calculations, based on the forward Euler method
-    half_step_conc = conc_array + [delta_A ,delta_B, delta_C]    # [5.08 45.08 24.92]  These are the conc's at t=delta_time
+    half_step_conc = conc_array + [delta_A ,delta_B, delta_C]    # [5.08 45.08 24.92]  These are the conc's halfway thru delta_time_full
 
     new_delta_A = delta_time_subinterval * (-kF * half_step_conc[0] * half_step_conc[1] + kR * half_step_conc[2])   # -2.190384
     new_delta_B = new_delta_A       # From the stoichiometry
@@ -377,6 +377,108 @@ def test_adaptive_time_resolution_2():
                                  n_steps=7, dynamic_step=time_subdivision, fast_threshold=5)
     assert np.allclose(rxn.system_time, 0.036)  # Note that 0.036 is 0.008 + 7 * 0.004
     assert np.allclose(rxn.system, np.array([0.29501266, 40.29501266, 29.70498734]))
+
+
+
+def test_adaptive_time_resolution_3():
+    chem_data = ReactionData(names=["A", "C"])
+    rxn = ReactionDynamics(chem_data)
+
+    conc_array = np.array([200., 40.])
+
+    # Reaction 2A <-> C,
+    # with 2nd-order kinetics for A, and 1-st order kinetics for C
+    # Based on experiment "reactions_single_compartment/react_4"
+    kF = 3.
+    kR = 2.
+
+    delta_time_full_interval = 0.002
+    time_subdivision = 4
+    delta_time_subinterval = delta_time_full_interval /time_subdivision
+
+    chem_data.add_reaction(reactants=[(2, "A", 2)], products=["C"],
+                           forward_rate=kF, reverse_rate=kR)
+                           # Note: the first 2 in (2, "A", 2) is the stoichiometry coefficient,
+                           #       while the other one is the order
+
+    # Start testing the lower-level functions, and then proceed to testing progressively higher-level ones
+    result = rxn.single_reaction_step_VARIABLE_RESOLUTION(delta_time=delta_time_subinterval, conc_array=conc_array,
+                                                          time_subdivision=time_subdivision, fast_threshold_fraction=0.05)
+    # Check the calculations, based on the forward Euler method
+    delta_A = 2 * delta_time_subinterval * (-kF * conc_array[0] **2 + kR * conc_array[1])   # -119.92
+    delta_C = -delta_A / 2.                           # From the stoichiometry
+    assert np.allclose(result, [delta_A ,delta_C])    # [-119.92   59.96]
+
+
+    # Repeat at the next-higher level
+    rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
+    chem_data.add_reaction(reactants=[(2, "A", 2)], products=["C"],
+                           forward_rate=kF, reverse_rate=kR)        # Re-add the reaction
+    result = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
+                                            dynamic_step=time_subdivision, fast_threshold=5)
+
+    # Check the calculations, based on the forward Euler method
+
+    # 1st substep, using the previously-computed [delta_A ,delta_C]
+    substep_conc = conc_array + [delta_A ,delta_C]  # [80.08, 99.96]  These are the conc's 1/4 way thru delta_time_full
+                                                    #                 i.e. at t = 0.0005
+    # 2nd substep
+    new_delta_A = 2 * delta_time_subinterval * (-kF * substep_conc[0] **2 + kR * substep_conc[1])
+    new_delta_C = -new_delta_A / 2.       # From the stoichiometry
+
+    delta_A += new_delta_A
+    delta_C += new_delta_C
+
+    substep_conc = conc_array + [delta_A ,delta_C]  # [61.0415008, 109.4792496]  These are the conc's 1/2 way thru delta_time_full
+                                                    #                 i.e. at t = 0.0010
+    # 3rd substep
+    new_delta_A = 2 * delta_time_subinterval * (-kF * substep_conc[0] **2 + kR * substep_conc[1])   #
+    new_delta_C = -new_delta_A / 2.       # From the stoichiometry
+
+    delta_A += new_delta_A
+    delta_C += new_delta_C
+
+    substep_conc = conc_array + [delta_A ,delta_C]  # [50.08226484, 114.95886758]  These are the conc's 3/4 way thru delta_time_full
+                                                    #                 i.e. at t = 0.0015
+
+    # 4th substep (completing the full interval)
+    new_delta_A = 2 * delta_time_subinterval * (-kF * substep_conc[0] **2 + kR * substep_conc[1])   #
+    new_delta_C = -new_delta_A / 2.       # From the stoichiometry
+
+    delta_A += new_delta_A
+    delta_C += new_delta_C
+
+    #substep_conc = conc_array + [delta_A ,delta_C]  # [42.78748282, 118.60625859]  These are the conc's 3/4 way thru delta_time_full
+                                                    #                 i.e. at t = 0.0020
+
+    assert np.allclose(result, [delta_A , delta_C])  # [-157.21251718   78.60625859]
+
+
+    # Repeat at the yet-next-higher level
+    rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
+    chem_data.add_reaction(reactants=[(2, "A", 2)], products=["C"],
+                           forward_rate=kF, reverse_rate=kR)        # Re-add the reaction
+    rxn.system = conc_array.copy()      # The copy() is to avoid messing up conc_array
+    rxn.system_time = 0.
+    rxn.single_compartment_react(time_step=delta_time_full_interval, n_steps=1, dynamic_step=time_subdivision, fast_threshold=5)
+
+    assert np.allclose(rxn.system_time, delta_time_full_interval)
+    assert np.allclose(rxn.system,
+                       conc_array + np.array([delta_A, delta_C]))     # [42.78748282, 118.60625859]
+
+
+    # Do one more step at the high level
+    rxn.single_compartment_react(time_step=delta_time_full_interval,
+                                 n_steps=1, dynamic_step=time_subdivision, fast_threshold=5)
+    assert np.allclose(rxn.system_time, 2 * delta_time_full_interval)     # system_time now is 0.004
+    assert np.allclose(rxn.system, np.array([27.89238785, 126.05380607]))
+
+
+    # Do several (3) more steps at the high level
+    rxn.single_compartment_react(time_step=delta_time_full_interval,
+                                 n_steps=3, dynamic_step=time_subdivision, fast_threshold=5)
+    assert np.allclose(rxn.system_time, 0.01)   # Note that 0.01 is 0.004 + 3 * 0.002
+    assert np.allclose(rxn.system, np.array([15.34008717, 132.32995642]))
 
 
 
