@@ -473,9 +473,9 @@ class ReactionDynamics:
             slow_rxns = self.slow_rxns()
             if 1 in self.verbose_list:
                 if slow_rxns == []:
-                    print(f"    There are NO slow reactions")
+                    print(f"    There are NO SLOW reactions")
                 else:
-                    print(f"    Slow reactions: {slow_rxns}")
+                    print(f"    SLOW REACTIONS: {slow_rxns}")
                     print(f"    Processing SLOW reactions")
 
             # Process all the slow reactions
@@ -491,7 +491,7 @@ class ReactionDynamics:
             # Process all the fast reactions
             fast_rxns = self.fast_rxns()
             if 1 in self.verbose_list:
-                print(f"    Fast reactions: {fast_rxns}")
+                print(f"    FAST REACTIONS: {fast_rxns}")
 
             local_conc_array = conc_array.copy()   # Saved as an unchanging baseline copy
             delta_concentrations_fast = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)     # One element per chemical species
@@ -499,7 +499,7 @@ class ReactionDynamics:
             for substep in range(dynamic_step):
                 if 1 in self.verbose_list:
                     local_system_time = self.system_time + substep * reduced_time_step
-                    print(f"    - substep: {substep} (in processing of FAST reactions).  'Local' system time: {local_system_time:,.4g}")
+                    print(f"    - substep: {substep} (in processing of FAST reactions, i.e. {fast_rxns}).  'Local' system time: {local_system_time:,.4g}")
 
                 incr_vector = self.single_reaction_step_VARIABLE_RESOLUTION(delta_time=reduced_time_step, time_subdivision=dynamic_step,
                                                                             fast_threshold_fraction=fast_threshold_fraction,
@@ -521,9 +521,9 @@ class ReactionDynamics:
 
             # Combine the results of all the slow reactions and all the fast reactions
             if 2 in self.verbose_list:
-                print("delta_time: ", delta_time_full)
-                print("    delta_concentrations_slow: ", delta_concentrations_slow)
-                print("    delta_concentrations_fast: ", delta_concentrations_fast)
+                print("      delta_time: ", delta_time_full)
+                print("          delta_concentrations_slow: ", delta_concentrations_slow)
+                print("          delta_concentrations_fast: ", delta_concentrations_fast)
 
             delta_concentrations = delta_concentrations_slow + delta_concentrations_fast
         # END IF
@@ -656,7 +656,7 @@ class ReactionDynamics:
         # Compute the forward and back "conversions" of all the applicable reactions
         delta_list = self.compute_all_reaction_deltas(conc_array=conc_array, delta_time=delta_time, rxn_list=rxn_list)
         if 3 in self.verbose_list:
-            print(f"delta_list: {delta_list}")
+            print(f"      delta_list: {delta_list}")
 
 
         if rxn_list is None:    # Meaning ALL reactions
@@ -683,7 +683,7 @@ class ReactionDynamics:
                 self.set_rxn_speed(rxn_index, "S")      # TENTATIVE assignment, that will be changed
                                                         #   if ANY chemical experiences significant concentration changes
                 if 1 in self.verbose_list:
-                    print(f"      (in the last substep: tentatively tagging rxn #{rxn_index} as 'S')")
+                    print(f"      (we're in the last substep: tentatively tagging rxn #{rxn_index} as 'S')")
 
 
             # The reactants decrease based on the (forward reaction - reverse reaction)
@@ -819,7 +819,9 @@ class ReactionDynamics:
         # If the reaction was (tentatively) labeled as "Slow", decide whether to flip it to "Fast"
         #   Note: the status will be used for the current simulation sub-cycle
         if self.get_rxn_speed(rxn_index) == "S":
-            #if abs(delta_conc) / baseline_conc > fast_threshold_fraction / time_subdivision # To avoid time-consuming divisions, re-formulated as below:
+            #if abs(delta_conc) / baseline_conc > fast_threshold_fraction / time_subdivision
+            # Perhaps more intuitive as shown above;
+            # but, to avoid time-consuming divisions (and potential divisions by zero), re-formulated as below:
             if abs(delta_conc) * time_subdivision > fast_threshold_fraction * baseline_conc:
                 self.set_rxn_speed(rxn_index, "F")
 
@@ -828,21 +830,23 @@ class ReactionDynamics:
                     msg = "left tagged as 'S'"
                 else:
                     msg = "flipped tag to 'F'"
-                if abs(delta_conc / baseline_conc) > (fast_threshold_fraction / time_subdivision):
+                if abs(delta_conc) * time_subdivision > fast_threshold_fraction * baseline_conc:
                     sign = ">"
                 else:
                     sign = "<"
                 print(f"        Rxn # {rxn_index} {msg}, "
                       f"based on a change of {delta_conc:.5g} (rel. to baseline of {baseline_conc:.6g}) "
                       f"for the conc. of `{self.reaction_data.get_name(species_index)}`: "
-                      f"abs({100 * delta_conc / baseline_conc:.3g}%) {sign} ({100 * fast_threshold_fraction:.3g}% /{time_subdivision})")
+                      f"abs({100 * delta_conc / (baseline_conc+0.000001):.3g}%) {sign} ({100 * fast_threshold_fraction:.3g}% /{time_subdivision})"
+                     )   # Note: we're adding a tiny amount to baseline_conc to avoid potential divisions by zero
+
 
 
 
     def compute_all_reaction_deltas(self, delta_time: float, conc_array=None, rxn_list=None) -> [float]:
         """
         For an explanation of the "reaction delta", see compute_reaction_delta().
-        Compute the "reaction delta" for all the specified ones (by default, all.)
+        Compute the "reaction delta" for all the specified reaction (by default, all.)
         Return a list with an entry for each reaction, in their index order.
 
         For background info: https://life123.science/reactions
@@ -852,14 +856,16 @@ class ReactionDynamics:
         :param conc_array:  All initial concentrations at the start of the reaction step,
                                 as a Numpy array for all the chemical species, in their index order;
                                 this can be thought of as the "SYSTEM STATE"
-        :param rxn_list:    OPTIONAL list of reactions (specified by index);
+        :param rxn_list:    OPTIONAL list of reactions (specified by their integer index);
                                 if None, do all the reactions.  EXAMPLE: [1, 3, 7]
 
         :return:            A list of the differences between forward and reverse "conversions" -
                                 for explanation, see compute_reaction_delta();
-                                each list has 1 entry per reaction, in the index order of the reactions
+                                each list has 1 entry per reaction, in the index order of the reactions.
+                                For any reaction not present in rxn_list, its value will be zero.
         """
-        delta_list = []         # It will have 1 entry per reaction
+        #delta_list = []         # It will have 1 entry per reaction
+        delta_list = [0] * self.reaction_data.number_of_reactions()     # A list of as many zeros as there are reactions
 
         if rxn_list is None:    # Meaning ALL reactions
             rxn_list = range(self.reaction_data.number_of_reactions())
@@ -867,7 +873,8 @@ class ReactionDynamics:
         # Process the requested reactions
         for i in rxn_list:      # Consider each reaction in turn
             delta = self.compute_reaction_delta(rxn_index=i, conc_array=conc_array, delta_time=delta_time)
-            delta_list.append(delta)
+            #delta_list.append(delta)
+            delta_list[i] = delta
 
         return delta_list
 
@@ -883,8 +890,9 @@ class ReactionDynamics:
         What we're computing here, is referred to as:  (Δt)∗delta_forward(n)
 
         :param rxn_index:   An integer that indexes the reaction of interest
-        :param conc_array:  All initial concentrations at the start of the reaction step,
-                                as a Numpy array for all the chemical species, in their index order;
+        :param conc_array:  ALL initial concentrations at the start of the reaction step,
+                                as a Numpy array for ALL the chemical species, in their index order
+                                (regardless of their involvement in the reaction of interest);
                                 this can be thought of as the "SYSTEM STATE"
         :param delta_time:  The time duration of the reaction step - assumed to be small enough that the
                             concentration won't vary significantly during this span

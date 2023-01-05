@@ -1,0 +1,176 @@
+# ---
+# jupyter:
+#   jupytext:
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.14.1
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
+# %% [markdown]
+# ## 2 COUPLED reactions of different speeds:  
+# ### A <-> B (fast) and B <-> C (slow)
+# All 1st order. Taken to equilibrium.   
+# The concentration of the intermediate product B manifests 1 oscillation ("overshoot")
+#
+# LAST REVISED: Jan. 4, 2023
+
+# %%
+# Extend the sys.path variable, to contain the project's root directory
+import set_path
+set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
+                                         # to reach the project's home, from the folder containing this notebook
+
+# %% tags=[]
+from experiments.get_notebook_info import get_notebook_basename
+
+from modules.reactions.reaction_data import ReactionData as chem
+from modules.reactions.reaction_dynamics import ReactionDynamics
+
+import numpy as np
+import plotly.express as px
+from modules.visualization.graphic_log import GraphicLog
+
+# %% tags=[]
+# Initialize the HTML logging (for the graphics)
+log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
+
+# Set up the use of some specified graphic (Vue) components
+GraphicLog.config(filename=log_file,
+                  components=["vue_cytoscape_1"],
+                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
+
+# %% [markdown]
+# # Initialize the System
+# Specify the chemicals and the reactions
+
+# %% tags=[]
+# Specify the chemicals
+chem_data = chem(names=["A", "B", "C"])
+
+# Reaction A <-> B (fast)
+chem_data.add_reaction(reactants=["A"], products=["B"],
+                       forward_rate=32., reverse_rate=8.) 
+
+# Reaction B <-> C (slow)
+chem_data.add_reaction(reactants=["B"], products=["C"],
+                       forward_rate=3., reverse_rate=2.) 
+
+print("Number of reactions: ", chem_data.number_of_reactions())
+
+# %%
+chem_data.describe_reactions()
+
+# %%
+# Send a plot of the network of reactions to the HTML log file
+graph_data = chem_data.prepare_graph_network()
+GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
+
+# %% [markdown]
+# # Start the simulation
+
+# %%
+dynamics = ReactionDynamics(reaction_data=chem_data)
+
+# %% [markdown]
+# ### Set the initial concentrations of all the chemicals, in their index order
+
+# %%
+dynamics.set_conc([60., 0, 10.], snapshot=True)
+
+# %%
+dynamics.describe_state()
+
+# %%
+dynamics.history.get()
+
+# %% [markdown] tags=[]
+# ## Run the reaction
+
+# %%
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+#dynamics.verbose_list = [1, 2, 3]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
+
+# The changes of concentrations vary very rapidly early on; so, we'll be using dynamic_step=4 , i.e. increase time resolution
+# by x4 initially, as long as the reaction remains "fast" (based on a threshold of 5% change)
+dynamics.single_compartment_react(time_step=0.05, reaction_duration=1.0,
+                                  snapshots={"initial_caption": "1st reaction step",
+                                             "final_caption": "last reaction step"},
+                                  dynamic_step=20)      
+                                  # Accepting the default:  fast_threshold=5
+
+# %% [markdown]
+# ### Note: the argument _dynamic_step=4_ splits the time steps in 4 whenever the reaction is "fast" (as determined using fast_threshold=5)
+
+# %%
+df = dynamics.history.get()
+df
+
+# %% [markdown]
+# ### Notice how the reaction proceeds in smaller steps in the early times, when the concentrations are changing much more rapidly
+
+# %%
+# Let's look at two early arrays of concentrations, from the run's history
+arr0 = dynamics.get_historical_concentrations(4)
+arr1 = dynamics.get_historical_concentrations(5)
+arr0, arr1
+
+# %%
+# Let's verify that the stoichiometry is being respected        # TODO: THIS MUST GET GENERALIZED for multiple reactions!!! *****
+dynamics.stoichiometry_checker(rxn_index=0, 
+                               conc_arr_before = arr0, 
+                               conc_arr_after = arr1)
+
+# %%
+dynamics.stoichiometry_checker(rxn_index=1, 
+                               conc_arr_before = arr0, 
+                               conc_arr_after = arr1)
+
+# %%
+dynamics.diagnostic_data.get().loc[0]    # Conveniently seen in the diagnostic data
+
+# %% [markdown]
+# ## Note: "A" (now largely depleted) is the limiting reagent
+
+# %% [markdown]
+# ### Check the final equilibrium
+
+# %%
+dynamics.get_system_conc()
+
+# %%
+# Verify that all the reactions have reached equilibrium
+dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc_dict())       # TODO: generalize to multiple reactions
+
+# %%
+dynamics.is_in_equilibrium(rxn_index=1, conc=dynamics.get_conc_dict())
+
+# %% [markdown] tags=[]
+# ## Plots of changes of concentration with time
+
+# %%
+fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B", "C"], 
+              title="Coupled reactions A <-> B and B <-> C",
+              color_discrete_sequence = ['blue', 'red', 'green'],
+              labels={"value":"concentration", "variable":"Chemical"})
+fig.show()
+
+# %% [markdown]
+# #### For diagnostic insight, uncomment the following lines:
+
+# %%
+#dynamics.examine_run(df=df, time_step=0.01)  
+# the time step MUST match the value used in call to single_compartment_react()
+
+#dynamics.diagnose_variable_time_steps()
+
+#dynamics.diagnostic_data.get()
+
+#dynamics.diagnostic_data_baselines.get()
+
+# %%
