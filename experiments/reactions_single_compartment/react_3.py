@@ -20,7 +20,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_4"_ 
 #
-# LAST REVISED: Jan. 1, 2023
+# LAST REVISED: Jan. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -126,7 +126,7 @@ dynamics.get_system_conc()
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc_dict())
+dynamics.is_in_equilibrium()
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time

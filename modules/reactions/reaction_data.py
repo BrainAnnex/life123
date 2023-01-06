@@ -254,7 +254,7 @@ class ReactionData:
         """
         rxn = self.get_reaction(i)
         reactants = rxn["reactants"]
-        return self.standard_form_chem_eqn(reactants)
+        return self._standard_form_chem_eqn(reactants)
 
 
 
@@ -278,7 +278,7 @@ class ReactionData:
         """
         rxn = self.get_reaction(i)
         products = rxn["products"]
-        return self.standard_form_chem_eqn(products)
+        return self._standard_form_chem_eqn(products)
 
 
 
@@ -611,21 +611,22 @@ class ReactionData:
     def describe_reactions(self, concise=False, return_as_list=False) -> Union[None, List[str]]:
         """
         Print out, and optionally return a list of, a user-friendly plain-text form of all the reactions
-        EXAMPLE:  ["(0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 , kR = 2.0)"]
+        EXAMPLE:  "(0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
 
         :param concise:         If True, less detail is shown
-        :param return_as_list:  If True, in addition to being printed, a list of reaction descriptions gets returned
+        :param return_as_list:  If True, instead of being printed, a list of reaction descriptions gets returned
+                                    (the main header still gets printed)
         :return:                Either None or a list of strings, based on the flag return_as_list
         """
         print(f"Number of reactions: {self.number_of_reactions()} (at temp. {self.temp - 273.15:,.4g} C)")
 
-        out = []    # Output list being built (and printed out, item-wise)
+        out = []    # Output list being built (item-wise)
         for i, rxn in enumerate(self.reaction_list):    # Loop over all the registered reactions
             reactants = self.extract_reactants(rxn)
             products = self.extract_products(rxn)
 
-            left = self.standard_form_chem_eqn(reactants)       # Left side of the equation, as a user-friendly string
-            right = self.standard_form_chem_eqn(products)       # Right side of the equation
+            left = self._standard_form_chem_eqn(reactants)       # Left side of the equation, as a user-friendly string
+            right = self._standard_form_chem_eqn(products)       # Right side of the equation
 
             rxn_description = f"{i}: {left} <-> {right}"        # Concise start point for a description of the reaction
 
@@ -650,19 +651,22 @@ class ReactionData:
                 if not high_order:
                     rxn_description += " | 1st order in all reactants & products"
 
-            print(rxn_description)          # Print each reaction on a separate line
-            out.append(rxn_description)
+            if return_as_list:
+                out.append(rxn_description)
+            else:
+                print(rxn_description)          # Print each reaction on a separate line
+
 
         if return_as_list:
             return out
 
 
 
-    def standard_form_chem_eqn(self, eqn_side: list) -> str:
+    def _standard_form_chem_eqn(self, eqn_side: list) -> str:
         """
         Return a user-friendly form of the given side of a chemical equation.
 
-        EXAMPLE:  turn [(1, 0, 1), (2, 10, 1)]  into  "Fe + 2 Cl"  (if species 0 is named "Fe" and species 10 is "Cl")
+        EXAMPLE:  turn [(1, 0, 1), (2, 8, 1)]  into  "Fe + 2 Cl"  (if species 0 is named "Fe" and species 8 is "Cl")
 
         :param eqn_side:    A list encoding either side of a chemical equation
         :return:            A string with a user-friendly form of a side of a chemical equation

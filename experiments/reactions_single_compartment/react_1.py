@@ -18,7 +18,7 @@
 #
 # See also the experiment _"1D/reactions/reaction_1"_ ; this is the "single-compartment" version of it.
 #
-# LAST REVISED: Dec. 21, 2022
+# LAST REVISED: Jan. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -118,7 +118,7 @@ dynamics.get_system_conc()
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc_dict())
+dynamics.is_in_equilibrium()
 
 # %% [markdown]
 # #### Note that, because of the high initial concentration of B relative to A, the overall reaction has proceeded **in reverse**

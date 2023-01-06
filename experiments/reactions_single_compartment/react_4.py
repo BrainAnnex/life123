@@ -17,10 +17,12 @@
 # #### with 2nd-order kinetics for A,  
 # #### and 1-st order kinetics for C
 #
+# (Adaptive variable time resolution is used)
+#
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #
 #
-# LAST REVISED: Jan. 3, 2023
+# LAST REVISED: Jan. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -136,11 +138,8 @@ dynamics.diagnostic_data.get().loc[0]    # Conveniently seen in the diagnostic d
 # ### Check the final equilibrium
 
 # %%
-dynamics.get_system_conc()
-
-# %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc_dict())
+dynamics.is_in_equilibrium()
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time

@@ -837,7 +837,7 @@ class ReactionDynamics:
                 print(f"        Rxn # {rxn_index} {msg}, "
                       f"based on a change of {delta_conc:.5g} (rel. to baseline of {baseline_conc:.6g}) "
                       f"for the conc. of `{self.reaction_data.get_name(species_index)}`: "
-                      f"abs({100 * delta_conc / (baseline_conc+0.000001):.3g}%) {sign} ({100 * fast_threshold_fraction:.3g}% /{time_subdivision})"
+                      f"abs({100 * delta_conc / (baseline_conc+1e-09):.3g}%) {sign} ({100 * fast_threshold_fraction:.3g}% /{time_subdivision})"
                      )   # Note: we're adding a tiny amount to baseline_conc to avoid potential divisions by zero
 
 
@@ -929,18 +929,57 @@ class ReactionDynamics:
 
 
 
-    def is_in_equilibrium(self, rxn_index: int, conc: dict, tolerance=0.05, explain=True) -> bool:
+    def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=0.05, explain=True) -> Union[bool, dict]:
         """
         Ascertain whether the given concentrations are in equilibrium for the specified reaction
+        (by default, all reactions)
 
-        :param rxn_index:   The index (0-based) to identify the reaction of interest
+        :param rxn_index:   The index (0-based integer) to identify the reaction of interest;
+                                if None, then check all the reactions
+        :param conc:        Dict with the concentrations of the species involved in the reaction.
+                            The keys are the chemical names
+                                EXAMPLE: {'A': 23.9, 'B': 36.1}
+                            If None, then use the current System concentrations
+        :param tolerance:   Allowable absolute tolerance, to establish satisfactory equality
+        :param explain:     If True, print out the formula(s) being used.
+                                EXAMPLES:   "([C][D]) / ([A][B])"
+                                            "[B] / [A]^2"
+        :return:            For 1 reaction, return True if the reaction is close enough to an equilibrium, as allowed by the requested tolerance
+                                For all reactions, return a dict of boolean status values, indexed by reaction index
+        """
+        if conc is None:
+            conc=self.get_conc_dict()   # Use the current System concentrations
+
+        if rxn_index is not None:
+            return self.reaction_in_equilibrium(rxn_index=rxn_index, conc=conc, tolerance=tolerance, explain=explain)
+        else:
+            status_dict = {}
+            description_list = self.reaction_data.describe_reactions(concise=True, return_as_list=True)
+            for i in range(self.reaction_data.number_of_reactions()):
+                #print(f"Reaction #{i}")
+                print(description_list[i])
+                status = self.reaction_in_equilibrium(rxn_index=i, conc=conc, tolerance=tolerance, explain=explain)
+                if status:
+                    print("Reaction IS in equilibrium (within tolerance)\n")
+                else:
+                    print("Reaction is NOT in equilibrium (not within tolerance)\n")
+                status_dict[i] = status
+
+            return status_dict
+
+
+    def reaction_in_equilibrium(self, rxn_index, conc, tolerance, explain: bool) -> bool:
+        """
+
+        :param rxn_index:   The index (0-based integer) to identify the reaction of interest
         :param conc:        Dict with the concentrations of the species involved in the reaction.
                             The keys are the chemical names
                                 EXAMPLE: {'A': 23.9, 'B': 36.1}
         :param tolerance:   Allowable absolute tolerance, to establish satisfactory equality
         :param explain:     If True, print out the formula being used.
-                                EXAMPLES:  "([C][D]) / ([A][B])" , "[B] / [A]^2",
-        :return:            True if the reaction is close enough to an equilibrium
+                                EXAMPLES:   "([C][D]) / ([A][B])"
+                                            "[B] / [A]^2"
+        :return:            True if the given reaction is close enough to an equilibrium, as allowed by the requested tolerance
         """
         rxn = self.reaction_data.get_reaction(rxn_index)
 
@@ -999,6 +1038,8 @@ class ReactionDynamics:
         to ascertain whether the change is consistent with the reaction's stoichiometry.
         See https://life123.science/reactions
 
+        IMPORTANT: this function is currently meant for simulations involving only 1 reaction (TODO: generalize)
+
         NOTE: the concentration changes in chemicals not involved in the specified reaction are ignored
 
         :param rxn_index:       Integer to identify the reaction of interest
@@ -1008,6 +1049,10 @@ class ReactionDynamics:
         :return:                True if the change in reactant/product concentrations is consistent with the
                                     reaction's stoichiometry, or False otherwise
         """
+        if self.reaction_data.number_of_reactions() > 1:
+            print(f"*** WARNING: {self.reaction_data.number_of_reactions()} reactions are present.  "
+                  f"stoichiometry_checker() currently only works for 1-reaction simulations")
+
         self.reaction_data.assert_valid_rxn_index(rxn_index)
 
         reactants = self.reaction_data.get_reactants(rxn_index)

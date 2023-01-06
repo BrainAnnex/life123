@@ -18,7 +18,9 @@
 # All 1st order. Taken to equilibrium.   
 # The concentration of the intermediate product B manifests 1 oscillation ("overshoot")
 #
-# LAST REVISED: Jan. 4, 2023
+# (Adaptive variable time resolution is used)
+#
+# LAST REVISED: Jan. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -114,41 +116,12 @@ df
 # %% [markdown]
 # ### Notice how the reaction proceeds in smaller steps in the early times, when the concentrations are changing much more rapidly
 
-# %%
-# Let's look at two early arrays of concentrations, from the run's history
-arr0 = dynamics.get_historical_concentrations(4)
-arr1 = dynamics.get_historical_concentrations(5)
-arr0, arr1
-
-# %%
-# Let's verify that the stoichiometry is being respected        # TODO: THIS MUST GET GENERALIZED for multiple reactions!!! *****
-dynamics.stoichiometry_checker(rxn_index=0, 
-                               conc_arr_before = arr0, 
-                               conc_arr_after = arr1)
-
-# %%
-dynamics.stoichiometry_checker(rxn_index=1, 
-                               conc_arr_before = arr0, 
-                               conc_arr_after = arr1)
-
-# %%
-dynamics.diagnostic_data.get().loc[0]    # Conveniently seen in the diagnostic data
-
-# %% [markdown]
-# ## Note: "A" (now largely depleted) is the limiting reagent
-
 # %% [markdown]
 # ### Check the final equilibrium
 
 # %%
-dynamics.get_system_conc()
-
-# %%
 # Verify that all the reactions have reached equilibrium
-dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc_dict())       # TODO: generalize to multiple reactions
-
-# %%
-dynamics.is_in_equilibrium(rxn_index=1, conc=dynamics.get_conc_dict())
+dynamics.is_in_equilibrium()
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time
