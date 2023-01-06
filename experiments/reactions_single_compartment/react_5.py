@@ -57,11 +57,11 @@ chem_data = chem(names=["A", "B", "C"])
 
 # Reaction A <-> B (fast)
 chem_data.add_reaction(reactants=["A"], products=["B"],
-                       forward_rate=32., reverse_rate=8.) 
+                       forward_rate=64., reverse_rate=8.) 
 
 # Reaction B <-> C (slow)
 chem_data.add_reaction(reactants=["B"], products=["C"],
-                       forward_rate=3., reverse_rate=2.) 
+                       forward_rate=12., reverse_rate=2.) 
 
 print("Number of reactions: ", chem_data.number_of_reactions())
 
@@ -83,7 +83,7 @@ dynamics = ReactionDynamics(reaction_data=chem_data)
 # ### Set the initial concentrations of all the chemicals, in their index order
 
 # %%
-dynamics.set_conc([60., 0, 10.], snapshot=True)
+dynamics.set_conc([50., 0, 0.], snapshot=True)
 
 # %%
 dynamics.describe_state()
@@ -100,28 +100,38 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 
 # The changes of concentrations vary very rapidly early on; so, we'll be using dynamic_step=4 , i.e. increase time resolution
 # by x4 initially, as long as the reaction remains "fast" (based on a threshold of 5% change)
-dynamics.single_compartment_react(time_step=0.05, reaction_duration=1.0,
+dynamics.single_compartment_react(time_step=0.02, reaction_duration=0.4,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_step=20)      
-                                  # Accepting the default:  fast_threshold=5
+                                  dynamic_step=10, fast_threshold=15)      
 
 # %% [markdown]
-# ### Note: the argument _dynamic_step=4_ splits the time steps in 4 whenever the reaction is "fast" (as determined using fast_threshold=5)
+# ### Note: the argument _dynamic_step=10_ splits the time steps in 10 for any reactions that are "fast-changing" (as determined using _fast_threshold=15_ )
 
 # %%
 df = dynamics.history.get()
 df
 
+# %%
+# Let's expand the last part
+df.loc[60:]
+
 # %% [markdown]
-# ### Notice how the reaction proceeds in smaller steps in the early times, when the concentrations are changing much more rapidly
+# ### Notice:
+# * the reaction proceeds in smaller steps in the earlier times (until t=0.160, in line 80), when the concentrations are changing much more rapidly 
+#
+# * between lines 70 and 80, only rection #1 is regarded as fast-changing (based on the fast_threshold we specified in the _simulation run_); previously, both reactions were regarded as fast-changing
+#
+# * "fast-changing" and "slow-changing" is NOT the same thing as "fast" and "slow" reaction kinetics.  For example, reaction #1, though it has much slower kinetics than reaction #0, involves large relative concentration changes because [C] is small
+#
+# * after step 80, both reactions are regarded as slow-changing, and no more intermediate steps are used
 
 # %% [markdown]
 # ### Check the final equilibrium
 
 # %%
 # Verify that all the reactions have reached equilibrium
-dynamics.is_in_equilibrium()
+dynamics.is_in_equilibrium(tolerance=0.2)
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time
@@ -137,12 +147,9 @@ fig.show()
 # #### For diagnostic insight, uncomment the following lines:
 
 # %%
-#dynamics.examine_run(df=df, time_step=0.01)  
-# the time step MUST match the value used in call to single_compartment_react()
-
 #dynamics.diagnose_variable_time_steps()
 
-#dynamics.diagnostic_data.get()
+dynamics.diagnostic_data.get()
 
 #dynamics.diagnostic_data_baselines.get()
 
