@@ -562,9 +562,9 @@ class ReactionDynamics:
         increment_vector = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
 
         # Compute the forward and back "conversions" of all the applicable reactions
-        delta_list = self.compute_all_reaction_deltas(conc_array=conc_array, delta_time=delta_time, rxn_list=rxn_list)
+        delta_dict = self.compute_all_reaction_deltas(conc_array=conc_array, delta_time=delta_time, rxn_list=rxn_list)
         if 3 in self.verbose_list:
-            print(f"delta_list: {delta_list}")
+            print(f"delta_list: {delta_dict}")
 
 
         if rxn_list is None:    # Meaning ALL reactions
@@ -587,7 +587,7 @@ class ReactionDynamics:
             # The reactants decrease based on the (forward reaction - reverse reaction)
             for r in reactants:
                 stoichiometry, species_index, order = r
-                delta_conc = stoichiometry * (- delta_list[rxn_index])  # Increment to this reactant from the reaction being considered
+                delta_conc = stoichiometry * (- delta_dict[rxn_index])  # Increment to this reactant from the reaction being considered
                 # Do a validation check to avoid negative concentrations
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
@@ -598,7 +598,7 @@ class ReactionDynamics:
             # The reaction products increase based on the (forward reaction - reverse reaction)
             for p in products:
                 stoichiometry, species_index, order = p
-                delta_conc = stoichiometry * delta_list[rxn_index]  # Increment to this reaction product from the reaction being considered
+                delta_conc = stoichiometry * delta_dict[rxn_index]  # Increment to this reaction product from the reaction being considered
                 # Do a validation check to avoid negative concentrations
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
@@ -654,9 +654,9 @@ class ReactionDynamics:
         increment_vector = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
 
         # Compute the forward and back "conversions" of all the applicable reactions
-        delta_list = self.compute_all_reaction_deltas(conc_array=conc_array, delta_time=delta_time, rxn_list=rxn_list)
+        delta_dict = self.compute_all_reaction_deltas(conc_array=conc_array, delta_time=delta_time, rxn_list=rxn_list)
         if 3 in self.verbose_list:
-            print(f"      delta_list: {delta_list}")
+            print(f"      delta_list: {delta_dict}")
 
 
         if rxn_list is None:    # Meaning ALL reactions
@@ -689,7 +689,7 @@ class ReactionDynamics:
             # The reactants decrease based on the (forward reaction - reverse reaction)
             for r in reactants:
                 stoichiometry, species_index, order = r
-                delta_conc = stoichiometry * (- delta_list[rxn_index])  # Increment to this reactant from the reaction being considered
+                delta_conc = stoichiometry * (- delta_dict[rxn_index])  # Increment to this reactant from the reaction being considered
                 # Do a validation check to avoid negative concentrations
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
@@ -711,7 +711,7 @@ class ReactionDynamics:
             # The reaction products increase based on the (forward reaction - reverse reaction)
             for p in products:
                 stoichiometry, species_index, order = p
-                delta_conc = stoichiometry * delta_list[rxn_index]  # Increment to this reaction product from the reaction being considered
+                delta_conc = stoichiometry * delta_dict[rxn_index]  # Increment to this reaction product from the reaction being considered
                 # Do a validation check to avoid negative concentrations
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
@@ -843,7 +843,7 @@ class ReactionDynamics:
 
 
 
-    def compute_all_reaction_deltas(self, delta_time: float, conc_array=None, rxn_list=None) -> [float]:
+    def compute_all_reaction_deltas(self, delta_time: float, conc_array=None, rxn_list=None) -> dict:
         """
         For an explanation of the "reaction delta", see compute_reaction_delta().
         Compute the "reaction delta" for all the specified reaction (by default, all.)
@@ -859,13 +859,12 @@ class ReactionDynamics:
         :param rxn_list:    OPTIONAL list of reactions (specified by their integer index);
                                 if None, do all the reactions.  EXAMPLE: [1, 3, 7]
 
-        :return:            A list of the differences between forward and reverse "conversions" -
-                                for explanation, see compute_reaction_delta();
-                                each list has 1 entry per reaction, in the index order of the reactions.
-                                For any reaction not present in rxn_list, its value will be zero.
+        :return:            A dict of the differences between forward and reverse "conversions" -
+                                for explanation, see compute_reaction_delta().
+                                The dict is indexed by the reaction number, and contains as many entries as the
+                                number of reactions being investigated
         """
-        #delta_list = []         # It will have 1 entry per reaction
-        delta_list = [0] * self.reaction_data.number_of_reactions()     # A list of as many zeros as there are reactions
+        delta_dict = {}
 
         if rxn_list is None:    # Meaning ALL reactions
             rxn_list = range(self.reaction_data.number_of_reactions())
@@ -873,10 +872,9 @@ class ReactionDynamics:
         # Process the requested reactions
         for i in rxn_list:      # Consider each reaction in turn
             delta = self.compute_reaction_delta(rxn_index=i, conc_array=conc_array, delta_time=delta_time)
-            #delta_list.append(delta)
-            delta_list[i] = delta
+            delta_dict[i] = delta
 
-        return delta_list
+        return delta_dict
 
 
 
@@ -944,8 +942,8 @@ class ReactionDynamics:
         :param explain:     If True, print out the formula(s) being used.
                                 EXAMPLES:   "([C][D]) / ([A][B])"
                                             "[B] / [A]^2"
-        :return:            For 1 reaction, return True if the reaction is close enough to an equilibrium, as allowed by the requested tolerance
-                                For all reactions, return a dict of boolean status values, indexed by reaction index
+        :return:            If 1 reaction, return True if the reaction is close enough to an equilibrium, as allowed by the requested tolerance.
+                                If for all reactions, return a dict of boolean status values, indexed by reaction index
         """
         if conc is None:
             conc=self.get_conc_dict()   # Use the current System concentrations
