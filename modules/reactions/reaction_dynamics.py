@@ -1052,6 +1052,27 @@ class ReactionDynamics:
         :return:                True if the change in reactant/product concentrations is consistent with the
                                     reaction's stoichiometry, or False otherwise
         """
+        return self.stoichiometry_checker_from_deltas(rxn_index = rxn_index,
+                                                      delta_arr = conc_arr_after-conc_arr_before)
+
+
+
+    def stoichiometry_checker_from_deltas(self, rxn_index: int, delta_arr: np.array) -> bool:
+        """
+        For the indicated reaction, investigate the change in the concentration of the involved chemicals,
+        to ascertain whether the change is consistent with the reaction's stoichiometry.
+        See https://life123.science/reactions
+
+        IMPORTANT: this function is currently meant for simulations involving only 1 reaction (TODO: generalize)
+
+        NOTE: the concentration changes in chemicals not involved in the specified reaction are ignored
+
+        :param rxn_index:   Integer to identify the reaction of interest
+        :param delta_arr:   Numpy array with the concentrations changes of ALL the chemicals (whether involved
+                                in the reaction or not), in their index order, as a result of JUST the reaction of interest
+        :return:            True if the change in reactant/product concentrations is consistent with the
+                                reaction's stoichiometry, or False otherwise
+        """
         if self.reaction_data.number_of_reactions() > 1:
             print(f"*** WARNING: {self.reaction_data.number_of_reactions()} reactions are present.  "
                   f"stoichiometry_checker() currently only works for 1-reaction simulations")
@@ -1066,14 +1087,14 @@ class ReactionDynamics:
         baseline_term = reactants[0]
         baseline_species = self.reaction_data.extract_species_index(baseline_term)
         baseline_stoichiometry = self.reaction_data.extract_stoichiometry(baseline_term)
-        baseline_ratio =  (conc_arr_after[baseline_species] - conc_arr_before[baseline_species]) / baseline_stoichiometry
+        baseline_ratio =  (delta_arr[baseline_species]) / baseline_stoichiometry
         #print("baseline_ratio: ", baseline_ratio)
 
         for i, term in enumerate(reactants):
             if i != 0:
                 species = self.reaction_data.extract_species_index(term)
                 stoichiometry = self.reaction_data.extract_stoichiometry(term)
-                ratio =  (conc_arr_after[species] - conc_arr_before[species]) / stoichiometry
+                ratio =  (delta_arr[species]) / stoichiometry
                 #print(f"ratio for `{self.reaction_data.get_name(species)}`: {ratio}")
                 if not np.allclose(ratio, baseline_ratio):
                     return False
@@ -1081,7 +1102,7 @@ class ReactionDynamics:
         for term in products:
             species = self.reaction_data.extract_species_index(term)
             stoichiometry = self.reaction_data.extract_stoichiometry(term)
-            ratio =  - (conc_arr_after[species] - conc_arr_before[species]) / stoichiometry # The minus in front is b/c we're on the other side of the eqn
+            ratio =  - (delta_arr[species]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn
             #print(f"ratio for `{self.reaction_data.get_name(species)}`: {ratio}")
             if not np.allclose(ratio, baseline_ratio):
                 return False
