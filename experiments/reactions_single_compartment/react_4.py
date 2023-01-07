@@ -22,7 +22,7 @@
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #
 #
-# LAST REVISED: Jan. 5, 2023
+# LAST REVISED: Jan. 6, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -129,7 +129,7 @@ dynamics.stoichiometry_checker(rxn_index=0,
 # #### Indeed, it can be easy checked that the drop in [A] is -119.920000 , twice the 59.96 increase in [C], as dictated by the stoichiometry
 
 # %%
-dynamics.diagnostic_data.get().loc[0]    # Conveniently seen in the diagnostic data
+dynamics.diagnostic_data[0].get().loc[0]    # Conveniently seen in the diagnostic data
 
 # %% [markdown]
 # ## Note: "A" (now largely depleted) is the limiting reagent
@@ -160,7 +160,7 @@ fig.show()
 
 #dynamics.diagnose_variable_time_steps()
 
-#dynamics.diagnostic_data.get()
+#dynamics.diagnostic_data[0].get()
 
 #dynamics.diagnostic_data_baselines.get()
 

@@ -39,7 +39,7 @@ class ReactionDynamics:
                                         #   Those sections will have entry points such as "if 1 in self.verbose_list"
                                         #   MAX code currently used: 5
 
-        self.diagnostic_data = None
+        self.diagnostic_data = {}       # This will be a dict with as many entries as reactions
         self.diagnostic_data_baselines = MovieTabular(parameter_name="TIME")
 
         self.diagnostics = False
@@ -651,6 +651,7 @@ class ReactionDynamics:
                                 as a Numpy array for all the chemical species, in their index order
                             EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):   array([7. , -21.])
         """
+        # The increment vector is the cumulative one for ALL the requested reactions
         increment_vector = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
 
         # Compute the forward and back "conversions" of all the applicable reactions
@@ -663,11 +664,14 @@ class ReactionDynamics:
             rxn_list = range(self.reaction_data.number_of_reactions())  # This will be a list of all the reaction index numbers
 
 
-        # For each applicable reaction, adjust the concentrations of the reactants and products,
+        # For each applicable reaction, find the needed adjustments ("deltas")
+        # to the concentrations of the reactants and products,
         # based on the forward and back rates of the reaction
         for rxn_index in rxn_list:      # Consider each reaction in turn
             if 1 in self.verbose_list:
                 print(f"      Determining the conc.'s changes as a result of rxn # {rxn_index}")
+
+            increment_vector_single_rxn = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
 
             # TODO: turn into a more efficient single step, as as:
             #(reactants, products) = cls.all_reactions.unpack_terms(i)
@@ -686,7 +690,7 @@ class ReactionDynamics:
                     print(f"      (we're in the last substep: tentatively tagging rxn #{rxn_index} as 'S')")
 
 
-            # The reactants decrease based on the (forward reaction - reverse reaction)
+            # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
             for r in reactants:
                 stoichiometry, species_index, order = r
                 delta_conc = stoichiometry * (- delta_dict[rxn_index])  # Increment to this reactant from the reaction being considered
@@ -706,9 +710,10 @@ class ReactionDynamics:
                           f"(substep_number = {substep_number}, time_subdivision = {time_subdivision})")
 
                 increment_vector[species_index] += delta_conc
+                increment_vector_single_rxn[species_index] += delta_conc
 
 
-            # The reaction products increase based on the (forward reaction - reverse reaction)
+            # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
             for p in products:
                 stoichiometry, species_index, order = p
                 delta_conc = stoichiometry * delta_dict[rxn_index]  # Increment to this reaction product from the reaction being considered
@@ -728,25 +733,25 @@ class ReactionDynamics:
                           f"(substep_number = {substep_number}, time_subdivision = {time_subdivision})")
 
                 increment_vector[species_index] += delta_conc
+                increment_vector_single_rxn[species_index] += delta_conc
 
 
             if self.diagnostics:
-                if self.diagnostic_data is None:    # Initialize, if needed
-                    self.diagnostic_data = MovieTabular(parameter_name="TIME")  #TODO: split the reactions into separate data frames (one per reaction)?
+                if self.diagnostic_data == {}:    # INITIALIZE the dictionary self.diagnostic_data, if needed
+                    for i in range(self.reaction_data.number_of_reactions()):
+                        self.diagnostic_data[i] = MovieTabular(parameter_name="TIME")       # One per reaction
 
-                #data_snapshot = self.get_conc_dict()         # A dict of conc values for all the chemicals' (baseline) conc's
                 data_snapshot = {}
                 # Add more entries to the above dictionary, starting with the Delta conc. for all the chemicals
-                for index, conc in enumerate(increment_vector):
+                for index, conc in enumerate(increment_vector_single_rxn):
                     data_snapshot["Delta " + self.reaction_data.get_name(index)] = conc
 
-                data_snapshot["reaction"] = rxn_index           # TODO: factor this out into separate data frames
+                data_snapshot["reaction"] = rxn_index           # TODO: now redundant because factored out into separate data frames
                 data_snapshot["substep"] = substep_number
                 data_snapshot["time_subdivision"] = time_subdivision
                 local_system_time = self.system_time + substep_number * delta_time
-                self.diagnostic_data.store(par=local_system_time, data_snapshot=data_snapshot, caption=f"delta_time: {delta_time}")
-                # TODO:
-                # self.diagnostic_data[rxn_index].store(SAME AS ABOVE)
+                self.diagnostic_data[rxn_index].store(par=local_system_time,
+                                                      data_snapshot=data_snapshot, caption=f"delta_time: {delta_time}")
         # END for (over rxn_list)
 
         return increment_vector
@@ -1156,6 +1161,14 @@ class ReactionDynamics:
         self.diagnostics = False
 
 
+    def get_diagnostic_data(self, rxn_index: int):
+        """
+
+        :param rxn_index:
+        :return:
+        """
+        return self.diagnostic_data[rxn_index].get()
+
 
     def diagnose_variable_time_steps(self, fast_threshold=5) -> None:
         """
@@ -1176,50 +1189,52 @@ class ReactionDynamics:
                   "call set_diagnostics() prior to running single_compartment_react()")
             return
 
-        diagnostic_df = self.diagnostic_data.get()  # TODO: self.diagnostic_data[rxn_index].get()
-        number_diagnostic_points = len(diagnostic_df)
+        #diagnostic_df = self.diagnostic_data.get()  # TODO: self.diagnostic_data[rxn_index].get()
 
-        baselines_df = self.diagnostic_data_baselines.get()
+        for rxn_index in range(self.reaction_data.number_of_reactions()):
+            print(f"\nDiagnostics for reaction {rxn_index}")
+            diagnostic_df = self.diagnostic_data[rxn_index].get()
+            number_diagnostic_points = len(diagnostic_df)
 
-        assert len(baselines_df) == number_diagnostic_points + 1, \
-            f"diagnose_variable_time_steps(): error in relative lengths of diagnostic changes Pandas frame ({number_diagnostic_points}) " \
-            f"and diagnostic baselines Pandas frame ({len(baselines_df)}); the latter should be 1 longer than the former"
+            baselines_df = self.diagnostic_data_baselines.get()
 
-
-        chemical_list = self.reaction_data.get_all_names()
-        print("Examining the reactions' diagnostic data for the chemicals: ", chemical_list)
-        chemical_delta_list = ["Delta " + name
-                               for name in chemical_list]
-        print("The concentration increments are: ", chemical_delta_list)
-
-        print("Diagnostics for reaction 0")     # TODO: generalize to multiple reactions
-
-        for i in range(number_diagnostic_points):
-            print(f"\n---- {i} (Reaction step OR substep) ----")
-            debug_time = diagnostic_df.iloc[i]['TIME']  # Note: each entry in the diagnostic_df data frame has the conc. increments
-                                                        #       for full step or substep that starts at this time
-            print(f"Start time: {debug_time:.5g} (Start of Full time interval or sub-interval)")
-
-            time_subdivision = diagnostic_df.iloc[i]['time_subdivision']
-            print(f"time_subdivision: {time_subdivision}")
-
-            baseline = baselines_df.iloc[i][chemical_list].to_numpy()
-            print("Baseline conc's:", baseline)
+            assert len(baselines_df) == number_diagnostic_points + 1, \
+                f"diagnose_variable_time_steps(): error in relative lengths of diagnostic changes Pandas frame ({number_diagnostic_points}) " \
+                f"and diagnostic baselines Pandas frame ({len(baselines_df)}); the latter should be 1 longer than the former"
 
 
-            substep = diagnostic_df.iloc[i]['substep']
-            if substep < time_subdivision - 1:
-                print("This is an INTERMEDIATE SUBSTEP. Therefore, no evaluations of reaction speeds")
-                continue
+            chemical_list = self.reaction_data.get_all_names()
+            print("Examining the reactions' diagnostic data for the chemicals: ", chemical_list)
+            chemical_delta_list = ["Delta " + name
+                                   for name in chemical_list]
+            print("The concentration increments are: ", chemical_delta_list)
 
-            delta = diagnostic_df.iloc[i][chemical_delta_list].to_numpy()
-            print("Delta conc's:", delta)
+            for i in range(number_diagnostic_points):
+                print(f"\n---- {i} (Reaction step OR substep) ----")
+                debug_time = diagnostic_df.iloc[i]['TIME']  # Note: each entry in the diagnostic_df data frame has the conc. increments
+                                                            #       for full step or substep that starts at this time
+                print(f"Start time: {debug_time:.5g} (Start of Full time interval or sub-interval)")
 
-            ratio = delta / baseline * 100.
-            print("Ratios (%):", ratio)
-            print(f"Max abs ratio (%): {max(abs(ratio)):.3g}")
-            print(f"Comparing the above value against {fast_threshold/time_subdivision}% (i.e. {fast_threshold}% /{time_subdivision})")
-            if max(abs(ratio)) > fast_threshold/time_subdivision:
-                print("*FAST* reaction")
-            else:
-                print("*Slow* reaction")
+                time_subdivision = diagnostic_df.iloc[i]['time_subdivision']
+                print(f"time_subdivision: {time_subdivision}")
+
+                baseline = baselines_df.iloc[i][chemical_list].to_numpy()
+                print("Baseline conc's:", baseline)
+
+
+                substep = diagnostic_df.iloc[i]['substep']
+                if substep < time_subdivision - 1:
+                    print("This is an INTERMEDIATE SUBSTEP. Therefore, no evaluations of reaction speeds")
+                    continue
+
+                delta = diagnostic_df.iloc[i][chemical_delta_list].to_numpy()
+                print("Delta conc's:", delta)
+
+                ratio = delta / baseline * 100.
+                print("Ratios (%):", ratio)
+                print(f"Max abs ratio (%): {max(abs(ratio)):.3g}")
+                print(f"Comparing the above value against {fast_threshold/time_subdivision}% (i.e. {fast_threshold}% /{time_subdivision})")
+                if max(abs(ratio)) > fast_threshold/time_subdivision:
+                    print("*FAST* reaction")
+                else:
+                    print("*Slow* reaction")

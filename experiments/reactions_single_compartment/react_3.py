@@ -20,7 +20,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_4"_ 
 #
-# LAST REVISED: Jan. 5, 2023
+# LAST REVISED: Jan. 6, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -158,12 +158,9 @@ dynamics.examine_run(df=df, time_step=0.004)
 dynamics.diagnose_variable_time_steps()
 
 # %% [markdown]
-# ### The above diagnostics are based on the following diagnostic data
+# ### The above diagnostics are based on the following diagnostic data:
 
 # %%
-dynamics.diagnostic_data.get()
-
-# %%
-dynamics.diagnostic_data_baselines.get()
+dynamics.diagnostic_data[0].get()
 
 # %%

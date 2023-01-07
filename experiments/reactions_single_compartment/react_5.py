@@ -20,7 +20,7 @@
 #
 # (Adaptive variable time resolution is used)
 #
-# LAST REVISED: Jan. 5, 2023
+# LAST REVISED: Jan. 6, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -147,10 +147,102 @@ fig.show()
 # #### For diagnostic insight, uncomment the following lines:
 
 # %%
+dynamics.diagnostic_data_baselines.get()
+
+# %%
 #dynamics.diagnose_variable_time_steps()
 
-dynamics.diagnostic_data.get()
+# %%
+dynamics.get_diagnostic_data(rxn_index=0)
 
-#dynamics.diagnostic_data_baselines.get()
+# %%
+dynamics.get_diagnostic_data(0).loc[60:]
+
+# %%
+dynamics.get_diagnostic_data(rxn_index=1)
+
+# %%
+dynamics.get_diagnostic_data(1).loc[60:]
+
+# %%
+conc_arr_before = np.array([50, 0, 0])
+conc_arr_before
+
+# %%
+conc_arr_after = conc_arr_before \
+                + np.array([-6.400000, 6.400000, 0.0])
+conc_arr_after
+
+# %%
+dynamics.stoichiometry_checker(rxn_index=0, conc_arr_before=conc_arr_before, conc_arr_after=conc_arr_after)
+
+# %%
+
+# %%
+dynamics.get_diagnostic_data(rxn_index=0).loc[0][['Delta A', 'Delta B', 'Delta C']].to_numpy()
+
+# %%
+
+# %%
+
+# %%
+conc_arr_before = dynamics.diagnostic_data_baselines.get().loc[0][['A', 'B', 'C']].to_numpy()
+conc_arr_before
+
+# %%
+# For reaction 0
+conc_arr_after_0 = conc_arr_before \
+                 + dynamics.get_diagnostic_data(rxn_index=0).loc[0][['Delta A', 'Delta B', 'Delta C']].to_numpy()
+conc_arr_after_0
+
+# %%
+dynamics.stoichiometry_checker(rxn_index=0, conc_arr_before=conc_arr_before, conc_arr_after=conc_arr_after_0)
+
+# %%
+# For reaction 1
+conc_arr_after_1 = conc_arr_before \
+                 + dynamics.get_diagnostic_data(rxn_index=1).loc[0][['Delta A', 'Delta B', 'Delta C']].to_numpy()
+conc_arr_after_1
+
+# %%
+dynamics.stoichiometry_checker(rxn_index=1, conc_arr_before=conc_arr_before, conc_arr_after=conc_arr_after_1)
+
+# %%
+conc_arr_before \
+    + dynamics.get_diagnostic_data(rxn_index=0).loc[0][['Delta A', 'Delta B', 'Delta C']].to_numpy() \
+    + dynamics.get_diagnostic_data(rxn_index=1).loc[0][['Delta A', 'Delta B', 'Delta C']].to_numpy()
+
+# %%
+
+# %%
+conc_arr_before = dynamics.diagnostic_data_baselines.get().loc[1][['A', 'B', 'C']].to_numpy()
+conc_arr_before
+
+# %%
+# For reaction 0
+delta_0 = dynamics.get_diagnostic_data(rxn_index=0).loc[1][['Delta A', 'Delta B', 'Delta C']].to_numpy()
+delta_0
+
+# %%
+conc_arr_after_0 = conc_arr_before + delta_0
+conc_arr_after_0
+
+# %%
+dynamics.stoichiometry_checker(rxn_index=0, conc_arr_before=conc_arr_before, conc_arr_after=conc_arr_after_0)
+
+# %%
+# For reaction 1
+delta_1 = dynamics.get_diagnostic_data(rxn_index=1).loc[1][['Delta A', 'Delta B', 'Delta C']].to_numpy()
+delta_1
+
+# %%
+conc_arr_after_1 = conc_arr_before + delta_1
+conc_arr_after_1
+
+# %%
+dynamics.stoichiometry_checker(rxn_index=1, conc_arr_before=conc_arr_before, conc_arr_after=conc_arr_after_1)
+
+# %%
+conc_arr_before + delta_0 + delta_1
 
 # %%
