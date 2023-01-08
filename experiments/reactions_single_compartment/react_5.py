@@ -16,11 +16,11 @@
 # ## 2 COUPLED reactions of different speeds:  
 # ### A <-> B (fast) and B <-> C (slow)
 # All 1st order. Taken to equilibrium.   
-# The concentration of the intermediate product B manifests 1 oscillation ("overshoot")
+# The concentration of the intermediate product B manifests 1 oscillation (transient "overshoot")
 #
 # (Adaptive variable time resolution is used)
 #
-# LAST REVISED: Jan. 7, 2023
+# LAST REVISED: Jan. 8, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -168,69 +168,10 @@ dynamics.get_diagnostic_data(rxn_index=1).loc[60:]
 # ## Perform some verification
 
 # %%
-# At time point 0 (t=0)
-
-# %%
-# For reaction 0
-delta_0 = dynamics.get_diagnostic_data(rxn_index=0).loc[0][['Delta A', 'Delta B', 'Delta C']].to_numpy()
-delta_0
-
-# %%
-dynamics.stoichiometry_checker_from_deltas(rxn_index=0, delta_arr=delta_0)
-
-# %%
-# For reaction 1
-delta_1 = dynamics.get_diagnostic_data(rxn_index=1).loc[0][['Delta A', 'Delta B', 'Delta C']].to_numpy()
-delta_1
-
-# %%
-dynamics.stoichiometry_checker_from_deltas(rxn_index=1, delta_arr=delta_1)
-
-# %%
-conc_arr_before = dynamics.diagnostic_data_baselines.get().loc[0][['A', 'B', 'C']].to_numpy()
-conc_arr_before
-
-# %%
-conc_arr_before + delta_0 + delta_1
-
-# %%
-dynamics.diagnostic_data_baselines.get().loc[1][['A', 'B', 'C']].to_numpy()
-
-# %%
-
-# %%
-# At time point 1 (t=0.002)
-
-# %%
-# For reaction 0
-delta_0 = dynamics.get_diagnostic_data(rxn_index=0).loc[1][['Delta A', 'Delta B', 'Delta C']].to_numpy()
-delta_0
-
-# %%
-dynamics.stoichiometry_checker_from_deltas(rxn_index=0, delta_arr=delta_0)
-
-# %%
-# For reaction 1
-delta_1 = dynamics.get_diagnostic_data(rxn_index=1).loc[1][['Delta A', 'Delta B', 'Delta C']].to_numpy()
-delta_1
-
-# %%
-dynamics.stoichiometry_checker_from_deltas(rxn_index=1, delta_arr=delta_1)
-
-# %%
-conc_arr_before = dynamics.diagnostic_data_baselines.get().loc[1][['A', 'B', 'C']].to_numpy()
-conc_arr_before
-
-# %%
-conc_arr_before + delta_0 + delta_1
-
-# %%
-dynamics.diagnostic_data_baselines.get().loc[2][['A', 'B', 'C']].to_numpy()
-
-# %%
-
-# %%
+# Verify that the stoichiometry is respected at every reaction step/substep (NOTE: it requires earlier activation of saving diagnostic data)
 dynamics.stoichiometry_checker_entire_run()
+
+# %%
 
 # %%
 
@@ -274,9 +215,6 @@ dynamics.diagnostic_data_baselines.get().loc[row_baseline+1]
 
 # %%
 import numpy as np
-
-# %%
-foo()
 
 # %%
 dynamics.get_diagnostic_data(rxn_index=0).loc[59:72]
@@ -342,7 +280,7 @@ print(conc_after)
 
 next_system_state = dynamics.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
 print(next_system_state)
- 
+
 
 # %%
 row_baseline += 1
@@ -368,7 +306,7 @@ next_system_state = dynamics.diagnostic_data_baselines.get().loc[row_baseline+1]
 print(next_system_state)
 
 print(np.allclose(conc_after.astype(float), next_system_state.astype(float)))
- 
+
 
 # %%
 row_baseline += 1
@@ -511,12 +449,6 @@ delta_cumulative
 ff([1])
 
 # %%
-row_0
-
-# %%
-row_1
-
-# %%
 row_list = [70,76]
 
 # %%
@@ -622,7 +554,27 @@ else:
     print("TBA")
 
 # %%
-active_list = [1]   # ************** HOW TO DETECT THIS???
+row_list
+
+# %%
+time_sub0 = dynamics.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['time_subdivision']
+time_sub0
+
+# %%
+time_sub1 = dynamics.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['time_subdivision']
+time_sub1
+
+# %%
+if time_sub0 > time_sub1:
+    active_list = [0]
+elif time_sub1 > time_sub0:
+    active_list = [1]
+
+# %%
+active_list
+
+# %%
+#active_list = [1]   # ************** HOW TO DETECT THIS???
 
 # %%
 good(active_list=active_list, row_baseline=row_baseline, row_list=row_list)
@@ -662,14 +614,28 @@ row_list
 row_baseline
 
 # %%
-active_list = [0,1]      # ************** HOW TO DETECT THIS???
+substep1 = dynamics.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['substep']
+substep1
+
+# %%
+time_sub1
+
+# %%
+if substep1 == time_sub1 - 1:
+    active_list = [0,1]
+
+# %%
+active_list
+
+# %%
+#active_list = [0,1]      # ************** HOW TO DETECT THIS???
 
 # %%
 good(active_list=active_list, row_baseline=row_baseline, row_list=row_list) 
 
 # %%
 row_baseline += 1
-for i in fast_list:
+for i in active_list:
     row_list[i] += 1
 
 # %%
@@ -677,7 +643,7 @@ good(active_list=active_list, row_baseline=row_baseline, row_list=row_list)
 
 # %%
 row_baseline += 1
-for i in fast_list:
+for i in active_list:
     row_list[i] += 1
 
 # %%
@@ -685,7 +651,7 @@ good(active_list=active_list, row_baseline=row_baseline, row_list=row_list)
 
 # %%
 row_baseline += 1
-for i in fast_list:
+for i in active_list:
     row_list[i] += 1
 
 # %%
