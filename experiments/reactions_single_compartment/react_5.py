@@ -20,7 +20,7 @@
 #
 # (Adaptive variable time resolution is used)
 #
-# LAST REVISED: Jan. 6, 2023
+# LAST REVISED: Jan. 7, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -156,13 +156,13 @@ dynamics.diagnostic_data_baselines.get()
 dynamics.get_diagnostic_data(rxn_index=0)
 
 # %%
-dynamics.get_diagnostic_data(0).loc[60:]
+dynamics.get_diagnostic_data(rxn_index=0).loc[60:]
 
 # %%
 dynamics.get_diagnostic_data(rxn_index=1)
 
 # %%
-dynamics.get_diagnostic_data(1).loc[60:]
+dynamics.get_diagnostic_data(rxn_index=1).loc[60:]
 
 # %% [markdown]
 # ## Perform some verification
@@ -230,17 +230,465 @@ dynamics.diagnostic_data_baselines.get().loc[2][['A', 'B', 'C']].to_numpy()
 # %%
 
 # %%
-rxn_index = 0
-for pnt in range(len(dynamics.get_diagnostic_data(rxn_index))):
-    delta = dynamics.get_diagnostic_data(rxn_index=rxn_index).loc[pnt][['Delta A', 'Delta B', 'Delta C']].to_numpy()
-    status = dynamics.stoichiometry_checker_from_deltas(rxn_index=rxn_index, delta_arr=delta)
-    print(status)
+dynamics.stoichiometry_checker_entire_run()
 
 # %%
-rxn_index = 1
-for pnt in range(len(dynamics.get_diagnostic_data(rxn_index))):
-    delta = dynamics.get_diagnostic_data(rxn_index=rxn_index).loc[pnt][['Delta A', 'Delta B', 'Delta C']].to_numpy()
-    status = dynamics.stoichiometry_checker_from_deltas(rxn_index=rxn_index, delta_arr=delta)
-    print(status)
+
+# %%
+chemical_list = dynamics.reaction_data.get_all_names()
+chemical_list
+
+# %%
+chemical_delta_list = dynamics.delta_names()
+chemical_delta_list
+
+# %%
+row_baseline = 1
+row_0 = 1
+row_1 = 1
+
+# %%
+df_row = dynamics.diagnostic_data_baselines.get().loc[row_baseline]
+df_row
+
+# %%
+conc_arr_before = df_row[chemical_list].to_numpy()
+conc_arr_before
+
+# %%
+# For reaction 0
+delta_0 = dynamics.get_diagnostic_data(rxn_index=0).loc[row_0][chemical_delta_list].to_numpy()
+delta_0
+
+# %%
+# For reaction 1
+delta_1 = dynamics.get_diagnostic_data(rxn_index=1).loc[row_1][chemical_delta_list].to_numpy()
+delta_1
+
+# %%
+conc_after = conc_arr_before + delta_0 + delta_1
+conc_after
+
+# %%
+dynamics.diagnostic_data_baselines.get().loc[row_baseline+1]
+
+# %%
+import numpy as np
+
+# %%
+foo()
+
+# %%
+dynamics.get_diagnostic_data(rxn_index=0).loc[59:72]
+
+# %%
+dynamics.get_diagnostic_data(rxn_index=1).loc[59:72]
+
+
+# %%
+def foo(row_baseline):
+    chemical_list = dynamics.reaction_data.get_all_names()  # EXAMPLE: ["A", "B", "C"]
+    chemical_delta_list = dynamics.delta_names()  # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
+    
+    row_0 = row_baseline
+    row_1 = row_baseline
+    conc_arr_before = dynamics.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy()
+    
+    # For reaction 0
+    delta_0 = dynamics.get_diagnostic_data(rxn_index=0).loc[row_0][chemical_delta_list].to_numpy()
+    delta_0
+    
+    # For reaction 1
+    delta_1 = dynamics.get_diagnostic_data(rxn_index=1).loc[row_1][chemical_delta_list].to_numpy()
+    delta_1
+    
+    conc_after = conc_arr_before + delta_0 + delta_1
+    print(conc_after)
+
+    next_system_state = dynamics.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
+    print(next_system_state)
+    
+    #return conc_after, next_system_state
+    
+    return np.allclose(conc_after.astype(float), next_system_state.astype(float))
+    
+
+
+# %%
+
+# %%
+foo(69)
+
+# %%
+chemical_list = dynamics.reaction_data.get_all_names()  # EXAMPLE: ["A", "B", "C"]
+chemical_delta_list = dynamics.delta_names()  # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
+
+row_baseline = 70
+row_0 = row_baseline
+row_1 = row_baseline
+conc_arr_before = dynamics.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy()
+
+# For reaction 0
+delta_0 = 0
+#delta_0 = dynamics.get_diagnostic_data(rxn_index=0).loc[row_0][chemical_delta_list].to_numpy()
+delta_0
+
+# For reaction 1
+delta_1 = dynamics.get_diagnostic_data(rxn_index=1).loc[row_1][chemical_delta_list].to_numpy()
+delta_1
+
+conc_after = conc_arr_before + delta_0 + delta_1
+print(conc_after)
+
+next_system_state = dynamics.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
+print(next_system_state)
+ 
+
+# %%
+row_baseline += 1
+row_1 += 1
+
+# %%
+conc_arr_before = dynamics.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy()
+print(conc_arr_before)
+
+# For reaction 0
+delta_0 = 0
+#delta_0 = dynamics.get_diagnostic_data(rxn_index=0).loc[row_0][chemical_delta_list].to_numpy()
+delta_0
+
+# For reaction 1
+delta_1 = dynamics.get_diagnostic_data(rxn_index=1).loc[row_1][chemical_delta_list].to_numpy()
+delta_1
+
+conc_after = conc_arr_before + delta_0 + delta_1
+print(conc_after)
+
+next_system_state = dynamics.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
+print(next_system_state)
+
+print(np.allclose(conc_after.astype(float), next_system_state.astype(float)))
+ 
+
+# %%
+row_baseline += 1
+row_1 += 1
+
+# %%
+conc_arr_before = dynamics.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy()
+print(conc_arr_before)
+
+# For reaction 0
+delta_0 = 0
+#delta_0 = dynamics.get_diagnostic_data(rxn_index=0).loc[row_0][chemical_delta_list].to_numpy()
+delta_0
+
+# For reaction 1
+delta_1 = dynamics.get_diagnostic_data(rxn_index=1).loc[row_1][chemical_delta_list].to_numpy()
+delta_1
+
+conc_after = conc_arr_before + delta_0 + delta_1
+print(conc_after)
+
+next_system_state = dynamics.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
+print(next_system_state)
+
+print(np.allclose(conc_after.astype(float), next_system_state.astype(float)))
+
+
+# %%
+def f(fast_list):
+    conc_arr_before = dynamics.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy()
+    print(conc_arr_before)
+
+    # For reaction 0
+    delta_0 = 0
+    #delta_0 = dynamics.get_diagnostic_data(rxn_index=0).loc[row_0][chemical_delta_list].to_numpy()
+    delta_0
+
+    # For reaction 1
+    delta_1 = dynamics.get_diagnostic_data(rxn_index=1).loc[row_1][chemical_delta_list].to_numpy()
+    delta_1
+
+    conc_after = conc_arr_before + delta_0 + delta_1
+    print(conc_after)
+
+    next_system_state = dynamics.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
+    print(next_system_state)
+
+    print(np.allclose(conc_after.astype(float), next_system_state.astype(float))) 
+
+
+# %%
+row_baseline += 1
+row_1 += 1
+
+# %%
+f([1])
+
+
+# %%
+def ff(fast_list):
+    conc_arr_before = dynamics.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy()
+    print(conc_arr_before)
+
+    # For reaction 0
+    if (0 in fast_list):
+        delta_0 = dynamics.get_diagnostic_data(rxn_index=0).loc[row_0][chemical_delta_list].to_numpy()
+    else:
+        delta_0 = 0   # TODO: this will change in a future version!
+        
+    # For reaction 1    
+    if (1 in fast_list):
+        delta_1 = dynamics.get_diagnostic_data(rxn_index=1).loc[row_1][chemical_delta_list].to_numpy()
+    else:
+        delta_1 = 0 
+        
+    conc_after = conc_arr_before + delta_0 + delta_1
+    print(conc_after)
+
+    next_system_state = dynamics.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
+    print(next_system_state)
+
+    print(np.allclose(conc_after.astype(float), next_system_state.astype(float))) 
+
+
+# %%
+row_baseline += 1
+row_1 += 1
+
+# %%
+ff([1])
+
+
+# %%
+def g(fast_list, row_baseline, row_list):
+    print("ROW of baseline data: ", row_baseline)
+    print("row_list: ", row_list)
+    
+    conc_arr_before = dynamics.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy().astype(float)
+    print("baseline concentration: ", conc_arr_before)
+
+    delta_cumulative = np.zeros(dynamics.reaction_data.number_of_chemicals(), 
+                                dtype=float)  # One element per chemical species
+    
+    # For each reaction
+    for rxn_index in range(dynamics.reaction_data.number_of_reactions()):
+        if (rxn_index in fast_list):
+            row = row_list[rxn_index]
+            delta_rxn = dynamics.get_diagnostic_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy().astype(float)
+        else:
+            delta_rxn = np.zeros(dynamics.reaction_data.number_of_chemicals(), 
+                                dtype=float)   # TODO: this will change in a future version!
+        
+        print(f"For rxn {rxn_index}: delta_rxn = {delta_rxn}")
+        delta_cumulative += delta_rxn
+              
+    print("delta_cumulative: ", delta_cumulative)
+    
+    conc_after = conc_arr_before + delta_cumulative
+    print("updated concentration: ", conc_after)
+
+    next_system_state = dynamics.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
+    print("concentration from the system state: ", next_system_state)
+
+    print(np.allclose(conc_after.astype(float), next_system_state.astype(float))) 
+
+
+# %%
+row_baseline += 1
+row_1 += 1
+
+# %%
+g([1])
+
+# %%
+delta_cumulative = np.zeros(dynamics.reaction_data.number_of_chemicals(), 
+                                dtype=float)
+delta_cumulative
+
+# %%
+ff([1])
+
+# %%
+row_0
+
+# %%
+row_1
+
+# %%
+row_list = [70,76]
+
+# %%
+g(fast_list=[1], row_baseline=row_baseline, row_list=row_list)
+
+# %%
+row_baseline += 1
+row_list[1] += 1
+row_list
+
+# %%
+g(fast_list=[1], row_baseline=row_baseline, row_list=row_list)
+
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+def good(active_list, row_baseline, row_list):
+    print("ROW of baseline data: ", row_baseline)
+    print("row_list: ", row_list)
+    
+    conc_arr_before = dynamics.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy().astype(float)
+    print("baseline concentration: ", conc_arr_before)
+
+    delta_cumulative = np.zeros(dynamics.reaction_data.number_of_chemicals(), 
+                                dtype=float)  # One element per chemical species
+    
+    # For each reaction
+    for rxn_index in range(dynamics.reaction_data.number_of_reactions()):
+        if (rxn_index in active_list):
+            row = row_list[rxn_index]
+            delta_rxn = dynamics.get_diagnostic_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy().astype(float)
+        else:
+            delta_rxn = np.zeros(dynamics.reaction_data.number_of_chemicals(), 
+                                dtype=float)   # TODO: this will change in a future version!
+        
+        print(f"For rxn {rxn_index}: delta_rxn = {delta_rxn}")
+        delta_cumulative += delta_rxn
+              
+    print("delta_cumulative: ", delta_cumulative)
+    
+    conc_after = conc_arr_before + delta_cumulative
+    print("updated concentration: ", conc_after)
+
+    next_system_state = dynamics.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
+    print("concentration from the system state: ", next_system_state)
+
+    print(np.allclose(conc_after.astype(float), next_system_state.astype(float))) 
+
+
+# %%
+row_baseline = 68
+row_list = [68, 68]
+active_list = [0, 1]
+
+# %%
+good(active_list=active_list, row_baseline=row_baseline, row_list=row_list)
+
+# %%
+dynamics.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['time_subdivision']
+
+# %%
+dynamics.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['substep']
+
+# %%
+dynamics.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['time_subdivision']
+
+# %%
+dynamics.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['substep']
+
+# %%
+row_baseline += 1
+
+# %%
+if dynamics.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['time_subdivision'] == dynamics.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['time_subdivision']:
+    row_list[0]  += 1
+    row_list[1]  += 1
+else:
+    print("TBA")
+
+# %%
+good(active_list=active_list, row_baseline=row_baseline, row_list=row_list)
+
+# %%
+row_baseline += 1
+
+if dynamics.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['time_subdivision'] == dynamics.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['time_subdivision']:
+    row_list[0]  += 1
+    row_list[1]  += 1
+else:
+    print("TBA")
+
+# %%
+active_list = [1]   # ************** HOW TO DETECT THIS???
+
+# %%
+good(active_list=active_list, row_baseline=row_baseline, row_list=row_list)
+
+# %%
+row_baseline += 1
+for i in active_list:
+    row_list[i] += 1
+
+# %%
+good(active_list=active_list, row_baseline=row_baseline, row_list=row_list)
+
+# %%
+row_baseline += 1
+for i in active_list:
+    row_list[i] += 1
+
+# %%
+good(active_list=active_list, row_baseline=row_baseline, row_list=row_list)
+
+# %%
+row_baseline += 1
+for i in active_list:
+    row_list[i] += 1
+
+good(active_list=active_list, row_baseline=row_baseline, row_list=row_list)    
+
+# %%
+row_baseline += 1
+for i in active_list:
+    row_list[i] += 1
+
+# %%
+row_list
+
+# %%
+row_baseline
+
+# %%
+active_list = [0,1]      # ************** HOW TO DETECT THIS???
+
+# %%
+good(active_list=active_list, row_baseline=row_baseline, row_list=row_list) 
+
+# %%
+row_baseline += 1
+for i in fast_list:
+    row_list[i] += 1
+
+# %%
+good(active_list=active_list, row_baseline=row_baseline, row_list=row_list) 
+
+# %%
+row_baseline += 1
+for i in fast_list:
+    row_list[i] += 1
+
+# %%
+good(active_list=active_list, row_baseline=row_baseline, row_list=row_list) 
+
+# %%
+row_baseline += 1
+for i in fast_list:
+    row_list[i] += 1
+
+# %%
+good(active_list=active_list, row_baseline=row_baseline, row_list=row_list) 
 
 # %%
