@@ -438,9 +438,6 @@ row_baseline += 1
 row_1 += 1
 
 # %%
-g([1])
-
-# %%
 delta_cumulative = np.zeros(dynamics.reaction_data.number_of_chemicals(), 
                                 dtype=float)
 delta_cumulative
@@ -462,7 +459,6 @@ row_list
 # %%
 g(fast_list=[1], row_baseline=row_baseline, row_list=row_list)
 
-
 # %%
 
 # %%
@@ -478,38 +474,6 @@ g(fast_list=[1], row_baseline=row_baseline, row_list=row_list)
 # %%
 
 # %%
-def good(active_list, row_baseline, row_list):
-    print("ROW of baseline data: ", row_baseline)
-    print("row_list: ", row_list)
-    
-    conc_arr_before = dynamics.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy().astype(float)
-    print("baseline concentration: ", conc_arr_before)
-
-    delta_cumulative = np.zeros(dynamics.reaction_data.number_of_chemicals(), 
-                                dtype=float)  # One element per chemical species
-    
-    # For each reaction
-    for rxn_index in range(dynamics.reaction_data.number_of_reactions()):
-        if (rxn_index in active_list):
-            row = row_list[rxn_index]
-            delta_rxn = dynamics.get_diagnostic_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy().astype(float)
-        else:
-            delta_rxn = np.zeros(dynamics.reaction_data.number_of_chemicals(), 
-                                dtype=float)   # TODO: this will change in a future version!
-        
-        print(f"For rxn {rxn_index}: delta_rxn = {delta_rxn}")
-        delta_cumulative += delta_rxn
-              
-    print("delta_cumulative: ", delta_cumulative)
-    
-    conc_after = conc_arr_before + delta_cumulative
-    print("updated concentration: ", conc_after)
-
-    next_system_state = dynamics.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
-    print("concentration from the system state: ", next_system_state)
-
-    print(np.allclose(conc_after.astype(float), next_system_state.astype(float))) 
-
 
 # %%
 row_baseline = 68
@@ -656,5 +620,113 @@ for i in active_list:
 
 # %%
 good(active_list=active_list, row_baseline=row_baseline, row_list=row_list) 
+
+
+# %%
+
+# %%
+def good(active_list, row_baseline, row_list):
+    print("-----------")                                               
+    print("ROW of baseline data: ", row_baseline)
+    
+    current_time = dynamics.diagnostic_data_baselines.get().loc[row_baseline]['TIME']
+    print(f"TIME = {current_time:.5g}")
+    
+    print("row_list: ", row_list)
+    print("active_list: ", active_list)
+    
+    conc_arr_before = dynamics.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy().astype(float)
+    print("baseline concentration: ", conc_arr_before)
+
+    delta_cumulative = np.zeros(dynamics.reaction_data.number_of_chemicals(), 
+                                dtype=float)  # One element per chemical species
+    
+    # For each reaction
+    for rxn_index in range(dynamics.reaction_data.number_of_reactions()):
+        if (rxn_index in active_list):
+            row = row_list[rxn_index]
+            delta_rxn = dynamics.get_diagnostic_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy().astype(float)
+        else:
+            delta_rxn = np.zeros(dynamics.reaction_data.number_of_chemicals(), 
+                                dtype=float)   # TODO: this will change in a future version!
+        
+        print(f"For rxn {rxn_index}: delta_rxn = {delta_rxn}")
+        delta_cumulative += delta_rxn
+              
+    print("delta_cumulative: ", delta_cumulative)
+    
+    conc_after = conc_arr_before + delta_cumulative
+    print("updated concentration: ", conc_after)
+
+    next_system_state = dynamics.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
+    print("concentration from the system state: ", next_system_state)
+
+    status = np.allclose(conc_after.astype(float), next_system_state.astype(float))
+    if status:
+        print("Match OK")
+    else:
+        print("********************** MISMATCH!!! **********************")
+        
+    print("-----------")
+    
+    return status
+
+
+# %%
+def explain():
+    #row_baseline = 68
+    #row_list = [68, 68]
+    row_baseline = 0
+    row_list = [0, 0]
+    active_list = [0, 1]
+    
+    good(active_list=active_list, row_baseline=row_baseline, row_list=row_list)
+    
+    #for _ in range(123):
+    while row_baseline < len(dynamics.diagnostic_data_baselines.get()) - 2:
+        row_baseline += 1
+        #if dynamics.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['time_subdivision'] == dynamics.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['time_subdivision']:
+        print("Normal advance")
+        for i in active_list:
+            row_list[i] += 1
+
+        time_sub0 = dynamics.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['time_subdivision']
+        time_sub1 = dynamics.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['time_subdivision']
+        print("time_sub's: ", time_sub0, time_sub1)
+
+        substep0 = dynamics.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['substep']
+        substep1 = dynamics.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['substep']
+        print("substeps: ", substep0, substep1)       
+        
+        if active_list == [0]:
+            if substep0 == time_sub0 - 1:
+                print("At last substep of rxn 0")
+                active_list = [0,1]
+        elif active_list == [1]:
+            if substep1 == time_sub1 - 1:
+                print("At last substep of rxn 1")
+                active_list = [0,1]
+        else:
+            print("Not at last substep")
+            if time_sub0 > time_sub1:
+                active_list = [0]
+                print("CHANGING active_list to: ", active_list)
+            elif time_sub1 > time_sub0:
+                active_list = [1]
+                print("CHANGING active_list to: ", active_list)
+            
+
+        status = good(active_list=active_list, row_baseline=row_baseline, row_list=row_list)
+        if not status:
+            return False
+        #else:
+            #print("TBA")
+            
+    return True
+
+# %%
+
+# %%
+explain()
 
 # %%
