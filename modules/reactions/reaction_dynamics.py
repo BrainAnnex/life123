@@ -1301,3 +1301,140 @@ class ReactionDynamics:
                     print("*FAST* reaction")
                 else:
                     print("*Slow* reaction")
+
+
+
+    def _explain_reactions_helper(self, active_list, row_baseline, row_list) -> bool:
+        """
+        Helper function for explain_reactions()
+
+        :param active_list: 
+        :param row_baseline: 
+        :param row_list: 
+        :return:            True is the diagnostic data is consistent for this (sub)step, or False otherwise
+        """
+        print("-----------")
+        print("ROW of baseline data: ", row_baseline)
+    
+        current_time = self.diagnostic_data_baselines.get().loc[row_baseline]['TIME']
+        print(f"TIME = {current_time:.5g}")
+    
+        print("row_list: ", row_list)
+        print("active_list: ", active_list)
+    
+        chemical_list = self.reaction_data.get_all_names()
+        chemical_delta_list = self.delta_names()
+    
+        conc_arr_before = self.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy().astype(float)
+        print("baseline concentrations: ", conc_arr_before)
+    
+        delta_cumulative = np.zeros(self.reaction_data.number_of_chemicals(),
+                                    dtype=float)  # One element per chemical species
+    
+        # For each reaction
+        for rxn_index in range(self.reaction_data.number_of_reactions()):
+            if (rxn_index in active_list):
+                row = row_list[rxn_index]
+                delta_rxn = self.get_diagnostic_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy().astype(float)
+            else:
+                delta_rxn = np.zeros(self.reaction_data.number_of_chemicals(),
+                                     dtype=float)   # TODO: this will change in a future version!
+    
+            print(f"From rxn {rxn_index}: delta_rxn = {delta_rxn}")
+            delta_cumulative += delta_rxn
+    
+        print("delta_cumulative: ", delta_cumulative)
+    
+        conc_after = conc_arr_before + delta_cumulative
+        print("updated concentrations: ", conc_after)
+    
+        next_system_state = self.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
+        print(f"concentrations from the next row ({row_baseline + 1}) of the system state: ", next_system_state)
+    
+        status = np.allclose(conc_after.astype(float), next_system_state.astype(float))
+        if status:
+            print("Match OK")
+        else:
+            print("********************** MISMATCH!!! **********************")
+    
+        print("-----------")
+    
+        return status
+
+
+
+    def explain_reactions(self) -> bool:
+        """
+        Provide a detailed explanation of all the steps/substeps of the reactions,
+        from the saved diagnostic data
+
+        WARNING: Currently designed only for exactly 2 reactions!  TODO: generalize to any number of reactions
+
+        TODO: allow arguments to specify the min and max reaction times during which to display the explanatory data
+
+        :return:    True is the diagnostic data is consistent for all the steps/substeps of all the reactions,
+                    or False otherwise
+        """
+        assert self.reaction_data.number_of_reactions() == 2, \
+            "explain_reactions() currently ONLY works when exactly 2 reactions are present. " \
+            "Future versions will lift this restriction"
+
+        row_baseline = 0
+        row_list = [0, 0]       # TODO: generalize
+        active_list = [0, 1]    # ALL the reactions.  TODO: generalize
+    
+        self._explain_reactions_helper(active_list=active_list, 
+                                       row_baseline=row_baseline, row_list=row_list)
+
+
+        while row_baseline < len(self.diagnostic_data_baselines.get()) - 2:
+            row_baseline += 1
+            #if self.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['time_subdivision'] == self.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['time_subdivision']:
+            if active_list == [0, 1]:    # ALL the reactions
+                print("Normal advance (single-step across all tables)")
+            else:
+                print("Advance a step in the tables for the following reactions: ", active_list)
+
+            for i in active_list:
+                row_list[i] += 1
+    
+            time_sub0 = self.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['time_subdivision']
+            time_sub1 = self.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['time_subdivision']
+            print("time subdivisions: ", time_sub0, time_sub1)
+    
+            substep0 = self.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['substep']
+            substep1 = self.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['substep']
+            print("substeps: ", substep0, substep1)
+    
+            if active_list == [0]:
+                if substep0 == time_sub0 - 1:
+                    print("At LAST SUBSTEP of rxn 0")
+                    active_list = [0,1]
+                else:
+                    print("Not at last substep of rxn 0")
+            elif active_list == [1]:
+                if substep1 == time_sub1 - 1:
+                    print("At LAST SUBSTEP of rxn 1")
+                    active_list = [0,1]
+                else:
+                    print("Not at last substep of rxn 1")
+            else:   # The active_list is ALL rxn's
+                if time_sub0 > time_sub1:
+                    active_list = [0]
+                    print("CHANGING active_list (rxns to advance in substeps) to: ", active_list)
+                elif time_sub1 > time_sub0:
+                    active_list = [1]
+                    print("CHANGING active_list (rxns to advance in substeps) to: ", active_list)
+                else:
+                    print("Will be advancing all reactions in lockstep")
+    
+    
+            #status = good(active_list=active_list, row_baseline=row_baseline, row_list=row_list)
+            status = self._explain_reactions_helper(active_list=active_list, row_baseline=row_baseline, row_list=row_list)
+    
+            if not status:
+                return False
+            #else:
+            #print("TBA")
+    
+        return True
