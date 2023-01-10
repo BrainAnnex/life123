@@ -15,12 +15,26 @@
 # %% [markdown]
 # ## 2 COUPLED reactions of different speeds:  
 # ### A <-> B (fast) and B <-> C (slow)
-# All 1st order. Taken to equilibrium.   
+# All 1st order. Taken to equilibrium. Both reactions are mostly forward.
 # The concentration of the intermediate product B manifests 1 oscillation (transient "overshoot")
 #
 # (Adaptive variable time resolution is used)
 #
-# LAST REVISED: Jan. 8, 2023
+# LAST REVISED: Jan. 9, 2023
+
+# %% [markdown]
+# ## Bathtub analogy:
+# A is initially full, while B and C are empty.  
+# Tubs are progressively lower (reactions are mostly forward.)  
+# A BIG pipe connects A and B: fast kinetics.  A small pipe connects B and C: slow kinetics. 
+#
+# INTUITION: B, unable to quickly drain into C while at the same time being blasted by a hefty inflow from A,  
+# will experience a transient surge, in excess of its final equilibrium level.
+#
+# * [Compare with the final reaction plot (the red line is B)](#react_5_plot)
+
+# %% [markdown]
+# ![2 Coupled Reactions](../../docs/2_coupled_reactions.png)
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -134,7 +148,7 @@ df.loc[60:]
 dynamics.is_in_equilibrium(tolerance=0.2)
 
 # %% [markdown] tags=[]
-# ## Plots of changes of concentration with time
+# ## <a name="react_5_plot"></a>Plots of changes of concentration with time
 
 # %%
 fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B", "C"], 
