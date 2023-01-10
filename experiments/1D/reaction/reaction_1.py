@@ -19,7 +19,9 @@
 #
 # Diffusion NOT taken into account
 #
-# LAST REVISED: Dec. 6, 2022
+# See also the experiment _"reactions_single_compartment/react_1"_ 
+#
+# LAST REVISED: Dec. 25, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -47,6 +49,9 @@ GraphicLog.config(filename=log_file,
                   components=["vue_cytoscape_1"],
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
+# %% [markdown]
+# # Initialize the System
+
 # %% tags=[]
 # Initialize the system
 chem_data = chem(names=["A", "B"])              # Diffusion NOT taken into account
@@ -59,7 +64,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0), caption="Initial state")
 
 # %%
 bio.get_history()
@@ -90,13 +95,13 @@ bio.describe_state()
 
 # %% [markdown]
 # NOTE: the concentration of species A is increasing, while that of species B is decreasing.
-# All bins have identical concentrations; so, there's no diffusion (and we're not attempting to compute it):
-# [[17. 17. 17.]
+# All bins have identical concentrations; so, there's no diffusion (and we're not attempting to compute it):  
+# [[17. 17. 17.]  
 #  [43. 43. 43.]]
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% [markdown]
@@ -104,7 +109,7 @@ bio.get_history()
 
 # %%
 # Numerous more steps
-bio.react(time_step=0.1, n_steps=10)
+bio.react(time_step=0.1, n_steps=10, snapshots={"sample_bin": 0})
 
 bio.describe_state()
 
@@ -136,7 +141,7 @@ bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_a
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+#bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% [markdown] tags=[]
@@ -150,12 +155,15 @@ fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"],
 fig.show()
 
 # %%
-# Same plot, but with smooth line
+# Same plot, but with a smoothed line
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="Changes in concentrations with time",
+              title="Changes in concentrations with time (smoothed)",
               color_discrete_sequence = ['navy', 'darkorange'],
               labels={"value":"concentration", "variable":"Chemical"},
               line_shape="spline")
 fig.show()
+
+# %% [markdown]
+# ## For more in-depth analysis of this reaction, see the experiment _"reactions_single_compartment/react_1"_ 
 
 # %%

@@ -144,6 +144,27 @@ def test_add_reaction():
     chem = ReactionData(names=["A", "B", "C", "D", "E", "F"])
     chem.set_temp(None)
 
+    # Reactants and the products can't be the same
+    with pytest.raises(Exception):
+        chem.add_reaction(reactants=["A"], products=["A"])
+    with pytest.raises(Exception):
+        chem.add_reaction(reactants=["A"], products=[("A")])
+    with pytest.raises(Exception):
+        chem.add_reaction(reactants=["A"], products=[(1, "A")])
+    with pytest.raises(Exception):
+        chem.add_reaction(reactants=["A"], products=[(1, "A", 1)])
+    with pytest.raises(Exception):
+        chem.add_reaction(reactants=[(2, "B")], products=[(2, "B")])
+    with pytest.raises(Exception):
+        chem.add_reaction(reactants=[(2, "B")], products=[(2, "B", 1)])
+    with pytest.raises(Exception):
+        chem.add_reaction(reactants=["A", "B"], products=["A", "B"])
+    with pytest.raises(Exception):
+        chem.add_reaction(reactants=["A", (3, "B")], products=["A", (3, "B")])
+    #with pytest.raises(Exception):
+        #chem.add_reaction(reactants=["A", "B"], products=["B", "A"])   #TODO: ought to be able to catch this
+
+
     # Add the first (0-th) reaction
     chem.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
@@ -196,6 +217,7 @@ def test_add_reaction():
 
     # Add another reaction (reaction index 2).  This time, first set the temperature
     chem.temp = 200
+
     chem.add_reaction(reactants=[(2, "D", 3)], products=[(1, "C", 2)], forward_rate=11., reverse_rate=13.)
     assert chem.number_of_reactions() == 3
 

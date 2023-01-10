@@ -106,6 +106,12 @@ class ReactionData:
 
 
     def assert_valid_rxn_index(self, index):
+        """
+        Raise an Exception if the specified reaction index isn't valid
+
+        :param index:
+        :return:
+        """
         assert (type(index) == int) and \
                0 <= index < self.number_of_reactions(), \
             f"The requested reaction index ({index}) is not the expected integer the range [0 - {self.number_of_reactions() - 1}], inclusive"
@@ -228,12 +234,12 @@ class ReactionData:
 
 
 
-    def get_reactants(self, i: int) -> (int, int, int):
+    def get_reactants(self, i: int) -> [(int, int, int)]:
         """
-        Return a triplet with details of the reactants of the i-th reaction
+        Return a list of triplets with details of the reactants of the i-th reaction
 
         :param i:   The index (0-based) to identify the reaction of interest
-        :return:    A triplet (stoichiometry, species index, reaction order)
+        :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
         """
         rxn = self.get_reaction(i)
         return rxn["reactants"]
@@ -248,16 +254,16 @@ class ReactionData:
         """
         rxn = self.get_reaction(i)
         reactants = rxn["reactants"]
-        return self.standard_form_chem_eqn(reactants)
+        return self._standard_form_chem_eqn(reactants)
 
 
 
-    def get_products(self, i: int) -> (int, int, int):
+    def get_products(self, i: int) -> [(int, int, int)]:
         """
-        Return a triplet with details of the products of the i-th reaction
+        Return a list of triplets with details of the products of the i-th reaction
 
         :param i:   The index (0-based) to identify the reaction of interest
-        :return:    A triplet (stoichiometry, species index, reaction order)
+        :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
         """
         rxn = self.get_reaction(i)
         return rxn["products"]
@@ -272,7 +278,7 @@ class ReactionData:
         """
         rxn = self.get_reaction(i)
         products = rxn["products"]
-        return self.standard_form_chem_eqn(products)
+        return self._standard_form_chem_eqn(products)
 
 
 
@@ -307,7 +313,7 @@ class ReactionData:
 
 
 
-    def extract_stoichiometry(self, term) -> int:
+    def extract_stoichiometry(self, term: (int, int, int)) -> int:
         """
 
         :param term:
@@ -315,10 +321,10 @@ class ReactionData:
         """
         return term[0]
 
-    def extract_species_index(self, term) -> int:
+    def extract_species_index(self, term: (int, int, int)) -> int:
         return term[1]
 
-    def extract_rxn_order(self, term) -> int:
+    def extract_rxn_order(self, term: (int, int, int)) -> int:
         return term[2]
 
 
@@ -508,26 +514,31 @@ class ReactionData:
 
 
     def add_reaction(self, reactants: Union[int, str, tuple, list], products: Union[int, str, tuple, list],
-                             forward_rate=None, reverse_rate=None,
-                             Delta_H=None, Delta_S=None) -> None:
+                           forward_rate=None, reverse_rate=None,
+                           Delta_H=None, Delta_S=None) -> None:
         """
         Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data
 
-        NOTE: in the next 2 arguments, if the stoichiometry and/or reaction order aren't specified, they're assumed to be 1
+        NOTE: in the reactants and products, if the stoichiometry and/or reaction order aren't specified, they're assumed to be 1
 
         :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
-                                    or simplified terms, as shown in _parse_reaction_term()
+                                    or simplified terms in various formats; for details, see _parse_reaction_term()
         :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction),
-                                    or simplified terms, as shown in _parse_reaction_term()
+                                    or simplified terms in various formats; for details, see _parse_reaction_term()
         :param forward_rate:    [OPTIONAL] Forward reaction rate constant
         :param reverse_rate:    [OPTIONAL] Reverse reaction rate constant
         :param Delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
         :param Delta_S          [OPTIONAL] Change in Entropy (from reactants to products)
         :return:                None
         """
-        reactant_list = [self._parse_reaction_term(r, "reactant") for r in reactants]
-        product_list = [self._parse_reaction_term(r, "product") for r in products]
+        reactant_list = [self._parse_reaction_term(r, "reactant") for r in reactants]   # A list of triples of integers
+        product_list = [self._parse_reaction_term(r, "product") for r in products]      # A list of triples of integers
 
+        # TODO: use a more sophisticated approach to catch indentical reaction sides even if
+        #       terms are reshuffled
+        assert reactant_list != product_list, \
+            f"ReactionData.add_reaction(): the reactants and the products can't be identical! " \
+            f"Internal structure: {reactant_list}"
 
         rxn = {"reactants": reactant_list, "products": product_list,
                "kF": None, "kR": None,
@@ -580,7 +591,7 @@ class ReactionData:
 
 
 
-    def clear_reactions(self) -> None:
+    def clear_reactions_data(self) -> None:
         """
         Get rid of all reactions; start again with "an empty slate" (but still with reference
         to the same data about the chemicals)
@@ -600,21 +611,22 @@ class ReactionData:
     def describe_reactions(self, concise=False, return_as_list=False) -> Union[None, List[str]]:
         """
         Print out, and optionally return a list of, a user-friendly plain-text form of all the reactions
-        EXAMPLE:  ["(0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 , kR = 2.0)"]
+        EXAMPLE:  "(0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
 
         :param concise:         If True, less detail is shown
-        :param return_as_list:  If True, in addition to being printed, a list of reaction descriptions gets returned
+        :param return_as_list:  If True, instead of being printed, a list of reaction descriptions gets returned
+                                    (the main header still gets printed)
         :return:                Either None or a list of strings, based on the flag return_as_list
         """
         print(f"Number of reactions: {self.number_of_reactions()} (at temp. {self.temp - 273.15:,.4g} C)")
 
-        out = []    # Output list being built (and printed out, item-wise)
+        out = []    # Output list being built (item-wise)
         for i, rxn in enumerate(self.reaction_list):    # Loop over all the registered reactions
             reactants = self.extract_reactants(rxn)
             products = self.extract_products(rxn)
 
-            left = self.standard_form_chem_eqn(reactants)       # Left side of the equation, as a user-friendly string
-            right = self.standard_form_chem_eqn(products)       # Right side of the equation
+            left = self._standard_form_chem_eqn(reactants)       # Left side of the equation, as a user-friendly string
+            right = self._standard_form_chem_eqn(products)       # Right side of the equation
 
             rxn_description = f"{i}: {left} <-> {right}"        # Concise start point for a description of the reaction
 
@@ -639,19 +651,22 @@ class ReactionData:
                 if not high_order:
                     rxn_description += " | 1st order in all reactants & products"
 
-            print(rxn_description)          # Print each reaction on a separate line
-            out.append(rxn_description)
+            if return_as_list:
+                out.append(rxn_description)
+            else:
+                print(rxn_description)          # Print each reaction on a separate line
+
 
         if return_as_list:
             return out
 
 
 
-    def standard_form_chem_eqn(self, eqn_side: list) -> str:
+    def _standard_form_chem_eqn(self, eqn_side: list) -> str:
         """
         Return a user-friendly form of the given side of a chemical equation.
 
-        EXAMPLE:  turn [(1, 0, 1), (2, 10, 1)]  into  "Fe + 2 Cl"  (if species 0 is named "Fe" and species 10 is "Cl")
+        EXAMPLE:  turn [(1, 0, 1), (2, 8, 1)]  into  "Fe + 2 Cl"  (if species 0 is named "Fe" and species 8 is "Cl")
 
         :param eqn_side:    A list encoding either side of a chemical equation
         :return:            A string with a user-friendly form of a side of a chemical equation
@@ -796,8 +811,10 @@ class ReactionData:
     def _parse_reaction_term(self, term: Union[int, str, tuple, list], name="term") -> (int, int, int):
         """
         Accept various ways to specify a reaction term, and return a standardized tuple form of it.
-        In the tuples or lists, the 1st entry is the stoichiometry, the 2nd one is the chemical name or index,
-        and the option 3rd one is the reaction order
+        In the tuples or lists:
+            - 1st entry is the stoichiometry
+            - 2nd one is the chemical name or index,
+            - optional 3rd one is the reaction order
 
         EXAMPLES (*assuming* that the chemical species with index 5 is called "F"):
             5       gets turned into:   (1, 5, 1)

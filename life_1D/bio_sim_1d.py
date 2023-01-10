@@ -4,7 +4,8 @@ import math
 from scipy.fft import rfft, rfftfreq    # Fast Fourier Transforms to extract frequency components
 from scipy.stats import norm
 from typing import Union, List, Tuple
-from modules.movies.movies import Movie
+#from modules.movies.movies import Movie    # OBSOLETED
+from modules.movies.movies import MovieTabular
 from modules.reactions.reaction_dynamics import ReactionDynamics
 import plotly.express as px
 from modules.html_log.html_log import HtmlLog as log
@@ -80,7 +81,8 @@ class BioSim1D:
 
         self.reaction_dynamics = None       # Object of class "ReactionDynamics"
 
-        self.history = Movie(tabular=True)  # To store user-selected snapshots of (parts of) the system,
+        self.history = MovieTabular()
+        #self.history = Movie(tabular=True)  # To store user-selected snapshots of (parts of) the system,
                                             #   whenever requested by the user.
                                             #   Note that we're using the "tabular" format - friendly to Pandas
 
@@ -747,7 +749,7 @@ class BioSim1D:
         :param concise: If True, only produce a minimalist printout with just the concentration values
         :return:        None
         """
-        print(f"SYSTEM STATE at Time t = {self.system_time}:")
+        print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
 
         if concise:             # A minimalist printout...
             print(self.system)   # ...only showing the concentration data (a Numpy array)
@@ -1243,7 +1245,9 @@ class BioSim1D:
         """
         Update the system concentrations as a result of all the reactions in all bins - taking
         the presence of membranes into account, if applicable.
-        CAUTION : NO diffusion is performed.
+
+        CAUTION : NO diffusion is performed. Use this function
+                  only if you intend to do reactions without diffusion!
 
         The duration and granularity of the reactions is specified with 2 out of the 3 parameters:
             total_duration, time_step, n_steps
@@ -1261,7 +1265,11 @@ class BioSim1D:
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
         :param snapshots:       OPTIONAL dict that may contain any the following keys:
-                                    "frequency", "sample_bin", "sample_species"
+                                        -"frequency"
+                                        -"sample_bin" (Required integer; if not present, no snapshots are taken)
+                                        -"species" (NOT YET IMPLEMENTED)
+                                        -"initial_caption" (default blank. NOT YET IMPLEMENTED)
+                                        -"final_caption" (default blank. NOT YET IMPLEMENTED)
                                     If provided, take a system snapshot after running a multiple
                                     of "frequency" run steps (default 1, i.e. at every step.)
                                     EXAMPLE: snapshots={"frequency": 2, "sample_bin": 0}
@@ -1271,11 +1279,15 @@ class BioSim1D:
                                                              time_step=time_step,
                                                              n_steps=n_steps)
 
-        # TODO: validation; also, implement "sample_species" option for snapshots
-        if snapshots is None:
-            frequency = None
+        # TODO: validation; also, implement "species" option for snapshots
+        first_snapshot = True
+        if snapshots:
+            frequency = snapshots.get("frequency", 1)   # If not present, it will be 1
+            sample_bin = snapshots.get("sample_bin", None)   # If not present, it will be None
         else:
-            frequency = snapshots.get("frequency", 1)
+            frequency = None
+            sample_bin = None
+
 
         for i in range(n_steps):
             self.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
@@ -1286,8 +1298,8 @@ class BioSim1D:
 
             self.system_time += time_step
             # Preserve some of the data, as requested
-            if (frequency is not None) and ((i+1)%frequency == 0):
-                self.save_snapshot(self.bin_snapshot(bin_address = snapshots["sample_bin"]))
+            if snapshots and ((i+1)%frequency == 0) and (sample_bin is not None):
+                self.add_snapshot(self.bin_snapshot(bin_address = snapshots["sample_bin"]))
 
 
 
@@ -1332,7 +1344,7 @@ class BioSim1D:
             #print(f"\conc_array in bin {bin_n}: ", conc_array)
 
             # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-            increment_vector = self.reaction_dynamics.reaction_step_orchestrator(delta_time=delta_time, conc_array=conc_array)
+            increment_vector = self.reaction_dynamics.reaction_step_orchestrator(delta_time_full=delta_time, conc_array=conc_array)
 
             # Replace the "bin_n" column of the self.delta_reactions matrix with the contents of the vector increment_vector
             self.delta_reactions[:, bin_n] = np.array([increment_vector])
@@ -1348,7 +1360,7 @@ class BioSim1D:
                 #print(f"\n Post-membrane side conc_dict in bin {bin_n}: ", conc_dict)
 
                 # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-                increment_vector = self.reaction_dynamics.reaction_step_orchestrator(delta_time=delta_time, conc_array=conc_array)
+                increment_vector = self.reaction_dynamics.reaction_step_orchestrator(delta_time_full=delta_time, conc_array=conc_array)
 
                 # Replace the "bin_n" column of the self.delta_reactions_B matrix with the contents of the vector increment_vector
                 self.delta_reactions_B[:, bin_n] = np.array([increment_vector])
@@ -1599,12 +1611,12 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
     
-    def save_snapshot(self, data_snapshot: dict, caption = "") -> None:
+    def add_snapshot(self, data_snapshot: dict, caption ="") -> None:
         """
         Preserve some data value (passed as dictionary) in the history, linked to the
         current System Time.
 
-        EXAMPLE:  save_snapshot(data_snapshot = {"concentration_A": 12.5, "concentration_B": 3.7},
+        EXAMPLE:  add_snapshot(data_snapshot = {"concentration_A": 12.5, "concentration_B": 3.7},
                                 caption="Just prior to infusion")
 
         IMPORTANT: if the data is not immutable, then it ought to be cloned first,
@@ -1614,7 +1626,7 @@ class BioSim1D:
         :param caption:         Optional caption to attach to this preserved data
         :return:                None
         """
-        self.history.store(pars=self.system_time,
+        self.history.store(par=self.system_time,
                            data_snapshot = data_snapshot, caption=caption)
 
 
@@ -1623,7 +1635,7 @@ class BioSim1D:
     def get_history(self) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
-        using save_snapshot()
+        using add_snapshot()
 
         :return:        a Pandas dataframe
         """

@@ -20,7 +20,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Nov. 28, 2022
+# LAST REVISED: Dec. 25, 2022
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -67,7 +67,7 @@ bio.describe_state()
 
 # %%
 # Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 0), caption="Initial state")
 bio.get_history()
 
 # %%
@@ -86,7 +86,7 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %%
 # First step
-bio.react(time_step=0.01, n_steps=1)
+bio.react(time_step=0.01, n_steps=1, snapshots={"sample_bin": 0})
 bio.describe_state()
 
 # %% [markdown]
@@ -98,13 +98,11 @@ bio.describe_state()
 #  [0.128]]
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %%
 # Identical 2nd step
-bio.react(time_step=0.01, n_steps=1)
+bio.react(time_step=0.01, n_steps=1, snapshots={"sample_bin": 0})
 bio.describe_state()
 
 # %% [markdown]
@@ -116,8 +114,6 @@ bio.describe_state()
 #  [0.17353152]]
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% [markdown]
@@ -125,7 +121,7 @@ bio.get_history()
 
 # %%
 # Numerous more identical steps, to equilibrium
-bio.react(time_step=0.01, n_steps=200)
+bio.react(time_step=0.01, n_steps=200, snapshots={"sample_bin": 0, "frequency": 10})
 bio.describe_state()
 
 # %% [markdown]
@@ -166,8 +162,6 @@ equil = -(Rf0 * A_eq * B_eq - Rf1 * C_eq * D_eq) + (Rb0 * C_eq - Rb1 * E_eq)
 print("\nAt equilibrium: ", equil, " (this should be close to 0 at equilibrium)")
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.save_snapshot(bio.bin_snapshot(bin_address = 0))
 bio.get_history()
 
 # %% [markdown] tags=[]

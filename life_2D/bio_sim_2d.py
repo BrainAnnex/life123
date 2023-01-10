@@ -1,8 +1,7 @@
 import numpy as np
 import pandas as pd
 from typing import Union, List, Tuple
-from modules.movies.movies import Movie
-#from modules.reactions.reaction_dynamics import ReactionDynamics
+from modules.movies.movies import MovieTabular
 from modules.reactions.reaction_dynamics import ReactionDynamics
 
 
@@ -592,7 +591,7 @@ class BioSim2D:
 
 
                 # Obtain the Delta-conc for each species, for the current bin
-                increment_vector = self.reaction_dynamics.reaction_step_orchestrator(delta_time=delta_time, conc_array=conc_array)
+                increment_vector = self.reaction_dynamics.reaction_step_orchestrator(delta_time_full=delta_time, conc_array=conc_array)
                                                                                                     #delta_time=delta_time)
 
                 # Replace the appropriate column of the self.delta_reactions matrix

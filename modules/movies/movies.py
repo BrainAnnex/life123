@@ -42,9 +42,9 @@ class MovieTabular:
 
 
 
-    def store(self, par, data_snapshot: dict, caption ="") -> None:
+    def store(self, par, data_snapshot: dict, caption="") -> None:
         """
-        Save up the given data snapshot
+        Save up the given data snapshot, alongside the specified parameter value and optional caption
 
         EXAMPLE :
                 store(8., {"A": 1., "B": 2.}, "State immediately before injection of 2nd reagent")
@@ -52,7 +52,7 @@ class MovieTabular:
         :param par:             Typically, the System Time - but could be anything that parametrizes the snapshots
                                     (e.g., a dictionary, or any desired data structure.)
                                     It doesn't have to remain consistent, but it's probably good practice to keep it so
-        :param data_snapshot:   A dict
+        :param data_snapshot:   A dict of data to preserve for later use
         :param caption:         OPTIONAL string to describe the snapshot
         :return:                None
         """
@@ -323,7 +323,7 @@ class MovieGeneral:
 
 
 
-#############    *** BEING PHASED OUT ***    ##############################
+#############    *** DEPRECATED.  Will be removed in the next version ***    ##############################
 
 class Movie:
     """
@@ -367,7 +367,7 @@ class Movie:
         :param tabular:         A flag indicating whether the "tabular" format will be used in this object.
                                     (Explained in the notes above)
         """
-        print("\n***********  DEPRECATED CLASS!   Use MovieTabular, MovieArray, or MovieGeneral instead  ***********\n")
+        print("\n***********  DEPRECATED CLASS: 'Movie'!   Use MovieTabular, MovieArray, or MovieGeneral instead  ***********\n")
         self.parameter_name = parameter_name
         self.tabular = tabular
 

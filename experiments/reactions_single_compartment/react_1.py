@@ -13,12 +13,12 @@
 # ---
 
 # %% [markdown]
-# ### A simple A <-> B reaction between 2 species,
+# ## A simple A <-> B reaction between 2 species
 # with 1st-order kinetics in both directions, taken to equilibrium
 #
-# Based on the experiment _"1D/reactions/reaction_1"_ ; this is simply the "single-compartment" version of it.
+# See also the experiment _"1D/reactions/reaction_1"_ ; this is the "single-compartment" version of it.
 #
-# LAST REVISED: Dec. 21, 2022
+# LAST REVISED: Jan. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -117,7 +117,8 @@ dynamics.get_system_conc()
 #
 
 # %%
-dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc_dict())
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium()
 
 # %% [markdown]
 # #### Note that, because of the high initial concentration of B relative to A, the overall reaction has proceeded **in reverse**
@@ -127,7 +128,7 @@ dynamics.is_in_equilibrium(rxn_index=0, conc=dynamics.get_conc_dict())
 
 # %%
 fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="Changes in concentrations with time",
+              title="Reaction A <-> B .  Changes in concentrations with time",
               color_discrete_sequence = ['navy', 'darkorange'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
@@ -175,5 +176,7 @@ fig.show()
 # %% [markdown]
 # ### At t=0, [A]=10 and [A] has a high rate of change (70);  
 # ### as the system approaches equilibrium, [A] approaches a value of 24, and its rate of change decays to zero.
+#
+# The curves are jagged because of limitations of numerically estimating derivatives.
 
 # %%

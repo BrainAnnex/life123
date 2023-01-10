@@ -105,7 +105,7 @@ bio.show_system_snapshot()
 
 # %%
 # Save the state of the concentrations of all species at the middle bin
-bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
@@ -157,7 +157,7 @@ bio.show_system_snapshot()
 
 # %%
 # Save the state of the concentrations of all species at the middle bin
-bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
@@ -197,7 +197,7 @@ bio.show_system_snapshot()
 
 # %%
 # Save the state of the concentrations of all species at the middle bin
-bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
@@ -244,7 +244,7 @@ bio.show_system_snapshot()
 
 # %%
 # Save the state of the concentrations of all species at the middle bin
-bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
@@ -288,7 +288,7 @@ bio.show_system_snapshot()
 
 # %%
 # Save the state of the concentrations of all species at the middle bin
-bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
@@ -325,7 +325,7 @@ bio.show_system_snapshot()
 
 # %%
 # Save the state of the concentrations of all species at the middle bin
-bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
@@ -362,7 +362,7 @@ bio.show_system_snapshot()
 
 # %%
 # Save the state of the concentrations of all species at the middle bin
-bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
@@ -399,7 +399,7 @@ bio.show_system_snapshot()
 
 # %%
 # Save the state of the concentrations of all species at the middle bin
-bio.save_snapshot(bio.bin_snapshot(bin_address = 3))
+bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
