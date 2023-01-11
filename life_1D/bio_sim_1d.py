@@ -81,8 +81,7 @@ class BioSim1D:
 
         self.reaction_dynamics = None       # Object of class "ReactionDynamics"
 
-        self.history = MovieTabular()
-        #self.history = Movie(tabular=True)  # To store user-selected snapshots of (parts of) the system,
+        self.history = MovieTabular()       # To store user-selected snapshots of (parts of) the system,
                                             #   whenever requested by the user.
                                             #   Note that we're using the "tabular" format - friendly to Pandas
 

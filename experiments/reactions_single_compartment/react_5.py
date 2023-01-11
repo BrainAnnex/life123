@@ -18,7 +18,7 @@
 # All 1st order. Taken to equilibrium. Both reactions are mostly forward.
 # The concentration of the intermediate product B manifests 1 oscillation (transient "overshoot")
 #
-# (Adaptive variable time resolution is used)
+# (Adaptive variable time resolution is used, with extensive diagnostics.)
 #
 # LAST REVISED: Jan. 9, 2023
 
@@ -112,15 +112,16 @@ dynamics.history.get()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 #dynamics.verbose_list = [1, 2, 3]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
-# The changes of concentrations vary very rapidly early on; so, we'll be using dynamic_step=4 , i.e. increase time resolution
-# by x4 initially, as long as the reaction remains "fast" (based on a threshold of 5% change)
+# The changes of concentrations vary very rapidly early on; 
+# so, we'll be using the dynamic_step option to increase time resolution, 
+# as long as the reaction remains "fast" (based on a threshold of % change, as specified by fast_threshold)
 dynamics.single_compartment_react(time_step=0.02, reaction_duration=0.4,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   dynamic_step=10, fast_threshold=15)      
 
 # %% [markdown]
-# ### Note: the argument _dynamic_step=10_ splits the time steps in 10 for any reactions that are "fast-changing" (as determined using _fast_threshold=15_ )
+# ### Note: the argument  _dynamic_step=10_  splits the time steps in 10 for any reactions that are "fast-changing" (as determined using _fast_threshold=15_ )
 
 # %%
 df = dynamics.history.get()
@@ -134,7 +135,7 @@ df.loc[60:]
 # ### Notice:
 # * the reaction proceeds in smaller steps in the earlier times (until t=0.160, in line 80), when the concentrations are changing much more rapidly 
 #
-# * between lines 70 and 80, only rection #1 is regarded as fast-changing (based on the fast_threshold we specified in the _simulation run_); previously, both reactions were regarded as fast-changing
+# * between lines 70 and 80, only rection #1 is regarded as fast-changing (based on the fast_threshold we specified in the _simulation run_); at earlier times, both reactions were regarded as fast-changing
 #
 # * "fast-changing" and "slow-changing" is NOT the same thing as "fast" and "slow" reaction kinetics.  For example, reaction #1, though it has much slower kinetics than reaction #0, involves large relative concentration changes because [C] is small
 #
