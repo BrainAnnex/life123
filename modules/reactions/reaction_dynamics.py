@@ -450,17 +450,23 @@ class ReactionDynamics:
         assert conc_array is not None, "reaction_step_orchestrator(): the argument 'conc_array' must be set to a Numpy array"
 
         fast_threshold_fraction = fast_threshold / 100.
+
         if 1 in self.verbose_list:
             print(f"************ SYSTEM TIME: {self.system_time:,.4g}")
 
 
-        if dynamic_step == 1:
+        if dynamic_step == 1:   # If the variable time step option was NOT requested
             if 1 in self.verbose_list:
                 print("    NO adaptive variable time resolution used")
-                print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s)")
+                print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s) with a single step")
 
             delta_concentrations = self.single_reaction_step_FIXED_RESOLUTION(delta_time=delta_time_full,
                                                                               conc_array=conc_array, rxn_list=None)
+
+        # Using variable time steps  (TODO: move this branch to its own function)
+        # delta_concentrations = self.advance_variable_time_steps(conc_array, dynamic_step, delta_time_full, fast_threshold_fraction, snapshots)
+
+        # TODO: start deleting here
         elif self.are_all_slow_rxns():
             if 1 in self.verbose_list:
                 print("    All the reactions are SLOW")
@@ -478,7 +484,6 @@ class ReactionDynamics:
                     print(f"    SLOW REACTIONS: {slow_rxns}")
                     print(f"    Processing SLOW reactions")
 
-            # Process all the slow reactions
             if slow_rxns == []:
                 # If there are no slow reactions
                 delta_concentrations_slow = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)  # One element per chemical species
@@ -505,7 +510,7 @@ class ReactionDynamics:
                                                                             fast_threshold_fraction=fast_threshold_fraction,
                                                                             conc_array=local_conc_array, rxn_list=fast_rxns,
                                                                             substep_number=substep)
-                local_conc_array += incr_vector
+                local_conc_array += incr_vector     # TODO: also incorporate a scaled-down fraction of delta_concentrations_slow (IF there are any slow rxn's)
                 delta_concentrations_fast += incr_vector
                 # Preserve the intermediate-state data, if requested
                 if snapshots and snapshots.get("show_intermediates") and substep < dynamic_step-1:  # Skip the last one, which will be handled by the caller
@@ -527,6 +532,96 @@ class ReactionDynamics:
 
             delta_concentrations = delta_concentrations_slow + delta_concentrations_fast
         # END IF
+        # TODO: end deleting here
+
+
+        return  delta_concentrations
+
+
+
+    def advance_variable_time_steps(self, conc_array, dynamic_step, delta_time_full, fast_threshold_fraction, snapshots) -> np.array:
+        """
+
+        :param conc_array:
+        :param dynamic_step:
+        :param delta_time_full:
+        :param fast_threshold_fraction:
+        :param snapshots:
+        :return:
+        """
+        if self.are_all_slow_rxns():
+            if 1 in self.verbose_list:
+                print("    All the reactions are SLOW")
+                print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s)")
+
+            delta_concentrations = self.single_reaction_step_VARIABLE_RESOLUTION(delta_time=delta_time_full, time_subdivision=1,
+                                                                                 fast_threshold_fraction=fast_threshold_fraction,
+                                                                                 conc_array=conc_array, rxn_list=None)
+            return delta_concentrations
+
+
+        # If we get thus far, not all reactions are slow
+
+        '''
+            Process all the SLOW reactions
+        '''
+        slow_rxns = self.slow_rxns()
+        if 1 in self.verbose_list:
+            if slow_rxns == []:
+                print(f"    There are NO SLOW reactions")
+            else:
+                print(f"    SLOW REACTIONS: {slow_rxns}")
+                print(f"    Processing SLOW reactions")
+
+        if slow_rxns == []:
+            # If there are no slow reactions
+            delta_concentrations_slow = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)  # One element per chemical species
+        else:
+            # Time-advance the simulation for all the slow reactions
+            delta_concentrations_slow = self.single_reaction_step_VARIABLE_RESOLUTION(delta_time=delta_time_full, time_subdivision=1,
+                                                                                      fast_threshold_fraction=fast_threshold_fraction,
+                                                                                      conc_array=conc_array, rxn_list=slow_rxns)
+
+        '''
+            Process all the FAST reactions
+        '''
+        fast_rxns = self.fast_rxns()
+        if 1 in self.verbose_list:
+            print(f"    FAST REACTIONS: {fast_rxns}")
+
+        local_conc_array = conc_array.copy()   # Saved as an unchanging baseline copy
+        delta_concentrations_fast = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)     # One element per chemical species
+        reduced_time_step = delta_time_full / dynamic_step
+        for substep in range(dynamic_step):
+            if 1 in self.verbose_list:
+                local_system_time = self.system_time + substep * reduced_time_step
+                print(f"    - substep: {substep} (in processing of FAST reactions, i.e. {fast_rxns}).  'Local' system time: {local_system_time:,.4g}")
+
+            incr_vector = self.single_reaction_step_VARIABLE_RESOLUTION(delta_time=reduced_time_step, time_subdivision=dynamic_step,
+                                                                        fast_threshold_fraction=fast_threshold_fraction,
+                                                                        conc_array=local_conc_array, rxn_list=fast_rxns,
+                                                                        substep_number=substep)
+            local_conc_array += incr_vector     # TODO: also incorporate a scaled-down fraction of delta_concentrations_slow (IF there are any slow rxn's)
+            delta_concentrations_fast += incr_vector
+            # Preserve the intermediate-state data, if requested
+            if snapshots and snapshots.get("show_intermediates") and substep < dynamic_step-1:  # Skip the last one, which will be handled by the caller
+                species_to_show = snapshots.get("species")          # If not present, it will be None (meaning show all)
+                time = self.system_time + (substep+1) * reduced_time_step
+                self.add_snapshot(time=time, species=species_to_show,
+                                  system_data=local_conc_array,
+                                  caption=f"Interm. step, due to the fast rxns: {fast_rxns}")
+                if self.diagnostics:
+                    self.diagnostic_data_baselines.store(par=time,
+                                                         data_snapshot=self.get_conc_dict(system_data=local_conc_array))
+
+
+        # Combine the results of all the slow reactions and all the fast reactions
+        if 2 in self.verbose_list:
+            print("      delta_time: ", delta_time_full)
+            print("          delta_concentrations_slow: ", delta_concentrations_slow)
+            print("          delta_concentrations_fast: ", delta_concentrations_fast)
+
+        delta_concentrations = delta_concentrations_slow + delta_concentrations_fast
 
         return  delta_concentrations
 
