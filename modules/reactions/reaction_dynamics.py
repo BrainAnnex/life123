@@ -529,7 +529,7 @@ class ReactionDynamics:
             if slow_rxns == []:
                 print(f"    There are NO SLOW reactions")
             else:
-                print(f"    SLOW REACTIONS: {slow_rxns}")
+                print(f"    * SLOW REACTIONS: {slow_rxns}")
                 print(f"    Processing SLOW reactions")
 
         if slow_rxns == []:
@@ -548,7 +548,7 @@ class ReactionDynamics:
         assert fast_rxns != [], "advance_variable_time_steps(): INTERNAL ERROR.  No fast reactions found"
 
         if 1 in self.verbose_list:
-            print(f"    FAST REACTIONS: {fast_rxns}")
+            print(f"    * FAST REACTIONS: {fast_rxns}")
 
         local_conc_array = conc_array.copy()    # Duplicate the array conc_array, to avoid altering it
                                                 # local_conc_array is the best estimate of the System state at the start of each substep
@@ -908,7 +908,7 @@ class ReactionDynamics:
                 if self.get_rxn_speed(rxn_index) == "S":
                     msg = "left tagged as 'S'"
                 else:
-                    msg = "flipped tag to 'F'"
+                    msg = "FLIPPED TAG to 'F'"
                 if abs(delta_conc) * time_subdivision > fast_threshold_fraction * baseline_conc:
                     sign = ">"
                 else:
@@ -1378,65 +1378,6 @@ class ReactionDynamics:
 
 
 
-    def _explain_reactions_helper(self, active_list, row_baseline, row_list) -> bool:
-        """
-        Helper function for explain_reactions()
-
-        :param active_list: 
-        :param row_baseline: 
-        :param row_list: 
-        :return:            True is the diagnostic data is consistent for this (sub)step, or False otherwise
-        """
-        print("-----------")
-        print("ROW of baseline data: ", row_baseline)
-    
-        current_time = self.diagnostic_data_baselines.get().loc[row_baseline]['TIME']
-        print(f"TIME = {current_time:.5g}")
-    
-        print("row_list: ", row_list)
-        print("active_list: ", active_list)
-    
-        chemical_list = self.reaction_data.get_all_names()
-        chemical_delta_list = self.delta_names()
-    
-        conc_arr_before = self.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy().astype(float)
-        print("baseline concentrations: ", conc_arr_before)
-    
-        delta_cumulative = np.zeros(self.reaction_data.number_of_chemicals(),
-                                    dtype=float)  # One element per chemical species
-    
-        # For each reaction
-        for rxn_index in range(self.reaction_data.number_of_reactions()):
-            if (rxn_index in active_list):
-                row = row_list[rxn_index]
-                delta_rxn = self.get_diagnostic_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy().astype(float)
-            else:
-                delta_rxn = np.zeros(self.reaction_data.number_of_chemicals(),
-                                     dtype=float)   # TODO: this will change in a future version!
-    
-            print(f"From rxn {rxn_index}: delta_rxn = {delta_rxn}")
-            delta_cumulative += delta_rxn
-    
-        print("delta_cumulative: ", delta_cumulative)
-    
-        conc_after = conc_arr_before + delta_cumulative
-        print("updated concentrations: ", conc_after)
-    
-        next_system_state = self.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
-        print(f"concentrations from the next row ({row_baseline + 1}) of the system state: ", next_system_state)
-    
-        status = np.allclose(conc_after.astype(float), next_system_state.astype(float))
-        if status:
-            print("Match OK")
-        else:
-            print("********************** MISMATCH!!! **********************")
-    
-        print("-----------")
-    
-        return status
-
-
-
     def explain_reactions(self) -> bool:
         """
         Provide a detailed explanation of all the steps/substeps of the reactions,
@@ -1449,7 +1390,9 @@ class ReactionDynamics:
         :return:    True is the diagnostic data is consistent for all the steps/substeps of all the reactions,
                     or False otherwise
         """
-        assert self.reaction_data.number_of_reactions() == 2, \
+        number_reactions = self.reaction_data.number_of_reactions()
+
+        assert number_reactions == 2, \
             "explain_reactions() currently ONLY works when exactly 2 reactions are present. " \
             "Future versions will lift this restriction"
 
@@ -1464,37 +1407,41 @@ class ReactionDynamics:
         while row_baseline < len(self.diagnostic_data_baselines.get()) - 2:
             row_baseline += 1
             #if self.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['time_subdivision'] == self.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['time_subdivision']:
-            if active_list == [0, 1]:    # ALL the reactions
+            if active_list == [0, 1]:    # ALL the reactions  TODO: generalize
                 print("Normal advance (single-step across all tables)")
             else:
                 print("Advance a step in the tables for the following reactions: ", active_list)
 
             for i in active_list:
                 row_list[i] += 1
-    
+
+            # TODO: generalize
             time_sub0 = self.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['time_subdivision']
             time_sub1 = self.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['time_subdivision']
             print("time subdivisions: ", time_sub0, time_sub1)
-    
+
+            # TODO: generalize
             substep0 = self.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['substep']
             substep1 = self.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['substep']
             print("substeps: ", substep0, substep1)
-    
-            if active_list == [0]:
+
+
+            last_substep = False
+            if active_list == [0]:  # TODO: generalize
                 if substep0 == time_sub0 - 1:
                     print("At LAST SUBSTEP of rxn 0")
-                    active_list = [0,1]
+                    last_substep = True
                 else:
                     print("Not at last substep of rxn 0")
             elif active_list == [1]:
                 if substep1 == time_sub1 - 1:
                     print("At LAST SUBSTEP of rxn 1")
-                    active_list = [0,1]
+                    last_substep = True
                 else:
                     print("Not at last substep of rxn 1")
             else:   # The active_list is ALL rxn's
                 if time_sub0 > time_sub1:
-                    active_list = [0]
+                    active_list = [0]   # TODO: generalize
                     print("CHANGING active_list (rxns to advance in substeps) to: ", active_list)
                 elif time_sub1 > time_sub0:
                     active_list = [1]
@@ -1503,12 +1450,85 @@ class ReactionDynamics:
                     print("Will be advancing all reactions in lockstep")
     
     
-            #status = good(active_list=active_list, row_baseline=row_baseline, row_list=row_list)
-            status = self._explain_reactions_helper(active_list=active_list, row_baseline=row_baseline, row_list=row_list)
-    
+            status = self._explain_reactions_helper(active_list=active_list, row_baseline=row_baseline, row_list=row_list,
+                                                    time_subdivision=max(time_sub0, time_sub1)) # TODO: generalize
+
+            if last_substep:
+                print("Changing active list to ALL reactions")
+                active_list = [0,1]     # TODO: generalize
+
+
             if not status:
-                return False
-            #else:
-            #print("TBA")
+                return False    # Error termination
+
+        # END while
     
-        return True
+        return True             # Successful termination
+
+
+
+    def _explain_reactions_helper(self, active_list, row_baseline, row_list, time_subdivision=None) -> bool:
+        """
+        Helper function for explain_reactions()
+
+        :param active_list:
+        :param row_baseline:
+        :param row_list:
+        :param time_subdivision:
+        :return:                True is the diagnostic data is consistent for this (sub)step, or False otherwise
+        """
+        print("-----------")
+        print("ROW of baseline data: ", row_baseline)
+
+        current_time = self.diagnostic_data_baselines.get().loc[row_baseline]['TIME']
+        print(f"TIME = {current_time:.5g}")
+
+        print("row_list: ", row_list)
+        print("active_list: ", active_list)
+
+        chemical_list = self.reaction_data.get_all_names()
+        chemical_delta_list = self.delta_names()
+
+        conc_arr_before = self.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy().astype(float)
+        print("baseline concentrations: ", conc_arr_before)
+
+        delta_cumulative = np.zeros(self.reaction_data.number_of_chemicals(),
+                                    dtype=float)  # One element per chemical species
+
+        # For each reaction
+        for rxn_index in range(self.reaction_data.number_of_reactions()):
+            if (rxn_index in active_list):  # If reaction is tagged as "fast"
+                row = row_list[rxn_index]   # Row in the data frame for the diagnostic data on this reaction
+                delta_rxn = self.get_diagnostic_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy().astype(float)
+                print(f"From fast rxn {rxn_index}: delta_rxn = {delta_rxn}")
+            else:                           # If reaction is tagged as "slow"
+                row = row_list[rxn_index]   # Row in the data frame for the diagnostic data on this reaction
+                #time_subdivision = self.get_diagnostic_data(rxn_index=rxn_index).loc[row]['time_subdivision']
+                delta_rxn = self.get_diagnostic_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy().astype(float) / time_subdivision
+                #delta_rxn = np.zeros(self.reaction_data.number_of_chemicals(),
+                #                     dtype=float)   # This is the way it was in release beta 19
+                print(f"From slow rxn {rxn_index}: delta_rxn = {delta_rxn} (using time_subdivision {time_subdivision})")
+
+
+            delta_cumulative += delta_rxn
+        # END for
+
+        print("delta_cumulative: ", delta_cumulative)
+
+        conc_after = conc_arr_before + delta_cumulative
+        print("updated concentrations: ", conc_after)
+
+        next_system_state = self.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
+        print(f"concentrations from the next row ({row_baseline + 1}) of the system state: ", next_system_state)
+
+        status = np.allclose(conc_after.astype(float), next_system_state.astype(float))
+        if status:
+            print("Match OK")
+        else:
+            print("****************************************   MISMATCH!!!  ****************************************")
+
+        print("-----------")
+
+        return status
+
+

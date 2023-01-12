@@ -19,7 +19,7 @@
 #
 # (Adaptive variable time resolution is used, with extensive diagnostics.)
 #
-# LAST REVISED: Jan. 10, 2023
+# LAST REVISED: Jan. 11, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -184,13 +184,13 @@ dynamics.explain_reactions()
 
 # %%
 
-# %% [markdown]
+# %% [markdown] tags=[]
 # # Re-run with constanst steps
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
 
-# %%
+# %% tags=[]
 dynamics.set_conc([50., 0, 0.], snapshot=True)
 
 # %%

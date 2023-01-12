@@ -20,7 +20,7 @@
 #
 # (Adaptive variable time resolution is used, with extensive diagnostics.)
 #
-# LAST REVISED: Jan. 9, 2023
+# LAST REVISED: Jan. 11, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -202,7 +202,7 @@ dynamics.get_diagnostic_data(rxn_index=1).loc[60:]
 # ### Provide a detailed explanation of all the steps/substeps of the reactions, from the saved diagnostic data
 
 # %%
-dynamics.explain_reactions()
+# dynamics.explain_reactions()     # Uncomment if desired
 
 # %%
 
