@@ -280,7 +280,7 @@ def test_adaptive_time_resolution_1():
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=kF, reverse_rate=kR)   # Re-add same reaction
 
     result = rxn.reaction_step_orchestrator(delta_time_full=0.1, conc_array=conc_array,
-                                            dynamic_step=2, fast_threshold=5)
+                                            dynamic_steps=2, fast_threshold=5)
     # The above call results in 2 time steps
     # Check the calculations, based on the forward Euler method
     half_step_conc = conc_array + [fwd_delta ,rev_delta]    # [13.5 46.5]   These are the conc's halfway thru delta_time_full
@@ -296,7 +296,7 @@ def test_adaptive_time_resolution_1():
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=kF, reverse_rate=kR)   # Re-add same reaction
     rxn.system = conc_array.copy()      # The copy() is to avoid messing up conc_array
     rxn.system_time = 0.
-    rxn.single_compartment_react(time_step=0.1, n_steps=1, dynamic_step=2, fast_threshold=5)
+    rxn.single_compartment_react(time_step=0.1, n_steps=1, dynamic_steps=2, fast_threshold=5)
 
     assert np.allclose(rxn.system_time, 0.1)
     assert np.allclose(rxn.system, conc_array + np.array([fwd_delta ,rev_delta]))     # [16.125, 43.875]
@@ -337,7 +337,7 @@ def test_adaptive_time_resolution_2():
     chem_data.add_reaction(reactants=["A" , "B"], products=["C"],
                            forward_rate=kF, reverse_rate=kR)        # Re-add the reaction
     result = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
-                                            dynamic_step=time_subdivision, fast_threshold=5)
+                                            dynamic_steps=time_subdivision, fast_threshold=5)
     # Check the calculations, based on the forward Euler method
     half_step_conc = conc_array + [delta_A ,delta_B, delta_C]    # [5.08 45.08 24.92]  These are the conc's halfway thru delta_time_full
 
@@ -358,7 +358,7 @@ def test_adaptive_time_resolution_2():
                            forward_rate=5., reverse_rate=2.)        # Re-add the reaction
     rxn.system = conc_array.copy()      # The copy() is to avoid messing up conc_array
     rxn.system_time = 0.
-    rxn.single_compartment_react(time_step=delta_time_full_interval, n_steps=1, dynamic_step=time_subdivision, fast_threshold=5)
+    rxn.single_compartment_react(time_step=delta_time_full_interval, n_steps=1, dynamic_steps=time_subdivision, fast_threshold=5)
 
     assert np.allclose(rxn.system_time, delta_time_full_interval)
     assert np.allclose(rxn.system,
@@ -367,14 +367,14 @@ def test_adaptive_time_resolution_2():
 
     # Do one more step at the high level
     rxn.single_compartment_react(time_step=delta_time_full_interval,
-                                 n_steps=1, dynamic_step=time_subdivision, fast_threshold=5)
+                                 n_steps=1, dynamic_steps=time_subdivision, fast_threshold=5)
     assert np.allclose(rxn.system_time, 2*delta_time_full_interval)     # system_time now is 0.008
     assert np.allclose(rxn.system, np.array([1.13726186, 41.13726186, 28.86273814]))
 
 
     # Do several (7) more steps at the high level
     rxn.single_compartment_react(time_step=delta_time_full_interval,
-                                 n_steps=7, dynamic_step=time_subdivision, fast_threshold=5)
+                                 n_steps=7, dynamic_steps=time_subdivision, fast_threshold=5)
     assert np.allclose(rxn.system_time, 0.036)  # Note that 0.036 is 0.008 + 7 * 0.004
     assert np.allclose(rxn.system, np.array([0.29501266, 40.29501266, 29.70498734]))
 
@@ -415,7 +415,7 @@ def test_adaptive_time_resolution_3():
     chem_data.add_reaction(reactants=[(2, "A", 2)], products=["C"],
                            forward_rate=kF, reverse_rate=kR)        # Re-add the reaction
     result = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
-                                            dynamic_step=time_subdivision, fast_threshold=5)
+                                            dynamic_steps=time_subdivision, fast_threshold=5)
 
     # Check the calculations, based on the forward Euler method
 
@@ -460,7 +460,7 @@ def test_adaptive_time_resolution_3():
                            forward_rate=kF, reverse_rate=kR)        # Re-add the reaction
     rxn.system = conc_array.copy()      # The copy() is to avoid messing up conc_array
     rxn.system_time = 0.
-    rxn.single_compartment_react(time_step=delta_time_full_interval, n_steps=1, dynamic_step=time_subdivision, fast_threshold=5)
+    rxn.single_compartment_react(time_step=delta_time_full_interval, n_steps=1, dynamic_steps=time_subdivision, fast_threshold=5)
 
     assert np.allclose(rxn.system_time, delta_time_full_interval)
     assert np.allclose(rxn.system,
@@ -469,14 +469,14 @@ def test_adaptive_time_resolution_3():
 
     # Do one more step at the high level
     rxn.single_compartment_react(time_step=delta_time_full_interval,
-                                 n_steps=1, dynamic_step=time_subdivision, fast_threshold=5)
+                                 n_steps=1, dynamic_steps=time_subdivision, fast_threshold=5)
     assert np.allclose(rxn.system_time, 2 * delta_time_full_interval)     # system_time now is 0.004
     assert np.allclose(rxn.system, np.array([27.89238785, 126.05380607]))
 
 
     # Do several (3) more steps at the high level
     rxn.single_compartment_react(time_step=delta_time_full_interval,
-                                 n_steps=3, dynamic_step=time_subdivision, fast_threshold=5)
+                                 n_steps=3, dynamic_steps=time_subdivision, fast_threshold=5)
     assert np.allclose(rxn.system_time, 0.01)   # Note that 0.01 is 0.004 + 3 * 0.002
     assert np.allclose(rxn.system, np.array([15.34008717, 132.32995642]))
 
