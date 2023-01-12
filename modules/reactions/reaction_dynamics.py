@@ -409,7 +409,7 @@ class ReactionDynamics:
 
     def reaction_step_orchestrator(self, delta_time_full: float, conc_array,
                                    snapshots=None, dynamic_step=1, fast_threshold=5) -> np.array:
-        """
+        """     TODO: the word "orchestrator" is no longer a good descriptor
         This is the common entry point for both single-compartment reactions,
         and the reaction part of reaction-diffusions in 1D, 2D and 3D.
 
@@ -461,8 +461,8 @@ class ReactionDynamics:
                 print("    NO adaptive variable time resolution used")
                 print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s) with a single step")
 
-            delta_concentrations = self.single_reaction_step_FIXED_RESOLUTION(delta_time=delta_time_full,
-                                                                              conc_array=conc_array, rxn_list=None)
+            delta_concentrations = self.reaction_step_FIXED_RESOLUTION(delta_time=delta_time_full,
+                                                                       conc_array=conc_array, rxn_list=None)
         else:
             # Using variable time steps
             delta_concentrations = self.advance_variable_time_steps(delta_time_full=delta_time_full, conc_array= conc_array,
@@ -513,13 +513,13 @@ class ReactionDynamics:
                 print("    All the reactions are SLOW")
                 print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s)")
 
-            delta_concentrations = self.single_reaction_step_VARIABLE_RESOLUTION(delta_time=delta_time_full, time_subdivision=1,
-                                                                                 fast_threshold_fraction=fast_threshold_fraction,
-                                                                                 conc_array=conc_array, rxn_list=None)
+            delta_concentrations = self.reaction_step_VARIABLE_RESOLUTION(delta_time=delta_time_full, time_subdivision=1,
+                                                                          fast_threshold_fraction=fast_threshold_fraction,
+                                                                          conc_array=conc_array, rxn_list=None)
             return delta_concentrations
 
 
-        # If we get thus far, not all reactions are slow
+        # If we get thus far, not all reactions are slow (i.e., some ar fast)
 
         '''
             Process all the SLOW reactions
@@ -537,9 +537,9 @@ class ReactionDynamics:
             delta_concentrations_slow = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)  # One element per chemical species
         else:
             # Time-advance the simulation for all the slow reactions
-            delta_concentrations_slow = self.single_reaction_step_VARIABLE_RESOLUTION(delta_time=delta_time_full, time_subdivision=1,
-                                                                                      fast_threshold_fraction=fast_threshold_fraction,
-                                                                                      conc_array=conc_array, rxn_list=slow_rxns)
+            delta_concentrations_slow = self.reaction_step_VARIABLE_RESOLUTION(delta_time=delta_time_full, time_subdivision=1,
+                                                                               fast_threshold_fraction=fast_threshold_fraction,
+                                                                               conc_array=conc_array, rxn_list=slow_rxns)
 
         '''
             Process all the FAST reactions
@@ -556,10 +556,10 @@ class ReactionDynamics:
                 local_system_time = self.system_time + substep * reduced_time_step
                 print(f"    - substep: {substep} (in processing of FAST reactions, i.e. {fast_rxns}).  'Local' system time: {local_system_time:,.4g}")
 
-            incr_vector = self.single_reaction_step_VARIABLE_RESOLUTION(delta_time=reduced_time_step, time_subdivision=dynamic_step,
-                                                                        fast_threshold_fraction=fast_threshold_fraction,
-                                                                        conc_array=local_conc_array, rxn_list=fast_rxns,
-                                                                        substep_number=substep)
+            incr_vector = self.reaction_step_VARIABLE_RESOLUTION(delta_time=reduced_time_step, time_subdivision=dynamic_step,
+                                                                 fast_threshold_fraction=fast_threshold_fraction,
+                                                                 conc_array=local_conc_array, rxn_list=fast_rxns,
+                                                                 substep_number=substep)
             local_conc_array += incr_vector     # TODO: also incorporate a scaled-down fraction of delta_concentrations_slow (IF there are any slow rxn's)
             delta_concentrations_fast += incr_vector
             # Preserve the intermediate-state data, if requested
@@ -586,7 +586,7 @@ class ReactionDynamics:
 
 
 
-    def single_reaction_step_FIXED_RESOLUTION(self, delta_time, conc_array, rxn_list=None) -> np.array:
+    def reaction_step_FIXED_RESOLUTION(self, delta_time, conc_array, rxn_list=None) -> np.array:
         """
         This version is for when NOT using adaptive variable time resolution.
 
@@ -664,8 +664,8 @@ class ReactionDynamics:
 
 
 
-    def single_reaction_step_VARIABLE_RESOLUTION(self, delta_time, conc_array, time_subdivision=1, fast_threshold_fraction=0.05,
-                                                 rxn_list=None, substep_number=0) -> np.array:
+    def reaction_step_VARIABLE_RESOLUTION(self, delta_time, conc_array, time_subdivision=1, fast_threshold_fraction=0.05,
+                                          rxn_list=None, substep_number=0) -> np.array:
         """
         This version is for when using adaptive variable time resolution.
 
