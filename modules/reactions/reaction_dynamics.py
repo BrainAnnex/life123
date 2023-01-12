@@ -355,7 +355,7 @@ class ReactionDynamics:
                                     if that reaction has fast dynamics,
                                     or multiplied by that factor, if that reaction has slow dynamics
         :param fast_threshold:  The minimum relative size of the concentration baseline over its change, AS A PERCENTAGE,
-                                for a reaction to be regarded as "Slow".  IMPORTANT: this refer to the FULL step size
+                                for a reaction to be regarded as "Slow".  IMPORTANT: this refers to the FULL step size
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
@@ -434,11 +434,12 @@ class ReactionDynamics:
         :param dynamic_step:    An integer by which to subdivide the time intervals for "fast" reactions;
                                     default 1, i.e. no subdivisions
         :param fast_threshold:  The minimum relative size of the concentration baseline over its change, AS A PERCENTAGE,
-                                for a reaction to be regarded as "Slow".  IMPORTANT: this refer to the FULL step size
+                                for a reaction to be regarded as "Slow".  IMPORTANT: this refers to the FULL step size
 
         :return:                The increment vector for the concentrations of ALL the chemical species,
                                     as a Numpy array for all the chemical species, in their index order
-                                    EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):   array([7. , -21.])
+                                    EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):
+                                        array([7. , -21.])
         """
         if 5 in self.verbose_list:
             print(f"Calling reaction_step_orchestrator() with delta_time={delta_time_full}, "
@@ -449,7 +450,7 @@ class ReactionDynamics:
         assert fast_threshold > 0, "reaction_step_orchestrator(): the argument 'fast_threshold' must be greater than 0"
         assert conc_array is not None, "reaction_step_orchestrator(): the argument 'conc_array' must be set to a Numpy array"
 
-        fast_threshold_fraction = fast_threshold / 100.
+        fast_threshold_fraction = fast_threshold / 100.     # Here we switch over from percentages to fractions
 
         if 1 in self.verbose_list:
             print(f"************ SYSTEM TIME: {self.system_time:,.4g}")
@@ -462,93 +463,51 @@ class ReactionDynamics:
 
             delta_concentrations = self.single_reaction_step_FIXED_RESOLUTION(delta_time=delta_time_full,
                                                                               conc_array=conc_array, rxn_list=None)
-
-        # Using variable time steps  (TODO: move this branch to its own function)
-        # delta_concentrations = self.advance_variable_time_steps(conc_array, dynamic_step, delta_time_full, fast_threshold_fraction, snapshots)
-
-        # TODO: start deleting here
-        elif self.are_all_slow_rxns():
-            if 1 in self.verbose_list:
-                print("    All the reactions are SLOW")
-                print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s)")
-            delta_concentrations = self.single_reaction_step_VARIABLE_RESOLUTION(delta_time=delta_time_full, time_subdivision=1,
-                                                                                 fast_threshold_fraction=fast_threshold_fraction,
-                                                                                 conc_array=conc_array, rxn_list=None)
         else:
-            # Process all the slow reactions
-            slow_rxns = self.slow_rxns()
-            if 1 in self.verbose_list:
-                if slow_rxns == []:
-                    print(f"    There are NO SLOW reactions")
-                else:
-                    print(f"    SLOW REACTIONS: {slow_rxns}")
-                    print(f"    Processing SLOW reactions")
-
-            if slow_rxns == []:
-                # If there are no slow reactions
-                delta_concentrations_slow = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)  # One element per chemical species
-            else:
-                # Time-advance the simulation for all the slow reactions
-                delta_concentrations_slow = self.single_reaction_step_VARIABLE_RESOLUTION(delta_time=delta_time_full, time_subdivision=1, 
-                                                                                          fast_threshold_fraction=fast_threshold_fraction,
-                                                                                          conc_array=conc_array, rxn_list=slow_rxns)
-
-            # Process all the fast reactions
-            fast_rxns = self.fast_rxns()
-            if 1 in self.verbose_list:
-                print(f"    FAST REACTIONS: {fast_rxns}")
-
-            local_conc_array = conc_array.copy()   # Saved as an unchanging baseline copy
-            delta_concentrations_fast = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)     # One element per chemical species
-            reduced_time_step = delta_time_full / dynamic_step
-            for substep in range(dynamic_step):
-                if 1 in self.verbose_list:
-                    local_system_time = self.system_time + substep * reduced_time_step
-                    print(f"    - substep: {substep} (in processing of FAST reactions, i.e. {fast_rxns}).  'Local' system time: {local_system_time:,.4g}")
-
-                incr_vector = self.single_reaction_step_VARIABLE_RESOLUTION(delta_time=reduced_time_step, time_subdivision=dynamic_step,
-                                                                            fast_threshold_fraction=fast_threshold_fraction,
-                                                                            conc_array=local_conc_array, rxn_list=fast_rxns,
-                                                                            substep_number=substep)
-                local_conc_array += incr_vector     # TODO: also incorporate a scaled-down fraction of delta_concentrations_slow (IF there are any slow rxn's)
-                delta_concentrations_fast += incr_vector
-                # Preserve the intermediate-state data, if requested
-                if snapshots and snapshots.get("show_intermediates") and substep < dynamic_step-1:  # Skip the last one, which will be handled by the caller
-                    species_to_show = snapshots.get("species")          # If not present, it will be None (meaning show all)
-                    time = self.system_time + (substep+1) * reduced_time_step
-                    self.add_snapshot(time=time, species=species_to_show,
-                                      system_data=local_conc_array,
-                                      caption=f"Interm. step, due to the fast rxns: {fast_rxns}")
-                    if self.diagnostics:
-                        self.diagnostic_data_baselines.store(par=time,
-                                                             data_snapshot=self.get_conc_dict(system_data=local_conc_array))
-
-
-            # Combine the results of all the slow reactions and all the fast reactions
-            if 2 in self.verbose_list:
-                print("      delta_time: ", delta_time_full)
-                print("          delta_concentrations_slow: ", delta_concentrations_slow)
-                print("          delta_concentrations_fast: ", delta_concentrations_fast)
-
-            delta_concentrations = delta_concentrations_slow + delta_concentrations_fast
-        # END IF
-        # TODO: end deleting here
-
+            # Using variable time steps
+            delta_concentrations = self.advance_variable_time_steps(delta_time_full=delta_time_full, conc_array= conc_array,
+                                                                    snapshots=snapshots,
+                                                                    dynamic_step=dynamic_step, fast_threshold_fraction=fast_threshold_fraction)
 
         return  delta_concentrations
 
 
 
-    def advance_variable_time_steps(self, conc_array, dynamic_step, delta_time_full, fast_threshold_fraction, snapshots) -> np.array:
+    def advance_variable_time_steps(self, delta_time_full: float, conc_array,
+                                    snapshots, dynamic_step: int, fast_threshold_fraction) -> np.array:
         """
+        This version is for when using adaptive VARIABLE TIME resolution.
 
-        :param conc_array:
-        :param dynamic_step:
-        :param delta_time_full:
-        :param fast_threshold_fraction:
-        :param snapshots:
-        :return:
+        Using the given concentration data of ALL the chemical species,
+        do the specified FULL TIME STEP for ALL the reactions - both those marked "slow" and those marked "fast" -
+        but for the fast reaction, break down the full time interval into dynamic_step parts.
+
+        All computations are based on the INITIAL concentrations (prior to this reaction step),
+        which are used as the basis for all the reactions (in "forward Euler" approach.)
+
+        Return the Numpy increment vector for ALL the chemical species concentrations, in their index order
+        (whether involved in these reactions or not)
+
+        NOTE: the actual system concentrations are NOT changed
+
+        :param delta_time_full: The requested time duration of the overall reaction step,
+                                    which will be subdivided for the "fast" reactions, if dynamic_step is greater than 1
+        :param conc_array:      All initial concentrations at the start of the reaction step,
+                                    as a Numpy array for all the chemical species, in their index order;
+                                    this can be thought of as the "SYSTEM STATE"
+        :param snapshots:       See explanation under single_compartment_react()
+        :param dynamic_step:    An integer > 1 by which to subdivide the time intervals for "fast" reactions
+        :param fast_threshold_fraction:  The minimum relative size of the concentration baseline over its change, AS A FRACTION,
+                                            for a reaction to be regarded as "Slow".  IMPORTANT: this refers to the FULL step size
+
+        :return:                The increment vector for the concentrations of ALL the chemical species,
+                                    as a Numpy array for all the chemical species, in their index order
+                                    EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):
+                                        array([7. , -21.])
         """
+        assert dynamic_step > 1, \
+            "advance_variable_time_steps(): the function is being called in a scenario with FIXED time steps are required"
+
         if self.are_all_slow_rxns():
             if 1 in self.verbose_list:
                 print("    All the reactions are SLOW")
@@ -909,7 +868,7 @@ class ReactionDynamics:
 
         :param fast_threshold_fraction: The minimum relative size of the concentration baseline over its change, AS A FRACTION,
                                             for a reaction to be regarded as "Slow".
-                                            IMPORTANT: this refer to the FULL step size, and will be scaled for time_subdivision
+                                            IMPORTANT: this refers to the FULL step size, and will be scaled for time_subdivision
                                             (e.g. a time_subdivision of 2 signifies 1/2 a time step,
                                             and will mean that just 1/2 of the change will constitute a threshold)
 
