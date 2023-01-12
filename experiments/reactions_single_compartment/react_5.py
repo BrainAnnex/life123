@@ -205,3 +205,118 @@ dynamics.get_diagnostic_data(rxn_index=1).loc[60:]
 dynamics.explain_reactions()
 
 # %%
+
+# %% [markdown] tags=[]
+# # Re-run with constanst steps
+
+# %% [markdown]
+# We'll use constant steps of size 0.0005, which is 1/4 of the smallest steps (the "substep" size) previously used in the variable-step run
+
+# %%
+dynamics2 = ReactionDynamics(reaction_data=chem_data)
+
+# %% tags=[]
+dynamics2.set_conc([50., 0, 0.], snapshot=True)
+
+# %%
+dynamics2.single_compartment_react(time_step=0.0005, reaction_duration=0.4,
+                                  snapshots={"initial_caption": "1st reaction step",
+                                             "final_caption": "last reaction step"},
+                                  )      
+
+# %%
+fig = px.line(data_frame=dynamics2.get_history(), x="SYSTEM TIME", y=["A", "B", "C"], 
+              title="Coupled reactions A <-> B and B <-> C",
+              color_discrete_sequence = ['blue', 'red', 'green'],
+              labels={"value":"concentration", "variable":"Chemical"})
+fig.show()
+
+# %%
+df2 = dynamics2.history.get()
+df2
+
+# %% [markdown]
+# ### Let's compare some entries with the coarser previous variable-time run
+
+# %% [markdown]
+# **At time t=0.002:**
+
+# %%
+df.loc[1]
+
+# %%
+df2.loc[4]
+
+# %%
+old = df.loc[1][['SYSTEM TIME', 'A', 'B', 'C']].to_numpy().astype(float)
+old
+
+# %%
+new = df2.loc[4][['SYSTEM TIME', 'A', 'B', 'C']].to_numpy().astype(float)
+new
+
+# %%
+new - old
+
+# %%
+
+# %% [markdown]
+# **At time t=0.032**, when [A] and [C] are almost equal:
+
+# %%
+df.loc[16]
+
+# %%
+df2.loc[64]
+
+# %%
+
+# %% [markdown]
+# **At time t=0.14**:
+
+# %%
+df.loc[70]
+
+# %%
+df2.loc[280]
+
+# %%
+
+# %% [markdown]
+# **At time t=0.26**:
+
+# %%
+df.loc[85]
+
+# %%
+df2.loc[520]
+
+# %%
+
+# %% [markdown]
+# ## Let's compare the plots of [B] from the earlier (variable-step) run, and the latest (high-precision fixed-step) one
+
+# %%
+# Earlier run
+fig1 = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["B"], 
+              color_discrete_sequence = ['red'],
+              labels={"value":"concentration", "variable":"Variable-step run"})
+fig1.show()
+
+# %%
+# Latest run
+fig2 = px.line(data_frame=dynamics2.get_history(), x="SYSTEM TIME", y=["B"], 
+              color_discrete_sequence = ['orange'],
+              labels={"value":"concentration", "variable":"Fine fixed-step run"})
+fig2.show()
+
+# %%
+import plotly.graph_objects as go
+
+all_fig = go.Figure(data=fig1.data + fig2.data)    # Note that the + is concatenating lists
+all_fig.update_layout(title="The 2 runs contrasted")
+all_fig['data'][0]['name']="B (variable steps)"
+all_fig['data'][1]['name']="B (fixed high precision)"
+all_fig.show()
+
+# %%

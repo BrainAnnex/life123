@@ -110,6 +110,12 @@ df = dynamics.history.get()
 df
 
 # %%
+df.loc[:50]
+
+# %%
+df.loc[51:99]
+
+# %%
 # Let's expand the last part
 df.loc[100:]
 

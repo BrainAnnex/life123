@@ -544,16 +544,22 @@ class ReactionDynamics:
         '''
             Next, process all the FAST reactions
         '''
-        fast_rxns = self.fast_rxns()
+        fast_rxns = self.fast_rxns()    # Look up which reactions are currently tagged as "fast"
         assert fast_rxns != [], "advance_variable_time_steps(): INTERNAL ERROR.  No fast reactions found"
 
         if 1 in self.verbose_list:
             print(f"    FAST REACTIONS: {fast_rxns}")
 
-        local_conc_array = conc_array.copy()   # Saved as an unchanging baseline copy
+        local_conc_array = conc_array.copy()    # Duplicate the array conc_array, to avoid altering it
+                                                # local_conc_array is the best estimate of the System state at the start of each substep
+
+        # TODO: maybe a better name for local_conc_array could be "system_state_estimate", and "conc_array" could be renamed "initial_system_state"
+
         delta_concentrations_fast = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)     # One element per chemical species
         reduced_time_step = delta_time_full / dynamic_steps
+
         for substep in range(dynamic_steps):
+            # For each of the substeps into which delta_time_full has been divided up into
             if 1 in self.verbose_list:
                 local_system_time = self.system_time + substep * reduced_time_step
                 print(f"    - substep: {substep} (in processing of FAST reactions, i.e. {fast_rxns}).  'Local' system time: {local_system_time:,.4g}")
@@ -562,8 +568,15 @@ class ReactionDynamics:
                                                                  fast_threshold_fraction=fast_threshold_fraction,
                                                                  conc_array=local_conc_array, rxn_list=fast_rxns,
                                                                  substep_number=substep)
-            local_conc_array += incr_vector     # TODO: also incorporate a scaled-down fraction of delta_concentrations_slow (IF there are any slow rxn's)
             delta_concentrations_fast += incr_vector
+
+            # TODO: the next 2 lines don't need to be run, if at the last step
+            local_conc_array += incr_vector     # This is the contribution to the advance of the system state from the fast reactions
+            # Also incorporate a scaled-down fraction of delta_concentrations_slow (IF there are any slow rxn's)
+            if slow_rxns != []:
+                local_conc_array += delta_concentrations_slow / dynamic_steps
+
+
             # Preserve the intermediate-state data, if requested
             if snapshots and snapshots.get("show_intermediates") and substep < dynamic_steps-1:  # Skip the last one, which will be handled by the caller
                 species_to_show = snapshots.get("species")          # If not present, it will be None (meaning show all)
@@ -574,7 +587,9 @@ class ReactionDynamics:
                 if self.diagnostics:
                     self.diagnostic_data_baselines.store(par=time,
                                                          data_snapshot=self.get_conc_dict(system_data=local_conc_array))
+        # END for
 
+        # At this point, all the slow AND all the fast reactions have been processed
 
         # Combine the results of all the slow reactions and all the fast reactions
         if 2 in self.verbose_list:
@@ -583,6 +598,9 @@ class ReactionDynamics:
             print("          delta_concentrations_fast: ", delta_concentrations_fast)
 
         delta_concentrations = delta_concentrations_slow + delta_concentrations_fast
+
+        assert np.allclose(conc_array + delta_concentrations, local_conc_array), \
+                    f"advance_variable_time_steps(): FAILED VALIDATION"         # TODO: eventually ditch this check
 
         return  delta_concentrations
 
