@@ -717,7 +717,8 @@ class ReactionDynamics:
         :param conc_array:              All initial concentrations at the start of the reaction step,
                                             as a Numpy array for all the chemical species, in their index order;
                                             this can be thought of as the "SYSTEM STATE"
-        :param rxn_list:                OPTIONAL list of reactions (specified by index) to include in this simulation step ; EXAMPLE: [1, 3, 7]
+        :param rxn_list:                OPTIONAL list of reactions (specified by their indices) to include in this simulation step ;
+                                            EXAMPLE: [1, 3, 7]
                                             If None, do all the reactions.
         :param substep_number:          Only used for variable time resolution mode.  Zero-based counting
 
@@ -725,7 +726,7 @@ class ReactionDynamics:
                                 as a Numpy array for all the chemical species, in their index order
                             EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):   array([7. , -21.])
         """
-        # The increment vector is the cumulative one for ALL the requested reactions
+        # The increment vector is cumulative for ALL the requested reactions
         increment_vector = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
 
         # Compute the forward and back "conversions" of all the applicable reactions
@@ -745,7 +746,8 @@ class ReactionDynamics:
             if 1 in self.verbose_list:
                 print(f"      Determining the conc.'s changes as a result of rxn # {rxn_index}")
 
-            increment_vector_single_rxn = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
+            # One element per chemical species; notice that this array is being reset for each reaction
+            increment_vector_single_rxn = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)
 
             # TODO: turn into a more efficient single step, as as:
             #(reactants, products) = cls.all_reactions.unpack_terms(i)
@@ -772,6 +774,8 @@ class ReactionDynamics:
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
+
+                ''' TODO: start of ditch '''
                 # If we are at the last of the substeps...
                 if substep_number == time_subdivision-1:
                     # Mark the reaction "fast", if appropriate
@@ -782,9 +786,10 @@ class ReactionDynamics:
                 elif 1 in self.verbose_list:
                     print(f"        Skipping evaluation of rxn speed for reagent `{self.reaction_data.get_name(species_index)}` because NOT at last substep "
                           f"(substep_number = {substep_number}, time_subdivision = {time_subdivision})")
+                ''' TODO: end of ditch '''
 
                 increment_vector[species_index] += delta_conc
-                increment_vector_single_rxn[species_index] += delta_conc
+                increment_vector_single_rxn[species_index] += delta_conc    # TODO: move to near end of function
 
 
             # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
@@ -795,6 +800,7 @@ class ReactionDynamics:
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
+                ''' TODO: start of ditch '''
                 # If we are at the last of the substeps...
                 if substep_number == time_subdivision-1:
                     # Mark the reaction "fast", if appropriate
@@ -805,9 +811,26 @@ class ReactionDynamics:
                 elif 1 in self.verbose_list:
                     print(f"        Skipping evaluation of rxn speed for product `{self.reaction_data.get_name(species_index)}` because NOT at last substep "
                           f"(substep_number = {substep_number}, time_subdivision = {time_subdivision})")
+                ''' TODO: end of ditch '''
 
                 increment_vector[species_index] += delta_conc
-                increment_vector_single_rxn[species_index] += delta_conc
+                increment_vector_single_rxn[species_index] += delta_conc   # TODO: move to near end of function
+
+            '''
+            # TODO: start of experimental
+            # If we are at the last of the substeps...
+            if substep_number == time_subdivision-1:
+                # Mark the reaction "fast", if appropriate
+                self.examine_increment_array(rxn_index=rxn_index,
+                                       delta_conc_array=increment_vector_single_rxn, baseline_conc_array=conc_array,
+                                       time_subdivision=time_subdivision,
+                                       fast_threshold_fraction=fast_threshold_fraction)
+            elif 1 in self.verbose_list:
+                print(f"        Skipping evaluation of rxn speed for reaction `{rxn_index}` because NOT at last substep "
+                      f"(substep_number = {substep_number}, time_subdivision = {time_subdivision})")
+            # TODO: end of experimental
+            '''
+
 
 
             if self.diagnostics:
@@ -858,6 +881,54 @@ class ReactionDynamics:
             raise Exception(f"The chosen time interval ({delta_time}) "
                             f"leads to a NEGATIVE concentration of the chemical species {species_index} from reaction {rxn_index}: "
                             f"must make the interval smaller!")
+
+
+
+    def examine_increment_array(self, rxn_index: int,
+                                delta_conc_array, baseline_conc_array,
+                                time_subdivision: int,
+                                fast_threshold_fraction) -> None:
+        """
+        :return:                        None (the equation is marked as "Fast", if appropriate, in its data structure)
+        """
+
+        if self.get_rxn_speed(rxn_index) == "F":
+            if 1 in self.verbose_list:
+                print(f"        Rxn # {rxn_index}: no action taken because already tagged as 'F'")
+
+            return
+
+
+        # If we get this far, the reaction came tagged as "SLOW"
+
+        # If the reaction was (tentatively) labeled as "Slow", decide whether to flip it to "Fast"
+        #   Note: the status will be used for the current simulation sub-cycle
+        for i in range(self.reaction_data.number_of_chemicals()):
+            delta_conc = delta_conc_array[i]
+            baseline_conc = baseline_conc_array[i]
+
+            #if abs(delta_conc) / baseline_conc > fast_threshold_fraction / time_subdivision
+            # Perhaps more intuitive as shown above;
+            # but, to avoid time-consuming divisions (and potential divisions by zero), re-formulated as below:
+            if abs(delta_conc) * time_subdivision > fast_threshold_fraction * baseline_conc:
+                self.set_rxn_speed(rxn_index, "F")
+                if 1 in self.verbose_list:
+                    print(f"        Rxn # {rxn_index} FLIPPED TAG to 'F', "
+                          f"based on a change of {delta_conc:.5g} (rel. to baseline of {baseline_conc:.6g}) "
+                          f"for the conc. of species # `{i}`: "
+                          f"abs({100 * delta_conc / (baseline_conc+1e-09):.3g}%) > ({100 * fast_threshold_fraction:.3g}% /{time_subdivision})"
+                          )   # Note: we're adding a tiny amount to baseline_conc to avoid potential divisions by zero
+                return
+
+        # END for
+        # If we get thus far, the reaction is still regarded as "Slow"
+
+        if 1 in self.verbose_list:
+            print(f"        Rxn # {rxn_index} left tagged as 'S', "
+                  f"based on a change of {delta_conc_array} (rel. to baseline of {baseline_conc_array}) "
+                  f"Elements of abs({100 * delta_conc_array / (baseline_conc_array+1e-09)}%) are all < ({100 * fast_threshold_fraction:.3g}% /{time_subdivision})"
+                  )   # Note: we're adding a tiny amount to baseline_conc to avoid potential divisions by zero
+
 
 
 
@@ -1307,6 +1378,7 @@ class ReactionDynamics:
         return self.diagnostic_data[rxn_index].get()
 
 
+
     def diagnose_variable_time_steps(self, fast_threshold=5) -> None:
         """
         Analyze, primarily for debugging purposes, the diagnostics data produced
@@ -1315,7 +1387,10 @@ class ReactionDynamics:
         The primary focus is for diagnostic information of the adaptive variable time steps.
 
         This approach will eventually be suitable for any
-        type of reaction simulations. TODO: generalize to multiple reactions
+        type of reaction simulations.
+
+        TODO: CAUTION - only meant for 1 reaction.  Generalize to multiple reactions.
+              For more than 1 reaction, use explain_reactions() instead
 
         :param fast_threshold:  The same value (for the FULL STEP size) that was used in single_compartment_react()
 
@@ -1325,6 +1400,10 @@ class ReactionDynamics:
             print("No diagnostic information is available:\nIn order to run diagnose_variable_time_steps(), "
                   "call set_diagnostics() prior to running single_compartment_react()")
             return
+
+        assert self.reaction_data.number_of_reactions() == 1, \
+                "diagnose_variable_time_steps() currently ONLY works when exactly 1 reaction is present. " \
+                "For more than 1 reaction, use explain_reactions() instead"
 
         #diagnostic_df = self.diagnostic_data.get()  # TODO: self.diagnostic_data[rxn_index].get()
 
@@ -1390,6 +1469,11 @@ class ReactionDynamics:
         :return:    True is the diagnostic data is consistent for all the steps/substeps of all the reactions,
                     or False otherwise
         """
+        if not self.diagnostics:
+            print("No diagnostic information is available:\nIn order to run diagnose_variable_time_steps(), "
+                  "call set_diagnostics() prior to running single_compartment_react()")
+            return False
+
         number_reactions = self.reaction_data.number_of_reactions()
 
         assert number_reactions == 2, \
