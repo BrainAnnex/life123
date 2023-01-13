@@ -562,7 +562,7 @@ class ReactionDynamics:
             # For each of the substeps into which delta_time_full has been divided up into
             if 1 in self.verbose_list:
                 local_system_time = self.system_time + substep * reduced_time_step
-                print(f"    - substep: {substep} (in processing of FAST reactions, i.e. {fast_rxns}).  'Local' system time: {local_system_time:,.4g}")
+                print(f"    - SUBSTEP: {substep} (in processing of FAST reactions, i.e. {fast_rxns}).  'Local' system time: {local_system_time:,.4g}")
 
             incr_vector = self.reaction_step_VARIABLE_RESOLUTION(delta_time=reduced_time_step, time_subdivision=dynamic_steps,
                                                                  fast_threshold_fraction=fast_threshold_fraction,
@@ -775,7 +775,7 @@ class ReactionDynamics:
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
 
-                ''' TODO: start of ditch '''
+                ''' TODO: start of ditch
                 # If we are at the last of the substeps...
                 if substep_number == time_subdivision-1:
                     # Mark the reaction "fast", if appropriate
@@ -786,7 +786,7 @@ class ReactionDynamics:
                 elif 1 in self.verbose_list:
                     print(f"        Skipping evaluation of rxn speed for reagent `{self.reaction_data.get_name(species_index)}` because NOT at last substep "
                           f"(substep_number = {substep_number}, time_subdivision = {time_subdivision})")
-                ''' TODO: end of ditch '''
+                TODO: end of ditch '''
 
                 increment_vector[species_index] += delta_conc
                 increment_vector_single_rxn[species_index] += delta_conc    # TODO: move to near end of function
@@ -800,7 +800,7 @@ class ReactionDynamics:
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
-                ''' TODO: start of ditch '''
+                ''' TODO: start of ditch
                 # If we are at the last of the substeps...
                 if substep_number == time_subdivision-1:
                     # Mark the reaction "fast", if appropriate
@@ -811,12 +811,12 @@ class ReactionDynamics:
                 elif 1 in self.verbose_list:
                     print(f"        Skipping evaluation of rxn speed for product `{self.reaction_data.get_name(species_index)}` because NOT at last substep "
                           f"(substep_number = {substep_number}, time_subdivision = {time_subdivision})")
-                ''' TODO: end of ditch '''
+                TODO: end of ditch '''
 
                 increment_vector[species_index] += delta_conc
                 increment_vector_single_rxn[species_index] += delta_conc   # TODO: move to near end of function
 
-            '''
+
             # TODO: start of experimental
             # If we are at the last of the substeps...
             if substep_number == time_subdivision-1:
@@ -829,7 +829,7 @@ class ReactionDynamics:
                 print(f"        Skipping evaluation of rxn speed for reaction `{rxn_index}` because NOT at last substep "
                       f"(substep_number = {substep_number}, time_subdivision = {time_subdivision})")
             # TODO: end of experimental
-            '''
+
 
 
 
@@ -903,7 +903,17 @@ class ReactionDynamics:
 
         # If the reaction was (tentatively) labeled as "Slow", decide whether to flip it to "Fast"
         #   Note: the status will be used for the current simulation sub-cycle
-        for i in range(self.reaction_data.number_of_chemicals()):
+
+
+        if 1 in self.verbose_list:
+            print(f"        For Rxn # {rxn_index}, checking concentrations of chems: {self.reaction_data.get_chemicals_in_reaction(rxn_index)}")
+
+
+        # Just loop over those in the given reaction (not over ALL the chemicals!)
+
+        #for i in range(self.reaction_data.number_of_chemicals()):
+        for i in self.reaction_data.get_chemicals_in_reaction(rxn_index):
+
             delta_conc = delta_conc_array[i]
             baseline_conc = baseline_conc_array[i]
 
@@ -915,7 +925,7 @@ class ReactionDynamics:
                 if 1 in self.verbose_list:
                     print(f"        Rxn # {rxn_index} FLIPPED TAG to 'F', "
                           f"based on a change of {delta_conc:.5g} (rel. to baseline of {baseline_conc:.6g}) "
-                          f"for the conc. of species # `{i}`: "
+                          f"for the conc. of `{self.reaction_data.get_name(species_index=i)}`: "
                           f"abs({100 * delta_conc / (baseline_conc+1e-09):.3g}%) > ({100 * fast_threshold_fraction:.3g}% /{time_subdivision})"
                           )   # Note: we're adding a tiny amount to baseline_conc to avoid potential divisions by zero
                 return
@@ -924,9 +934,12 @@ class ReactionDynamics:
         # If we get thus far, the reaction is still regarded as "Slow"
 
         if 1 in self.verbose_list:
+            chem_list = self.reaction_data.get_chemicals_in_reaction(rxn_index)
+            delta_conc_array_relevant = np.array([delta_conc_array[n] for n in chem_list])
+            baseline_conc_array_relevant = np.array([baseline_conc_array[n] for n in chem_list])
             print(f"        Rxn # {rxn_index} left tagged as 'S', "
-                  f"based on a change of {delta_conc_array} (rel. to baseline of {baseline_conc_array}) "
-                  f"Elements of abs({100 * delta_conc_array / (baseline_conc_array+1e-09)}%) are all < ({100 * fast_threshold_fraction:.3g}% /{time_subdivision})"
+                  f"based on a change of {delta_conc_array_relevant} (rel. to baseline of {baseline_conc_array_relevant})\n"
+                  f"Elements of abs({100 * delta_conc_array_relevant / (baseline_conc_array_relevant+1e-09)}%) are all < ({100 * fast_threshold_fraction:.3g}% /{time_subdivision})"
                   )   # Note: we're adding a tiny amount to baseline_conc to avoid potential divisions by zero
 
 
@@ -935,7 +948,7 @@ class ReactionDynamics:
     def examine_increment(self, rxn_index: int, species_index: int,
                           delta_conc, baseline_conc: float,
                           time_subdivision: int,
-                          fast_threshold_fraction) -> None:
+                          fast_threshold_fraction) -> None:  # TODO: OBSOLETE
         """
         Examine the requested concentration change given by delta_conc
         (typically, as computed by an ode solver),

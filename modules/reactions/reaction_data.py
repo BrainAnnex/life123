@@ -315,6 +315,7 @@ class ReactionData:
 
     def extract_stoichiometry(self, term: (int, int, int)) -> int:
         """
+        Return the stoichiometry coefficient from a reaction term
 
         :param term:
         :return:
@@ -371,6 +372,31 @@ class ReactionData:
                 properties[k] = v
 
         return properties
+
+
+
+    def get_chemicals_in_reaction(self, rxn_index: int) -> [int]:   # TODO: pytest
+        """
+        Return a list of indices (WARNING: NOT necessarily in numerical order) of
+        all the chemicals in the specified reaction
+
+        :param rxn_index:
+        :return:
+        """
+        chem_list = []  # Running list being built
+
+        reactants = self.get_reactants(rxn_index)
+        products = self.get_products(rxn_index)
+
+        for r in reactants:
+            species_index = self.extract_species_index(r)
+            chem_list.append(species_index)
+
+        for p in products:
+            species_index = self.extract_species_index(p)
+            chem_list.append(species_index)
+
+        return chem_list
 
 
 

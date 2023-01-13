@@ -13,13 +13,12 @@
 # ---
 
 # %% [markdown]
+# # SEE shunt_1
+#
 # ## 2 COUPLED reactions of different speeds:  
 # ### A <-> B (fast) and A <-> S (slow)
-# All 1st order. Taken to equilibrium. Both reactions are mostly forward.
 #
-# (Adaptive variable time resolution is used, with extensive diagnostics.)
-#
-# LAST REVISED: Jan. 11, 2023
+# ## DO NOT USE
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -110,10 +109,12 @@ df = dynamics.history.get()
 df
 
 # %%
-df.loc[:50]
+# Show the early part
+df.loc[:45]
 
 # %%
-df.loc[51:99]
+# Show the last part
+df.loc[46:]
 
 # %%
 # Let's expand the last part
@@ -188,19 +189,19 @@ dynamics.explain_reactions()
 # # Re-run with constanst steps
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics2 = ReactionDynamics(reaction_data=chem_data)
 
 # %% tags=[]
-dynamics.set_conc([50., 0, 0.], snapshot=True)
+dynamics2.set_conc([50., 0, 0.], snapshot=True)
 
 # %%
-dynamics.single_compartment_react(time_step=0.005, reaction_duration=0.8,
+dynamics2.single_compartment_react(time_step=0.005, reaction_duration=0.8,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   )      
 
 # %%
-fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B", "S"], 
+fig = px.line(data_frame=dynamics2.get_history(), x="SYSTEM TIME", y=["A", "B", "S"], 
               title="Coupled reactions A <-> B and A <-> S",
               color_discrete_sequence = ['blue', 'red', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
@@ -208,12 +209,12 @@ fig.show()
 
 # %%
 # Verify that all the reactions have reached equilibrium
-dynamics.is_in_equilibrium(tolerance=0.4)
+dynamics2.is_in_equilibrium(tolerance=0.4)
 
 # %%
 
 # %%
-df = dynamics.history.get()
-df
+df2 = dynamics2.history.get()
+df2
 
 # %%
