@@ -13,73 +13,10 @@
 # ---
 
 # %% [markdown]
-# # SEE cascade_1
+# # Renamed "cascade_1"
 
 # %% [markdown]
 # ## DO NOT USE
-
-# %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
-
-# %% tags=[]
-from experiments.get_notebook_info import get_notebook_basename
-
-from modules.reactions.reaction_data import ReactionData as chem
-from modules.reactions.reaction_dynamics import ReactionDynamics
-
-import numpy as np
-import plotly.express as px
-from modules.visualization.graphic_log import GraphicLog
-
-# %% tags=[]
-# Initialize the HTML logging (for the graphics)
-log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
-
-# Set up the use of some specified graphic (Vue) components
-GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_1"],
-                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
-
-# %% [markdown]
-# # Initialize the System
-# Specify the chemicals and the reactions
-
-# %% tags=[]
-# Specify the chemicals
-chem_data = chem(names=["A", "B", "C"])
-
-# Reaction A <-> B (fast)
-chem_data.add_reaction(reactants=["A"], products=["B"],
-                       forward_rate=64., reverse_rate=8.) 
-
-# Reaction B <-> C (slow)
-chem_data.add_reaction(reactants=["B"], products=["C"],
-                       forward_rate=12., reverse_rate=2.) 
-
-print("Number of reactions: ", chem_data.number_of_reactions())
-
-# %%
-chem_data.describe_reactions()
-
-# %%
-# Send a plot of the network of reactions to the HTML log file
-graph_data = chem_data.prepare_graph_network()
-GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
-
-# %% [markdown]
-# # Start the simulation
-
-# %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
-
-# %% [markdown]
-# ### Set the initial concentrations of all the chemicals, in their index order
-
-# %%
-dynamics.set_conc([50., 0, 0.], snapshot=True)
 
 # %%
 dynamics.describe_state()

@@ -13,6 +13,8 @@
 # ---
 
 # %% [markdown]
+# # TO DELETE (WILL USE shunt2 instead)
+#
 # ## A shunted reaction :  
 # ### A <-> B (fast) and A <-> S (slow)
 # All 1st order. Taken to equilibrium. Both reactions are mostly forward.
@@ -95,27 +97,29 @@ dynamics.history.get()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-dynamics.verbose_list = [1, 2, 3]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
+#dynamics.verbose_list = [1, 2, 3]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
 # The changes of concentrations vary very rapidly early on; 
 # so, we'll be using the dynamic_steps option to increase time resolution,
 # as long as the reaction remains "fast" (based on a threshold of % change, as specified by fast_threshold)
-dynamics.single_compartment_react(time_step=0.02, reaction_duration=0.8,
+dynamics.single_compartment_react(time_step=0.01, reaction_duration=0.2,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=10, fast_threshold=20)
+                                  dynamic_steps=4, fast_threshold=10)
+
+# %%
+# Continue running the reaction at lover resolution
+dynamics.single_compartment_react(time_step=0.05, reaction_duration=0.6,
+                                  snapshots={"initial_caption": "1st reaction step",
+                                             "final_caption": "last reaction step"},
+                                  dynamic_steps=4, fast_threshold=10)
+
+# %% [markdown]
+# ### Set the initial concentrations of all the chemicals, in their index order
 
 # %%
 df = dynamics.history.get()
 df
-
-# %%
-# Show the early part
-df.loc[:45]
-
-# %%
-# Show the last part
-df.loc[46:]
 
 # %% [markdown]
 # ### Check the final equilibrium
@@ -130,7 +134,7 @@ dynamics.is_in_equilibrium(tolerance=0.4)
 # %%
 fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B", "S"], 
               title="Coupled reactions A <-> B and A <-> S",
-              color_discrete_sequence = ['blue', 'red', 'green'],
+              color_discrete_sequence = ['blue', 'green', 'red'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
@@ -160,10 +164,6 @@ dynamics.diagnostic_data_baselines.get()
 dynamics.get_diagnostic_data(rxn_index=0)
 
 # %%
-# Expand the last part of the above table
-dynamics.get_diagnostic_data(rxn_index=0).loc[60:]
-
-# %%
 # Concentration increments due to reaction 1 (A <-> S)
 # Note that [B] is not affected
 dynamics.get_diagnostic_data(rxn_index=1)
@@ -174,7 +174,7 @@ dynamics.get_diagnostic_data(rxn_index=1)
 # ### Provide a detailed explanation of all the steps/substeps of the reactions, from the saved diagnostic data
 
 # %%
-dynamics.explain_reactions()
+#dynamics.explain_reactions()
 
 # %%
 
@@ -200,7 +200,7 @@ dynamics2.single_compartment_react(time_step=0.005, reaction_duration=0.8,
 # %%
 fig = px.line(data_frame=dynamics2.get_history(), x="SYSTEM TIME", y=["A", "B", "S"], 
               title="Coupled reactions A <-> B and A <-> S",
-              color_discrete_sequence = ['blue', 'red', 'green'],
+              color_discrete_sequence = ['blue', 'green', 'red'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 

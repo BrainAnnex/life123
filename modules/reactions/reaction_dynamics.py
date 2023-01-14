@@ -1028,7 +1028,7 @@ class ReactionDynamics:
 
     def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=0.05, explain=True) -> Union[bool, dict]:
         """
-        Ascertain whether the given concentrations are in equilibrium for the specified reaction
+        Ascertain whether the given concentrations are in equilibrium for the specified reactions
         (by default, all reactions)
 
         :param rxn_index:   The index (0-based integer) to identify the reaction of interest;
@@ -1067,6 +1067,7 @@ class ReactionDynamics:
 
     def reaction_in_equilibrium(self, rxn_index, conc, tolerance, explain: bool) -> bool:
         """
+        Ascertain whether the given concentrations are in equilibrium for the specified SINGLE reaction
 
         :param rxn_index:   The index (0-based integer) to identify the reaction of interest
         :param conc:        Dict with the concentrations of the species involved in the reaction.
@@ -1080,8 +1081,8 @@ class ReactionDynamics:
         """
         rxn = self.reaction_data.get_reaction(rxn_index)
 
-        reactants = self.reaction_data.extract_reactants(rxn)     # A list of triplets
-        products = self.reaction_data.extract_products(rxn)       # A list of triplets
+        reagents = self.reaction_data.extract_reactants(rxn)     # A list of triplets
+        products = self.reaction_data.extract_products(rxn)      # A list of triplets
         kF = self.reaction_data.extract_forward_rate(rxn)
         kB = self.reaction_data.extract_back_rate(rxn)
 
@@ -1090,7 +1091,10 @@ class ReactionDynamics:
         conc_ratio = 1.
         numerator = ""
         denominator = ""
+        all_concs = []      # List of strings
+
         for rxn_index, p in enumerate(products):
+            # Loop over the reaction products
             species_index = self.reaction_data.extract_species_index(p)
             rxn_order = self.reaction_data.extract_rxn_order(p)
 
@@ -1098,6 +1102,7 @@ class ReactionDynamics:
             species_conc = conc[species_name]
             conc_ratio *= (species_conc ** rxn_order)
             if explain:
+                all_concs.append(f"[{species_name}] = {species_conc:,.3g}")
                 numerator += f"[{species_name}]"
                 if rxn_order > 1:
                     numerator += f"^{rxn_order} "
@@ -1105,7 +1110,8 @@ class ReactionDynamics:
         if explain and len(products) > 1:
             numerator = f"({numerator})"
 
-        for r in reactants:
+        for r in reagents:
+            # Loop over the reagents
             species_index = self.reaction_data.extract_species_index(r)
             rxn_order = self.reaction_data.extract_rxn_order(r)
 
@@ -1113,19 +1119,21 @@ class ReactionDynamics:
             species_conc = conc[species_name]
             conc_ratio /= (species_conc ** rxn_order)
             if explain:
+                all_concs.append(f"[{species_name}] = {species_conc:,.3g}")
                 denominator += f"[{species_name}]"
                 if rxn_order > 1:
                     denominator += f"^{rxn_order} "
 
-        if explain and len(reactants) > 1:
+        if explain and len(reagents) > 1:
             denominator = f"({denominator})"
 
         if explain:
-            print(f"Ratio of forward/reverse reaction rates: {rate_ratio}")
+            print(f"Final concentrations: ", " ; ".join(all_concs))
             print(f"Ratio of reactant/product concentrations, adjusted for reaction orders: {conc_ratio:,.6g}")
             print(f"    {numerator} / {denominator}")
+            print(f"Ratio of forward/reverse reaction rates: {rate_ratio}")
 
-        return np.allclose(conc_ratio, rate_ratio, atol=tolerance)
+        return np.allclose(conc_ratio, rate_ratio, rtol=tolerance/100.)
 
 
 
