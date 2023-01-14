@@ -19,7 +19,7 @@
 #
 # (Adaptive variable time resolution is used, with extensive diagnostics.)
 #
-# LAST REVISED: Jan. 12, 2023
+# LAST REVISED: Jan. 13, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
