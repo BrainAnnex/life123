@@ -70,8 +70,6 @@ chem_data.add_reaction(reactants=["A"], products=["B"],
 
 chem_data.describe_reactions()
 
-# %%
-
 # %% [markdown]
 # ### Set the initial concentrations of all the chemicals, in their index order
 
