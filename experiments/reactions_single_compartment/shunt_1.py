@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# # TO DELETE (WILL USE shunt2 instead)
+# # TO DELETE (WILL USE down_regulate_1 instead)
 #
 # ## A shunted reaction :  
 # ### A <-> B (fast) and A <-> S (slow)

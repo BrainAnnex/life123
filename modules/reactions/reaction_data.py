@@ -481,7 +481,7 @@ class ReactionData:
 
 
 
-    def add_chemical(self, name: str, diffusion_rate: float, note=None) -> None:
+    def add_chemical(self, name: str, diffusion_rate=None, note=None) -> None:
         """
         Register one more chemical species, with a name and (optionally) a diffusion rate.
 
@@ -491,7 +491,7 @@ class ReactionData:
         :return:                None
         """
         assert type(name) == str, \
-            f"ReactionData.add_chemical(): a name must be provided, as a string value.  " \
+            f"ReactionData.add_chemical(): a chemical's name must be provided, as a string value.  " \
             f"What was passed was of type {type(name)}"
         
         if diffusion_rate:  
@@ -513,6 +513,7 @@ class ReactionData:
         self.name_dict[name] = len(self.chemical_data) - 1     # The next available positional index (for the mapping of names to indices)
 
         self.n_species += 1
+
 
 
     def set_diffusion_rate(self, name, diff_rate):
