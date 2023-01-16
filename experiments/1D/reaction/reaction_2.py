@@ -18,7 +18,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Dec. 25, 2022
+# LAST REVISED: Jan. 15, 2023
 #
 # * [First Step](#sec_2_first_step)
 # * [Numerous more steps](#sec_2)
@@ -110,7 +110,7 @@ bio.describe_state()
 
 # %%
 # Verify that the reaction has reached equilibrium
-bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
+bio.reaction_dynamics.is_in_equilibrium(conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
 bio.get_history()

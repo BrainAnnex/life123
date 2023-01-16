@@ -247,11 +247,11 @@ def test_add_reaction():
     assert np.allclose(r["Delta_G"], -2676.321364705849)   # - RT log(K)   
 
     # Check the descriptions we has so far
-    rxn_list = chem.describe_reactions(return_as_list=True)
-    assert rxn_list[0] == '0: A <-> B  (kF = 3 / kR = 2 / K = 1.5) | 1st order in all reactants & products'
-    assert rxn_list[1] == '1: 2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.28571) | 1st order in all reactants & products'
-    assert rxn_list[2] == '2: 2 D <-> C  (kF = 11 / kR = 13 / Delta_G = 277.793 / K = 0.846154) | 3-th order in reactant D | 2-th order in product C'
-    assert rxn_list[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / Delta_G = -2,676.32 / K = 5) | 2-th order in product C'
+    rxn_info = chem.multiple_reactions_describe()
+    assert rxn_info[0] == '0: A <-> B  (kF = 3 / kR = 2 / K = 1.5) | 1st order in all reactants & products'
+    assert rxn_info[1] == '1: 2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.28571) | 1st order in all reactants & products'
+    assert rxn_info[2] == '2: 2 D <-> C  (kF = 11 / kR = 13 / Delta_G = 277.793 / K = 0.846154) | 3-th order in reactant D | 2-th order in product C'
+    assert rxn_info[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / Delta_G = -2,676.32 / K = 5) | 2-th order in product C'
 
 
     # Add another reaction (reaction index 4), this time with thermodynamic data;

@@ -234,6 +234,16 @@ class ReactionData:
 
 
 
+    def extract_reactants(self, rxn: dict) -> [(int, int, int)]:
+        """
+        Return a list of triplets with details of the reactants of the given reaction
+
+        :param rxn: The data structure representing the reaction
+        :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
+        """
+        return rxn["reactants"]
+
+
     def get_reactants(self, i: int) -> [(int, int, int)]:
         """
         Return a list of triplets with details of the reactants of the i-th reaction
@@ -255,6 +265,17 @@ class ReactionData:
         rxn = self.get_reaction(i)
         reactants = rxn["reactants"]
         return self._standard_form_chem_eqn(reactants)
+
+
+
+    def extract_products(self, rxn: dict) -> [(int, int, int)]:
+        """
+        Return a list of triplet with details of the products of the given reaction
+
+        :param rxn: The data structure representing the reaction
+        :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
+        """
+        return rxn["products"]
 
 
 
@@ -302,16 +323,6 @@ class ReactionData:
         return rxn["kR"]
 
 
-    def extract_reactants(self, rxn: dict) -> [(int, int, int)]:
-        """
-        Return a list of triplets with details of the reactants of the given reaction
-
-        :param rxn: The data structure representing the reaction
-        :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
-        """
-        return rxn["reactants"]
-
-
 
     def extract_stoichiometry(self, term: (int, int, int)) -> int:
         """
@@ -328,16 +339,6 @@ class ReactionData:
     def extract_rxn_order(self, term: (int, int, int)) -> int:
         return term[2]
 
-
-
-    def extract_products(self, rxn: dict) -> [(int, int, int)]:
-        """
-        Return a list of triplet with details of the products of the given reaction
-
-        :param rxn: The data structure representing the reaction
-        :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
-        """
-        return rxn["products"]
 
 
     def extract_forward_rate(self, rxn: dict) -> float:
@@ -362,6 +363,7 @@ class ReactionData:
     def extract_rxn_properties(self, rxn: dict) -> {}:
         """
         Create a dictionary with the numerical properties of the given reaction (skipping any None values)
+        For example, reaction rates, Delta G, equilibrium constant
 
         :param rxn: A dictionary with all the reaction data
         :return:    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'Delta_G': -1005.1305052750387, 'K': 1.5}
@@ -634,57 +636,90 @@ class ReactionData:
     #                                                                       #
     #########################################################################
 
-    def describe_reactions(self, concise=False, return_as_list=False) -> Union[None, List[str]]:
+    def describe_reactions(self, concise=False) -> None:
         """
-        Print out, and optionally return a list of, a user-friendly plain-text form of all the reactions
-        EXAMPLE:  "(0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
+        Print out a user-friendly plain-text form of all the reactions
+        EXAMPLE (not concise):
+            Number of reactions: 2 (at temp. 25 C)
+            (0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
+            (1) A + B <-> C  (kF = 5.0 / kR = 1.0 / Delta_G =  / K = 5.0) | 1st order in all reactants & products"
 
-        :param concise:         If True, less detail is shown
-        :param return_as_list:  If True, instead of being printed, a list of reaction descriptions gets returned
-                                    (the main header still gets printed)
-        :return:                Either None or a list of strings, based on the flag return_as_list
+        :param concise:     If True, less detail is shown
+        :return:            None
         """
         print(f"Number of reactions: {self.number_of_reactions()} (at temp. {self.temp - 273.15:,.4g} C)")
+        for description in self.multiple_reactions_describe(concise=concise):
+            print(description)
+
+
+
+    def multiple_reactions_describe(self, rxn_list=None, concise=False) -> [str]:
+        """
+        The counterpart of single_reaction_describe() for many reactions
+
+        :param rxn_list:    Either a list of integers, to identify the reactions of interest,
+                                or None, meaning ALL reactions
+        :param concise:     If True, less detail is shown
+        :return:            A list of strings
+        """
+        if rxn_list is None:
+            rxn_list = range(self.number_of_reactions())
 
         out = []    # Output list being built (item-wise)
-        for i, rxn in enumerate(self.reaction_list):    # Loop over all the registered reactions
-            reactants = self.extract_reactants(rxn)
-            products = self.extract_products(rxn)
 
-            left = self._standard_form_chem_eqn(reactants)       # Left side of the equation, as a user-friendly string
-            right = self._standard_form_chem_eqn(products)       # Right side of the equation
+        for i in rxn_list:
+            description = self.single_reaction_describe(rxn_index=i, concise=concise)
+            out.append(description)
 
-            rxn_description = f"{i}: {left} <-> {right}"        # Concise start point for a description of the reaction
-
-            if not concise:     # Append more detail
-                details = []
-                rxn_properties = self.extract_rxn_properties(rxn)
-                for k,v in rxn_properties.items():
-                    details.append(f"{k} = {v:,.6g}")          # EXAMPLE: "kF = 3"
-
-                rxn_description += "  (" + ' / '.join(details) + ")"    # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
-
-                high_order = False      # Is there any term whose order is greater than 1 ?
-                for r in reactants:
-                    if r[2] > 1:
-                        rxn_description += f" | {r[2]}-th order in reactant {self.get_name(r[1])}"
-                        high_order = True
-                for p in products:
-                    if p[2] > 1:
-                        rxn_description += f" | {p[2]}-th order in product {self.get_name(p[1])}"
-                        high_order = True
-
-                if not high_order:
-                    rxn_description += " | 1st order in all reactants & products"
-
-            if return_as_list:
-                out.append(rxn_description)
-            else:
-                print(rxn_description)          # Print each reaction on a separate line
+        return out
 
 
-        if return_as_list:
-            return out
+
+    def single_reaction_describe(self, rxn_index: int, concise=False) -> str:
+        """
+        Return as a string, a user-friendly plain-text form of the given reaction
+        EXAMPLE (concise):      "CH4 + 2 O2 <-> CO2 + 2 H2O"
+        EXAMPLE (not concise):  "(0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
+
+        :param rxn_index:   Integer to identify the reaction of interest
+        :param concise:     If True, less detail is shown
+        :return:            A string with a description of the specified reaction
+        """
+        rxn = self.get_reaction(rxn_index)
+
+        reactants = self.extract_reactants(rxn)
+        products = self.extract_products(rxn)
+
+        left = self._standard_form_chem_eqn(reactants)       # Left side of the equation, as a user-friendly string
+        right = self._standard_form_chem_eqn(products)       # Right side of the equation
+
+        if concise:
+            return f"{left} <-> {right}"        # Concise start point for a description of the reaction
+
+        # If we get this far, we're looking for a more detailed description
+
+        rxn_description = f"{rxn_index}: {left} <-> {right}"        # Start point for a description of the reaction
+        details = []
+        rxn_properties = self.extract_rxn_properties(rxn)
+        for k,v in rxn_properties.items():
+            details.append(f"{k} = {v:,.6g}")          # EXAMPLE: "kF = 3"
+
+        rxn_description += "  (" + ' / '.join(details) + ")"    # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
+
+        high_order = False      # Is there any term whose order is greater than 1 ?
+        for r in reactants:
+            if r[2] > 1:
+                rxn_description += f" | {r[2]}-th order in reactant {self.get_name(r[1])}"
+                high_order = True
+        for p in products:
+            if p[2] > 1:
+                rxn_description += f" | {p[2]}-th order in product {self.get_name(p[1])}"
+                high_order = True
+
+        if not high_order:
+            rxn_description += " | 1st order in all reactants & products"
+
+        return rxn_description
 
 
 

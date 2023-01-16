@@ -582,45 +582,55 @@ def test_is_in_equilibrium():
     chem_data = ReactionData(names=["A", "B", "C", "D", "E", "F"])
     rxn = ReactionDynamics(chem_data)
 
+    # Reaction 0 : A <-> B
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
     c = {'A': 23.9931640625, 'B': 36.0068359375}
     assert rxn.is_in_equilibrium(rxn_index = 0, conc = c, explain=False)
 
+    # Reaction 1 : A <-> F
+    chem_data.add_reaction(reactants=["A"], products=["F"], forward_rate=20, reverse_rate=2.)
+    c = {'A': 3, 'F': 32.999}
+    assert rxn.is_in_equilibrium(rxn_index = 1, conc = c, explain=False, tolerance=10)   # Just below the 10% tolerance
+    c = {'A': 3, 'F': 33.001}
+    assert not rxn.is_in_equilibrium(rxn_index = 1, conc = c, explain=False, tolerance=10)  # Just above the 10% tolerance
+
+    # Reaction 2 : A <-> 3B
     chem_data.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
     c = {'A': 14.54545455, 'B': 36.36363636}
-    assert rxn.is_in_equilibrium(rxn_index = 1, conc = c, explain=False)
-
-    chem_data.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
-    c = {'A': 16.25, 'B': 40.625}
     assert rxn.is_in_equilibrium(rxn_index = 2, conc = c, explain=False)
 
-    # Reaction A + B <-> C , with 1st-order kinetics for each species
+    # Reaction 3:  2A <-> 3B
+    chem_data.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
+    c = {'A': 16.25, 'B': 40.625}
+    assert rxn.is_in_equilibrium(rxn_index = 3, conc = c, explain=False)
+
+    # Reaction 4:  A + B <-> C , with 1st-order kinetics for each species
     chem_data.add_reaction(reactants=[("A") , ("B")], products=[("C")],
                      forward_rate=5., reverse_rate=2.)
     c = {'A': 0.29487741, 'B': 40.29487741, 'C': 29.70512259}
-    assert rxn.is_in_equilibrium(rxn_index = 3, conc = c, explain=False)
+    assert rxn.is_in_equilibrium(rxn_index = 4, conc = c, explain=False)
 
-    # Reaction A <-> 2C + D , with 1st-order kinetics for each species
+    # Reaction 5:  A <-> 2C + D , with 1st-order kinetics for each species
     chem_data.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
                      forward_rate=5., reverse_rate=2.)
     c = {'A': 4.31058733, 'C': 6.37882534, 'D': 1.68941267}
-    assert rxn.is_in_equilibrium(rxn_index = 4, conc = c, explain=False)
+    assert rxn.is_in_equilibrium(rxn_index = 5, conc = c, explain=False)
 
-    # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
+    # Reaction 6:  2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
     chem_data.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
                      forward_rate=5., reverse_rate=2.)
     c = {'A': 2.80284552, 'B': 4.00711381, 'C': 7.39430896, 'D': 3.79573172}
-    assert rxn.is_in_equilibrium(rxn_index = 5, conc = c, explain=False)
+    assert rxn.is_in_equilibrium(rxn_index = 6, conc = c, explain=False)
 
 
     rxn.clear_reactions()   # This will reset the reaction count to 0
 
-    # Reaction  2A <-> B , with 1st-order kinetics in both directions
+    # Reaction 0:  2A <-> B , with 1st-order kinetics in both directions
     chem_data.add_reaction(reactants=[(2, "A")], products=["B"], forward_rate=5., reverse_rate=2.)
     c = {'A': 2.16928427, 'B': 5.41535786}
     assert rxn.is_in_equilibrium(rxn_index = 0, conc = c, explain=False)
 
-    # Reaction  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction
+    # Reaction 1:  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction
     chem_data.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
     c = {'A': 1.51554944, 'B': 5.74222528}
     assert rxn.is_in_equilibrium(rxn_index = 1, conc = c, explain=False)

@@ -20,7 +20,7 @@
 #
 # Single-bin reaction
 #
-# LAST REVISED: Nov. 28, 2022
+# LAST REVISED: Jan. 15, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -92,13 +92,9 @@ bio.get_history()
 # %% [markdown]
 # ### <a name="sec_equilibrium"></a>Equilibrium
 
-# %% [markdown]
-# Consistent with the 4/1 ratio of forward/reverse rates (and the 1st order reactions),
-# the systems settles in the following equilibrium:
-
 # %%
 # Verify that the reaction has reached equilibrium
-bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
+bio.reaction_dynamics.is_in_equilibrium(conc=bio.bin_snapshot(bin_address = 0))
 
 # %% [markdown] tags=[]
 # # Plots of changes of concentration with time
@@ -126,22 +122,18 @@ bio.get_history()
 # ### Again, take the system to equilibrium
 
 # %%
-bio.react(time_step=0.0005, n_steps=40, snapshots={"frequency": 2, "sample_bin": 0})  # At every other step, take a snapshot 
+bio.react(time_step=0.0005, n_steps=80, snapshots={"frequency": 2, "sample_bin": 0})  # At every other step, take a snapshot 
                                                                                       # of all species at bin 0
 bio.describe_state()
 bio.get_history()
 
 # %% [markdown]
-# A, still the limiting reagent, is again stopping the reaction.  
+# **A**, still the limiting reagent, is again stopping the reaction.  
 # The (transiently) high value of [A] led to a high value of [B]
 
 # %%
-# Verify the equilibrium
-A_eq = bio.bin_concentration(0, 0)
-X_eq = bio.bin_concentration(0, 1)
-B_eq = bio.bin_concentration(0, 2)
-print("Ratio of equilibrium concentrations (B_eq / (A_eq * X_eq)): ", (B_eq / (A_eq * X_eq)))
-print("Ratio of forward/reverse rates: ", chem_data.get_forward_rate(0) / chem_data.get_reverse_rate(0))
+# Verify that the reaction has reached equilibrium
+bio.reaction_dynamics.is_in_equilibrium(conc=bio.bin_snapshot(bin_address = 0), tolerance=7)
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "Y"], 
@@ -171,15 +163,11 @@ bio.describe_state()
 bio.get_history()
 
 # %% [markdown]
-# A, again the scarse limiting reagent, stops the reaction yet again
+# **A**, again the scarse limiting reagent, stops the reaction yet again
 
 # %%
-# Verify the equilibrium
-A_eq = bio.bin_concentration(0, 0)
-X_eq = bio.bin_concentration(0, 1)
-B_eq = bio.bin_concentration(0, 2)
-print("Ratio of equilibrium concentrations (B_eq / (A_eq * X_eq)): ", (B_eq / (A_eq * X_eq)))
-print("Ratio of forward/reverse rates: ", chem_data.get_forward_rate(0) / chem_data.get_reverse_rate(0))
+# Verify that the reaction has reached equilibrium
+bio.reaction_dynamics.is_in_equilibrium(conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "Y"], 

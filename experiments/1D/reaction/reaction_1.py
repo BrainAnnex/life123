@@ -21,7 +21,7 @@
 #
 # See also the experiment _"reactions_single_compartment/react_1"_ 
 #
-# LAST REVISED: Dec. 25, 2022
+# LAST REVISED: Jan. 15, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -130,14 +130,7 @@ bio.bin_snapshot(bin_address = 0)
 
 # %%
 # Verify that the reaction has reached equilibrium
-A_eq = bio.bin_concentration(0, 0)
-B_eq = bio.bin_concentration(0, 1)
-print(f"Ratio of forward/reverse rates: {chem_data.get_forward_rate(0) / chem_data.get_reverse_rate(0)}")
-print(f"Ratio of equilibrium concentrations: {B_eq / A_eq}")
-
-# %%
-# A handy way to do the above
-bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
+bio.reaction_dynamics.is_in_equilibrium(conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
 # Save the state of the concentrations of all species at bin 0
