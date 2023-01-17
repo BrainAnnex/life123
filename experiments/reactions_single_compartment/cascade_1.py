@@ -20,7 +20,7 @@
 #
 # (Adaptive variable time resolution is used, with extensive diagnostics.)
 #
-# LAST REVISED: Jan. 13, 2023
+# LAST REVISED: Jan. 16, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -31,7 +31,7 @@
 # INTUITION: B, unable to quickly drain into C while at the same time being blasted by a hefty inflow from A,  
 # will experience a transient surge, in excess of its final equilibrium level.
 #
-# * [Compare with the final reaction plot (the red line is B)](#react_5_plot)
+# * [Compare with the final reaction plot (the red line is B)](#cascade_1_plot)
 
 # %% [markdown]
 # ![2 Coupled Reactions](../../docs/2_coupled_reactions.png)
@@ -153,7 +153,7 @@ df.loc[60:]
 dynamics.is_in_equilibrium(tolerance=0.2)
 
 # %% [markdown] tags=[]
-# ## <a name="react_5_plot"></a>Plots of changes of concentration with time
+# ## <a name="cascade_1_plot"></a>Plots of changes of concentration with time
 
 # %%
 fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B", "C"], 

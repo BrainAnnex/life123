@@ -16,17 +16,26 @@
 # ## A <-> B , downregulated by the "shunt" (coupled reaction) A <-> S
 # ### _Kinetic_ advantage (downregulation in early phase) vs. _Thermodynamic_ advantage (long-term downregulation) 
 #
-# **Scenario 1** : No downregulation on A <-> B
+# **[Scenario 1](#down_regulate_1_scenario_1)** : No downregulation on A <-> B 
 #
-# **Scenario 2** : The shunt (A <-> S) has a *kinetic* advantage but *thermodynamic* DIS-advantage compared to A <-> B   
+# **[Scenario 2](#down_regulate_1_scenario_2)** : The shunt (A <-> S) has a *kinetic* advantage but *thermodynamic* DIS-advantage compared to A <-> B   
 # (i.e. A <-> S is fast, but energetically unfavored) 
 #
-# **Scenario 3** : The shunt (A <-> S) is has a *kinetic* DIS-advantage but a *thermodynamic* advantage compared to A <-> B     
+# **[Scenario 3](#down_regulate_1_scenario_3)** : The shunt (A <-> S) is has a *kinetic* DIS-advantage but a *thermodynamic* advantage compared to A <-> B     
 # (i.e. A <-> S is slow, but energetically favored)  
 #
 # All reactions 1st order, mostly forward.  Taken to equilibrium.
 #
-# LAST REVISED: Jan. 13, 2023
+# LAST REVISED: Jan. 16, 2023
+
+# %% [markdown]
+# ## Bathtub analogy:
+# A is initially full, while B and S are empty.  
+# If the "shunt" S is present, scenario 2 corresponds to a large pipe and a small elevation change...  
+# while scenario 3 corresponds to a narrow pipe and a large elevation change.
+
+# %% [markdown]
+# ![Downregulated by shunt](../../docs/down_regulate_1.png)
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -54,7 +63,7 @@ GraphicLog.config(filename=log_file,
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %% [markdown]
-# # Scenario 1: A <-> B in the absence of the 2nd reaction
+# # <a name="down_regulate_1_scenario_1"></a>  Scenario 1: A <-> B in the absence of the 2nd reaction
 
 # %% [markdown]
 # ### Initialize the System
@@ -118,7 +127,7 @@ fig.show()
 # %%
 
 # %% [markdown]
-# # Scenario 2: 
+# # <a name="down_regulate_1_scenario_2"></a>  Scenario 2: 
 # ### downregulated by shunt: kinetically fast,   
 # ### but with thermodynamical dis-advantage (i.e. energetically un-favored)
 
@@ -200,7 +209,7 @@ dynamics.stoichiometry_checker_entire_run()
 # %%
 
 # %% [markdown]
-# # Scenario 3: 
+# # <a name="down_regulate_1_scenario_3"></a> Scenario 3: 
 # ### downregulated by shunt: kinetically slow,   
 # ### but with thermodynamical advantage (i.e. energetically favored)
 
