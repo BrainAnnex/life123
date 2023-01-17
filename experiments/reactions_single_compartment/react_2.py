@@ -18,7 +18,7 @@
 #
 # Same as the experiment _"react_1"_ , but with an adaptive variable time scale
 #
-# LAST REVISED: Jan. 5, 2023
+# LAST REVISED: Jan. 11, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -89,7 +89,7 @@ dynamics.history.get()
 dynamics.single_compartment_react(time_step=0.1, n_steps=11,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_step=2)      
+                                  dynamic_steps=2)
                                   # Accepting the default:  fast_threshold=5
 
 # %% [markdown]
