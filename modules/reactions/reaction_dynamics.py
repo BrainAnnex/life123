@@ -165,7 +165,9 @@ class ReactionDynamics:
 
     def get_rxn_speed(self, rxn_index: int) -> str:
         """
-        Get the code about reaction speed that the given reaction is marked with
+        For the requested reaction, get the string code that it was marked with
+        to classify its speed.
+        If the reaction has not been previously classified, regard it as "F" (Fast)
 
         :param rxn_index:   The index (0-based) to identify the reaction of interest
         :return:            A 1-letter string with the code "F" (for Fast) or "S" (Slow)
@@ -175,7 +177,7 @@ class ReactionDynamics:
 
     def set_rxn_speed(self, rxn_index: int, speed: str) -> None:
         """
-        Set the code about reaction speed for the given reaction
+        Set a code value that classifies the reaction speed for the given reaction
 
         :param rxn_index:   The index (0-based) to identify the reaction of interest
         :param speed:       A 1-letter string with the code "F" (for Fast) or "S" (Slow)
@@ -1049,14 +1051,15 @@ class ReactionDynamics:
 
         :return:            Return True if ALL the reactions are close enough to an equilibrium,
                                 as allowed by the requested tolerance;
-                                otherwise, return a dict of boolean status values,
-                                indexed by reaction index, for all the reactions that failed the criterion
-                                (EXAMPLE: {3: False, 6: False})
+                                otherwise, return a dict of the form {False: [list of reaction index]}
+                                for all the reactions that failed the criterion
+                                (EXAMPLE:  {False:  [3, 6:]})
         """
         if conc is None:
             conc=self.get_conc_dict()   # Use the current System concentrations
 
-        failures_dict = {}              # Dict of reactions that fail to meet the criterion for equilibrium
+        failures_dict = {False: []}     # 1-element dict whose value is
+                                        # a list of reactions that fail to meet the criterion for equilibrium
 
         if rxn_index is not None:
             # Check the 1 given reaction
@@ -1066,7 +1069,7 @@ class ReactionDynamics:
 
             status = self.reaction_in_equilibrium(rxn_index=rxn_index, conc=conc, tolerance=tolerance, explain=explain)
             if not status:
-                failures_dict = {rxn_index: False}
+                failures_dict = {False: [rxn_index]}
 
         else:
             # Check all the reactions
@@ -1080,9 +1083,8 @@ class ReactionDynamics:
                 single_status = self.reaction_in_equilibrium(rxn_index=i, conc=conc, tolerance=tolerance, explain=explain)
 
                 if not single_status:
-                    failures_dict[i] = single_status
                     status = False
-
+                    failures_dict[False].append(i)
 
         if status:
             return True

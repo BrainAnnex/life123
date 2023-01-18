@@ -596,22 +596,22 @@ def test_is_in_equilibrium():
     with pytest.raises(Exception):
         assert rxn.is_in_equilibrium(conc=c, explain=False, tolerance=10) # Testing ALL reactions, but neglected to provide [B]
 
-    c = {'A': 3, 'B': 4.6, 'F': 33.001}     # We're now including all the concentrations we need for both reactions
+    c = {'A': 3, 'B': 4.6, 'F': 33.001}   # We're now including all the concentrations we need for both reactions
     assert rxn.is_in_equilibrium(conc=c, explain=False, tolerance=10) \
-           == {1: False}    # The deviation for reaction 1 is just above the 10% tolerance
+           == {False: [1]}    # The deviation for reaction 1 is just above the 10% tolerance
 
     assert rxn.is_in_equilibrium(conc=c, explain=False, tolerance=2.2) \
-           == {0: False, 1: False}      # With a tolerance so low, not reaction meets the criteria
+           == {False: [0, 1]}      # With a tolerance so low, not reaction meets the criteria
 
     assert rxn.is_in_equilibrium(conc=c, explain=False, tolerance=2.3) \
-           == {1: False}                # Reaction 0 barely passes with this tolerance (it deviates by 2.222 %)
+           == {False: [1]}                # Reaction 0 barely passes with this tolerance (it deviates by 2.222 %)
 
     with pytest.raises(Exception):
         assert rxn.is_in_equilibrium(explain=False, tolerance=2.3)  # We're failing to provide concentrations
 
     rxn.set_conc(conc=[3, 4.6, 0, 0, 0, 33.001])    # The concentrations are in the same order as the declared chemicals
     assert rxn.is_in_equilibrium(conc=c, explain=False, tolerance=2.3) \
-           == {1: False}        # Now using the System concentrations
+           == {False: [1]}        # Now using the System concentrations
 
 
 
