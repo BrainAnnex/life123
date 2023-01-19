@@ -93,7 +93,7 @@ class ReactionData:
 
 
 
-    def assert_valid_index(self, species_index: int) -> None:
+    def assert_valid_species_index(self, species_index: int) -> None:
         """
         Raise an Exception if the specified species_index isn't valid
 
@@ -159,7 +159,7 @@ class ReactionData:
         :return:                The name of the species with the given index if present,
                                     or None if not
         """
-        self.assert_valid_index(species_index)
+        self.assert_valid_species_index(species_index)
 
         return self.chemical_data[species_index].get("name")    # If "name" is not present, None will be returned
 
@@ -185,7 +185,7 @@ class ReactionData:
         :return:                The value of the diffusion rate for the species with the given index if present,
                                     or None if not
         """
-        self.assert_valid_index(species_index)
+        self.assert_valid_species_index(species_index)
 
         return self.chemical_data[species_index].get("diff")  # If not present, None is returned
 

@@ -55,7 +55,7 @@ class ReactionDynamics:
 
     def set_conc(self, conc: Union[list, tuple], snapshot=False) -> None:
         """
-        Set the concentrations of all the chemicals
+        Set the concentrations of all the chemicals at once
 
         :param conc:        A list or tuple (TODO: also allow a Numpy array; make sure to do a copy() to it!)
                             TODO: also allow a dict
@@ -66,7 +66,7 @@ class ReactionDynamics:
         # TODO: more validations, incl. of individual values being wrong data type
 
         assert len(conc) == self.reaction_data.number_of_chemicals(), \
-            f"ReactionDynamics.set_conc(): The number of passed concentration values ({len(conc)}) " \
+            f"ReactionDynamics.set_conc(): The number of concentration values passed in argument 'conc' ({len(conc)}) " \
             f"must match the number of declared chemicals ({self.reaction_data.number_of_chemicals()})"
 
         assert min(conc) >= 0, \
@@ -78,6 +78,29 @@ class ReactionDynamics:
 
         if snapshot:
             self.add_snapshot(caption="Initial state")
+
+
+
+    def set_chem_conc(self, species_index: int, conc, snapshot=False) -> None:
+        """
+        Set the concentrations of 1 chemical
+
+        :param species_index:
+        :param conc:
+        :param snapshot:
+        :return:                None
+        """
+        # Validate the arguments
+        self.reaction_data.assert_valid_species_index(species_index)
+
+        assert conc >= 0, \
+            f"ReactionDynamics.set_chem_conc(): Chemical concentrations cannot be negative (value passed: {conc})"
+
+
+        self.system[species_index] = conc
+
+        if snapshot:
+            self.add_snapshot(caption=f"Set concentration of `{self.reaction_data.get_name(species_index)}`")
 
 
 
@@ -131,6 +154,11 @@ class ReactionDynamics:
             return conc_dict
 
 
+
+
+    '''
+    Management of reactions
+    '''
 
     def slow_rxns(self) -> [int]:
         """
@@ -1171,9 +1199,9 @@ class ReactionDynamics:
             print(f"2. Ratio of forward/reverse reaction rates: {rate_ratio}")
             print(f"Discrepancy between the two values: {100 * abs(conc_ratio - rate_ratio)/rate_ratio :,.4g} %")
             if status:
-                print("Reaction IS in equilibrium (within tolerance)\n")
+                print(f"Reaction IS in equilibrium (within {tolerance:.2g}% tolerance)\n")
             else:
-                print("Reaction is NOT in equilibrium (not within tolerance)\n")
+                print(f"Reaction is NOT in equilibrium (not within {tolerance:.2g}% tolerance)\n")
 
         return status
 
