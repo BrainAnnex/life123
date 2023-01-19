@@ -70,13 +70,18 @@ class MovieTabular:
 
 
 
-    def get(self) -> pd.DataFrame:
+    def get(self, tail=None) -> pd.DataFrame:
         """
         Return the main data structure - a Pandas dataframe
 
-        :return:
+        :param tail:    If an integer value is provided, only show the last several rows,
+                            as many as specified by that number
+        :return:        A Pandas dataframe
         """
-        return self.movie
+        if tail is None:
+            return self.movie
+        else:
+            return self.movie.tail(tail)
 
 
 

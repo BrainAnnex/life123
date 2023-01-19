@@ -17,7 +17,7 @@
 # ## A down-regulates B , 
 # ### by being the *limiting reagent* in reaction A + 2 B <-> Y (mostly forward)
 # 1st-order kinetics.   
-# If [A] is low, [B] remains high.  Then, if [A] goes high, [B] goes low.  However, at that point, A can no longer bring B up to any substantial extent.
+# If [A] is low and [B] is high, then [B] remains high.  If [A] goes high, [B] goes low.  However, at that point, A can no longer bring B up to any substantial extent.
 #
 # See also 1D/reactions/down_regulation_1
 #
@@ -70,14 +70,15 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
-dynamics.set_conc([5, 100., 0.], snapshot=True)  # A is scarce, B is plentiful, C is absent
+dynamics.set_conc([5, 100., 0.], snapshot=True)  # A is scarce, B is plentiful, Y is absent
 dynamics.describe_state()
 
 # %% [markdown] tags=[]
 # ### Take the initial system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, n_steps=30)
+dynamics.single_compartment_react(time_step=0.0005, n_steps=30, 
+                                  dynamic_steps=2, fast_threshold=15)
 
 df = dynamics.history.get()
 df
@@ -94,37 +95,34 @@ df
 dynamics.is_in_equilibrium()
 
 # %% [markdown] tags=[]
-# # Plots of changes of concentration with time
+# ## Plots of changes of concentration with time
 
 # %%
 fig = px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B", "Y"], 
               title="Changes in concentrations",
-              color_discrete_sequence = ['red', 'green', 'darkorange'],
+              color_discrete_sequence = ['red', 'blue', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
 # %% [markdown] tags=[]
-# ## Now, let's suddenly increase [A]
+# # Now, let's suddenly increase [A]
 
 # %%
 dynamics.set_chem_conc(species_index=0, conc=40., snapshot=True)
 dynamics.describe_state()
 
 # %%
-dynamics.history.get()
+dynamics.history.get(tail=5)
 
 # %% [markdown]
 # ### Again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, n_steps=80)
+dynamics.single_compartment_react(time_step=0.001, n_steps=40,
+                                 dynamic_steps=2, fast_threshold=15)
 
 df = dynamics.history.get()
 df
-
-# %% [markdown]
-# **A**, still the limiting reagent, is again stopping the reaction.  
-# The (transiently) high value of [A] led to a high value of [B]
 
 # %%
 # Verify that the reaction has reached equilibrium
@@ -132,32 +130,34 @@ dynamics.is_in_equilibrium(tolerance=7)
 
 # %%
 fig = px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B", "Y"], 
-              title="Changes in concentrations",
-              color_discrete_sequence = ['red', 'green', 'darkorange'],
+              title="Changes in concentrations (reaction A + 2 B <-> Y)",
+              color_discrete_sequence = ['red', 'blue', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
+# %% [markdown]
+# **A**, still the limiting reagent, is again stopping the reaction.  
+# The (transiently) high value of [A] led to a high value of [B]
+
 # %% [markdown] tags=[]
-# ## Let's again suddenly increase [A]
+# # Let's again suddenly increase [A]
 
 # %%
 dynamics.set_chem_conc(species_index=0, conc=30., snapshot=True)
 dynamics.describe_state()
 
 # %%
-dynamics.history.get()
+dynamics.history.get(tail=5)
 
 # %% [markdown]
 # ### Yet again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, n_steps=70)
+dynamics.single_compartment_react(time_step=0.001, n_steps=35,
+                                 dynamic_steps=2, fast_threshold=15)
 
 df = dynamics.history.get()
 df
-
-# %% [markdown]
-# **A**, again the scarse limiting reagent, stops the reaction yet again
 
 # %%
 # Verify that the reaction has reached equilibrium
@@ -165,13 +165,46 @@ dynamics.is_in_equilibrium()
 
 # %%
 fig = px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B", "Y"], 
-              title="Changes in concentrations",
-              color_discrete_sequence = ['red', 'green', 'darkorange'],
+              title="Changes in concentrations (reaction A + 2 B <-> Y)",
+              color_discrete_sequence = ['red', 'blue', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
 # %% [markdown]
-# Note: A can up-regulate B, but it cannot bring it down.  
-# X will soon need to be replenished, if A is to continue being the limiting reagent.
+# **A**, again the scarse limiting reagent, stops the reaction yet again
+
+# %%
+
+# %% [markdown]
+# ## A can down-regulate B, but it cannot bring it up to any significant amount
+# #### Even if A is completely taken out (i.e., [A] set to 0), [B] can only slightly increase, from the reverse reaction ("Le Chatelier's principle".)  
+# Let's try it:
+
+# %%
+dynamics.set_chem_conc(species_index=0, conc=0., snapshot=True)   # Completely eliminate A
+dynamics.describe_state()
+
+# %%
+dynamics.single_compartment_react(time_step=0.001, n_steps=70,
+                                 dynamic_steps=2, fast_threshold=15)
+
+df = dynamics.history.get()
+df
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium(tolerance=2)
+
+# %%
+fig = px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B", "Y"], 
+              title="Changes in concentrations (reaction A + 2 B <-> Y)",
+              color_discrete_sequence = ['red', 'blue', 'green'],
+              labels={"value":"concentration", "variable":"Chemical"})
+fig.show()
+
+# %% [markdown]
+# #### As expected, even the complete withdrawal of A (red), brings about only a modest increase of B's concentration, from the reverse reaction (i.e. [B] slightly increases at the expense of [Y].)  
+# #### The change is modest because our  reaction A + 2 B <-> Y is mostly in the forward direction (K = 4)
+# Le Chatelier's principle in action: "A change in one of the variables that describe a system at equilibrium produces a shift in the position of the equilibrium that counteracts the effect of this change."
 
 # %%

@@ -382,8 +382,9 @@ class ReactionData:
         Return a list of indices (WARNING: NOT necessarily in numerical order) of
         all the chemicals in the specified reaction
 
-        :param rxn_index:
-        :return:
+        :param rxn_index:   An integer with the (zero-based) index to identify the reaction of interest
+        :return:            A list of indices of the chemicals involved in the above reaction
+                                Note: the list could be in any order
         """
         chem_list = []  # Running list being built
 
@@ -400,6 +401,17 @@ class ReactionData:
 
         return chem_list
 
+
+
+    def get_reactions_participating_in(self, species_index: int) -> [int]:
+        """
+        Return a list of all the reactions that the given chemical species
+        is involved in
+
+        :param species_index:
+        :return:
+        """
+        pass        # TODO: write
 
 
 

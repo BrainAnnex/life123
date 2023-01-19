@@ -57,10 +57,12 @@ class ReactionDynamics:
         """
         Set the concentrations of all the chemicals at once
 
-        :param conc:        A list or tuple (TODO: also allow a Numpy array; make sure to do a copy() to it!)
-                            TODO: also allow a dict
+        :param conc:        A list or tuple of concentration values for all the chemicals, in their index order
+                                (Any previous values will get over-written)
+                                TODO: also allow a Numpy array; make sure to do a copy() to it!
+                                TODO: also allow a dict
         :param snapshot:    (OPTIONAL) boolean: if True, add to the history
-                            a snapshot of this initial state being set.  Default: False
+                                a snapshot of this state being set.  Default: False
         :return:            None
         """
         # TODO: more validations, incl. of individual values being wrong data type
@@ -76,6 +78,8 @@ class ReactionDynamics:
 
         self.system = np.array(conc)
 
+        self.reaction_speeds = {}   # Reset all the reaction speeds (now they'll all be assumed to be "Fast")
+
         if snapshot:
             self.add_snapshot(caption="Initial state")
 
@@ -85,9 +89,11 @@ class ReactionDynamics:
         """
         Set the concentrations of 1 chemical
 
-        :param species_index:
-        :param conc:
-        :param snapshot:
+        :param species_index:   The index (0-based integer) to identify the chemical species of interest
+        :param conc:            A non-negative number with the desired concentration value for the above value.
+                                    (Any previous value will get over-written)
+        :param snapshot:        (OPTIONAL) boolean: if True, add to the history
+                                    a snapshot of this state being set.  Default: False
         :return:                None
         """
         # Validate the arguments
@@ -98,6 +104,10 @@ class ReactionDynamics:
 
 
         self.system[species_index] = conc
+
+        self.reaction_speeds = {}   # Reset all the reaction speeds (now they'll all be assumed to be "Fast")
+                                    # TODO: this is overkill; ought to only reset the affected reactions -
+                                    #       as returned by get_reactions_participating_in()
 
         if snapshot:
             self.add_snapshot(caption=f"Set concentration of `{self.reaction_data.get_name(species_index)}`")
@@ -909,7 +919,7 @@ class ReactionDynamics:
         then mark the given reaction as "Fast" (in its data structure);
         this will OVER-RIDE any previous annotation about the speed of that reaction.
 
-        :param rxn_index:               The index (0-based) to identify the reaction of interest
+        :param rxn_index:               An integer with the (zero-based) index to identify the reaction of interest
         :param delta_conc_array:        The change in concentrations computed by the ODE solver
                                             (for ALL the chemicals,
                                             though only the ones involved in the above reaction are looked at)
