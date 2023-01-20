@@ -109,12 +109,19 @@ class ReactionData:
         """
         Raise an Exception if the specified reaction index isn't valid
 
-        :param index:
+        :param index:   An integer that indexes the reaction of interest (numbering starts at 0)
         :return:
         """
-        assert (type(index) == int) and \
-               0 <= index < self.number_of_reactions(), \
-            f"The requested reaction index ({index}) is not the expected integer the range [0 - {self.number_of_reactions() - 1}], inclusive"
+        assert self.number_of_reactions() > 0, \
+            f"ReactionData.assert_valid_rxn_index(): there are no reactions defined yet.  Use add_reaction() to add them first"
+
+        assert (type(index) == int), \
+            f"ReactionData.assert_valid_rxn_index(): the requested reaction index must be an integer; " \
+            f"the provided value ({index}) is of type {type(index)}"
+
+        assert 0 <= index < self.number_of_reactions(), \
+            f"ReactionData.assert_valid_rxn_index(): the requested reaction index is not the expected range [0 to {self.number_of_reactions() - 1}], inclusive; " \
+            f"the value passed was: {index} (there is no reaction whose index is {index})"
 
 
 
@@ -222,13 +229,11 @@ class ReactionData:
         Return the data structure of the i-th reaction,
         in the order in which reactions were added (numbering starts at 0)
 
-        :param i:   The index (0-based) to identify the reaction of interest
+        :param i:   An integer that indexes the reaction of interest (numbering starts at 0)
         :return:    A dictionary with 4 keys ("reactants", "products", "kF", "kR"),
                     where "kF" is the forward reaction rate constant, and "kR" the back reaction rate constant
         """
-        assert 0 <= i < self.number_of_reactions(), \
-            f"get_reaction(): argument `i` must be in the range [0-{self.number_of_reactions()}], inclusive; " \
-            f"The value passed was {i} "
+        self.assert_valid_rxn_index(i)
 
         return self.reaction_list[i]
 
@@ -377,29 +382,31 @@ class ReactionData:
 
 
 
-    def get_chemicals_in_reaction(self, rxn_index: int) -> [int]:   # TODO: pytest
+    def get_chemicals_in_reaction(self, rxn_index: int) -> {int}:
         """
-        Return a list of indices (WARNING: NOT necessarily in numerical order) of
-        all the chemicals in the specified reaction
+        Return a SET of indices (being a set, it's NOT in any particular order)
+        of all the chemicals in the specified reaction
 
         :param rxn_index:   An integer with the (zero-based) index to identify the reaction of interest
-        :return:            A list of indices of the chemicals involved in the above reaction
-                                Note: the list could be in any order
+        :return:            A SET of indices of the chemicals involved in the above reaction
+                                Note: being a set, it's NOT in any particular order
         """
-        chem_list = []  # Running list being built
+        chem_set = set()    # Running set being built
 
-        reactants = self.get_reactants(rxn_index)
-        products = self.get_products(rxn_index)
+        rxn = self.get_reaction(rxn_index)
+
+        reactants = self.extract_reactants(rxn)
+        products = self.extract_products(rxn)
 
         for r in reactants:
             species_index = self.extract_species_index(r)
-            chem_list.append(species_index)
+            chem_set.add(species_index)
 
         for p in products:
             species_index = self.extract_species_index(p)
-            chem_list.append(species_index)
+            chem_set.add(species_index)
 
-        return chem_list
+        return chem_set
 
 
 
@@ -427,7 +434,8 @@ class ReactionData:
         of all the chemical species, in the given order.
         If no names are provided, the strings "Chemical 1", "Chemical 2", ..., are used
 
-        IMPORTANT: this function can be invoked only once, before any chemical data is set
+        IMPORTANT: this function can be invoked only once, before any chemical data is set.
+                   To add new chemicals later, use add_chemical()
 
         :param names:           [OPTIONAL] List or tuple of the names of the chemical species
         :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals,
@@ -495,9 +503,9 @@ class ReactionData:
 
     def add_chemical(self, name: str, diffusion_rate=None, note=None) -> None:
         """
-        Register one more chemical species, with a name and (optionally) a diffusion rate.
+        Register a new chemical species, with a name and (optionally) a diffusion rate.
 
-        :param name:            Name of the chemical species to add to this object
+        :param name:            Name of the chemical species to add
         :param diffusion_rate:  [OPTIONAL] Floating-point number with the diffusion rate (in water) of this chemical
         :param note:            [OPTIONAL] Note to attach to the chemical
         :return:                None
@@ -562,10 +570,19 @@ class ReactionData:
 
         NOTE: in the reactants and products, if the stoichiometry and/or reaction order aren't specified, they're assumed to be 1
 
+        EXAMPLES of formats for reactans and products (*assuming* that the chemical species with index 5 is called "F"):
+                    5       gets turned into:   (1, 5, 1)
+                    "F"                         (1, 5, 1)
+                    (3, 5)                      (3, 5, 1)
+                    (3, "F")                    (3, 5, 1)
+                    (3, 5, 2)                   (3, 5, 2)
+                    (3, "F", 2)                 (3, 5, 2)
+                    It's equally acceptable to use LISTS in lieu of tuples
+
         :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
-                                    or simplified terms in various formats; for details, see _parse_reaction_term()
+                                    or simplified terms in various formats; for details, see above
         :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction),
-                                    or simplified terms in various formats; for details, see _parse_reaction_term()
+                                    or simplified terms in various formats; for details, see above
         :param forward_rate:    [OPTIONAL] Forward reaction rate constant
         :param reverse_rate:    [OPTIONAL] Reverse reaction rate constant
         :param Delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
@@ -897,7 +914,7 @@ class ReactionData:
             (3, "F")                    (3, 5, 1)
             (3, 5, 2)                   (3, 5, 2)
             (3, "F", 2)                 (3, 5, 2)
-            Same if lists were used in lieu of tuples
+            It's equally acceptable to use LISTS in lieu of tuples
 
         :param term:    An integer or string or tuple or list
         :param name:    An optional nickname to refer to this term in error messages, if applicable

@@ -299,8 +299,38 @@ def test_extract_rxn_properties():
 
 
 
+def test_get_chemicals_in_reaction():
+    chem = ReactionData(names=["A", "B"])
 
-# SUPPORT FOR CREATION OF NETWORK DIAGRAMS
+    with pytest.raises(Exception):
+        chem.get_chemicals_in_reaction(0)   # There are no reactions defined yet
+
+    chem.add_reaction(reactants="A", products="B")  # Reaction 0
+    assert chem.get_chemicals_in_reaction(0) == {0, 1}
+
+    with pytest.raises(Exception):
+        chem.get_chemicals_in_reaction(1)   # There is no reaction 1
+
+    chem.add_chemical("C")
+    chem.add_reaction(reactants=["B"], products=[2, "C"])  # Reaction 1
+    assert chem.get_chemicals_in_reaction(0) == {0, 1}
+    assert chem.get_chemicals_in_reaction(1) == {1, 2}
+
+    chem.add_reaction(reactants=["A"], products=["C"])      # Reaction 2
+    assert chem.get_chemicals_in_reaction(0) == {0, 1}
+    assert chem.get_chemicals_in_reaction(1) == {1, 2}
+    assert chem.get_chemicals_in_reaction(2) == {0, 2}
+
+    chem.add_chemical("D")
+    chem.add_reaction(reactants=["A", "B"], products="D")    # Reaction 2
+    assert chem.get_chemicals_in_reaction(0) == {0, 1}
+    assert chem.get_chemicals_in_reaction(1) == {1, 2}
+    assert chem.get_chemicals_in_reaction(2) == {0, 2}
+    assert chem.get_chemicals_in_reaction(3) == {0, 1, 3}
+
+
+
+###  SUPPORT FOR CREATION OF NETWORK DIAGRAMS  ###
 
 def test_create_graph_network_data():
     chem = ReactionData(names=["A", "B"])

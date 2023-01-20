@@ -88,6 +88,7 @@ class ReactionDynamics:
     def set_chem_conc(self, species_index: int, conc, snapshot=False) -> None:
         """
         Set the concentrations of 1 chemical
+        TODO: allow specifying species_name
 
         :param species_index:   The index (0-based integer) to identify the chemical species of interest
         :param conc:            A non-negative number with the desired concentration value for the above value.
@@ -953,7 +954,7 @@ class ReactionDynamics:
             print(f"        For Rxn # {rxn_index}, checking concentrations of chems: {self.reaction_data.get_chemicals_in_reaction(rxn_index)}")
 
 
-        # Just loop over those in the given reaction (not over ALL the chemicals!)
+        # Just loop over the chemicals in the given reaction (not over ALL the chemicals!)
         for i in self.reaction_data.get_chemicals_in_reaction(rxn_index):
 
             delta_conc = delta_conc_array[i]
@@ -1030,7 +1031,7 @@ class ReactionDynamics:
         For background info: https://life123.science/reactions
         What we're computing here, is referred to as:  (Δt)∗delta_forward(n)
 
-        :param rxn_index:   An integer that indexes the reaction of interest
+        :param rxn_index:   An integer that indexes the reaction of interest (numbering starts at 0)
         :param conc_array:  ALL initial concentrations at the start of the reaction step,
                                 as a Numpy array for ALL the chemical species, in their index order
                                 (regardless of their involvement in the reaction of interest);
