@@ -53,14 +53,16 @@ class ReactionDynamics:
     #                                                                                           #
     #############################################################################################
 
-    def set_conc(self, conc: Union[list, tuple], snapshot=False) -> None:
+    def set_conc(self, conc: Union[list, tuple, dict], snapshot=False) -> None:
         """
-        Set the concentrations of all the chemicals at once
+        Set the concentrations of ALL the chemicals at once
 
-        :param conc:        A list or tuple of concentration values for all the chemicals, in their index order
+        :param conc:        A list or tuple of concentration values for ALL the chemicals, in their index order;
+                                alternatively, a dict indexed by the chemical names, again for ALL the chemicals
+                                EXAMPLE of the latter: {"A": 12.4, "B": 0.23, "C": 2.6}  (assuming that "A", "B" and "C" are all the chems)
                                 (Any previous values will get over-written)
                                 TODO: also allow a Numpy array; make sure to do a copy() to it!
-                                TODO: also allow a dict
+                                TODO: pytest for the dict option
         :param snapshot:    (OPTIONAL) boolean: if True, add to the history
                                 a snapshot of this state being set.  Default: False
         :return:            None
@@ -68,11 +70,24 @@ class ReactionDynamics:
         # TODO: more validations, incl. of individual values being wrong data type
 
         assert len(conc) == self.reaction_data.number_of_chemicals(), \
-            f"ReactionDynamics.set_conc(): The number of concentration values passed in argument 'conc' ({len(conc)}) " \
+            f"ReactionDynamics.set_conc(): the number of concentration values passed in the argument 'conc' ({len(conc)}) " \
             f"must match the number of declared chemicals ({self.reaction_data.number_of_chemicals()})"
 
+        if type(conc) == dict:
+            conc_list = []
+            for species_index in range(self.reaction_data.number_of_chemicals()):
+                name = self.reaction_data.get_name(species_index)
+                if name is None:
+                    raise Exception(f"ReactionDynamics.set_conc(): to use a dictionary for the `conc` arguments, "
+                                    f"all the chemicals must first be given names - to be used as keys for the dictionary "
+                                    f"(Chemical in index position {species_index} lacks a name")
+                conc_list.append(conc[name])
+            # END for
+            conc = conc_list
+
+
         assert min(conc) >= 0, \
-            f"ReactionDynamics.set_conc(): Values meant to be chemical concentrations cannot be negative " \
+            f"ReactionDynamics.set_conc(): values meant to be chemical concentrations cannot be negative " \
             f"(such as the passed value {min(conc)})"
 
 
@@ -85,23 +100,31 @@ class ReactionDynamics:
 
 
 
-    def set_chem_conc(self, species_index: int, conc, snapshot=False) -> None:
+    def set_chem_conc(self, conc, species_index=None, species_name=None, snapshot=False) -> None:
         """
         Set the concentrations of 1 chemical
-        TODO: allow specifying species_name
+        Note: if both species_index and species_name are provided, species_name is used     TODO: pytest this part
 
-        :param species_index:   The index (0-based integer) to identify the chemical species of interest
         :param conc:            A non-negative number with the desired concentration value for the above value.
                                     (Any previous value will get over-written)
+        :param species_index:   (OPTIONAL) An integer that indexes the chemical of interest (numbering starts at 0)
+        :param species_name:    (OPTIONAL) A name for the chemical of interest.
+                                    If both species_index and species_name are provided, species_name is used
         :param snapshot:        (OPTIONAL) boolean: if True, add to the history
                                     a snapshot of this state being set.  Default: False
         :return:                None
         """
         # Validate the arguments
-        self.reaction_data.assert_valid_species_index(species_index)
-
         assert conc >= 0, \
-            f"ReactionDynamics.set_chem_conc(): Chemical concentrations cannot be negative (value passed: {conc})"
+            f"ReactionDynamics.set_chem_conc(): chemical concentrations cannot be negative (value passed: {conc})"
+
+        if species_name is not None:
+            species_index = self.reaction_data.get_index(species_name)
+        elif species_index is not None:
+            self.reaction_data.assert_valid_species_index(species_index)
+        else:
+            raise Exception("ReactionDynamics.set_chem_conc(): at least one "
+                            "of the arguments `species_index` or `species_name` must be provided")
 
 
         self.system[species_index] = conc

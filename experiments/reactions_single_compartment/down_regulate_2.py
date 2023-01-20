@@ -21,7 +21,7 @@
 #
 # See also 1D/reactions/down_regulation_1
 #
-# LAST REVISED: Jan. 18, 2023
+# LAST REVISED: Jan. 19, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -70,7 +70,8 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
-dynamics.set_conc([5, 100., 0.], snapshot=True)  # A is scarce, B is plentiful, Y is absent
+dynamics.set_conc(conc={"A": 5., "B": 100., "Y": 0.},
+                  snapshot=True)      # A is scarce, B is plentiful, Y is absent
 dynamics.describe_state()
 
 # %% [markdown] tags=[]
@@ -108,7 +109,7 @@ fig.show()
 # # Now, let's suddenly increase [A]
 
 # %%
-dynamics.set_chem_conc(species_index=0, conc=40., snapshot=True)
+dynamics.set_chem_conc(species_name="A", conc=40., snapshot=True)
 dynamics.describe_state()
 
 # %%
@@ -143,7 +144,7 @@ fig.show()
 # # Let's again suddenly increase [A]
 
 # %%
-dynamics.set_chem_conc(species_index=0, conc=30., snapshot=True)
+dynamics.set_chem_conc(species_name="A", conc=30., snapshot=True)
 dynamics.describe_state()
 
 # %%
@@ -181,7 +182,7 @@ fig.show()
 # Let's try it:
 
 # %%
-dynamics.set_chem_conc(species_index=0, conc=0., snapshot=True)   # Completely eliminate A
+dynamics.set_chem_conc(species_name="A", conc=0., snapshot=True)   # Completely eliminate A
 dynamics.describe_state()
 
 # %%

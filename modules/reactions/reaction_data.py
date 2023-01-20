@@ -97,7 +97,7 @@ class ReactionData:
         """
         Raise an Exception if the specified species_index isn't valid
 
-        :param species_index:
+        :param species_index:   An integer that indexes the chemical of interest (numbering starts at 0)
         :return:                None
         """
         assert (type(species_index) == int) and \
@@ -105,12 +105,12 @@ class ReactionData:
             f"The requested species index ({species_index}) is not the expected integer the range [0 - {self.n_species - 1}], inclusive"
 
 
-    def assert_valid_rxn_index(self, index):
+    def assert_valid_rxn_index(self, index) -> None:
         """
         Raise an Exception if the specified reaction index isn't valid
 
         :param index:   An integer that indexes the reaction of interest (numbering starts at 0)
-        :return:
+        :return:        None
         """
         assert self.number_of_reactions() > 0, \
             f"ReactionData.assert_valid_rxn_index(): there are no reactions defined yet.  Use add_reaction() to add them first"
@@ -174,11 +174,12 @@ class ReactionData:
     def get_all_names(self) -> [Union[str, None]]:
         """
         Return a list with the names of all the chemical species, in their index order.
-        If any is missing, None is use
+        If any is missing, None is used
 
         :return:    A list of strings
         """
-        return [c.get("name") for c in self.chemical_data]
+        return [c.get("name", None)
+                for c in self.chemical_data]
 
 
 
