@@ -66,7 +66,7 @@ graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown]
-# ### Set the initial concentrations of all the chemicals, in their index order
+# ### Set the initial concentrations of all the chemicals
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
