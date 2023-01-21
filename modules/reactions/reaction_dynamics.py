@@ -40,7 +40,7 @@ class ReactionDynamics:
                                         #   MAX code currently used: 5
 
         self.diagnostic_data = {}       # This will be a dict with as many entries as reactions
-        self.diagnostic_data_baselines = MovieTabular(parameter_name="TIME")
+        self.diagnostic_data_baselines = MovieTabular(parameter_name="TIME")    # An expanded version of the normal System History
 
         self.diagnostics = False
 
@@ -447,9 +447,16 @@ class ReactionDynamics:
         assert self.system is not None, "ReactionDynamics.single_compartment_react(): " \
                                         "the concentration values of the various chemicals must be set first"
 
+
         if self.diagnostics:
+            # Save up the current System State, with some extra info
+            system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
+            system_data["is_primary"] = True
+            system_data["primary_timestep"] = time_step
+            system_data["n_substeps"] = dynamic_steps
+            system_data["substep_number"] = 0
             self.diagnostic_data_baselines.store(par=self.system_time,
-                                                 data_snapshot=self.get_conc_dict(system_data=self.system))
+                                                 data_snapshot=system_data)
 
         for i in range(n_steps):
             delta_concentrations = self.reaction_step_orchestrator(delta_time_full=time_step, conc_array=self.system,
@@ -466,8 +473,14 @@ class ReactionDynamics:
                     self.add_snapshot(species=species)
 
             if self.diagnostics:
+                # Save up the current System State, with some extra info
+                system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
+                system_data["is_primary"] = True
+                system_data["primary_timestep"] = time_step
+                system_data["n_substeps"] = dynamic_steps
+                system_data["substep_number"] = 0
                 self.diagnostic_data_baselines.store(par=self.system_time,
-                                                     data_snapshot=self.get_conc_dict(system_data=self.system))
+                                                     data_snapshot=system_data)
 
 
         if snapshots and "final_caption" in snapshots:
@@ -645,16 +658,22 @@ class ReactionDynamics:
                 local_conc_array += delta_concentrations_slow / dynamic_steps
 
 
-            # Preserve the intermediate-state data, if requested
-            if snapshots and snapshots.get("show_intermediates") and substep < dynamic_steps-1:  # Skip the last one, which will be handled by the caller
+            # Preserve the intermediate-state data (the "secondary staging points"), if requested
+            # NOTE: skipping the last substep, which will be handled by the caller function
+            if snapshots and snapshots.get("show_intermediates") and substep < dynamic_steps-1:
                 species_to_show = snapshots.get("species")          # If not present, it will be None (meaning show all)
                 time = self.system_time + (substep+1) * reduced_time_step
                 self.add_snapshot(time=time, species=species_to_show,
                                   system_data=local_conc_array,
                                   caption=f"Interm. step, due to the fast rxns: {fast_rxns}")
                 if self.diagnostics:
+                    system_data = self.get_conc_dict(system_data=local_conc_array)
+                    system_data["is_primary"] = False
+                    system_data["primary_timestep"] = delta_time_full
+                    system_data["n_substeps"] = dynamic_steps   # This must be set, or the data type of the whole column changes to accomodate NaN's!
+                    system_data["substep_number"] = substep+1
                     self.diagnostic_data_baselines.store(par=time,
-                                                         data_snapshot=self.get_conc_dict(system_data=local_conc_array))
+                                                         data_snapshot=system_data)
         # END for
 
         # At this point, all the slow AND all the fast reactions have been processed
@@ -1677,3 +1696,79 @@ class ReactionDynamics:
         return status
 
 
+
+    def explain_time_advance(self, return_times=False) -> Union[None, list]:
+        """
+        :param return_times:
+        :return:
+        """
+        assert self.diagnostics, "explain_time_advance(): diagnostics must first be turned on; " \
+                                 "use set_diagnostics() prior to the reaction run"
+
+        df = self.diagnostic_data_baselines.get()
+
+        t = list(df["TIME"])
+
+        grad = np.diff(t)
+
+
+        #print(grad)
+
+        start_i = 0
+
+        t_0 = df.loc[0, "TIME"]
+        critical_times = [t_0]
+
+        while start_i < len(t)-2:
+            delta_baseline = grad[start_i]
+
+            found = False
+            for i in range(start_i+1, len(t)-1):
+                #print(f"Considering position {i}")
+                if not np.allclose(grad[i], delta_baseline):
+                    #print(f"discrepancy found at i={i}")
+                    #print(f"Detected interval [{start_i} - {i}], advancing by {delta_baseline:.3g}")
+                    t_start = df.loc[start_i, "TIME"]
+                    t_end = df.loc[i, "TIME"]
+                    critical_times.append(t_end)
+                    primary_timestep = df.loc[i, "primary_timestep"]
+                    self._explain_time_advance_helper(t_start, t_end, delta_baseline, primary_timestep)
+                    start_i = i
+                    found = True
+                    break
+
+            if not found:
+                #print("discrepancy NOT FOUND; we're at the end")
+                #print(f"Detected interval [{start_i} - {len(t)-1}], advancing by {delta_baseline:.3g}")
+                t_start = df.loc[start_i, "TIME"]
+                t_end = df.loc[len(t)-1, "TIME"]
+                critical_times.append(t_end)
+                primary_timestep = df.loc[len(t)-1, "primary_timestep"]
+                self._explain_time_advance_helper(t_start, t_end, delta_baseline, primary_timestep)
+                break
+        # END WHILE
+
+        if return_times:
+            return critical_times
+
+
+    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, primary_timestep)  -> None:
+        """
+
+        :param t_start:
+        :param t_end:
+        :param delta_baseline:
+        :param primary_timestep:
+        :return:
+        """
+        if np.allclose(t_start, t_end):
+            print(f"[Ignoring interval starting and ending at same time {t_start:.3g}]")
+            return
+
+        if np.allclose(delta_baseline, primary_timestep):
+            n_steps = round((t_end - t_start) / delta_baseline)
+            print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} FULL steps of {delta_baseline:.3g}")
+        else:
+            #print(f"primary_timestep/delta_baseline is:  {primary_timestep}/{delta_baseline} = {primary_timestep/delta_baseline}")
+            n_steps = round((t_end - t_start) / delta_baseline)
+            print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substeps of {delta_baseline:.3g} (each 1/{round(primary_timestep/delta_baseline)} of full step)")

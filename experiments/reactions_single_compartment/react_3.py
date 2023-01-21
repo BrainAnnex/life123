@@ -20,7 +20,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_4"_ 
 #
-# LAST REVISED: Jan. 11, 2023
+# LAST REVISED: Jan. 20, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -104,6 +104,9 @@ dynamics.single_compartment_react(time_step=0.004, reaction_duration=0.06,
 # %%
 df = dynamics.history.get()
 df
+
+# %%
+dynamics.explain_time_advance()
 
 # %% [markdown]
 # ### Notice how the reaction proceeds in smaller steps in the early times, when the concentrations are changing much more rapidly

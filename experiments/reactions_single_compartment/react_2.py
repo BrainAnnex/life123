@@ -13,12 +13,12 @@
 # ---
 
 # %% [markdown]
-# ### Adaptive variable time resolution on reaction A <-> B  between 2 species,
+# ### Adaptive time substeps (variable time resolution) for reaction A <-> B,
 # with 1st-order kinetics in both directions, taken to equilibrium
 #
 # Same as the experiment _"react_1"_ , but with an adaptive variable time scale
 #
-# LAST REVISED: Jan. 11, 2023
+# LAST REVISED: Jan. 20, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -76,7 +76,6 @@ dynamics = ReactionDynamics(reaction_data=chem_data)
 # Initial concentrations of all the chemicals, in index order
 dynamics.set_conc([10., 50.], snapshot=True)
 
-# %%
 dynamics.describe_state()
 
 # %%
@@ -86,6 +85,8 @@ dynamics.history.get()
 # ## Run the reaction
 
 # %%
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
 dynamics.single_compartment_react(time_step=0.1, n_steps=11,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
@@ -96,11 +97,15 @@ dynamics.single_compartment_react(time_step=0.1, n_steps=11,
 # ## The argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using fast_threshold=5)
 
 # %%
-df = dynamics.history.get()
+df = dynamics.history.get()   # The system's history, saved during the run of single_compartment_react()
 df
 
+# %%
+dynamics.explain_time_advance()
+
 # %% [markdown]
-# ## Notice how the reaction proceeds in smaller steps in the early times, when [A] and [B] are changing much more rapidly
+# ## Notice how the reaction proceeds in smaller steps (half steps) in the early times, when [A] and [B] are changing much more rapidly
+# ### That resulted from passing the argument _dynamic_steps=2_ to single_compartment_react()
 #
 # * For example, upon completing the half step to t=0.30, i.e. **going from 0.25 to 0.30**, the last change in [A] was (21.508301 - 20.677734) = 0.830567  
 # Relative to the [A] baseline of 20.677734, that change is **4.02%**.  The DEFAULT threshold for a reaction to be considered fast is 5% per full step, for any of the involved chemicals.  For a half step, that corresponds to 2.5%... and abs(4.02%) is LARGER than that.  
@@ -149,6 +154,8 @@ dynamics.get_system_conc()
 #  
 # [B] = 36.00683594
 #
+# The presence of equilibrium may be automatically checked withe the following handy function:
+#
 
 # %%
 # Verify that the reaction has reached equilibrium
@@ -166,5 +173,16 @@ fig.show()
 
 # %% [markdown]
 # ## Note how the left-hand side of this plot is much smoother than it was in experiment "react_1", where no adaptive time substeps were used!
+
+# %%
+
+# %% [markdown]
+# # Diagnostics of the run may be investigated as follows:
+
+# %%
+dynamics.diagnostic_data_baselines.get()
+
+# %%
+dynamics.diagnostic_data[0].get()  # For the 0-th reaction (the only reaction in our case)
 
 # %%

@@ -88,6 +88,8 @@ dynamics.describe_state()
 # ### Start the reaction
 
 # %%
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
 dynamics.single_compartment_react(time_step=0.001, n_steps=30, 
                                   dynamic_steps=4, fast_threshold=10)
 
@@ -95,11 +97,17 @@ dynamics.single_compartment_react(time_step=0.001, n_steps=30,
 dynamics.history.get()
 
 # %%
+dynamics.explain_time_advance()
+
+# %%
 dynamics.single_compartment_react(time_step=0.01, n_steps=1000, 
                                   dynamic_steps=8, fast_threshold=10)
 
 df = dynamics.history.get()
 df
+
+# %%
+dynamics.explain_time_advance()
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time
@@ -120,5 +128,17 @@ fig.show()
 
 # %%
 dynamics.is_in_equilibrium(tolerance=4)
+
+# %%
+df.head(22)
+
+# %%
+df[113:131]
+
+# %%
+df[df['SYSTEM TIME'] > 2.52].head(50)
+
+# %%
+dynamics.diagnostic_data_baselines.get()[100:130]
 
 # %%
