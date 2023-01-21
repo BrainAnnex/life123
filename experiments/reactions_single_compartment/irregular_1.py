@@ -94,7 +94,7 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-dynamics.single_compartment_react(time_step=0.001, n_steps=30, 
+dynamics.single_compartment_react(time_step=0.001, stop_time=0.03, 
                                   dynamic_steps=4, fast_threshold=10)
 
 # %%

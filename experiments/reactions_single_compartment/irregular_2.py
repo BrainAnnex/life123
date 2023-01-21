@@ -61,20 +61,23 @@ chem_data.add_reaction(reactants=["C" , "E_high"], products=["A", "E_low"],
 chem_data.describe_reactions()
 
 # %%
-initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
+initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}  # Note the abundant energy source
 initial_conc
 
 # %% [markdown]
-# # START OVER WITH COARSE FIXED-RESOLUTION
+# # _COARSE_ FIXED-RESOLUTION
 
 # %%
 dynamics2 = ReactionDynamics(reaction_data=chem_data)
 dynamics2.set_conc(conc= initial_conc,
-                  snapshot=True)      # Note the abundant energy source
+                  snapshot=True)      
 dynamics2.describe_state()
 
 # %%
+# time_step values are picked as large as possible, but short of causing errors
 dynamics2.single_compartment_react(time_step=0.0005,stop_time=0.005)
+
+# %%
 dynamics2.single_compartment_react(time_step=0.001,stop_time=0.2)
 
 # %%
@@ -83,18 +86,54 @@ dynamics2.single_compartment_react(time_step=0.002, stop_time=3.)
 # %%
 dynamics2.single_compartment_react(time_step=0.005, stop_time=8.)
 
+# %%
+dynamics2.plot_curves()
 
 # %%
-def graphics():
-    df = dynamics2.history.get()
-    fig = px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B", "C"], 
-                  title="Changes in concentrations",
-                  color_discrete_sequence = ['blue', 'green', 'brown'],
-                  labels={"value":"concentration", "variable":"Chemical"})
-    fig.show()   
+df2 = dynamics2.get_history()
+len(df2)
+
+# %%
+df2["A"] > df2["B"]
 
 
 # %%
-graphics()
+def foo(df, t_min, t_max, var1, var2):
+    df
+
+
+# %%
+(df2["SYSTEM TIME"] > 2.) & (df2["SYSTEM TIME"] < 2.4)
+
+# %%
+df2[df2.eval("`SYSTEM TIME` >= 2.31 and `SYSTEM TIME` <= 2.33")]
+
+# %%
+df2[df2.eval("`SYSTEM TIME` >= 2.31 and `SYSTEM TIME` <= 2.33")]
+
+# %%
+df2[df2["SYSTEM TIME"].between(2.31, 2.33)]
+
+# %%
+df2[(df2["SYSTEM TIME"] >= 2.31) & (df2["SYSTEM TIME"] <= 2.33)]
+
+# %% [markdown]
+# # START OVER WITH _FINE_ FIXED-RESOLUTION
+
+# %%
+dynamics3 = ReactionDynamics(reaction_data=chem_data)
+dynamics3.set_conc(conc= initial_conc,
+                  snapshot=True)      
+dynamics3.describe_state()
+
+# %%
+# Using the smallest time_step value that was ever used in the subset of the VARIABLE-resolution run
+dynamics3.single_compartment_react(time_step=0.00025, stop_time=8.)
+
+# %%
+dynamics3.plot_curves()
+
+# %%
+len(dynamics3.history.get())
 
 # %%

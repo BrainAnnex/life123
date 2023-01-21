@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import pandas as pd
+import plotly.express as px
 from typing import Union
 from modules.movies.movies import MovieTabular
 
@@ -52,6 +53,9 @@ class ReactionDynamics:
     #                                ~  TO SET/READ DATA  ~                                     #
     #                                                                                           #
     #############################################################################################
+    def ___________TO_SET_READ_DATA___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
+        pass
+
 
     def set_conc(self, conc: Union[list, tuple, dict], snapshot=False) -> None:
         """
@@ -268,6 +272,9 @@ class ReactionDynamics:
     #                                   TO VISUALIZE SYSTEM                                     #
     #                                                                                           #
     #############################################################################################
+    def ___________TO_VISUALIZE_SYSTEM___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
+        pass
+
 
     def describe_state(self) -> None:
         """
@@ -296,6 +303,9 @@ class ReactionDynamics:
     #                                       HISTORY                                             #
     #                                                                                           #
     #############################################################################################
+    def ___________HISTORY___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
+        pass
+
 
     def add_snapshot(self, species=None, caption="", time=None, system_data=None) -> None:
         """
@@ -326,20 +336,28 @@ class ReactionDynamics:
 
 
 
-    def get_history(self) -> pd.DataFrame:
+    def get_history(self, t_start=None, t_end=None) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
         using add_snapshot()
+        Optionally, provide a start and end times
 
-        :return:        a Pandas dataframe
+        :param t_start:
+        :param t_end:
+        :return:        A Pandas dataframe
         """
-        return self.history.get()
+        df = self.get_history()
+
+        if t_start is not None and t_end is not None:
+            return df[df["SYSTEM TIME"].between(t_start, t_end)]
+
+        return df
 
 
 
     def get_historical_concentrations(self, row: int, df=None) -> np.array:
         """
-        Return, a Numpy array with ALL the chemical concentrations (in their index order)
+        Return a Numpy array with ALL the chemical concentrations (in their index order)
         from the specified row number of given Pandas data frame (by default, the system history)
 
         :param row: Integer with the zero-based row number of the system history (which is a Pandas data frame)
@@ -362,6 +380,9 @@ class ReactionDynamics:
     #                                TO PERFORM THE REACTIONS                                   #
     #                                                                                           #
     #############################################################################################
+    def ___________TO_PERFORM_THE_REACTIONS___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
+        pass
+
 
     def specify_steps(self, total_duration=None, time_step=None, n_steps=None) -> (float, int):
         """
@@ -1271,6 +1292,16 @@ class ReactionDynamics:
 
 
 
+
+    #############################################################################################
+    #                                                                                           #
+    #                                      FOR DIAGNOSTICS                                      #
+    #                                                                                           #
+    #############################################################################################
+    def _________FOR_DIAGNOSTICS___________(self):  # Used to get a better structure listing in IDEs such asPycharm
+        pass
+
+
     def stoichiometry_checker(self, rxn_index: int, conc_arr_before: np.array, conc_arr_after: np.array,
                               suppress_warning=False) -> bool:
         """
@@ -1783,3 +1814,23 @@ class ReactionDynamics:
             #print(f"primary_timestep/delta_baseline is:  {primary_timestep}/{delta_baseline} = {primary_timestep/delta_baseline}")
             n_steps = round((t_end - t_start) / delta_baseline)
             print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substeps of {delta_baseline:.3g} (each 1/{round(primary_timestep/delta_baseline)} of full step)")
+
+
+
+
+    #############################################################################################
+    #                                                                                           #
+    #                                      FOR GRAPHICS                                         #
+    #                                                                                           #
+    #############################################################################################
+    def _________FOR_GRAPHICS___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
+        pass
+
+
+    def plot_curves(self):
+        df = self.history.get()
+        fig = px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B", "C"],
+                      title="Changes in concentrations",
+                      color_discrete_sequence = ['blue', 'green', 'brown'],
+                      labels={"value":"concentration", "variable":"Chemical"})
+        fig.show()
