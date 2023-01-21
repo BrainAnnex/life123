@@ -391,7 +391,7 @@ class ReactionDynamics:
 
 
 
-    def single_compartment_react(self, reaction_duration=None, time_step=None, n_steps=None,
+    def single_compartment_react(self, reaction_duration=None, stop_time=None, time_step=None, n_steps=None,
                                  snapshots=None, dynamic_steps=1, fast_threshold=5) -> None:
         """
         Perform ALL the reactions in the single compartment -
@@ -402,7 +402,8 @@ class ReactionDynamics:
         (object attributes self.system and self.system_time)
 
         :param reaction_duration:  The overall time advance for the reactions (i.e. time_step * n_steps)
-                                TODO: maybe also offer a "final_time" (or "stop_time") option
+        :param stop_time:       The final time at which to stop the reaction
+                                    If both stop_time and reaction_duration are specified, an error will result
         :param time_step:       The size of each time step.
                                 Note: if a dynamic_steps > 1 is passed, then the time step will get internally
                                 subdivided for the "fast" reactions
@@ -427,6 +428,14 @@ class ReactionDynamics:
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
+        if stop_time is not None:
+            if reaction_duration is not None:
+                raise Exception("single_compartment_react(): cannot provide values for BOTH `stop_time` and `reaction_duration`")
+            else:
+                assert stop_time > self.system_time, \
+                    f"single_compartment_react(): `stop_time` must be larger than the current System Time ({self.system_time})"
+                reaction_duration = stop_time - self.system_time
+
         time_step, n_steps = self.specify_steps(total_duration=reaction_duration,
                                                 time_step=time_step,
                                                 n_steps=n_steps)
@@ -942,8 +951,10 @@ class ReactionDynamics:
         """
         if (baseline_conc + delta_conc) < 0:
             raise Exception(f"The chosen time interval ({delta_time}) "
-                            f"leads to a NEGATIVE concentration of the chemical species {species_index} from reaction {rxn_index}: "
-                            f"must make the interval smaller!")
+                            f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` (index {species_index}) "
+                            f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (index {rxn_index}): "
+                            f"MUST MAKE THE INTERVAL SMALLER!\n"
+                            f"[Baseline value: {baseline_conc} ; delta conc: {delta_conc}; System Time: {self.system_time}")
 
 
 

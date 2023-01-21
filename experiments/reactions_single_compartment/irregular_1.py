@@ -21,7 +21,7 @@
 #
 # All 1st-order kinetics.   
 #
-# LAST REVISED: Jan. 20, 2023
+# LAST REVISED: Jan. 21, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -79,8 +79,12 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
+initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
+initial_conc
+
+# %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
-dynamics.set_conc(conc={"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.},
+dynamics.set_conc(conc=initial_conc,
                   snapshot=True)      # Note the abundant energy source
 dynamics.describe_state()
 
@@ -88,6 +92,8 @@ dynamics.describe_state()
 # ### Start the reaction
 
 # %%
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
 dynamics.single_compartment_react(time_step=0.001, n_steps=30, 
                                   dynamic_steps=4, fast_threshold=10)
 
@@ -95,11 +101,17 @@ dynamics.single_compartment_react(time_step=0.001, n_steps=30,
 dynamics.history.get()
 
 # %%
-dynamics.single_compartment_react(time_step=0.01, n_steps=1000, 
+dynamics.explain_time_advance()
+
+# %%
+dynamics.single_compartment_react(time_step=0.01, stop_time=8.,
                                   dynamic_steps=8, fast_threshold=10)
 
 df = dynamics.history.get()
 df
+
+# %%
+dynamics.explain_time_advance()
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time
@@ -120,5 +132,17 @@ fig.show()
 
 # %%
 dynamics.is_in_equilibrium(tolerance=4)
+
+# %%
+df.head(22)
+
+# %%
+df[113:131]
+
+# %%
+df[df['SYSTEM TIME'] > 2.52].head(50)
+
+# %%
+dynamics.diagnostic_data_baselines.get()[100:130]
 
 # %%

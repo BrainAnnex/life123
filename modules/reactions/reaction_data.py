@@ -669,7 +669,9 @@ class ReactionData:
 
     def describe_reactions(self, concise=False) -> None:
         """
-        Print out a user-friendly plain-text form of all the reactions
+        Print out a user-friendly plain-text form of all the reactions.
+        If wanting to describe just 1 reaction, use single_reaction_describe()
+
         EXAMPLE (not concise):
             Number of reactions: 2 (at temp. 25 C)
             (0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
