@@ -346,9 +346,9 @@ class ReactionDynamics:
         :param t_end:
         :return:        A Pandas dataframe
         """
-        df = self.get_history()
+        df = self.history.get()
 
-        if t_start is not None and t_end is not None:
+        if (t_start is not None) and (t_end is not None):
             return df[df["SYSTEM TIME"].between(t_start, t_end)]
 
         return df
@@ -1753,7 +1753,6 @@ class ReactionDynamics:
 
         grad = np.diff(t)
 
-
         #print(grad)
 
         start_i = 0
@@ -1820,17 +1819,73 @@ class ReactionDynamics:
 
     #############################################################################################
     #                                                                                           #
-    #                                      FOR GRAPHICS                                         #
+    #                                       GRAPHICS                                            #
     #                                                                                           #
     #############################################################################################
-    def _________FOR_GRAPHICS___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
+    def _________GRAPHICS___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
         pass
 
 
-    def plot_curves(self):
+    def plot_curves(self, chemicals=None, colors=None, title=None) -> None:
+        """
+
+        :param chemicals:   (OPTIONAL) List of the names of the chemicals to plot
+        :param colors:      (OPTIONAL) List of the colors names to use
+        :param title:       (OPTIONAL) Title for the plot
+        :return:            None
+        """
+        default_colors = ['blue', 'green', 'brown', 'red', 'gray', 'orange', 'purple', 'cyan']
+
         df = self.history.get()
-        fig = px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B", "C"],
-                      title="Changes in concentrations",
-                      color_discrete_sequence = ['blue', 'green', 'brown'],
+
+        if chemicals is None:
+            chemicals = self.reaction_data.get_all_names()
+
+        number_of_curves = len(chemicals)
+
+        if colors is None:
+            colors = default_colors[:number_of_curves]
+
+        if title is None:
+            title = f"Changes in concentrations for {self.reaction_data.number_of_reactions()} reactions"
+
+        fig = px.line(data_frame=df, x="SYSTEM TIME", y=chemicals,
+                      title=title,
+                      color_discrete_sequence = colors,
                       labels={"value":"concentration", "variable":"Chemical"})
         fig.show()
+
+
+
+    #############################################################################################
+    #                                                                                           #
+    #                                   RESULT ANALYSIS                                         #
+    #                                                                                           #
+    #############################################################################################
+    def _________RESULT_ANALYSIS___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
+        pass
+
+
+
+    def curve_intersection(self, t_start, t_end, var1, var2) -> (float, float):
+        """
+        Find and return the intersection of the 2 curves in the columns var1 and var2,
+        in the time interval [t_start, t_end]
+        If there's more than one intersection, only one - in an unpredictable choice - is returned
+        TODO: interpolation
+
+        :param t_start:
+        :param t_end:
+        :param var1:
+        :param var2:
+        :return:        The pair (time of intersection, common value)
+        """
+        df = self.get_history(t_start=t_start, t_end=t_end)
+        row_index = abs(df[var1] - df[var2]).idxmin()
+        print(row_index)
+        row = df.loc[row_index]
+        t = row["SYSTEM TIME"]
+        val = row[var1]
+        #print(t)
+        #print(val)
+        return (t, val)

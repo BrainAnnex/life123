@@ -117,18 +117,19 @@ dynamics.explain_time_advance()
 # ## Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B", "C"], 
-              title="Changes in concentrations",
-              color_discrete_sequence = ['blue', 'green', 'brown'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-fig = px.line(data_frame=df, x="SYSTEM TIME", y=["E_high", "E_low"], 
-              title="Changes in concentrations",
-              color_discrete_sequence = ['red', 'gray'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(chemicals=["A", "B", "C"])
+
+# %%
+dynamics.curve_intersection(t_start=2.31, t_end=2.33, var1="A", var2="B")
+
+# %%
+dynamics.curve_intersection(t_start=3., t_end=4., var1="A", var2="C")
+
+# %%
+dynamics.curve_intersection(t_start=3., t_end=4., var1="B", var2="C")
 
 # %%
 dynamics.is_in_equilibrium(tolerance=4)

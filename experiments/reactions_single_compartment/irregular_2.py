@@ -39,8 +39,6 @@ import plotly.express as px
 from modules.visualization.graphic_log import GraphicLog
 
 # %%
-
-# %%
 # Initialize the system
 chem_data = chem(names=["A", "B", "C", "E_high", "E_low"])
 
@@ -87,35 +85,24 @@ dynamics2.single_compartment_react(time_step=0.002, stop_time=3.)
 dynamics2.single_compartment_react(time_step=0.005, stop_time=8.)
 
 # %%
-dynamics2.plot_curves()
+dynamics2.plot_curves(chemicals=["A", "B", "C"])
 
 # %%
-df2 = dynamics2.get_history()
-len(df2)
+len(dynamics2.get_history())
 
 # %%
-df2["A"] > df2["B"]
-
-
-# %%
-def foo(df, t_min, t_max, var1, var2):
-    df
-
+dynamics2.get_history(t_start=2.31, t_end=2.33)
 
 # %%
-(df2["SYSTEM TIME"] > 2.) & (df2["SYSTEM TIME"] < 2.4)
+dynamics2.curve_intersection(t_start=2.31, t_end=2.33, var1="A", var2="B")
 
 # %%
-df2[df2.eval("`SYSTEM TIME` >= 2.31 and `SYSTEM TIME` <= 2.33")]
+dynamics2.curve_intersection(t_start=3., t_end=4., var1="B", var2="C")
 
 # %%
-df2[df2.eval("`SYSTEM TIME` >= 2.31 and `SYSTEM TIME` <= 2.33")]
+dynamics2.curve_intersection(t_start=3., t_end=4., var1="B", var2="C")
 
 # %%
-df2[df2["SYSTEM TIME"].between(2.31, 2.33)]
-
-# %%
-df2[(df2["SYSTEM TIME"] >= 2.31) & (df2["SYSTEM TIME"] <= 2.33)]
 
 # %% [markdown]
 # # START OVER WITH _FINE_ FIXED-RESOLUTION
@@ -131,9 +118,18 @@ dynamics3.describe_state()
 dynamics3.single_compartment_react(time_step=0.00025, stop_time=8.)
 
 # %%
-dynamics3.plot_curves()
+dynamics3.plot_curves(chemicals=["A", "B", "C"])
 
 # %%
-len(dynamics3.history.get())
+len(dynamics3.get_history())
+
+# %%
+dynamics3.curve_intersection(t_start=2.31, t_end=2.33, var1="A", var2="B")
+
+# %%
+dynamics3.curve_intersection(t_start=3., t_end=4., var1="A", var2="C")
+
+# %%
+dynamics3.curve_intersection(t_start=3., t_end=4., var1="B", var2="C")
 
 # %%
