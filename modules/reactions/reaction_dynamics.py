@@ -45,6 +45,8 @@ class ReactionDynamics:
 
         self.diagnostics = False
 
+        self.fast_criterion = ""        # EXPERIMENTAL
+
 
 
 
@@ -413,7 +415,7 @@ class ReactionDynamics:
 
 
     def single_compartment_react(self, reaction_duration=None, stop_time=None, time_step=None, n_steps=None,
-                                 snapshots=None, dynamic_steps=1, fast_threshold=5) -> None:
+                                 snapshots=None, dynamic_steps=1, fast_threshold=None, abs_fast_threshold=None) -> None:
         """
         Perform ALL the reactions in the single compartment -
         based on the INITIAL concentrations,
@@ -444,8 +446,10 @@ class ReactionDynamics:
                                     on a reaction-by-reaction basis,
                                     if that reaction has fast dynamics,
                                     or multiplied by that factor, if that reaction has slow dynamics
-        :param fast_threshold:  The minimum relative size of the concentration baseline over its change, AS A PERCENTAGE,
-                                for a reaction to be regarded as "Slow".  IMPORTANT: this refers to the FULL step size
+        :param fast_threshold:  The minimum relative size of the concentration [baseline over its] change, AS A PERCENTAGE,
+                                    for a reaction to be regarded as "Slow".
+                                    IMPORTANT: this refers to the FULL step size
+        :param abs_fast_threshold: Similar to fast_threshold, but in terms of time units - NOT step sizes
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
@@ -460,6 +464,13 @@ class ReactionDynamics:
         time_step, n_steps = self.specify_steps(total_duration=reaction_duration,
                                                 time_step=time_step,
                                                 n_steps=n_steps)
+
+        if abs_fast_threshold is not None:
+            if fast_threshold is not None:
+                raise Exception("single_compartment_react(): cannot provide values for BOTH `fast_threshold` and `abs_fast_threshold`")
+            else:
+                fast_threshold = abs_fast_threshold * time_step * 100.       # The *100. is b/c fast_threshold is expressed as %
+                print(f"single_compartment_react(): setting fast_threshold to {fast_threshold}")
 
         if snapshots:
             frequency = snapshots.get("frequency", 1)   # If not present, it will be 1
@@ -948,6 +959,26 @@ class ReactionDynamics:
 
 
 
+    def criterion_fast_reaction(self, delta_conc, baseline_conc, time_subdivision, fast_threshold_fraction) -> bool:
+        """
+
+        :param delta_conc:
+        :param baseline_conc:
+        :param time_subdivision:
+        :param fast_threshold_fraction:
+        :return:
+        """
+        # if abs(delta_conc) / baseline_conc > fast_threshold_fraction / time_subdivision
+        # Perhaps more intuitive as shown above;
+        # but, to avoid time-consuming divisions (and potential divisions by zero), re-formulated as below:
+
+        if self.fast_criterion == "no_baseline":
+            return abs(delta_conc) * time_subdivision > fast_threshold_fraction
+
+        return abs(delta_conc) * time_subdivision > fast_threshold_fraction * baseline_conc
+
+
+
     def validate_increment(self,  delta_conc, baseline_conc: float,
                            rxn_index: int, species_index: int, delta_time) -> None:
         """
@@ -986,13 +1017,16 @@ class ReactionDynamics:
         """
         Examine the requested concentration changes given by delta_conc_array
         (typically, as computed by an ODE solver),
-        relative to the baseline (pre-reaction) values baseline_conc_array,
-        for the given SINGLE reaction across all the chemicals affected by it.
+        relative to their baseline (pre-reaction) values baseline_conc_array,
+        for the given SINGLE reaction,
+        across all the chemicals affected by it.
 
         If the concentration change is large, relative to its baseline value,
         for ANY of the  chemicals involved in the reaction,
         then mark the given reaction as "Fast" (in its data structure);
         this will OVER-RIDE any previous annotation about the speed of that reaction.
+
+        Note: if reaction is already marked as "Fast" then no action is taken
 
         :param rxn_index:               An integer with the (zero-based) index to identify the reaction of interest
         :param delta_conc_array:        The change in concentrations computed by the ODE solver
@@ -1023,12 +1057,11 @@ class ReactionDynamics:
         # If the reaction was (tentatively) labeled as "Slow", decide whether to flip it to "Fast"
         #   Note: the status will be used for the current simulation sub-cycle
 
-
         if 1 in self.verbose_list:
             print(f"        For Rxn # {rxn_index}, checking concentrations of chems: {self.reaction_data.get_chemicals_in_reaction(rxn_index)}")
 
 
-        # Just loop over the chemicals in the given reaction (not over ALL the chemicals!)
+        # Loop over just the chemicals in the given reaction (not over ALL the chemicals!)
         for i in self.reaction_data.get_chemicals_in_reaction(rxn_index):
 
             delta_conc = delta_conc_array[i]
@@ -1037,7 +1070,9 @@ class ReactionDynamics:
             #if abs(delta_conc) / baseline_conc > fast_threshold_fraction / time_subdivision
             # Perhaps more intuitive as shown above;
             # but, to avoid time-consuming divisions (and potential divisions by zero), re-formulated as below:
-            if abs(delta_conc) * time_subdivision > fast_threshold_fraction * baseline_conc:
+            #if abs(delta_conc) * time_subdivision > fast_threshold_fraction * baseline_conc:
+            if self.criterion_fast_reaction(delta_conc=delta_conc, baseline_conc=baseline_conc,
+                                            time_subdivision=time_subdivision, fast_threshold_fraction=fast_threshold_fraction):
                 self.set_rxn_speed(rxn_index, "F")
                 if 1 in self.verbose_list:
                     print(f"        Rxn # {rxn_index} FLIPPED TAG to 'F', "
@@ -1048,7 +1083,7 @@ class ReactionDynamics:
                 return
 
         # END for
-        # If we get thus far, the reaction is still regarded as "Slow"
+        # If we get thus far, the reaction is still regarded as "Slow", and its status is left unchanged
 
         if 1 in self.verbose_list:
             chem_list = self.reaction_data.get_chemicals_in_reaction(rxn_index)
@@ -1828,6 +1863,7 @@ class ReactionDynamics:
 
     def plot_curves(self, chemicals=None, colors=None, title=None) -> None:
         """
+        Draw the plots of the concentration values over time, based on the saved history data
 
         :param chemicals:   (OPTIONAL) List of the names of the chemicals to plot
         :param colors:      (OPTIONAL) List of the colors names to use

@@ -103,6 +103,9 @@ dynamics2.curve_intersection(t_start=3., t_end=4., var1="B", var2="C")
 dynamics2.curve_intersection(t_start=3., t_end=4., var1="B", var2="C")
 
 # %%
+dynamics2.is_in_equilibrium(tolerance=0.2)
+
+# %%
 
 # %% [markdown]
 # # START OVER WITH _FINE_ FIXED-RESOLUTION
@@ -131,5 +134,8 @@ dynamics3.curve_intersection(t_start=3., t_end=4., var1="A", var2="C")
 
 # %%
 dynamics3.curve_intersection(t_start=3., t_end=4., var1="B", var2="C")
+
+# %%
+dynamics3.is_in_equilibrium(tolerance=0.2)
 
 # %%
