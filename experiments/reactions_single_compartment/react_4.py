@@ -22,7 +22,7 @@
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #
 #
-# LAST REVISED: Jan. 20, 2023
+# LAST REVISED: Jan. 22, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -86,7 +86,7 @@ dynamics.set_conc([200., 40.], snapshot=True)
 dynamics.describe_state()
 
 # %%
-dynamics.history.get()
+dynamics.get_history()
 
 # %% [markdown] tags=[]
 # ## Run the reaction
@@ -100,14 +100,13 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.04,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=4)
-                                  # Accepting the default:  fast_threshold=5
+                                  dynamic_steps=4, fast_threshold=60)
 
 # %% [markdown]
-# ### Note: the argument _dynamic_step=4_ splits the time steps in 4 whenever the reaction is "fast" (as determined using fast_threshold=5)
+# ### Note: the argument _dynamic_step=4_ splits the time steps in 4 whenever the reaction is "fast" (as determined using the given value of _fast_threshold_ )
 
 # %%
-df = dynamics.history.get()
+df = dynamics.get_history()
 df
 
 # %%
@@ -142,7 +141,7 @@ dynamics.diagnostic_data[0].get().loc[0]    # Conveniently seen in the diagnosti
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium()
+dynamics.is_in_equilibrium(tolerance=2)
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time
@@ -158,7 +157,7 @@ fig.show()
 # #### For diagnostic insight, uncomment the following lines:
 
 # %%
-#dynamics.examine_run(df=df, time_step=0.002)  
+#dynamics.examine_run(df=df, time_step=0.002, fast_threshold=60)  
 # the time step MUST match the value used in call to single_compartment_react()
 
 #dynamics.diagnose_variable_time_steps()

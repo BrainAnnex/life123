@@ -21,7 +21,7 @@
 #
 # All 1st-order kinetics.   
 #
-# LAST REVISED: Jan. 21, 2023
+# LAST REVISED: Jan. 22, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -92,8 +92,6 @@ dynamics.describe_state()
 # ### Start the reaction
 
 # %%
-dynamics.fast_criterion = "no_baseline"   # EXPERIMENTAL OPTION!
-
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 dynamics.single_compartment_react(time_step=0.001, stop_time=0.03, 

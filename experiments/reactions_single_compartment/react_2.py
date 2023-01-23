@@ -18,7 +18,7 @@
 #
 # Same as the experiment _"react_1"_ , but with an adaptive variable time scale
 #
-# LAST REVISED: Jan. 20, 2023
+# LAST REVISED: Jan. 22, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -90,14 +90,13 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 dynamics.single_compartment_react(time_step=0.1, n_steps=11,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=2)
-                                  # Accepting the default:  fast_threshold=5
+                                  dynamic_steps=2, fast_threshold=100)
 
 # %% [markdown]
-# ## The argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using fast_threshold=5)
+# ## The argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using the specified value of _fast_threshold_ )
 
 # %%
-df = dynamics.history.get()   # The system's history, saved during the run of single_compartment_react()
+df = dynamics.get_history()   # The system's history, saved during the run of single_compartment_react()
 df
 
 # %%
@@ -108,8 +107,8 @@ dynamics.explain_time_advance()
 # ### That resulted from passing the argument _dynamic_steps=2_ to single_compartment_react()
 #
 # * For example, upon completing the half step to t=0.30, i.e. **going from 0.25 to 0.30**, the last change in [A] was (21.508301 - 20.677734) = 0.830567  
-# Relative to the [A] baseline of 20.677734, that change is **4.02%**.  The DEFAULT threshold for a reaction to be considered fast is 5% per full step, for any of the involved chemicals.  For a half step, that corresponds to 2.5%... and abs(4.02%) is LARGER than that.  
-# The reaction is therefore marked "FAST" (as it has been so far), and the simulation then proceeds in a half step, to t=0.35
+# The threshold we specified for a reaction to be considered fast is 100% per full step, for any of the involved chemicals.  For a half step, that corresponds to 50%, i.e. 0.5   
+# Since abs(0.830567) > 0.5 , the reaction is therefore marked "FAST" (as it has been so far), and the simulation then proceeds in a half step, to t=0.35
 
 # %% [markdown]
 # * (Note: at t=0, in the absence of any simulation data, ALL reactions are _assumed_ to be fast)
@@ -132,13 +131,13 @@ s_0_40 = df.iloc[8][['A', 'B']].to_numpy()
 s_0_40     # Concentrations of A and B at t=0.40
 
 # %%
-(s_0_40 - s_0_35) / s_0_35 * 100
+(s_0_40 - s_0_35)
 
 # %% [markdown]
-# The DEFAULT threshold for a reaction to be considered fast is 5% per full step, for any of the involved chemicals.  
-# For a half step, that corresponds to 2.5%.   
-# BOTH A's change of abs(2.11%) AND B's change of abs(-1.23%) are SMALLER than that.   
-# The reaction is therefore marked "SLOW", and the simulation then proceeds in a _full step_ (i.e. a more relaxed time resolution), to t=0.50
+# Again, the threshold we specified for a reaction to be considered fast is 100% per full step, for any of the involved chemicals.  
+# For a half step, that corresponds to 50%, i.e. 0.5    
+# BOTH A's change of abs(0.46) AND B's change of abs(-0.46) are SMALLER than that.   
+# The reaction is therefore marked "SLOW", and the simulation then proceeds in a _full time step_ of 0.1 (i.e. a more relaxed time resolution), to t=0.50
 
 # %% [markdown]
 # ### Check the final equilibrium

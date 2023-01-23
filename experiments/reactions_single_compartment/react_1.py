@@ -18,7 +18,7 @@
 #
 # See also the experiment _"1D/reactions/reaction_1"_ ; this is the "single-compartment" version of it.
 #
-# LAST REVISED: Jan. 5, 2023
+# LAST REVISED: Jan. 22, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -79,7 +79,7 @@ dynamics.set_conc([10., 50.], snapshot=True)
 dynamics.describe_state()
 
 # %%
-dynamics.history.get()
+dynamics.get_history()
 
 # %% [markdown] tags=[]
 # ## Start the reaction
@@ -90,7 +90,7 @@ dynamics.single_compartment_react(time_step=0.1, n_steps=1,
                                   snapshots={"initial_caption": "first reaction step"})
 
 # %%
-dynamics.history.get()
+dynamics.get_history()
 
 # %%
 # Numerous more steps
@@ -99,7 +99,7 @@ dynamics.single_compartment_react(time_step=0.1, n_steps=10,
                                              "final_caption": "last reaction step"})
 
 # %%
-dynamics.history.get()
+dynamics.get_history()
 
 # %% [markdown]
 # ### Check the final equilibrium
@@ -137,7 +137,7 @@ fig.show()
 # ### Note the raggedness of the left-side (early times) of the curves.  In experiment "react_2" this simulation gets repeated with an adaptive variable time resolution that takes smaller steps at the beginning, when the reaction is proceeding faster
 
 # %%
-df = dynamics.history.get()
+df = dynamics.get_history()
 
 # %%
 df

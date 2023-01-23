@@ -14,7 +14,7 @@
 # ---
 
 # %% [markdown]
-# # Continuation of "irregular_1"
+# # Continuation of "irregular_1" : FIXED-TIME RESOLUTIONS, coarse vs. fine
 #
 # ## A cycle of reactions A <-> B <-> C <-> A, 
 # The "closing" of the cycle (the "return" parth from C to A) is couple with an "energy donor" reaction:

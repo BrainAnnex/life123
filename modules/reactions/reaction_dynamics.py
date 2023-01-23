@@ -45,7 +45,8 @@ class ReactionDynamics:
 
         self.diagnostics = False
 
-        self.fast_criterion = ""        # EXPERIMENTAL
+        self.fast_criterion_use_baseline = False    # TODO: EXPERIMENTAL - Probably to be phased out,
+                                                    #       because True gives poor results
 
 
 
@@ -65,7 +66,7 @@ class ReactionDynamics:
 
         :param conc:        A list or tuple of concentration values for ALL the chemicals, in their index order;
                                 alternatively, a dict indexed by the chemical names, again for ALL the chemicals
-                                EXAMPLE of the latter: {"A": 12.4, "B": 0.23, "C": 2.6}  (assuming that "A", "B" and "C" are all the chems)
+                                EXAMPLE of the latter: {"A": 12.4, "B": 0.23, "C": 2.6}  (assuming that "A", "B", "C" are all the chemicals)
                                 (Any previous values will get over-written)
                                 TODO: also allow a Numpy array; make sure to do a copy() to it!
                                 TODO: pytest for the dict option
@@ -465,12 +466,15 @@ class ReactionDynamics:
                                                 time_step=time_step,
                                                 n_steps=n_steps)
 
-        if abs_fast_threshold is not None:
-            if fast_threshold is not None:
-                raise Exception("single_compartment_react(): cannot provide values for BOTH `fast_threshold` and `abs_fast_threshold`")
-            else:
-                fast_threshold = abs_fast_threshold * time_step * 100.       # The *100. is b/c fast_threshold is expressed as %
-                print(f"single_compartment_react(): setting fast_threshold to {fast_threshold}")
+        if dynamic_steps > 1:
+            if abs_fast_threshold is not None:
+                if fast_threshold is not None:
+                    raise Exception("single_compartment_react(): cannot provide values for BOTH `fast_threshold` and `abs_fast_threshold`")
+                else:
+                    fast_threshold = abs_fast_threshold * time_step * 100.       # The *100. is b/c fast_threshold is expressed as %
+                    print(f"single_compartment_react(): setting fast_threshold to {fast_threshold}")
+            elif fast_threshold is None:
+                raise Exception("single_compartment_react(): at least one of `fast_threshold` and `abs_fast_threshold` must be provided")
 
         if snapshots:
             frequency = snapshots.get("frequency", 1)   # If not present, it will be 1
@@ -567,12 +571,14 @@ class ReactionDynamics:
             print(f"Calling reaction_step_orchestrator() with delta_time={delta_time_full}, "
                   f"conc_array={conc_array}, dynamic_steps={dynamic_steps}")
 
+        assert conc_array is not None, "reaction_step_orchestrator(): the argument 'conc_array' must be set to a Numpy array"
         assert type(dynamic_steps) == int, "reaction_step_orchestrator(): the argument 'dynamic_steps' must be an integer"
         assert dynamic_steps >= 1, "reaction_step_orchestrator(): the argument 'dynamic_steps' must be an integer greater or equal than 1"
-        assert fast_threshold > 0, "reaction_step_orchestrator(): the argument 'fast_threshold' must be greater than 0"
-        assert conc_array is not None, "reaction_step_orchestrator(): the argument 'conc_array' must be set to a Numpy array"
 
-        fast_threshold_fraction = fast_threshold / 100.     # Here we switch over from percentages to fractions
+        if dynamic_steps > 1:   # If the variable time step option was requested
+            assert fast_threshold > 0, "reaction_step_orchestrator(): the argument 'fast_threshold' must be greater than 0"
+            fast_threshold_fraction = fast_threshold / 100.     # Here we switch over from percentages to fractions
+
 
         if 1 in self.verbose_list:
             print(f"************ SYSTEM TIME: {self.system_time:,.4g}")
@@ -961,21 +967,27 @@ class ReactionDynamics:
 
     def criterion_fast_reaction(self, delta_conc, baseline_conc, time_subdivision, fast_threshold_fraction) -> bool:
         """
+        Apply a criterion to determine, from the given data,
+        whether the originating reaction (the source of the data) needs to be classified as "Fast".
+        All the passed data is for the concentration changes in 1 chemical from 1 reaction
 
         :param delta_conc:
         :param baseline_conc:
         :param time_subdivision:
         :param fast_threshold_fraction:
-        :return:
+
+        :return:                    True if the concentration change is so large (based on some criteria)
+                                        that the reaction that caused it, ought to be regarded as "fast"
         """
-        # if abs(delta_conc) / baseline_conc > fast_threshold_fraction / time_subdivision
-        # Perhaps more intuitive as shown above;
-        # but, to avoid time-consuming divisions (and potential divisions by zero), re-formulated as below:
+        if self.fast_criterion_use_baseline:    # TODO: this criterion gives poor results, and will probably be eliminated
+            # if abs(delta_conc) / baseline_conc > fast_threshold_fraction / time_subdivision
+            # Perhaps more intuitive as shown above;
+            # but, to avoid time-consuming divisions (and potential divisions by zero), re-formulated as below:
+            return abs(delta_conc) * time_subdivision > fast_threshold_fraction * baseline_conc
 
-        if self.fast_criterion == "no_baseline":
+        else:
+            # Perhaps more intuitive written as:  if abs(delta_conc) > fast_threshold_fraction / time_subdivision
             return abs(delta_conc) * time_subdivision > fast_threshold_fraction
-
-        return abs(delta_conc) * time_subdivision > fast_threshold_fraction * baseline_conc
 
 
 
@@ -1067,10 +1079,7 @@ class ReactionDynamics:
             delta_conc = delta_conc_array[i]
             baseline_conc = baseline_conc_array[i]
 
-            #if abs(delta_conc) / baseline_conc > fast_threshold_fraction / time_subdivision
-            # Perhaps more intuitive as shown above;
-            # but, to avoid time-consuming divisions (and potential divisions by zero), re-formulated as below:
-            #if abs(delta_conc) * time_subdivision > fast_threshold_fraction * baseline_conc:
+            # Determine whether the reaction needs to be classified as "Fast"
             if self.criterion_fast_reaction(delta_conc=delta_conc, baseline_conc=baseline_conc,
                                             time_subdivision=time_subdivision, fast_threshold_fraction=fast_threshold_fraction):
                 self.set_rxn_speed(rxn_index, "F")
@@ -1455,7 +1464,7 @@ class ReactionDynamics:
 
 
 
-    def examine_run(self, df, time_step, fast_threshold=5) -> None:
+    def examine_run(self, df, time_step, fast_threshold) -> None:
         """
         Analyze, primarily for debugging purposes, the data produced by a run of single_compartment_react()
         The primary focus is for diagnostic information of the adaptive variable time steps.
@@ -1469,6 +1478,9 @@ class ReactionDynamics:
         :param fast_threshold:  The same value (for the FULL STEP size) that was used in single_compartment_react()
         :return:                None
         """
+        print("WARNING: The explanations below are based on an older system of using RELATIVE concentration changes, and no longer applicable to the newer approach; "
+              "it'll be corrected in future versions (PLEASE DIS-REGARD FOR NOW)\n\n")
+
         number_datapoints = len(df)
         chemical_list = self.reaction_data.get_all_names()
         print("Examining the reaction data for the chemicals: ", chemical_list)
@@ -1553,6 +1565,9 @@ class ReactionDynamics:
 
         :return:                None
         """
+        print("WARNING: The explanations below are based on an older system of using RELATIVE concentration changes, and no longer applicable to the newer approach; "
+              "it'll be corrected in future versions (PLEASE DIS-REGARD FOR NOW)\n\n")
+
         if not self.diagnostics:
             print("No diagnostic information is available:\nIn order to run diagnose_variable_time_steps(), "
                   "call set_diagnostics() prior to running single_compartment_react()")
@@ -1864,6 +1879,7 @@ class ReactionDynamics:
     def plot_curves(self, chemicals=None, colors=None, title=None) -> None:
         """
         Draw the plots of the concentration values over time, based on the saved history data
+        TODO: offer an option to just display a part of the timeline (e.g. a t_start and t_end)
 
         :param chemicals:   (OPTIONAL) List of the names of the chemicals to plot
         :param colors:      (OPTIONAL) List of the colors names to use
@@ -1908,17 +1924,17 @@ class ReactionDynamics:
         Find and return the intersection of the 2 curves in the columns var1 and var2,
         in the time interval [t_start, t_end]
         If there's more than one intersection, only one - in an unpredictable choice - is returned
-        TODO: interpolation
+        TODO: interpolation for the intersection point (check it with the last plot in experiment "down_regulate_1"
 
         :param t_start:
         :param t_end:
-        :param var1:
-        :param var2:
+        :param var1:    The name of the 1st chemical of interest
+        :param var2:    The name of the 2nd chemical of interest
         :return:        The pair (time of intersection, common value)
         """
         df = self.get_history(t_start=t_start, t_end=t_end)
         row_index = abs(df[var1] - df[var2]).idxmin()
-        print(row_index)
+        print(f"Row: {row_index}")
         row = df.loc[row_index]
         t = row["SYSTEM TIME"]
         val = row[var1]

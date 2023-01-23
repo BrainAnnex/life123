@@ -94,8 +94,8 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-dynamics.single_compartment_react(time_step=0.001, stop_time=0.03, 
-                                  dynamic_steps=4, fast_threshold=10)
+dynamics.single_compartment_react(time_step=0.0005, stop_time=0.03, 
+                                  dynamic_steps=4, fast_threshold=5)
 
 # %%
 dynamics.history.get()
@@ -104,8 +104,12 @@ dynamics.history.get()
 dynamics.explain_time_advance()
 
 # %%
-dynamics.single_compartment_react(time_step=0.01, stop_time=8.,
-                                  dynamic_steps=8, fast_threshold=10)
+dynamics.single_compartment_react(time_step=0.001, stop_time=1.,
+                                  dynamic_steps=8, fast_threshold=1)
+
+# %%
+dynamics.single_compartment_react(time_step=0.005, stop_time=8.,
+                                  dynamic_steps=8, fast_threshold=5)
 
 df = dynamics.history.get()
 df

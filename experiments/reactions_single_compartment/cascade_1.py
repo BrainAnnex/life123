@@ -20,7 +20,7 @@
 #
 # (Adaptive variable time resolution is used, with extensive diagnostics.)
 #
-# LAST REVISED: Jan. 16, 2023
+# LAST REVISED: Jan. 22, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -103,7 +103,7 @@ dynamics.set_conc([50., 0, 0.], snapshot=True)
 dynamics.describe_state()
 
 # %%
-dynamics.history.get()
+dynamics.get_history()
 
 # %% [markdown] tags=[]
 # ## Run the reaction
@@ -118,14 +118,17 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 dynamics.single_compartment_react(time_step=0.02, reaction_duration=0.4,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=10, fast_threshold=15)
+                                  dynamic_steps=10, fast_threshold=190)
 
 # %% [markdown]
-# ### Note: the argument  _dynamic_step=10_  splits the time steps in 10 for any reactions that are "fast-changing" (as determined using _fast_threshold=15_ )
+# ### Note: the argument  _dynamic_step=10_  splits the time steps in 10 for any reactions that are "fast-changing" (as determined using the given value of  _fast_threshold_ )
 
 # %%
-df = dynamics.history.get()
+df = dynamics.get_history()
 df
+
+# %%
+dynamics.explain_time_advance()
 
 # %%
 # Expand the early part
@@ -139,9 +142,9 @@ df.loc[60:]
 # ### Notice:
 # * the reaction proceeds in smaller steps in the earlier times (until t=0.160, in line 80), when the concentrations are changing much more rapidly 
 #
-# * between lines 70 and 80, only rection #1 is regarded as fast-changing (based on the fast_threshold we specified in the _simulation run_); at earlier times, both reactions were regarded as fast-changing
+# * between lines 30 and 80 (time 0.060 to 0.160), only rection #1 (B <-> C) is regarded as fast-changing (based on the fast_threshold we specified in the _simulation run_); at earlier times, both reactions were regarded as fast-changing
 #
-# * "fast-changing" and "slow-changing" is NOT the same thing as "fast" and "slow" reaction kinetics.  For example, reaction #1, though it has much slower kinetics than reaction #0, involves large relative concentration changes because [C] is small
+# * "fast-changing" and "slow-changing" is NOT the same thing as "fast" and "slow" reaction kinetics.  For example, reaction #1, though it has much slower kinetics than reaction #0, involves large concentration changes
 #
 # * after step 80, both reactions are regarded as slow-changing, and no more intermediate steps are used
 
@@ -150,19 +153,23 @@ df.loc[60:]
 
 # %%
 # Verify that all the reactions have reached equilibrium
-dynamics.is_in_equilibrium(tolerance=0.2)
+dynamics.is_in_equilibrium(tolerance=4)
 
 # %% [markdown] tags=[]
 # ## <a name="cascade_1_plot"></a>Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B", "C"], 
-              title="Coupled reactions A <-> B and B <-> C",
-              color_discrete_sequence = ['blue', 'red', 'green'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(title="Coupled reactions A <-> B and B <-> C",
+                     colors=['blue', 'red', 'green'])
 
 # %%
+dynamics.curve_intersection(t_start=0, t_end=0.05, var1="A", var2="B")
+
+# %%
+dynamics.curve_intersection(t_start=0, t_end=0.05, var1="A", var2="C")
+
+# %%
+dynamics.curve_intersection(t_start=0.05, t_end=0.1, var1="B", var2="C")
 
 # %%
 
@@ -188,10 +195,6 @@ dynamics.diagnostic_data_baselines.get()
 dynamics.get_diagnostic_data(rxn_index=0)
 
 # %%
-# Expand the last part of the above table
-dynamics.get_diagnostic_data(rxn_index=0).loc[60:]
-
-# %%
 # Concentration increments due to reaction 1 (B <-> C)
 # Note that [A] is not affected
 dynamics.get_diagnostic_data(rxn_index=1)
@@ -211,7 +214,7 @@ dynamics.get_diagnostic_data(rxn_index=1).loc[60:]
 # %%
 
 # %% [markdown] tags=[]
-# # Re-run with constanst steps
+# # Re-run with very small constanst steps
 
 # %% [markdown]
 # We'll use constant steps of size 0.0005, which is 1/4 of the smallest steps (the "substep" size) previously used in the variable-step run
@@ -236,8 +239,20 @@ fig = px.line(data_frame=dynamics2.get_history(), x="SYSTEM TIME", y=["A", "B", 
 fig.show()
 
 # %%
-df2 = dynamics2.history.get()
+dynamics2.curve_intersection(t_start=0, t_end=0.05, var1="A", var2="B")
+
+# %%
+dynamics2.curve_intersection(t_start=0, t_end=0.05, var1="A", var2="C")
+
+# %%
+dynamics2.curve_intersection(t_start=0.05, t_end=0.1, var1="B", var2="C")
+
+# %%
+df2 = dynamics2.get_history()
 df2
+
+# %% [markdown]
+# ## Notice that we now did 801 steps - vs. the 93 of the earlier variable-resolution run!
 
 # %% [markdown]
 # ### Let's compare some entries with the coarser previous variable-time run
@@ -249,7 +264,7 @@ df2
 df.loc[1]
 
 # %%
-df2.loc[4]
+df2.loc[4]   # High-precision result from fine fixed-resolution run
 
 # %%
 old = df.loc[1][['SYSTEM TIME', 'A', 'B', 'C']].to_numpy().astype(float)
@@ -271,7 +286,7 @@ new - old
 df.loc[16]
 
 # %%
-df2.loc[64]
+df2.loc[64]   # High-precision result from fine fixed-resolution run
 
 # %%
 
@@ -282,7 +297,7 @@ df2.loc[64]
 df.loc[70]
 
 # %%
-df2.loc[280]
+df2.loc[280]   # High-precision result from fine fixed-resolution run
 
 # %%
 
@@ -293,7 +308,7 @@ df2.loc[280]
 df.loc[85]
 
 # %%
-df2.loc[520]
+df2.loc[520]   # High-precision result from fine fixed-resolution run
 
 # %%
 
@@ -308,7 +323,7 @@ fig1 = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["B"],
 fig1.show()
 
 # %%
-# Latest run
+# Latest run (High-precision result from fine fixed-resolution run)
 fig2 = px.line(data_frame=dynamics2.get_history(), x="SYSTEM TIME", y=["B"], 
               color_discrete_sequence = ['orange'],
               labels={"value":"concentration", "variable":"Fine fixed-step run"})

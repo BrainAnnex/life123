@@ -26,7 +26,7 @@
 #
 # All reactions 1st order, mostly forward.  Taken to equilibrium.
 #
-# LAST REVISED: Jan. 16, 2023
+# LAST REVISED: Jan. 22, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -91,7 +91,7 @@ dynamics.describe_state()
 # ### Run the reaction
 
 # %%
-#dynamics.set_diagnostics()          # To save diagnostic information about the call to single_compartment_react()
+dynamics.set_diagnostics()          # To save diagnostic information about the call to single_compartment_react()
 #dynamics.verbose_list = [1, 2, 3]   # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
 # The changes of concentrations vary very rapidly early on; 
@@ -100,7 +100,11 @@ dynamics.describe_state()
 dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.05,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=4, fast_threshold=10)
+                                  dynamic_steps=4, fast_threshold=25)
+
+# %%
+df_iterm = dynamics.get_history()
+df_iterm
 
 # %%
 # Continue running the reaction at lover resolution
@@ -110,25 +114,25 @@ dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.25,
                                   dynamic_steps=4, fast_threshold=10)
 
 # %%
-df = dynamics.history.get()
+df = dynamics.get_history()
 df
+
+# %%
+dynamics.explain_time_advance()
 
 # %%
 # Verify that all the reactions have reached equilibrium
 dynamics.is_in_equilibrium()
 
 # %%
-fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="Single reaction A <-> B (no downregulation)",
-              color_discrete_sequence = ['blue', 'green'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(colors=["blue", "green"], title="Single reaction A <-> B (no downregulation)")
 
 # %%
 
 # %% [markdown]
 # # <a name="down_regulate_1_scenario_2"></a>  Scenario 2: 
-# ### downregulated by shunt: kinetically fast,   
+# ### downregulated by shunt: 
+# ### kinetically fast,   
 # ### but with thermodynamical dis-advantage (i.e. energetically un-favored)
 
 # %% tags=[]
@@ -177,7 +181,7 @@ dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.25,
                                   dynamic_steps=4, fast_threshold=10)
 
 # %%
-df = dynamics.history.get()
+df = dynamics.get_history()
 df
 
 # %% [markdown]
@@ -191,11 +195,8 @@ dynamics.is_in_equilibrium(tolerance=3)
 # ## <a name="react_5_plot"></a>Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B", "S"], 
-              title="Coupled reactions A <-> B and A <-> S (fast but disadvantaged energetically)",
-              color_discrete_sequence = ['blue', 'green', 'red'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(colors=["blue", "green", "red"], 
+                     title="Coupled reactions A <-> B and A <-> S (fast but disadvantaged energetically)")
 
 # %% [markdown]
 # ### Notice how the "alternate (shunt) path" of the reaction, i.e. S (red)   
@@ -210,7 +211,8 @@ dynamics.stoichiometry_checker_entire_run()
 
 # %% [markdown]
 # # <a name="down_regulate_1_scenario_3"></a> Scenario 3: 
-# ### downregulated by shunt: kinetically slow,   
+# ### downregulated by shunt:   
+# ### kinetically slow,   
 # ### but with thermodynamical advantage (i.e. energetically favored)
 
 # %%
@@ -258,7 +260,7 @@ dynamics3.single_compartment_react(time_step=0.25, reaction_duration=6.7,
                                   dynamic_steps=5, fast_threshold=10)
 
 # %%
-df3 = dynamics3.history.get()
+df3 = dynamics3.get_history()
 df3
 
 # %% [markdown]
@@ -272,11 +274,8 @@ dynamics3.is_in_equilibrium(tolerance=13)
 # ## <a name="react_5_plot"></a>Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=dynamics3.get_history(), x="SYSTEM TIME", y=["A", "B", "S"], 
-              title="Coupled reactions A <-> B and A <-> S (slow but with energetic advantage)",
-              color_discrete_sequence = ['blue', 'green', 'red'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics3.plot_curves(colors=["blue", "green", "red"], 
+                      title="Coupled reactions A <-> B and A <-> S (slow but with energetic advantage)")
 
 # %% [markdown]
 # ### Notice how the "alternate (shunt) path" of the reaction, i.e. S (red)   
@@ -285,7 +284,7 @@ fig.show()
 
 # %% [markdown]
 # #### Please note the much-longer timescale from the earlier plots
-# If we look at the initial [0-0.3] interval, this is what it looks like:
+# If we look at the initial [0-0.1] interval, this is what it looks like:
 
 # %%
 fig = px.line(data_frame=dynamics3.get_history().loc[:96], x="SYSTEM TIME", y=["A", "B", "S"], 
@@ -293,6 +292,9 @@ fig = px.line(data_frame=dynamics3.get_history().loc[:96], x="SYSTEM TIME", y=["
               color_discrete_sequence = ['blue', 'green', 'red'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
+
+# %%
+dynamics3.curve_intersection(t_start=0, t_end=0.08, var1="A", var2="B")
 
 # %%
 # Verify that the stoichiometry is respected at every reaction step/substep (NOTE: it requires earlier activation of saving diagnostic data)
