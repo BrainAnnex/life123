@@ -2,6 +2,19 @@ import numpy as np
 from modules.numerical.numerical import Numerical as num
 
 
+def test_deep_flatten():
+    assert num.deep_flatten(5) == [5]
+    assert num.deep_flatten([1,2]) == [1,2]
+    assert num.deep_flatten( (1,2) ) == [1,2]
+    assert num.deep_flatten([(1, 2), (3,4)])  == [1, 2, 3, 4]
+    assert num.deep_flatten( ((1, 2), (3,4)) )  == [1, 2, 3, 4]
+    assert num.deep_flatten([[1,2,3], [4,5,6], [7], [8,9]]) == [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    ragged = [[1, 2], [[[[3, 4, 5], 6]]], 7, [8, [9, [10, 11], 12, [13, 14, [15, [[16, 17], 18]]]]]]
+    assert num.deep_flatten(ragged) == list(range(1, 19))
+    assert num.deep_flatten("hello") == ["hello"]
+
+
+
 def test_compare_vectors():
     a = np.array([4.3, 123, 5.2, 532.5, -123.42, 0, 2.3])
     res = num.compare_vectors(a, a)

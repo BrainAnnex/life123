@@ -965,19 +965,20 @@ class ReactionDynamics:
 
 
 
-    def criterion_fast_reaction(self, delta_conc, baseline_conc, time_subdivision, fast_threshold_fraction) -> bool:
+    def criterion_fast_reaction(self, delta_conc, time_subdivision, fast_threshold_fraction,
+                                baseline_conc=None) -> bool:
         """
         Apply a criterion to determine, from the given data,
         whether the originating reaction (the source of the data) needs to be classified as "Fast".
         All the passed data is for the concentration changes in 1 chemical from 1 reaction
 
         :param delta_conc:
-        :param baseline_conc:
         :param time_subdivision:
         :param fast_threshold_fraction:
+        :param baseline_conc:           # TODO: probably phase out
 
-        :return:                    True if the concentration change is so large (based on some criteria)
-                                        that the reaction that caused it, ought to be regarded as "fast"
+        :return:                        True if the concentration change is so large (based on some criteria)
+                                            that the reaction that caused it, ought to be regarded as "fast"
         """
         if self.fast_criterion_use_baseline:    # TODO: this criterion gives poor results, and will probably be eliminated
             # if abs(delta_conc) / baseline_conc > fast_threshold_fraction / time_subdivision
@@ -1025,7 +1026,8 @@ class ReactionDynamics:
     def examine_increment_array(self, rxn_index: int,
                                 delta_conc_array: np.array, baseline_conc_array: np.array,
                                 time_subdivision: int,
-                                fast_threshold_fraction) -> None:
+                                fast_threshold_fraction
+                                ) -> None:
         """
         Examine the requested concentration changes given by delta_conc_array
         (typically, as computed by an ODE solver),
@@ -1853,7 +1855,7 @@ class ReactionDynamics:
         :return:
         """
         if np.allclose(t_start, t_end):
-            print(f"[Ignoring interval starting and ending at same time {t_start:.3g}]")
+            #print(f"[Ignoring interval starting and ending at same time {t_start:.3g}]")
             return
 
         if np.allclose(delta_baseline, primary_timestep):

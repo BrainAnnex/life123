@@ -9,6 +9,46 @@ class Numerical:
     Assorted, general numerical methods
     """
 
+    @classmethod
+    def deep_flatten(cls, items) -> list:
+        """
+        Completely flatten any lists/tuples of lists or tuples
+        into a single list
+        EXAMPLES:
+            [[1,2,3], [4,5,6], [7], [8,9]] becomes [1, 2, 3, 4, 5, 6, 7, 8, 9]
+            (1,2)                       becomes [1,2]
+            [(1, 2), (3,4)]             becomes [1, 2, 3, 4]
+            5                           becomes [5]
+            "hello"                     becomes ["hello"]
+
+        :param items:   A list or tuple possibly containing lists or tuples
+        :return:        A flat list
+        """
+        if items == [] or items == ():
+            return []
+        elif (type(items) is not list) and (type(items) is not tuple):
+            return [items]
+        else:
+            return cls.deep_flatten(items[0]) + cls.deep_flatten(items[1:])
+
+
+
+    @classmethod
+    def compare_results(cls, res1, res2) -> float:
+        """
+
+        :param res1:
+        :param res2:
+        :return:
+        """
+        flat1 =  cls.deep_flatten(res1)
+        flat2 =  cls.deep_flatten(res2)
+        assert len(flat1) == len(flat2), \
+            "compare_results(): the 2 sets of data (after flattening) must have the same length"
+
+        return cls.compare_vectors(v1=np.array(flat1), v2=np.array(flat2))
+
+
 
     @classmethod
     def compare_vectors(cls, v1: np.array, v2: np.array, metric=None, trim_edges=0) -> float:
@@ -19,8 +59,9 @@ class Numerical:
         :param v1:
         :param v2:
         :param metric:      NOT YET USED
-        :param trim_edges:
-        :return:
+        :param trim_edges:  (OPTIONAL) number of elements to ditch at each end,
+                                prior to comparing the vectors (default: 0)
+        :return:            The distance between the two vectors under L2 (Euclidean) metric
         """
         # TODO: give a helpful error message if v1 or v2 aren't 1-d,
         #       or if they have different dimensions

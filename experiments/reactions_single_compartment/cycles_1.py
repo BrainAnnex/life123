@@ -15,13 +15,13 @@
 
 # %% [markdown]
 # ## A cycle of reactions A <-> B <-> C <-> A, 
-# ### The "closing" of the cycle (the "return" parth from C to A) is couple with an "energy donor" reaction:
+# ### The "closing" of the above cycle (the "return" parth from C to A) is couple with an "energy donor" reaction:
 # ### C + E_High <-> A + E_Low
 # where E_High and E_Low are, respectively, the high- and low- energy molecules that drive the cycle (for example, think of ATP/ADP)
 #
 # All 1st-order kinetics.   
 #
-# LAST REVISED: Jan. 20, 2023
+# LAST REVISED: Jan. 23, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -34,6 +34,7 @@ from experiments.get_notebook_info import get_notebook_basename
 
 from modules.reactions.reaction_data import ReactionData as chem
 from modules.reactions.reaction_dynamics import ReactionDynamics
+from modules.numerical.numerical import Numerical as num
 
 import numpy as np
 import plotly.express as px
@@ -79,31 +80,118 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
+initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}  # Note the abundant energy source
+initial_conc
+
+# %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
-dynamics.set_conc(conc={"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.},
-                  snapshot=True)      # Note the abundant energy source
+dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 
 # %% [markdown] tags=[]
-# ### Start the reaction
+# ## Start the reaction
+# ### We'll split the simuation in three segments (apparent from the graph, further down):  
+# Time [0-0.03] fast changes   
+# Time [0.03-5.] medium changes   
+# Time [5.-8.] slow changes, as we approach equilibrium
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-dynamics.single_compartment_react(time_step=0.001, n_steps=30, 
-                                  dynamic_steps=4, fast_threshold=10)
+# %% [markdown]
+# # 1. For starters, we'll use FIXED time resolution, with COARSE time steps   
+# (trial and error, not shown, reveals that increasing any of the time steps below, soon leads to "excessive time step" errors)
 
 # %%
-dynamics.history.get()
+dynamics.single_compartment_react(time_step=0.0008, stop_time=0.03)
+dynamics.get_history()
+
+# %%
+dynamics.single_compartment_react(time_step=0.001, stop_time=5.)
+dynamics.get_history()
+
+# %%
+dynamics.single_compartment_react(time_step=0.005, stop_time=8.)
+
+# %%
+df = dynamics.get_history()
+df
+
+# %% [markdown]
+# ### Notice we created 5,609 data points
 
 # %%
 dynamics.explain_time_advance()
 
-# %%
-dynamics.single_compartment_react(time_step=0.01, n_steps=1000, 
-                                  dynamic_steps=8, fast_threshold=10)
+# %% [markdown] tags=[]
+# ## Plots of changes of concentration with time
 
-df = dynamics.history.get()
+# %%
+dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+
+# %%
+dynamics.plot_curves(chemicals=["A", "B", "C"])
+
+# %% [markdown]
+# ### The plots has 4 distinctive intersections; locate them and save them for later comparisons across repeated runs:
+
+# %%
+run1 = []
+
+# %%
+run1.append(dynamics.curve_intersection(t_start=1., t_end=2., var1="E_high", var2="E_low"))
+
+# %%
+run1.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, var1="A", var2="B"))
+
+# %%
+run1.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="A", var2="C"))
+
+# %%
+run1.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="B", var2="C"))
+
+# %%
+run1
+
+# %% [markdown]
+# ### Verify the final equilibrium state:
+
+# %%
+dynamics.is_in_equilibrium()
+
+# %%
+
+# %%
+
+# %% [markdown]
+# # Everything below is just a repeat of the experiment, with different timesteps, for technical comparisons
+
+# %% [markdown]
+# # 2. VARIABLE time resolution, using the same primary time steps as before 
+#
+
+# %%
+dynamics = ReactionDynamics(reaction_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
+dynamics.set_conc(conc=initial_conc, snapshot=True) 
+dynamics.describe_state()
+
+# %%
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+# %%
+dynamics.single_compartment_react(time_step=0.0008, stop_time=0.03,
+                                  dynamic_steps=2, abs_fast_threshold=750.)
+
+# %%
+dynamics.single_compartment_react(time_step=0.001, stop_time=5.,
+                                 dynamic_steps=2, abs_fast_threshold=250.)
+
+# %%
+dynamics.single_compartment_react(time_step=0.005, stop_time=8.,
+                                  dynamic_steps=2, abs_fast_threshold=2.)
+
+# %%
+df = dynamics.get_history()
 df
 
 # %%
@@ -113,32 +201,102 @@ dynamics.explain_time_advance()
 # ## Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B", "C"], 
-              title="Changes in concentrations",
-              color_discrete_sequence = ['blue', 'green', 'brown'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-fig = px.line(data_frame=df, x="SYSTEM TIME", y=["E_high", "E_low"], 
-              title="Changes in concentrations",
-              color_discrete_sequence = ['red', 'gray'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(chemicals=["A", "B", "C"])
+
+# %% [markdown]
+# ### The plots has 4 distinctive intersections; locate them:
 
 # %%
-dynamics.is_in_equilibrium(tolerance=4)
+run2 = []
 
 # %%
-df.head(22)
+run2.append(dynamics.curve_intersection(t_start=1., t_end=2., var1="E_high", var2="E_low"))
 
 # %%
-df[113:131]
+run2.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, var1="A", var2="B"))
 
 # %%
-df[df['SYSTEM TIME'] > 2.52].head(50)
+run2.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="A", var2="C"))
 
 # %%
-dynamics.diagnostic_data_baselines.get()[100:130]
+run2.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="B", var2="C"))
 
 # %%
+run2
+
+# %%
+
+# %%
+
+# %% [markdown]
+# # 3. FIXED time resolution, using the smallest time substeps used in the variable step 2 
+#
+
+# %%
+dynamics = ReactionDynamics(reaction_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
+dynamics.set_conc(conc=initial_conc, snapshot=True) 
+dynamics.describe_state()
+
+# %%
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+# %% tags=[]
+dynamics.single_compartment_react(time_step=0.0004, stop_time=0.03)
+
+# %%
+dynamics.single_compartment_react(time_step=0.0005, stop_time=5.)
+
+# %%
+dynamics.single_compartment_react(time_step=0.0025, stop_time=8.)
+
+# %%
+df = dynamics.get_history()
+df
+
+# %%
+dynamics.explain_time_advance()
+
+# %% [markdown] tags=[]
+# ## Plots of changes of concentration with time
+
+# %%
+dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+
+# %%
+dynamics.plot_curves(chemicals=["A", "B", "C"])
+
+# %% [markdown]
+# ### The plots has 4 distinctive intersections; locate them:
+
+# %%
+run3 = []
+
+# %%
+run3.append(dynamics.curve_intersection(t_start=1., t_end=2., var1="E_high", var2="E_low"))
+
+# %%
+run3.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, var1="A", var2="B"))
+
+# %%
+run3.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="A", var2="C"))
+
+# %%
+run3.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="B", var2="C"))
+
+# %%
+run3
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+num.compare_results(run1, run3)
+
+# %%
+num.compare_results(run2, run3)
