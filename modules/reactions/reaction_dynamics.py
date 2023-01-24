@@ -1024,9 +1024,10 @@ class ReactionDynamics:
 
 
     def examine_increment_array(self, rxn_index: int,
-                                delta_conc_array: np.array, baseline_conc_array: np.array,
+                                delta_conc_array: np.array,
                                 time_subdivision: int,
-                                fast_threshold_fraction
+                                fast_threshold_fraction,
+                                baseline_conc_array=None
                                 ) -> None:
         """
         Examine the requested concentration changes given by delta_conc_array
@@ -1047,7 +1048,7 @@ class ReactionDynamics:
                                             (for ALL the chemicals,
                                             though only the ones involved in the above reaction are looked at)
         :param baseline_conc_array:     The initial concentration (for ALL the chemicals),
-                                            before the last simulated reaction step or substep
+                                            before the last simulated reaction step or substep  TODO: phase out
         :param time_subdivision:        Integer with the number of subdivisions currently used for delta_time;
                                             used for adaptive variable time resolution
         :param fast_threshold_fraction: The minimum relative size of the concentration baseline over its change, AS A FRACTION,
@@ -1079,7 +1080,10 @@ class ReactionDynamics:
         for i in self.reaction_data.get_chemicals_in_reaction(rxn_index):
 
             delta_conc = delta_conc_array[i]
-            baseline_conc = baseline_conc_array[i]
+            if baseline_conc_array is None:
+                baseline_conc = None
+            else:
+                baseline_conc = baseline_conc_array[i]
 
             # Determine whether the reaction needs to be classified as "Fast"
             if self.criterion_fast_reaction(delta_conc=delta_conc, baseline_conc=baseline_conc,
