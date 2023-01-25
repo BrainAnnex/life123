@@ -20,7 +20,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_4"_ 
 #
-# LAST REVISED: Jan. 11, 2023
+# LAST REVISED: Jan. 22, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -83,7 +83,7 @@ dynamics.set_conc([10., 50., 20.], snapshot=True)
 dynamics.describe_state()
 
 # %%
-dynamics.history.get()
+dynamics.get_history()
 
 # %% [markdown] tags=[]
 # ## Run the reaction
@@ -95,15 +95,17 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 dynamics.single_compartment_react(time_step=0.004, reaction_duration=0.06,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=2)
-                                  # Accepting the default:  fast_threshold=5
+                                  dynamic_steps=2, fast_threshold=1)
 
 # %% [markdown]
-# ### Note: the argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using fast_threshold=5)
+# ### Note: the argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using the given value of _fast_threshold_ )
 
 # %%
-df = dynamics.history.get()
+df = dynamics.get_history()
 df
+
+# %%
+dynamics.explain_time_advance()
 
 # %% [markdown]
 # ### Notice how the reaction proceeds in smaller steps in the early times, when the concentrations are changing much more rapidly
@@ -142,12 +144,15 @@ fig.show()
 
 # %% [markdown]
 # # Everthing below is just for diagnostic insight 
-# # into the adaptive variable time steps
+# ## into the adaptive variable time steps
+
+# %% [markdown]
+# ## WARNING: The explanations below are based on an older system of using RELATIVE concentration changes, and no longer applicable to the newer approach; it'll be corrected in future versions (COMMENTED OUT FOR NOW)
 
 # %%
 # This approach, from the run data, is only usable with single-reaction runs
-dynamics.examine_run(df=df, time_step=0.004)
-# the time step MUST match the value used in call to single_compartment_react()
+#dynamics.examine_run(df=df, time_step=0.004, fast_threshold=1)
+# The arguments step MUST match the value used in call to single_compartment_react()
 
 # %% [markdown]
 # # Take a peek at internal diagnostic data from the reactions
@@ -155,7 +160,7 @@ dynamics.examine_run(df=df, time_step=0.004)
 # %%
 # This approach, from internal diagnostic data, 
 # is more generally applicable also to runs with multiple reactions
-dynamics.diagnose_variable_time_steps()
+#dynamics.diagnose_variable_time_steps()
 
 # %% [markdown]
 # ### The above diagnostics are based on the following diagnostic data:

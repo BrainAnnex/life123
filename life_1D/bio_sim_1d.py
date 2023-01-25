@@ -268,7 +268,7 @@ class BioSim1D:
         if species_name is not None:
             species_index = self.chem_data.get_index(species_name)
         else:
-            self.chem_data.assert_valid_index(species_index)
+            self.chem_data.assert_valid_species_index(species_index)
 
         assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
 
@@ -316,7 +316,7 @@ class BioSim1D:
         if species_name is not None:
             species_index = self.chem_data.get_index(species_name)
         else:
-            self.chem_data.assert_valid_index(species_index)
+            self.chem_data.assert_valid_species_index(species_index)
 
         self.assert_valid_bin(bin_address)
 
@@ -351,7 +351,7 @@ class BioSim1D:
         elif species_index is None:
             raise Exception("BioSim1D.set_species_conc(): must provide a `species_name` or `species_index`")
         else:
-            self.chem_data.assert_valid_index(species_index)
+            self.chem_data.assert_valid_species_index(species_index)
 
         assert (type(conc_list) == list) or (type(conc_list) == tuple) or (type(conc_list) == np.ndarray), \
             f"BioSim1D.set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
@@ -648,7 +648,7 @@ class BioSim1D:
         if species_name is not None:
             species_index = self.chem_data.get_index(species_name)
         else:
-            self.chem_data.assert_valid_index(species_index)
+            self.chem_data.assert_valid_species_index(species_index)
 
         if trans_membrane:
             species_conc =  self.system_B[species_index]
@@ -675,7 +675,7 @@ class BioSim1D:
         if species_name is not None:
             species_index = self.chem_data.get_index(species_name)
 
-        self.chem_data.assert_valid_index(species_index)
+        self.chem_data.assert_valid_species_index(species_index)
 
         if trans_membrane:
             return self.system_B[species_index, bin_address]

@@ -16,11 +16,13 @@
 # %% [markdown]
 # ### A down-regulates B , by being the *limiting reagent* in reaction A + 2 B <-> Y (mostly forward)
 # 1st-order kinetics.   
-# If [A] is low, [B] remains high.  Then, if [A] goes high, [B] goes low.  However, at that point, A can no longer bring B up to any substantial extent.
+# If [A] is low and [B] is high, then [B] remains high.  If [A] goes high, [B] goes low.  However, at that point, A can no longer bring B up to any substantial extent.
 #
 # Single-bin reaction
 #
-# LAST REVISED: Jan. 15, 2023
+# Based on experiment "reactions_single_compartment/down_regulate_2"
+#
+# LAST REVISED: Jan. 18, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -97,17 +99,17 @@ bio.get_history()
 bio.reaction_dynamics.is_in_equilibrium(conc=bio.bin_snapshot(bin_address = 0))
 
 # %% [markdown] tags=[]
-# # Plots of changes of concentration with time
+# ## Plots of changes of concentration with time
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "Y"], 
-              title="Changes in concentrations",
-              color_discrete_sequence = ['red', 'green', 'darkorange'],
+              title="Changes in concentrations (reaction A + 2 B <-> Y)",
+              color_discrete_sequence = ['red', 'blue', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
 # %% [markdown] tags=[]
-# ## Now, let's suddenly increase [A]
+# # Now, let's suddenly increase [A]
 
 # %%
 bio.set_bin_conc(bin_address=0, species_index=0, conc=40.)
@@ -127,23 +129,23 @@ bio.react(time_step=0.0005, n_steps=80, snapshots={"frequency": 2, "sample_bin":
 bio.describe_state()
 bio.get_history()
 
-# %% [markdown]
-# **A**, still the limiting reagent, is again stopping the reaction.  
-# The (transiently) high value of [A] led to a high value of [B]
-
 # %%
 # Verify that the reaction has reached equilibrium
 bio.reaction_dynamics.is_in_equilibrium(conc=bio.bin_snapshot(bin_address = 0), tolerance=7)
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "Y"], 
-              title="Changes in concentrations",
-              color_discrete_sequence = ['red', 'green', 'darkorange'],
+              title="Changes in concentrations (reaction A + 2 B <-> Y)",
+              color_discrete_sequence = ['red', 'blue', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
+# %% [markdown]
+# **A**, still the limiting reagent, is again stopping the reaction.  
+# The (transiently) high value of [A] led to a high value of [B]
+
 # %% [markdown] tags=[]
-# ## Let's again suddenly increase [A]
+# # Let's again suddenly increase [A]
 
 # %%
 bio.set_bin_conc(bin_address=0, species_index=0, conc=30.)
@@ -162,22 +164,23 @@ bio.react(time_step=0.0005, n_steps=70, snapshots={"frequency": 2, "sample_bin":
 bio.describe_state()
 bio.get_history()
 
-# %% [markdown]
-# **A**, again the scarse limiting reagent, stops the reaction yet again
-
 # %%
 # Verify that the reaction has reached equilibrium
 bio.reaction_dynamics.is_in_equilibrium(conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "Y"], 
-              title="Changes in concentrations",
-              color_discrete_sequence = ['red', 'green', 'darkorange'],
+              title="Changes in concentrations (reaction A + 2 B <-> Y)",
+              color_discrete_sequence = ['red', 'blue', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
 # %% [markdown]
-# Note: A can up-regulate B, but it cannot bring it down.  
-# X will soon need to be replenished, if A is to continue being the limiting reagent.
+# **A**, again the scarse limiting reagent, stops the reaction yet again
+
+# %% [markdown]
+# Note: A can down-regulate B, but it cannot bring it up.
+#
+# # For additional exploration, see the experiment "reactions_single_compartment/down_regulate_2"
 
 # %%

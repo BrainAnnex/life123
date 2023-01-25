@@ -198,7 +198,7 @@ class BioSim2D:
         elif species_index is None:
             raise Exception("BioSim2D.set_species_conc(): must provide a `species_name` or `species_index`")
         else:
-            self.chem_data.assert_valid_index(species_index)
+            self.chem_data.assert_valid_species_index(species_index)
 
         assert (type(conc_data) == list) or (type(conc_data) == tuple) or (type(conc_data) == np.ndarray), \
                     f"BioSim2D.set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
@@ -301,7 +301,7 @@ class BioSim2D:
         if species_name is not None:
             species_index = self.chem_data.get_index(species_name)
         else:
-            self.chem_data.assert_valid_index(species_index)
+            self.chem_data.assert_valid_species_index(species_index)
 
         species_conc = self.system[species_index]
 

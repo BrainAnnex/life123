@@ -283,7 +283,7 @@ def test_adaptive_time_resolution_1():
                                             dynamic_steps=2, fast_threshold=5)
     # The above call results in 2 time steps
     # Check the calculations, based on the forward Euler method
-    half_step_conc = conc_array + [fwd_delta ,rev_delta]    # [13.5 46.5]   These are the conc's halfway thru delta_time_full
+    half_step_conc=conc_array + [fwd_delta ,rev_delta]    # [13.5 46.5]   These are the conc's halfway thru delta_time_full
     new_fwd_delta = 0.05 * (-kF * half_step_conc[0] + kR * half_step_conc[1])   # 2.625
     new_rev_delta = -new_fwd_delta  # From the stoichiometry
     fwd_delta += new_fwd_delta      # 6.125
@@ -339,7 +339,7 @@ def test_adaptive_time_resolution_2():
     result = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
                                             dynamic_steps=time_subdivision, fast_threshold=5)
     # Check the calculations, based on the forward Euler method
-    half_step_conc = conc_array + [delta_A ,delta_B, delta_C]    # [5.08 45.08 24.92]  These are the conc's halfway thru delta_time_full
+    half_step_conc=conc_array + [delta_A ,delta_B, delta_C]    # [5.08 45.08 24.92]  These are the conc's halfway thru delta_time_full
 
     new_delta_A = delta_time_subinterval * (-kF * half_step_conc[0] * half_step_conc[1] + kR * half_step_conc[2])   # -2.190384
     new_delta_B = new_delta_A       # From the stoichiometry
@@ -376,7 +376,7 @@ def test_adaptive_time_resolution_2():
     rxn.single_compartment_react(time_step=delta_time_full_interval,
                                  n_steps=7, dynamic_steps=time_subdivision, fast_threshold=5)
     assert np.allclose(rxn.system_time, 0.036)  # Note that 0.036 is 0.008 + 7 * 0.004
-    assert np.allclose(rxn.system, np.array([0.29501266, 40.29501266, 29.70498734]))
+    assert np.allclose(rxn.system, np.array([0.29491353, 40.29491353, 29.70508647]))
 
 
 
@@ -420,7 +420,7 @@ def test_adaptive_time_resolution_3():
     # Check the calculations, based on the forward Euler method
 
     # 1st substep, using the previously-computed [delta_A ,delta_C]
-    substep_conc = conc_array + [delta_A ,delta_C]  # [80.08, 99.96]  These are the conc's 1/4 way thru delta_time_full
+    substep_conc=conc_array + [delta_A ,delta_C]  # [80.08, 99.96]  These are the conc's 1/4 way thru delta_time_full
                                                     #                 i.e. at t = 0.0005
     # 2nd substep
     new_delta_A = 2 * delta_time_subinterval * (-kF * substep_conc[0] **2 + kR * substep_conc[1])
@@ -429,7 +429,7 @@ def test_adaptive_time_resolution_3():
     delta_A += new_delta_A
     delta_C += new_delta_C
 
-    substep_conc = conc_array + [delta_A ,delta_C]  # [61.0415008, 109.4792496]  These are the conc's 1/2 way thru delta_time_full
+    substep_conc=conc_array + [delta_A ,delta_C]  # [61.0415008, 109.4792496]  These are the conc's 1/2 way thru delta_time_full
                                                     #                 i.e. at t = 0.0010
     # 3rd substep
     new_delta_A = 2 * delta_time_subinterval * (-kF * substep_conc[0] **2 + kR * substep_conc[1])   #
@@ -438,7 +438,7 @@ def test_adaptive_time_resolution_3():
     delta_A += new_delta_A
     delta_C += new_delta_C
 
-    substep_conc = conc_array + [delta_A ,delta_C]  # [50.08226484, 114.95886758]  These are the conc's 3/4 way thru delta_time_full
+    substep_conc=conc_array + [delta_A ,delta_C]  # [50.08226484, 114.95886758]  These are the conc's 3/4 way thru delta_time_full
                                                     #                 i.e. at t = 0.0015
 
     # 4th substep (completing the full interval)
@@ -448,7 +448,7 @@ def test_adaptive_time_resolution_3():
     delta_A += new_delta_A
     delta_C += new_delta_C
 
-    #substep_conc = conc_array + [delta_A ,delta_C]  # [42.78748282, 118.60625859]  These are the conc's 3/4 way thru delta_time_full
+    #substep_conc=conc_array + [delta_A ,delta_C]  # [42.78748282, 118.60625859]  These are the conc's 3/4 way thru delta_time_full
                                                     #                 i.e. at t = 0.0020
 
     assert np.allclose(result, [delta_A , delta_C])  # [-157.21251718   78.60625859]
@@ -585,42 +585,79 @@ def test_is_in_equilibrium():
     # Reaction 0 : A <-> B
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
     c = {'A': 23.9931640625, 'B': 36.0068359375}
-    assert rxn.is_in_equilibrium(rxn_index = 0, conc = c, explain=False)
+    assert rxn.is_in_equilibrium(rxn_index = 0, conc=c, explain=False, tolerance=1)
+    assert rxn.is_in_equilibrium(conc=c, explain=False, tolerance=1)      # Testing ALL reactions
 
     # Reaction 1 : A <-> F
     chem_data.add_reaction(reactants=["A"], products=["F"], forward_rate=20, reverse_rate=2.)
     c = {'A': 3, 'F': 32.999}
-    assert rxn.is_in_equilibrium(rxn_index = 1, conc = c, explain=False, tolerance=10)   # Just below the 10% tolerance
+    assert rxn.is_in_equilibrium(rxn_index=1, conc=c, explain=False, tolerance=10)   # The deviation is just below the 10% tolerance
+
+    with pytest.raises(Exception):
+        assert rxn.is_in_equilibrium(conc=c, explain=False, tolerance=10) # Testing ALL reactions, but neglected to provide [B]
+
+    c = {'A': 3, 'B': 4.6, 'F': 33.001}   # We're now including all the concentrations we need for both reactions
+    assert rxn.is_in_equilibrium(conc=c, explain=False, tolerance=10) \
+           == {False: [1]}    # The deviation for reaction 1 is just above the 10% tolerance
+
+    assert rxn.is_in_equilibrium(conc=c, explain=False, tolerance=2.2) \
+           == {False: [0, 1]}      # With a tolerance so low, not reaction meets the criteria
+
+    assert rxn.is_in_equilibrium(conc=c, explain=False, tolerance=2.3) \
+           == {False: [1]}                # Reaction 0 barely passes with this tolerance (it deviates by 2.222 %)
+
+    with pytest.raises(Exception):
+        assert rxn.is_in_equilibrium(explain=False, tolerance=2.3)  # We're failing to provide concentrations
+
+    rxn.set_conc(conc=[3, 4.6, 0, 0, 0, 33.001])    # The concentrations are in the same order as the declared chemicals
+    assert rxn.is_in_equilibrium(conc=c, explain=False, tolerance=2.3) \
+           == {False: [1]}        # Now using the System concentrations
+
+
+
+def test_reaction_in_equilibrium():
+    chem_data = ReactionData(names=["A", "B", "C", "D", "E", "F"])
+    rxn = ReactionDynamics(chem_data)
+
+    # Reaction 0 : A <-> B
+    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    c = {'A': 23.9931640625, 'B': 36.0068359375}
+    assert rxn.reaction_in_equilibrium(rxn_index = 0, conc=c, explain=False, tolerance=1)
+
+    # Reaction 1 : A <-> F
+    chem_data.add_reaction(reactants=["A"], products=["F"], forward_rate=20, reverse_rate=2.)
+    c = {'A': 3, 'F': 32.999}
+    assert rxn.reaction_in_equilibrium(rxn_index = 1, conc=c, explain=False, tolerance=10)   # Just below the 10% tolerance
     c = {'A': 3, 'F': 33.001}
-    assert not rxn.is_in_equilibrium(rxn_index = 1, conc = c, explain=False, tolerance=10)  # Just above the 10% tolerance
+    assert not rxn.reaction_in_equilibrium(rxn_index = 1, conc=c, explain=False, tolerance=10)  # Just above the 10% tolerance
 
     # Reaction 2 : A <-> 3B
     chem_data.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
     c = {'A': 14.54545455, 'B': 36.36363636}
-    assert rxn.is_in_equilibrium(rxn_index = 2, conc = c, explain=False)
+    assert rxn.reaction_in_equilibrium(rxn_index = 2, conc=c, explain=False, tolerance=1)
 
     # Reaction 3:  2A <-> 3B
     chem_data.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
     c = {'A': 16.25, 'B': 40.625}
-    assert rxn.is_in_equilibrium(rxn_index = 3, conc = c, explain=False)
+    assert rxn.reaction_in_equilibrium(rxn_index = 3, conc=c, explain=False, tolerance=1)
 
     # Reaction 4:  A + B <-> C , with 1st-order kinetics for each species
     chem_data.add_reaction(reactants=[("A") , ("B")], products=[("C")],
                      forward_rate=5., reverse_rate=2.)
     c = {'A': 0.29487741, 'B': 40.29487741, 'C': 29.70512259}
-    assert rxn.is_in_equilibrium(rxn_index = 4, conc = c, explain=False)
+    assert rxn.reaction_in_equilibrium(rxn_index = 4, conc=c, explain=False, tolerance=1)
 
     # Reaction 5:  A <-> 2C + D , with 1st-order kinetics for each species
     chem_data.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
                      forward_rate=5., reverse_rate=2.)
     c = {'A': 4.31058733, 'C': 6.37882534, 'D': 1.68941267}
-    assert rxn.is_in_equilibrium(rxn_index = 5, conc = c, explain=False)
+    assert rxn.reaction_in_equilibrium(rxn_index = 5, conc=c, explain=False, tolerance=1)
 
     # Reaction 6:  2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
     chem_data.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
                      forward_rate=5., reverse_rate=2.)
     c = {'A': 2.80284552, 'B': 4.00711381, 'C': 7.39430896, 'D': 3.79573172}
-    assert rxn.is_in_equilibrium(rxn_index = 6, conc = c, explain=False)
+    assert rxn.reaction_in_equilibrium(rxn_index = 6, conc=c, explain=False, tolerance=1)
 
 
     rxn.clear_reactions()   # This will reset the reaction count to 0
@@ -628,12 +665,12 @@ def test_is_in_equilibrium():
     # Reaction 0:  2A <-> B , with 1st-order kinetics in both directions
     chem_data.add_reaction(reactants=[(2, "A")], products=["B"], forward_rate=5., reverse_rate=2.)
     c = {'A': 2.16928427, 'B': 5.41535786}
-    assert rxn.is_in_equilibrium(rxn_index = 0, conc = c, explain=False)
+    assert rxn.reaction_in_equilibrium(rxn_index = 0, conc=c, explain=False, tolerance=1)
 
     # Reaction 1:  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction
     chem_data.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
     c = {'A': 1.51554944, 'B': 5.74222528}
-    assert rxn.is_in_equilibrium(rxn_index = 1, conc = c, explain=False)
+    assert rxn.reaction_in_equilibrium(rxn_index = 1, conc=c, explain=False, tolerance=1)
 
 
 
@@ -688,10 +725,11 @@ def test_validate_increment():
 
 
 
-
 def test_examine_increment_array():
     chem_data = ReactionData(names=["A", "B", "C"])
     rxn = ReactionDynamics(chem_data)
+
+    rxn.fast_criterion_use_baseline = True   # TODO: This will probably be phased out
 
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)   # 1st reaction: A <-> B
     rxn.set_rxn_speed(0, "S")          # Mark the lone reaction as "Slow"
@@ -804,6 +842,126 @@ def test_examine_increment_array():
     rxn.examine_increment_array(rxn_index=1, delta_conc_array=np.array([0, -1.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
                                 time_subdivision=10, fast_threshold_fraction=0.1)
     assert rxn.fast_rxns() == [0, 1]    # Reaction 1 got marked as "Fast" b/c of large delta_conc for a time_subdivision of 3
+
+
+
+def test_examine_increment_array_2():
+    chem_data = ReactionData(names=["A", "B", "C"])
+    rxn = ReactionDynamics(chem_data)
+
+
+    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)   # 1st reaction: A <-> B
+    rxn.set_rxn_speed(0, "S")          # Mark the lone reaction as "Slow"
+    assert rxn.are_all_slow_rxns()
+
+
+    # INITIAL THRESHOLD (fast_threshold_fraction=5.)
+
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([4.98, 0, 0]),
+                                time_subdivision=1, fast_threshold_fraction=5.)
+    assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag
+
+
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 5.01, 0]),
+                                time_subdivision=1, fast_threshold_fraction=5.)
+    assert rxn.fast_rxns() == [0]       # The one reaction present got marked as "Fast" b/c of large delta_conc
+    assert not rxn.are_all_slow_rxns()
+
+
+    rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, -4.98, 0]),
+                                time_subdivision=1, fast_threshold_fraction=5.)
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([-5.01, 0, 0]),
+                                time_subdivision=1, fast_threshold_fraction=5.)
+    assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc)
+
+    rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, -5.01, 0]),
+                                time_subdivision=1, fast_threshold_fraction=5.)
+    assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc),
+    # no matter which chemical species is being affected
+
+    rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([2.49, 0, 0]),
+                                time_subdivision=2, fast_threshold_fraction=5.)
+    assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag
+
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 2.51, 0]),
+                                time_subdivision=2, fast_threshold_fraction=5.)
+    assert rxn.fast_rxns() == [0]       # The reaction got marked as "Fast" b/c of large delta_conc for a time_subdivision of 2
+    assert not rxn.are_all_slow_rxns()
+
+
+    # NEW THRESHOLD (fast_threshold_fraction=10.)
+
+    chem_data.add_reaction(reactants=["B"], products=["C"], forward_rate=13., reverse_rate=12.)   # 2nd reaction: B <-> C
+    assert rxn.reaction_data.number_of_reactions() == 2
+    assert rxn.get_rxn_speed(1) == "F"  # Newly-added reactions are assumed "Fast" (until proven otherwise!)
+
+    rxn.set_rxn_speed(0, "S")           # Reset reactions to "Slow"
+    rxn.set_rxn_speed(1, "S")
+    assert rxn.slow_rxns() == [0, 1]
+    assert rxn.fast_rxns() == []
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 0, 5.01]),
+                                time_subdivision=1, fast_threshold_fraction=10.)
+    assert rxn.slow_rxns() == [0, 1]    # No change, because the threshold is now higher
+    assert rxn.fast_rxns() == []
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 9.99, 0]),
+                                time_subdivision=1, fast_threshold_fraction=10.)
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 0, -9.99]),
+                                time_subdivision=1, fast_threshold_fraction=10.)
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([9.99, 0, 0]),
+                                time_subdivision=1, fast_threshold_fraction=10.)
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, -9.99, 0]),
+                                time_subdivision=1, fast_threshold_fraction=10.)
+    assert rxn.slow_rxns() == [0, 1]    # Still no change, because all the abs(delta_conc) still below threshold
+    assert rxn.fast_rxns() == []
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment_array(rxn_index=1, delta_conc_array=np.array([0, 10.01, 0]),
+                                time_subdivision=1, fast_threshold_fraction=10.)
+    assert rxn.slow_rxns() == [0]       # The last function call was "the straw that broke the camel's back" for reaction 1 (no longer "slow")!
+    assert rxn.fast_rxns() == [1]
+    assert not rxn.are_all_slow_rxns()
+
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, -10.01, 0]),
+                                time_subdivision=1, fast_threshold_fraction=10.)
+    assert rxn.slow_rxns() == []        # The last function call was "straw that broke the camel's back" for reaction 0 (no longer "slow")!
+    assert rxn.fast_rxns() == [0, 1]
+    assert not rxn.are_all_slow_rxns()
+
+    rxn.set_rxn_speed(0, "S")           # Reset reactions to "Slow"
+    rxn.set_rxn_speed(1, "S")
+    assert rxn.are_all_slow_rxns()
+
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 0, 3.32]),
+                                time_subdivision=3, fast_threshold_fraction=10.)
+    assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag for reaction 0
+
+    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 3.34, 0]),
+                                time_subdivision=3, fast_threshold_fraction=10.)
+    assert rxn.fast_rxns() == [0]       # Reaction 0 got marked as "Fast" b/c of large delta_conc for a time_subdivision of 3
+
+    rxn.examine_increment_array(rxn_index=1, delta_conc_array=np.array([0, 0, -0.99]),
+                                time_subdivision=10, fast_threshold_fraction=10.)
+    assert rxn.fast_rxns() == [0]       # The small increment didn't trip the current "slow reaction" tag for reaction 1
+
+    rxn.examine_increment_array(rxn_index=1, delta_conc_array=np.array([0, -1.01, 0]),
+                                time_subdivision=10, fast_threshold_fraction=10.)
+    assert rxn.fast_rxns() == [0, 1]    # Reaction 1 got marked as "Fast" b/c of large delta_conc for a time_subdivision of 3
+
 
 
 
