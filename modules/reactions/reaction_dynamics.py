@@ -1797,8 +1797,14 @@ class ReactionDynamics:
 
     def explain_time_advance(self, return_times=False) -> Union[None, list]:
         """
-        :param return_times:
-        :return:
+        Use the saved-up diagnostic data, to print out details of the timescales of the reaction run
+
+        EXAMPLE of output:
+            From time 0 to 0.0168, in 42 substeps of 0.0004 (each 1/2 of full step)
+            From time 0.0168 to 0.0304, in 17 FULL steps of 0.0008
+
+        :param return_times:    If True, all the critical times are saved and returned as a list
+        :return:                Either None, or a list of time values
         """
         assert self.diagnostics, "explain_time_advance(): diagnostics must first be turned on; " \
                                  "use set_diagnostics() prior to the reaction run"

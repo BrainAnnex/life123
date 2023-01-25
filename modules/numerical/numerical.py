@@ -36,10 +36,16 @@ class Numerical:
     @classmethod
     def compare_results(cls, res1, res2) -> float:
         """
+        Use a Euclidean distance metric to compare 2 sets of results - typically from 2 runs
+        of different accuracy.
+        Each result value may be a number or a list or tuple, possibly containing lists or tuples,
+        of numbers.
+        However, after the structure is flattened,
+        the 2 result data sets must have the same number of points
 
         :param res1:
         :param res2:
-        :return:
+        :return:    The distance between the two sets of value, based on an L2 (Euclidean) metric
         """
         flat1 =  cls.deep_flatten(res1)
         flat2 =  cls.deep_flatten(res2)
@@ -58,10 +64,10 @@ class Numerical:
 
         :param v1:
         :param v2:
-        :param metric:      NOT YET USED
+        :param metric:      NOT YET USED: the default L2 norm is always used
         :param trim_edges:  (OPTIONAL) number of elements to ditch at each end,
                                 prior to comparing the vectors (default: 0)
-        :return:            The distance between the two vectors under L2 (Euclidean) metric
+        :return:            The distance between the two vectors based on an L2 (Euclidean) metric
         """
         # TODO: give a helpful error message if v1 or v2 aren't 1-d,
         #       or if they have different dimensions

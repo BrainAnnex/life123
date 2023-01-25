@@ -15,13 +15,14 @@
 
 # %% [markdown]
 # ## A cycle of reactions A <-> B <-> C <-> A, 
-# ### The "closing" of the above cycle (the "return" parth from C to A) is couple with an "energy donor" reaction:
-# ### C + E_High <-> A + E_Low
-# where E_High and E_Low are, respectively, the high- and low- energy molecules that drive the cycle (for example, think of ATP/ADP)
+# #### The "closing" of the above cycle (the "return" parth from C to A) is coupled with an "energy donor" reaction:
+# #### C + E_High <-> A + E_Low
+# #### where E_High and E_Low are, respectively, the high- and low- energy molecules that drive the cycle (for example, think of ATP/ADP).   
+# Comparisons are made between results obtained with 3 different time resolutions.
 #
 # All 1st-order kinetics.   
 #
-# LAST REVISED: Jan. 23, 2023
+# LAST REVISED: Jan. 24, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -80,38 +81,39 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}  # Note the abundant energy source
+initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}  # Note the abundant energy source "E_high"
 initial_conc
+
+# %% [markdown] tags=[]
+# ### We'll split each simulation in three segments (apparent from the graphs of the runs, further down):  
+# Time [0-0.03] fast changes   
+# Time [0.03-5.] medium changes   
+# Time [5.-8.] slow changes, as we approach equilibrium  
+#
+# ### and we'll do MULTIPLE RUNS, at varying time resolutions.
+
+# %% [markdown]
+# # Run # 1 : FIXED time resolution, with COARSE time steps   
+# (trial and error, not shown, reveals that increasing any of the time steps below, leads to "excessive time step" errors)
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
 dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 
-# %% [markdown] tags=[]
-# ## Start the reaction
-# ### We'll split the simuation in three segments (apparent from the graph, further down):  
-# Time [0-0.03] fast changes   
-# Time [0.03-5.] medium changes   
-# Time [5.-8.] slow changes, as we approach equilibrium
-
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# %% [markdown]
-# # 1. For starters, we'll use FIXED time resolution, with COARSE time steps   
-# (trial and error, not shown, reveals that increasing any of the time steps below, soon leads to "excessive time step" errors)
-
 # %%
 dynamics.single_compartment_react(time_step=0.0008, stop_time=0.03)
-dynamics.get_history()
+#dynamics.get_history()
 
 # %%
 dynamics.single_compartment_react(time_step=0.001, stop_time=5.)
-dynamics.get_history()
+#dynamics.get_history()
 
 # %%
-dynamics.single_compartment_react(time_step=0.005, stop_time=8.)
+#dynamics.single_compartment_react(time_step=0.005, stop_time=8.)
 
 # %%
 df = dynamics.get_history()
@@ -164,11 +166,10 @@ dynamics.is_in_equilibrium()
 # %%
 
 # %% [markdown]
-# # Everything below is just a repeat of the experiment, with different timesteps, for technical comparisons
+# # _NOTE: Everything below is JUST A REPEAT of the same experiment, with different time steps, for accuracy comparisons_
 
 # %% [markdown]
-# # 2. VARIABLE time resolution, using the same primary time steps as before 
-#
+# # Run # 2. VARIABLE time resolution, using the same primary time steps as in run #1
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
@@ -181,6 +182,8 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 # %%
 dynamics.single_compartment_react(time_step=0.0008, stop_time=0.03,
                                   dynamic_steps=2, abs_fast_threshold=750.)
+# Note: the threshold values were picked by trial and error (not shown) 
+# to be neither too small nor too large - leading to substeps being used roughly 1/2 of the time
 
 # %%
 dynamics.single_compartment_react(time_step=0.001, stop_time=5.,
@@ -193,6 +196,9 @@ dynamics.single_compartment_react(time_step=0.005, stop_time=8.,
 # %%
 df = dynamics.get_history()
 df
+
+# %% [markdown]
+# ### Notice we created 8,149 data points, a fair bit more than in run #1
 
 # %%
 dynamics.explain_time_advance()
@@ -207,7 +213,7 @@ dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 dynamics.plot_curves(chemicals=["A", "B", "C"])
 
 # %% [markdown]
-# ### The plots has 4 distinctive intersections; locate them:
+# ### The plots has 4 distinctive intersections; locate and save them:
 
 # %%
 run2 = []
@@ -232,7 +238,8 @@ run2
 # %%
 
 # %% [markdown]
-# # 3. FIXED time resolution, using the smallest time substeps used in the variable step 2 
+# # Run # 3. FIXED time resolution, using the smallest time substeps from run # 2  
+# #### (i.e. FINER fixed resolution than in run #1)
 #
 
 # %%
@@ -256,6 +263,9 @@ dynamics.single_compartment_react(time_step=0.0025, stop_time=8.)
 df = dynamics.get_history()
 df
 
+# %% [markdown]
+# ### Notice we created 11,217 data points, a fair bit more than in run #2, and a good deal more than in run #1
+
 # %%
 dynamics.explain_time_advance()
 
@@ -269,7 +279,7 @@ dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 dynamics.plot_curves(chemicals=["A", "B", "C"])
 
 # %% [markdown]
-# ### The plots has 4 distinctive intersections; locate them:
+# ### The plots has 4 distinctive intersections; locate and save them:
 
 # %%
 run3 = []
@@ -291,12 +301,32 @@ run3
 
 # %%
 
-# %%
+# %% [markdown]
+# # Finally, compare (using a Euclidean metric) the discrepancy between the runs
+# Run #3, at high resolution, could be thought of as "the closest to the actual values"
 
 # %%
-
-# %%
+# Discrepancy of run1 from run3
 num.compare_results(run1, run3)
 
 # %%
+# Discrepancy of run2 from run3
 num.compare_results(run2, run3)
+
+# %% [markdown]
+# The fact that our measure of distance of run 2 (with intermediate resolution) from run3 is actually GREATER than the distance of run 1 (with low resolution) from run3, might be an artifact of the limited accuracy of the function **curve_intersection()**, used to extract the point coordinates from the saved run data.   
+# Future versions will address that...
+
+# %% [markdown]
+# #### The coordinates of the 4 critical points, from the 3 different runs, are pretty similar to one another - as can be easily seen:
+
+# %%
+run1
+
+# %%
+run2
+
+# %%
+run3
+
+# %%
