@@ -14,7 +14,7 @@
 # ---
 
 # %% [markdown]
-# ## A down-regulates B , 
+# ## 'A' down-regulates 'B' , 
 # ### by being the *limiting reagent* in reaction A + 2 B <-> Y (mostly forward)
 # 1st-order kinetics.   
 # If [A] is low and [B] is high, then [B] remains high.  If [A] goes high, [B] goes low.  However, at that point, A can no longer bring B up to any substantial extent.

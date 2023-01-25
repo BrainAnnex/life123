@@ -14,8 +14,8 @@
 # ---
 
 # %% [markdown]
-# ## A cycle of reactions A <-> B <-> C <-> A, 
-# #### The "closing" of the above cycle (the "return" parth from C to A) is coupled with an "energy donor" reaction:
+# ## A cycle of reactions A <-> B <-> C <-> A 
+# #### the "closing" of the above cycle (the "return" parth from C to A) is coupled with an "energy donor" reaction:
 # #### C + E_High <-> A + E_Low
 # #### where E_High and E_Low are, respectively, the high- and low- energy molecules that drive the cycle (for example, think of ATP/ADP).   
 # Comparisons are made between results obtained with 3 different time resolutions.
