@@ -9,6 +9,102 @@ class Numerical:
     Assorted, general numerical methods
     """
 
+
+    @classmethod
+    def segment_intersect(cls, t, y_rise, y_drop) -> (float, float):
+        """
+        Find the intersection of 2 segments in the XY plane.
+        Their respective endpoints share the same x-coordinates: (t_start, t_end)
+
+        One segment ("rise") has increasing y-coordinates: (rise_start, rise_end)
+        The other segment ("drop") had decreasing y-coordinates: (drop_start, drop_end)
+
+        The rising segments starts at a lower y-coordinates than the other one,
+        and ends at a higher y-coordinates than the other one: so, basically, an "X-shaped"
+        intersection of 2 segments.
+
+        Note: for the more general case, use line_intersect()
+
+        :param t:       Pair with the joint x-coordinates of the 2 start points,
+                            and the joint x-coordinates of the 2 end points
+        :param y_rise:  Pair with the y_coordinates of the endpoints of the rising segment
+        :param y_drop:  Pair with the y_coordinates of the endpoints of the dropping segment
+                            Note: either segment - but not both - may be horizontal
+
+        :return:        A pair with the (x,y) coord of the intersection;
+                            if the segments don't meet their specs (which might result in the lack of an intersection),
+                            an Exception is raised
+        """
+        t_start, t_end = t
+        rise_start, rise_end = y_rise
+        drop_start, drop_end = y_drop
+
+        assert t_end > t_start, "data in wrong format"
+        assert rise_end >= rise_start, "data in wrong format"
+        if np.allclose(rise_end, rise_start):   # if the "rise" line is horizontal
+            assert drop_end < drop_start, "data in wrong format"
+
+        assert drop_end <= drop_start, "data in wrong format"
+        if np.allclose(drop_end, drop_start):   # if the "drop" line is horizontal
+            assert rise_end > rise_start, "data in wrong format"
+
+        assert drop_start > rise_start, "data in wrong format"
+        assert drop_end < rise_end, "data in wrong format"
+
+        delta_t = t_end - t_start
+        delta_r = rise_end - rise_start
+        delta_d = drop_end - drop_start
+
+        '''
+        Solving for t_intersect the equation:
+        (t_intersect - t_start) * (delta_r/delta_t) + rise_start 
+            = (t_intersect - t_start) * (delta_d/delta_t) + drop_start
+        '''
+        factor = (rise_start - drop_start) / (delta_r - delta_d)
+        t_intersect = t_start -  factor * delta_t
+        y_intersect = rise_start - factor * delta_r
+
+        return t_intersect, y_intersect
+
+
+
+    @classmethod
+    def line_intersect(cls, p1, p2, q1, q2) -> Union[tuple, None]:
+        """
+        Returns the coordinates of the intersection
+        between the line passing thru the points p1 and p2,
+        and the line passing thru the points q1 and q2.
+
+        Based on https://stackoverflow.com/a/42727584/5478830
+
+        :param p1:  Pair of (x,y) coord of a point on the 1st line
+        :param p2:  Pair of (x,y) coord of another point on the 1st line
+        :param q1:  Pair of (x,y) coord of a point on the 2nd line
+        :param q2:  Pair of (x,y) coord of another point on the 2nd line
+
+        :return:    A pair with the (x,y) coord of the intersection, if it exists;
+                        or None if it doesn't exist
+        """
+        s = np.vstack([p1, p2, q1, q2])     # s for "stacked"
+                                            #   This will be a matrix :
+                                            #   [[p1_x, p1_y]
+                                            #    [p2_x, p2_y]
+                                            #    [q1_x, q1_y]
+                                            #    [q2_x, q2_y]]
+
+        vertical_vector = np.ones((4, 1))   # Four 1's stacked up vertically
+        mat = np.hstack((s, vertical_vector)) # This is the earlier "s" matrix, with an extra columns of 1's
+        l1 = np.cross(mat[0], mat[1])       # This is a vector representation of the 1st line
+        l2 = np.cross(mat[2], mat[3])       # This is a vector representation of the 2nd line
+        x, y, z = np.cross(l1, l2)          # Data about the point of intersection
+
+        if np.allclose(z, 0.):              # Lines are parallel, or almost so
+            return None
+
+        return (x/z, y/z)
+
+
+
     @classmethod
     def deep_flatten(cls, items) -> list:
         """

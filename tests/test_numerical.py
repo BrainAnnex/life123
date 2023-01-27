@@ -1,5 +1,75 @@
+import pytest
 import numpy as np
 from modules.numerical.numerical import Numerical as num
+
+
+def test_segment_intersect():
+    # Same points as in test_line_intersect()
+
+    # 45-degree angles
+    result = num.segment_intersect(t=(-2, 2), y_rise=(-1, 1), y_drop=(1, -1))
+    assert np.allclose(result, [0., 0.])
+
+    # x-axis (t value) stretch by 2 and shift by 14
+    result = num.segment_intersect(t=(10, 18), y_rise=(-1, 1), y_drop=(1, -1))
+    assert np.allclose(result, [14., 0.])
+
+    # y-axis shift by 10
+    result = num.segment_intersect(t=(10, 18), y_rise=(9, 11), y_drop=(11, 9))
+    assert np.allclose(result, [14., 10.])
+
+    # "3,4,5" right triangles
+    result = num.segment_intersect(t=(0, 8), y_rise=(0, 0), y_drop=(3, -3))
+    assert np.allclose(result, [4., 0.])
+
+    # x-axis (t value) shift by -10
+    result = num.segment_intersect(t=(-10, -2), y_rise=(0, 0), y_drop=(3, -3))
+    assert np.allclose(result, [-6., 0.])
+
+    # y-axis shift by 100
+    result = num.segment_intersect(t=(-10, -2), y_rise=(100, 100), y_drop=(103, 97))
+    assert np.allclose(result, [-6., 100.])
+
+    result = num.segment_intersect(t=(2, 3), y_rise=(10, 11), y_drop=(12, 10))
+    assert np.allclose(result, [2.666666, 10.666666])
+
+    with pytest.raises(Exception):
+        num.segment_intersect(t=(2, 3), y_rise=(10, 10), y_drop=(12, 12))   # Parallel segments
+
+
+
+def test_line_intersect():
+    # Same points as in test_segment_intersect()
+
+    # 45-degree angles
+    result = num.line_intersect((-2,-1), (2, 1), (-2,1), (2,-1))
+    assert np.allclose(result, [0., 0.])
+
+    # x-axis (t value) stretch by 2 and shift by 14
+    result = num.line_intersect((10,-1), (18, 1), (10,1), (18,-1))
+    assert np.allclose(result, [14., 0.])
+
+    # y-axis shift by 10
+    result = num.line_intersect((10,9), (18, 11), (10,11), (18,9))
+    assert np.allclose(result, [14., 10.])
+
+    # "3,4,5" right triangles
+    result = num.line_intersect((0,0), (8, 0), (0,3), (8,-3))
+    assert np.allclose(result, [4., 0.])
+
+    # x-axis (t value) shift by -10
+    result = num.line_intersect((-10,0), (-2, 0), (-10,3), (-2,-3))
+    assert np.allclose(result, [-6., 0.])
+
+    # y-axis shift by 100
+    result = num.line_intersect((-10,100), (-2, 100), (-10,103), (-2,97))
+    assert np.allclose(result, [-6., 100.])
+
+    result = num.line_intersect((2,10), (3, 11), (2,12), (3,10))
+    assert np.allclose(result, [2.666666, 10.666666])
+
+    assert num.line_intersect((2, 10), (3, 10), (2, 12), (3, 12)) is None   # Parallel segments
+
 
 
 def test_deep_flatten():
