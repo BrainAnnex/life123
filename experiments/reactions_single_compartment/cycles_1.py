@@ -22,7 +22,7 @@
 #
 # All 1st-order kinetics.   
 #
-# LAST REVISED: Jan. 24, 2023
+# LAST REVISED: Jan. 27, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -113,7 +113,7 @@ dynamics.single_compartment_react(time_step=0.001, stop_time=5.)
 #dynamics.get_history()
 
 # %%
-#dynamics.single_compartment_react(time_step=0.005, stop_time=8.)
+dynamics.single_compartment_react(time_step=0.005, stop_time=8.)
 
 # %%
 df = dynamics.get_history()

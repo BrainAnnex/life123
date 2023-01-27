@@ -1936,20 +1936,22 @@ class ReactionDynamics:
         Find and return the intersection of the 2 curves in the columns var1 and var2,
         in the time interval [t_start, t_end]
         If there's more than one intersection, only one - in an unpredictable choice - is returned
-        TODO: interpolation for the intersection point (check it with the last plot in experiment "down_regulate_1"
+        TODO: interpolation for the intersection point (check it with the last plot in experiment "down_regulate_1")
+        TODO: move most of it to the "Numerical" module
 
-        :param t_start:
-        :param t_end:
+        :param t_start: The start of the time interval being considered
+        :param t_end:   The end of the time interval being considered
         :param var1:    The name of the 1st chemical of interest
         :param var2:    The name of the 2nd chemical of interest
         :return:        The pair (time of intersection, common value)
         """
         df = self.get_history(t_start=t_start, t_end=t_end)
-        row_index = abs(df[var1] - df[var2]).idxmin()
+        row_index = abs(df[var1] - df[var2]).idxmin()   # The index of the Pandas dataframe row
+                                                        #   with the smallest absolute value of difference in concentrations
         print(f"Row: {row_index}")
         row = df.loc[row_index]
         t = row["SYSTEM TIME"]
         val = row[var1]
         #print(t)
         #print(val)
-        return (t, val)
+        return (t, val)     # A coarse approximation of the intersection.  TODO: improve with interpolation
