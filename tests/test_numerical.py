@@ -1,40 +1,181 @@
 import pytest
 import numpy as np
 from modules.numerical.numerical import Numerical as num
+import pandas as pd
+
+
+def test_curve_intersect_interpolate():
+    df = pd.DataFrame({"TIME": [1, 2, 3], "A": [2,4,10], "B": [12,4,0]})
+    result = num.curve_intersect_interpolate(df, row_index=1, x="TIME", var1="A", var2="B")
+    assert np.allclose(result, (2, 4))
+
+    df = pd.DataFrame({"SYSTEM TIME": [10, 20, 30], "p": [2,4,10], "q": [12,4,0]})
+    result = num.curve_intersect_interpolate(df, row_index=1, x="SYSTEM TIME", var1="p", var2="q")
+    assert np.allclose(result, (20, 4))
+
+    df = pd.DataFrame({"SYSTEM TIME": [10, 20, 30], "p": [2,4,10], "q": [12,5,0]})
+    result = num.curve_intersect_interpolate(df, row_index=1, x="SYSTEM TIME", var1="p", var2="q")
+    assert np.allclose(result, (20.90909090909091, 4.545454545454546))
+    alternate_result = num.line_intersect((20, 4), (30, 10), (20, 5), (30, 0))  # Worked out by hand
+    assert np.allclose(result, alternate_result)
+
+    df = pd.DataFrame({"SYSTEM TIME": [10, 20, 30], "p": [2,4,10], "q": [12,1,0]})
+    result = num.curve_intersect_interpolate(df, row_index=1, x="SYSTEM TIME", var1="p", var2="q")
+    assert np.allclose(result, (17.692307692307693, 3.5384615384615383))
+    alternate_result = num.line_intersect((10, 2), (20, 4), (10, 12), (20, 1))
+    assert np.allclose(result, alternate_result)
+
+    df = pd.DataFrame({"x-coord": [5, 6, 10], "line 1": [-2,-2,-2], "line 2": [2,0,-5]})
+    result = num.curve_intersect_interpolate(df, row_index=1, x="x-coord", var1="line 1", var2="line 2")
+    assert np.allclose(result, (7.6, -2.0))
+    alternate_result = num.line_intersect((6, -2), (10, -2), (6, 0), (10, -5))
+    assert np.allclose(result, alternate_result)
+
+    df = pd.DataFrame({"x coord": [5, 7, 15], "L1": [-6,-3,3], "L2": [1,-2,-0]})
+    result = num.curve_intersect_interpolate(df, row_index=1, x="x coord", var1="L1", var2="L2")
+    assert np.allclose(result, (9.0, -1.5))
+    alternate_result = num.line_intersect((7, -3), (15, 3), (7, -2), (15, 0))
+    assert np.allclose(result, alternate_result)
+
+    # Extra row at end of dataframe
+    df = pd.DataFrame({"x coord": [5, 7, 15, 99], "L1": [-6,-3,3,99], "L2": [1,-2,-0,99]})
+    result = num.curve_intersect_interpolate(df, row_index=1, x="x coord", var1="L1", var2="L2")
+    assert np.allclose(result, (9.0, -1.5))
+
+    # Extra row at start of dataframe
+    df = pd.DataFrame({"x coord": [-123, 5, 7, 15], "L1": [-123,-6,-3,3], "L2": [-123,1,-2,-0]})
+    result = num.curve_intersect_interpolate(df, row_index=2, x="x coord", var1="L1", var2="L2")
+    assert np.allclose(result, (9.0, -1.5))
+
+    # No actual intersection
+    df = pd.DataFrame({"x coord": [8, 10, 15], "L1": [-3,-1,-6], "L2": [3,1,30]})
+    result = num.curve_intersect_interpolate(df, row_index=1, x="x coord", var1="L1", var2="L2")
+    assert np.allclose(result, (10, 0.))
+
+
+    # Error cases
+    df = pd.DataFrame({"TIME": [1, 2, 3], "A": [4,4,4], "B": [4,4,4]})
+    with pytest.raises(Exception):
+        num.curve_intersect_interpolate(df, row_index=1, x="TIME", var1="A", var2="B")  # Extended overlap on both sides
+
+    df = pd.DataFrame({"TIME": [1, 2, 3], "A": [10,12,30], "B": [10,12,40]})
+    with pytest.raises(Exception):
+        num.curve_intersect_interpolate(df, row_index=1, x="TIME", var1="A", var2="B")  # Extended overlap on left segments
+
+    df = pd.DataFrame({"TIME": [1, 2, 3], "A": [5,12,30], "B": [-8,12,30]})
+    with pytest.raises(Exception):
+        num.curve_intersect_interpolate(df, row_index=1, x="TIME", var1="A", var2="B")  # Extended overlap on right segments
+
+
+    df = pd.DataFrame({"SYSTEM TIME": [5, 6, 10], "A": [-2,-2,-2], "B": [2,0,-5]})
+    # Unknown column names
+    with pytest.raises(Exception):
+        num.curve_intersect_interpolate(df, row_index=1, x="unknown", var1="A", var2="B")
+    with pytest.raises(Exception):
+        num.curve_intersect_interpolate(df, row_index=1, x="SYSTEM TIME", var1="unknown", var2="B")
+    with pytest.raises(Exception):
+        num.curve_intersect_interpolate(df, row_index=1, x="SYSTEM TIME", var1="A", var2="unknown")
+
+    df = pd.DataFrame({"TIME": [1, 2], "A": [10,12], "B": [80,100]})
+    with pytest.raises(Exception):
+        num.curve_intersect_interpolate(df, row_index=1, x="TIME", var1="A", var2="B")  # Too few rows
+
+
+    df = pd.DataFrame({"x coord": [-2, 0, 5], "L1": [-3,1,-6], "L2": [3,-1,30]})
+    # Multiple intersections
+    with pytest.raises(Exception):
+        num.curve_intersect_interpolate(df, row_index=1, x="x coord", var1="L1", var2="L2")
+
+
+
+def test_intersecting_curves():
+    with pytest.raises(Exception):
+        num.intersecting_curves_NOT_USED_TO_DITCH(times=(0, 2, 2), y1=(1, 2, 3), y2=(4, 5, 6)) # repeated times
+        num.intersecting_curves_NOT_USED_TO_DITCH(times=(1, 2, 0), y1=(1, 2, 3), y2=(4, 5, 6)) # non-consecutive times
+
 
 
 def test_segment_intersect():
     # Same points as in test_line_intersect()
 
     # 45-degree angles
-    result = num.segment_intersect(t=(-2, 2), y_rise=(-1, 1), y_drop=(1, -1))
+    result = num.segment_intersect(t=(-2, 2), y1=(-1, 1), y2=(1, -1))
+    assert np.allclose(result, [0., 0.])
+    result = num.segment_intersect(t=(-2, 2), y2=(-1, 1), y1=(1, -1))
     assert np.allclose(result, [0., 0.])
 
     # x-axis (t value) stretch by 2 and shift by 14
-    result = num.segment_intersect(t=(10, 18), y_rise=(-1, 1), y_drop=(1, -1))
+    result = num.segment_intersect(t=(10, 18), y1=(-1, 1), y2=(1, -1))
+    assert np.allclose(result, [14., 0.])
+    result = num.segment_intersect(t=(10, 18), y2=(-1, 1), y1=(1, -1))
     assert np.allclose(result, [14., 0.])
 
     # y-axis shift by 10
-    result = num.segment_intersect(t=(10, 18), y_rise=(9, 11), y_drop=(11, 9))
+    result = num.segment_intersect(t=(10, 18), y1=(9, 11), y2=(11, 9))
+    assert np.allclose(result, [14., 10.])
+    result = num.segment_intersect(t=(10, 18), y2=(9, 11), y1=(11, 9))
     assert np.allclose(result, [14., 10.])
 
     # "3,4,5" right triangles
-    result = num.segment_intersect(t=(0, 8), y_rise=(0, 0), y_drop=(3, -3))
+    result = num.segment_intersect(t=(0, 8), y1=(0, 0), y2=(3, -3))
     assert np.allclose(result, [4., 0.])
 
     # x-axis (t value) shift by -10
-    result = num.segment_intersect(t=(-10, -2), y_rise=(0, 0), y_drop=(3, -3))
+    result = num.segment_intersect(t=(-10, -2), y1=(0, 0), y2=(3, -3))
     assert np.allclose(result, [-6., 0.])
 
     # y-axis shift by 100
-    result = num.segment_intersect(t=(-10, -2), y_rise=(100, 100), y_drop=(103, 97))
+    result = num.segment_intersect(t=(-10, -2), y1=(100, 100), y2=(103, 97))
     assert np.allclose(result, [-6., 100.])
 
-    result = num.segment_intersect(t=(2, 3), y_rise=(10, 11), y_drop=(12, 10))
+    # Other examples
+    result = num.segment_intersect(t=(2, 3), y1=(10, 11), y2=(12, 10))
+    assert np.allclose(result, [2.666666, 10.666666])
+
+    result = num.segment_intersect(t=(20,30), y1=(4,10), y2=(5,0))
+    assert np.allclose(result, (20.90909090909091, 4.545454545454546))
+
+    result = num.segment_intersect(t=(10,20), y1=(2,4), y2=(12,1))
+    assert np.allclose(result, (17.692307692307693, 3.5384615384615383))
+
+    with pytest.raises(Exception):
+        num.segment_intersect(t=(2, 3), y1=(10, 10), y2=(12, 12))   # Parallel segments
+        num.segment_intersect(t=(2, 3), y2=(10, 10), y1=(12, 12))   # Parallel segments
+
+
+
+def test_segment_intersect_OLD():       # TODO: ditch
+    # Same points as in test_line_intersect()
+
+    # 45-degree angles
+    result = num.segment_intersect_OLD(t=(-2, 2), y_rise=(-1, 1), y_drop=(1, -1))
+    assert np.allclose(result, [0., 0.])
+
+    # x-axis (t value) stretch by 2 and shift by 14
+    result = num.segment_intersect_OLD(t=(10, 18), y_rise=(-1, 1), y_drop=(1, -1))
+    assert np.allclose(result, [14., 0.])
+
+    # y-axis shift by 10
+    result = num.segment_intersect_OLD(t=(10, 18), y_rise=(9, 11), y_drop=(11, 9))
+    assert np.allclose(result, [14., 10.])
+
+    # "3,4,5" right triangles
+    result = num.segment_intersect_OLD(t=(0, 8), y_rise=(0, 0), y_drop=(3, -3))
+    assert np.allclose(result, [4., 0.])
+
+    # x-axis (t value) shift by -10
+    result = num.segment_intersect_OLD(t=(-10, -2), y_rise=(0, 0), y_drop=(3, -3))
+    assert np.allclose(result, [-6., 0.])
+
+    # y-axis shift by 100
+    result = num.segment_intersect_OLD(t=(-10, -2), y_rise=(100, 100), y_drop=(103, 97))
+    assert np.allclose(result, [-6., 100.])
+
+    result = num.segment_intersect_OLD(t=(2, 3), y_rise=(10, 11), y_drop=(12, 10))
     assert np.allclose(result, [2.666666, 10.666666])
 
     with pytest.raises(Exception):
-        num.segment_intersect(t=(2, 3), y_rise=(10, 10), y_drop=(12, 12))   # Parallel segments
+        num.segment_intersect_OLD(t=(2, 3), y_rise=(10, 10), y_drop=(12, 12))   # Parallel segments
 
 
 
@@ -65,8 +206,15 @@ def test_line_intersect():
     result = num.line_intersect((-10,100), (-2, 100), (-10,103), (-2,97))
     assert np.allclose(result, [-6., 100.])
 
+    # Other examples
     result = num.line_intersect((2,10), (3, 11), (2,12), (3,10))
     assert np.allclose(result, [2.666666, 10.666666])
+
+    result = num.line_intersect((20, 4), (30, 10), (20, 5), (30, 0))
+    assert np.allclose(result, (20.90909090909091, 4.545454545454546))
+
+    result = num.line_intersect((10, 2), (20, 4), (10, 12), (20, 1))
+    assert np.allclose(result, (17.692307692307693, 3.5384615384615383))
 
     assert num.line_intersect((2, 10), (3, 10), (2, 12), (3, 12)) is None   # Parallel segments
 

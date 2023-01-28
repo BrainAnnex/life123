@@ -2,6 +2,7 @@
 
 from typing import Union
 import numpy as np
+import pandas as pd
 
 
 class Numerical:
@@ -11,9 +12,65 @@ class Numerical:
 
 
     @classmethod
-    def segment_intersect(cls, t, y_rise, y_drop) -> (float, float):
+    def intersecting_curves_NOT_USED_TO_DITCH(cls, times, y1, y2) -> (float, float):
         """
-        Find the intersection of 2 segments in the XY plane.
+        Given samples of the functions y1(t) and y2(t),
+        at 3 different consecutive times,
+        return the estimated coordinates of their intersection,
+        i.e. a pair (t_intersect, y_intersect) satisfying:
+            y1(t_intersect) = y2(t_intersect)
+        Linear interpolation is used
+
+        :param times:   A triplet of different consecutive times
+        :param y1:      A triplet of values of the function y1(t) at the 3 given times
+        :param y2:      A triplet of values of the function y1(t) at the 3 given times
+        :return:        The pair (time of intersection, common value)
+        """
+        prev_t, t, next_t = times
+        assert prev_t < t < next_t, f"intersecting_curves_NOT_USED_TO_DITCH(): " \
+                                    f"the 3 times {times} must be different and consecutive"
+
+        (prev_val1, val1, next_val1) = y1
+        (prev_val2, val2, next_val2) = y2
+
+        avg_val = (val1+val2) / 2.
+
+        print("Coarse intersection coordinates: ",  (t, avg_val))
+
+        if np.allclose(val1, val2):     # The intersection occurs at the given middle point
+            return (t, avg_val)
+
+        # Note: we already eliminated the case that val2 is equal (or very close to) val1
+        if val2 > val1:
+            if next_val2 < next_val1:   # inversion detected: VARIABLE 2 is dropping, while VARIABLE 1 is rising
+                return cls.segment_intersect_OLD(t=(t, next_t),
+                                                 y_rise=(val1, next_val1),
+                                                 y_drop=(val2, next_val2))
+            if prev_val2 < prev_val1:   # inversion detected: VARIABLE 2 is rising, while VARIABLE 1 is dropping
+                return cls.segment_intersect_OLD(t=(prev_t, t),
+                                                 y_rise=(prev_val2, val2),
+                                                 y_drop=(prev_val1, val1))
+            print("Unable to locate sign change")
+            return (t, avg_val)
+
+
+        # If we get thus far, val2 < val1
+
+        if next_val2 > next_val1:   # inversion detected: VARIABLE 2 is rising, while VARIABLE 1 is dropping
+            return cls.segment_intersect_OLD(t=(t, next_t),
+                                             y_rise=(val2, next_val2),
+                                             y_drop=(val1, next_val1))
+        if prev_val2 > prev_val1:   # inversion detected: VARIABLE 2 is dropping, while VARIABLE 1 is rising
+            return cls.segment_intersect_OLD(t=(prev_t, t),
+                                             y_rise=(prev_val1, val1),
+                                             y_drop=(prev_val2, val2))
+        print("Unable to locate sign change")
+        return (t, avg_val)
+
+    @classmethod
+    def segment_intersect_OLD(cls, t, y_rise, y_drop) -> (float, float):
+        """
+        Find the intersection of 2 segments that form an "X shape" in 2D.
         Their respective endpoints share the same x-coordinates: (t_start, t_end)
 
         One segment ("rise") has increasing y-coordinates: (rise_start, rise_end)
@@ -66,6 +123,144 @@ class Numerical:
 
         return t_intersect, y_intersect
 
+
+    @classmethod
+    def curve_intersect_interpolate(cls, df: pd.DataFrame, row_index :int, x, var1, var2) -> (float, float):
+        """
+        Fine-tune the intersection point between 2 Pandas dataframe columns,
+        using linear interpolation
+
+        :param df:          A Pandas dataframe with at least 3 columns
+        :param row_index:   The index of the Pandas dataframe row
+                                with the smallest absolute value of difference in concentrations
+        :param x:           The name of the dataframe column with the independent variable
+        :param var1:        The name of the dataframe column with the data from the 1st curve
+        :param var2:        The name of the dataframe column with the data from the 2nd curve
+        :return:            The pair (time of intersection, common value)
+        """
+        assert len(df) >= 3, \
+            f"the Pandas dataframe must have at least 3 rows (it has {len(df)})"
+
+        col_names = list(df.columns)
+        assert x in col_names, f"the given Pandas dataframe lacks a column named `{x}`"
+        assert var1 in col_names, f"the given Pandas dataframe lacks a column named `{var1}`"
+        assert var2 in col_names, f"the given Pandas dataframe lacks a column named `{var2}`"
+
+        row = df.loc[row_index]
+        t = row[x]
+        val1 = row[var1]
+        val2 = row[var2]
+
+        avg_val = (val1+val2) / 2.
+
+        print("Coarse intersection coordinates: ",  (t, avg_val))
+
+
+        next_row = df.loc[row_index+1]      # TODO: check whether it exists
+        next_t = next_row[x]
+        next_val1 = next_row[var1]
+        next_val2 = next_row[var2]
+
+        prev_row = df.loc[row_index-1]      # TODO: check whether it exists
+        prev_t = prev_row[x]
+        prev_val1 = prev_row[var1]
+        prev_val2 = prev_row[var2]
+
+        if np.allclose(val1, val2):     # The intersection occurs at the given middle point
+            print("val1 is very close to, or equal to, val2")
+            if np.allclose(next_val1, next_val2) or np.allclose(prev_val1, prev_val2):
+                raise Exception("the intersection isn't well-defined because there's extended overlap")
+            else:
+                return (t, avg_val)
+
+
+        later_inversion = False
+        earlier_inversion = False
+
+        if (    (val2 > val1) and (next_val2 < next_val1)
+                or
+                (val2 < val1) and (next_val2 > next_val1)
+            ):   # If there's an inversion in height of points on the two curves, at times t vs. next_t
+            print("Using the NEXT value")
+            later_inversion = True
+
+
+        # No luck finding a curve inversion with the next point; try the previous point instead
+
+        if (    (val2 > val1) and (prev_val2 < prev_val1)
+                or
+                (val2 < val1) and (prev_val2 > prev_val1)
+            ):   # If there's an inversion in height of points on the two curves, at times t vs. prev_t
+            print("Using the PREV value")
+            earlier_inversion = True
+
+
+        if later_inversion and earlier_inversion:
+            raise Exception("2 intersections detected")
+
+        if later_inversion:
+            return cls.segment_intersect(  t=(t, next_t),
+                                           y1=(val1, next_val1),
+                                           y2=(val2, next_val2))
+
+        if  earlier_inversion:
+            return cls.segment_intersect(  t=(prev_t, t),
+                                           y1=(prev_val1, val1),
+                                           y2=(prev_val2, val2))
+
+
+        print("Unable to locate a crossover in the curves; "
+              "a coarser value is returned as intersection point")
+
+        return (t, avg_val)
+
+
+
+
+    @classmethod
+    def segment_intersect(cls, t, y1, y2) -> (float, float):
+        """
+        Find the intersection of 2 segments in 2D.
+        Their respective endpoints share the same x-coordinates: (t_start, t_end)
+
+        Note: for the more general case, use line_intersect()
+
+        :param t:   Pair with the joint x-coordinates of the 2 start points,
+                        and the joint x-coordinates of the 2 end points
+        :param y1:  Pair with the y_coordinates of the endpoints of the rising segment
+        :param y2:  Pair with the y_coordinates of the endpoints of the dropping segment
+                        Note: either segment - but not both - may be horizontal
+
+        :return:    A pair with the (x,y) coord of the intersection;
+                        if the segments don't meet their specs (which might result in the lack of an intersection),
+                        an Exception is raised
+        """
+        t_start, t_end = t
+        y1_start, y1_end = y1
+        y2_start, y2_end = y2
+
+        assert t_end > t_start, "t_end must be strictly > t_start"
+
+        if np.allclose(y1_start, y1_end):   # if line1 is horizontal
+            assert y2_start != y2_end, "cannot intersect 2 horizontal segments"
+
+        if np.allclose(y2_start, y2_end):   # if line2 is horizontal
+            assert y1_start != y1_end, "cannot intersect 2 horizontal segments"
+
+        delta_t = t_end - t_start
+        delta_r = y1_end - y1_start
+        delta_d = y2_end - y2_start
+
+        '''
+        Solving for t_intersect the equation:
+        (t_intersect - t_start) * (delta_r/delta_t) + y1_start 
+            = (t_intersect - t_start) * (delta_d/delta_t) + y2_start
+        '''
+        factor = (y1_start - y2_start) / (delta_r - delta_d)
+        t_intersect = t_start -  factor * delta_t
+        y_intersect = y1_start - factor * delta_r
+
+        return t_intersect, y_intersect
 
 
     @classmethod

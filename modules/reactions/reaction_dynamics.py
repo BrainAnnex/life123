@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.express as px
 from typing import Union
 from modules.movies.movies import MovieTabular
+from modules.numerical.numerical import Numerical as num
 
 
 class ReactionDynamics:
@@ -1930,6 +1931,77 @@ class ReactionDynamics:
         pass
 
 
+    def curve_intersection_NEW(self, t_start, t_end, var1, var2) -> (float, float):
+        """
+        Find and return the intersection of the 2 curves in the columns var1 and var2,
+        in the time interval [t_start, t_end]
+        If there's more than one intersection, only one - in an unpredictable choice - is returned
+        TODO: interpolation for the intersection point (check it with the last plot in experiment "down_regulate_1")
+        TODO: move most of it to the "Numerical" module
+
+        :param t_start: The start of the time interval being considered
+        :param t_end:   The end of the time interval being considered
+        :param var1:    The name of the 1st chemical of interest
+        :param var2:    The name of the 2nd chemical of interest
+        :return:        The pair (time of intersection, common value)
+        """
+        df = self.get_history(t_start=t_start, t_end=t_end)
+        row_index = abs(df[var1] - df[var2]).idxmin()   # The index of the Pandas dataframe row
+                                                        #   with the smallest absolute value of difference in concentrations
+        print(f"Min abs distance found at row: {row_index}")
+
+        return num.curve_intersect_interpolate(df, row_index, x="SYSTEM TIME", var1=var1, var2=var2)
+
+
+        '''        
+        row = df.loc[row_index]
+        t = row["SYSTEM TIME"]
+        val1 = row[var1]
+        val2 = row[var2]
+
+        avg_val = (val1+val2) / 2.
+
+        print("Coarse intersection coordinates: ",  (t, avg_val))
+
+        if np.allclose(val1, val2):     # The intersection occurs at the given middle point
+            return (t, avg_val)
+
+        next_row = df.loc[row_index+1]      # TODO: check whether it exists
+        next_t = next_row["SYSTEM TIME"]
+        next_val1 = next_row[var1]
+        next_val2 = next_row[var2]
+
+        if (    (val2 > val1) and (next_val2 < next_val1)
+                    or
+                (val2 < val1) and (next_val2 > next_val1)
+            ):   # If there's an inversion in height of points on the two curves, at times t vs. next_t
+            return num.segment_intersect(  t=(t, next_t),
+                                          y1=(val1, next_val1),
+                                          y2=(val2, next_val2))
+
+
+        # No luck finding a curve inversion with the next point; try the previous point instead
+
+        prev_row = df.loc[row_index-1]      # TODO: check whether it exists
+        prev_t = prev_row["SYSTEM TIME"]
+        prev_val1 = prev_row[var1]
+        prev_val2 = prev_row[var2]
+
+        if (    (val2 > val1) and (prev_val2 < prev_val1)
+                    or
+                (val2 < val1) and (prev_val2 > prev_val1)
+            ):   # If there's an inversion in height of points on the two curves, at times t vs. prev_t
+            return num.segment_intersect(  t=(prev_t, t),
+                                           y1=(val1, prev_val1),
+                                           y2=(val2, prev_val2))
+
+        print("Unable to locate a crossover in the curves; "
+              "no interpolation possible. A coarser value is returned as intersection point")
+
+        return (t, avg_val)
+        '''
+
+
 
     def curve_intersection(self, t_start, t_end, var1, var2) -> (float, float):
         """
@@ -1948,10 +2020,63 @@ class ReactionDynamics:
         df = self.get_history(t_start=t_start, t_end=t_end)
         row_index = abs(df[var1] - df[var2]).idxmin()   # The index of the Pandas dataframe row
                                                         #   with the smallest absolute value of difference in concentrations
-        print(f"Row: {row_index}")
+        print(f"Min abs distance found at row: {row_index}")
+
         row = df.loc[row_index]
         t = row["SYSTEM TIME"]
-        val = row[var1]
-        #print(t)
-        #print(val)
-        return (t, val)     # A coarse approximation of the intersection.  TODO: improve with interpolation
+        val1 = row[var1]
+        val2 = row[var1]
+
+
+        prev_row = df.loc[row_index-1]      # TODO: check whether it exists
+        prev_t = prev_row["SYSTEM TIME"]
+        prev_val1 = prev_row[var1]
+        prev_val2 = prev_row[var2]
+
+        next_row = df.loc[row_index+1]      # TODO: check whether it exists
+        next_t = next_row["SYSTEM TIME"]
+        next_val1 = next_row[var1]
+        next_val2 = next_row[var2]
+
+
+        return num.intersecting_curves_NOT_USED_TO_DITCH(times=(prev_t, t, next_t),
+                                                         y1=(prev_val1, val1, next_val1),
+                                                         y2=(prev_val2, val2, next_val2))
+
+
+        """        
+        avg_val = (val1+val2) / 2.
+
+        if np.allclose(val1, val2):
+            return (t, avg_val)
+
+
+        print("Coarse intersection coordinates: ",  (t, avg_val))
+      
+        # Note: we already eliminated the case that val2 is equal (or very close to) val1
+        if val2 > val1:
+            if next_val2 < next_val1:   # inversion detected: VARIABLE 2 is dropping, while VARIABLE 1 is rising
+                return num.segment_intersect_OLD( t=(t, next_t),
+                                              y_rise=(val1, next_val1),
+                                              y_drop=(val2, next_val2))
+            if prev_val2 < prev_val1:   # inversion detected: VARIABLE 2 is rising, while VARIABLE 1 is dropping
+                return num.segment_intersect_OLD( t=(prev_t, t),
+                                              y_rise=(prev_val2, val2),
+                                              y_drop=(prev_val1, val1))
+            print("Unable to locate sign change")
+            return (t, avg_val)
+
+
+        # If we get thus far, val2 < val1
+
+        if next_val2 > next_val1:   # inversion detected: VARIABLE 2 is rising, while VARIABLE 1 is dropping
+            return num.segment_intersect_OLD( t=(t, next_t),
+                                          y_rise=(val2, next_val2),
+                                          y_drop=(val1, next_val1))
+        if prev_val2 > prev_val1:   # inversion detected: VARIABLE 2 is dropping, while VARIABLE 1 is rising
+            return num.segment_intersect_OLD( t=(prev_t, t),
+                                          y_rise=(prev_val1, val1),
+                                          y_drop=(prev_val2, val2))
+        print("Unable to locate sign change")
+        return (t, avg_val)
+        """
