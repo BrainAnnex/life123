@@ -21,7 +21,7 @@
 #
 # See also 1D/reactions/down_regulation_1
 #
-# LAST REVISED: Jan. 19, 2023
+# LAST REVISED: Jan. 28, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -55,7 +55,7 @@ GraphicLog.config(filename=log_file,
 # Initialize the system
 chem_data = chem(names=["A", "B", "Y"])
 
-# Reaction A + X <-> 2B , with 1st-order kinetics for all species
+# Reaction A + 2 B <-> Y , with 1st-order kinetics for all species
 chem_data.add_reaction(reactants=[("A") , (2, "B")], products=[("Y")],
                        forward_rate=8., reverse_rate=2.)
 

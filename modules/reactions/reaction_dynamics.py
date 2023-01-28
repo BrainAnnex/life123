@@ -340,20 +340,27 @@ class ReactionDynamics:
 
 
 
-    def get_history(self, t_start=None, t_end=None) -> pd.DataFrame:
+    def get_history(self, t_start=None, t_end=None, tail=None) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
         using add_snapshot()
         Optionally, provide a start and end times
 
-        :param t_start:
-        :param t_end:
+        :param t_start: (OPTIONAL) Start time in the "SYSTEM TIME" column
+        :param t_end:   (OPTIONAL) End time
+        :param tail:    (OPTIONAL) Number of records to consider, from the end of the dataframe
         :return:        A Pandas dataframe
         """
-        df = self.history.get()
+        df = self.history.get(tail=tail)
 
         if (t_start is not None) and (t_end is not None):
             return df[df["SYSTEM TIME"].between(t_start, t_end)]
+
+        if t_start is not None:
+            return df[df["SYSTEM TIME"] >= t_start]
+
+        if t_end is not None:
+            return df[df["SYSTEM TIME"] <= t_end]
 
         return df
 
