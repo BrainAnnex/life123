@@ -314,8 +314,7 @@ num.compare_results(run1, run3)
 num.compare_results(run2, run3)
 
 # %% [markdown]
-# The fact that our measure of distance of run 2 (with intermediate resolution) from run3 is actually GREATER than the distance of run 1 (with low resolution) from run3, might be an artifact of the limited accuracy of the function **curve_intersection()**, used to extract the point coordinates from the saved run data.   
-# Future versions will address that...
+# The fact that our measure of distance of run 2 (with intermediate resolution) from run3 is actually GREATER than the distance of run 1 (with low resolution) from run3, might be an artifact of the limited accuracy in the extraction of intersection coordinates from the saved run data.
 
 # %% [markdown]
 # #### The coordinates of the 4 critical points, from the 3 different runs, are pretty similar to one another - as can be easily seen:

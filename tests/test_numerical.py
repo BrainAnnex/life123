@@ -88,13 +88,6 @@ def test_curve_intersect_interpolate():
 
 
 
-def test_intersecting_curves():
-    with pytest.raises(Exception):
-        num.intersecting_curves_NOT_USED_TO_DITCH(times=(0, 2, 2), y1=(1, 2, 3), y2=(4, 5, 6)) # repeated times
-        num.intersecting_curves_NOT_USED_TO_DITCH(times=(1, 2, 0), y1=(1, 2, 3), y2=(4, 5, 6)) # non-consecutive times
-
-
-
 def test_segment_intersect():
     # Same points as in test_line_intersect()
 
@@ -144,41 +137,6 @@ def test_segment_intersect():
 
 
 
-def test_segment_intersect_OLD():       # TODO: ditch
-    # Same points as in test_line_intersect()
-
-    # 45-degree angles
-    result = num.segment_intersect_OLD(t=(-2, 2), y_rise=(-1, 1), y_drop=(1, -1))
-    assert np.allclose(result, [0., 0.])
-
-    # x-axis (t value) stretch by 2 and shift by 14
-    result = num.segment_intersect_OLD(t=(10, 18), y_rise=(-1, 1), y_drop=(1, -1))
-    assert np.allclose(result, [14., 0.])
-
-    # y-axis shift by 10
-    result = num.segment_intersect_OLD(t=(10, 18), y_rise=(9, 11), y_drop=(11, 9))
-    assert np.allclose(result, [14., 10.])
-
-    # "3,4,5" right triangles
-    result = num.segment_intersect_OLD(t=(0, 8), y_rise=(0, 0), y_drop=(3, -3))
-    assert np.allclose(result, [4., 0.])
-
-    # x-axis (t value) shift by -10
-    result = num.segment_intersect_OLD(t=(-10, -2), y_rise=(0, 0), y_drop=(3, -3))
-    assert np.allclose(result, [-6., 0.])
-
-    # y-axis shift by 100
-    result = num.segment_intersect_OLD(t=(-10, -2), y_rise=(100, 100), y_drop=(103, 97))
-    assert np.allclose(result, [-6., 100.])
-
-    result = num.segment_intersect_OLD(t=(2, 3), y_rise=(10, 11), y_drop=(12, 10))
-    assert np.allclose(result, [2.666666, 10.666666])
-
-    with pytest.raises(Exception):
-        num.segment_intersect_OLD(t=(2, 3), y_rise=(10, 10), y_drop=(12, 12))   # Parallel segments
-
-
-
 def test_line_intersect():
     # Same points as in test_segment_intersect()
 
@@ -215,6 +173,9 @@ def test_line_intersect():
 
     result = num.line_intersect((10, 2), (20, 4), (10, 12), (20, 1))
     assert np.allclose(result, (17.692307692307693, 3.5384615384615383))
+
+    result = num.line_intersect((3.2625, 36.194766), (3.2630, 36.192342), (3.2625, 36.190287), (3.2630, 36.199950))
+    assert np.allclose(result, (3.262685299694276, 36.193867736703666))
 
     assert num.line_intersect((2, 10), (3, 10), (2, 12), (3, 12)) is None   # Parallel segments
 
