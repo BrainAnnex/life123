@@ -25,8 +25,21 @@ class Numerical:
         :param var2:        The name of the dataframe column with the data from the 2nd curve
         :return:            The pair (time of intersection, common value)
         """
-        assert len(df) >= 3, \
-            f"the Pandas dataframe must have at least 3 rows (it has {len(df)})"
+        df_size = len(df)
+        assert df_size >= 3, \
+            f"the Pandas dataframe must have at least 3 rows (it has {df_size})"
+
+        # The next 2 integers are the indices of the boundaries of the passed dataframe
+        first_index = df.iloc[0].name
+        last_index = df.iloc[df_size-1].name
+
+        assert row_index > first_index, \
+            f"curve_intersect_interpolate(): the given row (index {row_index}) in the Pandas dataframe must be past " \
+            f"the first one (whose index is {first_index}). Try using a bigger dataframe with an earlier start point!"
+
+        assert row_index < last_index, \
+            f"curve_intersect_interpolate(): the given row (index {row_index}) in the Pandas dataframe must be before " \
+            f"the last one (whose index is {last_index}). Try using a bigger dataframe with an later end point!"
 
         col_names = list(df.columns)
         assert x in col_names, f"the given Pandas dataframe lacks a column named `{x}`"
@@ -43,12 +56,12 @@ class Numerical:
         #print("Coarse intersection coordinates: ",  (t, avg_val))
 
 
-        next_row = df.loc[row_index+1]      # TODO: check whether it exists
+        next_row = df.loc[row_index+1]      # TODO: make sure that it exists
         next_t = next_row[x]
         next_val1 = next_row[var1]
         next_val2 = next_row[var2]
 
-        prev_row = df.loc[row_index-1]      # TODO: check whether it exists
+        prev_row = df.loc[row_index-1]      # TODO: make sure that it exists
         prev_t = prev_row[x]
         prev_val1 = prev_row[var1]
         prev_val2 = prev_row[var2]

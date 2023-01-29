@@ -14,12 +14,12 @@
 # ---
 
 # %% [markdown]
-# ### `A` up-regulates `B` , by being *the limiting reagent* in the reaction   
+# ### `A` up-regulates `B` , by being *the limiting reagent* in the reaction:     
 # ### `A + X <-> 2B` (mostly forward), where `X` is plentiful
 # 1st-order kinetics.   
 # If [A] is low, [B] remains low, too.  Then, if [A] goes high, then so does [B].  However, at that point, A can no longer bring B down to any substantial extent.
 #
-# Single-bin reaction
+# **Single-bin reaction**
 #
 # Based on experiment "reactions_single_compartment/up_regulate_1"
 #

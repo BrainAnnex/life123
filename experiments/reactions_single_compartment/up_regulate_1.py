@@ -14,7 +14,7 @@
 # ---
 
 # %% [markdown]
-# ### `A` up-regulates `B` , by being *the limiting reagent* in the reaction   
+# ### `A` up-regulates `B` , by being *the limiting reagent* in the reaction:   
 # ### `A + X <-> 2B` (mostly forward), where `X` is plentiful
 # 1st-order kinetics.   
 # If [A] is low, [B] remains low, too.  Then, if [A] goes high, then so does [B].  However, at that point, A can no longer bring B down to any substantial extent.
@@ -176,7 +176,7 @@ dynamics.curve_intersection(t_start=0, t_end=0.01, var1="A", var2="B")
 # %%
 dynamics.curve_intersection(t_start=0.0151, t_end=0.02, var1="A", var2="B")
 
-# %%
-dynamics.curve_intersection(t_start=0.014, t_end=0.0151, var1="A", var2="B")
+# %% [markdown]
+# Note: the _curve_intersection()_ function currently cannot location the intersection at t=0.015 (the vertical rise in the red line); this issue will get addressed in future versions...
 
 # %%

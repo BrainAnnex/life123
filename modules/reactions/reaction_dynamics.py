@@ -1943,6 +1943,9 @@ class ReactionDynamics:
         Find and return the intersection of the 2 curves in the columns var1 and var2,
         in the time interval [t_start, t_end]
         If there's more than one intersection, only one - in an unpredictable choice - is returned
+        TODO: the current implementation fails in cases where the 2 curves stay within some distance of each other,
+              and then one curve jumps on the opposite side of the other curve, at at BIGGER distance.
+              See the missed intersection at the end of experiment "reactions_single_compartment/up_regulate_1"
 
         :param t_start: The start of the time interval being considered
         :param t_end:   The end of the time interval being considered
