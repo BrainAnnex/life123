@@ -597,8 +597,8 @@ class ReactionDynamics:
                 print("    NO adaptive variable time resolution used")
                 print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s) with a single step")
 
-            delta_concentrations = self.reaction_step_FIXED_RESOLUTION(delta_time=delta_time_full,
-                                                                       conc_array=conc_array, rxn_list=None)
+            delta_concentrations = self.reaction_step_NEW(delta_time=delta_time_full,
+                                                          conc_array=conc_array, rxn_list=None, tag_reactions=False)
         else:
             # Using variable time steps
             delta_concentrations = self.advance_variable_time_steps(delta_time_full=delta_time_full, conc_array= conc_array,
@@ -645,17 +645,19 @@ class ReactionDynamics:
             "advance_variable_time_steps(): the function is being called in a scenario with FIXED time steps are required"
 
         if self.are_all_slow_rxns():
+            # If all the reactions are labeled as "slow"
             if 1 in self.verbose_list:
                 print("    All the reactions are SLOW")
                 print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s)")
 
-            delta_concentrations = self.reaction_step_VARIABLE_RESOLUTION(delta_time=delta_time_full, time_subdivision=1,
-                                                                          fast_threshold_fraction=fast_threshold_fraction,
-                                                                          conc_array=conc_array, rxn_list=None)
+            delta_concentrations = self.reaction_step_NEW(delta_time=delta_time_full, conc_array=conc_array, rxn_list=None,
+                                                          tag_reactions=True,
+                                                          time_subdivision=1, substep_number=0, fast_threshold_fraction=fast_threshold_fraction,
+                                                        )
             return delta_concentrations
 
 
-        # If we get thus far, not all reactions are slow (i.e., some ar fast)
+        # If we get thus far, not all reactions are slow (i.e., some are fast)
 
         '''
             Process all the SLOW reactions first
@@ -673,9 +675,9 @@ class ReactionDynamics:
             delta_concentrations_slow = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)  # One element per chemical species
         else:
             # Time-advance the simulation for all the slow reactions
-            delta_concentrations_slow = self.reaction_step_VARIABLE_RESOLUTION(delta_time=delta_time_full, time_subdivision=1,
-                                                                               fast_threshold_fraction=fast_threshold_fraction,
-                                                                               conc_array=conc_array, rxn_list=slow_rxns)
+            delta_concentrations_slow = self.reaction_step_NEW(delta_time=delta_time_full,  conc_array=conc_array, rxn_list=slow_rxns,
+                                                               tag_reactions=True,
+                                                               time_subdivision=1, fast_threshold_fraction=fast_threshold_fraction)
 
         '''
             Next, process all the FAST reactions
@@ -700,10 +702,18 @@ class ReactionDynamics:
                 local_system_time = self.system_time + substep * reduced_time_step
                 print(f"    - SUBSTEP: {substep} (in processing of FAST reactions, i.e. {fast_rxns}).  'Local' system time: {local_system_time:,.4g}")
 
-            incr_vector = self.reaction_step_VARIABLE_RESOLUTION(delta_time=reduced_time_step, time_subdivision=dynamic_steps,
+            if substep == dynamic_steps-1:
+                tag_reactions = True
+            else:
+                tag_reactions = False
+                if 1 in self.verbose_list:
+                    print(f"        Skipping evaluation of rxn speed for all reactions because NOT at last substep "
+                          f"(substep_number = {substep}, time_subdivision = {dynamic_steps})")
+
+            incr_vector = self.reaction_step_NEW(delta_time=reduced_time_step, time_subdivision=dynamic_steps,
                                                                  fast_threshold_fraction=fast_threshold_fraction,
                                                                  conc_array=local_conc_array, rxn_list=fast_rxns,
-                                                                 substep_number=substep)
+                                                                 substep_number=substep, tag_reactions=tag_reactions)
             delta_concentrations_fast += incr_vector
 
             # TODO: the next 2 lines don't need to be run, if at the last step
@@ -748,8 +758,8 @@ class ReactionDynamics:
 
 
 
-    def reaction_step_FIXED_RESOLUTION(self, delta_time: float, conc_array: np.array, rxn_list=None) -> np.array:
-        """
+    def reaction_step_FIXED_RESOLUTION_OBSOLETE(self, delta_time: float, conc_array: np.array, rxn_list=None) -> np.array:
+        """ # TODO: phase out
         This version is for when NOT using adaptive variable time resolution.
 
         Using the given concentration data of ALL the chemical species,
@@ -959,6 +969,15 @@ class ReactionDynamics:
 
 
     def save_diagnostic_data(self, delta_time, increment_vector_single_rxn, rxn_index, substep_number, time_subdivision):
+        """
+
+        :param delta_time:
+        :param increment_vector_single_rxn:
+        :param rxn_index:
+        :param substep_number:
+        :param time_subdivision:
+        :return:
+        """
         if self.diagnostic_data == {}:    # INITIALIZE the dictionary self.diagnostic_data, if needed
             for i in range(self.reaction_data.number_of_reactions()):
                 self.diagnostic_data[i] = MovieTabular(parameter_name="TIME")       # One per reaction
@@ -978,7 +997,7 @@ class ReactionDynamics:
 
 
 
-    def reaction_step_VARIABLE_RESOLUTION(self, delta_time: float, conc_array: np.array, rxn_list=None,
+    def reaction_step_VARIABLE_RESOLUTION_OBSOLETE(self, delta_time: float, conc_array: np.array, rxn_list=None,
                                           time_subdivision=1, fast_threshold_fraction=0.05,
                                           substep_number=0) -> np.array:
         """
