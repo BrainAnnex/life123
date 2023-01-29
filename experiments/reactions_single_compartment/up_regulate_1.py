@@ -14,8 +14,8 @@
 # ---
 
 # %% [markdown]
-# ### `A` up-regulates `B` , by being *the limiting reagent* in the reaction:   
-# ### `A + X <-> 2B` (mostly forward), where `X` is plentiful
+# ## `A` up-regulates `B` , 
+# ### by being *the limiting reagent* in the reaction `A + X <-> 2B` (mostly forward), where `X` is plentiful
 # 1st-order kinetics.   
 # If [A] is low, [B] remains low, too.  Then, if [A] goes high, then so does [B].  However, at that point, A can no longer bring B down to any substantial extent.
 #
@@ -81,7 +81,7 @@ dynamics.describe_state()
 dynamics.single_compartment_react(time_step=0.0005, n_steps=30, 
                                   dynamic_steps=2, fast_threshold=15)
 
-df = dynamics.history.get()
+df = dynamics.get_history()
 df
 
 # %% [markdown]
@@ -99,7 +99,7 @@ dynamics.is_in_equilibrium()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(chemicals=["A", "X", "B"], colors=['red', 'darkorange', 'green'],
+dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
                      title="Changes in concentrations (reaction A + X <-> 2B)")
 
 # %% [markdown] tags=[]
@@ -110,7 +110,7 @@ dynamics.set_chem_conc(species_name="A", conc=50., snapshot=True)
 dynamics.describe_state()
 
 # %%
-dynamics.get_history(t_start=0.00400, t_end=0.00600001)
+dynamics.get_history(tail=5)
 
 # %% [markdown]
 # ### Again, take the system to equilibrium
@@ -119,7 +119,7 @@ dynamics.get_history(t_start=0.00400, t_end=0.00600001)
 dynamics.single_compartment_react(time_step=0.0005, n_steps=40,
                                  dynamic_steps=2, fast_threshold=15)
 
-df = dynamics.history.get()
+df = dynamics.get_history()
 df
 
 # %%
@@ -127,7 +127,7 @@ df
 dynamics.is_in_equilibrium(tolerance=2)
 
 # %%
-dynamics.plot_curves(chemicals=["A", "X", "B"], colors=['red', 'darkorange', 'green'],
+dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
                      title="Changes in concentrations (reaction A + X <-> 2B)")
 
 # %% [markdown]
@@ -159,7 +159,7 @@ df
 dynamics.is_in_equilibrium(tolerance=2)
 
 # %%
-dynamics.plot_curves(chemicals=["A", "X", "B"], colors=['red', 'darkorange', 'green'],
+dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
                      title="Changes in concentrations (reaction A + X <-> 2B)")
 
 # %% [markdown]
