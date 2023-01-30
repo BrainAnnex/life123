@@ -1,0 +1,232 @@
+# ---
+# jupyter:
+#   jupytext:
+#     formats: ipynb,py:percent
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.14.1
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
+# %% [markdown]
+# ## Excessively large time steps - and remediation
+# ### Based on experiment `cycles_1`
+# #### A cycle of reactions `A <-> B <-> C <-> A` and `C + E_High <-> A + E_Low`
+#
+# ### RUN 1 - Initially, very large time steps are taken - at the edge of pushing some concentrations into negative values.
+# The system automatic detects those problems, intercepts the problematic steps and re-runs them with 1/2 the time step.   
+# Negative concentrations are automatically avoided, but nonetheless the plots are ragged... and the solutions are eventually unstable.
+#
+# ### RUN 2 - Same primary steps as for run #1, but with the option of using 1/2 substeps as needed, 
+# with thresholds that lead to those substeps being actually utilized a fair part of the time.   
+# The raggedness and instabilities are now eliminated.
+# (Note: the 1/2 substeps are on a per-reaction basis)
+#
+# LAST REVISED: Jan. 29, 2023
+
+# %%
+# Extend the sys.path variable, to contain the project's root directory
+import set_path
+set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
+                                         # to reach the project's home, from the folder containing this notebook
+
+# %% tags=[]
+from experiments.get_notebook_info import get_notebook_basename
+
+from modules.reactions.reaction_data import ReactionData as chem
+from modules.reactions.reaction_dynamics import ReactionDynamics
+from modules.numerical.numerical import Numerical as num
+
+import numpy as np
+import plotly.express as px
+from modules.visualization.graphic_log import GraphicLog
+
+# %% tags=[]
+# Initialize the HTML logging
+log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
+
+# Set up the use of some specified graphic (Vue) components
+GraphicLog.config(filename=log_file,
+                  components=["vue_cytoscape_1"],
+                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
+
+# %% [markdown]
+# ### Initialize the system
+
+# %%
+# Initialize the system
+chem_data = chem(names=["A", "B", "C", "E_high", "E_low"])
+
+# Reaction A <-> B, mostly in forward direction (favored energetically)
+# Note: all reactions in this experiment have 1st-order kinetics for all species
+chem_data.add_reaction(reactants="A", products="B",
+                       forward_rate=9., reverse_rate=3.)
+
+# Reaction B <-> C, also favored energetically
+chem_data.add_reaction(reactants="B", products="C",
+                       forward_rate=8., reverse_rate=4.)
+
+# Reaction C + E_High <-> A + E_Low, also favored energetically, but kinetically slow
+# Note that, thanks to the energy donation from E, we can go "upstream" from C, to the higher-energy level of "A"
+chem_data.add_reaction(reactants=["C" , "E_high"], products=["A", "E_low"],
+                       forward_rate=1., reverse_rate=0.2)
+
+chem_data.describe_reactions()
+
+# Send the plot of the reaction network to the HTML log file
+graph_data = chem_data.prepare_graph_network()
+GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
+
+# %% [markdown]
+# ### Set the initial concentrations of all the chemicals
+
+# %%
+initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}  # Note the abundant energy source "E_high"
+initial_conc
+
+# %% [markdown] tags=[]
+# ### We'll split each simulation in three segments (apparent from the graphs of the runs, further down):  
+# Time [0-0.03] fast changes   
+# Time [0.03-5.] medium changes   
+# Time [5.-8.] slow changes, as we approach equilibrium  
+
+# %% [markdown]
+# ## RUN 1 - Initially, very large time steps are taken - at the edge of pushing some concentrations into negative values.
+# The system automatic detects those problems, intercepts the problematic steps and re-runs them with 1/2 the time step.   
+# Negative concentrations are automatically avoided, but nonetheless the plots are ragged... and the solutions are eventually unstable.
+
+# %%
+dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics.set_conc(conc=initial_conc, snapshot=True)
+dynamics.describe_state()
+
+# %%
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+# %%
+#dynamics.verbose_list = [1]     # Uncomment for debugging information
+
+# %%
+dynamics.single_compartment_react(time_step=0.0012, stop_time=0.03)
+#dynamics.get_history()
+
+# %%
+dynamics.explain_time_advance()
+
+# %% [markdown]
+# ### Notice how the system automatically intervened and reduced some steps in 1/2, to prevent negative concentrations
+
+# %%
+dynamics.single_compartment_react(time_step=0.0025, stop_time=5.)
+#dynamics.get_history()
+
+# %%
+dynamics.explain_time_advance()
+
+# %% [markdown]
+# ### Notice how the system automatically periodically intervened and reduced some steps in 1/2, to prevent negative concentrations.
+# The time step that was originally requested hovers near the cusp of being so large as to lead to negative concentrations
+
+# %%
+dynamics.single_compartment_react(time_step=0.008, stop_time=8.)
+
+# %%
+df = dynamics.get_history()
+df
+
+# %% [markdown]
+# ### Notice that with our aggressively-large time steps, we ended up with _far fewer_ data points than in any of the runs in the experiment `cycles_1`, which this analysis is based on
+
+# %%
+dynamics.explain_time_advance()
+
+# %% [markdown]
+# ### Yet again, the system automatically keeps periodically throttling down the time steps, to prevent negative concentrations.
+# At times, especially near the end, the throttling gets very frequent ("frantic"!)
+
+# %% [markdown] tags=[]
+# ## Plots of changes of concentration with time
+
+# %%
+dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+
+# %%
+dynamics.plot_curves(chemicals=["A", "B", "C"])
+
+# %% [markdown]
+# # The negative concentrations were automatically avoided, but nonetheless the plots are ragged... and the solutions display instabilities
+
+# %%
+
+# %% [markdown]
+# ## RUN 2 - Same primary steps as for run #1, but with the option of using 1/2 substeps as needed, 
+# with thresholds that lead to those substeps being actually utilized a fair part of the time.   
+# The raggedness and instabilities are now eliminated.
+# (Note: the 1/2 substeps are on a per-reaction basis)
+
+# %%
+dynamics = ReactionDynamics(reaction_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
+dynamics.set_conc(conc=initial_conc, snapshot=True) 
+dynamics.describe_state()
+
+# %%
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+# %%
+#dynamics.verbose_list = [1]     # Uncomment for debugging information
+
+# %%
+dynamics.single_compartment_react(time_step=0.0012, stop_time=0.03, 
+                                  dynamic_steps=2, abs_fast_threshold=750.)
+#dynamics.get_history()
+
+# %%
+dynamics.explain_time_advance()
+
+# %% [markdown]
+# ### Compared to the earlier run, the system is now at times reaching for smaller 1/4 steps 
+# (1/2 factors arise from either the negative concentrations or the optional substeps triggered by large changes; sometime both occur)
+
+# %%
+dynamics.single_compartment_react(time_step=0.0025, stop_time=5.,
+                                 dynamic_steps=2, abs_fast_threshold=250.)
+#dynamics.get_history()
+
+# %%
+dynamics.explain_time_advance()
+
+# %% [markdown]
+# ### Again, we see a good many of those smaller 1/4 steps
+
+# %%
+dynamics.single_compartment_react(time_step=0.008, stop_time=8.,
+                                  dynamic_steps=2, abs_fast_threshold=2.)
+
+# %%
+df = dynamics.get_history()
+df
+
+# %%
+dynamics.explain_time_advance()
+
+# %% [markdown]
+# ### In the later times (the 5.-8. range) there isn't that "frantic throttling up and down" that we had before
+
+# %% [markdown] tags=[]
+# ## Plots of changes of concentration with time
+
+# %%
+dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+
+# %%
+dynamics.plot_curves(chemicals=["A", "B", "C"])
+
+# %% [markdown]
+# # The raggedness, and instability in the solutions, is now gone :)
+
+# %%

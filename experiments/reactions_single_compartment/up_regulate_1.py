@@ -78,7 +78,9 @@ dynamics.describe_state()
 # ### Take the initial system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, n_steps=30, 
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+dynamics.single_compartment_react(time_step=0.0005, stop_time=0.015, 
                                   dynamic_steps=2, fast_threshold=15)
 
 df = dynamics.get_history()
@@ -87,6 +89,9 @@ df
 # %% [markdown]
 # A, as the scarse limiting reagent, stops the reaction.  
 # When A is low, B is also low.
+
+# %%
+dynamics.explain_time_advance()
 
 # %% [markdown]
 # ### <a name="sec_equilibrium"></a>Equilibrium
@@ -116,11 +121,14 @@ dynamics.get_history(tail=5)
 # ### Again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, n_steps=40,
+dynamics.single_compartment_react(time_step=0.0005, stop_time=0.035, 
                                  dynamic_steps=2, fast_threshold=15)
 
 df = dynamics.get_history()
 df
+
+# %%
+dynamics.explain_time_advance()
 
 # %%
 # Verify that the reaction has reached equilibrium
@@ -148,11 +156,14 @@ dynamics.get_history(tail=5)
 # ### Yet again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, n_steps=70,
+dynamics.single_compartment_react(time_step=0.0005, stop_time=0.070, 
                                  dynamic_steps=2, fast_threshold=15)
 
 df = dynamics.history.get()
 df
+
+# %%
+dynamics.explain_time_advance()
 
 # %%
 # Verify that the reaction has reached equilibrium

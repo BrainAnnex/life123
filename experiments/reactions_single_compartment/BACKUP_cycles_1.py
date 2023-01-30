@@ -92,7 +92,7 @@ initial_conc
 #
 # ### and we'll do MULTIPLE RUNS, at varying time resolutions.
 
-# %% [markdown]
+# %% [markdown] tags=[]
 # # Run # 1 : FIXED time resolution, with COARSE time steps   
 # (trial and error, not shown, reveals that increasing any of the time steps below, leads to "excessive time step" errors)
 
@@ -106,11 +106,11 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 
 # %%
 dynamics.single_compartment_react(time_step=0.0008, stop_time=0.03)
-#dynamics.get_history()
+dynamics.get_history()
 
 # %%
 dynamics.single_compartment_react(time_step=0.001, stop_time=5.)
-#dynamics.get_history()
+dynamics.get_history()
 
 # %%
 dynamics.single_compartment_react(time_step=0.005, stop_time=8.)
