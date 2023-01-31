@@ -77,6 +77,55 @@ def test_specify_steps():
 
 
 
+def test_single_compartment_react():
+
+    # Test based on experiment "cycles_1"
+    chem_data = ReactionData(names=["A", "B", "C", "E_high", "E_low"])
+
+    # Reaction A <-> B, mostly in forward direction (favored energetically)
+    chem_data.add_reaction(reactants="A", products="B",
+                           forward_rate=9., reverse_rate=3.)
+
+    # Reaction B <-> C, also favored energetically
+    chem_data.add_reaction(reactants="B", products="C",
+                           forward_rate=8., reverse_rate=4.)
+
+    # Reaction C + E_High <-> A + E_Low, also favored energetically, but kinetically slow
+    chem_data.add_reaction(reactants=["C" , "E_high"], products=["A", "E_low"],
+                           forward_rate=1., reverse_rate=0.2)
+
+    initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
+
+    dynamics = ReactionDynamics(reaction_data=chem_data)
+    dynamics.set_conc(conc=initial_conc, snapshot=False)
+
+    dynamics.set_diagnostics()
+    dynamics.single_compartment_react(time_step=0.0010, stop_time=0.0035)
+
+    run1 = dynamics.get_system_conc()
+    assert np.allclose(run1, [9.69124339e+01, 3.06982519e+00, 1.77408783e-02, 9.99985757e+02, 1.42431633e-02])
+    assert np.allclose(dynamics.system_time, 0.0035)
+    assert dynamics.explain_time_advance(return_times=True) == [0.0, 0.002, 0.0025, 0.0035]
+
+    # The above computation automatically took 2 normal steps, 1 half-size step and 1 normal step;
+    # now repeat the process manually
+
+    dynamics2 = ReactionDynamics(reaction_data=chem_data)
+    dynamics2.set_conc(conc=initial_conc, snapshot=False)
+
+    dynamics2.set_diagnostics()
+    dynamics2.single_compartment_react(time_step=0.0010, n_steps=2)
+    dynamics2.single_compartment_react(time_step=0.0005, n_steps=1)
+    dynamics2.single_compartment_react(time_step=0.0010, n_steps=1)
+    run2 = dynamics.get_system_conc()
+    assert np.allclose(run2, run1)      # Same result as before
+    assert np.allclose(dynamics2.system_time, 0.0035)
+    assert dynamics2.explain_time_advance(return_times=True) == [0.0, 0.002, 0.002, 0.0025, 0.0025, 0.0035]
+    # The time advance is now different, because multiple calls to single_compartment_react() break up the counting
+    # (just a convention)
+
+
+
 def test_single_reaction_fixed_step():
     chem_data = ReactionData(names=["A", "B"])
     rxn = ReactionDynamics(chem_data)
@@ -279,7 +328,7 @@ def test_adaptive_time_resolution_1():
     rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=kF, reverse_rate=kR)   # Re-add same reaction
 
-    result = rxn.reaction_step_orchestrator(delta_time_full=0.1, conc_array=conc_array,
+    result, _ = rxn.reaction_step_orchestrator(delta_time_full=0.1, conc_array=conc_array,
                                             dynamic_steps=2, fast_threshold=5)
     # The above call results in 2 time steps
     # Check the calculations, based on the forward Euler method
@@ -336,7 +385,7 @@ def test_adaptive_time_resolution_2():
     rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
     chem_data.add_reaction(reactants=["A" , "B"], products=["C"],
                            forward_rate=kF, reverse_rate=kR)        # Re-add the reaction
-    result = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
+    result, _  = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
                                             dynamic_steps=time_subdivision, fast_threshold=5)
     # Check the calculations, based on the forward Euler method
     half_step_conc=conc_array + [delta_A ,delta_B, delta_C]    # [5.08 45.08 24.92]  These are the conc's halfway thru delta_time_full
@@ -414,13 +463,13 @@ def test_adaptive_time_resolution_3():
     rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
     chem_data.add_reaction(reactants=[(2, "A", 2)], products=["C"],
                            forward_rate=kF, reverse_rate=kR)        # Re-add the reaction
-    result = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
-                                            dynamic_steps=time_subdivision, fast_threshold=5)
+    result, _  = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
+                                                dynamic_steps=time_subdivision, fast_threshold=5)
 
     # Check the calculations, based on the forward Euler method
 
     # 1st substep, using the previously-computed [delta_A ,delta_C]
-    substep_conc=conc_array + [delta_A ,delta_C]  # [80.08, 99.96]  These are the conc's 1/4 way thru delta_time_full
+    substep_conc = conc_array + [delta_A ,delta_C]  # [80.08, 99.96]  These are the conc's 1/4 way thru delta_time_full
                                                     #                 i.e. at t = 0.0005
     # 2nd substep
     new_delta_A = 2 * delta_time_subinterval * (-kF * substep_conc[0] **2 + kR * substep_conc[1])

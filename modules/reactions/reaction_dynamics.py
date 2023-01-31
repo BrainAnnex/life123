@@ -524,12 +524,16 @@ class ReactionDynamics:
 
         #for i in range(n_steps):
         i = 0
+        extra_steps = 0
         while self.system_time < stop_time:
             delta_concentrations, step_actually_taken = self.reaction_step_orchestrator(delta_time_full=time_step, conc_array=self.system,
                                                                    snapshots=snapshots,
                                                                    dynamic_steps=dynamic_steps, fast_threshold=fast_threshold)
             self.system += delta_concentrations
             self.system_time += step_actually_taken
+            if step_actually_taken < time_step:
+                extra_steps += 1
+
             # Preserve some of the data, as requested
             if snapshots and ((i+1)%frequency == 0):
                 if first_snapshot and "initial_caption" in snapshots:
@@ -555,7 +559,14 @@ class ReactionDynamics:
                                                      data_snapshot=system_data)
         # END while
 
-        # TODO: check whether the number of steps got increased
+        # Report as to whether extra steps were automatically added, as well as the total # taken
+        n_steps_taken = i
+        if extra_steps > 0:
+            print(f"The computation took {extra_steps} extra step(s) - "
+                  f"automatically added to prevent negative concentrations")
+
+        print(f"{n_steps_taken} total step(s) taken")
+
 
         if snapshots and "final_caption" in snapshots:
             self.history.set_caption_last_snapshot(snapshots["final_caption"])
@@ -620,8 +631,8 @@ class ReactionDynamics:
         while delta_time_full > 0.000001:   # TODO: tweak this number (used to prevent infinite loops)
             try:
                 if 1 in self.verbose_list:
-                    print(f"reaction_step_orchestrator(): in WHILE loop with System Time={self.system_time:.5g} "
-                          f"and delta_time_full={delta_time_full:.5g}")
+                    print(f"reaction_step_orchestrator(): entering WHILE loop at System Time={self.system_time:.5g} "
+                          f"with delta_time_full={delta_time_full:.5g}")
 
                 if dynamic_steps == 1:   # If the variable time step option was NOT requested
                     if 2 in self.verbose_list:
@@ -1803,21 +1814,93 @@ class ReactionDynamics:
         :param return_times:    If True, all the critical times are saved and returned as a list
         :return:                Either None, or a list of time values
         """
-        assert self.diagnostics, "explain_time_advance(): diagnostics must first be turned on; " \
+        assert self.diagnostics, "ReactionDynamics.explain_time_advance(): diagnostics must first be turned on; " \
+                                 "use set_diagnostics() prior to the reaction run"
+
+        df = self.diagnostic_data_baselines.get()
+        n_entries = len(df)
+        t = list(df["TIME"])
+        grad = np.diff(t)
+        grad_shifted = np.insert(grad, 0, 0)  # Insert a zero at the top (shifting don the array)
+        #print(grad)
+        #print(grad_shifted)
+        start_interval = t[0]
+
+        critical_times = [start_interval]  # List of times to report on (start time, plus times where the steps change)
+
+        for i in range(1, n_entries-1):
+            #print(i)
+            if not np.allclose(grad[i], grad_shifted[i]):
+                #print (f"   Detection at element {i} : time={t[i]}")
+                #print (f"   From time {start_interval} to {t[i]}, in steps of {grad_shifted[i]}")
+                primary_timestep = df.loc[i, "primary_timestep"]
+                self._explain_time_advance_helper(t_start=start_interval, t_end=t[i], delta_baseline=grad_shifted[i], primary_timestep=primary_timestep)
+                start_interval = t[i]
+                critical_times.append(t[i])
+
+        #print (f"   From time {start_interval} to {t[-1]}, in steps of {grad_shifted[-1]}")
+        primary_timestep = df.loc[n_entries-1, "primary_timestep"]
+        self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1], delta_baseline=grad_shifted[-1], primary_timestep=primary_timestep)
+        critical_times.append(t[-1])
+
+        if return_times:
+            return critical_times
+
+
+    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, primary_timestep)  -> None:
+        """
+
+        :param t_start:
+        :param t_end:
+        :param delta_baseline:
+        :param primary_timestep:
+        :return:
+        """
+        if np.allclose(t_start, t_end):
+            #print(f"[Ignoring interval starting and ending at same time {t_start:.3g}]")
+            return
+
+        if np.allclose(delta_baseline, primary_timestep):
+            n_steps = round((t_end - t_start) / delta_baseline)
+            name = "step" if n_steps == 1 else "steps"  # singular vs. plural
+            print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} FULL {name} of {delta_baseline:.3g}")
+        else:
+            #print(f"primary_timestep/delta_baseline is:  {primary_timestep}/{delta_baseline} = {primary_timestep/delta_baseline}")
+            n_steps = round((t_end - t_start) / delta_baseline)
+            if n_steps == 1:    # singular
+                print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substep of {delta_baseline:.3g} (1/{round(primary_timestep/delta_baseline)} of full step)")
+            else:               # plural
+                print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substeps of {delta_baseline:.3g} (each 1/{round(primary_timestep/delta_baseline)} of full step)")
+
+
+
+
+    def explain_time_advance_OLD(self, return_times=False) -> Union[None, list]:    # TODO: OBSOLETE - to ditch
+        """
+        Use the saved-up diagnostic data, to print out details of the timescales of the reaction run
+
+        EXAMPLE of output:
+            From time 0 to 0.0168, in 42 substeps of 0.0004 (each 1/2 of full step)
+            From time 0.0168 to 0.0304, in 17 FULL steps of 0.0008
+
+        :param return_times:    If True, all the critical times are saved and returned as a list
+        :return:                Either None, or a list of time values
+        """
+        assert self.diagnostics, "ReactionDynamics.explain_time_advance_OLD(): diagnostics must first be turned on; " \
                                  "use set_diagnostics() prior to the reaction run"
 
         df = self.diagnostic_data_baselines.get()
 
-        t = list(df["TIME"])
+        t = list(df["TIME"])    # List of times from the cumulative history of the run
 
-        grad = np.diff(t)
+        grad = np.diff(t)       # Numpy array of differences between consecutive times; this will have 1 less element than the list t
 
-        #print(grad)
+        #print("grad: ", grad)
 
         start_i = 0
 
-        t_0 = df.loc[0, "TIME"]
-        critical_times = [t_0]
+        t_0 = df.loc[0, "TIME"] # Initial time
+        critical_times = [t_0]  # List of times to report on (start time, plus times where the steps change)
 
         while start_i < len(t)-2:
             delta_baseline = grad[start_i]
@@ -1850,29 +1933,6 @@ class ReactionDynamics:
 
         if return_times:
             return critical_times
-
-
-    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, primary_timestep)  -> None:
-        """
-
-        :param t_start:
-        :param t_end:
-        :param delta_baseline:
-        :param primary_timestep:
-        :return:
-        """
-        if np.allclose(t_start, t_end):
-            #print(f"[Ignoring interval starting and ending at same time {t_start:.3g}]")
-            return
-
-        if np.allclose(delta_baseline, primary_timestep):
-            n_steps = round((t_end - t_start) / delta_baseline)
-            print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} FULL steps of {delta_baseline:.3g}")
-        else:
-            #print(f"primary_timestep/delta_baseline is:  {primary_timestep}/{delta_baseline} = {primary_timestep/delta_baseline}")
-            n_steps = round((t_end - t_start) / delta_baseline)
-            print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substeps of {delta_baseline:.3g} (each 1/{round(primary_timestep/delta_baseline)} of full step)")
-
 
 
 

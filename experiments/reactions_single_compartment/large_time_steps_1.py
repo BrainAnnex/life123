@@ -27,7 +27,7 @@
 # The raggedness and instabilities are now eliminated.
 # (Note: the 1/2 substeps are on a per-reaction basis)
 #
-# LAST REVISED: Jan. 29, 2023
+# LAST REVISED: Jan. 30, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -201,7 +201,7 @@ dynamics.single_compartment_react(time_step=0.0025, stop_time=5.,
 dynamics.explain_time_advance()
 
 # %% [markdown]
-# ### Again, we see a good many of those smaller 1/4 steps
+# ### Again, we see many of those smaller 1/4 steps
 
 # %%
 dynamics.single_compartment_react(time_step=0.008, stop_time=8.,

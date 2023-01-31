@@ -22,7 +22,7 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: Jan. 27, 2023
+# LAST REVISED: Jan. 30, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

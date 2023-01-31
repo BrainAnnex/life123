@@ -17,7 +17,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Dec. 25, 2022
+# LAST REVISED: Jan. 30, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
