@@ -14,15 +14,15 @@
 # ---
 
 # %% [markdown]
-# ## A cycle of reactions A <-> B <-> C <-> A, 
-# #### The "closing" of the above cycle (the "return" parth from C to A) is coupled with an "energy donor" reaction:
-# #### C + E_High <-> A + E_Low
-# #### where E_High and E_Low are, respectively, the high- and low- energy molecules that drive the cycle (for example, think of ATP/ADP).   
+# ## A cycle of reactions `A <-> B <-> C <-> A`  IN-PROGRESS
+# #### the "closing" of the above cycle (the "return" parth from `C` to `A`) is coupled with an "energy donor" reaction:
+# #### `C + E_High <-> A + E_Low`
+# #### where `E_High` and `E_Low` are, respectively, the high- and low- energy molecules that drive the cycle (for example, think of ATP/ADP).   
 # Comparisons are made between results obtained with 3 different time resolutions.
 #
-# All 1st-order kinetics.   
+# All 1st-order kinetics.    
 #
-# LAST REVISED: Jan. 24, 2023
+# LAST REVISED: Jan. 30, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -113,7 +113,7 @@ dynamics.single_compartment_react(time_step=0.001, stop_time=5.)
 #dynamics.get_history()
 
 # %%
-#dynamics.single_compartment_react(time_step=0.005, stop_time=8.)
+dynamics.single_compartment_react(time_step=0.005, stop_time=8.)
 
 # %%
 df = dynamics.get_history()
@@ -314,8 +314,7 @@ num.compare_results(run1, run3)
 num.compare_results(run2, run3)
 
 # %% [markdown]
-# The fact that our measure of distance of run 2 (with intermediate resolution) from run3 is actually GREATER than the distance of run 1 (with low resolution) from run3, might be an artifact of the limited accuracy of the function **curve_intersection()**, used to extract the point coordinates from the saved run data.   
-# Future versions will address that...
+# The fact that our measure of distance of run 2 (with intermediate resolution) from run3 is actually GREATER than the distance of run 1 (with low resolution) from run3, might be an artifact of the limited accuracy in the extraction of intersection coordinates from the saved run data.
 
 # %% [markdown]
 # #### The coordinates of the 4 critical points, from the 3 different runs, are pretty similar to one another - as can be easily seen:

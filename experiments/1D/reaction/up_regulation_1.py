@@ -14,11 +14,14 @@
 # ---
 
 # %% [markdown]
-# ### A up-regulates B , by being *the limiting reagent* in reaction A + X <-> 2B (mostly forward), where X is plentiful
+# ### `A` up-regulates `B` , by being *the limiting reagent* in the reaction:     
+# ### `A + X <-> 2B` (mostly forward), where `X` is plentiful
 # 1st-order kinetics.   
 # If [A] is low, [B] remains low, too.  Then, if [A] goes high, then so does [B].  However, at that point, A can no longer bring B down to any substantial extent.
 #
-# Single-bin reaction
+# **Single-bin reaction**
+#
+# Based on experiment "reactions_single_compartment/up_regulate_1"
 #
 # LAST REVISED: Nov. 28, 2022
 
@@ -51,8 +54,6 @@ GraphicLog.config(filename=log_file,
 # %%
 # Initialize the system
 chem_data = chem(names=["A", "X", "B"])     # NOTE: Diffusion not applicable (just 1 bin)
-
-
 
 # Reaction A + X <-> 2B , with 1st-order kinetics for all species
 chem_data.add_reaction(reactants=[("A") , ("X")], products=[(2, "B")],
@@ -107,13 +108,13 @@ bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_a
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "X", "B"], 
-              title="Changes in concentrations",
+              title="Changes in concentrations (reaction A + X <-> 2B)",
               color_discrete_sequence = ['red', 'darkorange', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
 # %% [markdown] tags=[]
-# ## Now, let's suddenly increase [A]
+# # Now, let's suddenly increase [A]
 
 # %%
 bio.set_bin_conc(bin_address=0, species_index=0, conc=50.)
@@ -147,13 +148,17 @@ print("Ratio of forward/reverse rates: ", chem_data.get_forward_rate(0) / chem_d
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "X", "B"], 
-              title="Changes in concentrations",
+              title="Changes in concentrations (reaction A + X <-> 2B)",
               color_discrete_sequence = ['red', 'darkorange', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
+# %% [markdown]
+# `A`, still the limiting reagent, is again stopping the reaction.  
+# The (transiently) high value of [A] led to a high value of [B]
+
 # %% [markdown] tags=[]
-# ## Let's again suddenly increase [A]
+# # Let's again suddenly increase [A]
 
 # %%
 bio.set_bin_conc(bin_address=0, species_index=0, conc=30.)
@@ -185,13 +190,19 @@ print("Ratio of forward/reverse rates: ", chem_data.get_forward_rate(0) / chem_d
 
 # %%
 fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "X", "B"], 
-              title="Changes in concentrations",
+              title="Changes in concentrations (reaction A + X <-> 2B)",
               color_discrete_sequence = ['red', 'darkorange', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
 # %% [markdown]
-# Note: A can up-regulate B, but it cannot bring it down.  
-# X will soon need to be replenished, if A is to continue being the limiting reagent.
+# `A`, again the scarse limiting reagent, stops the reaction yet again.  
+# And, again, the (transiently) high value of [A] up-regulated [B]  
+#
+# Note: `A` can up-regulate `B`, but it cannot bring it down.  
+# `X` will soon need to be replenished, if `A` is to continue being the limiting reagent.
+
+# %% [markdown]
+# # For additional exploration, see the experiment "reactions_single_compartment/up_regulate_1"
 
 # %%

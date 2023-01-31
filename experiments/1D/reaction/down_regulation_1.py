@@ -22,7 +22,7 @@
 #
 # Based on experiment "reactions_single_compartment/down_regulate_2"
 #
-# LAST REVISED: Jan. 18, 2023
+# LAST REVISED: Jan. 28, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -54,7 +54,7 @@ GraphicLog.config(filename=log_file,
 # Initialize the system
 chem_data = chem(names=["A", "B", "Y"])     # NOTE: Diffusion not applicable (just 1 bin)
 
-# Reaction A + X <-> 2B , with 1st-order kinetics for all species
+# Reaction A + 2 B <-> Y , with 1st-order kinetics for all species
 chem_data.add_reaction(reactants=[("A") , (2, "B")], products=[("Y")],
                        forward_rate=8., reverse_rate=2.)
 
@@ -176,11 +176,11 @@ fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "Y"],
 fig.show()
 
 # %% [markdown]
-# **A**, again the scarse limiting reagent, stops the reaction yet again
+# **A**, again the scarse limiting reagent, stops the reaction yet again   
+#
+# Note: A can down-regulate B, but it cannot bring it up.
 
 # %% [markdown]
-# Note: A can down-regulate B, but it cannot bring it up.
-#
 # # For additional exploration, see the experiment "reactions_single_compartment/down_regulate_2"
 
 # %%

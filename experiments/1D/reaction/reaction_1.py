@@ -21,7 +21,7 @@
 #
 # See also the experiment _"reactions_single_compartment/react_1"_ 
 #
-# LAST REVISED: Jan. 15, 2023
+# LAST REVISED: Jan. 30, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

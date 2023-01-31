@@ -2,12 +2,203 @@
 
 from typing import Union
 import numpy as np
+import pandas as pd
 
 
 class Numerical:
     """
     Assorted, general numerical methods
     """
+
+
+    @classmethod
+    def curve_intersect_interpolate(cls, df: pd.DataFrame, row_index :int, x, var1, var2) -> (float, float):
+        """
+        Fine-tune the intersection point between 2 Pandas dataframe columns,
+        using linear interpolation
+
+        :param df:          A Pandas dataframe with at least 3 columns
+        :param row_index:   The index of the Pandas dataframe row
+                                with the smallest absolute value of difference in concentrations
+        :param x:           The name of the dataframe column with the independent variable
+        :param var1:        The name of the dataframe column with the data from the 1st curve
+        :param var2:        The name of the dataframe column with the data from the 2nd curve
+        :return:            The pair (time of intersection, common value)
+        """
+        df_size = len(df)
+        assert df_size >= 3, \
+            f"the Pandas dataframe must have at least 3 rows (it has {df_size})"
+
+        # The next 2 integers are the indices of the boundaries of the passed dataframe
+        first_index = df.iloc[0].name           # TODO: try df.index[0]
+        last_index = df.iloc[df_size-1].name    # TODO: try df.index[-1]
+
+        assert row_index > first_index, \
+            f"curve_intersect_interpolate(): the given row (index {row_index}) in the Pandas dataframe must be past " \
+            f"the first one (whose index is {first_index}). Try using a bigger dataframe with an earlier start point!"
+
+        assert row_index < last_index, \
+            f"curve_intersect_interpolate(): the given row (index {row_index}) in the Pandas dataframe must be before " \
+            f"the last one (whose index is {last_index}). Try using a bigger dataframe with an later end point!"
+
+        col_names = list(df.columns)
+        assert x in col_names, f"the given Pandas dataframe lacks a column named `{x}`"
+        assert var1 in col_names, f"the given Pandas dataframe lacks a column named `{var1}`"
+        assert var2 in col_names, f"the given Pandas dataframe lacks a column named `{var2}`"
+
+        row = df.loc[row_index]
+        t = row[x]
+        val1 = row[var1]
+        val2 = row[var2]
+
+        avg_val = (val1+val2) / 2.
+
+        #print("Coarse intersection coordinates: ",  (t, avg_val))
+
+
+        next_row = df.loc[row_index+1]
+        next_t = next_row[x]
+        next_val1 = next_row[var1]
+        next_val2 = next_row[var2]
+
+        prev_row = df.loc[row_index-1]
+        prev_t = prev_row[x]
+        prev_val1 = prev_row[var1]
+        prev_val2 = prev_row[var2]
+
+        if np.allclose(val1, val2):     # The intersection occurs at the given middle point
+            print("val1 is very close to, or equal to, val2")
+            if np.allclose(next_val1, next_val2) or np.allclose(prev_val1, prev_val2):
+                raise Exception("the intersection isn't well-defined because there's extended overlap")
+            else:
+                return (t, avg_val)
+
+
+        later_inversion = False
+        earlier_inversion = False
+
+        if (    (val2 > val1) and (next_val2 < next_val1)
+                or
+                (val2 < val1) and (next_val2 > next_val1)
+            ):   # If there's an inversion in height of points on the two curves, at times t vs. next_t
+            later_inversion = True
+
+
+        # No luck finding a curve inversion with the next point; try the previous point instead
+
+        if (    (val2 > val1) and (prev_val2 < prev_val1)
+                or
+                (val2 < val1) and (prev_val2 > prev_val1)
+            ):   # If there's an inversion in height of points on the two curves, at times t vs. prev_t
+            earlier_inversion = True
+
+
+        if later_inversion and earlier_inversion:
+            raise Exception("2 intersections detected")
+
+        if later_inversion:
+            return cls.segment_intersect(  t=(t, next_t),
+                                           y1=(val1, next_val1),
+                                           y2=(val2, next_val2))
+
+        if  earlier_inversion:
+            return cls.segment_intersect(  t=(prev_t, t),
+                                           y1=(prev_val1, val1),
+                                           y2=(prev_val2, val2))
+
+
+        print("Unable to locate a crossover in the curves; "
+              "a coarser value is returned as intersection point")
+
+        return (t, avg_val)
+
+
+
+    @classmethod
+    def segment_intersect(cls, t, y1, y2) -> (float, float):
+        """
+        Find the intersection of 2 segments in 2D.
+        Their respective endpoints share the same x-coordinates: (t_start, t_end)
+
+        Note: for an alternate method, see line_intersect()
+
+        :param t:   Pair with the joint x-coordinates of the 2 start points,
+                        and the joint x-coordinates of the 2 end points
+        :param y1:  Pair with the y_coordinates of the endpoints of the 1st segment
+        :param y2:  Pair with the y_coordinates of the endpoints of the 2nd segment
+                        Note: either segment - but not both - may be horizontal
+
+        :return:    A pair with the (x,y) coord of the intersection;
+                        if the segments don't meet their specs (which might result in the lack of an intersection),
+                        an Exception is raised
+        """
+        t_start, t_end = t
+        y1_start, y1_end = y1
+        y2_start, y2_end = y2
+
+        assert t_end > t_start, "t_end must be strictly > t_start"
+
+        if np.allclose(y1_start, y1_end):   # if line1 is horizontal
+            assert y2_start != y2_end, "cannot intersect 2 horizontal segments"
+
+        if np.allclose(y2_start, y2_end):   # if line2 is horizontal
+            assert y1_start != y1_end, "cannot intersect 2 horizontal segments"
+
+        delta_t = t_end - t_start
+        delta_r = y1_end - y1_start
+        delta_d = y2_end - y2_start
+
+        '''
+        Solving for t_intersect the equation:
+        (t_intersect - t_start) * (delta_r/delta_t) + y1_start 
+            = (t_intersect - t_start) * (delta_d/delta_t) + y2_start
+        '''
+        factor = (y1_start - y2_start) / (delta_r - delta_d)
+        t_intersect = t_start -  factor * delta_t
+        y_intersect = y1_start - factor * delta_r
+
+        return t_intersect, y_intersect
+
+
+
+    @classmethod
+    def line_intersect(cls, p1, p2, q1, q2) -> Union[tuple, None]:
+        """
+        Returns the coordinates of the intersection
+        between the line passing thru the points p1 and p2,
+        and the line passing thru the points q1 and q2.
+
+        Based on https://stackoverflow.com/a/42727584/5478830
+
+        Note: for an alternate method, see segment_intersect()
+
+        :param p1:  Pair of (x,y) coord of a point on the 1st line
+        :param p2:  Pair of (x,y) coord of another point on the 1st line
+        :param q1:  Pair of (x,y) coord of a point on the 2nd line
+        :param q2:  Pair of (x,y) coord of another point on the 2nd line
+
+        :return:    A pair with the (x,y) coord of the intersection, if it exists;
+                        or None if it doesn't exist
+        """
+        s = np.vstack([p1, p2, q1, q2])     # s for "stacked"
+                                            #   This will be a matrix :
+                                            #   [[p1_x, p1_y]
+                                            #    [p2_x, p2_y]
+                                            #    [q1_x, q1_y]
+                                            #    [q2_x, q2_y]]
+
+        vertical_vector = np.ones((4, 1))   # Four 1's stacked up vertically
+        mat = np.hstack((s, vertical_vector)) # This is the earlier "s" matrix, with an extra columns of 1's
+        l1 = np.cross(mat[0], mat[1])       # This is a vector representation of the 1st line
+        l2 = np.cross(mat[2], mat[3])       # This is a vector representation of the 2nd line
+        x, y, z = np.cross(l1, l2)          # Data about the point of intersection
+
+        if np.allclose(z, 0.):              # Lines are parallel, or almost so
+            return None
+
+        return (x/z, y/z)
+
+
 
     @classmethod
     def deep_flatten(cls, items) -> list:

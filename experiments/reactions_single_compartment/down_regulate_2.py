@@ -14,14 +14,14 @@
 # ---
 
 # %% [markdown]
-# ## A down-regulates B , 
-# ### by being the *limiting reagent* in reaction A + 2 B <-> Y (mostly forward)
+# ## `A` down-regulates `B` , 
+# ### by being the *limiting reagent* in reaction `A + 2 B <-> Y` (mostly forward)
 # 1st-order kinetics.   
 # If [A] is low and [B] is high, then [B] remains high.  If [A] goes high, [B] goes low.  However, at that point, A can no longer bring B up to any substantial extent.
 #
 # See also 1D/reactions/down_regulation_1
 #
-# LAST REVISED: Jan. 19, 2023
+# LAST REVISED: Jan. 28, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -55,7 +55,7 @@ GraphicLog.config(filename=log_file,
 # Initialize the system
 chem_data = chem(names=["A", "B", "Y"])
 
-# Reaction A + X <-> 2B , with 1st-order kinetics for all species
+# Reaction A + 2 B <-> Y , with 1st-order kinetics for all species
 chem_data.add_reaction(reactants=[("A") , (2, "B")], products=[("Y")],
                        forward_rate=8., reverse_rate=2.)
 
@@ -81,7 +81,7 @@ dynamics.describe_state()
 dynamics.single_compartment_react(time_step=0.0005, n_steps=30, 
                                   dynamic_steps=2, fast_threshold=15)
 
-df = dynamics.history.get()
+df = dynamics.get_history()
 df
 
 # %% [markdown]
@@ -99,11 +99,8 @@ dynamics.is_in_equilibrium()
 # ## Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B", "Y"], 
-              title="Changes in concentrations",
-              color_discrete_sequence = ['red', 'blue', 'green'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
+                     title="Changes in concentrations (reaction A + 2 B <-> Y)")
 
 # %% [markdown] tags=[]
 # # Now, let's suddenly increase [A]
@@ -127,14 +124,11 @@ df
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(tolerance=7)
+dynamics.is_in_equilibrium(tolerance=6)
 
 # %%
-fig = px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B", "Y"], 
-              title="Changes in concentrations (reaction A + 2 B <-> Y)",
-              color_discrete_sequence = ['red', 'blue', 'green'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
+                     title="Changes in concentrations (reaction A + 2 B <-> Y)")
 
 # %% [markdown]
 # **A**, still the limiting reagent, is again stopping the reaction.  
@@ -157,7 +151,7 @@ dynamics.history.get(tail=5)
 dynamics.single_compartment_react(time_step=0.001, n_steps=35,
                                  dynamic_steps=2, fast_threshold=15)
 
-df = dynamics.history.get()
+df = dynamics.get_history()
 df
 
 # %%
@@ -165,11 +159,8 @@ df
 dynamics.is_in_equilibrium()
 
 # %%
-fig = px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B", "Y"], 
-              title="Changes in concentrations (reaction A + 2 B <-> Y)",
-              color_discrete_sequence = ['red', 'blue', 'green'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
+                     title="Changes in concentrations (reaction A + 2 B <-> Y)")
 
 # %% [markdown]
 # **A**, again the scarse limiting reagent, stops the reaction yet again
@@ -189,19 +180,15 @@ dynamics.describe_state()
 dynamics.single_compartment_react(time_step=0.001, n_steps=70,
                                  dynamic_steps=2, fast_threshold=15)
 
-df = dynamics.history.get()
-df
+dynamics.get_history()
 
 # %%
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium(tolerance=2)
 
 # %%
-fig = px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B", "Y"], 
-              title="Changes in concentrations (reaction A + 2 B <-> Y)",
-              color_discrete_sequence = ['red', 'blue', 'green'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
+                     title="Changes in concentrations (reaction A + 2 B <-> Y)")
 
 # %% [markdown]
 # #### As expected, even the complete withdrawal of A (red), brings about only a modest increase of B's concentration, from the reverse reaction (i.e. [B] slightly increases at the expense of [Y].)  

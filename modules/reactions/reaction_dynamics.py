@@ -4,6 +4,15 @@ import pandas as pd
 import plotly.express as px
 from typing import Union
 from modules.movies.movies import MovieTabular
+from modules.numerical.numerical import Numerical as num
+
+
+class ExcessiveTimeStep(Exception):
+    """
+    Used to raise Exceptions arising from excessively large time steps (that lead to negative concentration values)
+    """
+    pass
+
 
 
 class ReactionDynamics:
@@ -339,20 +348,27 @@ class ReactionDynamics:
 
 
 
-    def get_history(self, t_start=None, t_end=None) -> pd.DataFrame:
+    def get_history(self, t_start=None, t_end=None, tail=None) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
         using add_snapshot()
         Optionally, provide a start and end times
 
-        :param t_start:
-        :param t_end:
+        :param t_start: (OPTIONAL) Start time in the "SYSTEM TIME" column
+        :param t_end:   (OPTIONAL) End time
+        :param tail:    (OPTIONAL) Number of records to consider, from the end of the dataframe
         :return:        A Pandas dataframe
         """
-        df = self.history.get()
+        df = self.history.get(tail=tail)
 
         if (t_start is not None) and (t_end is not None):
             return df[df["SYSTEM TIME"].between(t_start, t_end)]
+
+        if t_start is not None:
+            return df[df["SYSTEM TIME"] >= t_start]
+
+        if t_end is not None:
+            return df[df["SYSTEM TIME"] <= t_end]
 
         return df
 
@@ -466,6 +482,9 @@ class ReactionDynamics:
                                                 time_step=time_step,
                                                 n_steps=n_steps)
 
+        if stop_time is None:
+            stop_time = self.system_time + time_step * n_steps
+
         if dynamic_steps > 1:
             if abs_fast_threshold is not None:
                 if fast_threshold is not None:
@@ -494,7 +513,7 @@ class ReactionDynamics:
 
 
         if self.diagnostics:
-            # Save up the current System State, with some extra info
+            # Save up the current System State, with some extra info, as "diagnostic 'baseline' data"
             system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
             system_data["is_primary"] = True
             system_data["primary_timestep"] = time_step
@@ -503,12 +522,18 @@ class ReactionDynamics:
             self.diagnostic_data_baselines.store(par=self.system_time,
                                                  data_snapshot=system_data)
 
-        for i in range(n_steps):
-            delta_concentrations = self.reaction_step_orchestrator(delta_time_full=time_step, conc_array=self.system,
+        #for i in range(n_steps):
+        i = 0
+        extra_steps = 0
+        while self.system_time < stop_time:
+            delta_concentrations, step_actually_taken = self.reaction_step_orchestrator(delta_time_full=time_step, conc_array=self.system,
                                                                    snapshots=snapshots,
                                                                    dynamic_steps=dynamic_steps, fast_threshold=fast_threshold)
             self.system += delta_concentrations
-            self.system_time += time_step
+            self.system_time += step_actually_taken
+            if step_actually_taken < time_step:
+                extra_steps += 1
+
             # Preserve some of the data, as requested
             if snapshots and ((i+1)%frequency == 0):
                 if first_snapshot and "initial_caption" in snapshots:
@@ -517,8 +542,14 @@ class ReactionDynamics:
                 else:
                     self.add_snapshot(species=species)
 
+            i += 1
+
+            if i > 1000 * n_steps:  # To catch infinite loops
+                raise Exception("single_compartment_react(): "
+                                "the computation is taking a very large number of steps; reduce the delta_time")
+
             if self.diagnostics:
-                # Save up the current System State, with some extra info
+                # Save up the current System State, with some extra info, as "diagnostic 'baseline' data"
                 system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
                 system_data["is_primary"] = True
                 system_data["primary_timestep"] = time_step
@@ -526,6 +557,15 @@ class ReactionDynamics:
                 system_data["substep_number"] = 0
                 self.diagnostic_data_baselines.store(par=self.system_time,
                                                      data_snapshot=system_data)
+        # END while
+
+        # Report as to whether extra steps were automatically added, as well as the total # taken
+        n_steps_taken = i
+        if extra_steps > 0:
+            print(f"The computation took {extra_steps} extra step(s) - "
+                  f"automatically added to prevent negative concentrations")
+
+        print(f"{n_steps_taken} total step(s) taken")
 
 
         if snapshots and "final_caption" in snapshots:
@@ -534,8 +574,8 @@ class ReactionDynamics:
 
 
     def reaction_step_orchestrator(self, delta_time_full: float, conc_array,
-                                   snapshots=None, dynamic_steps=1, fast_threshold=5) -> np.array:
-        """     TODO: the word "orchestrator" is no longer a good descriptor
+                                   snapshots=None, dynamic_steps=1, fast_threshold=5) -> (np.array, float):
+        """     TODO: the word "orchestrator" may no longer be a good descriptor
         This is the common entry point for both single-compartment reactions,
         and the reaction part of reaction-diffusions in 1D, 2D and 3D.
 
@@ -562,10 +602,12 @@ class ReactionDynamics:
         :param fast_threshold:  The minimum relative size of the concentration baseline over its change, AS A PERCENTAGE,
                                 for a reaction to be regarded as "Slow".  IMPORTANT: this refers to the FULL step size
 
-        :return:                The increment vector for the concentrations of ALL the chemical species,
-                                    as a Numpy array for all the chemical species, in their index order
-                                    EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):
-                                        array([7. , -21.])
+        :return:                The pair:
+                                    1) increment vector for the concentrations of ALL the chemical species,
+                                        as a Numpy array for all the chemical species, in their index order
+                                        EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):
+                                            array([7. , -21.])
+                                    2) step actually taken (which might be smaller than the requested one)
         """
         if 5 in self.verbose_list:
             print(f"Calling reaction_step_orchestrator() with delta_time={delta_time_full}, "
@@ -580,24 +622,46 @@ class ReactionDynamics:
             fast_threshold_fraction = fast_threshold / 100.     # Here we switch over from percentages to fractions
 
 
-        if 1 in self.verbose_list:
+        if 2 in self.verbose_list:
             print(f"************ SYSTEM TIME: {self.system_time:,.4g}")
 
 
-        if dynamic_steps == 1:   # If the variable time step option was NOT requested
-            if 1 in self.verbose_list:
-                print("    NO adaptive variable time resolution used")
-                print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s) with a single step")
+        delta_concentrations = None
 
-            delta_concentrations = self.reaction_step_FIXED_RESOLUTION(delta_time=delta_time_full,
-                                                                       conc_array=conc_array, rxn_list=None)
-        else:
-            # Using variable time steps
-            delta_concentrations = self.advance_variable_time_steps(delta_time_full=delta_time_full, conc_array= conc_array,
-                                                                    snapshots=snapshots,
-                                                                    dynamic_steps=dynamic_steps, fast_threshold_fraction=fast_threshold_fraction)
+        while delta_time_full > 0.000001:   # TODO: tweak this number (used to prevent infinite loops)
+            try:
+                if 1 in self.verbose_list:
+                    print(f"reaction_step_orchestrator(): entering WHILE loop at System Time={self.system_time:.5g} "
+                          f"with delta_time_full={delta_time_full:.5g}")
 
-        return  delta_concentrations
+                if dynamic_steps == 1:   # If the variable time step option was NOT requested
+                    if 2 in self.verbose_list:
+                        print("    NO adaptive variable time resolution used")
+                        print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s) with a single step")
+
+                    delta_concentrations = self.reaction_step_NEW(delta_time=delta_time_full, conc_array=conc_array, rxn_list=None,
+                                                                  tag_reactions=False)
+                else:
+                    # Using variable time steps
+                    delta_concentrations = self.advance_variable_time_steps(delta_time_full=delta_time_full, conc_array= conc_array,
+                                                                            snapshots=snapshots,
+                                                                            dynamic_steps=dynamic_steps, fast_threshold_fraction=fast_threshold_fraction)
+                break
+
+            except ExcessiveTimeStep as ex:
+                # Single reactions steps can fail if the attempted time step was too large (leading to negative concentrations)
+                if 1 in self.verbose_list:
+                    print(ex)
+
+                delta_time_full /= 2.       # Reduce the excessive time step in 1/2
+                if 1 in self.verbose_list:
+                    print(f"reaction_step_orchestrator(): RE-DOING THE LAST REACTION STEP with the smaller time interval of {delta_time_full}\n")
+
+
+        if delta_concentrations is None:
+            raise Exception("reaction_step_orchestrator(): unable to complete the reaction step")
+
+        return  (delta_concentrations, delta_time_full)
 
 
 
@@ -634,20 +698,22 @@ class ReactionDynamics:
                                         array([7. , -21.])
         """
         assert dynamic_steps > 1, \
-            "advance_variable_time_steps(): the function is being called in a scenario with FIXED time steps are required"
+            "advance_variable_time_steps(): the function is being called in a scenario where FIXED time steps should be used"
 
         if self.are_all_slow_rxns():
+            # If all the reactions are labeled as "slow"
             if 1 in self.verbose_list:
                 print("    All the reactions are SLOW")
                 print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s)")
 
-            delta_concentrations = self.reaction_step_VARIABLE_RESOLUTION(delta_time=delta_time_full, time_subdivision=1,
-                                                                          fast_threshold_fraction=fast_threshold_fraction,
-                                                                          conc_array=conc_array, rxn_list=None)
+            delta_concentrations = self.reaction_step_NEW(delta_time=delta_time_full, conc_array=conc_array, rxn_list=None,
+                                                          tag_reactions=True,
+                                                          time_subdivision=1, substep_number=0, fast_threshold_fraction=fast_threshold_fraction,
+                                                        )
             return delta_concentrations
 
 
-        # If we get thus far, not all reactions are slow (i.e., some ar fast)
+        # If we get thus far, not all reactions are slow (i.e., some are fast)
 
         '''
             Process all the SLOW reactions first
@@ -665,9 +731,9 @@ class ReactionDynamics:
             delta_concentrations_slow = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)  # One element per chemical species
         else:
             # Time-advance the simulation for all the slow reactions
-            delta_concentrations_slow = self.reaction_step_VARIABLE_RESOLUTION(delta_time=delta_time_full, time_subdivision=1,
-                                                                               fast_threshold_fraction=fast_threshold_fraction,
-                                                                               conc_array=conc_array, rxn_list=slow_rxns)
+            delta_concentrations_slow = self.reaction_step_NEW(delta_time=delta_time_full,  conc_array=conc_array, rxn_list=slow_rxns,
+                                                               tag_reactions=True,
+                                                               time_subdivision=1, fast_threshold_fraction=fast_threshold_fraction)
 
         '''
             Next, process all the FAST reactions
@@ -692,10 +758,18 @@ class ReactionDynamics:
                 local_system_time = self.system_time + substep * reduced_time_step
                 print(f"    - SUBSTEP: {substep} (in processing of FAST reactions, i.e. {fast_rxns}).  'Local' system time: {local_system_time:,.4g}")
 
-            incr_vector = self.reaction_step_VARIABLE_RESOLUTION(delta_time=reduced_time_step, time_subdivision=dynamic_steps,
+            if substep == dynamic_steps-1:
+                tag_reactions = True
+            else:
+                tag_reactions = False
+                if 1 in self.verbose_list:
+                    print(f"        Skipping evaluation of rxn speed for all reactions because NOT at last substep "
+                          f"(substep_number = {substep}, time_subdivision = {dynamic_steps})")
+
+            incr_vector = self.reaction_step_NEW(delta_time=reduced_time_step, time_subdivision=dynamic_steps,
                                                                  fast_threshold_fraction=fast_threshold_fraction,
                                                                  conc_array=local_conc_array, rxn_list=fast_rxns,
-                                                                 substep_number=substep)
+                                                                 substep_number=substep, tag_reactions=tag_reactions)
             delta_concentrations_fast += incr_vector
 
             # TODO: the next 2 lines don't need to be run, if at the last step
@@ -740,93 +814,10 @@ class ReactionDynamics:
 
 
 
-    def reaction_step_FIXED_RESOLUTION(self, delta_time: float, conc_array: np.array, rxn_list=None) -> np.array:
-        """
-        This version is for when NOT using adaptive variable time resolution.
-
-        Using the given concentration data of ALL the chemical species,
-        do the specified SINGLE TIME STEP for ONLY the requested reactions (by default all).
-
-        All computations are based on the INITIAL concentrations (prior to this reaction step),
-        which are used as the basis for all the reactions (in "forward Euler" approach.)
-
-        Return the Numpy increment vector for ALL the chemical species concentrations, in their index order
-        (whether involved in these reactions or not)
-
-        NOTE: the actual system concentrations are NOT changed
-
-        :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
-                                concentration won't vary significantly during this span.
-        :param conc_array:  All initial concentrations at the start of the reaction step,
-                                as a Numpy array for all the chemical species, in their index order;
-                                this can be thought of as the "SYSTEM STATE"
-        :param rxn_list:    OPTIONAL list of reactions (specified by index) to include in this simulation step ; EXAMPLE: [1, 3, 7]
-                                If None, do all the reactions.
-
-        :return:            The increment vector for the concentrations of ALL the chemical species,
-                                (whether involved in the reactions or not),
-                                as a Numpy array for all the chemical species, in their index order
-                            EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):   array([7. , -21.])
-        """
-        # The increment vector is cumulative for ALL the requested reactions
-        increment_vector = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
-
-        # Compute the forward and back "conversions" of all the applicable reactions
-        delta_dict = self.compute_all_reaction_deltas(conc_array=conc_array, delta_time=delta_time, rxn_list=rxn_list)
-        if 3 in self.verbose_list:
-            print(f"delta_list: {delta_dict}")
-
-
-        if rxn_list is None:    # Meaning ALL reactions
-            rxn_list = range(self.reaction_data.number_of_reactions())  # This will be a list of all the reaction index numbers
-
-
-        # For each applicable reaction, find the needed adjustments ("deltas")
-        # to the concentrations of the reactants and products,
-        # based on the forward and back rates of the reaction
-        for rxn_index in rxn_list:      # Consider each reaction in turn
-            if 1 in self.verbose_list:
-                print(f"      Determining the conc.'s changes as a result of rxn # {rxn_index}")
-
-            # TODO: turn into a more efficient single step, as as:
-            #(reactants, products) = cls.all_reactions.unpack_terms(rxn_index)
-            reactants = self.reaction_data.get_reactants(rxn_index)
-            products = self.reaction_data.get_products(rxn_index)
-
-            # Determine the concentration adjustments
-
-            # The reactants decrease based on the (forward reaction - reverse reaction)
-            for r in reactants:
-                stoichiometry, species_index, order = r
-                delta_conc = stoichiometry * (- delta_dict[rxn_index])  # Increment to this reactant from the reaction being considered
-                # Do a validation check to avoid negative concentrations
-                self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
-                                        rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
-
-                increment_vector[species_index] += delta_conc
-
-
-            # The reaction products increase based on the (forward reaction - reverse reaction)
-            for p in products:
-                stoichiometry, species_index, order = p
-                delta_conc = stoichiometry * delta_dict[rxn_index]  # Increment to this reaction product from the reaction being considered
-                # Do a validation check to avoid negative concentrations
-                self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
-                                        rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
-                increment_vector[species_index] += delta_conc
-
-        # END for (over rxn_list)
-
-        return increment_vector
-
-
-
-    def reaction_step_VARIABLE_RESOLUTION(self, delta_time: float, conc_array: np.array, rxn_list=None,
-                                          time_subdivision=1, fast_threshold_fraction=0.05,
-                                          substep_number=0) -> np.array:
-        """
-        This version is for when using adaptive variable time resolution.
-
+    def reaction_step_NEW(self, delta_time: float, conc_array: np.array, rxn_list=None, tag_reactions=False,
+                          time_subdivision=1, substep_number=0, fast_threshold_fraction=0.
+                          ) -> np.array:
+        """ # TODO: experimental merger of reaction_step_FIXED_RESOLUTION() and reaction_step_VARIABLE_RESOLUTION()
         Using the given concentration data of ALL the chemical species,
         do the specified SINGLE TIME STEP for ONLY the requested reactions (by default all).
 
@@ -839,18 +830,21 @@ class ReactionDynamics:
         Return the Numpy increment vector for ALL the chemical species concentrations, in their index order
         (whether involved in these reactions or not)
 
-        NOTE: the actual system concentrations are NOT changed
+        NOTES:  - the actual System Concentrations and the System Time are NOT changed
+                - if any of the concentrations go negative, an Exception is raised
 
-        :param delta_time:              The time duration of this individual reaction step - assumed to be small enough that the
-                                            concentration won't vary significantly during this span.
-                                            NOTE: this may be a "full step" or a "substep", depending on the adaptive time scale
-                                                  being used by the caller function
-        :param conc_array:              All initial concentrations at the start of the reaction step,
-                                        as a Numpy array for all the chemical species, in their index order;
-                                        this can be thought of as the "SYSTEM STATE"
-        :param rxn_list:                OPTIONAL list of reactions (specified by their indices) to include in this simulation step ;
-                                            EXAMPLE: [1, 3, 7]
-                                            If None, do all the reactions.
+        :param delta_time:      The time duration of this individual reaction step - assumed to be small enough that the
+                                    concentration won't vary significantly during this span.
+                                    NOTE: this may be a "full step" or a "substep", depending on the adaptive time scale
+                                          being used by the caller function
+        :param conc_array:      All initial concentrations at the start of the reaction step,
+                                    as a Numpy array for all the chemical species, in their index order;
+                                    this can be thought of as the "SYSTEM STATE"
+        :param rxn_list:        OPTIONAL list of reactions (specified by their indices) to include in this simulation step ;
+                                    EXAMPLE: [1, 3, 7]
+                                    If None, do all the reactions
+        :param tag_reactions:   OPTIONAL boolean indicating whether to examine a pre-determined "measure of change" in the concentrations
+                                    caused by each reaction, and store the results with the reactions
 
         [ALL THE REMAINING ARGUMENTS ARE SPECIFIC TO THE VARIABLE TIME RESOLUTION]
         :param time_subdivision:        Integer with the number of subdivisions currently being used for the "full" time step
@@ -869,7 +863,7 @@ class ReactionDynamics:
         # The increment vector is cumulative for ALL the requested reactions
         increment_vector = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
 
-        # Compute the forward and back "conversions" of all the applicable reactions
+        # Compute the forward and reverse "conversions" of all the applicable reactions
         delta_dict = self.compute_all_reaction_deltas(conc_array=conc_array, delta_time=delta_time, rxn_list=rxn_list)
         if 3 in self.verbose_list:
             print(f"      delta_list: {delta_dict}")
@@ -880,13 +874,13 @@ class ReactionDynamics:
 
 
         # For each applicable reaction, find the needed adjustments ("deltas")
-        # to the concentrations of the reactants and products,
-        # based on the forward and back rates of the reaction
+        #   to the concentrations of the reactants and products,
+        #   based on the forward and reverse rates of the reaction
         for rxn_index in rxn_list:      # Consider each reaction in turn
-            if 1 in self.verbose_list:
+            if 2 in self.verbose_list:
                 print(f"      Determining the conc.'s changes as a result of rxn # {rxn_index}")
 
-            # One element per chemical species; notice that this array is being reset for each reaction
+            # One element per chemical species; notice that this array is being RESET for EACH REACTION
             increment_vector_single_rxn = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)
 
             # TODO: turn into a more efficient single step, as as:
@@ -894,74 +888,88 @@ class ReactionDynamics:
             reactants = self.reaction_data.get_reactants(rxn_index)
             products = self.reaction_data.get_products(rxn_index)
 
-            # Determine the concentration adjustments (and label the reaction as "Slow" or "Fast" accordingly)
 
-            # If we are at the LAST of the substeps
-            if substep_number == time_subdivision-1:
-                # NOTE: NO NEED TO COMPUTE THE REACTION SPEEDS, EXCEPT IN THE FINAL SUBSTEPS
-                # (which might double as main steps, if there's no further subdivision)
-                self.set_rxn_speed(rxn_index, "S")      # TENTATIVE assignment, that will be changed
-                                                        #   if ANY chemical experiences significant concentration changes
+            # If requested to evaluate the reaction "speeds"
+            if tag_reactions:
+                self.set_rxn_speed(rxn_index, "S")  # TENTATIVE assignment, that will be changed
+                                                    #   if ANY chemical experiences significant concentration changes
                 if 1 in self.verbose_list:
-                    print(f"      (we're in the last substep: tentatively tagging rxn #{rxn_index} as 'S')")
+                    print(f"      (tentatively tagging rxn #{rxn_index} as 'S')")
 
+
+            """
+            Determine the concentration adjustments as a result of this reaction step, for the reaction being considered
+            """
 
             # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
             for r in reactants:
                 stoichiometry, species_index, order = r
                 delta_conc = stoichiometry * (- delta_dict[rxn_index])  # Increment to this reactant from the reaction being considered
-                # Do a validation check to avoid negative concentrations
+                # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
                 increment_vector_single_rxn[species_index] += delta_conc
-                increment_vector[species_index] += delta_conc
+                #increment_vector[species_index] += delta_conc
 
 
             # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
             for p in products:
                 stoichiometry, species_index, order = p
                 delta_conc = stoichiometry * delta_dict[rxn_index]  # Increment to this reaction product from the reaction being considered
-                # Do a validation check to avoid negative concentrations
+                # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
                 increment_vector_single_rxn[species_index] += delta_conc
-                increment_vector[species_index] += delta_conc
+                #increment_vector[species_index] += delta_conc
 
 
-            # If we are at the last of the substeps...
-            if substep_number == time_subdivision-1:
+            increment_vector += increment_vector_single_rxn
+
+
+            # If requested to evaluate the reaction "speeds"
+            if tag_reactions:
                 # Mark the reaction "fast", if appropriate
                 self.examine_increment_array(rxn_index=rxn_index,
-                                       delta_conc_array=increment_vector_single_rxn, baseline_conc_array=conc_array,
-                                       time_subdivision=time_subdivision,
-                                       fast_threshold_fraction=fast_threshold_fraction)
-            elif 1 in self.verbose_list:
-                print(f"        Skipping evaluation of rxn speed for reaction `{rxn_index}` because NOT at last substep "
-                      f"(substep_number = {substep_number}, time_subdivision = {time_subdivision})")
-
+                                             delta_conc_array=increment_vector_single_rxn, baseline_conc_array=conc_array,
+                                             time_subdivision=time_subdivision,
+                                             fast_threshold_fraction=fast_threshold_fraction)
 
             if self.diagnostics:
-                if self.diagnostic_data == {}:    # INITIALIZE the dictionary self.diagnostic_data, if needed
-                    for i in range(self.reaction_data.number_of_reactions()):
-                        self.diagnostic_data[i] = MovieTabular(parameter_name="TIME")       # One per reaction
-
-                data_snapshot = {}
-                # Add more entries to the above dictionary, starting with the Delta conc. for all the chemicals
-                for index, conc in enumerate(increment_vector_single_rxn):
-                    data_snapshot["Delta " + self.reaction_data.get_name(index)] = conc
-
-                data_snapshot["reaction"] = rxn_index           # TODO: now redundant because factored out into separate data frames
-                data_snapshot["substep"] = substep_number
-                data_snapshot["time_subdivision"] = time_subdivision
-                data_snapshot["delta_time"] = delta_time
-                local_system_time = self.system_time + substep_number * delta_time
-                self.diagnostic_data[rxn_index].store(par=local_system_time,
-                                                      data_snapshot=data_snapshot)
+                self.save_diagnostic_data(delta_time, increment_vector_single_rxn, rxn_index, substep_number, time_subdivision)
         # END for (over rxn_list)
 
         return increment_vector
+
+
+
+    def save_diagnostic_data(self, delta_time, increment_vector_single_rxn, rxn_index, substep_number, time_subdivision):
+        """
+
+        :param delta_time:
+        :param increment_vector_single_rxn:
+        :param rxn_index:
+        :param substep_number:
+        :param time_subdivision:
+        :return:
+        """
+        if self.diagnostic_data == {}:    # INITIALIZE the dictionary self.diagnostic_data, if needed
+            for i in range(self.reaction_data.number_of_reactions()):
+                self.diagnostic_data[i] = MovieTabular(parameter_name="TIME")       # One per reaction
+
+        data_snapshot = {}
+        # Add more entries to the above dictionary, starting with the Delta conc. for all the chemicals
+        for index, conc in enumerate(increment_vector_single_rxn):
+            data_snapshot["Delta " + self.reaction_data.get_name(index)] = conc
+
+        data_snapshot["reaction"] = rxn_index           # TODO: now redundant because factored out into separate data frames
+        data_snapshot["substep"] = substep_number
+        data_snapshot["time_subdivision"] = time_subdivision
+        data_snapshot["delta_time"] = delta_time
+        local_system_time = self.system_time + substep_number * delta_time
+        self.diagnostic_data[rxn_index].store(par=local_system_time,
+                                              data_snapshot=data_snapshot)
 
 
 
@@ -996,12 +1004,12 @@ class ReactionDynamics:
                            rxn_index: int, species_index: int, delta_time) -> None:
         """
         Examine the requested concentration change given by delta_conc
-        (typically, as computed by an ode solver),
+        (typically, as computed by an ODE solver),
         relative to the baseline (pre-reaction) value baseline_conc,
         for the given SINGLE chemical species and SINGLE reaction.
 
         If the concentration change would render the concentration negative,
-        raise an Exception
+        raise an Exception (of custom type "ExcessiveTimeStep")
 
         :param delta_conc:              The change in concentration computed by the ode solver
                                             (for the specified chemical, in the given reaction)
@@ -1010,16 +1018,16 @@ class ReactionDynamics:
         [The remaining arguments are ONLY USED for error printing]
         :param rxn_index:               The index (0-based) to identify the reaction of interest (ONLY USED for error printing)
         :param species_index:           The index (0-based) to identify the chemical species of interest (ONLY USED for error printing)
-        :param delta_time:              The time duration of the reaction step. (ONLY USED for error printing)
+        :param delta_time:              The time duration of the reaction step (ONLY USED for error printing)
 
         :return:                        None (an Exception is raised if a negative concentration is detected)
         """
         if (baseline_conc + delta_conc) < 0:
-            raise Exception(f"The chosen time interval ({delta_time}) "
-                            f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` (index {species_index}) "
-                            f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (index {rxn_index}): "
-                            f"MUST MAKE THE INTERVAL SMALLER!\n"
-                            f"[Baseline value: {baseline_conc} ; delta conc: {delta_conc}; System Time: {self.system_time}")
+            raise ExcessiveTimeStep(f"The chosen time interval ({delta_time}) "
+                                    f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` (index {species_index}) "
+                                    f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
+                                    f"MUST MAKE THE INTERVAL SMALLER!\n"
+                                    f"[System Time: {self.system_time:.5g} : Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}]")
 
 
 
@@ -1806,21 +1814,93 @@ class ReactionDynamics:
         :param return_times:    If True, all the critical times are saved and returned as a list
         :return:                Either None, or a list of time values
         """
-        assert self.diagnostics, "explain_time_advance(): diagnostics must first be turned on; " \
+        assert self.diagnostics, "ReactionDynamics.explain_time_advance(): diagnostics must first be turned on; " \
+                                 "use set_diagnostics() prior to the reaction run"
+
+        df = self.diagnostic_data_baselines.get()
+        n_entries = len(df)
+        t = list(df["TIME"])
+        grad = np.diff(t)
+        grad_shifted = np.insert(grad, 0, 0)  # Insert a zero at the top (shifting don the array)
+        #print(grad)
+        #print(grad_shifted)
+        start_interval = t[0]
+
+        critical_times = [start_interval]  # List of times to report on (start time, plus times where the steps change)
+
+        for i in range(1, n_entries-1):
+            #print(i)
+            if not np.allclose(grad[i], grad_shifted[i]):
+                #print (f"   Detection at element {i} : time={t[i]}")
+                #print (f"   From time {start_interval} to {t[i]}, in steps of {grad_shifted[i]}")
+                primary_timestep = df.loc[i, "primary_timestep"]
+                self._explain_time_advance_helper(t_start=start_interval, t_end=t[i], delta_baseline=grad_shifted[i], primary_timestep=primary_timestep)
+                start_interval = t[i]
+                critical_times.append(t[i])
+
+        #print (f"   From time {start_interval} to {t[-1]}, in steps of {grad_shifted[-1]}")
+        primary_timestep = df.loc[n_entries-1, "primary_timestep"]
+        self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1], delta_baseline=grad_shifted[-1], primary_timestep=primary_timestep)
+        critical_times.append(t[-1])
+
+        if return_times:
+            return critical_times
+
+
+    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, primary_timestep)  -> None:
+        """
+
+        :param t_start:
+        :param t_end:
+        :param delta_baseline:
+        :param primary_timestep:
+        :return:
+        """
+        if np.allclose(t_start, t_end):
+            #print(f"[Ignoring interval starting and ending at same time {t_start:.3g}]")
+            return
+
+        if np.allclose(delta_baseline, primary_timestep):
+            n_steps = round((t_end - t_start) / delta_baseline)
+            name = "step" if n_steps == 1 else "steps"  # singular vs. plural
+            print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} FULL {name} of {delta_baseline:.3g}")
+        else:
+            #print(f"primary_timestep/delta_baseline is:  {primary_timestep}/{delta_baseline} = {primary_timestep/delta_baseline}")
+            n_steps = round((t_end - t_start) / delta_baseline)
+            if n_steps == 1:    # singular
+                print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substep of {delta_baseline:.3g} (1/{round(primary_timestep/delta_baseline)} of full step)")
+            else:               # plural
+                print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substeps of {delta_baseline:.3g} (each 1/{round(primary_timestep/delta_baseline)} of full step)")
+
+
+
+
+    def explain_time_advance_OLD(self, return_times=False) -> Union[None, list]:    # TODO: OBSOLETE - to ditch
+        """
+        Use the saved-up diagnostic data, to print out details of the timescales of the reaction run
+
+        EXAMPLE of output:
+            From time 0 to 0.0168, in 42 substeps of 0.0004 (each 1/2 of full step)
+            From time 0.0168 to 0.0304, in 17 FULL steps of 0.0008
+
+        :param return_times:    If True, all the critical times are saved and returned as a list
+        :return:                Either None, or a list of time values
+        """
+        assert self.diagnostics, "ReactionDynamics.explain_time_advance_OLD(): diagnostics must first be turned on; " \
                                  "use set_diagnostics() prior to the reaction run"
 
         df = self.diagnostic_data_baselines.get()
 
-        t = list(df["TIME"])
+        t = list(df["TIME"])    # List of times from the cumulative history of the run
 
-        grad = np.diff(t)
+        grad = np.diff(t)       # Numpy array of differences between consecutive times; this will have 1 less element than the list t
 
-        #print(grad)
+        #print("grad: ", grad)
 
         start_i = 0
 
-        t_0 = df.loc[0, "TIME"]
-        critical_times = [t_0]
+        t_0 = df.loc[0, "TIME"] # Initial time
+        critical_times = [t_0]  # List of times to report on (start time, plus times where the steps change)
 
         while start_i < len(t)-2:
             delta_baseline = grad[start_i]
@@ -1853,29 +1933,6 @@ class ReactionDynamics:
 
         if return_times:
             return critical_times
-
-
-    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, primary_timestep)  -> None:
-        """
-
-        :param t_start:
-        :param t_end:
-        :param delta_baseline:
-        :param primary_timestep:
-        :return:
-        """
-        if np.allclose(t_start, t_end):
-            #print(f"[Ignoring interval starting and ending at same time {t_start:.3g}]")
-            return
-
-        if np.allclose(delta_baseline, primary_timestep):
-            n_steps = round((t_end - t_start) / delta_baseline)
-            print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} FULL steps of {delta_baseline:.3g}")
-        else:
-            #print(f"primary_timestep/delta_baseline is:  {primary_timestep}/{delta_baseline} = {primary_timestep/delta_baseline}")
-            n_steps = round((t_end - t_start) / delta_baseline)
-            print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substeps of {delta_baseline:.3g} (each 1/{round(primary_timestep/delta_baseline)} of full step)")
-
 
 
 
@@ -1930,26 +1987,25 @@ class ReactionDynamics:
         pass
 
 
-
     def curve_intersection(self, t_start, t_end, var1, var2) -> (float, float):
         """
         Find and return the intersection of the 2 curves in the columns var1 and var2,
         in the time interval [t_start, t_end]
         If there's more than one intersection, only one - in an unpredictable choice - is returned
-        TODO: interpolation for the intersection point (check it with the last plot in experiment "down_regulate_1"
+        TODO: the current implementation fails in cases where the 2 curves stay within some distance of each other,
+              and then one curve jumps on the opposite side of the other curve, at at BIGGER distance.
+              See the missed intersection at the end of experiment "reactions_single_compartment/up_regulate_1"
 
-        :param t_start:
-        :param t_end:
+        :param t_start: The start of the time interval being considered
+        :param t_end:   The end of the time interval being considered
         :param var1:    The name of the 1st chemical of interest
         :param var2:    The name of the 2nd chemical of interest
         :return:        The pair (time of intersection, common value)
         """
         df = self.get_history(t_start=t_start, t_end=t_end)
-        row_index = abs(df[var1] - df[var2]).idxmin()
-        print(f"Row: {row_index}")
-        row = df.loc[row_index]
-        t = row["SYSTEM TIME"]
-        val = row[var1]
-        #print(t)
-        #print(val)
-        return (t, val)
+        row_index = abs(df[var1] - df[var2]).idxmin()   # The index of the Pandas dataframe row
+                                                        #   with the smallest absolute value of difference in concentrations
+        print(f"Min abs distance found at row: {row_index}")
+
+        return num.curve_intersect_interpolate(df, row_index,
+                                               x="SYSTEM TIME", var1=var1, var2=var2)
