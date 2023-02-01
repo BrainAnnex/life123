@@ -1062,3 +1062,73 @@ def test_stoichiometry_checker():
     assert rxn.stoichiometry_checker(rxn_index=5, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([80, 70, 140, 150]))
     assert not rxn.stoichiometry_checker(rxn_index=5, conc_arr_before=np.array([100, 100, 100, 100.1]), conc_arr_after=np.array([80, 70, 140, 150]))
 
+
+
+def test_explain_time_advance():
+    rxn = ReactionDynamics(None)
+
+    with pytest.raises(Exception):
+        rxn.explain_time_advance(return_times=True)      # Diagnostics weren't first enabled
+
+    rxn.set_diagnostics()
+
+    with pytest.raises(Exception):
+        rxn.explain_time_advance(return_times=True)      # No diagnostic data yet present
+
+    # Start out with uniform steps
+    rxn.diagnostic_data_baselines.store(par=20.,
+                                        data_snapshot={"primary_timestep": 100.})
+    result = rxn.explain_time_advance(return_times=True)
+    assert np.allclose(result, [20.])
+
+    rxn.diagnostic_data_baselines.store(par=30.,
+                                        data_snapshot={"primary_timestep": 100.})
+    result = rxn.explain_time_advance(return_times=True)
+    assert np.allclose(result, [20., 30.])
+
+    rxn.diagnostic_data_baselines.store(par=40.,
+                                        data_snapshot={"primary_timestep": 100.})
+    result = rxn.explain_time_advance(return_times=True)
+    assert np.allclose(result, [20., 40.])
+
+    # Switching to smaller step
+    rxn.diagnostic_data_baselines.store(par=45.,
+                                        data_snapshot={"primary_timestep": 100.})
+    result = rxn.explain_time_advance(return_times=True)
+    assert np.allclose(result, [20., 40., 45.])
+
+    rxn.diagnostic_data_baselines.store(par=50.,
+                                        data_snapshot={"primary_timestep": 100.})
+    result = rxn.explain_time_advance(return_times=True)
+    assert np.allclose(result, [20., 40., 50.])
+
+    # Switching to larger step
+    rxn.diagnostic_data_baselines.store(par=70.,
+                                        data_snapshot={"primary_timestep": 100.})
+    result = rxn.explain_time_advance(return_times=True)
+    assert np.allclose(result, [20., 40., 50., 70.])
+
+    # Yet larger
+    rxn.diagnostic_data_baselines.store(par=95.,
+                                        data_snapshot={"primary_timestep": 100.})
+    result = rxn.explain_time_advance(return_times=True)
+    assert np.allclose(result, [20., 40., 50., 70., 95.])
+
+    # Smaller again
+    rxn.diagnostic_data_baselines.store(par=96.,
+                                        data_snapshot={"primary_timestep": 100.})
+    result = rxn.explain_time_advance(return_times=True)
+    assert np.allclose(result, [20., 40., 50., 70., 95., 96.])
+
+    rxn.diagnostic_data_baselines.store(par=97.,
+                                        data_snapshot={"primary_timestep": 100.})
+    result = rxn.explain_time_advance(return_times=True)
+    assert np.allclose(result, [20., 40., 50., 70., 95., 97.])
+
+    rxn.diagnostic_data_baselines.store(par=98.,
+                                        data_snapshot={"primary_timestep": 100.})
+    result = rxn.explain_time_advance(return_times=True)
+    assert np.allclose(result, [20., 40., 50., 70., 95., 98.])
+
+    #print(rxn.diagnostic_data_baselines.get())
+    #print(result)

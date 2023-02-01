@@ -25,7 +25,8 @@ class ReactionDynamics:
         """
         
         :param reaction_data:   Object of type "ReactionData" (with data about the chemicals and their reactions)
-                                TODO: maybe offer an option to let the constructor instantiate that object?
+                                    It's acceptable to pass None, and take care of it later (though probably a bad idea!)
+                                    TODO: maybe offer an option to let the constructor instantiate that object?
         """
         self.reaction_data = reaction_data
 
@@ -817,7 +818,7 @@ class ReactionDynamics:
     def reaction_step_NEW(self, delta_time: float, conc_array: np.array, rxn_list=None, tag_reactions=False,
                           time_subdivision=1, substep_number=0, fast_threshold_fraction=0.
                           ) -> np.array:
-        """ # TODO: experimental merger of reaction_step_FIXED_RESOLUTION() and reaction_step_VARIABLE_RESOLUTION()
+        """
         Using the given concentration data of ALL the chemical species,
         do the specified SINGLE TIME STEP for ONLY the requested reactions (by default all).
 
@@ -944,15 +945,16 @@ class ReactionDynamics:
 
 
 
-    def save_diagnostic_data(self, delta_time, increment_vector_single_rxn, rxn_index, substep_number, time_subdivision):
+    def save_diagnostic_data(self, delta_time, increment_vector_single_rxn, rxn_index, substep_number, time_subdivision) -> None:
         """
+        Add detailed data from current step-in-progress of the reaction simulation to the self.diagnostic_data attribute
 
         :param delta_time:
         :param increment_vector_single_rxn:
         :param rxn_index:
         :param substep_number:
         :param time_subdivision:
-        :return:
+        :return:                            None
         """
         if self.diagnostic_data == {}:    # INITIALIZE the dictionary self.diagnostic_data, if needed
             for i in range(self.reaction_data.number_of_reactions()):
@@ -1807,6 +1809,8 @@ class ReactionDynamics:
         """
         Use the saved-up diagnostic data, to print out details of the timescales of the reaction run
 
+        If diagnostics weren't enable ahead of calling this function, an Exception is raised
+
         EXAMPLE of output:
             From time 0 to 0.0168, in 42 substeps of 0.0004 (each 1/2 of full step)
             From time 0.0168 to 0.0304, in 17 FULL steps of 0.0008
@@ -1814,16 +1818,32 @@ class ReactionDynamics:
         :param return_times:    If True, all the critical times are saved and returned as a list
         :return:                Either None, or a list of time values
         """
-        assert self.diagnostics, "ReactionDynamics.explain_time_advance(): diagnostics must first be turned on; " \
+        assert self.diagnostics, "ReactionDynamics.explain_time_advance(): diagnostics must first be enabled; " \
                                  "use set_diagnostics() prior to the reaction run"
 
         df = self.diagnostic_data_baselines.get()
+        assert df is not None, \
+                    "ReactionDynamics.explain_time_advance(): no diagnostic data found.  " \
+                    "Did you call set_diagnostics() prior to the reaction run?"
+
         n_entries = len(df)
-        t = list(df["TIME"])
+        t = list(df["TIME"])    # List of times (simulation step points)
+
+        if n_entries == 1:
+            print(f"ReactionDynamics.explain_time_advance(): no time advance found. "
+                  f"Diagnostics only contain an initial System Time of {t[0]:.3g} ;  "
+                  f"did you run the reaction simulation?")
+            if return_times:
+                return t
+            else:
+                return
+
+
+        # If we get thus far, we have at least 2 entries in the list "t" of times
         grad = np.diff(t)
-        grad_shifted = np.insert(grad, 0, 0)  # Insert a zero at the top (shifting don the array)
-        #print(grad)
-        #print(grad_shifted)
+        grad_shifted = np.insert(grad, 0, 0)  # Insert a zero at the top (shifting down the array)
+        print(grad)
+        print(grad_shifted)
         start_interval = t[0]
 
         critical_times = [start_interval]  # List of times to report on (start time, plus times where the steps change)
@@ -1871,7 +1891,6 @@ class ReactionDynamics:
                 print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substep of {delta_baseline:.3g} (1/{round(primary_timestep/delta_baseline)} of full step)")
             else:               # plural
                 print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substeps of {delta_baseline:.3g} (each 1/{round(primary_timestep/delta_baseline)} of full step)")
-
 
 
 
