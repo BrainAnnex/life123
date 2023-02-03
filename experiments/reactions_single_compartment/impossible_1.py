@@ -39,6 +39,7 @@ from modules.numerical.numerical import Numerical as num
 
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 from modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
@@ -126,7 +127,7 @@ dynamics.explain_time_advance()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(chemicals=["A", "B", "C"])
+dynamics.plot_curves()
 
 # %% [markdown]
 # ### It might look like an equilibrium has been reached.  But NOT!  Verify the LACK of final equilibrium state:
@@ -197,7 +198,16 @@ dynamics.explain_time_advance()
 #dynamics.get_history()
 
 # %%
-dynamics.plot_curves(chemicals=["A", "B", "C"])
+fig0 = dynamics.plot_curves(suppress=True)   # Prepare, but don't show, the main plot
+
+# %%
+# Add a second plot, with a vertical gray line at t=2
+fig1 = px.line(x=[2,2], y=[0,100], color_discrete_sequence = ['gray'])
+
+# Combine the plots, and display them
+all_fig = go.Figure(data=fig0.data + fig1.data, layout = fig0.layout)    # Note that the + is concatenating lists
+all_fig.update_layout(title="On the left of vertical gray line: FICTIONAL world; on the right: REAL world!")
+all_fig.show()
 
 # %% [markdown]
 # ### Notice how [A] drops at time t=2, when we re-enact the Laws of Physics, because A no longer receives the extra boost from the previous mostly-forward (and thus physically-impossible given the unfavorable energy levels!) reaction `C <-> A`.   

@@ -1985,27 +1985,42 @@ class ReactionDynamics:
         pass
 
 
-    def plot_curves(self, chemicals=None, colors=None, title=None) -> None:
+    def plot_curves(self, chemicals=None, colors=None, title=None, suppress=False):
         """
-        Draw the plots of the concentration values over time, based on the saved history data
+        Using plotly, draw the plots of concentration values over time, based on the saved history data.
         TODO: offer an option to just display a part of the timeline (e.g. a t_start and t_end)
+        TODO: allow alternate labels for x-axis
 
-        :param chemicals:   (OPTIONAL) List of the names of the chemicals to plot
-        :param colors:      (OPTIONAL) List of the colors names to use
-        :param title:       (OPTIONAL) Title for the plot
-        :return:            None
+        EXAMPLE - to combine plots:
+            import plotly.graph_objects as go
+            fig0 = plot_curves(chemicals=["A", "B", "C"], suppress=True)
+            fig1 = px.line(x=[2,2], y=[0,100], color_discrete_sequence = ['gray'])
+            all_fig = go.Figure(data=fig0.data + fig1.data, layout = fig0.layout)    # Note that the + is concatenating lists
+            all_fig.update_layout(title="My title")
+            all_fig.show()
+
+        :param chemicals:   (OPTIONAL) List of the names of the chemicals to plot;
+                                if None, then display all
+        :param colors:      (OPTIONAL) List of the colors names to use;
+                                if None, then use the hardwired defaults
+        :param title:       (OPTIONAL) Title for the plot;
+                                if None, use default titles such as
+                                "Changes in concentrations for 5 reactions"
+        :param suppress:    If True, nothing gets shown - and a plotly "Figure" object gets returned instead
+        
+        :return:            None or a plotly "Figure" object, depending on the "suppress" flag
         """
-        default_colors = ['blue', 'green', 'brown', 'red', 'gray', 'orange', 'purple', 'cyan']
+        default_colors = ['blue', 'green', 'brown', 'red', 'gray', 'orange', 'purple', 'cyan', 'darkorange', 'navy', 'darkred']
 
         df = self.history.get()
 
         if chemicals is None:
-            chemicals = self.reaction_data.get_all_names()
+            chemicals = self.reaction_data.get_all_names()      # List of names.  EXAMPLE: ["A", "B", "H"]
 
         number_of_curves = len(chemicals)
 
         if colors is None:
-            colors = default_colors[:number_of_curves]
+            colors = default_colors[:number_of_curves]      # Pick the first default colors; TODO: rotate if needing more
 
         if title is None:
             title = f"Changes in concentrations for {self.reaction_data.number_of_reactions()} reactions"
@@ -2014,7 +2029,12 @@ class ReactionDynamics:
                       title=title,
                       color_discrete_sequence = colors,
                       labels={"value":"concentration", "variable":"Chemical"})
-        fig.show()
+
+        if not suppress:
+            fig.show()
+        else:
+            return fig
+
 
 
 
