@@ -565,7 +565,7 @@ class ReactionData:
 
     def add_reaction(self, reactants: Union[int, str, tuple, list], products: Union[int, str, tuple, list],
                            forward_rate=None, reverse_rate=None,
-                           Delta_H=None, Delta_S=None) -> None:
+                           Delta_H=None, Delta_S=None, Delta_G=None) -> None:
         """
         Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data
 
@@ -587,7 +587,8 @@ class ReactionData:
         :param forward_rate:    [OPTIONAL] Forward reaction rate constant
         :param reverse_rate:    [OPTIONAL] Reverse reaction rate constant
         :param Delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
-        :param Delta_S          [OPTIONAL] Change in Entropy (from reactants to products)
+        :param Delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
+        :param Delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
         :return:                None
         """
         reactant_list = [self._parse_reaction_term(r, "reactant") for r in reactants]   # A list of triples of integers
@@ -645,6 +646,18 @@ class ReactionData:
                     if (rxn["kR"] is None) and (rxn["kF"] is not None):
                         rxn["kR"] = rxn["kF"] / equil_const
 
+        # TODO: add more combinations of arguments supplied
+        elif (Delta_G is not None) and (self.temp is not None):
+            # The kinetic data was incomplete; fill in the missing parts from the thermodynamic data
+            rxn["Delta_G"] = Delta_G
+            equil_const = math.exp(- Delta_G / (self.R * self.temp))    # Compute the equilibrium constant (from the thermodynamic data)
+            rxn["K"] = equil_const
+            # If only one of the Forward or Reverse rates was provided, compute the other one
+            if (rxn["kF"] is None) and (rxn["kR"] is not None):
+                rxn["kF"] = equil_const * rxn["kR"]
+            if (rxn["kR"] is None) and (rxn["kF"] is not None):
+                rxn["kR"] = rxn["kF"] / equil_const
+
 
         self.reaction_list.append(rxn)
 
@@ -653,7 +666,7 @@ class ReactionData:
     def clear_reactions_data(self) -> None:
         """
         Get rid of all reactions; start again with "an empty slate" (but still with reference
-        to the same data about the chemicals)
+        to the same data object about the chemicals)
         :return:    None
         """
         self.reaction_list = []

@@ -70,7 +70,7 @@ class ReactionDynamics:
         pass
 
 
-    def set_conc(self, conc: Union[list, tuple, dict], snapshot=False) -> None:
+    def set_conc(self, conc: Union[list, tuple, dict], snapshot=False) -> None:     # TODO: maybe rename set_all_conc()
         """
         Set the concentrations of ALL the chemicals at once
 
@@ -81,7 +81,7 @@ class ReactionDynamics:
                                 TODO: also allow a Numpy array; make sure to do a copy() to it!
                                 TODO: pytest for the dict option
         :param snapshot:    (OPTIONAL) boolean: if True, add to the history
-                                a snapshot of this state being set.  Default: False
+                                a snapshot of this state being set.  Default: False    TODO: maybe switch default to True
         :return:            None
         """
         # TODO: more validations, incl. of individual values being wrong data type
@@ -128,7 +128,7 @@ class ReactionDynamics:
         :param species_name:    (OPTIONAL) A name for the chemical of interest.
                                     If both species_index and species_name are provided, species_name is used
         :param snapshot:        (OPTIONAL) boolean: if True, add to the history
-                                    a snapshot of this state being set.  Default: False
+                                    a snapshot of this state being set.  Default: False     TODO: maybe switch default to True
         :return:                None
         """
         # Validate the arguments
@@ -271,12 +271,16 @@ class ReactionDynamics:
     def clear_reactions(self) -> None:
         """
         Get rid of all reactions; start again with "an empty slate" (but still with reference
-        to the same data about the chemicals)
+        to the same data object about the chemicals)
+
+        # TODO: maybe offer an option to clear just one reaction, or a list of them
+        # TOOO: provide support for "inactivating" reactions
 
         :return:    None
         """
         self.reaction_data.clear_reactions_data()
         self.reaction_speeds = {}
+
 
 
 
@@ -353,7 +357,8 @@ class ReactionDynamics:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
         using add_snapshot()
-        Optionally, provide a start and end times
+        Optionally, restrict the result with a start and/or end times,
+        or by limiting to a specified numbers of rows at the end
 
         :param t_start: (OPTIONAL) Start time in the "SYSTEM TIME" column
         :param t_end:   (OPTIONAL) End time
@@ -433,7 +438,7 @@ class ReactionDynamics:
 
 
     def single_compartment_react(self, reaction_duration=None, stop_time=None, time_step=None, n_steps=None,
-                                 snapshots=None, dynamic_steps=1, fast_threshold=None, abs_fast_threshold=None) -> None:
+                                 snapshots=None, dynamic_steps=1, fast_threshold=None, abs_fast_threshold=None, silent=False) -> None:
         """
         Perform ALL the reactions in the single compartment -
         based on the INITIAL concentrations,
@@ -562,11 +567,17 @@ class ReactionDynamics:
 
         # Report as to whether extra steps were automatically added, as well as the total # taken
         n_steps_taken = i
-        if extra_steps > 0:
-            print(f"The computation took {extra_steps} extra step(s) - "
-                  f"automatically added to prevent negative concentrations")
 
-        print(f"{n_steps_taken} total step(s) taken")
+        if extra_steps > 0:
+            if dynamic_steps > 1:
+                print(f"The computation took {extra_steps} extra step(s) - "
+                      f"automatically added to prevent negative concentrations and/or as a result of the requested dynamic steps")
+            else:
+                print(f"The computation took {extra_steps} extra step(s) - "
+                      f"automatically added to prevent negative concentrations")
+
+        if not silent:
+            print(f"{n_steps_taken} total step(s) taken")
 
 
         if snapshots and "final_caption" in snapshots:
@@ -1554,13 +1565,23 @@ class ReactionDynamics:
         self.diagnostics = False
 
 
-    def get_diagnostic_data(self, rxn_index: int):
+    def get_diagnostic_data(self, rxn_index: int, tail=None) -> pd.DataFrame:
         """
+        Return a Pandas data frame with the diagnostic data of the requested reaction.
+        Also, print out a brief description of the reaction.
+        Optionally, restrict the result with a start and/or end times,
+        or by limiting to a specified numbers of rows at the end
 
-        :param rxn_index:
-        :return:
+        :param rxn_index:   An integer that indexes the reaction of interest (numbering starts at 0)
+        :param tail:        (OPTIONAL) Number of records to consider, from the end of the diagnostic dataframe
+        :return:            A Pandas data frame with (all or some of) the diagnostic data of the above reaction
         """
-        return self.diagnostic_data[rxn_index].get()
+        # First, validate the reaction index
+        self.reaction_data.assert_valid_rxn_index(rxn_index)
+
+        print("Reaction: ", self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True))
+
+        return self.diagnostic_data[rxn_index].get(tail=tail)
 
 
 
@@ -1842,8 +1863,8 @@ class ReactionDynamics:
         # If we get thus far, we have at least 2 entries in the list "t" of times
         grad = np.diff(t)
         grad_shifted = np.insert(grad, 0, 0)  # Insert a zero at the top (shifting down the array)
-        print(grad)
-        print(grad_shifted)
+        #print(grad)
+        #print(grad_shifted)
         start_interval = t[0]
 
         critical_times = [start_interval]  # List of times to report on (start time, plus times where the steps change)
