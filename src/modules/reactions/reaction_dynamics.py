@@ -9,30 +9,32 @@ from src.modules.numerical.numerical import Numerical as num
 
 class ExcessiveTimeStep(Exception):
     """
-    Used to raise Exceptions arising from excessively large time steps (that lead to negative concentration values)
+    Used to raise Exceptions arising from excessively large time steps
+    (that lead to negative concentration values)
     """
     pass
 
 
+#############################################################################################
 
 class ReactionDynamics:
     """
     Used to simulate the dynamics of reactions (in a single compartment.)
-    In the context of Life123, this may be thought of as a zero-dimensional system.
+    In the context of Life123, this may be thought of as a "zero-dimensional system"
     """
 
     def __init__(self, reaction_data):
         """
-        
         :param reaction_data:   Object of type "ReactionData" (with data about the chemicals and their reactions)
-                                    It's acceptable to pass None, and take care of it later (though probably a bad idea!)
+                                    It's acceptable to pass None,
+                                    and take care of it later (though probably a bad idea!)
                                     TODO: maybe offer an option to let the constructor instantiate that object?
         """
         self.reaction_data = reaction_data
 
         self.system = None  # Concentration data in the single compartment we're simulating, for all the chemicals
-                            # A Numpy array of the initial concentrations of all the chemical species, in their index order
-                            # 1-dimensional NumPy array of floats, of size: n_species
+                            # A Numpy array of the concentrations of all the chemical species, in their index order
+                            # 1-dimensional NumPy array of floats, whose size is the number of chemical species.
                             # Each entry is the concentration of the species with that index (in the "ReactionData" object)
                             # Note that this is the counterpart - with 1 less dimension - of the array by the same name
                             #       in the class BioSim1D
@@ -72,12 +74,14 @@ class ReactionDynamics:
 
     def set_conc(self, conc: Union[list, tuple, dict], snapshot=False) -> None:     # TODO: maybe rename set_all_conc()
         """
-        Set the concentrations of ALL the chemicals at once
+        Set the concentrations of ALL the chemicals at once   TODO: maybe a dict indicates a selection of chems, while a list, etc means "ALL"
 
         :param conc:        A list or tuple of concentration values for ALL the chemicals, in their index order;
                                 alternatively, a dict indexed by the chemical names, again for ALL the chemicals
-                                EXAMPLE of the latter: {"A": 12.4, "B": 0.23, "C": 2.6}  (assuming that "A", "B", "C" are all the chemicals)
+                                EXAMPLE of the latter: {"A": 12.4, "B": 0.23, "C": 2.6}  (assuming that "A", "B", "C" are ALL the chemicals)
                                 (Any previous values will get over-written)
+                                TODO: [maybe the dict version should be the responsibility of set_chem_conc() instead;] OR
+                                      allow the dict to be a subset of all chemicals
                                 TODO: also allow a Numpy array; make sure to do a copy() to it!
                                 TODO: pytest for the dict option
         :param snapshot:    (OPTIONAL) boolean: if True, add to the history
@@ -118,6 +122,8 @@ class ReactionDynamics:
 
 
     def set_chem_conc(self, conc, species_index=None, species_name=None, snapshot=False) -> None:
+        # TODO Maybe rename set_single_conc()
+        #      [OR call it set_conc(), and also handle dict's]
         """
         Set the concentrations of 1 chemical
         Note: if both species_index and species_name are provided, species_name is used     TODO: pytest this part
@@ -144,6 +150,7 @@ class ReactionDynamics:
                             "of the arguments `species_index` or `species_name` must be provided")
 
 
+        # TODO: if setting concentrations of a newly-added chemical, needs to first expand self.system
         self.system[species_index] = conc
 
         self.reaction_speeds = {}   # Reset all the reaction speeds (now they'll all be assumed to be "Fast")
@@ -181,7 +188,7 @@ class ReactionDynamics:
         if system_data is None:
             system_data = self.system
         else:
-            assert system_data.size == self.reaction_data.number_of_chemicals(),\
+            assert system_data.size == self.reaction_data.number_of_chemicals(), \
                 f"ReactionDynamics.get_conc_dict(): the argument `system_data` must be a 1-D Numpy array with as many entries " \
                 f"as the declared number of chemicals ({self.reaction_data.number_of_chemicals()})"
 
@@ -191,7 +198,7 @@ class ReactionDynamics:
                 return {}
             else:
                 return {self.reaction_data.get_name(index): system_data[index]
-                               for index, conc in enumerate(system_data)}
+                        for index, conc in enumerate(system_data)}
         else:
             assert type(species) == list or  type(species) == tuple, \
                 f"ReactionDynamics.get_conc_dict(): the argument `species` must be a list or tuple" \
@@ -533,8 +540,8 @@ class ReactionDynamics:
         extra_steps = 0
         while self.system_time < stop_time:
             delta_concentrations, step_actually_taken = self.reaction_step_orchestrator(delta_time_full=time_step, conc_array=self.system,
-                                                                   snapshots=snapshots,
-                                                                   dynamic_steps=dynamic_steps, fast_threshold=fast_threshold)
+                                                                                        snapshots=snapshots,
+                                                                                        dynamic_steps=dynamic_steps, fast_threshold=fast_threshold)
             self.system += delta_concentrations
             self.system_time += step_actually_taken
             if step_actually_taken < time_step:
@@ -721,7 +728,7 @@ class ReactionDynamics:
             delta_concentrations = self.reaction_step_NEW(delta_time=delta_time_full, conc_array=conc_array, rxn_list=None,
                                                           tag_reactions=True,
                                                           time_subdivision=1, substep_number=0, fast_threshold_fraction=fast_threshold_fraction,
-                                                        )
+                                                          )
             return delta_concentrations
 
 
@@ -779,9 +786,9 @@ class ReactionDynamics:
                           f"(substep_number = {substep}, time_subdivision = {dynamic_steps})")
 
             incr_vector = self.reaction_step_NEW(delta_time=reduced_time_step, time_subdivision=dynamic_steps,
-                                                                 fast_threshold_fraction=fast_threshold_fraction,
-                                                                 conc_array=local_conc_array, rxn_list=fast_rxns,
-                                                                 substep_number=substep, tag_reactions=tag_reactions)
+                                                 fast_threshold_fraction=fast_threshold_fraction,
+                                                 conc_array=local_conc_array, rxn_list=fast_rxns,
+                                                 substep_number=substep, tag_reactions=tag_reactions)
             delta_concentrations_fast += incr_vector
 
             # TODO: the next 2 lines don't need to be run, if at the last step
@@ -1201,7 +1208,7 @@ class ReactionDynamics:
             stoichiometry, species_index, order = r     # Unpack the data of the reactant r
             conc = conc_array[species_index]
             #assert conc is not None, \
-                #f"ReactionDynamics.compute_rate_delta(): lacking the value for the concentration of the chemical species `{self.reaction_data.get_name(species_index)}`"
+            #f"ReactionDynamics.compute_rate_delta(): lacking the value for the concentration of the chemical species `{self.reaction_data.get_name(species_index)}`"
             forward_rate *= conc ** order      # Raise to power
 
         reverse_rate = rev_rate_constant
@@ -1209,7 +1216,7 @@ class ReactionDynamics:
             stoichiometry, species_index, order = p     # Unpack the data of the reaction product p
             conc = conc_array[species_index]
             #assert conc is not None, \
-                #f"ReactionDynamics.compute_rate_delta(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
+            #f"ReactionDynamics.compute_rate_delta(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
             reverse_rate *= conc ** order     # Raise to power
 
         return delta_time * (forward_rate - reverse_rate)
@@ -1220,6 +1227,7 @@ class ReactionDynamics:
         """
         Ascertain whether the given concentrations are in equilibrium for the specified reactions
         (by default, for all reactions)
+        TODO: optionally display last lines in diagnostic data
 
         :param rxn_index:   The index (0-based integer) to identify the reaction of interest;
                                 if None, then check all the reactions
@@ -1565,6 +1573,7 @@ class ReactionDynamics:
         self.diagnostics = False
 
 
+
     def get_diagnostic_data(self, rxn_index: int, tail=None) -> pd.DataFrame:
         """
         Return a Pandas data frame with the diagnostic data of the requested reaction.
@@ -1611,8 +1620,8 @@ class ReactionDynamics:
             return
 
         assert self.reaction_data.number_of_reactions() == 1, \
-                "diagnose_variable_time_steps() currently ONLY works when exactly 1 reaction is present. " \
-                "For more than 1 reaction, use explain_reactions() instead"
+            "diagnose_variable_time_steps() currently ONLY works when exactly 1 reaction is present. " \
+            "For more than 1 reaction, use explain_reactions() instead"
 
         #diagnostic_df = self.diagnostic_data.get()  # TODO: self.diagnostic_data[rxn_index].get()
 
@@ -1637,7 +1646,7 @@ class ReactionDynamics:
             for i in range(number_diagnostic_points):
                 print(f"\n---- {i} (Reaction step OR substep) ----")
                 debug_time = diagnostic_df.iloc[i]['TIME']  # Note: each entry in the diagnostic_df data frame has the conc. increments
-                                                            #       for full step or substep that starts at this time
+                #       for full step or substep that starts at this time
                 print(f"Start time: {debug_time:.5g} (Start of Full time interval or sub-interval)")
 
                 time_subdivision = diagnostic_df.iloc[i]['time_subdivision']
@@ -1692,8 +1701,8 @@ class ReactionDynamics:
         row_baseline = 0
         row_list = [0, 0]       # TODO: generalize
         active_list = [0, 1]    # ALL the reactions.  TODO: generalize
-    
-        self._explain_reactions_helper(active_list=active_list, 
+
+        self._explain_reactions_helper(active_list=active_list,
                                        row_baseline=row_baseline, row_list=row_list)
 
 
@@ -1741,8 +1750,8 @@ class ReactionDynamics:
                     print("CHANGING active_list (rxns to advance in substeps) to: ", active_list)
                 else:
                     print("Will be advancing all reactions in lockstep")
-    
-    
+
+
             status = self._explain_reactions_helper(active_list=active_list, row_baseline=row_baseline, row_list=row_list,
                                                     time_subdivision=max(time_sub0, time_sub1)) # TODO: generalize
 
@@ -1755,7 +1764,7 @@ class ReactionDynamics:
                 return False    # Error termination
 
         # END while
-    
+
         return True             # Successful termination
 
 
@@ -1844,8 +1853,8 @@ class ReactionDynamics:
 
         df = self.diagnostic_data_baselines.get()
         assert df is not None, \
-                    "ReactionDynamics.explain_time_advance(): no diagnostic data found.  " \
-                    "Did you call set_diagnostics() prior to the reaction run?"
+            "ReactionDynamics.explain_time_advance(): no diagnostic data found.  " \
+            "Did you call set_diagnostics() prior to the reaction run?"
 
         n_entries = len(df)
         t = list(df["TIME"])    # List of times (simulation step points)
@@ -2007,7 +2016,7 @@ class ReactionDynamics:
                                 if None, use default titles such as
                                 "Changes in concentrations for 5 reactions"
         :param suppress:    If True, nothing gets shown - and a plotly "Figure" object gets returned instead
-        
+
         :return:            None or a plotly "Figure" object, depending on the "suppress" flag
         """
         default_colors = ['blue', 'green', 'brown', 'red', 'gray', 'orange', 'purple', 'cyan', 'darkorange', 'navy', 'darkred']
@@ -2023,7 +2032,12 @@ class ReactionDynamics:
             colors = default_colors[:number_of_curves]      # Pick the first default colors; TODO: rotate if needing more
 
         if title is None:
-            title = f"Changes in concentrations for {self.reaction_data.number_of_reactions()} reactions"
+            if self.reaction_data.number_of_reactions() > 1:
+                title = f"Changes in concentrations for {self.reaction_data.number_of_reactions()} reactions"
+            else:
+                rxn_text = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)   # The only reaction
+                title = f"Reaction {rxn_text} .  Changes in concentrations with time"
+
 
         fig = px.line(data_frame=df, x="SYSTEM TIME", y=chemicals,
                       title=title,

@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import Union
 import math
 import numpy as np
 
@@ -134,7 +134,7 @@ class ReactionData:
         """
         assert type(diff) == float or type(diff) == int, \
             f"ReactionData.assert_valid_diffusion(): The value for the diffusion rate ({diff}) is not a number (float or int)"
-        
+
         assert diff >= 0., \
             f"ReactionData.assert_valid_diffusion(): the diffusion rate ({diff}) cannot be negative"
 
@@ -514,16 +514,16 @@ class ReactionData:
         assert type(name) == str, \
             f"ReactionData.add_chemical(): a chemical's name must be provided, as a string value.  " \
             f"What was passed was of type {type(name)}"
-        
-        if diffusion_rate:  
+
+        if diffusion_rate:
             self.assert_valid_diffusion(diffusion_rate)
 
         # Prepare the data structure for the new chemical
         new_data = {"name": name}
-        
+
         if diffusion_rate:
             new_data["diff"] = diffusion_rate
-            
+
         if note:
             new_data["note"] = note
 
@@ -531,7 +531,8 @@ class ReactionData:
         self.chemical_data.append(new_data)
 
 
-        self.name_dict[name] = len(self.chemical_data) - 1     # The next available positional index (for the mapping of names to indices)
+        self.name_dict[name] = len(self.chemical_data) - 1  # The next available positional index
+        # (for the mapping of names to indices)
 
         self.n_species += 1
 
@@ -564,14 +565,16 @@ class ReactionData:
 
 
     def add_reaction(self, reactants: Union[int, str, tuple, list], products: Union[int, str, tuple, list],
-                           forward_rate=None, reverse_rate=None,
-                           Delta_H=None, Delta_S=None, Delta_G=None) -> None:
+                     forward_rate=None, reverse_rate=None,
+                     Delta_H=None, Delta_S=None, Delta_G=None) -> None:
         """
-        Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data
+        Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
+        The involved chemicals must be already registered - use add_chemical() if needed.
 
-        NOTE: in the reactants and products, if the stoichiometry and/or reaction order aren't specified, they're assumed to be 1
+        NOTE: in the reactants and products, if the stoichiometry and/or reaction order aren't specified,
+              they're assumed to be 1
 
-        EXAMPLES of formats for reactans and products (*assuming* that the chemical species with index 5 is called "F"):
+        EXAMPLES of formats for reactants and products (*assuming* that the chemical species with index 5 is called "F"):
                     5       gets turned into:   (1, 5, 1)
                     "F"                         (1, 5, 1)
                     (3, 5)                      (3, 5, 1)
