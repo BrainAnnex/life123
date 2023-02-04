@@ -1,6 +1,6 @@
 # Test 1 of using the heatmap module "vue-heatmap-10" in an HTML log
 
-from modules.html_log.html_log import HtmlLog as log
+from src.modules.html_log.html_log import HtmlLog as log
 
 # Note: paths are from the location of THE LOG FILE
 log.config(filename="vue-heatmap-10_1.htm", mode='overwrite',

@@ -45,12 +45,12 @@ set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.reactions.reaction_data import ReactionData as chem
-from modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
 import plotly.express as px
-from modules.visualization.graphic_log import GraphicLog
+from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
 # Initialize the HTML logging (for the graphics)

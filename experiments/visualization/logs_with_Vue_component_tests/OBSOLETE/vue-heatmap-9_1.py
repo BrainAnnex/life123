@@ -1,6 +1,6 @@
 # Test of the heatmap module "vue-heatmap-9"
 
-from modules.html_log.html_log import HtmlLog as log
+from src.modules.html_log.html_log import HtmlLog as log
 
 # Note: paths are from the location of THE LOG FILE
 log.config(filename="vue-heatmap-9_1.htm", mode='overwrite',

@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from modules.numerical.numerical import Numerical as num
+from src.modules.numerical.numerical import Numerical as num
 import pandas as pd
 
 

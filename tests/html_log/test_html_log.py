@@ -1,5 +1,5 @@
 import pytest
-from modules.html_log.html_log import HtmlLog as log
+from src.modules.html_log.html_log import HtmlLog as log
 import os
 
 

@@ -1,5 +1,5 @@
 import pytest
-from modules.heuristics.heuristics import Heuristics as heur
+from src.modules.heuristics.heuristics import Heuristics as heur
 
 
 

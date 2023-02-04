@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
-from modules.reactions.reaction_data import ReactionData
-from modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_data import ReactionData
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 
 

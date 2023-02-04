@@ -34,10 +34,10 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
                                          # to reach the project's home, from the folder containing this notebook
 
 # %%
-from life_1D.bio_sim_1d import BioSim1D
+from src.life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
-from modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_data import ReactionData as chem
 
 # %%
 # Initialize the system with a uniform concentration (of the only species)

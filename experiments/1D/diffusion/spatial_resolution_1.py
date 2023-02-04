@@ -28,14 +28,14 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from life_1D.bio_sim_1d import BioSim1D
-from modules.reactions.reaction_data import ReactionData as chem
-from modules.numerical.numerical import Numerical as num
+from src.life_1D.bio_sim_1d import BioSim1D
+from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.numerical.numerical import Numerical as num
 
 import plotly.express as px
 import plotly.graph_objects as go
-from modules.html_log.html_log import HtmlLog as log
-from modules.visualization.graphic_log import GraphicLog
+from src.modules.html_log.html_log import HtmlLog as log
+from src.modules.visualization.graphic_log import GraphicLog
 
 # %%
 # Initialize the HTML logging
