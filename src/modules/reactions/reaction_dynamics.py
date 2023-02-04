@@ -44,8 +44,12 @@ class ReactionDynamics:
         self.history = MovieTabular()   # To store user-selected snapshots of (some of) the chemical concentrations,
                                         #   whenever requested by the user.
 
-        self.reaction_speeds = {}       # A dictionary.  EXAMPLE : { 1: "F", 4: "S", 5: "F" , 8: "S" }
-                                        #   Anything missing is regarded to be "F" (Fast)
+        self.reaction_speeds = {}       # A dictionary, where the keys are reaction indices,
+                                        #   and the values are either "S" (Slow) or "F" (Fast)
+                                        #   EXAMPLE : { 1: "F", 4: "S", 5: "F" , 8: "S" }
+                                        #   Any reaction with a missing entry is regarded as "F" (Fast)
+
+        self.last_abs_fast_threshold = None # The last-used value of the threshold for fast reactions
 
         self.verbose_list = []          # A list of integers with the codes of the desired verbose checkpoints
                                         #   EXAMPLE: [1, 3] to invoke sections of code marked as 1 or 3
@@ -114,7 +118,7 @@ class ReactionDynamics:
 
         self.system = np.array(conc)
 
-        self.reaction_speeds = {}   # Reset all the reaction speeds (now they'll all be assumed to be "Fast")
+        self.set_rxn_speed_all_fast()   # Reset all the reaction speeds to "Fast"
 
         if snapshot:
             self.add_snapshot(caption="Initial state")
@@ -153,9 +157,9 @@ class ReactionDynamics:
         # TODO: if setting concentrations of a newly-added chemical, needs to first expand self.system
         self.system[species_index] = conc
 
-        self.reaction_speeds = {}   # Reset all the reaction speeds (now they'll all be assumed to be "Fast")
-                                    # TODO: this is overkill; ought to only reset the affected reactions -
-                                    #       as returned by get_reactions_participating_in()
+        self.set_rxn_speed_all_fast()   # Reset all the reaction speeds to "Fast"
+                                        # TODO: this is overkill; ought to only reset the affected reactions -
+                                        #       as returned by get_reactions_participating_in()
 
         if snapshot:
             self.add_snapshot(caption=f"Set concentration of `{self.reaction_data.get_name(species_index)}`")
@@ -263,7 +267,7 @@ class ReactionDynamics:
 
     def set_rxn_speed(self, rxn_index: int, speed: str) -> None:
         """
-        Set a code value that classifies the reaction speed for the given reaction
+        Set a code value that classifies the reaction speed to tag the given reaction to
 
         :param rxn_index:   The index (0-based) to identify the reaction of interest
         :param speed:       A 1-letter string with the code "F" (for Fast) or "S" (Slow)
@@ -274,6 +278,16 @@ class ReactionDynamics:
         self.reaction_speeds[rxn_index] = speed
 
 
+    def set_rxn_speed_all_fast(self) -> None:
+        """
+        Reset all the reaction speeds to "Fast"
+
+        :return:    None
+        """
+        self.reaction_speeds = {}   # Now they'll all be assumed to be "Fast"
+                                    #   (which is the default for missing values)
+
+
 
     def clear_reactions(self) -> None:
         """
@@ -281,12 +295,12 @@ class ReactionDynamics:
         to the same data object about the chemicals)
 
         # TODO: maybe offer an option to clear just one reaction, or a list of them
-        # TOOO: provide support for "inactivating" reactions
+        # TODO: provide support for "inactivating" reactions
 
         :return:    None
         """
         self.reaction_data.clear_reactions_data()
-        self.reaction_speeds = {}
+        self.set_rxn_speed_all_fast()   # Reset all the reaction speeds to "Fast"
 
 
 
@@ -445,7 +459,8 @@ class ReactionDynamics:
 
 
     def single_compartment_react(self, reaction_duration=None, stop_time=None, time_step=None, n_steps=None,
-                                 snapshots=None, dynamic_steps=1, fast_threshold=None, abs_fast_threshold=None, silent=False) -> None:
+                                 snapshots=None, silent=False,
+                                 dynamic_steps=1, rel_fast_threshold=None, fast_threshold=None, abs_fast_threshold=None) -> None:
         """
         Perform ALL the reactions in the single compartment -
         based on the INITIAL concentrations,
@@ -476,10 +491,17 @@ class ReactionDynamics:
                                     on a reaction-by-reaction basis,
                                     if that reaction has fast dynamics,
                                     or multiplied by that factor, if that reaction has slow dynamics
-        :param fast_threshold:  The minimum relative size of the concentration [baseline over its] change, AS A PERCENTAGE,
+
+        :param rel_fast_threshold: Synonym of "fast_threshold" - and meant to replace it
+        :param fast_threshold:  Only used when dynamic_steps > 1
+                                    The minimum relative size of the concentration [baseline over its] change, AS A PERCENTAGE,
                                     for a reaction to be regarded as "Slow".
                                     IMPORTANT: this refers to the FULL step size
-        :param abs_fast_threshold: Similar to fast_threshold, but in terms of time units - NOT step sizes
+                                    TODO: maybe rename rel_fast_threshold
+        :param abs_fast_threshold: Similar to fast_threshold, but in terms of time units - NOT relative to the requested step size
+                                    TODO: maybe rename fast_threshold
+
+        :param silent:
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
@@ -498,15 +520,33 @@ class ReactionDynamics:
         if stop_time is None:
             stop_time = self.system_time + time_step * n_steps
 
-        if dynamic_steps > 1:
+
+        if dynamic_steps > 1:   # If variable substep size was requested
+            if fast_threshold is not None:
+                rel_fast_threshold = fast_threshold # TODO: for historical reasons - fast_threshold to be obsoleted
+
             if abs_fast_threshold is not None:
-                if fast_threshold is not None:
-                    raise Exception("single_compartment_react(): cannot provide values for BOTH `fast_threshold` and `abs_fast_threshold`")
+                if rel_fast_threshold is not None:
+                    raise Exception("single_compartment_react(): "
+                                    "cannot provide values for BOTH `rel_fast_threshold` and `abs_fast_threshold`")
                 else:
-                    fast_threshold = abs_fast_threshold * time_step * 100.       # The *100. is b/c fast_threshold is expressed as %
-                    print(f"single_compartment_react(): setting fast_threshold to {fast_threshold}")
-            elif fast_threshold is None:
-                raise Exception("single_compartment_react(): at least one of `fast_threshold` and `abs_fast_threshold` must be provided")
+                    rel_fast_threshold = abs_fast_threshold * time_step * 100.  # The *100. is b/c rel_fast_threshold is expressed as %
+                    print(f"single_compartment_react(): setting rel_fast_threshold to {rel_fast_threshold}")
+            elif rel_fast_threshold is None:
+                raise Exception("single_compartment_react(): at least one of `rel_fast_threshold` and `abs_fast_threshold` must be provided")
+            else:
+                abs_fast_threshold = rel_fast_threshold / (time_step * 100.)
+                print(f"single_compartment_react(): setting abs_fast_threshold to {abs_fast_threshold}")
+
+            if self.last_abs_fast_threshold and (abs_fast_threshold < self.last_abs_fast_threshold):
+                # If we're changing (from the previous run) our standards of what constitutes a "fast" reaction,
+                #   in the direction of possibly making more reaction fast,
+                #   then play it safe and initially regard all reactions as fast
+                self.set_rxn_speed_all_fast()   # Reset all the reaction speeds to "Fast"
+
+            self.last_abs_fast_threshold = abs_fast_threshold
+        # END if dynamic_steps
+
 
         if snapshots:
             frequency = snapshots.get("frequency", 1)   # If not present, it will be 1
@@ -541,7 +581,7 @@ class ReactionDynamics:
         while self.system_time < stop_time:
             delta_concentrations, step_actually_taken = self.reaction_step_orchestrator(delta_time_full=time_step, conc_array=self.system,
                                                                                         snapshots=snapshots,
-                                                                                        dynamic_steps=dynamic_steps, fast_threshold=fast_threshold)
+                                                                                        dynamic_steps=dynamic_steps, fast_threshold=rel_fast_threshold)
             self.system += delta_concentrations
             self.system_time += step_actually_taken
             if step_actually_taken < time_step:

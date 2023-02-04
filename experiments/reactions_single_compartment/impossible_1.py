@@ -16,13 +16,13 @@
 # %% [markdown]
 # ## Violating the Laws of Physics for Fun and Insight!
 # ###  A cascade of reactions `A <-> B <-> C` , mostly in the forward direction
-# ### PART 1 : the above, together with a PHYSICALLY-IMPOSSIBLE "closing" of the above cycle with :
+# ### PART 1 : the above, together with a PHYSICALLY-IMPOSSIBLE "closing" of the cycle with :
 # #### `C <-> A`,  *ALSO* mostly in the forward direction (never mind the laws of thermodymics)!
-# ### PART 2 : restoring the law of physics
+# ### PART 2 : restoring the law of physics (by letting `C <-> A` adjust its kinetics based on the energy difference.)
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: Feb. 2, 2023
+# LAST REVISED: Feb. 3, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -74,7 +74,7 @@ chem_data.add_reaction(reactants="B", products="C",
 # LET'S VIOLATE THE LAWS OF PHYSICS!
 # Reaction C <-> A, also mostly in forward direction - MAGICALLY GOING "UPSTREAM" from C, to the higher-energy level of "A"
 chem_data.add_reaction(reactants="C" , products="A",
-                       forward_rate=3., reverse_rate=2.)   # PHYSICALLY IMPOSSIBLE! Future versions of Life123 may flag this!
+                       forward_rate=3., reverse_rate=2.) # PHYSICALLY IMPOSSIBLE! Future versions of Life123 may flag this!
 
 chem_data.describe_reactions()
 
@@ -101,7 +101,7 @@ dynamics.describe_state()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 dynamics.single_compartment_react(time_step=0.001, stop_time=0.05,
-                                  dynamic_steps=4, fast_threshold=80.)
+                                  dynamic_steps=4, rel_fast_threshold=80.)
 
 dynamics.explain_time_advance()
 
@@ -109,7 +109,7 @@ dynamics.explain_time_advance()
 
 # %%
 dynamics.single_compartment_react(time_step=0.005, stop_time=0.3,
-                                 dynamic_steps=4, fast_threshold=100.)
+                                 dynamic_steps=4, rel_fast_threshold=100.)
 
 dynamics.explain_time_advance()
 
@@ -117,7 +117,7 @@ dynamics.explain_time_advance()
 
 # %%
 dynamics.single_compartment_react(time_step=0.01, stop_time=2.,
-                                 dynamic_steps=4, fast_threshold=120.)
+                                 dynamic_steps=4, rel_fast_threshold=120.)
 
 dynamics.explain_time_advance()
 
@@ -137,8 +137,8 @@ dynamics.is_in_equilibrium()
 
 # %% [markdown]
 # ## Not surprisingly, none of the reactions of this physically-impossible hypothetical system are in equilibrium
-# ### Even though the concentrations don't change, the cause of that is NOT equilibrium in the reactions - but rather a balancing out of consuming and replenishing across reactions
-# #### Consider, for example, the concentrations of `A` at the end time, and its contributions from _individual_ reactions affecting `A`, as available from the diagnostic data:
+# ### Even though the concentrations don't change, it's NOT from equilibrium in the reactions - but rather from a balancing out of consuming and replenishing across reactions. 
+# #### Consider, for example, the concentrations of `A` at the end time, and contributions to its change ("Delta A") from _individual_ reactions affecting `A`, as available from the diagnostic data:
 
 # %%
 dynamics.get_diagnostic_data(rxn_index=0, tail=1)
@@ -148,7 +148,7 @@ dynamics.get_diagnostic_data(rxn_index=2, tail=1)
 
 # %% [markdown]
 # ### Looking at the last row from each of the 2 dataframes above, one case see that, at every reaction cycle, [A] gets reduced by 0.914286 by the reaction `A <-> B`, while simultaneously getting increased by the SAME amount by the (fictional) reaction `C <-> A`.   
-# ### Hence, the concentration of A remains constant - but neither reaction is in equilibrium!
+# ### Hence, the concentration of A remains constant - but none of the reactions is in equilibrium!
 
 # %%
 
@@ -162,7 +162,7 @@ chem_data.describe_reactions()
 dynamics.clear_reactions()       # Let's start over with the reactions  (without affecting the data from the reactions)
 
 # %%
-# For the reactions A <-> B, and B <-> C, everything the same as before
+# For the reactions A <-> B, and B <-> C, everything is being restored to the way it was before
 chem_data.add_reaction(reactants="A", products="B",
                        forward_rate=9., reverse_rate=3.)
 
@@ -176,22 +176,24 @@ chem_data.describe_reactions()
 # %%
 # But for the reaction C <-> A, this time we'll "bend the knee" to the laws of thermodynamics!
 # We'll use the same forward rate as before, but we'll let the reverse rate be picked by the system, 
-# based of thermodynamic data consistent with the previous 2 reactions : i.e. an energy difference of -(-2,723.41 - 1,718.28) = +4,441.69
+# based of thermodynamic data consistent with the previous 2 reactions : i.e. an energy difference of -(-2,723.41 - 1,718.28) = +4,441.69 (reflecting the  
+# "going uphill energetically" from C to A
 chem_data.add_reaction(reactants="C" , products="A",
-                       forward_rate=3., Delta_G=4441.69)   # Notice the the positive Delta H: we're going from C, to the higher-energy level of "A"
+                       forward_rate=3., Delta_G=4441.69)   # Notice the the positive Delta G: we're going from "C", to the higher-energy level of "A"
 
 # %%
 chem_data.describe_reactions()
 
 # %% [markdown]
-# # Notice how, now that we're again following the laws of thermodynamics, the last reaction is mostly IN REVERSE (low K < 1), as it ought to be!
+# # Notice how, now that we're again following the laws of thermodynamics, the last reaction is mostly IN REVERSE (low K < 1), as it ought to be! 
+# #### (considering how energetically unfavorable it is)
 
 # %% [markdown]
-# ### Now, let's continue with this "legit" set of reactions, from where we left off in our fantasy world:
+# ### Now, let's continue with this "legit" set of reactions, from where we left off in our fantasy world at time t=2:
 
 # %%
 dynamics.single_compartment_react(time_step=0.008, stop_time=4.,
-                                 dynamic_steps=4, fast_threshold=120.)
+                                  dynamic_steps=4, rel_fast_threshold=120.)
 
 dynamics.explain_time_advance()
 
