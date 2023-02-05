@@ -14,13 +14,13 @@
 
 # %% [markdown]
 # ## 2 COUPLED reactions of different speeds, forming a "cascade":  
-# ### A <-> B (fast) and B <-> C (slow)
+# ### `A <-> B` (fast) and `B <-> C` (slow)
 # All 1st order. Taken to equilibrium. Both reactions are mostly forward.
 # The concentration of the intermediate product B manifests 1 oscillation (transient "overshoot")
 #
 # (Adaptive variable time resolution is used, with extensive diagnostics.)
 #
-# LAST REVISED: Jan. 22, 2023
+# LAST REVISED: Feb. 4, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -118,7 +118,7 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 dynamics.single_compartment_react(time_step=0.02, reaction_duration=0.4,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_substeps=10, fast_threshold=190)
+                                  dynamic_substeps=10, rel_fast_threshold=190)
 
 # %% [markdown]
 # ### Note: the argument  _dynamic_step=10_  splits the time steps in 10 for any reactions that are "fast-changing" (as determined using the given value of  _fast_threshold_ )

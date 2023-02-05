@@ -1507,8 +1507,10 @@ class ReactionDynamics:
 
     def stoichiometry_checker_entire_run(self) -> bool:
         """
-        Verify that the stoichiometry is satisfied in all the reaction (sub)steps, using the diagnostic data from an earlier run
-        :return:
+        Verify that the stoichiometry is satisfied in all the reaction (sub)steps,
+        using the diagnostic data from an earlier run
+
+        :return:    True if everything checks out, or False otherwise
         """
         if self.diagnostic_data == {}:
             print("WARNING *** In order to run stoichiometry_checker_entire_run(), "
@@ -1516,8 +1518,9 @@ class ReactionDynamics:
             return False
 
         for rxn_index in range(self.reaction_data.number_of_reactions()):
-            for row_index in range(len(self.get_diagnostic_data(rxn_index))):
-                df_row = self.get_diagnostic_data(rxn_index=rxn_index).loc[row_index]     # Row in the Panda's data frame of diagnostic data
+            diagnostic_data = self.get_diagnostic_data(rxn_index=rxn_index, print_reaction=False)
+            for row_index in range(len(diagnostic_data)):
+                df_row = diagnostic_data.loc[row_index]     # Row in the Panda's data frame of diagnostic data
                 chemical_delta_list = self.delta_names()            # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
                 delta = df_row[chemical_delta_list].to_numpy()      # Extract select columns from the data frame row, and turn into Numpy array
                 status = self.stoichiometry_checker_from_deltas(rxn_index=rxn_index, delta_arr=delta, suppress_warning=True)
@@ -1618,21 +1621,23 @@ class ReactionDynamics:
 
 
 
-    def get_diagnostic_data(self, rxn_index: int, tail=None) -> pd.DataFrame:
+    def get_diagnostic_data(self, rxn_index: int, tail=None, print_reaction=True) -> pd.DataFrame:
         """
         Return a Pandas data frame with the diagnostic data of the requested reaction.
-        Also, print out a brief description of the reaction.
+        Also, optionally print out a brief description of the reaction.
         Optionally, restrict the result with a start and/or end times,
         or by limiting to a specified numbers of rows at the end
 
         :param rxn_index:   An integer that indexes the reaction of interest (numbering starts at 0)
         :param tail:        (OPTIONAL) Number of records to consider, from the end of the diagnostic dataframe
+        :param print_reaction:
         :return:            A Pandas data frame with (all or some of) the diagnostic data of the above reaction
         """
         # First, validate the reaction index
         self.reaction_data.assert_valid_rxn_index(rxn_index)
 
-        print("Reaction: ", self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True))
+        if print_reaction:
+            print("Reaction: ", self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True))
 
         return self.diagnostic_data[rxn_index].get(tail=tail)
 

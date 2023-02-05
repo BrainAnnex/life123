@@ -13,20 +13,20 @@
 # ---
 
 # %% [markdown]
-# ## A <-> B , downregulated by the "shunt" (coupled reaction) A <-> S
+# ## `A <-> B` , downregulated by the "shunt" (coupled reaction) `A <-> S`
 # ### _Kinetic_ advantage (downregulation in early phase) vs. _Thermodynamic_ advantage (long-term downregulation) 
 #
-# **[Scenario 1](#down_regulate_1_scenario_1)** : No downregulation on A <-> B 
+# **[Scenario 1](#down_regulate_1_scenario_1)** : No downregulation on `A <-> B `
 #
-# **[Scenario 2](#down_regulate_1_scenario_2)** : The shunt (A <-> S) has a *kinetic* advantage but *thermodynamic* DIS-advantage compared to A <-> B   
-# (i.e. A <-> S is fast, but energetically unfavored) 
+# **[Scenario 2](#down_regulate_1_scenario_2)** : The shunt (`A <-> S`) has a *kinetic* advantage but *thermodynamic* DIS-advantage compared to `A <-> B `  
+# (i.e. `A <-> S` is fast, but energetically unfavored) 
 #
-# **[Scenario 3](#down_regulate_1_scenario_3)** : The shunt (A <-> S) is has a *kinetic* DIS-advantage but a *thermodynamic* advantage compared to A <-> B     
-# (i.e. A <-> S is slow, but energetically favored)  
+# **[Scenario 3](#down_regulate_1_scenario_3)** : The shunt (`A <-> S`) is has a *kinetic* DIS-advantage but a *thermodynamic* advantage compared to `A <-> B`     
+# (i.e. `A <-> S` is slow, but energetically favored)  
 #
 # All reactions 1st order, mostly forward.  Taken to equilibrium.
 #
-# LAST REVISED: Jan. 22, 2023
+# LAST REVISED: Feb. 4, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -100,7 +100,7 @@ dynamics.set_diagnostics()          # To save diagnostic information about the c
 dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.05,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_substeps=4, fast_threshold=25)
+                                  dynamic_substeps=4, rel_fast_threshold=25)
 
 # %%
 df_iterm = dynamics.get_history()
@@ -171,14 +171,14 @@ dynamics.set_diagnostics()         # To save diagnostic information about the ca
 dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.05,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_substeps=4, fast_threshold=10)
+                                  dynamic_substeps=4, rel_fast_threshold=10)
 
 # %%
 # Continue running the reaction at lover resolution
 dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.25,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_substeps=4, fast_threshold=10)
+                                  dynamic_substeps=4, rel_fast_threshold=10)
 
 # %%
 df = dynamics.get_history()
@@ -250,14 +250,14 @@ dynamics3.set_diagnostics()       # To save diagnostic information about the cal
 dynamics3.single_compartment_react(time_step=0.005, reaction_duration=0.3,
                                    snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                   dynamic_substeps=5, fast_threshold=10)
+                                   dynamic_substeps=5, rel_fast_threshold=10)
 
 # %%
 # Continue running the reaction at lover resolution
 dynamics3.single_compartment_react(time_step=0.25, reaction_duration=6.7,
                                    snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                   dynamic_substeps=5, fast_threshold=10)
+                                   dynamic_substeps=5, rel_fast_threshold=10)
 
 # %%
 df3 = dynamics3.get_history()
