@@ -181,17 +181,17 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 
 # %%
 dynamics.single_compartment_react(time_step=0.0008, stop_time=0.03,
-                                  dynamic_steps=2, abs_fast_threshold=750.)
+                                  dynamic_substeps=2, abs_fast_threshold=750.)
 # Note: the threshold values were picked by trial and error (not shown) 
 # to be neither too small nor too large - leading to substeps being used roughly 1/2 of the time
 
 # %%
 dynamics.single_compartment_react(time_step=0.001, stop_time=5.,
-                                 dynamic_steps=2, abs_fast_threshold=250.)
+                                  dynamic_substeps=2, abs_fast_threshold=250.)
 
 # %%
 dynamics.single_compartment_react(time_step=0.005, stop_time=8.,
-                                  dynamic_steps=2, abs_fast_threshold=2.)
+                                  dynamic_substeps=2, abs_fast_threshold=2.)
 
 # %%
 df = dynamics.get_history()

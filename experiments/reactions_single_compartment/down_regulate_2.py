@@ -78,8 +78,8 @@ dynamics.describe_state()
 # ### Take the initial system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, n_steps=30, 
-                                  dynamic_steps=2, fast_threshold=15)
+dynamics.single_compartment_react(time_step=0.0005, n_steps=30,
+                                  dynamic_substeps=2, fast_threshold=15)
 
 df = dynamics.get_history()
 df
@@ -117,7 +117,7 @@ dynamics.history.get(tail=5)
 
 # %%
 dynamics.single_compartment_react(time_step=0.001, n_steps=40,
-                                 dynamic_steps=2, fast_threshold=15)
+                                  dynamic_substeps=2, fast_threshold=15)
 
 df = dynamics.history.get()
 df
@@ -149,7 +149,7 @@ dynamics.history.get(tail=5)
 
 # %%
 dynamics.single_compartment_react(time_step=0.001, n_steps=35,
-                                 dynamic_steps=2, fast_threshold=15)
+                                  dynamic_substeps=2, fast_threshold=15)
 
 df = dynamics.get_history()
 df
@@ -178,7 +178,7 @@ dynamics.describe_state()
 
 # %%
 dynamics.single_compartment_react(time_step=0.001, n_steps=70,
-                                 dynamic_steps=2, fast_threshold=15)
+                                  dynamic_substeps=2, fast_threshold=15)
 
 dynamics.get_history()
 

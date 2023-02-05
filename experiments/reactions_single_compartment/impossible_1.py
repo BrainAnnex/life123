@@ -101,7 +101,7 @@ dynamics.describe_state()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 dynamics.single_compartment_react(time_step=0.001, stop_time=0.05,
-                                  dynamic_steps=4, rel_fast_threshold=80.)
+                                  dynamic_substeps=4, rel_fast_threshold=80.)
 
 dynamics.explain_time_advance()
 
@@ -109,7 +109,7 @@ dynamics.explain_time_advance()
 
 # %%
 dynamics.single_compartment_react(time_step=0.005, stop_time=0.3,
-                                 dynamic_steps=4, rel_fast_threshold=100.)
+                                  dynamic_substeps=4, rel_fast_threshold=100.)
 
 dynamics.explain_time_advance()
 
@@ -117,7 +117,7 @@ dynamics.explain_time_advance()
 
 # %%
 dynamics.single_compartment_react(time_step=0.01, stop_time=2.,
-                                 dynamic_steps=4, rel_fast_threshold=120.)
+                                  dynamic_substeps=4, rel_fast_threshold=120.)
 
 dynamics.explain_time_advance()
 
@@ -193,7 +193,7 @@ chem_data.describe_reactions()
 
 # %%
 dynamics.single_compartment_react(time_step=0.008, stop_time=4.,
-                                  dynamic_steps=4, rel_fast_threshold=120.)
+                                  dynamic_substeps=4, rel_fast_threshold=120.)
 
 dynamics.explain_time_advance()
 

@@ -80,8 +80,8 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-dynamics.single_compartment_react(time_step=0.0005, stop_time=0.015, 
-                                  dynamic_steps=2, fast_threshold=15)
+dynamics.single_compartment_react(time_step=0.0005, stop_time=0.015,
+                                  dynamic_substeps=2, fast_threshold=15)
 
 df = dynamics.get_history()
 df
@@ -121,8 +121,8 @@ dynamics.get_history(tail=5)
 # ### Again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, stop_time=0.035, 
-                                 dynamic_steps=2, fast_threshold=15)
+dynamics.single_compartment_react(time_step=0.0005, stop_time=0.035,
+                                  dynamic_substeps=2, fast_threshold=15)
 
 df = dynamics.get_history()
 df
@@ -156,8 +156,8 @@ dynamics.get_history(tail=5)
 # ### Yet again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, stop_time=0.070, 
-                                 dynamic_steps=2, fast_threshold=15)
+dynamics.single_compartment_react(time_step=0.0005, stop_time=0.070,
+                                  dynamic_substeps=2, fast_threshold=15)
 
 df = dynamics.history.get()
 df

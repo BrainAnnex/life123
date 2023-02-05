@@ -95,7 +95,7 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 dynamics.single_compartment_react(time_step=0.004, reaction_duration=0.06,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=2, fast_threshold=1)
+                                  dynamic_substeps=2, fast_threshold=1)
 
 # %% [markdown]
 # ### Note: the argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using the given value of _fast_threshold_ )

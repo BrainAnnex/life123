@@ -181,8 +181,8 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 #dynamics.verbose_list = [1]     # Uncomment for debugging information
 
 # %%
-dynamics.single_compartment_react(time_step=0.0012, stop_time=0.03, 
-                                  dynamic_steps=2, abs_fast_threshold=750.)
+dynamics.single_compartment_react(time_step=0.0012, stop_time=0.03,
+                                  dynamic_substeps=2, abs_fast_threshold=750.)
 #dynamics.get_history()
 
 # %%
@@ -194,7 +194,7 @@ dynamics.explain_time_advance()
 
 # %%
 dynamics.single_compartment_react(time_step=0.0025, stop_time=5.,
-                                 dynamic_steps=2, abs_fast_threshold=250.)
+                                  dynamic_substeps=2, abs_fast_threshold=250.)
 #dynamics.get_history()
 
 # %%
@@ -205,7 +205,7 @@ dynamics.explain_time_advance()
 
 # %%
 dynamics.single_compartment_react(time_step=0.008, stop_time=8.,
-                                  dynamic_steps=2, abs_fast_threshold=2.)
+                                  dynamic_substeps=2, abs_fast_threshold=2.)
 
 # %%
 df = dynamics.get_history()

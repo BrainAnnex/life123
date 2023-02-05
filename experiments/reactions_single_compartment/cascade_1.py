@@ -113,12 +113,12 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 #dynamics.verbose_list = [1, 2, 3]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
 # The changes of concentrations vary very rapidly early on; 
-# so, we'll be using the dynamic_steps option to increase time resolution,
+# so, we'll be using the dynamic_substeps option to increase time resolution,
 # as long as the reaction remains "fast" (based on a threshold of % change, as specified by fast_threshold)
 dynamics.single_compartment_react(time_step=0.02, reaction_duration=0.4,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=10, fast_threshold=190)
+                                  dynamic_substeps=10, fast_threshold=190)
 
 # %% [markdown]
 # ### Note: the argument  _dynamic_step=10_  splits the time steps in 10 for any reactions that are "fast-changing" (as determined using the given value of  _fast_threshold_ )

@@ -95,12 +95,12 @@ dynamics.set_diagnostics()          # To save diagnostic information about the c
 #dynamics.verbose_list = [1, 2, 3]   # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
 # The changes of concentrations vary very rapidly early on; 
-# so, we'll be using the dynamic_steps option to increase time resolution,
+# so, we'll be using the dynamic_substeps option to increase time resolution,
 # as long as the reaction remains "fast" (based on a threshold of % change, as specified by fast_threshold)
 dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.05,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=4, fast_threshold=25)
+                                  dynamic_substeps=4, fast_threshold=25)
 
 # %%
 df_iterm = dynamics.get_history()
@@ -111,7 +111,7 @@ df_iterm
 dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.25,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=4, fast_threshold=10)
+                                  dynamic_substeps=4, fast_threshold=10)
 
 # %%
 df = dynamics.get_history()
@@ -166,19 +166,19 @@ dynamics.set_diagnostics()         # To save diagnostic information about the ca
 #dynamics.verbose_list = [1, 2, 3]  # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
 # The changes of concentrations vary very rapidly early on; 
-# so, we'll be using the dynamic_steps option to increase time resolution,
+# so, we'll be using the dynamic_substeps option to increase time resolution,
 # as long as the reaction remains "fast" (based on a threshold of % change, as specified by fast_threshold)
 dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.05,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=4, fast_threshold=10)
+                                  dynamic_substeps=4, fast_threshold=10)
 
 # %%
 # Continue running the reaction at lover resolution
 dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.25,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=4, fast_threshold=10)
+                                  dynamic_substeps=4, fast_threshold=10)
 
 # %%
 df = dynamics.get_history()
@@ -245,19 +245,19 @@ dynamics3.set_diagnostics()       # To save diagnostic information about the cal
 #dynamics3.verbose_list = [1, 2, 3]  # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
 # The changes of concentrations vary very rapidly early on; 
-# so, we'll be using the dynamic_steps option to increase time resolution,
+# so, we'll be using the dynamic_substeps option to increase time resolution,
 # as long as the reaction remains "fast" (based on a threshold of % change, as specified by fast_threshold)
 dynamics3.single_compartment_react(time_step=0.005, reaction_duration=0.3,
-                                  snapshots={"initial_caption": "1st reaction step",
+                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=5, fast_threshold=10)
+                                   dynamic_substeps=5, fast_threshold=10)
 
 # %%
 # Continue running the reaction at lover resolution
 dynamics3.single_compartment_react(time_step=0.25, reaction_duration=6.7,
-                                  snapshots={"initial_caption": "1st reaction step",
+                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=5, fast_threshold=10)
+                                   dynamic_substeps=5, fast_threshold=10)
 
 # %%
 df3 = dynamics3.get_history()
