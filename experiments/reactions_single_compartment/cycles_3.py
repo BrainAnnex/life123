@@ -95,7 +95,7 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 
 # %%
 dynamics.single_compartment_react(time_step=0.0016, reaction_duration=0.025,
-                                  dynamic_substeps=2, fast_threshold=150.)
+                                  dynamic_substeps=2, rel_fast_threshold=150.)
 #dynamics.get_history()
 
 # %%
@@ -111,7 +111,7 @@ dynamics.set_chem_conc(conc=0., species_name="E_low", snapshot=True)
 # %%
 for i in range(19):
     dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.025,
-                                      dynamic_substeps=2, fast_threshold=150., silent=True)
+                                      dynamic_substeps=2, rel_fast_threshold=150., silent=True)
     dynamics.set_chem_conc(conc=1000., species_name="E_high", snapshot=True)
     dynamics.set_chem_conc(conc=0., species_name="E_low", snapshot=True)
 
@@ -121,7 +121,7 @@ dynamics.system_time
 # %%
 for i in range(30):
     dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.025,
-                                      dynamic_substeps=2, fast_threshold=150., silent=True)
+                                      dynamic_substeps=2, rel_fast_threshold=150., silent=True)
     dynamics.set_chem_conc(conc=1000., species_name="E_high", snapshot=True)
     dynamics.set_chem_conc(conc=0., species_name="E_low", snapshot=True)
 
@@ -131,7 +131,7 @@ dynamics.system_time
 # %%
 for i in range(250):
     dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.025,
-                                      dynamic_substeps=2, fast_threshold=120., silent=True)
+                                      dynamic_substeps=2, rel_fast_threshold=120., silent=True)
     dynamics.set_chem_conc(conc=1000., species_name="E_high", snapshot=True)
     dynamics.set_chem_conc(conc=0., species_name="E_low", snapshot=True)
     if i % 10 == 0:

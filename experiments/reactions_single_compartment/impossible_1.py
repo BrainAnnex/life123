@@ -22,10 +22,10 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: Feb. 4, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %% [markdown]
-# ![Temporarily suspendind the Laws of Physics](../../docs/impossible_1.png)
+# ![Temporarily suspending the Laws of Physics](../../docs/impossible_1.png)
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

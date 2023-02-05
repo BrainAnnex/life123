@@ -13,11 +13,11 @@
 # ---
 
 # %% [markdown]
-# ### One-bin 2A <-> 3B reaction, with 1st-order kinetics in both directions, taken to equilibrium
+# ### One-bin `2A <-> 3B` reaction, with 1st-order kinetics in both directions, taken to equilibrium
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Jan. 30, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

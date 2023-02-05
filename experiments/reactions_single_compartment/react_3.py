@@ -13,14 +13,14 @@
 # ---
 
 # %% [markdown]
-# ## Association/Dissociation reaction A + B <-> C
+# ## Association/Dissociation reaction `A + B <-> C`
 # #### with 1st-order kinetics for each species, taken to equilibrium.
 # #### Exploration of debugging and diagnostics options
 # (Adaptive variable time resolution is used)
 #
 # _See also the experiment "1D/reactions/reaction_4"_ 
 #
-# LAST REVISED: Jan. 22, 2023
+#   # For the 0-th reaction (the only reaction in our case)
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -95,7 +95,7 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 dynamics.single_compartment_react(time_step=0.004, reaction_duration=0.06,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_substeps=2, fast_threshold=1)
+                                  dynamic_substeps=2, rel_fast_threshold=1)
 
 # %% [markdown]
 # ### Note: the argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using the given value of _fast_threshold_ )
@@ -134,11 +134,7 @@ dynamics.is_in_equilibrium()
 # ## Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B", "C"], 
-              title="Reaction A + B <-> C .  Changes in concentrations with time",
-              color_discrete_sequence = ['red', 'violet', 'green'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(colors=['red', 'violet', 'green'])
 
 # %%
 
@@ -151,7 +147,7 @@ fig.show()
 
 # %%
 # This approach, from the run data, is only usable with single-reaction runs
-#dynamics.examine_run(df=df, time_step=0.004, fast_threshold=1)
+#dynamics.examine_run(df=df, time_step=0.004, rel_fast_threshold=1)
 # The arguments step MUST match the value used in call to single_compartment_react()
 
 # %% [markdown]
@@ -166,6 +162,6 @@ fig.show()
 # ### The above diagnostics are based on the following diagnostic data:
 
 # %%
-dynamics.diagnostic_data[0].get()
+dynamics.get_diagnostic_data(rxn_index=0)
 
 # %%

@@ -1643,7 +1643,7 @@ class ReactionDynamics:
 
 
 
-    def diagnose_variable_time_steps(self, fast_threshold=5) -> None:
+    def diagnose_variable_time_steps(self, rel_fast_threshold=5) -> None:
         """
         Analyze, primarily for debugging purposes, the diagnostics data produced
         when the self.diagnostics attribute is set to True prior to running single_compartment_react().
@@ -1656,7 +1656,7 @@ class ReactionDynamics:
         TODO: CAUTION - only meant for 1 reaction.  Generalize to multiple reactions.
               For more than 1 reaction, use explain_reactions() instead
 
-        :param fast_threshold:  The same value (for the FULL STEP size) that was used in single_compartment_react()
+        :param rel_fast_threshold:  The same value that was used in single_compartment_react()
 
         :return:                None
         """
@@ -1716,8 +1716,8 @@ class ReactionDynamics:
                 ratio = delta / baseline * 100.
                 print("Ratios (%):", ratio)
                 print(f"Max abs ratio (%): {max(abs(ratio)):.3g}")
-                print(f"Comparing the above value against {fast_threshold/time_subdivision}% (i.e. {fast_threshold}% /{time_subdivision})")
-                if max(abs(ratio)) > fast_threshold/time_subdivision:
+                print(f"Comparing the above value against {rel_fast_threshold / time_subdivision}% (i.e. {rel_fast_threshold}% /{time_subdivision})")
+                if max(abs(ratio)) > rel_fast_threshold/time_subdivision:
                     print("*FAST* reaction")
                 else:
                     print("*Slow* reaction")

@@ -13,16 +13,16 @@
 # ---
 
 # %% [markdown]
-# ## Association/Dissociation reaction 2A <-> C
-# #### with 2nd-order kinetics for A,  
-# #### and 1-st order kinetics for C
+# ## Association/Dissociation reaction `2A <-> C`
+# #### with 2nd-order kinetics for `A`,  
+# #### and 1-st order kinetics for `C`
 #
 # Taken to equilibrium.  (Adaptive variable time resolution is used)
 #
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #
 #
-# LAST REVISED: Jan. 22, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -100,7 +100,7 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.04,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_substeps=4, fast_threshold=60)
+                                  dynamic_substeps=4, rel_fast_threshold=60)
 
 # %% [markdown]
 # ### Note: the argument _dynamic_step=4_ splits the time steps in 4 whenever the reaction is "fast" (as determined using the given value of _fast_threshold_ )
@@ -147,22 +147,19 @@ dynamics.is_in_equilibrium(tolerance=2)
 # ## Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "C"], 
-              title="Reaction 2A <-> C  (2nd order in A).  Changes in concentrations with time",
-              color_discrete_sequence = ['red', 'green'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(colors=['red', 'green'],
+                     title="Reaction 2A <-> C  (2nd order in A).  Changes in concentrations with time")
 
 # %% [markdown]
 # #### For diagnostic insight, uncomment the following lines:
 
 # %%
-#dynamics.examine_run(df=df, time_step=0.002, fast_threshold=60)  
+#dynamics.examine_run(df=df, time_step=0.002, rel_fast_threshold=60)
 # the time step MUST match the value used in call to single_compartment_react()
 
 #dynamics.diagnose_variable_time_steps()
 
-#dynamics.diagnostic_data[0].get()
+#dynamics.get_diagnostic_data(rxn_index=0)
 
 #dynamics.diagnostic_data_baselines.get()
 

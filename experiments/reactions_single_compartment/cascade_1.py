@@ -20,7 +20,7 @@
 #
 # (Adaptive variable time resolution is used, with extensive diagnostics.)
 #
-# LAST REVISED: Feb. 4, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:

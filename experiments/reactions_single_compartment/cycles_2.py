@@ -95,7 +95,7 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 
 # %%
 dynamics.single_compartment_react(time_step=0.0016, reaction_duration=0.025,
-                                  dynamic_substeps=2, fast_threshold=150.)
+                                  dynamic_substeps=2, rel_fast_threshold=150.)
 #dynamics.get_history()
 
 # %%
@@ -110,7 +110,7 @@ dynamics.set_chem_conc(conc=1000., species_name="E_high", snapshot=True)
 # %%
 for i in range(19):
     dynamics.single_compartment_react(time_step=0.0016, reaction_duration=0.025,
-                                      dynamic_substeps=2, fast_threshold=150., silent=True)
+                                      dynamic_substeps=2, rel_fast_threshold=150., silent=True)
     dynamics.set_chem_conc(conc=1000., species_name="E_high", snapshot=True)
 
 # %%
@@ -119,7 +119,7 @@ dynamics.system_time
 # %%
 for i in range(30):
     dynamics.single_compartment_react(time_step=0.0016, reaction_duration=0.025,
-                                      dynamic_substeps=2, fast_threshold=150., silent=True)
+                                      dynamic_substeps=2, rel_fast_threshold=150., silent=True)
     dynamics.set_chem_conc(conc=1000., species_name="E_high", snapshot=True)
 
 # %%
@@ -128,7 +128,7 @@ dynamics.system_time
 # %%
 for i in range(1500):
     dynamics.single_compartment_react(time_step=0.0005, reaction_duration=0.025,
-                                      dynamic_substeps=2, fast_threshold=80., silent=True)
+                                      dynamic_substeps=2, rel_fast_threshold=80., silent=True)
     dynamics.set_chem_conc(conc=1000., species_name="E_high", snapshot=True)
     if i % 50 == 0:
         print(f"Processed {i} rounds so far...")

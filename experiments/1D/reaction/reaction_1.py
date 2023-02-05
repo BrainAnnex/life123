@@ -14,14 +14,14 @@
 # ---
 
 # %% [markdown]
-# ### A simple A <-> B reaction between 2 species with initial uniform concentrations across 3 bins,
+# ### A simple `A <-> B` reaction between 2 species with initial uniform concentrations across 3 bins,
 # with 1st-order kinetics in both directions, taken to equilibrium
 #
 # Diffusion NOT taken into account
 #
 # See also the experiment _"reactions_single_compartment/react_1"_ 
 #
-# LAST REVISED: Jan. 30, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

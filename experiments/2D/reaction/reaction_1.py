@@ -13,12 +13,12 @@
 # ---
 
 # %% [markdown]
-# ## A <-> B reaction, with 1st-order kinetics in both directions,
+# ## `A <-> B` reaction, with 1st-order kinetics in both directions,
 # ### taken to equilibrium
 #
 # Diffusion not done
 #
-# LAST REVISED: Nov. 28, 2022
+# LAST REVISED: Feb. 5, 2023
 # %%
 # Extend the sys.path variable, to contain the project's root directory
 import set_path

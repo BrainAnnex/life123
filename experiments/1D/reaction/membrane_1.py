@@ -16,7 +16,7 @@
 # ### Exploring the data structures of MEMBRANES, and reactions in them 
 # #### - with NO DIFFUSION
 #
-# LAST REVISED: Nov. 28, 2022
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

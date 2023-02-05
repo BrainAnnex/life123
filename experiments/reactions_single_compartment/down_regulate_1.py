@@ -26,7 +26,7 @@
 #
 # All reactions 1st order, mostly forward.  Taken to equilibrium.
 #
-# LAST REVISED: Feb. 4, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -111,7 +111,7 @@ df_iterm
 dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.25,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_substeps=4, fast_threshold=10)
+                                  dynamic_substeps=4, rel_fast_threshold=10)
 
 # %%
 df = dynamics.get_history()

@@ -14,7 +14,7 @@
 # ---
 
 # %% [markdown]
-# ### A down-regulates B , by being the *limiting reagent* in reaction A + 2 B <-> Y (mostly forward)
+# ### `A` down-regulates `B` , by being the *limiting reagent* in reaction `A + 2 B <-> Y` (mostly forward)
 # 1st-order kinetics.   
 # If [A] is low and [B] is high, then [B] remains high.  If [A] goes high, [B] goes low.  However, at that point, A can no longer bring B up to any substantial extent.
 #
@@ -22,7 +22,7 @@
 #
 # Based on experiment "reactions_single_compartment/down_regulate_2"
 #
-# LAST REVISED: Jan. 28, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

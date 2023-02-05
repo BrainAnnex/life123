@@ -13,14 +13,14 @@
 # ---
 
 # %% [markdown]
-# ## One-bin Association/Dissociation reaction A + B <-> C
+# ## One-bin Association/Dissociation reaction `A + B <-> C`
 # ### with 1st-order kinetics for each species, taken to equilibrium
 #
 # Diffusion not applicable (just 1 bin)
 #
 # See also the experiment _"reactions_single_compartment/react_3"_ 
 #
-# LAST REVISED: Dec. 24, 2022
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

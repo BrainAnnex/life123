@@ -13,12 +13,12 @@
 # ---
 
 # %% [markdown]
-# ### One-bin A <-> 3B reaction, with 1st-order kinetics in both directions,
+# ### One-bin `A <-> 3B` reaction, with 1st-order kinetics in both directions,
 # ### taken to equilibrium
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Jan. 15, 2023
+# LAST REVISED: Feb. 5, 2023
 #
 # * [First Step](#sec_2_first_step)
 # * [Numerous more steps](#sec_2)

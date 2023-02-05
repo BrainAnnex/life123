@@ -13,14 +13,14 @@
 # ---
 
 # %% [markdown]
-# ## One-bin  2A <-> B reaction,  
+# ## One-bin  `2A <-> B` reaction,  
 # ### COMPARING 1st-order and 2nd-order kinetics in *forward* direction; reverse direction 1-st order
 #
 # Diffusion not applicable (just 1 bin)
 #
 # See also the experiment _"reactions_single_compartment/react_4"_ 
 #
-# LAST REVISED: Jan. 9, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

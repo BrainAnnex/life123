@@ -27,7 +27,7 @@
 # The raggedness and instabilities are now eliminated.
 # (Note: the 1/2 substeps are on a per-reaction basis)
 #
-# LAST REVISED: Jan. 30, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
