@@ -14,7 +14,7 @@
 # ---
 
 # %% [markdown]
-# ## A cycle of reactions `A <-> B <-> C <-> A`  IN-PROGRESS
+# ## A cycle of reactions `A <-> B <-> C <-> A`
 # #### the "closing" of the above cycle (the "return" parth from `C` to `A`) is coupled with an "energy donor" reaction:
 # #### `C + E_High <-> A + E_Low`
 # #### where `E_High` and `E_Low` are, respectively, the high- and low- energy molecules that drive the cycle (for example, think of ATP/ADP).   
@@ -22,7 +22,7 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: Jan. 30, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -33,13 +33,13 @@ set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.reactions.reaction_data import ReactionData as chem
-from modules.reactions.reaction_dynamics import ReactionDynamics
-from modules.numerical.numerical import Numerical as num
+from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.numerical.numerical import Numerical as num
 
 import numpy as np
 import plotly.express as px
-from modules.visualization.graphic_log import GraphicLog
+from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
 # Initialize the HTML logging
@@ -181,17 +181,17 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 
 # %%
 dynamics.single_compartment_react(time_step=0.0008, stop_time=0.03,
-                                  dynamic_steps=2, abs_fast_threshold=750.)
+                                  dynamic_substeps=2, abs_fast_threshold=750.)
 # Note: the threshold values were picked by trial and error (not shown) 
 # to be neither too small nor too large - leading to substeps being used roughly 1/2 of the time
 
 # %%
 dynamics.single_compartment_react(time_step=0.001, stop_time=5.,
-                                 dynamic_steps=2, abs_fast_threshold=250.)
+                                  dynamic_substeps=2, abs_fast_threshold=250.)
 
 # %%
 dynamics.single_compartment_react(time_step=0.005, stop_time=8.,
-                                  dynamic_steps=2, abs_fast_threshold=2.)
+                                  dynamic_substeps=2, abs_fast_threshold=2.)
 
 # %%
 df = dynamics.get_history()

@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
-from life_2D.bio_sim_2d import BioSim2D
-from modules.reactions.reaction_data import ReactionData as chem
+from src.life_2D.bio_sim_2d import BioSim2D
+from src.modules.reactions.reaction_data import ReactionData as chem
 
 
 

@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from modules.reactions.reaction_data import ReactionData
+from src.modules.reactions.reaction_data import ReactionData
 
 
 

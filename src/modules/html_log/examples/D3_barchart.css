@@ -1,0 +1,11 @@
+/*  For a simple D3-based function to draw a bar chart */
+
+svg.container {
+    width: 250px;
+    height: 200px;
+    border: 1px solid #720570;
+}
+
+rect.bar {
+    fill: #720570;
+}

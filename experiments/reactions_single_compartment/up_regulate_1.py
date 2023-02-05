@@ -21,7 +21,7 @@
 #
 # See also 1D/reactions/up_regulation_1
 #
-# LAST REVISED: Jan. 28, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -32,12 +32,12 @@ set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.reactions.reaction_data import ReactionData as chem
-from modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
 import plotly.express as px
-from modules.visualization.graphic_log import GraphicLog
+from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
 # Initialize the HTML logging
@@ -80,8 +80,8 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-dynamics.single_compartment_react(time_step=0.0005, stop_time=0.015, 
-                                  dynamic_steps=2, fast_threshold=15)
+dynamics.single_compartment_react(time_step=0.0005, stop_time=0.015,
+                                  dynamic_substeps=2, rel_fast_threshold=15)
 
 df = dynamics.get_history()
 df
@@ -104,8 +104,7 @@ dynamics.is_in_equilibrium()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
-                     title="Changes in concentrations (reaction A + X <-> 2B)")
+dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
 
 # %% [markdown] tags=[]
 # # Now, let's suddenly increase [A]
@@ -121,8 +120,8 @@ dynamics.get_history(tail=5)
 # ### Again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, stop_time=0.035, 
-                                 dynamic_steps=2, fast_threshold=15)
+dynamics.single_compartment_react(time_step=0.0005, stop_time=0.035,
+                                  dynamic_substeps=2, rel_fast_threshold=15)
 
 df = dynamics.get_history()
 df
@@ -135,8 +134,7 @@ dynamics.explain_time_advance()
 dynamics.is_in_equilibrium(tolerance=2)
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
-                     title="Changes in concentrations (reaction A + X <-> 2B)")
+dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
 
 # %% [markdown]
 # **A**, still the limiting reagent, is again stopping the reaction.  
@@ -156,8 +154,8 @@ dynamics.get_history(tail=5)
 # ### Yet again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, stop_time=0.070, 
-                                 dynamic_steps=2, fast_threshold=15)
+dynamics.single_compartment_react(time_step=0.0005, stop_time=0.070,
+                                  dynamic_substeps=2, rel_fast_threshold=15)
 
 df = dynamics.history.get()
 df
@@ -170,8 +168,7 @@ dynamics.explain_time_advance()
 dynamics.is_in_equilibrium(tolerance=2)
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
-                     title="Changes in concentrations (reaction A + X <-> 2B)")
+dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
 
 # %% [markdown]
 # `A`, again the scarse limiting reagent, stops the reaction yet again.  

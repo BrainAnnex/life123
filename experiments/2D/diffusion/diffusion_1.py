@@ -31,12 +31,12 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from life_2D.bio_sim_2d import BioSim2D
+from src.life_2D.bio_sim_2d import BioSim2D
 
 import plotly.express as px
 import plotly.graph_objects as go
 
-from modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_data import ReactionData as chem
 
 # %%
 # Prepare the initial system, with a single non-zero bin, near the left edge of the system, positioned halfway vertically

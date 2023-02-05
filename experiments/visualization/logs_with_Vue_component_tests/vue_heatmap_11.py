@@ -1,8 +1,8 @@
 # Test of using the graphic module (Vue component) "vue-heatmap-11" in an HTML log
 
 import pathlib
-from modules.html_log.html_log import HtmlLog as log
-from modules.visualization.graphic_log import GraphicLog
+from src.modules.html_log.html_log import HtmlLog as log
+from src.modules.visualization.graphic_log import GraphicLog
 
 COMPONENT_NAME = "vue_heatmap_11"           # CHANGE AS NEEDED
 

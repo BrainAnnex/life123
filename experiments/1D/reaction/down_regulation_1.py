@@ -14,7 +14,7 @@
 # ---
 
 # %% [markdown]
-# ### A down-regulates B , by being the *limiting reagent* in reaction A + 2 B <-> Y (mostly forward)
+# ### `A` down-regulates `B` , by being the *limiting reagent* in reaction `A + 2 B <-> Y` (mostly forward)
 # 1st-order kinetics.   
 # If [A] is low and [B] is high, then [B] remains high.  If [A] goes high, [B] goes low.  However, at that point, A can no longer bring B up to any substantial extent.
 #
@@ -22,7 +22,7 @@
 #
 # Based on experiment "reactions_single_compartment/down_regulate_2"
 #
-# LAST REVISED: Jan. 28, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -33,13 +33,13 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.reactions.reaction_data import ReactionData as chem
-from modules.reactions.reaction_dynamics import ReactionDynamics
-from life_1D.bio_sim_1d import BioSim1D
+from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
-from modules.html_log.html_log import HtmlLog as log
-from modules.visualization.graphic_log import GraphicLog
+from src.modules.html_log.html_log import HtmlLog as log
+from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
 # Initialize the HTML logging

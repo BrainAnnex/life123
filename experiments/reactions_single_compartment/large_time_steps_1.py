@@ -27,7 +27,7 @@
 # The raggedness and instabilities are now eliminated.
 # (Note: the 1/2 substeps are on a per-reaction basis)
 #
-# LAST REVISED: Jan. 30, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -38,13 +38,13 @@ set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.reactions.reaction_data import ReactionData as chem
-from modules.reactions.reaction_dynamics import ReactionDynamics
-from modules.numerical.numerical import Numerical as num
+from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.numerical.numerical import Numerical as num
 
 import numpy as np
 import plotly.express as px
-from modules.visualization.graphic_log import GraphicLog
+from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
 # Initialize the HTML logging
@@ -181,8 +181,8 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 #dynamics.verbose_list = [1]     # Uncomment for debugging information
 
 # %%
-dynamics.single_compartment_react(time_step=0.0012, stop_time=0.03, 
-                                  dynamic_steps=2, abs_fast_threshold=750.)
+dynamics.single_compartment_react(time_step=0.0012, stop_time=0.03,
+                                  dynamic_substeps=2, abs_fast_threshold=750.)
 #dynamics.get_history()
 
 # %%
@@ -194,7 +194,7 @@ dynamics.explain_time_advance()
 
 # %%
 dynamics.single_compartment_react(time_step=0.0025, stop_time=5.,
-                                 dynamic_steps=2, abs_fast_threshold=250.)
+                                  dynamic_substeps=2, abs_fast_threshold=250.)
 #dynamics.get_history()
 
 # %%
@@ -205,7 +205,7 @@ dynamics.explain_time_advance()
 
 # %%
 dynamics.single_compartment_react(time_step=0.008, stop_time=8.,
-                                  dynamic_steps=2, abs_fast_threshold=2.)
+                                  dynamic_substeps=2, abs_fast_threshold=2.)
 
 # %%
 df = dynamics.get_history()

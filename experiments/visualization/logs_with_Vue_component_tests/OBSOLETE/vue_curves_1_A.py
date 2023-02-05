@@ -1,7 +1,7 @@
 # Test "A" of using the heatmap module "vue_curves_1" in an HTML log
 
-from modules.html_log.html_log import HtmlLog as log
-from modules.visualization.graphic_log import GraphicLog
+from src.modules.html_log.html_log import HtmlLog as log
+from src.modules.visualization.graphic_log import GraphicLog
 
 COMPONENT_NAME = "vue_curves_1"
 

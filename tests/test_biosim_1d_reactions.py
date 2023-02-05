@@ -2,8 +2,8 @@
 # for general tests of 1D system, see test_biosim_1d.py
 
 import numpy as np
-from modules.reactions.reaction_data import ReactionData
-from life_1D.bio_sim_1d import BioSim1D
+from src.modules.reactions.reaction_data import ReactionData
+from src.life_1D.bio_sim_1d import BioSim1D
 
 
 

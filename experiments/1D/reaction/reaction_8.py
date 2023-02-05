@@ -13,14 +13,14 @@
 # ---
 
 # %% [markdown]
-# ## 2 COUPLED reactions:  A + B <-> C  and  C + D <-> E , 
+# ## 2 COUPLED reactions:  `A + B <-> C`  and  `C + D <-> E` , 
 # ### with 1st-order kinetics for each species, taken to equilibrium
 #
 # Both reactions are stronger in their respective forward rates.  For the most part, "C" is produced by the 1st reaction, and consumed by the 2nd one
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Dec. 25, 2022
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -31,13 +31,13 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.reactions.reaction_data import ReactionData as chem
-from modules.reactions.reaction_dynamics import ReactionDynamics
-from life_1D.bio_sim_1d import BioSim1D
+from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
-from modules.html_log.html_log import HtmlLog as log
-from modules.visualization.graphic_log import GraphicLog
+from src.modules.html_log.html_log import HtmlLog as log
+from src.modules.visualization.graphic_log import GraphicLog
 
 # %%
 # Initialize the HTML logging

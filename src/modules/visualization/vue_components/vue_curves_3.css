@@ -1,0 +1,38 @@
+/* For outer box around the plot */
+svg.chart-holder {
+    border:1px solid cyan;
+}
+
+/* For animations when switching between the interpolation styles
+   of 'curveStepBefore' and  'curveStepAfter' */
+path {
+    transition: all 500ms ease;
+}
+
+
+/*
+    For the axes
+ */
+
+g.axis-line {
+    stroke: black;
+    stroke-width: 1px;
+}
+g.ticks {
+    stroke: grey;
+}
+
+g.tick-labels {
+    fill: grey;
+    font-size: 10px;
+    font-family: sans-serif;
+    text-anchor: middle;
+    /* transform: translate(0, 1px);   Increase for larger font sizes */
+}
+g.tick-labels-left-axis {
+   fill: grey;
+   font-size: 10px;
+   font-family: sans-serif;
+   text-anchor: middle;
+   /* transform: translate(-10px, 1px);   Increase for larger font sizes */
+}

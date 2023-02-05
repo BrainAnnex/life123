@@ -13,12 +13,12 @@
 # ---
 
 # %% [markdown]
-# ### Adaptive time substeps (variable time resolution) for reaction A <-> B,
+# ### Adaptive time substeps (variable time resolution) for reaction `A <-> B`,
 # with 1st-order kinetics in both directions, taken to equilibrium
 #
 # Same as the experiment _"react_1"_ , but with an adaptive variable time scale
 #
-# LAST REVISED: Jan. 22, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -29,12 +29,12 @@ set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.reactions.reaction_data import ReactionData as chem
-from modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
 import plotly.express as px
-from modules.visualization.graphic_log import GraphicLog
+from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
 # Initialize the HTML logging (for the graphics)
@@ -90,7 +90,7 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 dynamics.single_compartment_react(time_step=0.1, n_steps=11,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=2, fast_threshold=100)
+                                  dynamic_substeps=2, rel_fast_threshold=100)
 
 # %% [markdown]
 # ## The argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using the specified value of _fast_threshold_ )
@@ -182,6 +182,6 @@ fig.show()
 dynamics.diagnostic_data_baselines.get()
 
 # %%
-dynamics.diagnostic_data[0].get()  # For the 0-th reaction (the only reaction in our case)
+dynamics.get_diagnostic_data(rxn_index=0)      # For the 0-th reaction (the only reaction in our case)
 
 # %%

@@ -14,13 +14,13 @@
 
 # %% [markdown]
 # ## 2 COUPLED reactions of different speeds, forming a "cascade":  
-# ### A <-> B (fast) and B <-> C (slow)
+# ### `A <-> B` (fast) and `B <-> C` (slow)
 # All 1st order. Taken to equilibrium. Both reactions are mostly forward.
 # The concentration of the intermediate product B manifests 1 oscillation (transient "overshoot")
 #
 # (Adaptive variable time resolution is used, with extensive diagnostics.)
 #
-# LAST REVISED: Jan. 22, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -45,12 +45,12 @@ set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.reactions.reaction_data import ReactionData as chem
-from modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
 import plotly.express as px
-from modules.visualization.graphic_log import GraphicLog
+from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
 # Initialize the HTML logging (for the graphics)
@@ -113,12 +113,12 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 #dynamics.verbose_list = [1, 2, 3]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
 # The changes of concentrations vary very rapidly early on; 
-# so, we'll be using the dynamic_steps option to increase time resolution,
+# so, we'll be using the dynamic_substeps option to increase time resolution,
 # as long as the reaction remains "fast" (based on a threshold of % change, as specified by fast_threshold)
 dynamics.single_compartment_react(time_step=0.02, reaction_duration=0.4,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=10, fast_threshold=190)
+                                  dynamic_substeps=10, rel_fast_threshold=190)
 
 # %% [markdown]
 # ### Note: the argument  _dynamic_step=10_  splits the time steps in 10 for any reactions that are "fast-changing" (as determined using the given value of  _fast_threshold_ )

@@ -13,14 +13,14 @@
 # ---
 
 # %% [markdown]
-# ## One-bin  2A <-> B reaction,  
+# ## One-bin  `2A <-> B` reaction,  
 # ### COMPARING 1st-order and 2nd-order kinetics in *forward* direction; reverse direction 1-st order
 #
 # Diffusion not applicable (just 1 bin)
 #
 # See also the experiment _"reactions_single_compartment/react_4"_ 
 #
-# LAST REVISED: Jan. 9, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -31,13 +31,13 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.reactions.reaction_data import ReactionData as chem
-from modules.reactions.reaction_dynamics import ReactionDynamics
-from life_1D.bio_sim_1d import BioSim1D
+from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
-from modules.html_log.html_log import HtmlLog as log
-from modules.visualization.graphic_log import GraphicLog
+from src.modules.html_log.html_log import HtmlLog as log
+from src.modules.visualization.graphic_log import GraphicLog
 
 # %%
 # Initialize the HTML logging

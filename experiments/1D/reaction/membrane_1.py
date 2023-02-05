@@ -16,7 +16,7 @@
 # ### Exploring the data structures of MEMBRANES, and reactions in them 
 # #### - with NO DIFFUSION
 #
-# LAST REVISED: Nov. 28, 2022
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -25,10 +25,10 @@ set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up
                                          # to reach the project's home from the folder containing this notebook
 
 # %%
-from modules.reactions.reaction_data import ReactionData as chem
-from modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
-from life_1D.bio_sim_1d import BioSim1D
+from src.life_1D.bio_sim_1d import BioSim1D
 
 # %%
 chem_data = chem(names=["A", "B", "C"])     # NOTE: Diffusion not done

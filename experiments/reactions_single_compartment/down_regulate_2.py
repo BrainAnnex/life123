@@ -21,7 +21,7 @@
 #
 # See also 1D/reactions/down_regulation_1
 #
-# LAST REVISED: Jan. 28, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -32,12 +32,12 @@ set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.reactions.reaction_data import ReactionData as chem
-from modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
 import plotly.express as px
-from modules.visualization.graphic_log import GraphicLog
+from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
 # Initialize the HTML logging
@@ -78,8 +78,8 @@ dynamics.describe_state()
 # ### Take the initial system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, n_steps=30, 
-                                  dynamic_steps=2, fast_threshold=15)
+dynamics.single_compartment_react(time_step=0.0005, n_steps=30,
+                                  dynamic_substeps=2, rel_fast_threshold=15)
 
 df = dynamics.get_history()
 df
@@ -117,7 +117,7 @@ dynamics.history.get(tail=5)
 
 # %%
 dynamics.single_compartment_react(time_step=0.001, n_steps=40,
-                                 dynamic_steps=2, fast_threshold=15)
+                                  dynamic_substeps=2, rel_fast_threshold=15)
 
 df = dynamics.history.get()
 df
@@ -149,7 +149,7 @@ dynamics.history.get(tail=5)
 
 # %%
 dynamics.single_compartment_react(time_step=0.001, n_steps=35,
-                                 dynamic_steps=2, fast_threshold=15)
+                                  dynamic_substeps=2, rel_fast_threshold=15)
 
 df = dynamics.get_history()
 df
@@ -178,7 +178,7 @@ dynamics.describe_state()
 
 # %%
 dynamics.single_compartment_react(time_step=0.001, n_steps=70,
-                                 dynamic_steps=2, fast_threshold=15)
+                                  dynamic_substeps=2, rel_fast_threshold=15)
 
 dynamics.get_history()
 
@@ -193,6 +193,6 @@ dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
 # %% [markdown]
 # #### As expected, even the complete withdrawal of A (red), brings about only a modest increase of B's concentration, from the reverse reaction (i.e. [B] slightly increases at the expense of [Y].)  
 # #### The change is modest because our  reaction A + 2 B <-> Y is mostly in the forward direction (K = 4)
-# Le Chatelier's principle in action: "A change in one of the variables that describe a system at equilibrium produces a shift in the position of the equilibrium that counteracts the effect of this change."
+# *Le Chatelier's principle* in action: "A change in one of the variables that describe a system at equilibrium produces a shift in the position of the equilibrium that counteracts the effect of this change."
 
 # %%

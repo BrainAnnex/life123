@@ -13,20 +13,20 @@
 # ---
 
 # %% [markdown]
-# ## A <-> B , downregulated by the "shunt" (coupled reaction) A <-> S
+# ## `A <-> B` , downregulated by the "shunt" (coupled reaction) `A <-> S`
 # ### _Kinetic_ advantage (downregulation in early phase) vs. _Thermodynamic_ advantage (long-term downregulation) 
 #
-# **[Scenario 1](#down_regulate_1_scenario_1)** : No downregulation on A <-> B 
+# **[Scenario 1](#down_regulate_1_scenario_1)** : No downregulation on `A <-> B `
 #
-# **[Scenario 2](#down_regulate_1_scenario_2)** : The shunt (A <-> S) has a *kinetic* advantage but *thermodynamic* DIS-advantage compared to A <-> B   
-# (i.e. A <-> S is fast, but energetically unfavored) 
+# **[Scenario 2](#down_regulate_1_scenario_2)** : The shunt (`A <-> S`) has a *kinetic* advantage but *thermodynamic* DIS-advantage compared to `A <-> B `  
+# (i.e. `A <-> S` is fast, but energetically unfavored) 
 #
-# **[Scenario 3](#down_regulate_1_scenario_3)** : The shunt (A <-> S) is has a *kinetic* DIS-advantage but a *thermodynamic* advantage compared to A <-> B     
-# (i.e. A <-> S is slow, but energetically favored)  
+# **[Scenario 3](#down_regulate_1_scenario_3)** : The shunt (`A <-> S`) is has a *kinetic* DIS-advantage but a *thermodynamic* advantage compared to `A <-> B`     
+# (i.e. `A <-> S` is slow, but energetically favored)  
 #
 # All reactions 1st order, mostly forward.  Taken to equilibrium.
 #
-# LAST REVISED: Jan. 22, 2023
+# LAST REVISED: Feb. 5, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -46,12 +46,12 @@ set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from modules.reactions.reaction_data import ReactionData as chem
-from modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
 import plotly.express as px
-from modules.visualization.graphic_log import GraphicLog
+from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
 # Initialize the HTML logging (for the graphics)
@@ -95,12 +95,12 @@ dynamics.set_diagnostics()          # To save diagnostic information about the c
 #dynamics.verbose_list = [1, 2, 3]   # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
 # The changes of concentrations vary very rapidly early on; 
-# so, we'll be using the dynamic_steps option to increase time resolution,
+# so, we'll be using the dynamic_substeps option to increase time resolution,
 # as long as the reaction remains "fast" (based on a threshold of % change, as specified by fast_threshold)
 dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.05,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=4, fast_threshold=25)
+                                  dynamic_substeps=4, rel_fast_threshold=25)
 
 # %%
 df_iterm = dynamics.get_history()
@@ -111,7 +111,7 @@ df_iterm
 dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.25,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=4, fast_threshold=10)
+                                  dynamic_substeps=4, rel_fast_threshold=10)
 
 # %%
 df = dynamics.get_history()
@@ -166,19 +166,19 @@ dynamics.set_diagnostics()         # To save diagnostic information about the ca
 #dynamics.verbose_list = [1, 2, 3]  # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
 # The changes of concentrations vary very rapidly early on; 
-# so, we'll be using the dynamic_steps option to increase time resolution,
+# so, we'll be using the dynamic_substeps option to increase time resolution,
 # as long as the reaction remains "fast" (based on a threshold of % change, as specified by fast_threshold)
 dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.05,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=4, fast_threshold=10)
+                                  dynamic_substeps=4, rel_fast_threshold=10)
 
 # %%
 # Continue running the reaction at lover resolution
 dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.25,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=4, fast_threshold=10)
+                                  dynamic_substeps=4, rel_fast_threshold=10)
 
 # %%
 df = dynamics.get_history()
@@ -245,19 +245,19 @@ dynamics3.set_diagnostics()       # To save diagnostic information about the cal
 #dynamics3.verbose_list = [1, 2, 3]  # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
 # The changes of concentrations vary very rapidly early on; 
-# so, we'll be using the dynamic_steps option to increase time resolution,
+# so, we'll be using the dynamic_substeps option to increase time resolution,
 # as long as the reaction remains "fast" (based on a threshold of % change, as specified by fast_threshold)
 dynamics3.single_compartment_react(time_step=0.005, reaction_duration=0.3,
-                                  snapshots={"initial_caption": "1st reaction step",
+                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=5, fast_threshold=10)
+                                   dynamic_substeps=5, rel_fast_threshold=10)
 
 # %%
 # Continue running the reaction at lover resolution
 dynamics3.single_compartment_react(time_step=0.25, reaction_duration=6.7,
-                                  snapshots={"initial_caption": "1st reaction step",
+                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_steps=5, fast_threshold=10)
+                                   dynamic_substeps=5, rel_fast_threshold=10)
 
 # %%
 df3 = dynamics3.get_history()
