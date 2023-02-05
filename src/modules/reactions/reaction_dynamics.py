@@ -460,7 +460,7 @@ class ReactionDynamics:
 
     def single_compartment_react(self, reaction_duration=None, stop_time=None, time_step=None, n_steps=None,
                                  snapshots=None, silent=False,
-                                 dynamic_substeps=1, rel_fast_threshold=None, fast_threshold=None, abs_fast_threshold=None) -> None:
+                                 dynamic_substeps=1, rel_fast_threshold=None, abs_fast_threshold=None) -> None:
         """
         Perform ALL the reactions in the single compartment -
         based on the INITIAL concentrations,
@@ -492,8 +492,7 @@ class ReactionDynamics:
                                     if that reaction has fast dynamics,
                                     or multiplied by that factor, if that reaction has slow dynamics
 
-        :param rel_fast_threshold:  Synonym of "fast_threshold" - and meant to replace it
-        :param fast_threshold:      Only used when dynamic_substeps > 1
+        :param rel_fast_threshold:  Only used when dynamic_substeps > 1
                                     The minimum relative size of the concentration [baseline over its] change, AS A PERCENTAGE,
                                     for a reaction to be regarded as "Slow".
                                     IMPORTANT: this refers to the FULL step size
@@ -522,9 +521,6 @@ class ReactionDynamics:
 
 
         if dynamic_substeps > 1:   # If variable substep size was requested
-            if fast_threshold is not None:
-                rel_fast_threshold = fast_threshold # TODO: for historical reasons - fast_threshold to be obsoleted
-
             if abs_fast_threshold is not None:
                 if rel_fast_threshold is not None:
                     raise Exception("single_compartment_react(): "
@@ -583,7 +579,7 @@ class ReactionDynamics:
         while self.system_time < stop_time:
             delta_concentrations, step_actually_taken = self.reaction_step_orchestrator(delta_time_full=time_step, conc_array=self.system,
                                                                                         snapshots=snapshots,
-                                                                                        dynamic_substeps=dynamic_substeps, fast_threshold=rel_fast_threshold)
+                                                                                        dynamic_substeps=dynamic_substeps, rel_fast_threshold=rel_fast_threshold)
             self.system += delta_concentrations
             self.system_time += step_actually_taken
             if step_actually_taken < time_step:
@@ -638,7 +634,7 @@ class ReactionDynamics:
 
 
     def reaction_step_orchestrator(self, delta_time_full: float, conc_array,
-                                   snapshots=None, dynamic_substeps=1, fast_threshold=5) -> (np.array, float):
+                                   snapshots=None, dynamic_substeps=1, rel_fast_threshold=5) -> (np.array, float):
         """     TODO: the word "orchestrator" may no longer be a good descriptor
         This is the common entry point for both single-compartment reactions,
         and the reaction part of reaction-diffusions in 1D, 2D and 3D.
@@ -663,7 +659,7 @@ class ReactionDynamics:
         :param snapshots:       See explanation under single_compartment_react()
         :param dynamic_substeps: An integer by which to subdivide the time intervals for "fast" reactions;
                                     default 1, i.e. no subdivisions
-        :param fast_threshold:  The minimum relative size of the concentration baseline over its change, AS A PERCENTAGE,
+        :param rel_fast_threshold:  The minimum relative size of the concentration baseline over its change, AS A PERCENTAGE,
                                 for a reaction to be regarded as "Slow".  IMPORTANT: this refers to the FULL step size
 
         :return:                The pair:
@@ -684,8 +680,8 @@ class ReactionDynamics:
         assert dynamic_substeps >= 1, "reaction_step_orchestrator(): the argument 'dynamic_substeps' must be an integer greater or equal than 1"
 
         if dynamic_substeps > 1:   # If the variable time step option was requested
-            assert fast_threshold > 0, "reaction_step_orchestrator(): the argument 'fast_threshold' must be greater than 0"
-            fast_threshold_fraction = fast_threshold / 100.     # Here we switch over from percentages to fractions
+            assert rel_fast_threshold > 0, "reaction_step_orchestrator(): the argument 'fast_threshold' must be greater than 0"
+            fast_threshold_fraction = rel_fast_threshold / 100.     # Here we switch over from percentages to fractions
 
 
         if 2 in self.verbose_list:
