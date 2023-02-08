@@ -495,8 +495,7 @@ class ReactionDynamics:
         :param rel_fast_threshold:  Only used when dynamic_substeps > 1
                                     The minimum relative size of the concentration [baseline over its] change, AS A PERCENTAGE,
                                     for a reaction to be regarded as "Slow".
-                                    IMPORTANT: this refers to the FULL step size
-                                    TODO: maybe rename rel_fast_threshold
+                                    IMPORTANT: this refers to the FULL step size : it's RELative to it
         :param abs_fast_threshold: Similar to fast_threshold, but in terms of time units - NOT relative to the requested step size
                                     TODO: maybe rename fast_threshold
 
