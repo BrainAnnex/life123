@@ -14,8 +14,11 @@
 # ---
 
 # %% [markdown]
-# ## `E` ("Enhancer") up-regulates `X` , by sharing a reaction product `D` ("Drain") in 2 separate reactions:   
+# ## `E` ("Enhancer") up-regulates `X` , by sharing a reaction product `D` ("Drain") across 2 separate reactions:   
 # ### `E <-> 2 D` and `X <-> D` (mostly forward)
+#
+# Invoking [Le Chatelier's principle](https://www.chemguide.co.uk/physical/equilibria/lechatelier.html), it can be seen that, starting from equilibrium, when `E` goes up, so does `D`; and when `D` goes up, so does `X`.   
+# Conversely, when `E` goes down, so does `D`; and when `D` goes down, so does `X`.   
 #
 # 1st-order kinetics throughout.   
 #
@@ -76,13 +79,13 @@ dynamics.set_conc(conc={"E": 50., "X": 100., "D": 0.})
 dynamics.describe_state()
 
 # %% [markdown] tags=[]
-# ### Take the initial system to equilibrium
+# # 1. Take the initial system to equilibrium
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 dynamics.single_compartment_react(time_step=0.03, stop_time=0.5,
-                                  dynamic_substeps=2, rel_fast_threshold=15)
+                                  dynamic_substeps=2, rel_fast_threshold=50)
 
 df = dynamics.get_history()
 df
@@ -104,7 +107,7 @@ dynamics.plot_curves(colors=['red', 'green', 'gray'])
 dynamics.is_in_equilibrium()
 
 # %% [markdown] tags=[]
-# # Now, let's suddenly increase [E]
+# # 2. Now, let's suddenly increase [E]
 
 # %%
 dynamics.set_chem_conc(species_name="E", conc=70., snapshot=True)
@@ -117,8 +120,8 @@ dynamics.get_history(tail=3)
 # ### Again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.03, stop_time=1.1,
-                                  dynamic_substeps=2, rel_fast_threshold=15)
+dynamics.single_compartment_react(time_step=0.03, stop_time=1,
+                                  dynamic_substeps=2, rel_fast_threshold=50)
 
 df = dynamics.get_history()
 df
@@ -129,15 +132,15 @@ dynamics.explain_time_advance()
 # %%
 dynamics.plot_curves(colors=['red', 'green', 'gray'])
 
+# %% [markdown]
+# ### The (transiently) high value of [E] led to an increase in [X]
+
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium()
-
-# %% [markdown]
-# The (transiently) high value of [E] led to a high value of [X]
+dynamics.is_in_equilibrium(tolerance=2)
 
 # %% [markdown] tags=[]
-# # Let's again suddenly increase [E]
+# # 3. Let's again suddenly increase [E]
 
 # %%
 dynamics.set_chem_conc(species_name="E", conc=100., snapshot=True)
@@ -150,8 +153,8 @@ dynamics.get_history(tail=3)
 # ### Yet again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.03, stop_time=1.7,
-                                  dynamic_substeps=2, rel_fast_threshold=15)
+dynamics.single_compartment_react(time_step=0.03, stop_time=1.6,
+                                  dynamic_substeps=2, rel_fast_threshold=120)
 
 df = dynamics.history.get()
 df
@@ -162,12 +165,15 @@ dynamics.explain_time_advance()
 # %%
 dynamics.plot_curves(colors=['red', 'green', 'gray'])
 
+# %% [markdown]
+# ### The (transiently) high value of [E] again led to an increase in [X]
+
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium()
+dynamics.is_in_equilibrium(explain=False)
 
 # %% [markdown] tags=[]
-# # Now, instead, let's DECREASE [E]
+# # 4. Now, instead, let's DECREASE [E]
 
 # %%
 dynamics.set_chem_conc(species_name="E", conc=5., snapshot=True)
@@ -181,7 +187,7 @@ dynamics.get_history(tail=3)
 
 # %%
 dynamics.single_compartment_react(time_step=0.03, stop_time=2.3,
-                                  dynamic_substeps=2, rel_fast_threshold=15)
+                                  dynamic_substeps=2, rel_fast_threshold=80)
 
 df = dynamics.history.get()
 df
@@ -192,8 +198,11 @@ dynamics.explain_time_advance()
 # %%
 dynamics.plot_curves(colors=['red', 'green', 'gray'])
 
+# %% [markdown]
+# ### The (transiently) LOW value of [E] led to an DECREASE in [X]
+
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium()
+dynamics.is_in_equilibrium(explain=False)
 
 # %%

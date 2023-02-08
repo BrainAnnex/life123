@@ -958,7 +958,7 @@ class ReactionData:
         if type(species) == str:
             species = self.get_index(species)
         else:
-            raise Exception(f"_parse_reaction_term(): The species value must be a string. Instead, it is {species} (of type {type(species)})")
+            raise Exception(f"_parse_reaction_term(): The chemical name must be a string. Instead, it is {species} (of type {type(species)})")
         #elif type(species) != int:
             #raise Exception(f"parse_reaction_term(): The species value must be an integer or a string. Instead, it is {species}")
 

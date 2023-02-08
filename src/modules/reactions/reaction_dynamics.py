@@ -1887,11 +1887,12 @@ class ReactionDynamics:
         """
         Use the saved-up diagnostic data, to print out details of the timescales of the reaction run
 
-        If diagnostics weren't enable ahead of calling this function, an Exception is raised
+        If diagnostics weren't enabled ahead of calling this function, an Exception is raised
 
         EXAMPLE of output:
             From time 0 to 0.0168, in 42 substeps of 0.0004 (each 1/2 of full step)
             From time 0.0168 to 0.0304, in 17 FULL steps of 0.0008
+            (for a grand total of 38 full steps)
 
         :param return_times:    If True, all the critical times are saved and returned as a list
         :return:                Either None, or a list of time values
@@ -1926,42 +1927,47 @@ class ReactionDynamics:
 
         critical_times = [start_interval]  # List of times to report on (start time, plus times where the steps change)
 
+        total_number_full_steps = 0
         for i in range(1, n_entries-1):
             #print(i)
             if not np.allclose(grad[i], grad_shifted[i]):
                 #print (f"   Detection at element {i} : time={t[i]}")
                 #print (f"   From time {start_interval} to {t[i]}, in steps of {grad_shifted[i]}")
                 primary_timestep = df.loc[i, "primary_timestep"]
-                self._explain_time_advance_helper(t_start=start_interval, t_end=t[i], delta_baseline=grad_shifted[i], primary_timestep=primary_timestep)
+                total_number_full_steps += self._explain_time_advance_helper(t_start=start_interval, t_end=t[i], delta_baseline=grad_shifted[i], primary_timestep=primary_timestep)
                 start_interval = t[i]
                 critical_times.append(t[i])
 
         #print (f"   From time {start_interval} to {t[-1]}, in steps of {grad_shifted[-1]}")
         primary_timestep = df.loc[n_entries-1, "primary_timestep"]
-        self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1], delta_baseline=grad_shifted[-1], primary_timestep=primary_timestep)
+        total_number_full_steps += self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1], delta_baseline=grad_shifted[-1], primary_timestep=primary_timestep)
         critical_times.append(t[-1])
+        print(f"(for a grand total of {total_number_full_steps} full steps)")
 
         if return_times:
             return critical_times
 
 
-    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, primary_timestep)  -> None:
+
+    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, primary_timestep)  -> int:
         """
+        Using the provided data, about a group of same-size steps, create and print a description of it for the user
 
         :param t_start:
         :param t_end:
         :param delta_baseline:
         :param primary_timestep:
-        :return:
+        :return:                An integer with the corresponding number of full steps taken
         """
         if np.allclose(t_start, t_end):
             #print(f"[Ignoring interval starting and ending at same time {t_start:.3g}]")
-            return
+            return 0
 
         if np.allclose(delta_baseline, primary_timestep):
             n_steps = round((t_end - t_start) / delta_baseline)
             name = "step" if n_steps == 1 else "steps"  # singular vs. plural
             print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} FULL {name} of {delta_baseline:.3g}")
+            return n_steps
         else:
             #print(f"primary_timestep/delta_baseline is:  {primary_timestep}/{delta_baseline} = {primary_timestep/delta_baseline}")
             n_steps = round((t_end - t_start) / delta_baseline)
@@ -1969,6 +1975,8 @@ class ReactionDynamics:
                 print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substep of {delta_baseline:.3g} (1/{round(primary_timestep/delta_baseline)} of full step)")
             else:               # plural
                 print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substeps of {delta_baseline:.3g} (each 1/{round(primary_timestep/delta_baseline)} of full step)")
+
+            return round(n_steps *  delta_baseline / primary_timestep)
 
 
 
