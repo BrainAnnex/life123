@@ -14,15 +14,15 @@
 # ---
 
 # %% [markdown]
-# ## `E` ("Enhancer") up-regulates `X` , by sharing a reaction product `D` ("Drain") across 2 separate reactions:   
-# ### `E <-> 2 D` and `X <-> D` (mostly forward)
+# ## `U` ("Up-regulator") up-regulates `X` , by sharing a reaction product `D` ("Drain") across 2 separate reactions:   
+# ### `U <-> 2 D` and `U <-> D` (both mostly forward)
 #
-# Invoking [Le Chatelier's principle](https://www.chemguide.co.uk/physical/equilibria/lechatelier.html), it can be seen that, starting from equilibrium, when `E` goes up, so does `D`; and when `D` goes up, so does `X`.   
-# Conversely, when `E` goes down, so does `D`; and when `D` goes down, so does `X`.   
+# Invoking [Le Chatelier's principle](https://www.chemguide.co.uk/physical/equilibria/lechatelier.html), it can be seen that, starting from equilibrium, when `U` goes up, so does `D`; and when `D` goes up, so does `X`.   
+# Conversely, when `U` goes down, so does `D`; and when `D` goes down, so does `X`.   
 #
 # 1st-order kinetics throughout.   
 #
-# LAST REVISED: Feb. 7, 2023
+# LAST REVISED: Feb. 8, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -54,10 +54,10 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = chem(names=["E", "X", "D"])
+chem_data = chem(names=["U", "X", "D"])
 
-# Reaction E <-> 2D , with 1st-order kinetics for all species
-chem_data.add_reaction(reactants="E", products=[(2, "D")],
+# Reaction U <-> 2D , with 1st-order kinetics for all species
+chem_data.add_reaction(reactants="U", products=[(2, "D")],
                        forward_rate=8., reverse_rate=2.)
 
 # Reaction X <-> D , with 1st-order kinetics for all species
@@ -75,7 +75,7 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
-dynamics.set_conc(conc={"E": 50., "X": 100., "D": 0.})
+dynamics.set_conc(conc={"U": 50., "X": 100., "D": 0.})
 dynamics.describe_state()
 
 # %% [markdown] tags=[]
@@ -107,10 +107,10 @@ dynamics.plot_curves(colors=['red', 'green', 'gray'])
 dynamics.is_in_equilibrium()
 
 # %% [markdown] tags=[]
-# # 2. Now, let's suddenly increase [E]
+# # 2. Now, let's suddenly increase [U]
 
 # %%
-dynamics.set_chem_conc(species_name="E", conc=70., snapshot=True)
+dynamics.set_chem_conc(species_name="U", conc=70., snapshot=True)
 dynamics.describe_state()
 
 # %%
@@ -133,17 +133,17 @@ dynamics.explain_time_advance()
 dynamics.plot_curves(colors=['red', 'green', 'gray'])
 
 # %% [markdown]
-# ### The (transiently) high value of [E] led to an increase in [X]
+# ### The (transiently) high value of [U] led to an increase in [X]
 
 # %%
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium(tolerance=2)
 
 # %% [markdown] tags=[]
-# # 3. Let's again suddenly increase [E]
+# # 3. Let's again suddenly increase [U]
 
 # %%
-dynamics.set_chem_conc(species_name="E", conc=100., snapshot=True)
+dynamics.set_chem_conc(species_name="U", conc=100., snapshot=True)
 dynamics.describe_state()
 
 # %%
@@ -166,17 +166,17 @@ dynamics.explain_time_advance()
 dynamics.plot_curves(colors=['red', 'green', 'gray'])
 
 # %% [markdown]
-# ### The (transiently) high value of [E] again led to an increase in [X]
+# ### The (transiently) high value of [U] again led to an increase in [X]
 
 # %%
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium(explain=False)
 
 # %% [markdown] tags=[]
-# # 4. Now, instead, let's DECREASE [E]
+# # 4. Now, instead, let's DECREASE [U]
 
 # %%
-dynamics.set_chem_conc(species_name="E", conc=5., snapshot=True)
+dynamics.set_chem_conc(species_name="U", conc=5., snapshot=True)
 dynamics.describe_state()
 
 # %%
@@ -199,7 +199,7 @@ dynamics.explain_time_advance()
 dynamics.plot_curves(colors=['red', 'green', 'gray'])
 
 # %% [markdown]
-# ### The (transiently) LOW value of [E] led to an DECREASE in [X]
+# ### The (transiently) LOW value of [U] led to an DECREASE in [X]
 
 # %%
 # Verify that the reaction has reached equilibrium

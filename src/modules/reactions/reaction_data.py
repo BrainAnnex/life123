@@ -935,14 +935,11 @@ class ReactionData:
                             OR  a triplet (stoichiometry coeff, name, reaction order)
         :param name:    An optional nickname to refer to this term in error messages, if applicable
                             (for example, "reactant" or "product")
-        :return:        A standardized tuple form, of the form (stoichiometry, species, reaction_order),
+        :return:        A standardized tuple form, of the form (stoichiometry, species index, reaction_order),
                             where all terms are integers
         """
-        #if type(term) == int:
-            #return  (1, term, 1)
-        #elif type(term) == str:
         if type(term) == str:
-            return  (1, self.get_index(term), 1)    # Accept just the chemical name as a shortcut
+            return  (1, self.get_index(term), 1)    # Accept simply the chemical name as a shortcut
                                                     # for when the stoichiometry coefficient and reaction order are both 1
         elif type(term) != tuple and type(term) != list:
             raise Exception(f"_parse_reaction_term(): {name} item must be either a string (a chemical name), "
@@ -959,8 +956,6 @@ class ReactionData:
             species = self.get_index(species)
         else:
             raise Exception(f"_parse_reaction_term(): The chemical name must be a string. Instead, it is {species} (of type {type(species)})")
-        #elif type(species) != int:
-            #raise Exception(f"parse_reaction_term(): The species value must be an integer or a string. Instead, it is {species}")
 
         if len(term) == 2:
             return (stoichiometry, species, 1)

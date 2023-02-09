@@ -76,7 +76,7 @@ class ReactionDynamics:
         pass
 
 
-    def set_conc(self, conc: Union[list, tuple, dict], snapshot=False) -> None:     # TODO: maybe rename set_all_conc()
+    def set_conc(self, conc: Union[list, tuple, dict], snapshot=True) -> None:     # TODO: maybe rename set_all_conc()
         """
         Set the concentrations of ALL the chemicals at once   TODO: maybe a dict indicates a selection of chems, while a list, etc means "ALL"
 
@@ -89,7 +89,7 @@ class ReactionDynamics:
                                 TODO: also allow a Numpy array; make sure to do a copy() to it!
                                 TODO: pytest for the dict option
         :param snapshot:    (OPTIONAL) boolean: if True, add to the history
-                                a snapshot of this state being set.  Default: False    TODO: maybe switch default to True
+                                a snapshot of this state being set.  Default: True
         :return:            None
         """
         # TODO: more validations, incl. of individual values being wrong data type
@@ -125,7 +125,7 @@ class ReactionDynamics:
 
 
 
-    def set_chem_conc(self, conc, species_index=None, species_name=None, snapshot=False) -> None:
+    def set_chem_conc(self, conc, species_index=None, species_name=None, snapshot=True) -> None:
         # TODO Maybe rename set_single_conc()
         #      [OR call it set_conc(), and also handle dict's]
         """
@@ -138,7 +138,7 @@ class ReactionDynamics:
         :param species_name:    (OPTIONAL) A name for the chemical of interest.
                                     If both species_index and species_name are provided, species_name is used
         :param snapshot:        (OPTIONAL) boolean: if True, add to the history
-                                    a snapshot of this state being set.  Default: False     TODO: maybe switch default to True
+                                    a snapshot of this state being set.  Default: True
         :return:                None
         """
         # Validate the arguments
@@ -1509,6 +1509,8 @@ class ReactionDynamics:
         Verify that the stoichiometry is satisfied in all the reaction (sub)steps,
         using the diagnostic data from an earlier run
 
+        IMPORTANT: this function is currently meant for simulations involving only 1 reaction (TODO: generalize)
+
         :return:    True if everything checks out, or False otherwise
         """
         if self.diagnostic_data == {}:
@@ -1520,7 +1522,7 @@ class ReactionDynamics:
             diagnostic_data = self.get_diagnostic_data(rxn_index=rxn_index, print_reaction=False)
             for row_index in range(len(diagnostic_data)):
                 df_row = diagnostic_data.loc[row_index]     # Row in the Panda's data frame of diagnostic data
-                chemical_delta_list = self.delta_names()            # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
+                chemical_delta_list = self._delta_names()            # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
                 delta = df_row[chemical_delta_list].to_numpy()      # Extract select columns from the data frame row, and turn into Numpy array
                 status = self.stoichiometry_checker_from_deltas(rxn_index=rxn_index, delta_arr=delta, suppress_warning=True)
                 if not status:
@@ -1532,9 +1534,10 @@ class ReactionDynamics:
 
 
 
-    def delta_names(self) -> [str]:
+    def _delta_names(self) -> [str]:
         """
-        Return a list of strings, with names of all chemicals, prefixed by the string "Delta "
+        Return a list of strings, with names of all the chemicals,
+        each prefixed by the string "Delta "
         EXAMPLE: ["Delta A", "Delta B", "Delta C"]
         :return:
         """
@@ -1684,11 +1687,10 @@ class ReactionDynamics:
                 f"diagnose_variable_time_steps(): error in relative lengths of diagnostic changes Pandas frame ({number_diagnostic_points}) " \
                 f"and diagnostic baselines Pandas frame ({len(baselines_df)}); the latter should be 1 longer than the former"
 
-            # TODO: replace next several lines with call to delta_names()
+
             chemical_list = self.reaction_data.get_all_names()
-            print("Examining the reactions' diagnostic data for the chemicals: ", chemical_list)
-            chemical_delta_list = ["Delta " + name
-                                   for name in chemical_list]
+            print("Examining the reactions' diagnostic data for all the chemicals")
+            chemical_delta_list = self._delta_names()
             print("The concentration increments are: ", chemical_delta_list)
 
             for i in range(number_diagnostic_points):
@@ -1837,7 +1839,7 @@ class ReactionDynamics:
         print("active_list: ", active_list)
 
         chemical_list = self.reaction_data.get_all_names()
-        chemical_delta_list = self.delta_names()
+        chemical_delta_list = self._delta_names()
 
         conc_arr_before = self.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy().astype(float)
         print("baseline concentrations: ", conc_arr_before)
