@@ -579,7 +579,10 @@ class ReactionDynamics:
             delta_concentrations, step_actually_taken = self.reaction_step_orchestrator(delta_time_full=time_step, conc_array=self.system,
                                                                                         snapshots=snapshots,
                                                                                         dynamic_substeps=dynamic_substeps, rel_fast_threshold=rel_fast_threshold)
-            self.system += delta_concentrations
+            self.system += delta_concentrations     # TODO: check for negative concentrations
+            if min(self.system) < 0:
+                print(f"******** WARNING: negative concentration upon advancing reactions from system time t={self.system_time:,.4g}")
+
             self.system_time += step_actually_taken
             if step_actually_taken < time_step:
                 extra_steps += 1
@@ -960,34 +963,35 @@ class ReactionDynamics:
 
 
             """
-            Determine the concentration adjustments as a result of this reaction step, for the reaction being considered
+            Determine the concentration adjustments as a result of this reaction step, 
+            for the reaction being considered
             """
 
             # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
             for r in reactants:
-                stoichiometry, species_index, order = r
+                stoichiometry, species_index, order = r                 # Unpack
                 delta_conc = stoichiometry * (- delta_dict[rxn_index])  # Increment to this reactant from the reaction being considered
                 # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
+                # TODO: not enough to detect conc going negative from combined changes from multiple reactions!
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
                 increment_vector_single_rxn[species_index] += delta_conc
-                #increment_vector[species_index] += delta_conc
 
 
             # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
             for p in products:
-                stoichiometry, species_index, order = p
+                stoichiometry, species_index, order = p             # Unpack
                 delta_conc = stoichiometry * delta_dict[rxn_index]  # Increment to this reaction product from the reaction being considered
                 # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
+                # TODO: not enough to detect conc going negative from combined changes from multiple reactions!
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
                 increment_vector_single_rxn[species_index] += delta_conc
-                #increment_vector[species_index] += delta_conc
 
 
-            increment_vector += increment_vector_single_rxn
+            increment_vector += increment_vector_single_rxn     # Accumulate the increment vector across all reactions
 
 
             # If requested to evaluate the reaction "speeds"
