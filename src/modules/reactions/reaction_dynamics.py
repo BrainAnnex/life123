@@ -579,9 +579,10 @@ class ReactionDynamics:
             delta_concentrations, step_actually_taken = self.reaction_step_orchestrator(delta_time_full=time_step, conc_array=self.system,
                                                                                         snapshots=snapshots,
                                                                                         dynamic_substeps=dynamic_substeps, rel_fast_threshold=rel_fast_threshold)
-            self.system += delta_concentrations     # TODO: check for negative concentrations
-            if min(self.system) < 0:
-                print(f"******** WARNING: negative concentration upon advancing reactions from system time t={self.system_time:,.4g}")
+            # Update the System State
+            self.system += delta_concentrations
+            if min(self.system) < 0:        # Check again for negative concentrations.  TODO: redundant, since reaction_step_orchestrator() now does that
+                print(f"******** ERROR: FAILED TO CATCH negative concentration upon advancing reactions from system time t={self.system_time:,.4g}")
 
             self.system_time += step_actually_taken
             if step_actually_taken < time_step:
@@ -711,7 +712,17 @@ class ReactionDynamics:
                     delta_concentrations = self._advance_variable_substeps(delta_time_full=delta_time_full, conc_array= conc_array,
                                                                            snapshots=snapshots,
                                                                            dynamic_substeps=dynamic_substeps, fast_threshold_fraction=fast_threshold_fraction)
-                break
+
+                # Check whether the COMBINED delta_concentrations will make any conc negative
+                tentative_updated_system = self.system + delta_concentrations
+                if min(tentative_updated_system) < 0:
+                    print(f"******** WARNING: negative concentration upon advancing reactions from system time t={self.system_time:,.5g}")
+                    raise ExcessiveTimeStep(f"The chosen time interval ({delta_time_full}) "
+                                            f"leads to a NEGATIVE concentration of one of the chemicals: "
+                                            f"MUST MAKE THE INTERVAL SMALLER!\n"
+                                            f"[System Time: {self.system_time:.5g} : Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
+
+                break       # TODO: do we really need this break???
 
             except ExcessiveTimeStep as ex:
                 # Single reactions steps can fail if the attempted time step was too large (leading to negative concentrations)
@@ -726,7 +737,7 @@ class ReactionDynamics:
         if delta_concentrations is None:
             raise Exception("reaction_step_orchestrator(): unable to complete the reaction step")
 
-        return  (delta_concentrations, delta_time_full)
+        return  (delta_concentrations, delta_time_full)     # TODO: consider returning tentative_updated_system , since we already computed it
 
 
 
