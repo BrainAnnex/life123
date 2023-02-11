@@ -582,7 +582,7 @@ class ReactionDynamics:
             # Update the System State
             self.system += delta_concentrations
             if min(self.system) < 0:        # Check again for negative concentrations.  TODO: redundant, since reaction_step_orchestrator() now does that
-                print(f"******** ERROR: FAILED TO CATCH negative concentration upon advancing reactions from system time t={self.system_time:,.4g}")
+                print(f"+++++++++++ SYSTEM STATE ERROR: FAILED TO CATCH negative concentration upon advancing reactions from system time t={self.system_time:,.4g}")
 
             self.system_time += step_actually_taken
             if step_actually_taken < time_step:
@@ -722,7 +722,7 @@ class ReactionDynamics:
                                             f"MUST MAKE THE INTERVAL SMALLER!\n"
                                             f"[System Time: {self.system_time:.5g} : Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
 
-                break       # TODO: do we really need this break???
+                break       # IMPORTANT: this is needed!
 
             except ExcessiveTimeStep as ex:
                 # Single reactions steps can fail if the attempted time step was too large (leading to negative concentrations)
@@ -1189,6 +1189,12 @@ class ReactionDynamics:
         :return:                        None (an Exception is raised if a negative concentration is detected)
         """
         if (baseline_conc + delta_conc) < 0:
+            '''
+            print(f"****** DETECTING NEGATIVE CONCENTRATION in chemical `{self.reaction_data.get_name(species_index)}` "
+                  f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)}\n"
+                  f"       [System Time: {self.system_time:.5g} : Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}]"
+                  f"\n       IGNORING AND CONTINUING (for demonstration purposes)")
+            '''
             raise ExcessiveTimeStep(f"The chosen time interval ({delta_time}) "
                                     f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` (index {species_index}) "
                                     f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
@@ -1997,7 +2003,7 @@ class ReactionDynamics:
         EXAMPLE of output:
             From time 0 to 0.0168, in 42 substeps of 0.0004 (each 1/2 of full step)
             From time 0.0168 to 0.0304, in 17 FULL steps of 0.0008
-            (for a grand total of 38 full steps)
+            (for a grand total of 38 FULL steps)
 
         :param return_times:    If True, all the critical times are saved and returned as a list
         :return:                Either None, or a list of time values
@@ -2039,15 +2045,17 @@ class ReactionDynamics:
                 #print (f"   Detection at element {i} : time={t[i]}")
                 #print (f"   From time {start_interval} to {t[i]}, in steps of {grad_shifted[i]}")
                 primary_timestep = df.loc[i, "primary_timestep"]
+                #print("ADDING FULL STEPS:", self._explain_time_advance_helper(t_start=start_interval, t_end=t[i], delta_baseline=grad_shifted[i], primary_timestep=primary_timestep))
                 total_number_full_steps += self._explain_time_advance_helper(t_start=start_interval, t_end=t[i], delta_baseline=grad_shifted[i], primary_timestep=primary_timestep)
                 start_interval = t[i]
                 critical_times.append(t[i])
 
         #print (f"   From time {start_interval} to {t[-1]}, in steps of {grad_shifted[-1]}")
         primary_timestep = df.loc[n_entries-1, "primary_timestep"]
+        #print("ADDING FULL STEPS:", self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1], delta_baseline=grad_shifted[-1], primary_timestep=primary_timestep))
         total_number_full_steps += self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1], delta_baseline=grad_shifted[-1], primary_timestep=primary_timestep)
         critical_times.append(t[-1])
-        print(f"(for a grand total of {total_number_full_steps} full steps)")
+        print(f"(for a grand total of the equivalent of {total_number_full_steps:,.3g} FULL steps)")
 
         if return_times:
             return critical_times
@@ -2062,7 +2070,7 @@ class ReactionDynamics:
         :param t_end:
         :param delta_baseline:
         :param primary_timestep:
-        :return:                An integer with the corresponding number of full steps taken
+        :return:                The corresponding number of FULL steps taken (it may be fractional)
         """
         if np.allclose(t_start, t_end):
             #print(f"[Ignoring interval starting and ending at same time {t_start:.3g}]")
@@ -2076,12 +2084,13 @@ class ReactionDynamics:
         else:
             #print(f"primary_timestep/delta_baseline is:  {primary_timestep}/{delta_baseline} = {primary_timestep/delta_baseline}")
             n_steps = round((t_end - t_start) / delta_baseline)
-            if n_steps == 1:    # singular
+            if n_steps == 1:    # Use wording for the singular
                 print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substep of {delta_baseline:.3g} (1/{round(primary_timestep/delta_baseline)} of full step)")
-            else:               # plural
+            else:               # Use wording for the plural
                 print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substeps of {delta_baseline:.3g} (each 1/{round(primary_timestep/delta_baseline)} of full step)")
 
-            return round(n_steps *  delta_baseline / primary_timestep)
+            #return round(n_steps *  delta_baseline / primary_timestep)
+            return (n_steps *  delta_baseline / primary_timestep)
 
 
 
