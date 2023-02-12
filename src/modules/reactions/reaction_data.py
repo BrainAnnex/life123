@@ -572,15 +572,13 @@ class ReactionData:
         The involved chemicals must be already registered - use add_chemical() if needed.
 
         NOTE: in the reactants and products, if the stoichiometry and/or reaction order aren't specified,
-              they're assumed to be 1
+              they're assumed to be 1.
+              Their full structure is the triplet (stoichiometry coefficient, name, reaction order)
 
         EXAMPLES of formats for reactants and products (*assuming* that the chemical species with index 5 is called "F"):
-                    5       gets turned into:   (1, 5, 1)
-                    "F"                         (1, 5, 1)
-                    (3, 5)                      (3, 5, 1)
-                    (3, "F")                    (3, 5, 1)
-                    (3, 5, 2)                   (3, 5, 2)
-                    (3, "F", 2)                 (3, 5, 2)
+                    "F"         gets turned into:   (1, 5, 1)
+                    (3, "F")                        (3, 5, 1)
+                    (3, "F", 2)                     (3, 5, 2)
                     It's equally acceptable to use LISTS in lieu of tuples
 
         :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
@@ -922,42 +920,42 @@ class ReactionData:
         """
         Accept various ways to specify a reaction term, and return a standardized tuple form of it.
         In the tuples or lists:
-            - 1st entry is the stoichiometry
-            - 2nd one is the chemical name or index,
+            - optional 1st entry is the stoichiometry
+            - required entry is the chemical name
             - optional 3rd one is the reaction order
 
         EXAMPLES (*assuming* that the chemical species with index 5 is called "F"):
-            5       gets turned into:   (1, 5, 1)
-            "F"                         (1, 5, 1)
-            (3, 5)                      (3, 5, 1)
-            (3, "F")                    (3, 5, 1)
-            (3, 5, 2)                   (3, 5, 2)
-            (3, "F", 2)                 (3, 5, 2)
+            "F"          gets turned into:  (1, 5, 1)
+            (3, "F")                        (3, 5, 1)
+            (3, "F", 2)                     (3, 5, 2)
             It's equally acceptable to use LISTS in lieu of tuples
 
-        :param term:    An integer or string or tuple or list
+        :param term:    A string (a chemical name)
+                            OR  a pair (stoichiometry coeff, name)
+                            OR  a triplet (stoichiometry coeff, name, reaction order)
         :param name:    An optional nickname to refer to this term in error messages, if applicable
                             (for example, "reactant" or "product")
-        :return:        A standardized tuple form, of the form (stoichiometry, species, reaction_order),
+        :return:        A standardized tuple form, of the form (stoichiometry, species index, reaction_order),
                             where all terms are integers
         """
-        if type(term) == int:
-            return  (1, term, 1)
-        elif type(term) == str:
-            return  (1, self.get_index(term), 1)
+        if type(term) == str:
+            return  (1, self.get_index(term), 1)    # Accept simply the chemical name as a shortcut
+                                                    # for when the stoichiometry coefficient and reaction order are both 1
         elif type(term) != tuple and type(term) != list:
-            raise Exception(f"_parse_reaction_term(): {name} must be either an integer, or a string, or a pair or a triplet. Instead, it is {type(term)}")
+            raise Exception(f"_parse_reaction_term(): {name} item must be either a string (a chemical name), "
+                            f"or a pair (stoichiometry coeff, name) or a triplet (stoichiometry coeff, name, reaction order). "
+                            f"Instead, it is `{term}` (of type {type(term)})")
 
         # If we get thus far, term is either a tuple or a list
         if len(term) != 3 and len(term) != 2:
-            raise Exception(f"parse_reaction_term(): Unexpected length for {name} tuple/list: it should be 2 or 3. Instead, it is {len(term)}")
+            raise Exception(f"_parse_reaction_term(): Unexpected length for {name} tuple/list: it should be 2 or 3. Instead, it is {len(term)}")
 
         stoichiometry = term[0]
         species = term[1]
         if type(species) == str:
             species = self.get_index(species)
-        elif type(species) != int:
-            raise Exception(f"parse_reaction_term(): The species value must be an integer or a string. Instead, it is {species}")
+        else:
+            raise Exception(f"_parse_reaction_term(): The chemical name must be a string. Instead, it is {species} (of type {type(species)})")
 
         if len(term) == 2:
             return (stoichiometry, species, 1)

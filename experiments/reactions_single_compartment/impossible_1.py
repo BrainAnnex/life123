@@ -89,6 +89,9 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 # # Notice the absurdity of the energy levels always going down, throughout the cycle (like in an Escher painting!)
 
 # %% [markdown]
+# ![Energy levels always going down](../../docs/impossible_1b.jpg)
+
+# %% [markdown]
 # ### Set the initial concentrations of all the chemicals
 
 # %%
@@ -182,7 +185,7 @@ chem_data.describe_reactions()
 # based of thermodynamic data consistent with the previous 2 reactions : i.e. an energy difference of -(-2,723.41 - 1,718.28) = +4,441.69 (reflecting the  
 # "going uphill energetically" from C to A
 chem_data.add_reaction(reactants="C" , products="A",
-                       forward_rate=3., Delta_G=4441.69)   # Notice the the positive Delta G: we're going from "C", to the higher-energy level of "A"
+                       forward_rate=3., Delta_G=4441.69)   # Notice the positive Delta G: we're going from "C", to the higher-energy level of "A"
 
 # %%
 chem_data.describe_reactions()

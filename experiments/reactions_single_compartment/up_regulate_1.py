@@ -19,7 +19,7 @@
 # 1st-order kinetics.   
 # If [A] is low, [B] remains low, too.  Then, if [A] goes high, then so does [B].  However, at that point, A can no longer bring B down to any substantial extent.
 #
-# See also 1D/reactions/up_regulation_1
+# See also the experiment "1D/reactions/up_regulation_1"
 #
 # LAST REVISED: Feb. 5, 2023
 
@@ -171,10 +171,11 @@ dynamics.is_in_equilibrium(tolerance=2)
 dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
 
 # %% [markdown]
-# `A`, again the scarse limiting reagent, stops the reaction yet again.  
+# `A`, again the scarce limiting reagent, stops the reaction yet again.  
 # And, again, the (transiently) high value of [A] up-regulated [B]  
 #
-# Note: `A` can up-regulate `B`, but it cannot bring it down.  
+# Notes:   
+# `A` can up-regulate `B`, but it cannot bring it down.  
 # `X` will soon need to be replenished, if `A` is to continue being the limiting reagent.
 
 # %%

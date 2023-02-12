@@ -305,28 +305,30 @@ def test_get_chemicals_in_reaction():
     with pytest.raises(Exception):
         chem.get_chemicals_in_reaction(0)   # There are no reactions defined yet
 
-    chem.add_reaction(reactants="A", products="B")  # Reaction 0
+    chem.add_reaction(reactants="A", products="B")  # Reaction 0 : A <-> B
     assert chem.get_chemicals_in_reaction(0) == {0, 1}
 
     with pytest.raises(Exception):
         chem.get_chemicals_in_reaction(1)   # There is no reaction 1
 
     chem.add_chemical("C")
-    chem.add_reaction(reactants=["B"], products=[2, "C"])  # Reaction 1
+
+    chem.add_reaction(reactants=["B"], products=[(2, "C")])  # Reaction 1 : B <-> 2C
     assert chem.get_chemicals_in_reaction(0) == {0, 1}
     assert chem.get_chemicals_in_reaction(1) == {1, 2}
 
-    chem.add_reaction(reactants=["A"], products=["C"])      # Reaction 2
+    chem.add_reaction(reactants=["A"], products=["C"])      # Reaction 2 : A <-> C
     assert chem.get_chemicals_in_reaction(0) == {0, 1}
     assert chem.get_chemicals_in_reaction(1) == {1, 2}
     assert chem.get_chemicals_in_reaction(2) == {0, 2}
 
     chem.add_chemical("D")
-    chem.add_reaction(reactants=["A", "B"], products="D")    # Reaction 2
+    chem.add_reaction(reactants=["A", "B"], products="D")    # Reaction 3 : A + B <-> D
     assert chem.get_chemicals_in_reaction(0) == {0, 1}
     assert chem.get_chemicals_in_reaction(1) == {1, 2}
     assert chem.get_chemicals_in_reaction(2) == {0, 2}
     assert chem.get_chemicals_in_reaction(3) == {0, 1, 3}
+
 
 
 
@@ -352,11 +354,26 @@ def test_create_graph_network_data():
 
 def test_parse_reaction_term():
     chem = ReactionData(names=["A", "B", "C", "D", "E", "F"])
-    assert chem._parse_reaction_term(5) == (1, 5, 1)
+
+    with pytest.raises(Exception):
+        chem._parse_reaction_term(5)    # The argument is not a string nor a tuple or list
+
     assert chem._parse_reaction_term("F") == (1, 5, 1)
 
-    assert chem._parse_reaction_term( (3, 5) ) == (3, 5, 1)
-    assert chem._parse_reaction_term( (3, "F") ) == (3, 5, 1)
+    with pytest.raises(Exception):
+        chem._parse_reaction_term("Not the name of any chemical")
 
-    assert chem._parse_reaction_term( (3, 5, 2) ) == (3, 5, 2)
+    with pytest.raises(Exception):
+        chem._parse_reaction_term( (3, 5) )   # The last item in the pair is not a string
+
+    assert chem._parse_reaction_term( (3, "F") ) == (3, 5, 1)
+    assert chem._parse_reaction_term( [3, "F"] ) == (3, 5, 1)
+
+    with pytest.raises(Exception):
+        chem._parse_reaction_term( (3, 5, 2) )   # The mid-item in the triplet is not a string
+
     assert chem._parse_reaction_term( (3, "F", 2) ) == (3, 5, 2)
+    assert chem._parse_reaction_term( [3, "F", 2] ) == (3, 5, 2)
+
+    with pytest.raises(Exception):
+        chem._parse_reaction_term( (3, 5, 2, 123) )     # Extra element in tuple
