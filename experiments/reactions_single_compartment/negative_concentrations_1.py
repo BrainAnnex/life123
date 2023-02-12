@@ -127,7 +127,9 @@ all_fig.show()
 # %% [markdown]
 # # There are 3 separate scenarios that lead to negative concentrations
 #
-# #### Scenario 1 : A reaction causes a dip into the negative, and the other reactions fails to remedy it
+# [More information](https://life123.science/reactions)
+#
+# #### Scenario 1 : A reaction causes a dip into the negative, and the combined other reactions fail to remedy it
 #
 # #### Scenario 2 : A reaction causes a dip into the negative, and the other reactions counterbalance it enough to remedy it
 # (though "counterbalanced", this is still regarded as a sign of instability)

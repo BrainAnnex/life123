@@ -1756,7 +1756,7 @@ class ReactionDynamics:
 
 
 
-    def diagnose_variable_time_steps(self, rel_fast_threshold=5) -> None:
+    def diagnose_variable_time_steps(self, rel_fast_threshold) -> None:
         """
         Analyze, primarily for debugging purposes, the diagnostics data produced
         when the self.diagnostics attribute is set to True prior to running single_compartment_react().
