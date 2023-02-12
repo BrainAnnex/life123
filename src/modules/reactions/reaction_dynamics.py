@@ -714,15 +714,19 @@ class ReactionDynamics:
                                                                            dynamic_substeps=dynamic_substeps, fast_threshold_fraction=fast_threshold_fraction)
 
                 # Check whether the COMBINED delta_concentrations will make any conc negative
-                tentative_updated_system = self.system + delta_concentrations
-                if min(tentative_updated_system) < 0:
-                    print(f"******** WARNING: negative concentration upon advancing reactions from system time t={self.system_time:,.5g}")
-                    raise ExcessiveTimeStep(f"The chosen time interval ({delta_time_full}) "
-                                            f"leads to a NEGATIVE concentration of one of the chemicals: "
-                                            f"MUST MAKE THE INTERVAL SMALLER!\n"
-                                            f"[System Time: {self.system_time:.5g} : Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
+                if self.system is not None:     # IMPORTANT: usage of this function doesn't always involve self.system
+                    tentative_updated_system = self.system + delta_concentrations
+                    if min(tentative_updated_system) < 0:
+                        print(f"******** CAUTION: negative concentration resulting from the combined effect of multiple reactions, "
+                              f"upon advancing reactions from system time t={self.system_time:,.5g}\n"
+                              f"         It will be AUTOMATICALLY CORRECTED with a reduction in the time step size")
+                        raise ExcessiveTimeStep(f"The chosen time interval ({delta_time_full}) "
+                                                f"leads to a NEGATIVE concentration of one of the chemicals: "
+                                                f"MUST MAKE THE INTERVAL SMALLER!\n"
+                                                f"[System Time: {self.system_time:.5g} : Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
 
-                break       # IMPORTANT: this is needed!
+
+                break       # IMPORTANT: this is needed because, in the absence of errors, we need to go thru the WHILE loop only once!
 
             except ExcessiveTimeStep as ex:
                 # Single reactions steps can fail if the attempted time step was too large (leading to negative concentrations)
@@ -1189,12 +1193,10 @@ class ReactionDynamics:
         :return:                        None (an Exception is raised if a negative concentration is detected)
         """
         if (baseline_conc + delta_conc) < 0:
-            '''
-            print(f"****** DETECTING NEGATIVE CONCENTRATION in chemical `{self.reaction_data.get_name(species_index)}` "
-                  f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)}\n"
-                  f"       [System Time: {self.system_time:.5g} : Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}]"
-                  f"\n       IGNORING AND CONTINUING (for demonstration purposes)")
-            '''
+            print(f"******** CAUTION: negative concentration in chemical `{self.reaction_data.get_name(species_index)}`"
+                  f" (resulting from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)})\n",
+                  f"        upon advancing from system time t={self.system_time:,.5g} [Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}]\n"
+                  f"         It will be AUTOMATICALLY CORRECTED with a reduction in the time step size")
             raise ExcessiveTimeStep(f"The chosen time interval ({delta_time}) "
                                     f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` (index {species_index}) "
                                     f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
@@ -2089,69 +2091,8 @@ class ReactionDynamics:
             else:               # Use wording for the plural
                 print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} substeps of {delta_baseline:.3g} (each 1/{round(primary_timestep/delta_baseline)} of full step)")
 
-            #return round(n_steps *  delta_baseline / primary_timestep)
             return (n_steps *  delta_baseline / primary_timestep)
 
-
-
-    def explain_time_advance_OLD(self, return_times=False) -> Union[None, list]:    # TODO: OBSOLETE - to ditch
-        """
-        Use the saved-up diagnostic data, to print out details of the timescales of the reaction run
-
-        EXAMPLE of output:
-            From time 0 to 0.0168, in 42 substeps of 0.0004 (each 1/2 of full step)
-            From time 0.0168 to 0.0304, in 17 FULL steps of 0.0008
-
-        :param return_times:    If True, all the critical times are saved and returned as a list
-        :return:                Either None, or a list of time values
-        """
-        assert self.diagnostics, "ReactionDynamics.explain_time_advance_OLD(): diagnostics must first be turned on; " \
-                                 "use set_diagnostics() prior to the reaction run"
-
-        df = self.diagnostic_data_baselines.get()
-
-        t = list(df["TIME"])    # List of times from the cumulative history of the run
-
-        grad = np.diff(t)       # Numpy array of differences between consecutive times; this will have 1 less element than the list t
-
-        #print("grad: ", grad)
-
-        start_i = 0
-
-        t_0 = df.loc[0, "TIME"] # Initial time
-        critical_times = [t_0]  # List of times to report on (start time, plus times where the steps change)
-
-        while start_i < len(t)-2:
-            delta_baseline = grad[start_i]
-
-            found = False
-            for i in range(start_i+1, len(t)-1):
-                #print(f"Considering position {i}")
-                if not np.allclose(grad[i], delta_baseline):
-                    #print(f"discrepancy found at i={i}")
-                    #print(f"Detected interval [{start_i} - {i}], advancing by {delta_baseline:.3g}")
-                    t_start = df.loc[start_i, "TIME"]
-                    t_end = df.loc[i, "TIME"]
-                    critical_times.append(t_end)
-                    primary_timestep = df.loc[i, "primary_timestep"]
-                    self._explain_time_advance_helper(t_start, t_end, delta_baseline, primary_timestep)
-                    start_i = i
-                    found = True
-                    break
-
-            if not found:
-                #print("discrepancy NOT FOUND; we're at the end")
-                #print(f"Detected interval [{start_i} - {len(t)-1}], advancing by {delta_baseline:.3g}")
-                t_start = df.loc[start_i, "TIME"]
-                t_end = df.loc[len(t)-1, "TIME"]
-                critical_times.append(t_end)
-                primary_timestep = df.loc[len(t)-1, "primary_timestep"]
-                self._explain_time_advance_helper(t_start, t_end, delta_baseline, primary_timestep)
-                break
-        # END WHILE
-
-        if return_times:
-            return critical_times
 
 
 

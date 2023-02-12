@@ -14,14 +14,14 @@
 # ---
 
 # %% [markdown]
-# # IN-PROGRESS
+# # From finer to coarser resolution in advancing the two coupled reactions: 
 # ### `2 S <-> U` and `S <-> X` (both mostly forward)
 #
-# ## Based on the experiment `up_regulate_3"
+# 1st-order kinetics throughout.  
 #
-# 1st-order kinetics throughout.   
+# Note: for an exploration of instabilities, see the experiment `negative_concentrations_1`
 #
-# LAST REVISED: Feb. 8, 2023
+# LAST REVISED: Feb. 11, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -55,11 +55,11 @@ GraphicLog.config(filename=log_file,
 # Initialize the system
 chem_data = chem(names=["U", "X", "S"])
 
-# Reaction 2 S <-> U , with 1st-order kinetics for all species
+# Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
 chem_data.add_reaction(reactants=[(2, "S")], products="U",
                        forward_rate=8., reverse_rate=2.)
 
-# Reaction S <-> X , with 1st-order kinetics for all species
+# Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
 chem_data.add_reaction(reactants="S", products="X",
                        forward_rate=6., reverse_rate=3.)
 
@@ -70,7 +70,7 @@ graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown]
-# ### Run 1 : extremely small fixed time steps (no substeps)
+# # Run 1 : extremely small fixed time steps (no substeps)
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
@@ -86,10 +86,10 @@ df = dynamics.get_history()
 dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['red', 'green', 'gray'])
+dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
-# ### Run 2 : very small time steps, with dynamic substeps
+# # Run 2 : very small time steps, with dynamic substeps
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
@@ -106,10 +106,10 @@ df = dynamics.get_history()
 dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['red', 'green', 'gray'])
+dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
-# ### Run 3 : small-ish time steps, with dynamic substeps
+# # Run 3 : small-ish time steps, with dynamic substeps
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
@@ -126,10 +126,10 @@ df = dynamics.get_history()
 dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['red', 'green', 'gray'])
+dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
-# ### Run 4 : same as previous run, but fewer dynamic substeps
+# # Run 4 : same as previous run, but fewer dynamic substeps
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
@@ -146,10 +146,10 @@ df = dynamics.get_history()
 dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['red', 'green', 'gray'])
+dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
-# ### Run 5 : same as previous run, but slightly larger primary step
+# # Run 5 : same as previous run, but slightly larger primary step
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
@@ -159,17 +159,20 @@ dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 dynamics.single_compartment_react(time_step=0.1, stop_time=0.8,
-                                  dynamic_substeps=2, rel_fast_threshold=150)
+                                  dynamic_substeps=2, abs_fast_threshold=80.0)
 
 df = dynamics.get_history()
 #df
 dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['red', 'green', 'gray'])
+dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
-# ### Run 6 : same as previous run, but no substeps
+# ### Note: the above run is identical to the last run in the experiment `negative_concentrations_1`
+
+# %% [markdown]
+# # Run 6 : same as previous run, but no substeps
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
@@ -184,7 +187,13 @@ df = dynamics.get_history()
 #df
 dynamics.explain_time_advance()
 
+# %% [markdown]
+# ### Notice the automated detection - and correction - of negative concentrations arising from the excessively-large time steps
+
 # %%
-dynamics.plot_curves(colors=['red', 'green', 'gray'])
+dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+
+# %% [markdown]
+# ### Note: for an exploration of instabilities, see the experiment `negative_concentrations_1`
 
 # %%

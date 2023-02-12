@@ -14,21 +14,30 @@
 # ---
 
 # %% [markdown]
-# # IN-PROGRESS
-# ## Exploration of automatic detection - and stepsize reduction - in case any concentration goes negative
-# ### Two coupled reactions: `2 S <-> U` and `S <-> X` (both mostly forward)
-#
-# ## Based on the experiment `up_regulate_3`
+# ## Tour of Life123's process of automatic detection - and stepsize reduction - in case any concentration goes negative
+# ### Case study of two coupled reactions: `2 S <-> U` and `S <-> X` (both mostly forward)
 #
 # 1st-order kinetics throughout.   
 #
-# LAST REVISED: Feb. 10, 2023
+# LAST REVISED: Feb. 11, 2023
+#
+# * [RUN 1 : negative concentrations are detected but otherwise ignored](#negative_concentrations_1_run_1)  
+#
+# * [RUN 2 : we restored some, but not all, of the code that had been disabled in Run #1](#negative_concentrations_1_run_2)   
+# Negative concentrations from *individual* reactions are now automatically corrected - but negative concentrations from *combined* (synergistic) reactions can still slip thru  
+#
+# * [RUN 3 : we restored ALL the code that had been disabled in the earlier runs](#negative_concentrations_1_run_3)   
+# Negative concentrations from *individual* reactions are now automatically corrected - and so are negative concentrations from *combined* (synergistic) reactions   
+#
+# * [RUN 4 : same as the previous run, but with slightly finer time resolution](#negative_concentrations_1_run_4)   
+# (For even more accurate solutions, see the experiment `large_time_steps_2`)
+#
 
 # %% [markdown]
 # # IMPORTANT: DO NOT ATTEMPT TO RUN THIS NOTEBOOK!   
 # ## This is a **"frozen run"** that depends on Life123 code changes for demonstration purposes  
-# (a code change turning off the automatic correction of time steps that lead to negative concentrations.)  
-# If you bypass the exit in the first cell, and run the other cells, you WILL NOT REPLICATE the results below!
+# (a code change that turned off the automatic correction of time steps that lead to negative concentrations.)  
+# If you bypass the execution exit in the first cell, and run the other cells, you WILL NOT REPLICATE the results below!
 
 # %%
 # To stop the current and subsequent cells: USED TO PREVENT ACCIDENTAL RUNS OF THIS NOTEBOOK!
@@ -77,7 +86,9 @@ chem_data.describe_reactions()
 #
 
 # %% [markdown]
-# # RUN 1 : negative concentrations are detected but otherwise ignored
+# # <a name="negative_concentrations_1_run_1"></a>RUN 1 : negative concentrations are detected but otherwise ignored
+# This run required the disabling of multiple software features that detect, and automatically correct, such issues.   
+# It cannot be replicated with current versions of Life123.  DO NOT ATTEMPT TO RE-RUN!
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)
@@ -114,16 +125,17 @@ all_fig.update_layout(title="Changes in concentrations; notice the several dips 
 all_fig.show()
 
 # %% [markdown]
-# ## Notice three separate scenarios leading to negative concentrations
+# # There are 3 separate scenarios that lead to negative concentrations
 #
 # #### Scenario 1 : A reaction causes a dip into the negative, and the other reactions fails to remedy it
 #
 # #### Scenario 2 : A reaction causes a dip into the negative, and the other reactions counterbalance it enough to remedy it
+# (though "counterbalanced", this is still regarded as a sign of instability)
 #
 # #### Scenario 3 : No single reaction causes any negative concentration, but - combined - they do
 
 # %% [markdown]
-# **Example of scenario 1** (all the necessary diagnostic data in the next few rows)     
+# **Example of scenario 1** (all the necessary diagnostic data in the next several rows)     
 # The step from t=0.1 to 0.2 :   
 # [S] is initially 50   
 # * Reaction 0 causes a Delta_S of -64.000000 , which would send it into the negative    
@@ -134,7 +146,7 @@ all_fig.show()
 # That's what had led to the message _"+++ SYSTEM STATE ERROR: FAILED TO CATCH negative concentration upon advancing reactions from system time t=0.1"_
 
 # %% [markdown]
-# **Example of scenario 2** (all the necessary diagnostic data in the next few rows)     
+# **Example of scenario 2** (all the necessary diagnostic data in the next several rows)     
 # The step from t=0.4 to 0.5 :  
 # [S] is initially -67.99  
 # * Reaction 0 causes a Delta_S of 146.96 , which would remedy the negative when combined with the initial value      
@@ -159,21 +171,23 @@ dynamics.get_diagnostic_data(rxn_index=0)
 # %%
 dynamics.get_diagnostic_data(rxn_index=1)
 
-# %% [markdown]
-#
+# %%
 
 # %% [markdown]
-# # RUN 2 : we restored some, but not all, of the code that had been disabled in Run #1.  
+# ##################################################################################
+
+# %% [markdown]
+# # <a name="negative_concentrations_1_run_2"></a>RUN 2 : we restored some, but not all, of the code that had been disabled in Run #1.  
 # ## Negative concentrations from *individual* reactions are now automatically corrected - but negative concentrations from *combined* (synergistic) reactions can still slip thru
 # ### (With the restored code) Life123 automatically detects whenever an individual reaction would cause any chemical concentration to go negative.   
 # At that point, it raises an `ExcessiveTimeStep` exception.
-# That exception gets caught; it causes the following:   
-# * the (partial) execution of last last step gets discarded
+# That exception gets caught - which results in the following:   
+# * the (partial) execution of the last step gets discarded
 # * the step size gets halved
 # * the run automatically resumes from the previous time
 #
 # Such an automatic detection and remediation eliminates "Scenarios 1 and 2" (see earlier in notebook for definitions) BUT NOT "scenario 3"  
-# IMPORTANT: scenario 3 normally gets caught and remedied, too - but that feature got disabled by a code change _FOR DEMONSTRATION PURPOSES_
+# IMPORTANT: scenario 3 normally gets caught and remedied, too - but that feature got disabled by a code change in this run, _FOR DEMONSTRATION PURPOSES_
 
 # %%
 # Same as for Run #1
@@ -220,7 +234,7 @@ all_fig.show()
 # ## With this partially-restored functionality, we're averting what we called "scenarios 1 and 2" earlier in the notebook - but are still afflicted by "scenario 3" (no single reaction causes any negative concentration, but - combined - they do)
 
 # %% [markdown]
-# **That's what happens to [S] at t=0.55**   (all the necessary diagnostic data in the next few rows)       
+# **That's exactly what happens to [S] at t=0.55**   (all the necessary diagnostic data in the next few rows)       
 # The step from t=0.45 to 0.55 :   
 # [S] is initially 37.453500    
 # * Reaction 0 causes a Delta_S of -36.445600 , which by itself would cause no problem    
@@ -241,12 +255,15 @@ dynamics.get_diagnostic_data(rxn_index=1)
 # %%
 
 # %% [markdown]
-# # RUN 3 : we restored ALL the code that had been disabled in the earlier runs.
+# ##################################################################################
+
+# %% [markdown]
+# # <a name="negative_concentrations_1_run_3"></a>RUN 3 : we restored ALL the code that had been disabled in the earlier runs.
 # ## Negative concentrations from *individual* reactions are now automatically corrected - and so are negative concentrations from *combined* (synergistic) reactions
 # ### (With the restored code) Life123 automatically detects whenever any chemical concentration goes negative from any cause.   
 # At that point, it raises an `ExcessiveTimeStep` exception.
-# That exception gets caught; it causes the following:   
-# * the (partial) execution of last last step gets discarded
+# That exception gets caught - which results in the following:   
+# * the (partial) execution of the last step gets discarded
 # * the step size gets halved
 # * the run automatically resumes from the previous time
 
@@ -289,11 +306,13 @@ all_fig.show()
 # %% [markdown]
 # ## With the completely-restored functionality, we're averting what we called "scenarios 1, 2 and 3" earlier in the notebook :)
 
-# %% [markdown]
-#
+# %%
 
 # %% [markdown]
-# # RUN 4 : same as the previous run, but with slightly finer time resolution
+# ##################################################################################
+
+# %% [markdown]
+# # <a name="negative_concentrations_1_run_4"></a>RUN 4 : same as the previous run, but with slightly finer time resolution
 #
 # In run 3, we demonstrated catching - and resolving - all cases of negative concentrations that would slip in if it weren't for Life123's detection and automatic remediation.  But we still have a lot of instability, especially in [S].
 #
@@ -306,7 +325,7 @@ dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 
 # %% [markdown]
-# ## Rather than decreasing (for the whole run) the time step of 0.1, we'll simply opt to automatically take 2 substeps whenever any of the reactions are "fast changing" based on a threshold we provide
+# ## Rather than decreasing (for the whole run) the time step of 0.1, we'll simply opt to AUTOMATICALLY take 2 substeps whenever any of the reactions are "fast changing" based on a threshold we provide
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
@@ -329,5 +348,8 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # ## The resolution is still coarse, especially up to t=0.1, but all the instability is gone :)
+
+# %% [markdown]
+# ### Note: For even more accurate solutions, see the experiment `large_time_steps_2`
 
 # %%
