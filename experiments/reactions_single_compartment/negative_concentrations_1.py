@@ -22,16 +22,24 @@
 # LAST REVISED: Feb. 11, 2023
 #
 # * [RUN 1 : negative concentrations are detected but otherwise ignored](#negative_concentrations_1_run_1)  
+# (_"DEMONIC"_ in figure below)
 #
 # * [RUN 2 : we restored some, but not all, of the code that had been disabled in Run #1](#negative_concentrations_1_run_2)   
-# Negative concentrations from *individual* reactions are now automatically corrected - but negative concentrations from *combined* (synergistic) reactions can still slip thru  
+# Negative concentrations from *individual* reactions are now automatically corrected - but negative concentrations from *combined* (synergistic) reactions can still slip thru   
+# (_"POSSESSED"_ in figure below)
 #
 # * [RUN 3 : we restored ALL the code that had been disabled in the earlier runs](#negative_concentrations_1_run_3)   
 # Negative concentrations from *individual* reactions are now automatically corrected - and so are negative concentrations from *combined* (synergistic) reactions   
+# (_"DISTURBED"_ in figure below)
 #
 # * [RUN 4 : same as the previous run, but with slightly finer time resolution](#negative_concentrations_1_run_4)   
-# (For even more accurate solutions, see the experiment `large_time_steps_2`)
+# (_"HEALING"_ in figure below)
 #
+# For even more accurate solutions - _"HEALTHY"_ in figure below - see the experiment `large_time_steps_2`
+#
+
+# %% [markdown]
+# ![Exorcising Instabilities](../../docs/negative_concentrations_1.png)
 
 # %% [markdown]
 # # IMPORTANT: DO NOT ATTEMPT TO RUN THIS NOTEBOOK!   
