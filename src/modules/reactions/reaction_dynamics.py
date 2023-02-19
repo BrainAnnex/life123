@@ -72,7 +72,7 @@ class ReactionDynamics:
     #                                ~  TO SET/READ DATA  ~                                     #
     #                                                                                           #
     #############################################################################################
-    def ___________TO_SET_READ_DATA___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
+    def ___________TO_SET_AND_READ_DATA___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
         pass
 
 
@@ -1531,7 +1531,7 @@ class ReactionDynamics:
     #                                      FOR DIAGNOSTICS                                      #
     #                                                                                           #
     #############################################################################################
-    def _________FOR_DIAGNOSTICS___________(self):  # Used to get a better structure listing in IDEs such asPycharm
+    def _________FOR_DIAGNOSTICS___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
         pass
 
 

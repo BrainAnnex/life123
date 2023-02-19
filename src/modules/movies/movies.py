@@ -32,7 +32,11 @@ class MovieTabular:
 
 
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """
+        Return the number of snapshots comprising the movie
+        :return:    An integer
+        """
         return len(self.movie)
 
 
@@ -85,13 +89,13 @@ class MovieTabular:
 
 
 
-    def set_caption_last_snapshot(self, caption: str):
+    def set_caption_last_snapshot(self, caption: str) -> None:
         """
         Set the caption field of the last (most recent) snapshot to the given value.
         Any previous value gets over-written
 
         :param caption:
-        :return:
+        :return:        None
         """
         index = len(self.movie) - 1
         self.movie.loc[index, "caption"] = caption
@@ -133,8 +137,11 @@ class MovieArray:
 
 
 
-    def __len__(self):
-        # Return the number of snapshots comprising the movie
+    def __len__(self) -> int:
+        """
+        Return the number of snapshots comprising the movie
+        :return:    An integer
+        """
         return self.movie.shape[0]
 
 

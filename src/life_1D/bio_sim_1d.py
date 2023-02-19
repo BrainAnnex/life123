@@ -518,7 +518,7 @@ class BioSim1D:
 
     
     def x_coord(self, bin_address):
-        """"
+        """
         Return the x coordinate of the middle of the specified bin.
         By convention, for the leftmost bin, it's zero,
         and for the rightmost, it's the overall length of the system
@@ -725,7 +725,9 @@ class BioSim1D:
 
 
     def show_system_snapshot(self) -> None:
-        """"
+        """
+
+        :return:    None
         """
         print(f"SYSTEM SNAPSHOT at time {self.system_time}:")
         print(self.system_snapshot())
