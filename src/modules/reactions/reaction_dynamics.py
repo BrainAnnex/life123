@@ -2124,8 +2124,11 @@ class ReactionDynamics:
         :param colors:      (OPTIONAL) List of the colors names to use;
                                 if None, then use the hardwired defaults
         :param title:       (OPTIONAL) Title for the plot;
-                                if None, use default titles such as
-                                "Changes in concentrations for 5 reactions"
+                                if None, use default titles that will vary based on the # of reactions; EXAMPLES:
+                                    "Changes in concentrations for 5 reactions"
+                                    "Reaction `A <-> 2 B` .  Changes in concentrations with time"
+                                    "Changes in concentration for `2 S <-> U` and `S <-> X`"
+
         :param suppress:    If True, nothing gets shown - and a plotly "Figure" object gets returned instead
 
         :return:            None or a plotly "Figure" object, depending on the "suppress" flag
@@ -2142,12 +2145,18 @@ class ReactionDynamics:
         if colors is None:
             colors = default_colors[:number_of_curves]      # Pick the first default colors; TODO: rotate if needing more
 
-        if title is None:
-            if self.reaction_data.number_of_reactions() > 1:
-                title = f"Changes in concentrations for {self.reaction_data.number_of_reactions()} reactions"
-            else:
+
+        if title is None:   # If no title was specified, create one based on how many reactions are present
+            number_of_rxns = self.reaction_data.number_of_reactions()
+            if number_of_rxns > 2:
+                title = f"Changes in concentrations for {number_of_rxns} reactions"
+            elif number_of_rxns == 1:
                 rxn_text = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)   # The only reaction
-                title = f"Reaction {rxn_text} .  Changes in concentrations with time"
+                title = f"Reaction `{rxn_text}` .  Changes in concentrations with time"
+            else:   # Exactly 2 reactions
+                rxn_text_0 = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)
+                rxn_text_1 = self.reaction_data.single_reaction_describe(rxn_index=1, concise=True)
+                title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
 
         fig = px.line(data_frame=df, x="SYSTEM TIME", y=chemicals,

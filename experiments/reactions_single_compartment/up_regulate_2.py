@@ -17,10 +17,10 @@
 # ## `U` ("Up-regulator") up-regulates `X` , by sharing a reaction product `D` ("Drain") across 2 separate reactions:   
 # ### `U <-> 2 D` and `X <-> D` (both mostly forward)
 #
-# Invoking [Le Chatelier's principle](https://www.chemguide.co.uk/physical/equilibria/lechatelier.html), it can be seen that, starting from equilibrium, when [U] goes up, so does [D]; and when [D] goes up, so does [X].   
-# Conversely, when [U] goes down, so does [D]; and when [D] goes down, so does [X].   
+# 1st-order kinetics throughout. 
 #
-# 1st-order kinetics throughout.   
+# Invoking [Le Chatelier's principle](https://www.chemguide.co.uk/physical/equilibria/lechatelier.html), it can be seen that, starting from equilibrium, when [U] goes up, so does [D]; and when [D] goes up, so does [X].   
+# Conversely, when [U] goes down, so does [D]; and when [D] goes down, so does [X].     
 #
 # LAST REVISED: Feb. 11, 2023
 
