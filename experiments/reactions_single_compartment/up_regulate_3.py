@@ -24,6 +24,8 @@
 #
 # This experiment is a counterpart of `up_regulate_2`, with "upstream" rather than "downstream" reactions.
 #
+# Note: numerical errors in the same reactions (with the same initial conditions) is explored in the experiment "large_time_steps_2"
+#
 # LAST REVISED: Feb. 19, 2023
 
 # %%
@@ -214,5 +216,14 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 # %%
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium(explain=False)
+
+# %% [markdown]
+# **IDEAS TO EXPLORE**:   
+#
+# * Effect of the stoichiometry and the Delta_G on the "amplification" of the signal (from [U] to [X]) 
+#
+# * Effect of a continuously-varying (maybe oscillating [U]), and its being affected by the reactions' kinetics
+#
+# * Combining this experiment and `up_regulate_2` in a "bifan motif"
 
 # %%

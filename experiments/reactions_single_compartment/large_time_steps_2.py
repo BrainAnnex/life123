@@ -19,7 +19,9 @@
 #
 # 1st-order kinetics throughout.  
 #
-# Note: for an exploration of instabilities, see the experiment `negative_concentrations_1`
+# Notes:  
+# * for an exploration of instabilities, see the experiment `negative_concentrations_1`
+# * for an accurate longer run of the same reactions (with the same initial conditions), see the experiment "up_regulate_3"
 #
 # LAST REVISED: Feb. 11, 2023
 
