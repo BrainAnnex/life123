@@ -434,8 +434,8 @@ class ReactionDynamics:
 
     def specify_steps(self, total_duration=None, time_step=None, n_steps=None) -> (float, int):
         """
-        Receive 2 out of 3 possible parameters, and determine the 3rd one:
-                        total_duration, time_step, n_steps
+        If either the time_step or n_steps is not provided (but at least 1 of them must be present),
+        determine the other one from total_duration
 
         Their desired relationship is: total_duration = time_step * n_steps
 
@@ -456,7 +456,7 @@ class ReactionDynamics:
         if not n_steps:
             n_steps = math.ceil(total_duration / time_step)
 
-        return (time_step, n_steps)     # Note: could opt to also return total_duration is there's a need for it
+        return (time_step, n_steps)     # Note: could opt to also return total_duration if there's a need for it
 
 
 
@@ -511,7 +511,7 @@ class ReactionDynamics:
 
 
         """
-        Determine all the various time parameters that are not explicitly provided
+        Determine all the various time parameters that were not explicitly provided
         """
 
         if stop_time is not None:
@@ -585,6 +585,11 @@ class ReactionDynamics:
                             #   were automatically taken to avoid negative-concentration errors
                             # NOTE: dynamic substeps, if requested, have no bearing on the number of (full) steps that were taken
         while self.system_time < stop_time:
+            if (not self.variable_steps) and (i == n_steps) and np.allclose(self.system_time, stop_time):
+                break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
+                            #   the System Time is below the stop_time because of roundoff error
+
+
             delta_concentrations, step_actually_taken = self.reaction_step_orchestrator(delta_time_full=time_step, conc_array=self.system,
                                                                                         snapshots=snapshots,
                                                                                         dynamic_substeps=dynamic_substeps, rel_fast_threshold=rel_fast_threshold)
