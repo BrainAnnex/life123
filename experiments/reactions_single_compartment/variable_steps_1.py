@@ -81,14 +81,12 @@ dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics.verbose_list = [1]
 
-dynamics.single_compartment_react(time_step=0.01, n_steps=10)
+dynamics.single_compartment_react(time_step=0.01, n_steps=20)
 
 df = dynamics.get_history()
 df
-
-# %% [markdown]
-# # WHY 11 (rather than 10) steps?????
 
 # %%
 dynamics.explain_time_advance()

@@ -328,7 +328,7 @@ def test_adaptive_time_resolution_1():
     rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=kF, reverse_rate=kR)   # Re-add same reaction
 
-    result, _ = rxn.reaction_step_orchestrator(delta_time_full=0.1, conc_array=conc_array,
+    result, _, _ = rxn.reaction_step_orchestrator(delta_time_full=0.1, conc_array=conc_array,
                                                dynamic_substeps=2, rel_fast_threshold=5)
     # The above call results in 2 time steps
     # Check the calculations, based on the forward Euler method
@@ -385,7 +385,7 @@ def test_adaptive_time_resolution_2():
     rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
     chem_data.add_reaction(reactants=["A" , "B"], products=["C"],
                            forward_rate=kF, reverse_rate=kR)        # Re-add the reaction
-    result, _  = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
+    result, _, _  = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
                                                 dynamic_substeps=time_subdivision, rel_fast_threshold=5)
     # Check the calculations, based on the forward Euler method
     half_step_conc=conc_array + [delta_A ,delta_B, delta_C]    # [5.08 45.08 24.92]  These are the conc's halfway thru delta_time_full
@@ -463,7 +463,7 @@ def test_adaptive_time_resolution_3():
     rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
     chem_data.add_reaction(reactants=[(2, "A", 2)], products=["C"],
                            forward_rate=kF, reverse_rate=kR)        # Re-add the reaction
-    result, _  = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
+    result, _, _  = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
                                                 dynamic_substeps=time_subdivision, rel_fast_threshold=5)
 
     # Check the calculations, based on the forward Euler method

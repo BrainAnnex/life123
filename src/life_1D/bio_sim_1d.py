@@ -1345,7 +1345,7 @@ class BioSim1D:
             #print(f"\conc_array in bin {bin_n}: ", conc_array)
 
             # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-            increment_vector, _ = self.reaction_dynamics.reaction_step_orchestrator(delta_time_full=delta_time, conc_array=conc_array)
+            increment_vector, _, _ = self.reaction_dynamics.reaction_step_orchestrator(delta_time_full=delta_time, conc_array=conc_array)
 
             # Replace the "bin_n" column of the self.delta_reactions matrix with the contents of the vector increment_vector
             self.delta_reactions[:, bin_n] = np.array([increment_vector])
@@ -1361,7 +1361,7 @@ class BioSim1D:
                 #print(f"\n Post-membrane side conc_dict in bin {bin_n}: ", conc_dict)
 
                 # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-                increment_vector, _ = self.reaction_dynamics.reaction_step_orchestrator(delta_time_full=delta_time, conc_array=conc_array)
+                increment_vector, _, _ = self.reaction_dynamics.reaction_step_orchestrator(delta_time_full=delta_time, conc_array=conc_array)
 
                 # Replace the "bin_n" column of the self.delta_reactions_B matrix with the contents of the vector increment_vector
                 self.delta_reactions_B[:, bin_n] = np.array([increment_vector])
