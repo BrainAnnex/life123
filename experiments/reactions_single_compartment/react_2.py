@@ -16,7 +16,7 @@
 # ### Adaptive time substeps (variable time resolution) for reaction `A <-> B`,
 # with 1st-order kinetics in both directions, taken to equilibrium
 #
-# Same as the experiment _"react_1"_ , but with an adaptive variable time scale
+# Same as the experiment _"react_1"_ , but with adaptive time substeps
 #
 # LAST REVISED: Feb. 5, 2023
 

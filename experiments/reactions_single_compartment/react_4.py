@@ -17,7 +17,7 @@
 # #### with 2nd-order kinetics for `A`,  
 # #### and 1-st order kinetics for `C`
 #
-# Taken to equilibrium.  (Adaptive variable time resolution is used)
+# Taken to equilibrium.  (Adaptive variable time substeps are used)
 #
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #

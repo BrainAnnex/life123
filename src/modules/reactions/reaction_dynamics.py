@@ -1730,7 +1730,8 @@ class ReactionDynamics:
         Return a list of strings, with names of all the chemicals,
         each prefixed by the string "Delta "
         EXAMPLE: ["Delta A", "Delta B", "Delta C"]
-        :return:
+
+        :return:    A list of strings
         """
         chemical_list = self.reaction_data.get_all_names()      # EXAMPLE: ["A", "B", "C"]
         chemical_delta_list = ["Delta " + name
@@ -1813,6 +1814,9 @@ class ReactionDynamics:
         self.diagnostics = False
 
 
+    def get_diagnostic_rxn_data(self, rxn_index: int, tail=None, print_reaction=True) -> pd.DataFrame:  # TODO: phase in this new name
+        return self.get_diagnostic_data(rxn_index, tail, print_reaction)
+
 
     def get_diagnostic_data(self, rxn_index: int, tail=None, print_reaction=True) -> pd.DataFrame:
         """
@@ -1833,6 +1837,59 @@ class ReactionDynamics:
             print("Reaction: ", self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True))
 
         return self.diagnostic_data[rxn_index].get(tail=tail)
+
+
+
+    def get_diagnostic_conc_data(self) -> pd.DataFrame:
+        """
+        Return the diagnostic concentration data saved during the run
+        :return:
+        """
+        return self.diagnostic_data_baselines.get()
+
+
+
+    def get_diagnostic_delta_data(self) -> pd.DataFrame:
+        """
+        TODO: unclear if this works when substeps are involved
+        :return:    A Pandas dataframe with all the "Delta concentration" values
+        """
+        fields = self._delta_names()    # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
+
+        rxn_0 = self.get_diagnostic_rxn_data(rxn_index=0, print_reaction=False)
+
+        df_sum = rxn_0[fields]
+
+        time_col = rxn_0["TIME"]
+
+        n_rows = len(df_sum)
+
+        for rxn_index in range(1, self.reaction_data.number_of_reactions()):
+            rxn = self.get_diagnostic_rxn_data(rxn_index=rxn_index, print_reaction=False)
+            assert len(rxn)  == n_rows, "get_diagnostic_delta_data(): this function cannot be used because different dataframes" \
+                                        "of diagnostic reaction data have different numbers of rows"
+            df_sum += rxn[fields]
+
+        df_sum.insert(0, "TIME", time_col)
+
+        return df_sum
+
+
+
+    def get_L2_data(self) -> pd.DataFrame:
+        """
+
+        :return:
+        """
+        df = self.get_diagnostic_delta_data()
+        fields = self._delta_names()    # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
+
+        sq_arr = np.zeros(len(df))
+
+        for field_name in fields:
+            sq_arr += df[field_name]**2
+
+        return np.sqrt(sq_arr)/len(fields)
 
 
 

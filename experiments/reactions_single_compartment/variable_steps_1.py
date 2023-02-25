@@ -19,7 +19,7 @@
 #
 # Based on the experiment `up_regulate_3`
 #
-# LAST REVISED: Feb. 20, 2023
+# LAST REVISED: Feb. 24, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -83,7 +83,7 @@ dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 dynamics.verbose_list = [1]
 
-dynamics.single_compartment_react(time_step=0.01, n_steps=20)
+dynamics.single_compartment_react(time_step=0.01, n_steps=20, variable_steps=True)
 
 df = dynamics.get_history()
 df
@@ -98,3 +98,21 @@ dynamics.explain_time_advance()
 dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 
 # %%
+rxn0 = dynamics.get_diagnostic_rxn_data(rxn_index=0)
+rxn0
+
+# %%
+rxn1 = dynamics.get_diagnostic_rxn_data(rxn_index=1)
+rxn1
+
+# %%
+dynamics.get_diagnostic_conc_data()
+
+# %%
+dynamics.get_diagnostic_delta_data()
+
+# %%
+df
+
+# %%
+dynamics.get_L2_data()

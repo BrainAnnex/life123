@@ -16,7 +16,7 @@
 # ## Association/Dissociation reaction `A + B <-> C`
 # #### with 1st-order kinetics for each species, taken to equilibrium.
 # #### Exploration of debugging and diagnostics options
-# (Adaptive variable time resolution is used)
+# (Adaptive variable time substeps are used)
 #
 # _See also the experiment "1D/reactions/reaction_4"_ 
 #
