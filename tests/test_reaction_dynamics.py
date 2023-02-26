@@ -531,6 +531,48 @@ def test_adaptive_time_resolution_3():
 
 
 
+def test_single_compartment_react_variable_steps_1():
+    # Based on experiment "variable_steps_1"
+
+    # Initialize the system
+    chem_data = ReactionData(names=["U", "X", "S"])
+
+    # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
+    chem_data.add_reaction(reactants=[(2, "S")], products="U",
+                           forward_rate=8., reverse_rate=2.)
+
+    # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
+    chem_data.add_reaction(reactants="S", products="X",
+                           forward_rate=6., reverse_rate=3.)
+
+    dynamics = ReactionDynamics(reaction_data=chem_data)
+    dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
+
+    dynamics.single_compartment_react(time_step=0.01, n_steps=20, variable_steps=True)
+
+    df = dynamics.get_history()
+    print(df)
+    assert len(df) == 23
+
+    assert np.allclose(df.iloc[0][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.0000,  50.000000,  100.000000,  0.000000])
+
+    assert np.allclose(df.iloc[1][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.0050,  49.500000,  98.500000,  2.500000], rtol=1e-03)     # Notice the halved step size
+
+    assert np.allclose(df.iloc[2][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.0075,  49.302500,  97.798750,  3.596250], rtol=1e-03)
+
+    assert np.allclose(df.iloc[22][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.2050,  55.600598,   69.127620,  19.671183], rtol=1e-03)
+
+    #print(df.iloc[22][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'))
+
+
+
+
+######################  LOWER-LEVEL METHODS  ######################
+
 def test_compute_all_rate_deltas():
     chem_data = ReactionData(names=["A", "B", "C", "D"])
     rxn = ReactionDynamics(chem_data)
