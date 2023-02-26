@@ -64,8 +64,19 @@ class ReactionDynamics:
                                         #   Those sections will have entry points such as "if 1 in self.verbose_list"
                                         #   MAX code currently used: 5
 
-        self.diagnostic_data = {}       # This will be a dict with as many entries as reactions
-        self.diagnostic_data_baselines = MovieTabular(parameter_name="TIME")    # An expanded version of the normal System History
+        self.diagnostic_data = {}       # This will be a dict with as many entries as reactions.
+                                        #   The keys are the reaction indices; the values are Pandas dataframes
+                                        #   This is also referred to as "diagnostic reaction data"
+                                        #   Columns of the dataframes:
+                                        #       'TIME' 'Delta A' 'Delta B'...	'reaction' 	'substep' 'time_subdivision' 'delta_time' 'caption'
+                                        #   Note: entries are always added, even if an interval run is aborted
+
+        self.diagnostic_data_baselines = MovieTabular(parameter_name="TIME")
+                                        # An expanded version of the normal System History.
+                                        #   This is also referred to as "diagnostic concentration data".
+                                        #   Columns of the dataframes:
+                                        #       'TIME' 	'A' 'B' ...  'is_primary' 'primary_timestep' 'n_substeps' 'substep_number' 'caption'
+                                        #   Note: if an interval run is aborted, NO entry is created here
 
         self.diagnostics = False
 
@@ -751,6 +762,8 @@ class ReactionDynamics:
                         #L2_rate = np.linalg.norm(delta_concentrations) / (delta_time_full * n_chems)
                         print("    Adjusted L2 norm:   ", L2_rate)
                         #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
+
+                        # TODO: maybe make use of the method determine_step_action()
                         if L2_rate > self.variable_steps_threshold_high:
                             msg =   f"The current time step ({delta_time_full}) " \
                                     f"leads to an 'L2 rate' ({L2_rate:.4g}) that is higher than the specified HIGH threshold ({self.variable_steps_threshold_high}):\n" \
@@ -1814,21 +1827,29 @@ class ReactionDynamics:
         self.diagnostics = False
 
 
-    def get_diagnostic_rxn_data(self, rxn_index: int, tail=None, print_reaction=True) -> pd.DataFrame:  # TODO: phase in this new name
-        return self.get_diagnostic_data(rxn_index, tail, print_reaction)
+
+    def get_diagnostic_data(self, rxn_index: int, tail=None, print_reaction=True) -> pd.DataFrame:  # TODO: phase out this old name
+        return self.get_diagnostic_rxn_data(rxn_index, tail, print_reaction)
 
 
-    def get_diagnostic_data(self, rxn_index: int, tail=None, print_reaction=True) -> pd.DataFrame:
+    def get_diagnostic_rxn_data(self, rxn_index: int, tail=None, print_reaction=True) -> pd.DataFrame:
         """
-        Return a Pandas data frame with the diagnostic data of the requested reaction.
+        Return a Pandas data frame with the diagnostic data of the requested reaction: in particular,
+        the "Delta" values for each of the chemicals involved in the reaction - the change in
+        their concentration over the time interval that STARTS at the value in the TIME column.
+        (So, there'll be no row with the final current System Time)
+
         Also, optionally print out a brief description of the reaction.
         Optionally, restrict the result with a start and/or end times,
         or by limiting to a specified numbers of rows at the end
+        Note: entries are always added, even if an interval run is aborted
 
         :param rxn_index:   An integer that indexes the reaction of interest (numbering starts at 0)
         :param tail:        (OPTIONAL) Number of records to consider, from the end of the diagnostic dataframe
         :param print_reaction:  (OPTIONAL) If True (default), concisely print out the requested reaction
-        :return:            A Pandas data frame with (all or some of) the diagnostic data of the above reaction
+        :return:            A Pandas data frame with (all or some of) the diagnostic data of the requested reaction.
+                                Columns of the dataframes:
+                                'TIME' 'Delta A' 'Delta B'...	'reaction' 	'substep' 'time_subdivision' 'delta_time' 'caption'
         """
         # First, validate the reaction index
         self.reaction_data.assert_valid_rxn_index(rxn_index)
@@ -1842,8 +1863,11 @@ class ReactionDynamics:
 
     def get_diagnostic_conc_data(self) -> pd.DataFrame:
         """
-        Return the diagnostic concentration data saved during the run
-        :return:
+        Return the diagnostic concentration data saved during the run.
+        Note: if an interval run is aborted, NO entry is created here
+
+        :return: A Pandas dataframe, with the columns:
+                    'TIME' 	'A' 'B' ...  'is_primary' 'primary_timestep' 'n_substeps' 'substep_number' 'caption'
         """
         return self.diagnostic_data_baselines.get()
 
@@ -1851,8 +1875,10 @@ class ReactionDynamics:
 
     def get_diagnostic_delta_data(self) -> pd.DataFrame:
         """
-        TODO: unclear if this works when substeps are involved
-        :return:    A Pandas dataframe with all the "Delta concentration" values
+        Determine and return the diagnostic data about concentration changes at every step - EVEN aborted ones
+        TODO: unclear if this works when substeps are used.  Maybe this data should be saved rather than computed on the fly
+
+        :return:    A Pandas dataframe with a "TIME" column, and columns for all the "Delta concentration" values
         """
         fields = self._delta_names()    # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
 
@@ -1876,20 +1902,51 @@ class ReactionDynamics:
 
 
 
-    def get_L2_data(self) -> pd.DataFrame:
+    def get_diagnostic_L2_data(self) -> pd.DataFrame:
         """
+        Return the diagnostic data about concentration changes at every step - EVEN aborted ones - plus
+        the L2 norms about the concentration deltas at those steps, and a code for the resolution that was taken:
+        "ABORT", "DECREASE", "INCREASE", "STAY"
 
-        :return:
+        :return:    A Pandas dataframe with a "TIME" column, and columns for all the "Delta concentration" values,
+                    plus an "L2" column and a "step_actions" action.
+                    Note that this is a superset of the dataframe returned by get_diagnostic_delta_data()
         """
         df = self.get_diagnostic_delta_data()
         fields = self._delta_names()    # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
 
+        # Compute the L2 norms, since this data (at least for now) is not being saved
         sq_arr = np.zeros(len(df))
 
         for field_name in fields:
             sq_arr += df[field_name]**2
 
-        return np.sqrt(sq_arr)/len(fields)
+        L2_values = np.sqrt(sq_arr)/len(fields)     # Pandas series, with one element per time point in diagnostic dataframe
+
+        actions = np.vectorize(self.determine_step_action)(L2_values) # Numpy array. EXAMPLE: array(['ABORT', 'DECREASE', 'INCREASE'])
+
+        new_df = df.assign(L2 = L2_values, step_actions = actions)
+
+        return new_df
+
+
+
+    def determine_step_action(self, norm) -> str:
+        """
+        Given a value for a norm (or other measure) about the concentration deltas at a time steps,
+        generate a code for the resolution to be taken:  "ABORT", "DECREASE", "INCREASE", "STAY"
+
+        :param norm:
+        :return:    One of the 4 following strings: "ABORT", "DECREASE", "INCREASE", "STAY"
+        """
+        if norm > self.variable_steps_threshold_high:
+            return "ABORT"
+        if norm > self.variable_steps_threshold_mid:
+            return "DECREASE"
+        if norm > self.variable_steps_threshold_low:
+            return "STAY"
+
+        return "INCREASE"
 
 
 

@@ -98,12 +98,10 @@ dynamics.explain_time_advance()
 dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 
 # %%
-rxn0 = dynamics.get_diagnostic_rxn_data(rxn_index=0)
-rxn0
+dynamics.get_diagnostic_rxn_data(rxn_index=0)
 
 # %%
-rxn1 = dynamics.get_diagnostic_rxn_data(rxn_index=1)
-rxn1
+dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 dynamics.get_diagnostic_conc_data()
@@ -112,7 +110,6 @@ dynamics.get_diagnostic_conc_data()
 dynamics.get_diagnostic_delta_data()
 
 # %%
-df
+dynamics.get_diagnostic_L2_data()
 
 # %%
-dynamics.get_L2_data()
