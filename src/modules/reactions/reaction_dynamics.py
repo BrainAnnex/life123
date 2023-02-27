@@ -840,11 +840,12 @@ class ReactionDynamics:
 
     def _determine_step_action(self, norm) -> str:
         """
-        Given a value for a norm (or other measure) about the concentration deltas at a time steps,
+        Given a value for a norm (or other measure) about the concentration deltas at a time step,
         generate a code for the resolution to be taken:  "ABORT", "DECREASE", "INCREASE", "STAY"
+        upon consulting various thresholds stored in object variables
 
-        :param norm:
-        :return:    One of the 4 following strings: "ABORT", "DECREASE", "INCREASE", "STAY"
+        :param norm: Value for a norm (or other measure) about the concentration deltas at a time step
+        :return:     One of the 4 following strings: "ABORT", "DECREASE", "INCREASE", "STAY"
         """
         if norm > self.variable_steps_threshold_high:
             return "ABORT"

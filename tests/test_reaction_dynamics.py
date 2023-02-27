@@ -551,7 +551,7 @@ def test_single_compartment_react_variable_steps_1():
     dynamics.single_compartment_react(time_step=0.01, n_steps=20, variable_steps=True)
 
     df = dynamics.get_history()
-    print(df)
+    #print(df)
     assert len(df) == 23
 
     assert np.allclose(df.iloc[0][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
@@ -570,8 +570,79 @@ def test_single_compartment_react_variable_steps_1():
 
 
 
+def test_single_compartment_correct_neg_conc_1():
+    # Based on "Run 3" of experiment "negative_concentrations_1
+
+    # Initialize the system
+    chem_data = ReactionData(names=["U", "X", "S"])
+
+    # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
+    chem_data.add_reaction(reactants=[(2, "S")], products="U",
+                           forward_rate=8., reverse_rate=2.)
+
+    # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
+    chem_data.add_reaction(reactants="S", products="X",
+                           forward_rate=6., reverse_rate=3.)
+
+    dynamics = ReactionDynamics(reaction_data=chem_data)
+    dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
+
+    dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+    dynamics.single_compartment_react(time_step=0.1, stop_time=0.8, variable_steps=False)
+    # Note: negative concentrations that would arise from the given step size, get automatically intercepted - and
+    #       the step sizes get reduced as needed
+
+    df = dynamics.get_history()
+    #print(df)
+    assert len(df) == 11
+
+    assert np.allclose(df.iloc[0][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.0000,  50.000000,  100.000000,  0.000000])
+
+    assert np.allclose(df.iloc[1][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.1,  40, 70, 50], rtol=1e-03)
+
+    assert np.allclose(df.iloc[2][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.15,  56, 74.50, 13.5], rtol=1e-03)        # Notice the halved step size
+
+    assert np.allclose(df.iloc[3][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.25,  55.6, 60.25, 28.55], rtol=1e-03)        # Back to the requested step size
+
+    assert np.allclose(df.iloc[5][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.45,  58.7, 45.1465, 37.4535], rtol=1e-03)
+
+    assert np.allclose(df.iloc[6][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.5,  67.8114, 49.610575, 14.766625], rtol=1e-03)        # Notice another instance of halved step size
+
+    assert np.allclose(df.iloc[7][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.6,  66.062420, 43.587378, 24.287783], rtol=1e-03)        # Back to the requested step size
+
+    assert np.allclose(df.iloc[10][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.9,  76.895206, 44.446655,	1.762933], rtol=1e-03)        # Final step
+
+
+
 
 ######################  LOWER-LEVEL METHODS  ######################
+
+def test__determine_step_action():
+    chem_data = ReactionData()
+    rxn = ReactionDynamics(chem_data)
+    rxn.variable_steps_threshold_low = 50
+    rxn.variable_steps_threshold_mid = 100
+    rxn.variable_steps_threshold_high = 200
+
+    assert rxn._determine_step_action(0) == "INCREASE"
+    assert rxn._determine_step_action(49.9) == "INCREASE"
+    assert rxn._determine_step_action(50.1) == "STAY"
+    assert rxn._determine_step_action(99.0) == "STAY"
+    assert rxn._determine_step_action(100.1) == "DECREASE"
+    assert rxn._determine_step_action(199.9) == "DECREASE"
+    assert rxn._determine_step_action(200.1) == "ABORT"
+    assert rxn._determine_step_action(10000) == "ABORT"
+
+
 
 def test_compute_all_rate_deltas():
     chem_data = ReactionData(names=["A", "B", "C", "D"])

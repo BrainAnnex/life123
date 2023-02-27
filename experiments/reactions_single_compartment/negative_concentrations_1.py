@@ -198,6 +198,9 @@ dynamics.get_diagnostic_data(rxn_index=1)
 #
 # Such an automatic detection and remediation eliminates "Scenarios 1 and 2" (see earlier in notebook for definitions) BUT NOT "scenario 3"  
 # IMPORTANT: scenario 3 normally gets caught and remedied, too - but that feature got disabled by a code change in this run, _FOR DEMONSTRATION PURPOSES_
+#
+# This run required the disabling of multiple software features that detect, and automatically correct, such issues.   
+# It cannot be replicated with current versions of Life123.  **DO NOT ATTEMPT TO RE-RUN!**
 
 # %%
 # Same as for Run #1
@@ -292,7 +295,7 @@ dynamics.explain_time_advance()
 
 # %% [markdown]
 # ### Notice how the system automatically temporarily slowed down from the requested time step of 0.1 at t=0.1 and again at t=0.45  
-# Those actions intercepted, and automatically remedied, ALL the negative concentrations.
+# Those actions intercepted, and automatically remedied, ALL the negative concentrations, whether caused by any single reaction, or by the cumulative effect of multiple ones.  
 # We now took a total of 10 steps, instead of the 9 ones of Run #1
 
 # %%
