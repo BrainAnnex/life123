@@ -17,9 +17,9 @@
 # ## Exploration of rates of concentration change in the coupled reactions `2 S <-> U` and `S <-> X`   
 # Both mostly forward.  1st-order kinetics throughout.   
 #
-# Based on the experiment `up_regulate_3`
+# Based on the reactions and initial conditions of the experiment `up_regulate_3`
 #
-# LAST REVISED: Feb. 24, 2023
+# LAST REVISED: Feb. 26, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -81,21 +81,30 @@ dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-dynamics.verbose_list = [1]
+dynamics.verbose_list = [1, "variable_steps"]
 
-dynamics.single_compartment_react(time_step=0.01, n_steps=20, variable_steps=True)
+dynamics.single_compartment_react(time_step=0.01, n_steps=200, variable_steps=True)
 
 df = dynamics.get_history()
 df
 
 # %%
-dynamics.explain_time_advance()
+transition_times = dynamics.explain_time_advance(return_times=True)
+
+# %%
+transition_times
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time
 
 # %%
 dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+
+# %%
+dynamics.plot_curves_experimental(colors=['green', 'orange', 'blue'], vertical_lines=transition_times)
+
+# %%
+dynamics.is_in_equilibrium()
 
 # %%
 dynamics.get_diagnostic_rxn_data(rxn_index=0)

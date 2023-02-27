@@ -2,6 +2,7 @@ import math
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from typing import Union
 from src.modules.movies.movies import MovieTabular
 from src.modules.numerical.numerical import Numerical as num
@@ -519,6 +520,8 @@ class ReactionDynamics:
                                     TODO: maybe rename fast_threshold
 
         :param silent:              If True, less output is generated
+
+        :param variable_steps:      If True, the steps sizes will get automatically adjusted, based on thresholds
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
@@ -2280,17 +2283,17 @@ class ReactionDynamics:
         if np.allclose(delta_baseline, primary_timestep):
             n_steps = round((t_end - t_start) / delta_baseline)
             name = "step" if n_steps == 1 else "steps"  # singular vs. plural
-            print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} FULL {name} of {delta_baseline:.3g}")
+            print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} FULL {name} of {delta_baseline:.3g}")
             return n_steps
         else:
             # Detected "reduced steps" (which maybe be due to substeps or to steps that were aborted and automatically re-run
             #print(f"primary_timestep/delta_baseline is:  {primary_timestep}/{delta_baseline} = {primary_timestep/delta_baseline}")
             n_steps = round((t_end - t_start) / delta_baseline)
             if n_steps == 1:    # Use wording for the singular
-                print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} reduced step of {delta_baseline:.3g} "
+                print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} reduced step of {delta_baseline:.3g} "
                       f"(1/{round(primary_timestep/delta_baseline)} of requested step)") # Formerly saying "substep" and "full step"
             else:               # Use wording for the plural
-                print(f"From time {t_start:.3g} to {t_end:.3g}, in {n_steps} reduced step of {delta_baseline:.3g} "
+                print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} reduced step of {delta_baseline:.3g} "
                       f"(each 1/{round(primary_timestep/delta_baseline)} of requested step)")
 
             return (n_steps *  delta_baseline / primary_timestep)
@@ -2307,6 +2310,46 @@ class ReactionDynamics:
         pass
 
 
+    def plot_curves_experimental(self, chemicals=None, colors=None, title=None, suppress=False, vertical_lines=None):
+        """
+        TODO: experimental, in-progress
+
+        :param chemicals:
+        :param colors:
+        :param title:
+        :param suppress:
+        :param vertical_lines:
+        :return:
+        """
+        if not vertical_lines:
+            self.plot_curves(chemicals=chemicals, colors=colors, title=title, suppress=False)
+            return
+
+        fig_baseline = self.plot_curves(chemicals=chemicals, colors=colors, title=title, suppress=True)
+
+        combined_data = fig_baseline.data
+
+        for xi in vertical_lines:
+            fig =  px.line(x=[xi, xi], y=[0,100], color_discrete_sequence = ['gray'])   # TODO: determine the values 0 and 100
+            combined_data += fig.data          # Note that the + is concatenating lists
+
+        '''
+        x0 = vertical_lines[0]
+        fig0 = px.line(x=[x0, x0], y=[0,100], color_discrete_sequence = ['gray'])
+        combined_data += fig0.data
+
+        x1 = vertical_lines[1]
+        fig1 = px.line(x=[x1, x1], y=[0,100], color_discrete_sequence = ['gray'])
+        combined_data += fig1.data
+        '''
+
+        all_fig = go.Figure(data=combined_data, layout = fig_baseline.layout)
+
+        all_fig.update_layout(title="My title")
+        all_fig.show()
+
+
+
     def plot_curves(self, chemicals=None, colors=None, title=None, suppress=False):
         """
         Using plotly, draw the plots of concentration values over time, based on the saved history data.
@@ -2314,6 +2357,7 @@ class ReactionDynamics:
         TODO: allow alternate labels for x-axis
 
         EXAMPLE - to combine plots:
+
             import plotly.graph_objects as go
             fig0 = plot_curves(chemicals=["A", "B", "C"], suppress=True)
             fig1 = px.line(x=[2,2], y=[0,100], color_discrete_sequence = ['gray'])
@@ -2331,16 +2375,17 @@ class ReactionDynamics:
                                     "Reaction `A <-> 2 B` .  Changes in concentrations with time"
                                     "Changes in concentration for `2 S <-> U` and `S <-> X`"
 
-        :param suppress:    If True, nothing gets shown - and a plotly "Figure" object gets returned instead
+        :param suppress:    If True, nothing gets shown - and a plotly "Figure" object gets returned instead;
+                                this is useful to combine multiple plots (see example above)
 
         :return:            None or a plotly "Figure" object, depending on the "suppress" flag
         """
-        default_colors = ['blue', 'green', 'brown', 'red', 'gray', 'orange', 'purple', 'cyan', 'darkorange', 'navy', 'darkred']
+        default_colors = ['blue', 'green', 'brown', 'red', 'gray', 'orange', 'purple', 'cyan', 'darkorange', 'navy', 'darkred', 'black']
 
         df = self.history.get()
 
         if chemicals is None:
-            chemicals = self.reaction_data.get_all_names()      # List of names.  EXAMPLE: ["A", "B", "H"]
+            chemicals = self.reaction_data.get_all_names()      # List of the chemical names.  EXAMPLE: ["A", "B", "H"]
 
         number_of_curves = len(chemicals)
 
