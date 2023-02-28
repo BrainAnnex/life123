@@ -19,7 +19,7 @@
 #
 # Based on the reactions and initial conditions of the experiment `up_regulate_3`
 #
-# LAST REVISED: Feb. 26, 2023
+# LAST REVISED: Feb. 27, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -101,7 +101,7 @@ transition_times
 dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 
 # %%
-dynamics.plot_curves_experimental(colors=['green', 'orange', 'blue'], vertical_lines=transition_times)
+dynamics.plot_curves(colors=['green', 'orange', 'blue'], vertical_lines=transition_times)
 
 # %%
 dynamics.is_in_equilibrium()

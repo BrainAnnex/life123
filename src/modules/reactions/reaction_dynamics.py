@@ -2310,47 +2310,8 @@ class ReactionDynamics:
         pass
 
 
-    def plot_curves_experimental(self, chemicals=None, colors=None, title=None, suppress=False, vertical_lines=None):
-        """
-        TODO: experimental, in-progress
-
-        :param chemicals:
-        :param colors:
-        :param title:
-        :param suppress:
-        :param vertical_lines:
-        :return:
-        """
-        if not vertical_lines:
-            self.plot_curves(chemicals=chemicals, colors=colors, title=title, suppress=False)
-            return
-
-        fig_baseline = self.plot_curves(chemicals=chemicals, colors=colors, title=title, suppress=True)
-
-        combined_data = fig_baseline.data
-
-        for xi in vertical_lines:
-            fig =  px.line(x=[xi, xi], y=[0,100], color_discrete_sequence = ['gray'])   # TODO: determine the values 0 and 100
-            combined_data += fig.data          # Note that the + is concatenating lists
-
-        '''
-        x0 = vertical_lines[0]
-        fig0 = px.line(x=[x0, x0], y=[0,100], color_discrete_sequence = ['gray'])
-        combined_data += fig0.data
-
-        x1 = vertical_lines[1]
-        fig1 = px.line(x=[x1, x1], y=[0,100], color_discrete_sequence = ['gray'])
-        combined_data += fig1.data
-        '''
-
-        all_fig = go.Figure(data=combined_data, layout = fig_baseline.layout)
-
-        all_fig.update_layout(title="My title")
-        all_fig.show()
-
-
-
-    def plot_curves(self, chemicals=None, colors=None, title=None, suppress=False):
+    def plot_curves(self, chemicals=None, colors=None, title=None,
+                    vertical_lines=None, suppress=False) -> Union[None, go.Figure]:
         """
         Using plotly, draw the plots of concentration values over time, based on the saved history data.
         TODO: offer an option to just display a part of the timeline (e.g. a t_start and t_end)
@@ -2374,6 +2335,7 @@ class ReactionDynamics:
                                     "Changes in concentrations for 5 reactions"
                                     "Reaction `A <-> 2 B` .  Changes in concentrations with time"
                                     "Changes in concentration for `2 S <-> U` and `S <-> X`"
+        :param vertical_lines: (OPTIONAL) List of x-coordinates at which to draw thin vertical dotted gray lines
 
         :param suppress:    If True, nothing gets shown - and a plotly "Figure" object gets returned instead;
                                 this is useful to combine multiple plots (see example above)
@@ -2410,6 +2372,12 @@ class ReactionDynamics:
                       title=title,
                       color_discrete_sequence = colors,
                       labels={"value":"concentration", "variable":"Chemical"})
+
+        if vertical_lines:
+            assert type(vertical_lines) == list, \
+                "plot_curves(): the argument `vertical_lines`, if not None, must be a list of numbers (x-axis coords)"
+            for xi in vertical_lines:
+                fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
 
         if not suppress:
             fig.show()
