@@ -105,7 +105,9 @@ def test_single_compartment_react():
     run1 = dynamics.get_system_conc()
     assert np.allclose(run1, [9.69124339e+01, 3.06982519e+00, 1.77408783e-02, 9.99985757e+02, 1.42431633e-02])
     assert np.allclose(dynamics.system_time, 0.0035)
-    assert dynamics.explain_time_advance(return_times=True) == [0.0, 0.002, 0.0025, 0.0035]
+    assert dynamics.explain_time_advance(return_times=True, silent=True) == \
+               ([0.0, 0.002, 0.0025, 0.0035],
+                [0.001, 0.0005, 0.001])
 
     # The above computation automatically took 2 normal steps, 1 half-size step and 1 normal step;
     # now repeat the process manually
@@ -120,7 +122,9 @@ def test_single_compartment_react():
     run2 = dynamics.get_system_conc()
     assert np.allclose(run2, run1)      # Same result as before
     assert np.allclose(dynamics2.system_time, 0.0035)
-    assert dynamics2.explain_time_advance(return_times=True) == [0.0, 0.002, 0.002, 0.0025, 0.0025, 0.0035]
+    assert dynamics2.explain_time_advance(return_times=True) == \
+           ([0.0, 0.002, 0.0025, 0.0035],
+            [0.001, 0.0005, 0.001])
     # The time advance is now different, because multiple calls to single_compartment_react() break up the counting
     # (just a convention)
 
@@ -1191,56 +1195,57 @@ def test_explain_time_advance():
     # Start out with uniform steps
     rxn.diagnostic_data_baselines.store(par=20.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
-    assert np.allclose(result, [20.])
+
+    assert rxn.explain_time_advance(return_times=True, silent=True) is None
+
 
     rxn.diagnostic_data_baselines.store(par=30.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)    # TODO: also test the returned step sizes
     assert np.allclose(result, [20., 30.])
 
     rxn.diagnostic_data_baselines.store(par=40.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40.])
 
     # Switching to smaller step
     rxn.diagnostic_data_baselines.store(par=45.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 45.])
 
     rxn.diagnostic_data_baselines.store(par=50.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50.])
 
     # Switching to larger step
     rxn.diagnostic_data_baselines.store(par=70.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70.])
 
     # Yet larger
     rxn.diagnostic_data_baselines.store(par=95.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95.])
 
     # Smaller again
     rxn.diagnostic_data_baselines.store(par=96.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 96.])
 
     rxn.diagnostic_data_baselines.store(par=97.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 97.])
 
     rxn.diagnostic_data_baselines.store(par=98.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 98.])
 
     #print(rxn.diagnostic_data_baselines.get())

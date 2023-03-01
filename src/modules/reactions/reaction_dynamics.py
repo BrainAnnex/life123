@@ -765,6 +765,35 @@ class ReactionDynamics:
                         print("    Adjusted L2 norm:   ", L2_rate)
                         #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
 
+
+                        if L2_rate > self.variable_steps_threshold_high:
+                            # Abort the current step if the rate of change is deemed excessive
+                            msg =   f"The current time step ({delta_time_full}) " \
+                                    f"leads to an 'L2 rate' ({L2_rate:.4g}) that is higher than the specified HIGH threshold ({self.variable_steps_threshold_high}):\n" \
+                                    f"ACTION: IMMEDIATE ABORT. Will abort this step, and re-do it with a SMALLER time interval. " \
+                                    f"[The current step started at System Time: {self.system_time:.5g}, and will rewind there]"
+                            #print("WARNING: ", msg)
+                            raise ExcessiveTimeStep(msg)
+
+                        step_factor = self.step_determiner_1(L2_rate)
+                        recommended_next_step = delta_time_full * step_factor
+
+                        if "variable_steps" in self.verbose_list:
+                            msg =   f"The chosen time step ({delta_time_full}) results in an 'L2 rate' ({L2_rate:.4g}) that leads to the following:\n"
+
+                            if step_factor > 1:     # "INCREASE"
+                                msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER by a factor {step_factor} (set to {recommended_next_step}) at the next round!"
+                            elif step_factor < 1:     # "DECREASE"
+                                msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL SMALLER by a factor {1/step_factor} (set to ({recommended_next_step}) at the next round!"
+                            else:   # "STAY THE COURSE"
+                                msg +=  f"ACTION: COMPLETE NORMALLY - we're inside the target range.  No change to step size."
+
+                            msg += f" [The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time_full:.5g}]"
+                            print("NOTICE:", msg)
+
+
+
+                        '''
                         action = self._determine_step_action(L2_rate)    # For the given rate, generate a code for the resolution to be taken
 
                         if action == "ABORT":   # L2_rate > self.variable_steps_threshold_high:
@@ -797,7 +826,7 @@ class ReactionDynamics:
                                         f"ACTION: COMPLETE NORMALLY - we're inside the target range. " \
                                         f"[The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time_full:.5g}]"
                                 print("NOTICE:", msg)
-
+                        '''
                 else:                       # Using variable time steps
                     # CORE OPERATION IN CASE THE SUBSTEPS OPTION WAS REQUESTED
                     delta_concentrations = self._advance_variable_substeps(delta_time_full=delta_time_full, conc_array= conc_array,
@@ -858,6 +887,19 @@ class ReactionDynamics:
             return "STAY"
 
         return "INCREASE"
+
+
+    def step_determiner_1(self, norm) -> float:
+        #if norm > self.variable_steps_threshold_high:
+            #return "ABORT"
+        factor = 2
+
+        if norm > self.variable_steps_threshold_mid:
+            return 1/factor # "DECREASE"
+        if norm > self.variable_steps_threshold_low:
+            return 1        # "STAY"
+
+        return factor       # "INCREASE"
 
 
 
@@ -2250,19 +2292,26 @@ class ReactionDynamics:
                 #print (f"   Detection at element {i} : time={t[i]}")
                 #print (f"   From time {start_interval} to {t[i]}, in steps of {grad_shifted[i]}")
                 primary_timestep = df.loc[i, "primary_timestep"]
-                total_number_full_steps += self._explain_time_advance_helper(t_start=start_interval, t_end=t[i],
+                n_full_steps_taken = self._explain_time_advance_helper(t_start=start_interval, t_end=t[i],
                                                                              delta_baseline=grad_shifted[i], primary_timestep=primary_timestep, silent=silent)
-                start_interval = t[i]
-                critical_times.append(t[i])
-                step_sizes.append(grad_shifted[i])
 
-        #print (f"   From time {start_interval} to {t[-1]}, in steps of {grad_shifted[-1]}")
+                start_interval = t[i]
+                if n_full_steps_taken > 0:
+                    total_number_full_steps += n_full_steps_taken
+                    critical_times.append(t[i])
+                    step_sizes.append(grad_shifted[i])
+
+
+        # Final wrap-up of the interval's endpoint
         primary_timestep = df.loc[n_entries-1, "primary_timestep"]
-        total_number_full_steps += self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1],
+        n_full_steps_taken = self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1],
                                                                      delta_baseline=grad_shifted[-1], primary_timestep=primary_timestep, silent=silent)
-        critical_times.append(t[-1])
-        step_sizes.append(grad_shifted[-1])
-        #print(f"(for a grand total of the equivalent of {total_number_full_steps:,.3g} FULL steps)")   # Confusing, when variable steps are enabled
+
+        if n_full_steps_taken > 0:
+            total_number_full_steps += n_full_steps_taken
+            critical_times.append(t[-1])
+            step_sizes.append(grad_shifted[-1])
+
 
         if return_times:
             assert len(critical_times) == len(step_sizes) + 1, \
@@ -2282,7 +2331,7 @@ class ReactionDynamics:
         :return:                The corresponding number of FULL steps taken (it may be fractional)
         """
         if np.allclose(t_start, t_end):
-            #print(f"[Ignoring interval starting and ending at same time {t_start:.3g}]")
+            #print(f"   [Ignoring interval starting and ending at same time {t_start:.3g}]")
             return 0
 
         if np.allclose(delta_baseline, primary_timestep):

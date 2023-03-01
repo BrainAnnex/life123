@@ -19,7 +19,7 @@
 #
 # Based on the reactions and initial conditions of the experiment `up_regulate_3`
 #
-# LAST REVISED: Feb. 28, 2023
+# LAST REVISED: Feb. 27, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -106,12 +106,12 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 # %%
 dynamics.plot_curves(colors=['green', 'orange', 'blue'], vertical_lines=transition_times)
 
-# %% [markdown]
-# ## Note: the dashed lines above are NOT the steps; they are the "critical values", i.e. times when the step size changes.   
-# The step sizes are shown below:
-
 # %%
 dynamics.plot_step_sizes(show_transition_times=True)
+
+# %% [markdown]
+# ## Note: the dashed lines above are NOT the steps; they are the "critical values", i.e. times when the step size changes.   
+# The step sizes are shown below
 
 # %%
 dynamics.is_in_equilibrium()
