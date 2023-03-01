@@ -630,21 +630,22 @@ def test_single_compartment_correct_neg_conc_1():
 
 ######################  LOWER-LEVEL METHODS  ######################
 
-def test__determine_step_action():
+
+def test_step_determiner_1():
     chem_data = ReactionData()
     rxn = ReactionDynamics(chem_data)
     rxn.variable_steps_threshold_low = 50
     rxn.variable_steps_threshold_mid = 100
     rxn.variable_steps_threshold_high = 200
 
-    assert rxn._determine_step_action(0) == "INCREASE"
-    assert rxn._determine_step_action(49.9) == "INCREASE"
-    assert rxn._determine_step_action(50.1) == "STAY"
-    assert rxn._determine_step_action(99.0) == "STAY"
-    assert rxn._determine_step_action(100.1) == "DECREASE"
-    assert rxn._determine_step_action(199.9) == "DECREASE"
-    assert rxn._determine_step_action(200.1) == "ABORT"
-    assert rxn._determine_step_action(10000) == "ABORT"
+    assert rxn.step_determiner_1(0) == 2
+    assert rxn.step_determiner_1(49.9) == 2
+    assert rxn.step_determiner_1(50.1) == 1
+    assert rxn.step_determiner_1(99.0) == 1
+    assert np.allclose(rxn.step_determiner_1(100.1), 0.5)
+    assert np.allclose(rxn.step_determiner_1(199.9), 0.5)
+    assert np.allclose(rxn.step_determiner_1(200.1), 0.5)
+    assert np.allclose(rxn.step_determiner_1(10000), 0.5)
 
 
 

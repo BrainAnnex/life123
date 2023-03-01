@@ -766,8 +766,8 @@ class ReactionDynamics:
                         #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
 
 
+                        # Abort the current step if the rate of change is deemed excessive
                         if L2_rate > self.variable_steps_threshold_high:
-                            # Abort the current step if the rate of change is deemed excessive
                             msg =   f"The current time step ({delta_time_full}) " \
                                     f"leads to an 'L2 rate' ({L2_rate:.4g}) that is higher than the specified HIGH threshold ({self.variable_steps_threshold_high}):\n" \
                                     f"ACTION: IMMEDIATE ABORT. Will abort this step, and re-do it with a SMALLER time interval. " \
@@ -791,42 +791,6 @@ class ReactionDynamics:
                             msg += f" [The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time_full:.5g}]"
                             print("NOTICE:", msg)
 
-
-
-                        '''
-                        action = self._determine_step_action(L2_rate)    # For the given rate, generate a code for the resolution to be taken
-
-                        if action == "ABORT":   # L2_rate > self.variable_steps_threshold_high:
-                            msg =   f"The current time step ({delta_time_full}) " \
-                                    f"leads to an 'L2 rate' ({L2_rate:.4g}) that is higher than the specified HIGH threshold ({self.variable_steps_threshold_high}):\n" \
-                                    f"ACTION: IMMEDIATE ABORT. Will abort this step, and re-do it with a SMALLER time interval. " \
-                                    f"[The current step started at System Time: {self.system_time:.5g}, and will rewind there]"
-                            #print("WARNING: ", msg)
-                            raise ExcessiveTimeStep(msg)
-                        elif action == "DECREASE":   # L2_rate > self.variable_steps_threshold_mid:
-                            recommended_next_step = delta_time_full / 2.
-                            if "variable_steps" in self.verbose_list:
-                                msg =   f"The chosen time step ({delta_time_full}) " \
-                                        f"leads to an 'L2 rate' ({L2_rate:.4g}) between the MID ({self.variable_steps_threshold_mid}) and HIGH threshold ({self.variable_steps_threshold_high}):\n" \
-                                        f"ACTION: COMPLETE NORMALLY and MAKE THE INTERVAL SMALLER ({recommended_next_step}) at the next round! " \
-                                        f"[The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time_full:.5g}]"
-                                print("NOTICE:", msg)
-                        elif action == "INCREASE":   # L2_rate < self.variable_steps_threshold_low:
-                            recommended_next_step = delta_time_full * 2.
-                            if "variable_steps" in self.verbose_list:
-                                msg =   f"The chosen time step ({delta_time_full}) " \
-                                        f"leads to an 'L2 rate' ({L2_rate:.4g}) that is smaller than the specified LOW threshold ({self.variable_steps_threshold_low}):\n" \
-                                        f"ACTION: COMPLETE NORMALLY and MAKE THE INTERVAL LARGER ({recommended_next_step}) at the next round! " \
-                                        f"[The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time_full:.5g}]"
-                                print("NOTICE:", msg)
-                        else:   # action is "STAY".  The L2_rate is in the desired range; no change made to recommended_next_step
-                            if "variable_steps" in self.verbose_list:
-                                msg =   f"The chosen time step ({delta_time_full}) " \
-                                        f"leads to an 'L2 rate' ({L2_rate:.4g}) between the LOW ({self.variable_steps_threshold_low}) and MID threshold ({self.variable_steps_threshold_mid}):\n" \
-                                        f"ACTION: COMPLETE NORMALLY - we're inside the target range. " \
-                                        f"[The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time_full:.5g}]"
-                                print("NOTICE:", msg)
-                        '''
                 else:                       # Using variable time steps
                     # CORE OPERATION IN CASE THE SUBSTEPS OPTION WAS REQUESTED
                     delta_concentrations = self._advance_variable_substeps(delta_time_full=delta_time_full, conc_array= conc_array,
@@ -867,26 +831,6 @@ class ReactionDynamics:
             raise Exception("reaction_step_orchestrator(): unable to complete the reaction step")
 
         return  (delta_concentrations, delta_time_full, recommended_next_step)     # TODO: consider returning tentative_updated_system , since we already computed it
-
-
-
-    def _determine_step_action(self, norm) -> str:
-        """
-        Given a value for a norm (or other measure) about the concentration deltas at a time step,
-        generate a code for the resolution to be taken:  "ABORT", "DECREASE", "INCREASE", "STAY"
-        upon consulting various thresholds stored in object variables
-
-        :param norm: Value for a norm (or other measure) about the concentration deltas at a time step
-        :return:     One of the 4 following strings: "ABORT", "DECREASE", "INCREASE", "STAY"
-        """
-        if norm > self.variable_steps_threshold_high:
-            return "ABORT"
-        if norm > self.variable_steps_threshold_mid:
-            return "DECREASE"
-        if norm > self.variable_steps_threshold_low:
-            return "STAY"
-
-        return "INCREASE"
 
 
     def step_determiner_1(self, norm) -> float:
@@ -1991,9 +1935,10 @@ class ReactionDynamics:
 
         L2_values = np.sqrt(sq_arr)/len(fields)     # Pandas series, with one element per time point in diagnostic dataframe
 
-        actions = np.vectorize(self._determine_step_action)(L2_values) # Numpy array. EXAMPLE: array(['ABORT', 'DECREASE', 'INCREASE'])
+        actions = np.where(L2_values > self.variable_steps_threshold_high, "ABORT", "OK")
+        step_factors = np.vectorize(self.step_determiner_1)(L2_values)
 
-        new_df = df.assign(L2 = L2_values, step_actions = actions)
+        new_df = df.assign(L2 = L2_values, actions=actions, step_factors=step_factors)  # Add columns to the Pandas dataframe
 
         return new_df
 
