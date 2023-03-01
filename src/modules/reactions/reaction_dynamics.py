@@ -2197,7 +2197,7 @@ class ReactionDynamics:
 
 
 
-    def explain_time_advance(self, return_times=False) -> Union[None, tuple]:
+    def explain_time_advance(self, return_times=False, silent=False) -> Union[None, tuple]:
         """
         Use the saved-up diagnostic data, to print out details of the timescales of the reaction run
 
@@ -2210,7 +2210,10 @@ class ReactionDynamics:
 
         :param return_times:    If True, all the critical times (times where the interval steps change)
                                     are saved and returned as a list
-        :return:                Either None, or a list of time values (depending on the argument return_times)
+        :param silent:          If True, nothing gets printed out
+        :return:                Depending on the argument return_times, either None, or a pair with 2 lists:
+                                        1 - list of time values
+                                        2 - list of step sizes  (will have one less element than the first list)
         """
         assert self.diagnostics, "ReactionDynamics.explain_time_advance(): diagnostics must first be enabled; " \
                                  "call set_diagnostics() prior to the reaction run"
@@ -2247,16 +2250,16 @@ class ReactionDynamics:
                 #print (f"   Detection at element {i} : time={t[i]}")
                 #print (f"   From time {start_interval} to {t[i]}, in steps of {grad_shifted[i]}")
                 primary_timestep = df.loc[i, "primary_timestep"]
-                #print("ADDING FULL STEPS:", self._explain_time_advance_helper(t_start=start_interval, t_end=t[i], delta_baseline=grad_shifted[i], primary_timestep=primary_timestep))
-                total_number_full_steps += self._explain_time_advance_helper(t_start=start_interval, t_end=t[i], delta_baseline=grad_shifted[i], primary_timestep=primary_timestep)
+                total_number_full_steps += self._explain_time_advance_helper(t_start=start_interval, t_end=t[i],
+                                                                             delta_baseline=grad_shifted[i], primary_timestep=primary_timestep, silent=silent)
                 start_interval = t[i]
                 critical_times.append(t[i])
                 step_sizes.append(grad_shifted[i])
 
         #print (f"   From time {start_interval} to {t[-1]}, in steps of {grad_shifted[-1]}")
         primary_timestep = df.loc[n_entries-1, "primary_timestep"]
-        #print("ADDING FULL STEPS:", self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1], delta_baseline=grad_shifted[-1], primary_timestep=primary_timestep))
-        total_number_full_steps += self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1], delta_baseline=grad_shifted[-1], primary_timestep=primary_timestep)
+        total_number_full_steps += self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1],
+                                                                     delta_baseline=grad_shifted[-1], primary_timestep=primary_timestep, silent=silent)
         critical_times.append(t[-1])
         step_sizes.append(grad_shifted[-1])
         #print(f"(for a grand total of the equivalent of {total_number_full_steps:,.3g} FULL steps)")   # Confusing, when variable steps are enabled
@@ -2268,7 +2271,7 @@ class ReactionDynamics:
 
 
 
-    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, primary_timestep)  -> int:
+    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, primary_timestep, silent) -> Union[int, float]:
         """
         Using the provided data, about a group of same-size steps, create and print a description of it for the user
 
@@ -2285,18 +2288,20 @@ class ReactionDynamics:
         if np.allclose(delta_baseline, primary_timestep):
             n_steps = round((t_end - t_start) / delta_baseline)
             step_s = "step" if n_steps == 1 else "steps"  # singular vs. plural
-            print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} FULL {step_s} of {delta_baseline:.3g}")
+            if not silent:
+                print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} FULL {step_s} of {delta_baseline:.3g}")
             return n_steps
         else:
             # Detected "reduced steps" (which maybe be due to substeps or to steps that were aborted and automatically re-run
             #print(f"primary_timestep/delta_baseline is:  {primary_timestep}/{delta_baseline} = {primary_timestep/delta_baseline}")
             n_steps = round((t_end - t_start) / delta_baseline)
-            if n_steps == 1:    # Use wording for the singular
-                print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} reduced step of {delta_baseline:.3g} "
-                      f"(1/{round(primary_timestep/delta_baseline)} of requested step)") # Formerly saying "substep" and "full step"
-            else:               # Use wording for the plural
-                print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} reduced step of {delta_baseline:.3g} "
-                      f"(each 1/{round(primary_timestep/delta_baseline)} of requested step)")
+            if not silent:
+                if n_steps == 1:    # Use wording for the singular
+                    print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} reduced step of {delta_baseline:.3g} "
+                          f"(1/{round(primary_timestep/delta_baseline)} of requested step)") # Formerly saying "substep" and "full step"
+                else:               # Use wording for the plural
+                    print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} reduced step of {delta_baseline:.3g} "
+                          f"(each 1/{round(primary_timestep/delta_baseline)} of requested step)")
 
             return (n_steps *  delta_baseline / primary_timestep)
 
@@ -2369,7 +2374,7 @@ class ReactionDynamics:
                 rxn_text_1 = self.reaction_data.single_reaction_describe(rxn_index=1, concise=True)
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
-
+        # Create the plot
         fig = px.line(data_frame=df, x="SYSTEM TIME", y=chemicals,
                       title=title,
                       color_discrete_sequence = colors,
@@ -2385,6 +2390,34 @@ class ReactionDynamics:
             fig.show()
         else:
             return fig
+
+
+
+    def plot_step_sizes(self, show_transition_times=False) -> None:
+        """
+        Using plotly, draw the plot of the step sizes vs. time
+        (only meaningful when the variable-step option was used).
+        The same scale as plot_curves() will be used
+
+        :param show_transition_times:   If True, will add to the plot thin vertical dotted gray lines
+                                            at the transition times
+        :return:                        None
+        """
+        (transition_times, step_sizes) = self.explain_time_advance(return_times=True, silent=True)
+
+        # Note: the step size at the final end time isn't a defined quantity - so, we'll just repeat
+        #       the last value, to maintain the full x-axis size
+        fig = px.line(x=transition_times, y=step_sizes+[step_sizes[-1]])
+
+        fig.update_layout(title='Simulation step sizes',
+                          xaxis_title='SYSTEM TIME',
+                          yaxis_title='Step size')
+
+        if show_transition_times:
+            for xi in transition_times:
+                fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
+
+        fig.show()
 
 
 
