@@ -2197,7 +2197,7 @@ class ReactionDynamics:
 
 
 
-    def explain_time_advance(self, return_times=False) -> Union[None, list]:
+    def explain_time_advance(self, return_times=False) -> Union[None, tuple]:
         """
         Use the saved-up diagnostic data, to print out details of the timescales of the reaction run
 
@@ -2227,10 +2227,7 @@ class ReactionDynamics:
             print(f"ReactionDynamics.explain_time_advance(): no time advance found. "
                   f"Diagnostics only contain an initial System Time of {t[0]:.3g} ;  "
                   f"did you run the reaction simulation?")
-            if return_times:
-                return t
-            else:
-                return
+            return
 
 
         # If we get thus far, we have at least 2 entries in the list "t" of times
@@ -2241,6 +2238,7 @@ class ReactionDynamics:
         start_interval = t[0]
 
         critical_times = [start_interval]  # List of times to report on (start time, plus times where the steps change)
+        step_sizes = []
 
         total_number_full_steps = 0
         for i in range(1, n_entries-1):
@@ -2253,16 +2251,20 @@ class ReactionDynamics:
                 total_number_full_steps += self._explain_time_advance_helper(t_start=start_interval, t_end=t[i], delta_baseline=grad_shifted[i], primary_timestep=primary_timestep)
                 start_interval = t[i]
                 critical_times.append(t[i])
+                step_sizes.append(grad_shifted[i])
 
         #print (f"   From time {start_interval} to {t[-1]}, in steps of {grad_shifted[-1]}")
         primary_timestep = df.loc[n_entries-1, "primary_timestep"]
         #print("ADDING FULL STEPS:", self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1], delta_baseline=grad_shifted[-1], primary_timestep=primary_timestep))
         total_number_full_steps += self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1], delta_baseline=grad_shifted[-1], primary_timestep=primary_timestep)
         critical_times.append(t[-1])
+        step_sizes.append(grad_shifted[-1])
         #print(f"(for a grand total of the equivalent of {total_number_full_steps:,.3g} FULL steps)")   # Confusing, when variable steps are enabled
 
         if return_times:
-            return critical_times
+            assert len(critical_times) == len(step_sizes) + 1, \
+                "explain_time_advance(): validation error in the values to return"
+            return (critical_times, step_sizes)
 
 
 
@@ -2282,8 +2284,8 @@ class ReactionDynamics:
 
         if np.allclose(delta_baseline, primary_timestep):
             n_steps = round((t_end - t_start) / delta_baseline)
-            name = "step" if n_steps == 1 else "steps"  # singular vs. plural
-            print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} FULL {name} of {delta_baseline:.3g}")
+            step_s = "step" if n_steps == 1 else "steps"  # singular vs. plural
+            print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} FULL {step_s} of {delta_baseline:.3g}")
             return n_steps
         else:
             # Detected "reduced steps" (which maybe be due to substeps or to steps that were aborted and automatically re-run
@@ -2344,7 +2346,7 @@ class ReactionDynamics:
         """
         default_colors = ['blue', 'green', 'brown', 'red', 'gray', 'orange', 'purple', 'cyan', 'darkorange', 'navy', 'darkred', 'black']
 
-        df = self.history.get()
+        df = self.get_history()     # The expected columns are "SYSTEM TIME", followed by the various chemicals
 
         if chemicals is None:
             chemicals = self.reaction_data.get_all_names()      # List of the chemical names.  EXAMPLE: ["A", "B", "H"]

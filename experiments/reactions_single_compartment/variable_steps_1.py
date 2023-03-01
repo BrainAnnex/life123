@@ -89,10 +89,13 @@ df = dynamics.get_history()
 df
 
 # %%
-transition_times = dynamics.explain_time_advance(return_times=True)
+(transition_times, step_sizes) = dynamics.explain_time_advance(return_times=True)
 
 # %%
 transition_times
+
+# %%
+step_sizes
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time
@@ -102,6 +105,16 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 
 # %%
 dynamics.plot_curves(colors=['green', 'orange', 'blue'], vertical_lines=transition_times)
+
+# %% [markdown]
+# ## Note: the dashed lines above are NOT the steps; they are the "critical values", i.e. times when the step size changes.   
+# The step sizes are shown below
+
+# %%
+fig = px.line(x=transition_times, y=step_sizes+[step_sizes[-1]])
+fig.update_layout(title='Simulation step sizes',
+                  xaxis_title='SYSTEM TIME',
+                  yaxis_title='Step size')
 
 # %%
 dynamics.is_in_equilibrium()
