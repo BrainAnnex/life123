@@ -2344,7 +2344,8 @@ class ReactionDynamics:
                                     "Changes in concentrations for 5 reactions"
                                     "Reaction `A <-> 2 B` .  Changes in concentrations with time"
                                     "Changes in concentration for `2 S <-> U` and `S <-> X`"
-        :param vertical_lines: (OPTIONAL) List of x-coordinates at which to draw thin vertical dotted gray lines
+        :param vertical_lines: (OPTIONAL) List or tuple or Numpy array or Pandas series
+                                    of x-coordinates at which to draw thin vertical dotted gray lines
         :param show_intervals: (OPTIONAL) If True, it over-rides any value in vertical_lines, and draws
                                     thin vertical dotted gray lines at all the x-coords of the data points in the saved history data;
                                     also, it adds a comment to the title
@@ -2403,30 +2404,57 @@ class ReactionDynamics:
 
 
 
-    def plot_step_sizes(self, show_transition_times=False) -> None:
+    def plot_step_sizes(self, show_intervals=False) -> None:
         """
         Using plotly, draw the plot of the step sizes vs. time
         (only meaningful when the variable-step option was used).
-        The same scale as plot_curves() will be used
+        The same scale as plot_curves() will be used.
+        This function requires the diagnostics option to be turned on, prior to running the simulation
 
-        :param show_transition_times:   If True, will add to the plot thin vertical dotted gray lines
-                                            at the transition times
-        :return:                        None
+        :param show_intervals:  If True, will add to the plot thin vertical dotted gray lines
+                                    at the time steps
+        :return:                None
         """
         (transition_times, step_sizes) = self.explain_time_advance(return_times=True, silent=True)
 
+        x=transition_times
+        y=step_sizes
+
+        # Create a step plot (TODO: there might be a way to directly do this in plotly)
+        new_x = [x[0]]
+        new_y = [y[0]]
+        for i, xi in enumerate(x[1:-1]) :   # Drop the first and last elements
+            new_x.append(xi)
+            new_y.append(y[i])
+
+            new_x.append(xi)
+            new_y.append(y[i+1])
+
+        new_x.append(x[-1])
+        new_y.append(y[-1])
+
+
+        df = self.get_diagnostic_conc_data()    # Pandas dataframe with a column called "TIME"
+
         # Note: the step size at the final end time isn't a defined quantity - so, we'll just repeat
         #       the last value, to maintain the full x-axis size
-        fig = px.line(x=transition_times, y=step_sizes+[step_sizes[-1]])
+        #fig = px.line(x=transition_times, y=step_sizes+[step_sizes[-1]])
+
+        fig = px.line(x=new_x, y=new_y)
+
+        if show_intervals:
+            for xi in df["TIME"]:
+                fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
+
 
         fig.update_layout(title='Simulation step sizes',
                           xaxis_title='SYSTEM TIME',
                           yaxis_title='Step size')
-
-        if show_transition_times:
+        '''
+        if show_intervals:
             for xi in transition_times:
                 fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
-
+        '''
         fig.show()
 
 

@@ -107,15 +107,16 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 dynamics.plot_curves(colors=['green', 'orange', 'blue'], show_intervals=True)
 
 # %%
+# Show the "critical values", i.e. times when the step size changes
 dynamics.plot_curves(colors=['green', 'orange', 'blue'], vertical_lines=transition_times, 
                      title="Critical values of time-step changes for reactions `2 S <-> U` and `S <-> X`")
 
 # %% [markdown]
 # ## Note: the dashed lines in the plots immediatly above and below are NOT the steps; they are the "critical values", i.e. times when the step size changes.   
-# The step sizes were shown in an earlier plots
+# The time steps were shown in an earlier plots
 
 # %%
-dynamics.plot_step_sizes(show_transition_times=True)
+dynamics.plot_step_sizes(show_intervals=True)
 
 # %%
 dynamics.is_in_equilibrium()
