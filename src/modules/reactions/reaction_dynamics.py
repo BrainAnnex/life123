@@ -833,17 +833,25 @@ class ReactionDynamics:
         return  (delta_concentrations, delta_time_full, recommended_next_step)     # TODO: consider returning tentative_updated_system , since we already computed it
 
 
-    def step_determiner_1(self, norm) -> float:
-        #if norm > self.variable_steps_threshold_high:
-            #return "ABORT"
+
+    def step_determiner_1(self, norm) -> Union[float, int]:
+        """
+        Given a value for a norm (or other measure) about the concentration deltas at a time step,
+        generate a factor by which to multiple the time step at the next iteration round,
+        upon consulting various thresholds stored in object variables
+
+        :param norm: Value for a norm (or other measure) about the concentration deltas at a time step
+        :return:     A factor by which to multiple the time step at the next iteration round;
+                        if no change is deemed necessary, 1 is returned
+        """
         factor = 2
 
         if norm > self.variable_steps_threshold_mid:
-            return 1/factor # "DECREASE"
+            return 1/factor     # "DECREASE"
         if norm > self.variable_steps_threshold_low:
-            return 1        # "STAY"
+            return 1            # "STAY"
 
-        return factor       # "INCREASE"
+        return factor           # "INCREASE"
 
 
 
@@ -2312,7 +2320,7 @@ class ReactionDynamics:
 
 
     def plot_curves(self, chemicals=None, colors=None, title=None,
-                    vertical_lines=None, suppress=False) -> Union[None, go.Figure]:
+                    vertical_lines=None, show_intervals=False, suppress=False) -> Union[None, go.Figure]:
         """
         Using plotly, draw the plots of concentration values over time, based on the saved history data.
         TODO: offer an option to just display a part of the timeline (e.g. a t_start and t_end)
@@ -2337,7 +2345,9 @@ class ReactionDynamics:
                                     "Reaction `A <-> 2 B` .  Changes in concentrations with time"
                                     "Changes in concentration for `2 S <-> U` and `S <-> X`"
         :param vertical_lines: (OPTIONAL) List of x-coordinates at which to draw thin vertical dotted gray lines
-
+        :param show_intervals: (OPTIONAL) If True, it over-rides any value in vertical_lines, and draws
+                                    thin vertical dotted gray lines at all the x-coords of the data points in the saved history data;
+                                    also, it adds a comment to the title
         :param suppress:    If True, nothing gets shown - and a plotly "Figure" object gets returned instead;
                                 this is useful to combine multiple plots (see example above)
 
@@ -2368,17 +2378,23 @@ class ReactionDynamics:
                 rxn_text_1 = self.reaction_data.single_reaction_describe(rxn_index=1, concise=True)
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
-        # Create the plot
+        if show_intervals:
+            vertical_lines = df["SYSTEM TIME"]
+            title += " (time steps shown in dashed lines)"
+
+        # Create the main plot
         fig = px.line(data_frame=df, x="SYSTEM TIME", y=chemicals,
                       title=title,
                       color_discrete_sequence = colors,
                       labels={"value":"concentration", "variable":"Chemical"})
 
-        if vertical_lines:
-            assert type(vertical_lines) == list, \
-                "plot_curves(): the argument `vertical_lines`, if not None, must be a list of numbers (x-axis coords)"
+
+        if vertical_lines is not None:
+            assert (type(vertical_lines) == list) or (type(vertical_lines) == tuple) or (type(vertical_lines) == np.ndarray) or (type(vertical_lines) == pd.core.series.Series), \
+                "plot_curves(): the argument `vertical_lines`, if not None, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
             for xi in vertical_lines:
                 fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
+
 
         if not suppress:
             fig.show()

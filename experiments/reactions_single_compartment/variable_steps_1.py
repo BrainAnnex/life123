@@ -14,12 +14,12 @@
 # ---
 
 # %% [markdown]
-# ## Exploration of rates of concentration change in the coupled reactions `2 S <-> U` and `S <-> X`   
+# ## Exploration of variable time steps in the simulation of the coupled reactions `2 S <-> U` and `S <-> X`   
 # Both mostly forward.  1st-order kinetics throughout.   
 #
 # Based on the reactions and initial conditions of the experiment `up_regulate_3`
 #
-# LAST REVISED: Feb. 28, 2023
+# LAST REVISED: Mar. 1, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -104,11 +104,15 @@ np.array(transition_times)    # Note: there will be one more transition time (th
 dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'], vertical_lines=transition_times)
+dynamics.plot_curves(colors=['green', 'orange', 'blue'], show_intervals=True)
+
+# %%
+dynamics.plot_curves(colors=['green', 'orange', 'blue'], vertical_lines=transition_times, 
+                     title="Critical values of time-step changes for reactions `2 S <-> U` and `S <-> X`")
 
 # %% [markdown]
-# ## Note: the dashed lines above are NOT the steps; they are the "critical values", i.e. times when the step size changes.   
-# The step sizes are shown below:
+# ## Note: the dashed lines in the plots immediatly above and below are NOT the steps; they are the "critical values", i.e. times when the step size changes.   
+# The step sizes were shown in an earlier plots
 
 # %%
 dynamics.plot_step_sizes(show_transition_times=True)
@@ -130,5 +134,8 @@ dynamics.get_diagnostic_delta_data()
 
 # %%
 dynamics.get_diagnostic_L2_data()
+
+# %% [markdown]
+# #### Notice how the first step got aborted, and re-run, because of the large adjusted L2 value in the concentrations 
 
 # %%
