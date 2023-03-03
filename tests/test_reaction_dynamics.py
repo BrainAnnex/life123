@@ -552,7 +552,8 @@ def test_single_compartment_react_variable_steps_1():
     dynamics = ReactionDynamics(reaction_data=chem_data)
     dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
-    dynamics.single_compartment_react(time_step=0.01, n_steps=20, variable_steps=True)
+    dynamics.single_compartment_react(time_step=0.01, n_steps=20,
+                                      variable_steps=True, thresholds={"low": 0.5, "high": 0.8})
 
     df = dynamics.get_history()
     #print(df)
@@ -635,8 +636,8 @@ def test_step_determiner_1():
     chem_data = ReactionData()
     rxn = ReactionDynamics(chem_data)
     rxn.variable_steps_threshold_low = 50
-    rxn.variable_steps_threshold_mid = 100
-    rxn.variable_steps_threshold_high = 200
+    rxn.variable_steps_threshold_high = 100
+    rxn.variable_steps_threshold_abort = 200
 
     assert rxn.step_determiner_1(0) == 2
     assert rxn.step_determiner_1(49.9) == 2

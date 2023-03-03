@@ -19,7 +19,7 @@
 #
 # Based on the reactions and initial conditions of the experiment `up_regulate_3`
 #
-# LAST REVISED: Mar. 1, 2023
+# LAST REVISED: Mar. 2, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -76,14 +76,11 @@ dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
-dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
-#dynamics.describe_state()
-
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-dynamics.verbose_list = [1, "variable_steps"]
+#dynamics.verbose_list = [1, "variable_steps"]
 
-dynamics.single_compartment_react(time_step=0.01, n_steps=200, variable_steps=True)
+dynamics.single_compartment_react(time_step=0.01, n_steps=200, 
+                                  variable_steps=True, thresholds={"low": 0.5, "high": 0.8})
 
 df = dynamics.get_history()
 df

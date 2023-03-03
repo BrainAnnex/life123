@@ -55,9 +55,9 @@ class ReactionDynamics:
 
         self.variable_steps = False     # If True, the (main) steps will get automatically adjusted
 
-        self.variable_steps_threshold_low = 0.50   # EXPERIMENTAL
-        self.variable_steps_threshold_mid = 0.80   # EXPERIMENTAL
-        self.variable_steps_threshold_high = 1.2   # EXPERIMENTAL
+        self.variable_steps_threshold_low = 0.50    # EXPERIMENTAL default value
+        self.variable_steps_threshold_high = 0.80   # EXPERIMENTAL default value
+        self.variable_steps_threshold_abort = 1.2   # EXPERIMENTAL
 
 
         self.verbose_list = []          # A list of integers or strings with the codes of the desired verbose checkpoints
@@ -480,7 +480,7 @@ class ReactionDynamics:
     def single_compartment_react(self, reaction_duration=None, stop_time=None, time_step=None, n_steps=None,
                                  snapshots=None, silent=False,
                                  dynamic_substeps=1, rel_fast_threshold=None, abs_fast_threshold=None,
-                                 variable_steps=False) -> None:
+                                 variable_steps=False, thresholds=None) -> None:
         """
         Perform ALL the reactions in the single compartment -
         based on the INITIAL concentrations,
@@ -522,6 +522,8 @@ class ReactionDynamics:
         :param silent:              If True, less output is generated
 
         :param variable_steps:      If True, the steps sizes will get automatically adjusted, based on thresholds
+        :param thresholds:          (OPTIONAL) dict.  For now only used for variable_steps.
+                                        EXAMPLE: {"low": 0.5, "high": 0.8}
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
@@ -530,6 +532,12 @@ class ReactionDynamics:
                                         "the concentration values of the various chemicals must be set first"
 
         self.variable_steps = variable_steps
+        if thresholds:
+            if "low" in thresholds:
+                self.variable_steps_threshold_low = thresholds["low"]
+            if "high" in thresholds:
+                self.variable_steps_threshold_high = thresholds["high"]
+
         """
         Determine all the various time parameters that were not explicitly provided
         """
@@ -754,22 +762,24 @@ class ReactionDynamics:
                     # TODO: move to the common part after the "if dynamic_substeps" option
                     if self.variable_steps:
                         n_chems = self.reaction_data.number_of_chemicals()
-                        print(f"EXAMINING CONCENTRATION CHANGES at System Time {self.system_time:.5g} from the upcoming single step (for all rxns):")
-                        print("    Baseline: ", conc_array)
-                        print("    Deltas:   ", delta_concentrations)
-                        #print("    Relative Deltas:   ", delta_concentrations / conc_array)
-                        #print("    L_inf norm:   ", np.linalg.norm(delta_concentrations, ord=np.inf) / delta_time_full)
+
                         # The following are normalized by the number of steps and the number of chemicals
                         L2_rate = np.linalg.norm(delta_concentrations) / n_chems
                         #L2_rate = np.linalg.norm(delta_concentrations) / (delta_time_full * n_chems)
-                        print("    Adjusted L2 norm:   ", L2_rate)
-                        #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
 
+                        if "variable_steps" in self.verbose_list:
+                            print(f"EXAMINING CONCENTRATION CHANGES at System Time {self.system_time:.5g} from the upcoming single step (for all rxns):")
+                            print("    Baseline: ", conc_array)
+                            print("    Deltas:   ", delta_concentrations)
+                            #print("    Relative Deltas:   ", delta_concentrations / conc_array)
+                            #print("    L_inf norm:   ", np.linalg.norm(delta_concentrations, ord=np.inf) / delta_time_full)
+                            print("    Adjusted L2 norm:   ", L2_rate)
+                            #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
 
                         # Abort the current step if the rate of change is deemed excessive
-                        if L2_rate > self.variable_steps_threshold_high:
+                        if L2_rate > self.variable_steps_threshold_abort:
                             msg =   f"The current time step ({delta_time_full}) " \
-                                    f"leads to an 'L2 rate' ({L2_rate:.4g}) that is higher than the specified HIGH threshold ({self.variable_steps_threshold_high}):\n" \
+                                    f"leads to an 'L2 rate' ({L2_rate:.4g}) that is higher than the specified HIGH threshold ({self.variable_steps_threshold_abort}):\n" \
                                     f"ACTION: IMMEDIATE ABORT. Will abort this step, and re-do it with a SMALLER time interval. " \
                                     f"[The current step started at System Time: {self.system_time:.5g}, and will rewind there]"
                             #print("WARNING: ", msg)
@@ -846,7 +856,7 @@ class ReactionDynamics:
         """
         factor = 2
 
-        if norm > self.variable_steps_threshold_mid:
+        if norm > self.variable_steps_threshold_high:
             return 1/factor     # "DECREASE"
         if norm > self.variable_steps_threshold_low:
             return 1            # "STAY"
@@ -1943,7 +1953,7 @@ class ReactionDynamics:
 
         L2_values = np.sqrt(sq_arr)/len(fields)     # Pandas series, with one element per time point in diagnostic dataframe
 
-        actions = np.where(L2_values > self.variable_steps_threshold_high, "ABORT", "OK")
+        actions = np.where(L2_values > self.variable_steps_threshold_abort, "ABORT", "OK")
         step_factors = np.vectorize(self.step_determiner_1)(L2_values)
 
         new_df = df.assign(L2 = L2_values, actions=actions, step_factors=step_factors)  # Add columns to the Pandas dataframe
