@@ -52,6 +52,9 @@ class ReactionDynamics:
 
         self.last_abs_fast_threshold = None # The last-used value of the threshold for fast reactions
 
+        self.fast_criterion_use_baseline = False    # TODO: EXPERIMENTAL - Probably to be phased out,
+                                                    #       because True gives poor results
+
 
         self.variable_steps = False     # If True, the (main) steps will get automatically adjusted
 
@@ -63,6 +66,11 @@ class ReactionDynamics:
         self.verbose_list = []          # A list of integers or strings with the codes of the desired verbose checkpoints
                                         #   EXAMPLE: [1, "variable_steps"] to invoke sections of code marked as 1 or 3
                                         #   Those sections will have entry points such as "if "substeps" in self.verbose_list"
+
+
+        # FOR DIAGNOSTICS
+
+        self.diagnostics = False
 
         self.diagnostic_data = {}       # This will be a dict with as many entries as reactions.
                                         #   The keys are the reaction indices; the values are Pandas dataframes
@@ -78,10 +86,9 @@ class ReactionDynamics:
                                         #       'TIME' 	'A' 'B' ...  'is_primary' 'primary_timestep' 'n_substeps' 'substep_number' 'caption'
                                         #   Note: if an interval run is aborted, NO entry is created here
 
-        self.diagnostics = False
-
-        self.fast_criterion_use_baseline = False    # TODO: EXPERIMENTAL - Probably to be phased out,
-                                                    #       because True gives poor results
+        self.diagnostic_delta_conc_data = MovieTabular(parameter_name="TIME")
+                                        #   Columns of the dataframes:
+                                        #       'TIME' 	'DELTA A' 'DELTA B' ...  [plus, if applicable, other fields such as 'L2', 'actions', 'step_factors']
 
 
 
@@ -1911,7 +1918,8 @@ class ReactionDynamics:
     def get_diagnostic_delta_data(self) -> pd.DataFrame:
         """
         Determine and return the diagnostic data about concentration changes at every step - EVEN aborted ones
-        TODO: unclear if this works when substeps are used.  Maybe this data should be saved rather than computed on the fly
+        TODO: unclear if this works when substeps are used.
+              Maybe this data should be saved rather than computed on the fly -> IN PROGRESS
 
         :return:    A Pandas dataframe with a "TIME" column, and columns for all the "Delta concentration" values
         """
