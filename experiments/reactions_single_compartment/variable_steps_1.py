@@ -77,9 +77,9 @@ dynamics.describe_state()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-#dynamics.verbose_list = [1, "variable_steps"]
+dynamics.verbose_list = ["substeps", "variable_steps"]
 
-dynamics.single_compartment_react(time_step=0.01, n_steps=200, 
+dynamics.single_compartment_react(time_step=0.01, stop_time=2., 
                                   variable_steps=True, thresholds={"low": 0.5, "high": 0.8})
 
 df = dynamics.get_history()

@@ -318,7 +318,7 @@ def test_adaptive_time_resolution_1():
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=kF, reverse_rate=kR)
 
     # Start testing the lowest-level function, and then proceed to testing progressively higher-level ones
-    #rxn.verbose_list = [1]
+    #rxn.verbose_list = ["substeps"]
     result = rxn._reaction_elemental_step(delta_time=0.05, conc_array=conc_array,
                                           time_subdivision=2, fast_threshold_fraction=0.05)
     # The above call is just 1 time step

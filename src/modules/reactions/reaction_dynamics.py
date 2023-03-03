@@ -55,14 +55,14 @@ class ReactionDynamics:
 
         self.variable_steps = False     # If True, the (main) steps will get automatically adjusted
 
-        self.variable_steps_threshold_low = 0.50    # EXPERIMENTAL default value
-        self.variable_steps_threshold_high = 0.80   # EXPERIMENTAL default value
-        self.variable_steps_threshold_abort = 1.2   # EXPERIMENTAL
+        self.variable_steps_threshold_low = 0.25    # EXPERIMENTAL default value
+        self.variable_steps_threshold_high = 0.64   # EXPERIMENTAL default value
+        self.variable_steps_threshold_abort = 1.44  # EXPERIMENTAL
 
 
         self.verbose_list = []          # A list of integers or strings with the codes of the desired verbose checkpoints
                                         #   EXAMPLE: [1, "variable_steps"] to invoke sections of code marked as 1 or 3
-                                        #   Those sections will have entry points such as "if 1 in self.verbose_list"
+                                        #   Those sections will have entry points such as "if "substeps" in self.verbose_list"
 
         self.diagnostic_data = {}       # This will be a dict with as many entries as reactions.
                                         #   The keys are the reaction indices; the values are Pandas dataframes
@@ -531,6 +531,10 @@ class ReactionDynamics:
         assert self.system is not None, "ReactionDynamics.single_compartment_react(): " \
                                         "the concentration values of the various chemicals must be set first"
 
+        if variable_steps and n_steps is not None:
+            raise Exception("single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
+                            "(because the number of steps will vary); specify `reaction_duration` or `stop_time` instead")
+
         self.variable_steps = variable_steps
         if thresholds:
             if "low" in thresholds:
@@ -745,7 +749,7 @@ class ReactionDynamics:
         while delta_time_full > 0.0001:   # TODO: tweak this number (used to prevent infinite loops).  Maybe 1/10 or 1/100 of original value?
             try:    # We want to catch errors that can arise from excessively large time steps
                     #   that lead to negative concentrations or other problems
-                if 1 in self.verbose_list:
+                if "substeps" in self.verbose_list:
                     print(f"\nreaction_step_orchestrator(): entering WHILE loop at System Time={self.system_time:.5g} "
                           f"with delta_time_full={delta_time_full:.5g}")
 
@@ -764,8 +768,9 @@ class ReactionDynamics:
                         n_chems = self.reaction_data.number_of_chemicals()
 
                         # The following are normalized by the number of steps and the number of chemicals
-                        L2_rate = np.linalg.norm(delta_concentrations) / n_chems
-                        #L2_rate = np.linalg.norm(delta_concentrations) / (delta_time_full * n_chems)
+                        #L2_rate = np.linalg.norm(delta_concentrations) / n_chems
+                        #L2_rate = np.sqrt(np.sum(delta_concentrations * delta_concentrations)) / n_chems
+                        L2_rate = np.sum(delta_concentrations * delta_concentrations) / (n_chems * n_chems)
 
                         if "variable_steps" in self.verbose_list:
                             print(f"EXAMINING CONCENTRATION CHANGES at System Time {self.system_time:.5g} from the upcoming single step (for all rxns):")
@@ -826,12 +831,12 @@ class ReactionDynamics:
             except ExcessiveTimeStep as ex:
                 # Single reactions steps can fail if the attempted time step
                 #   was too large (leading to negative concentrations or other problem)
-                if 1 in self.verbose_list:
+                if "substeps" in self.verbose_list:
                     print(ex)
 
                 delta_time_full /= 2.       # Reduce the excessive time step in 1/2
                 recommended_next_step = delta_time_full
-                if 1 in self.verbose_list:
+                if "substeps" in self.verbose_list:
                     print(f"reaction_step_orchestrator(): RE-DOING THE LAST REACTION STEP with the smaller time interval of {delta_time_full:.5g}\n")
 
         # END while
@@ -902,7 +907,7 @@ class ReactionDynamics:
 
         if self.are_all_slow_rxns():
             # If all the reactions are labeled as "slow"
-            if 1 in self.verbose_list:
+            if "substeps" in self.verbose_list:
                 print("    All the reactions are SLOW")
                 print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s)")
 
@@ -919,7 +924,7 @@ class ReactionDynamics:
             Process all the SLOW reactions first
         '''
         slow_rxns = self.slow_rxns()
-        if 1 in self.verbose_list:
+        if "substeps" in self.verbose_list:
             if slow_rxns == []:
                 print(f"    There are NO SLOW reactions")
             else:
@@ -941,7 +946,7 @@ class ReactionDynamics:
         fast_rxns = self.fast_rxns()    # Look up which reactions are currently tagged as "fast"
         assert fast_rxns != [], "_advance_variable_substeps(): INTERNAL ERROR.  No fast reactions found"
 
-        if 1 in self.verbose_list:
+        if "substeps" in self.verbose_list:
             print(f"    * FAST REACTIONS: {fast_rxns}")
 
         local_conc_array = conc_array.copy()    # Duplicate the array conc_array, to avoid altering it
@@ -954,7 +959,7 @@ class ReactionDynamics:
 
         for substep in range(dynamic_substeps):
             # For each of the substeps into which delta_time_full has been divided up into
-            if 1 in self.verbose_list:
+            if "substeps" in self.verbose_list:
                 local_system_time = self.system_time + substep * reduced_time_step
                 print(f"    - SUBSTEP: {substep} (in processing of FAST reactions, i.e. {fast_rxns})."
                       f"  'Local' system time: {local_system_time:,.4g}")
@@ -963,7 +968,7 @@ class ReactionDynamics:
                 tag_reactions = True
             else:
                 tag_reactions = False
-                if 1 in self.verbose_list:
+                if "substeps" in self.verbose_list:
                     print(f"        Skipping evaluation of rxn speed for all reactions because NOT at last substep "
                           f"(substep_number = {substep}, time_subdivision = {dynamic_substeps})")
 
@@ -1099,7 +1104,7 @@ class ReactionDynamics:
             if tag_reactions:
                 self.set_rxn_speed(rxn_index, "S")  # TENTATIVE assignment, that will be changed
                                                     #   if ANY chemical experiences significant concentration changes
-                if 1 in self.verbose_list:
+                if "substeps" in self.verbose_list:
                     print(f"      (tentatively tagging rxn #{rxn_index} as 'S')")
 
 
@@ -1175,7 +1180,7 @@ class ReactionDynamics:
         if tag_reactions:
             self.set_rxn_speed(rxn_index, "S")  # TENTATIVE assignment, that will be changed
             #   if ANY chemical experiences significant concentration changes
-            if 1 in self.verbose_list:
+            if "substeps" in self.verbose_list:
                 print(f"      (tentatively tagging rxn #{rxn_index} as 'S')")
 
 
@@ -1366,7 +1371,7 @@ class ReactionDynamics:
 
         if self.get_rxn_speed(rxn_index) == "F":
             # If the reaction was already marked as "Fast" then no action is taken
-            if 1 in self.verbose_list:
+            if "substeps" in self.verbose_list:
                 print(f"        Rxn # {rxn_index}: no action taken because already tagged as 'F'")
 
             return
@@ -1377,7 +1382,7 @@ class ReactionDynamics:
         # If the reaction was (tentatively) labeled as "Slow", decide whether to flip it to "Fast"
         #   Note: the status will be used for the current simulation sub-cycle
 
-        if 1 in self.verbose_list:
+        if "substeps" in self.verbose_list:
             print(f"        For Rxn # {rxn_index}, checking concentrations of chems: {self.reaction_data.get_chemicals_in_reaction(rxn_index)}")
 
 
@@ -1394,7 +1399,7 @@ class ReactionDynamics:
             if self.criterion_fast_reaction(delta_conc=delta_conc, baseline_conc=baseline_conc,
                                             time_subdivision=time_subdivision, fast_threshold_fraction=fast_threshold_fraction):
                 self.set_rxn_speed(rxn_index, "F")
-                if 1 in self.verbose_list:
+                if "substeps" in self.verbose_list:
                     print(f"        Rxn # {rxn_index} FLIPPED TAG to 'F', "
                           f"based on a change of {delta_conc:.5g} (rel. to baseline of {baseline_conc:.6g}) "
                           f"for the conc. of `{self.reaction_data.get_name(species_index=i)}`: "
@@ -1405,7 +1410,7 @@ class ReactionDynamics:
         # END for
         # If we get thus far, the reaction is still regarded as "Slow", and its status is left unchanged
 
-        if 1 in self.verbose_list:
+        if "substeps" in self.verbose_list:
             chem_list = self.reaction_data.get_chemicals_in_reaction(rxn_index)
             delta_conc_array_relevant = np.array([delta_conc_array[n] for n in chem_list])
             baseline_conc_array_relevant = np.array([baseline_conc_array[n] for n in chem_list])
@@ -1945,13 +1950,14 @@ class ReactionDynamics:
         df = self.get_diagnostic_delta_data()
         fields = self._delta_names()    # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
 
-        # Compute the L2 norms, since this data (at least for now) is not being saved
+        # Compute the L2 norms, since this data (at least for now) is not being saved.  TODO: save it!
         sq_arr = np.zeros(len(df))
 
         for field_name in fields:
             sq_arr += df[field_name]**2
 
-        L2_values = np.sqrt(sq_arr)/len(fields)     # Pandas series, with one element per time point in diagnostic dataframe
+        #L2_values = np.sqrt(sq_arr)/len(fields)     # Pandas series, with one element per time point in diagnostic dataframe
+        L2_values = sq_arr/(len(fields)**2)     # TODO: it'd be more robust to store these values during the run than to re-compute them
 
         actions = np.where(L2_values > self.variable_steps_threshold_abort, "ABORT", "OK")
         step_factors = np.vectorize(self.step_determiner_1)(L2_values)

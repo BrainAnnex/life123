@@ -109,7 +109,7 @@ dynamics.describe_state()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %%
-#dynamics.verbose_list = [1]     # Uncomment for debugging information
+#dynamics.verbose_list = ["substeps"]     # Uncomment for debugging information
 
 # %%
 dynamics.single_compartment_react(time_step=0.0012, stop_time=0.03)
@@ -178,7 +178,7 @@ dynamics.describe_state()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %%
-#dynamics.verbose_list = [1]     # Uncomment for debugging information
+#dynamics.verbose_list = ["substeps"]     # Uncomment for debugging information
 
 # %%
 dynamics.single_compartment_react(time_step=0.0012, stop_time=0.03,
