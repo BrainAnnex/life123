@@ -58,7 +58,7 @@ class MovieTabular:
                                     It doesn't have to remain consistent, but it's probably good practice to keep it so
         :param data_snapshot:   A dict of data to preserve for later use
         :param caption:         OPTIONAL string to describe the snapshot
-        :return:                None
+        :return:                None (the object variable "self.movie" will get updated)
         """
         if self.movie is None:     # No Pandas dataframe was yet started
             assert type(data_snapshot) == dict, \

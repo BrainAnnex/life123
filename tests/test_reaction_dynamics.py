@@ -552,8 +552,8 @@ def test_single_compartment_react_variable_steps_1():
     dynamics = ReactionDynamics(reaction_data=chem_data)
     dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
-    dynamics.single_compartment_react(time_step=0.01, n_steps=20,
-                                      variable_steps=True, thresholds={"low": 0.5, "high": 0.8})
+    dynamics.single_compartment_react(time_step=0.01, stop_time=0.2,
+                                      variable_steps=True, thresholds={"low": 0.25, "high": 0.64})
 
     df = dynamics.get_history()
     #print(df)
@@ -629,7 +629,7 @@ def test_single_compartment_correct_neg_conc_1():
 
 
 
-######################  LOWER-LEVEL METHODS  ######################
+###########################  LOWER-LEVEL METHODS  ###########################
 
 
 def test_step_determiner_1():
@@ -1252,3 +1252,23 @@ def test_explain_time_advance():
 
     #print(rxn.diagnostic_data_baselines.get())
     #print(result)
+
+
+
+def test__delta_names():
+    chem_data = ReactionData(names=["A", "B", "X"])
+    dyn = ReactionDynamics(chem_data)
+
+    assert dyn._delta_names() == ["Delta A", "Delta B", "Delta X"]
+
+
+
+def test__delta_conc_dict():
+    chem_data = ReactionData(names=["A", "B", "X"])
+    dyn = ReactionDynamics(chem_data)
+
+    assert dyn._delta_conc_dict(np.array([10, 20, 30])) == \
+           {"Delta A": 10, "Delta B": 20, "Delta X": 30}
+
+    with pytest.raises(Exception):
+        dyn._delta_conc_dict(np.array([10, 20, 30, 40]))    # One element too many
