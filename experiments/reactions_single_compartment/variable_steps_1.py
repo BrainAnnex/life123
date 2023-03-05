@@ -19,7 +19,7 @@
 #
 # Based on the reactions and initial conditions of the experiment `up_regulate_3`
 #
-# LAST REVISED: Mar. 2, 2023
+# LAST REVISED: Mar. 4, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

@@ -60,7 +60,10 @@ class ReactionDynamics:
 
         self.variable_steps_threshold_low = 0.25    # EXPERIMENTAL default value
         self.variable_steps_threshold_high = 0.64   # EXPERIMENTAL default value
+
         self.variable_steps_threshold_abort = 1.44  # EXPERIMENTAL
+        self.abort_step_reduction_factor = 2.       # Factor by which to divide the time step
+                                                    #   in case of error from excessive step size
 
 
         self.verbose_list = []          # A list of integers or strings with the codes of the desired verbose checkpoints
@@ -690,7 +693,8 @@ class ReactionDynamics:
 
     def reaction_step_orchestrator(self, delta_time_full: float, conc_array, snapshots=None,
                                    dynamic_substeps=1, rel_fast_threshold=5) -> (np.array, float, float):
-        """     TODO: the word "orchestrator" may no longer be a good descriptor
+        """     TODO: the word "orchestrator" may no longer be a good descriptor.
+                      NAME IDEAS: reaction_step_manager(), reaction_step_common()
         This is the common entry point for both single-compartment reactions,
         and the reaction part of reaction-diffusions in 1D, 2D and 3D.
 
@@ -704,7 +708,9 @@ class ReactionDynamics:
 
         Return the increment vector for all the chemical species concentrations in the compartment
 
-        NOTE:  the actual system concentrations are NOT changed
+        NOTES:  - the actual system concentrations are NOT changed
+                - this method doesn't decide on step sizes - except in case of aborts and repeats with smaller step - but
+                  makes suggestions to the calling module about the next step to best take
 
         :param delta_time_full: The requested time duration of the overall reaction step,
                                     which will be subdivided for the "fast" reactions, if dynamic_substeps is greater than 1
@@ -727,15 +733,10 @@ class ReactionDynamics:
                                         NOTE: dynamic substeps, if requested, have no bearing on the (full) step size being returned
                                     3) recommended_next_step
         """
-        abort_step_reduction_factor = 2.    # TODO: move to object variable
+        recommended_next_step = delta_time_full     # Baseline; no reason yet to suggest a change in step size
 
-        recommended_next_step = delta_time_full
-
-        if 5 in self.verbose_list:
-            print(f"Calling reaction_step_orchestrator() with delta_time={delta_time_full}, "
-                  f"conc_array={conc_array}, dynamic_substeps={dynamic_substeps}")
-
-        assert conc_array is not None, "reaction_step_orchestrator(): the argument 'conc_array' must be set to a Numpy array"
+        # Validate arguments
+        assert conc_array is not None, "reaction_step_orchestrator(): the argument 'conc_array' must be a Numpy array"
         assert type(dynamic_substeps) == int, "reaction_step_orchestrator(): the argument 'dynamic_substeps' must be an integer"
         assert dynamic_substeps >= 1, "reaction_step_orchestrator(): the argument 'dynamic_substeps' must be an integer greater or equal than 1"
 
@@ -745,7 +746,9 @@ class ReactionDynamics:
 
 
         if 2 in self.verbose_list:
-            print(f"************ SYSTEM TIME: {self.system_time:,.4g}")
+            print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_orchestrator() with:")
+            print(f"             delta_time_full={delta_time_full}, "
+                  f"conc_array={conc_array}, dynamic_substeps={dynamic_substeps}, rel_fast_threshold={rel_fast_threshold}")
 
 
         delta_concentrations = None
@@ -758,7 +761,7 @@ class ReactionDynamics:
                           f"with delta_time_full={delta_time_full:.5g}")
 
 
-                if dynamic_substeps == 1:   # If the substep option was NOT requested
+                if dynamic_substeps == 1:   # ****  BRANCH 1 - If the substep option was NOT requested
                     if 2 in self.verbose_list:
                         print("    NO adaptive variable time resolution used")
                         print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s) with a single step")
@@ -766,83 +769,94 @@ class ReactionDynamics:
                     # CORE OPERATION IN CASE OF *NOT* ALLOWING FOR SUBSTEPS
                     delta_concentrations = self._reaction_elemental_step(delta_time=delta_time_full, conc_array=conc_array, rxn_list=None,
                                                                          tag_reactions=False)
-                    if self.diagnostics:
-                        diagnostic_data_snapshot = self._delta_conc_dict(delta_concentrations)  # A dict
-                        #self.diagnostic_delta_conc_data.store(par=self.system_time,
-                                                              #data_snapshot=self._delta_conc_dict(delta_concentrations))
-
-                    # TODO: move to the common part after the "if dynamic_substeps" option
-                    if self.variable_steps:
-                        n_chems = self.reaction_data.number_of_chemicals()
-
-                        # The following are normalized by the number of steps and the number of chemicals
-                        #L2_rate = np.linalg.norm(delta_concentrations) / n_chems
-                        #L2_rate = np.sqrt(np.sum(delta_concentrations * delta_concentrations)) / n_chems
-                        L2_rate = np.sum(delta_concentrations * delta_concentrations) / (n_chems * n_chems)   # The square of the rate above
-
-                        if "variable_steps" in self.verbose_list:
-                            print(f"EXAMINING CONCENTRATION CHANGES at System Time {self.system_time:.5g} from the upcoming single step (for all rxns):")
-                            print("    Baseline: ", conc_array)
-                            print("    Deltas:   ", delta_concentrations)
-                            #print("    Relative Deltas:   ", delta_concentrations / conc_array)
-                            #print("    L_inf norm:   ", np.linalg.norm(delta_concentrations, ord=np.inf) / delta_time_full)
-                            print("    Adjusted L2 norm:   ", L2_rate)
-                            #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
-
-                        # Abort the current step if the rate of change is deemed excessive
-                        if L2_rate > self.variable_steps_threshold_abort:
-                            msg =   f"The current time step ({delta_time_full}) " \
-                                    f"leads to an 'L2 rate' ({L2_rate:.4g}) that is higher than the specified HIGH threshold ({self.variable_steps_threshold_abort}):\n" \
-                                    f"ACTION: IMMEDIATE ABORT. Will abort this step, and re-do it with a SMALLER time interval. " \
-                                    f"[The current step started at System Time: {self.system_time:.5g}, and will rewind there]"
-                            #print("WARNING: ", msg)
-                            if self.diagnostics:
-                                diagnostic_data_snapshot['L2'] = L2_rate
-                                diagnostic_data_snapshot['action'] = "ABORT"
-                                diagnostic_data_snapshot['step_factor'] = 1/abort_step_reduction_factor
-                                self.diagnostic_delta_conc_data.store(par=self.system_time,
-                                                                      data_snapshot=diagnostic_data_snapshot)
-
-                            raise ExcessiveTimeStep(msg)
+                    #if self.diagnostics:
+                        #diagnostic_data_snapshot = self._delta_conc_dict(delta_concentrations)  # A dict
 
 
-                        step_factor = self.step_determiner_1(L2_rate)
-                        recommended_next_step = delta_time_full * step_factor
-
-                        if self.diagnostics:
-                            diagnostic_data_snapshot['L2'] = L2_rate
-                            diagnostic_data_snapshot['action'] = "OK"
-                            diagnostic_data_snapshot['step_factor'] = step_factor
-
-                            #self.diagnostic_delta_conc_data.movie.loc[self.diagnostic_delta_conc_data.movie.index[-1], 'L2'] = L2_rate
-
-
-                        if "variable_steps" in self.verbose_list:
-                            msg =   f"The chosen time step ({delta_time_full}) results in an 'L2 rate' ({L2_rate:.4g}) that leads to the following:\n"
-
-                            if step_factor > 1:     # "INCREASE"
-                                msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER by a factor {step_factor} (set to {recommended_next_step}) at the next round!"
-                            elif step_factor < 1:     # "DECREASE"
-                                msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL SMALLER by a factor {1/step_factor} (set to ({recommended_next_step}) at the next round!"
-                            else:   # "STAY THE COURSE"
-                                msg +=  f"ACTION: COMPLETE NORMALLY - we're inside the target range.  No change to step size."
-
-                            msg += f" [The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time_full:.5g}]"
-                            print("NOTICE:", msg)
-
-
-                    if self.diagnostics:
-                        self.diagnostic_delta_conc_data.store(par=self.system_time,
-                                                              data_snapshot=diagnostic_data_snapshot)
-
-                else:                  # Using variable substeps
+                else:                       # ****  BRANCH 2 - Using variable substeps
                     # CORE OPERATION IN CASE THE SUBSTEPS OPTION WAS REQUESTED
                     delta_concentrations = self._advance_variable_substeps(delta_time_full=delta_time_full, conc_array= conc_array,
                                                                            snapshots=snapshots,
                                                                            dynamic_substeps=dynamic_substeps, fast_threshold_fraction=fast_threshold_fraction)
+                    #if self.diagnostics:
+                        #diagnostic_data_snapshot = self._delta_conc_dict(delta_concentrations)  # A dict
+                        #self.diagnostic_delta_conc_data.store(par=self.system_time,
+                                                              #data_snapshot=self._delta_conc_dict(delta_concentrations))
+
+
+
+                # RECOMBINATION of the 2 main branches (no substeps vs. substeps)
+                if self.diagnostics:
+                    diagnostic_data_snapshot = self._delta_conc_dict(delta_concentrations)  # A dict
+
+
+                if self.variable_steps:
+                    n_chems = self.reaction_data.number_of_chemicals()
+
+                    # The following are normalized by the number of steps and the number of chemicals
+                    #L2_rate = np.linalg.norm(delta_concentrations) / n_chems
+                    #L2_rate = np.sqrt(np.sum(delta_concentrations * delta_concentrations)) / n_chems
+                    L2_rate = np.sum(delta_concentrations * delta_concentrations) / (n_chems * n_chems)   # The square of the rate above
+
+                    if "variable_steps" in self.verbose_list:
+                        print(f"EXAMINING CONCENTRATION CHANGES at System Time {self.system_time:.5g} from the upcoming single step (for all rxns):")
+                        print("    Baseline: ", conc_array)
+                        print("    Deltas:   ", delta_concentrations)
+                        #print("    Relative Deltas:   ", delta_concentrations / conc_array)
+                        #print("    L_inf norm:   ", np.linalg.norm(delta_concentrations, ord=np.inf) / delta_time_full)
+                        print("    Adjusted L2 norm:   ", L2_rate)
+                        #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
+
+                    # Abort the current step if the rate of change is deemed excessive.  TODO: maybe ALWAYS check this, regardless of variable-steps option
+                    if L2_rate > self.variable_steps_threshold_abort:
+                        msg =   f"The current time step ({delta_time_full}) " \
+                                f"leads to an 'L2 rate' ({L2_rate:.4g}) that is higher than the specified HIGH threshold ({self.variable_steps_threshold_abort}):\n" \
+                                f"ACTION: IMMEDIATE ABORT. Will abort this step, and re-do it with a SMALLER time interval. " \
+                                f"[The current step started at System Time: {self.system_time:.5g}, and will rewind there]"
+                        #print("WARNING: ", msg)
+                        if self.diagnostics:
+                            # Expand the dict diagnostic_data_snapshot
+                            diagnostic_data_snapshot['L2'] = L2_rate
+                            diagnostic_data_snapshot['action'] = "ABORT"
+                            diagnostic_data_snapshot['caption'] = "excessive L2_rate"
+                            diagnostic_data_snapshot['step_factor'] = 1/self.abort_step_reduction_factor
+                            self.diagnostic_delta_conc_data.store(par=self.system_time,
+                                                                  data_snapshot=diagnostic_data_snapshot)
+
+                        raise ExcessiveTimeStep(msg)    # ABORT THE CURRENT STEP
+
+
+                    step_factor = self.step_determiner_1(L2_rate)
+                    recommended_next_step = delta_time_full * step_factor
+
                     if self.diagnostics:
-                        self.diagnostic_delta_conc_data.store(par=self.system_time,
-                                                              data_snapshot=self._delta_conc_dict(delta_concentrations))
+                        # Expand the dict diagnostic_data_snapshot
+                        diagnostic_data_snapshot['L2'] = L2_rate
+                        diagnostic_data_snapshot['action'] = "OK"
+                        diagnostic_data_snapshot['step_factor'] = step_factor
+
+                        #self.diagnostic_delta_conc_data.movie.loc[self.diagnostic_delta_conc_data.movie.index[-1], 'L2'] = L2_rate
+
+
+                    if "variable_steps" in self.verbose_list:
+                        msg =   f"The chosen time step ({delta_time_full}) results in an 'L2 rate' ({L2_rate:.4g}) that leads to the following:\n"
+
+                        if step_factor > 1:     # "INCREASE"
+                            msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER by a factor {step_factor} (set to {recommended_next_step}) at the next round!"
+                        elif step_factor < 1:     # "DECREASE"
+                            msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL SMALLER by a factor {1/step_factor} (set to {recommended_next_step}) at the next round!"
+                        else:   # "STAY THE COURSE"
+                            msg +=  f"ACTION: COMPLETE NORMALLY - we're inside the target range.  No change to step size."
+
+                        msg += f" [The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time_full:.5g}]"
+                        print("NOTICE:", msg)
+
+
+                if self.diagnostics:
+                    self.diagnostic_delta_conc_data.store(par=self.system_time,
+                                                          data_snapshot=diagnostic_data_snapshot)
+
+
 
                 # Check whether the COMBINED delta_concentrations will make any conc negative
                 if self.system is not None:     # IMPORTANT: usage of this function doesn't always involve self.system
@@ -851,6 +865,10 @@ class ReactionDynamics:
                         print(f"******** CAUTION: negative concentration resulting from the combined effect of multiple reactions, "
                               f"upon advancing reactions from system time t={self.system_time:,.5g}\n"
                               f"         It will be AUTOMATICALLY CORRECTED with a reduction in the time step size")
+                        if self.diagnostics:
+                            self.diagnostic_delta_conc_data.store(par=self.system_time,
+                                                                  data_snapshot={"action": "ABORT", "step_factor": 1/self.abort_step_reduction_factor,
+                                                                                 "caption": "neg. conc. from combined effect of multiple rxns"})
                         raise ExcessiveTimeStep(f"The chosen time interval ({delta_time_full}) "
                                                 f"leads to a NEGATIVE concentration of one of the chemicals: "
                                                 f"MUST MAKE THE INTERVAL SMALLER!\n"
@@ -861,15 +879,19 @@ class ReactionDynamics:
 
             # CATCH any 'ExcessiveTimeStep' exception raised in the loop
             except ExcessiveTimeStep as ex:
-                # Single reactions steps can fail if the attempted time step
-                #   was too large (leading to negative concentrations or other problem)
+                # Single reactions steps can fail with this error condition if the attempted time step was too large,
+                #   under the following scenarios:
+                #       1. negative concentrations from any one reaction - caught by  validate_increment()
+                #       2. negative concentration from the combined effect of multiple reactions - caught in this function
+                #       3. excessive L2_rate of the overall step - caught in this function (currently only checked in case of the variable-steps option)
+
                 if "substeps" in self.verbose_list:
                     print(ex)
 
-                delta_time_full /= abort_step_reduction_factor       # Reduce the excessive time step by a pre-set factor
+                delta_time_full /= self.abort_step_reduction_factor       # Reduce the excessive time step by a pre-set factor
                 recommended_next_step = delta_time_full
                 if "substeps" in self.verbose_list:
-                    print(f"reaction_step_orchestrator(): RE-DOING THE LAST REACTION STEP with the smaller time interval of {delta_time_full:.5g}\n")
+                    print(f"reaction_step_orchestrator(): RE-DOING THE LAST REACTION STEP with the smaller time interval of {delta_time_full:.5g}")
 
         # END while
 
@@ -1192,6 +1214,7 @@ class ReactionDynamics:
 
 
 
+
     def _reaction_elemental_step_SINGLE_REACTION(self, delta_time: float, conc_array: np.array, increment_vector,
                                                  rxn_index: int, tag_reactions :bool,
                                                  delta_dict):     # TODO: EXPERIMENTAL; not yet in use
@@ -1354,12 +1377,14 @@ class ReactionDynamics:
         :return:                        None (an Exception is raised if a negative concentration is detected)
         """
         if (baseline_conc + delta_conc) < 0:
-            print(f"******** CAUTION: negative concentration in chemical `{self.reaction_data.get_name(species_index)}`"
-                  f" (resulting from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)})\n",
-                  f"        upon advancing from system time t={self.system_time:,.5g} [Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}]\n"
-                  f"         It will be AUTOMATICALLY CORRECTED with a reduction in the time step size")
+            print(f"******** CAUTION: negative concentration in chemical `{self.reaction_data.get_name(species_index)}`.  "
+                  f"It will be AUTOMATICALLY CORRECTED with a reduction in the time step size")
+            if self.diagnostics:
+                self.diagnostic_delta_conc_data.store(par=self.system_time,
+                                                  data_snapshot={"action": "ABORT", "step_factor": 1/self.abort_step_reduction_factor,
+                                                                 "caption": f"neg. conc. in {self.reaction_data.get_name(species_index)} from rxn # {rxn_index}"})
             raise ExcessiveTimeStep(f"The chosen time interval ({delta_time}) "
-                                    f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` (index {species_index}) "
+                                    f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` (chem index {species_index}) "
                                     f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
                                     f"MUST MAKE THE INTERVAL SMALLER!\n"
                                     f"[System Time: {self.system_time:.5g} : Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}]")
