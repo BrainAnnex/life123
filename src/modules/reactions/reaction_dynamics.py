@@ -517,7 +517,8 @@ class ReactionDynamics:
                                     of "frequency" reaction steps (default 1, i.e. at every step.)
                                     EXAMPLE: snapshots={"frequency": 2, "species": ["A", "H"]}
 
-        :param dynamic_substeps:    An integer >= 1.  If > 1, individual steps may get divided by that factor,
+        :param dynamic_substeps:    TODO: DEPRECATED!
+                                    An integer >= 1.  If > 1, individual steps may get divided by that factor,
                                     on a reaction-by-reaction basis,
                                     if that reaction has fast dynamics,
                                     or multiplied by that factor, if that reaction has slow dynamics
@@ -537,6 +538,10 @@ class ReactionDynamics:
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
+        if dynamic_substeps != 1:
+            print("*** ReactionDynamics.single_compartment_react(): the `dynamic_substeps` option is DEPRECATED, "
+                  "and it will be eliminated in the next beta release")
+
         # Validation
         assert self.system is not None, "ReactionDynamics.single_compartment_react(): " \
                                         "the concentration values of the various chemicals must be set first"
