@@ -19,7 +19,7 @@
 #
 # Based on the reactions and initial conditions of the experiment `up_regulate_3`
 #
-# LAST REVISED: Mar. 4, 2023
+# LAST REVISED: Mar. 6, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -77,9 +77,9 @@ dynamics.describe_state()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-dynamics.verbose_list = ["substeps", "variable_steps"]
+#dynamics.verbose_list = ["substeps", "variable_steps"]  # Uncomment for debug data
 
-dynamics.single_compartment_react(time_step=0.01, stop_time=2., 
+dynamics.single_compartment_react(time_step=0.01, stop_time=2.0, 
                                   variable_steps=True, thresholds={"low": 0.25, "high": 0.64})
 
 df = dynamics.get_history()

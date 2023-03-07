@@ -75,9 +75,9 @@ class ReactionDynamics:
 
         self.diagnostics = False
 
-        self.diagnostic_data = {}       # This will be a dict with as many entries as reactions.    TODO: rename(?)
+        self.diagnostic_rxn_data = {}   # "Diagnostic reaction data": this gets turned into a dict with as many entries as reactions.
                                         #   The keys are the reaction indices; the values are Pandas dataframes
-                                        #   This is also referred to as "diagnostic reaction data"
+                                        #   This is also referred to as
                                         #   Columns of the dataframes:
                                         #       'TIME' 'Delta A' 'Delta B'...	'reaction' 	'substep' 'time_subdivision' 'delta_time' 'caption'
                                         #   Note: entries are always added, even if an interval run is aborted
@@ -753,12 +753,12 @@ class ReactionDynamics:
 
         delta_concentrations = None
 
-        while delta_time_full > 0.0001:   # TODO: tweak this number (used to prevent infinite loops).  Maybe 1/10 or 1/100 of original value?
+        while delta_time_full > 0.00001:   # TODO: tweak this number (used to prevent infinite loops).  Maybe 1/10 or 1/100 of original value?
             try:    # We want to catch errors that can arise from excessively large time steps
                     #   that lead to negative concentrations or other problems
                 if "substeps" in self.verbose_list:
                     print(f"\nreaction_step_orchestrator(): entering WHILE loop at System Time={self.system_time:.5g} "
-                          f"with delta_time_full={delta_time_full:.5g}")
+                          f"with delta_time_full={delta_time_full:.5g}. Processing interval [{self.system_time:.5g} - {self.system_time+delta_time_full:.5g}]")
 
 
                 if dynamic_substeps == 1:   # ****  BRANCH 1 - If the substep option was NOT requested
@@ -1308,9 +1308,9 @@ class ReactionDynamics:
         :param time_subdivision:
         :return:                            None
         """
-        if self.diagnostic_data == {}:    # INITIALIZE the dictionary self.diagnostic_data, if needed
+        if self.diagnostic_rxn_data == {}:    # INITIALIZE the dictionary self.diagnostic_data, if needed
             for i in range(self.reaction_data.number_of_reactions()):
-                self.diagnostic_data[i] = MovieTabular(parameter_name="TIME")       # One per reaction
+                self.diagnostic_rxn_data[i] = MovieTabular(parameter_name="TIME")       # One per reaction
 
         data_snapshot = {}
         # Add more entries to the above dictionary, starting with the Delta conc. for all the chemicals
@@ -1322,8 +1322,8 @@ class ReactionDynamics:
         data_snapshot["time_subdivision"] = time_subdivision
         data_snapshot["delta_time"] = delta_time
         local_system_time = self.system_time + substep_number * delta_time
-        self.diagnostic_data[rxn_index].store(par=local_system_time,
-                                              data_snapshot=data_snapshot)
+        self.diagnostic_rxn_data[rxn_index].store(par=local_system_time,
+                                                  data_snapshot=data_snapshot)
 
 
 
@@ -1811,7 +1811,7 @@ class ReactionDynamics:
 
         :return:    True if everything checks out, or False otherwise
         """
-        if self.diagnostic_data == {}:
+        if self.diagnostic_rxn_data == {}:
             print("WARNING *** In order to run stoichiometry_checker_entire_run(), "
                   "the diagnostics must be turned on, with set_diagnostics(), prior to the simulation run!")
             return False
@@ -1971,7 +1971,7 @@ class ReactionDynamics:
         if print_reaction:
             print("Reaction: ", self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True))
 
-        return self.diagnostic_data[rxn_index].get(tail=tail)
+        return self.diagnostic_rxn_data[rxn_index].get(tail=tail)
 
 
 
@@ -2089,7 +2089,7 @@ class ReactionDynamics:
         # Loop over all the reactions
         for rxn_index in range(self.reaction_data.number_of_reactions()):
             print(f"\nDiagnostics for reaction {rxn_index}")
-            diagnostic_df = self.diagnostic_data[rxn_index].get()
+            diagnostic_df = self.diagnostic_rxn_data[rxn_index].get()
             number_diagnostic_points = len(diagnostic_df)
 
             baselines_df = self.diagnostic_data_baselines.get()
