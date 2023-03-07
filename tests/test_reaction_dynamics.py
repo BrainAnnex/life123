@@ -105,7 +105,9 @@ def test_single_compartment_react():
     run1 = dynamics.get_system_conc()
     assert np.allclose(run1, [9.69124339e+01, 3.06982519e+00, 1.77408783e-02, 9.99985757e+02, 1.42431633e-02])
     assert np.allclose(dynamics.system_time, 0.0035)
-    assert dynamics.explain_time_advance(return_times=True) == [0.0, 0.002, 0.0025, 0.0035]
+    assert dynamics.explain_time_advance(return_times=True, silent=True) == \
+               ([0.0, 0.002, 0.0025, 0.0035],
+                [0.001, 0.0005, 0.001])
 
     # The above computation automatically took 2 normal steps, 1 half-size step and 1 normal step;
     # now repeat the process manually
@@ -120,7 +122,9 @@ def test_single_compartment_react():
     run2 = dynamics.get_system_conc()
     assert np.allclose(run2, run1)      # Same result as before
     assert np.allclose(dynamics2.system_time, 0.0035)
-    assert dynamics2.explain_time_advance(return_times=True) == [0.0, 0.002, 0.002, 0.0025, 0.0025, 0.0035]
+    assert dynamics2.explain_time_advance(return_times=True) == \
+           ([0.0, 0.002, 0.0025, 0.0035],
+            [0.001, 0.0005, 0.001])
     # The time advance is now different, because multiple calls to single_compartment_react() break up the counting
     # (just a convention)
 
@@ -314,7 +318,7 @@ def test_adaptive_time_resolution_1():
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=kF, reverse_rate=kR)
 
     # Start testing the lowest-level function, and then proceed to testing progressively higher-level ones
-    #rxn.verbose_list = [1]
+    #rxn.verbose_list = ["substeps"]
     result = rxn._reaction_elemental_step(delta_time=0.05, conc_array=conc_array,
                                           time_subdivision=2, fast_threshold_fraction=0.05)
     # The above call is just 1 time step
@@ -328,7 +332,7 @@ def test_adaptive_time_resolution_1():
     rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=kF, reverse_rate=kR)   # Re-add same reaction
 
-    result, _ = rxn.reaction_step_orchestrator(delta_time_full=0.1, conc_array=conc_array,
+    result, _, _ = rxn.reaction_step_orchestrator(delta_time_full=0.1, conc_array=conc_array,
                                                dynamic_substeps=2, rel_fast_threshold=5)
     # The above call results in 2 time steps
     # Check the calculations, based on the forward Euler method
@@ -385,7 +389,7 @@ def test_adaptive_time_resolution_2():
     rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
     chem_data.add_reaction(reactants=["A" , "B"], products=["C"],
                            forward_rate=kF, reverse_rate=kR)        # Re-add the reaction
-    result, _  = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
+    result, _, _  = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
                                                 dynamic_substeps=time_subdivision, rel_fast_threshold=5)
     # Check the calculations, based on the forward Euler method
     half_step_conc=conc_array + [delta_A ,delta_B, delta_C]    # [5.08 45.08 24.92]  These are the conc's halfway thru delta_time_full
@@ -463,7 +467,7 @@ def test_adaptive_time_resolution_3():
     rxn.clear_reactions()   # IMPORTANT: because it'll reset all reaction in their default initial "fast" mode
     chem_data.add_reaction(reactants=[(2, "A", 2)], products=["C"],
                            forward_rate=kF, reverse_rate=kR)        # Re-add the reaction
-    result, _  = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
+    result, _, _  = rxn.reaction_step_orchestrator(delta_time_full=delta_time_full_interval, conc_array=conc_array,
                                                 dynamic_substeps=time_subdivision, rel_fast_threshold=5)
 
     # Check the calculations, based on the forward Euler method
@@ -528,6 +532,121 @@ def test_adaptive_time_resolution_3():
                                  n_steps=3, dynamic_substeps=time_subdivision, rel_fast_threshold=5)
     assert np.allclose(rxn.system_time, 0.01)   # Note that 0.01 is 0.004 + 3 * 0.002
     assert np.allclose(rxn.system, np.array([15.34008717, 132.32995642]))
+
+
+
+def test_single_compartment_react_variable_steps_1():
+    # Based on experiment "variable_steps_1"
+
+    # Initialize the system
+    chem_data = ReactionData(names=["U", "X", "S"])
+
+    # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
+    chem_data.add_reaction(reactants=[(2, "S")], products="U",
+                           forward_rate=8., reverse_rate=2.)
+
+    # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
+    chem_data.add_reaction(reactants="S", products="X",
+                           forward_rate=6., reverse_rate=3.)
+
+    dynamics = ReactionDynamics(reaction_data=chem_data)
+    dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
+
+    dynamics.single_compartment_react(time_step=0.01, stop_time=0.2,
+                                      variable_steps=True, thresholds={"low": 0.25, "high": 0.64})
+
+    df = dynamics.get_history()
+    #print(df)
+    assert len(df) == 23
+
+    assert np.allclose(df.iloc[0][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.0000,  50.000000,  100.000000,  0.000000])
+
+    assert np.allclose(df.iloc[1][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.0050,  49.500000,  98.500000,  2.500000], rtol=1e-03)     # Notice the halved step size
+
+    assert np.allclose(df.iloc[2][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.0075,  49.302500,  97.798750,  3.596250], rtol=1e-03)
+
+    assert np.allclose(df.iloc[22][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.2050,  55.600598,   69.127620,  19.671183], rtol=1e-03)
+
+    #print(df.iloc[22][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'))
+
+
+
+def test_single_compartment_correct_neg_conc_1():
+    # Based on "Run 3" of experiment "negative_concentrations_1
+
+    # Initialize the system
+    chem_data = ReactionData(names=["U", "X", "S"])
+
+    # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
+    chem_data.add_reaction(reactants=[(2, "S")], products="U",
+                           forward_rate=8., reverse_rate=2.)
+
+    # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
+    chem_data.add_reaction(reactants="S", products="X",
+                           forward_rate=6., reverse_rate=3.)
+
+    dynamics = ReactionDynamics(reaction_data=chem_data)
+    dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
+
+    dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+    dynamics.single_compartment_react(time_step=0.1, stop_time=0.8, variable_steps=False)
+    # Note: negative concentrations that would arise from the given step size, get automatically intercepted - and
+    #       the step sizes get reduced as needed
+
+    df = dynamics.get_history()
+    #print(df)
+    assert len(df) == 11
+
+    assert np.allclose(df.iloc[0][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.0000,  50.000000,  100.000000,  0.000000])
+
+    assert np.allclose(df.iloc[1][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.1,  40, 70, 50], rtol=1e-03)
+
+    assert np.allclose(df.iloc[2][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.15,  56, 74.50, 13.5], rtol=1e-03)        # Notice the halved step size
+
+    assert np.allclose(df.iloc[3][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.25,  55.6, 60.25, 28.55], rtol=1e-03)        # Back to the requested step size
+
+    assert np.allclose(df.iloc[5][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.45,  58.7, 45.1465, 37.4535], rtol=1e-03)
+
+    assert np.allclose(df.iloc[6][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.5,  67.8114, 49.610575, 14.766625], rtol=1e-03)        # Notice another instance of halved step size
+
+    assert np.allclose(df.iloc[7][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.6,  66.062420, 43.587378, 24.287783], rtol=1e-03)        # Back to the requested step size
+
+    assert np.allclose(df.iloc[10][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
+                       [0.9,  76.895206, 44.446655,	1.762933], rtol=1e-03)        # Final step
+
+
+
+
+###########################  LOWER-LEVEL METHODS  ###########################
+
+
+def test_step_determiner_1():
+    chem_data = ReactionData()
+    rxn = ReactionDynamics(chem_data)
+    rxn.variable_steps_threshold_low = 50
+    rxn.variable_steps_threshold_high = 100
+    rxn.variable_steps_threshold_abort = 200
+
+    assert rxn.step_determiner_1(0) == 2
+    assert rxn.step_determiner_1(49.9) == 2
+    assert rxn.step_determiner_1(50.1) == 1
+    assert rxn.step_determiner_1(99.0) == 1
+    assert np.allclose(rxn.step_determiner_1(100.1), 0.5)
+    assert np.allclose(rxn.step_determiner_1(199.9), 0.5)
+    assert np.allclose(rxn.step_determiner_1(200.1), 0.5)
+    assert np.allclose(rxn.step_determiner_1(10000), 0.5)
 
 
 
@@ -1078,57 +1197,78 @@ def test_explain_time_advance():
     # Start out with uniform steps
     rxn.diagnostic_data_baselines.store(par=20.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
-    assert np.allclose(result, [20.])
+
+    assert rxn.explain_time_advance(return_times=True, silent=True) is None
+
 
     rxn.diagnostic_data_baselines.store(par=30.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)    # TODO: also test the returned step sizes
     assert np.allclose(result, [20., 30.])
 
     rxn.diagnostic_data_baselines.store(par=40.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40.])
 
     # Switching to smaller step
     rxn.diagnostic_data_baselines.store(par=45.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 45.])
 
     rxn.diagnostic_data_baselines.store(par=50.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50.])
 
     # Switching to larger step
     rxn.diagnostic_data_baselines.store(par=70.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70.])
 
     # Yet larger
     rxn.diagnostic_data_baselines.store(par=95.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95.])
 
     # Smaller again
     rxn.diagnostic_data_baselines.store(par=96.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 96.])
 
     rxn.diagnostic_data_baselines.store(par=97.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 97.])
 
     rxn.diagnostic_data_baselines.store(par=98.,
                                         data_snapshot={"primary_timestep": 100.})
-    result = rxn.explain_time_advance(return_times=True)
+    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 98.])
 
     #print(rxn.diagnostic_data_baselines.get())
     #print(result)
+
+
+
+def test__delta_names():
+    chem_data = ReactionData(names=["A", "B", "X"])
+    dyn = ReactionDynamics(chem_data)
+
+    assert dyn._delta_names() == ["Delta A", "Delta B", "Delta X"]
+
+
+
+def test__delta_conc_dict():
+    chem_data = ReactionData(names=["A", "B", "X"])
+    dyn = ReactionDynamics(chem_data)
+
+    assert dyn._delta_conc_dict(np.array([10, 20, 30])) == \
+           {"Delta A": 10, "Delta B": 20, "Delta X": 30}
+
+    with pytest.raises(Exception):
+        dyn._delta_conc_dict(np.array([10, 20, 30, 40]))    # One element too many

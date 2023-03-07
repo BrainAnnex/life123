@@ -22,16 +22,24 @@
 # LAST REVISED: Feb. 11, 2023
 #
 # * [RUN 1 : negative concentrations are detected but otherwise ignored](#negative_concentrations_1_run_1)  
+# (_"DEMONIC"_ in figure below)
 #
 # * [RUN 2 : we restored some, but not all, of the code that had been disabled in Run #1](#negative_concentrations_1_run_2)   
-# Negative concentrations from *individual* reactions are now automatically corrected - but negative concentrations from *combined* (synergistic) reactions can still slip thru  
+# Negative concentrations from *individual* reactions are now automatically corrected - but negative concentrations from *combined* (synergistic) reactions can still slip thru   
+# (_"POSSESSED"_ in figure below)
 #
 # * [RUN 3 : we restored ALL the code that had been disabled in the earlier runs](#negative_concentrations_1_run_3)   
 # Negative concentrations from *individual* reactions are now automatically corrected - and so are negative concentrations from *combined* (synergistic) reactions   
+# (_"DISTURBED"_ in figure below)
 #
 # * [RUN 4 : same as the previous run, but with slightly finer time resolution](#negative_concentrations_1_run_4)   
-# (For even more accurate solutions, see the experiment `large_time_steps_2`)
+# (_"HEALING"_ in figure below)
 #
+# For even more accurate solutions - _"HEALTHY"_ in figure below - see the experiment `large_time_steps_2`
+#
+
+# %% [markdown]
+# ![Exorcising Instabilities](../../docs/negative_concentrations_1.png)
 
 # %% [markdown]
 # # IMPORTANT: DO NOT ATTEMPT TO RUN THIS NOTEBOOK!   
@@ -127,7 +135,9 @@ all_fig.show()
 # %% [markdown]
 # # There are 3 separate scenarios that lead to negative concentrations
 #
-# #### Scenario 1 : A reaction causes a dip into the negative, and the other reactions fails to remedy it
+# [More information](https://life123.science/reactions)
+#
+# #### Scenario 1 : A reaction causes a dip into the negative, and the combined other reactions fail to remedy it
 #
 # #### Scenario 2 : A reaction causes a dip into the negative, and the other reactions counterbalance it enough to remedy it
 # (though "counterbalanced", this is still regarded as a sign of instability)
@@ -188,6 +198,9 @@ dynamics.get_diagnostic_data(rxn_index=1)
 #
 # Such an automatic detection and remediation eliminates "Scenarios 1 and 2" (see earlier in notebook for definitions) BUT NOT "scenario 3"  
 # IMPORTANT: scenario 3 normally gets caught and remedied, too - but that feature got disabled by a code change in this run, _FOR DEMONSTRATION PURPOSES_
+#
+# This run required the disabling of multiple software features that detect, and automatically correct, such issues.   
+# It cannot be replicated with current versions of Life123.  **DO NOT ATTEMPT TO RE-RUN!**
 
 # %%
 # Same as for Run #1
@@ -282,7 +295,7 @@ dynamics.explain_time_advance()
 
 # %% [markdown]
 # ### Notice how the system automatically temporarily slowed down from the requested time step of 0.1 at t=0.1 and again at t=0.45  
-# Those actions intercepted, and automatically remedied, ALL the negative concentrations.
+# Those actions intercepted, and automatically remedied, ALL the negative concentrations, whether caused by any single reaction, or by the cumulative effect of multiple ones.  
 # We now took a total of 10 steps, instead of the 9 ones of Run #1
 
 # %%

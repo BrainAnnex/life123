@@ -32,7 +32,11 @@ class MovieTabular:
 
 
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """
+        Return the number of snapshots comprising the movie
+        :return:    An integer
+        """
         return len(self.movie)
 
 
@@ -54,7 +58,7 @@ class MovieTabular:
                                     It doesn't have to remain consistent, but it's probably good practice to keep it so
         :param data_snapshot:   A dict of data to preserve for later use
         :param caption:         OPTIONAL string to describe the snapshot
-        :return:                None
+        :return:                None (the object variable "self.movie" will get updated)
         """
         if self.movie is None:     # No Pandas dataframe was yet started
             assert type(data_snapshot) == dict, \
@@ -85,13 +89,13 @@ class MovieTabular:
 
 
 
-    def set_caption_last_snapshot(self, caption: str):
+    def set_caption_last_snapshot(self, caption: str) -> None:
         """
         Set the caption field of the last (most recent) snapshot to the given value.
         Any previous value gets over-written
 
         :param caption:
-        :return:
+        :return:        None
         """
         index = len(self.movie) - 1
         self.movie.loc[index, "caption"] = caption
@@ -133,8 +137,11 @@ class MovieArray:
 
 
 
-    def __len__(self):
-        # Return the number of snapshots comprising the movie
+    def __len__(self) -> int:
+        """
+        Return the number of snapshots comprising the movie
+        :return:    An integer
+        """
         return self.movie.shape[0]
 
 

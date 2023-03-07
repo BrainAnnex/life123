@@ -110,7 +110,7 @@ dynamics.get_history()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-#dynamics.verbose_list = [1, 2, 3]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
+#dynamics.verbose_list = ["substeps", 2, 3]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
 # The changes of concentrations vary very rapidly early on; 
 # so, we'll be using the dynamic_substeps option to increase time resolution,

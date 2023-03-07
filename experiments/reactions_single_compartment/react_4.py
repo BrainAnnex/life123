@@ -17,7 +17,7 @@
 # #### with 2nd-order kinetics for `A`,  
 # #### and 1-st order kinetics for `C`
 #
-# Taken to equilibrium.  (Adaptive variable time resolution is used)
+# Taken to equilibrium.  (Adaptive variable time substeps are used)
 #
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #
@@ -93,7 +93,7 @@ dynamics.get_history()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-#dynamics.verbose_list = [1]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
+#dynamics.verbose_list = ["substeps"]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
 # The changes of concentrations vary very rapidly early on; so, we'll be using dynamic_substeps=4 , i.e. increase time resolution
 # by x4 initially, as long as the reaction remains "fast" (based on a threshold of 5% change)
@@ -131,7 +131,7 @@ dynamics.stoichiometry_checker(rxn_index=0,
 # #### Indeed, it can be easy checked that the drop in [A] is -119.920000 , twice the 59.96 increase in [C], as dictated by the stoichiometry
 
 # %%
-dynamics.diagnostic_data[0].get().loc[0]    # Conveniently seen in the diagnostic data
+dynamics.diagnostic_rxn_data[0].get().loc[0]    # Conveniently seen in the diagnostic data
 
 # %% [markdown]
 # ## Note: "A" (now largely depleted) is the limiting reagent

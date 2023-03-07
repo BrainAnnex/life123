@@ -310,7 +310,7 @@ class Numerical:
 
 
     @classmethod
-    def gradient_order4_1d(cls, arr, dx=1.0, dtype='float'):
+    def gradient_order4_1d(cls, arr, dx=1.0, dtype='float') -> np.array:
         """
         Compute the gradient, from the values in the given array,
         using the 5-point Central Difference, which produces an accuracy of order 4.
@@ -476,7 +476,7 @@ class Numerical:
 
 
     @classmethod
-    def expand_matrix_boundary(cls, m):
+    def expand_matrix_boundary(cls, m) -> np.array:
         """
         Add a row at the top and at the bottom, and also add a column to the left and to the right,
         repeating the edge values of the matrix
@@ -490,7 +490,7 @@ class Numerical:
                  Note how the original matrix is "embedded" in the center of the larger one
 
         :param m:   A Numpy matrix
-        :return:
+        :return:    A Numpy matrix, with 2 extra rows (at top and bottom) and 2 extra columns (at left and right)
         """
         # Stack up the first row, the matrix, and the last row
         tall = np.concatenate( ([m[0, :]] , m , [m[-1, :]]) )

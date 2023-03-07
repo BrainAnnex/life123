@@ -518,7 +518,7 @@ class BioSim1D:
 
     
     def x_coord(self, bin_address):
-        """"
+        """
         Return the x coordinate of the middle of the specified bin.
         By convention, for the leftmost bin, it's zero,
         and for the rightmost, it's the overall length of the system
@@ -725,7 +725,9 @@ class BioSim1D:
 
 
     def show_system_snapshot(self) -> None:
-        """"
+        """
+
+        :return:    None
         """
         print(f"SYSTEM SNAPSHOT at time {self.system_time}:")
         print(self.system_snapshot())
@@ -1343,7 +1345,7 @@ class BioSim1D:
             #print(f"\conc_array in bin {bin_n}: ", conc_array)
 
             # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-            increment_vector, _ = self.reaction_dynamics.reaction_step_orchestrator(delta_time_full=delta_time, conc_array=conc_array)
+            increment_vector, _, _ = self.reaction_dynamics.reaction_step_orchestrator(delta_time_full=delta_time, conc_array=conc_array)
 
             # Replace the "bin_n" column of the self.delta_reactions matrix with the contents of the vector increment_vector
             self.delta_reactions[:, bin_n] = np.array([increment_vector])
@@ -1359,7 +1361,7 @@ class BioSim1D:
                 #print(f"\n Post-membrane side conc_dict in bin {bin_n}: ", conc_dict)
 
                 # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-                increment_vector, _ = self.reaction_dynamics.reaction_step_orchestrator(delta_time_full=delta_time, conc_array=conc_array)
+                increment_vector, _, _ = self.reaction_dynamics.reaction_step_orchestrator(delta_time_full=delta_time, conc_array=conc_array)
 
                 # Replace the "bin_n" column of the self.delta_reactions_B matrix with the contents of the vector increment_vector
                 self.delta_reactions_B[:, bin_n] = np.array([increment_vector])
