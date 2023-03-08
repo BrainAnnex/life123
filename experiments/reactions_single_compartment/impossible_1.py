@@ -22,7 +22,7 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: Feb. 5, 2023
+# LAST REVISED: Mar. 7, 2023
 
 # %% [markdown]
 # ![Temporarily suspending the Laws of Physics](../../docs/impossible_1.png)
@@ -147,10 +147,10 @@ dynamics.is_in_equilibrium()
 # #### Consider, for example, the concentrations of `A` at the end time, and contributions to its change ("Delta A") from _individual_ reactions affecting `A`, as available from the diagnostic data:
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=0, tail=1)
+dynamics.get_diagnostic_rxn_data(rxn_index=0, tail=1)
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=2, tail=1)
+dynamics.get_diagnostic_rxn_data(rxn_index=2, tail=1)
 
 # %% [markdown]
 # ### Looking at the last row from each of the 2 dataframes above, one case see that, at every reaction cycle, [A] gets reduced by 0.914286 by the reaction `A <-> B`, while simultaneously getting increased by the SAME amount by the (fictional) reaction `C <-> A`.   
@@ -231,12 +231,12 @@ dynamics.is_in_equilibrium()
 # ### The fact that individual reactions are now in actual, real equilibrium, can be easily seen from the last rows in the diagnostic data.  Notice all the delta-concentration values at the final times are virtually zero:
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=0, tail=1)
+dynamics.get_diagnostic_rxn_data(rxn_index=0, tail=1)
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=1, tail=1)
+dynamics.get_diagnostic_rxn_data(rxn_index=1, tail=1)
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=2, tail=1)
+dynamics.get_diagnostic_rxn_data(rxn_index=2, tail=1)
 
 # %%

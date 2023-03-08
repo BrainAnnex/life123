@@ -16,9 +16,9 @@
 # ### Adaptive time substeps (variable time resolution) for reaction `A <-> B`,
 # with 1st-order kinetics in both directions, taken to equilibrium
 #
-# Same as the experiment _"react_1"_ , but with adaptive time substeps
+# Same as the experiment _"react_1"_ , but with adaptive time substeps  ************** TODO: change
 #
-# LAST REVISED: Feb. 5, 2023
+# LAST REVISED: Mar. 7, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -173,7 +173,8 @@ fig.show()
 # %% [markdown]
 # ## Note how the left-hand side of this plot is much smoother than it was in experiment "react_1", where no adaptive time substeps were used!
 
-# %%
+# %% [markdown]
+#
 
 # %% [markdown]
 # # Diagnostics of the run may be investigated as follows:
@@ -182,6 +183,6 @@ fig.show()
 dynamics.diagnostic_data_baselines.get()
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=0)      # For the 0-th reaction (the only reaction in our case)
+dynamics.get_diagnostic_rxn_data(rxn_index=0)      # For the 0-th reaction (the only reaction in our case)
 
 # %%

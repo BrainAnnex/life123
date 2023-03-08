@@ -21,8 +21,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #
-#
-# LAST REVISED: Feb. 5, 2023
+# LAST REVISED: Mar. 7, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -159,7 +158,7 @@ dynamics.plot_curves(colors=['red', 'green'],
 
 #dynamics.diagnose_variable_time_steps()
 
-#dynamics.get_diagnostic_data(rxn_index=0)
+#dynamics.get_diagnostic_rxn_data(rxn_index=0)
 
 #dynamics.diagnostic_data_baselines.get()
 

@@ -1710,10 +1710,6 @@ class ReactionDynamics:
 
 
 
-    def get_diagnostic_data(self, rxn_index: int, tail=None, print_reaction=True) -> pd.DataFrame:  # TODO: phase out this old name
-        return self.get_diagnostic_rxn_data(rxn_index, tail, print_reaction)
-
-
     def get_diagnostic_rxn_data(self, rxn_index: int, tail=None, print_reaction=True) -> pd.DataFrame:
         """
         Return a Pandas data frame with the diagnostic data of the requested reaction: in particular,

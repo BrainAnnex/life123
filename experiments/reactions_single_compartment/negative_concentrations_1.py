@@ -19,7 +19,7 @@
 #
 # 1st-order kinetics throughout.   
 #
-# LAST REVISED: Feb. 11, 2023
+# LAST REVISED: Mar. 7, 2023
 #
 # * [RUN 1 : negative concentrations are detected but otherwise ignored](#negative_concentrations_1_run_1)  
 # (_"DEMONIC"_ in figure below)
@@ -176,10 +176,10 @@ all_fig.show()
 df
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=0)
+dynamics.get_diagnostic_rxn_data(rxn_index=0)
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=1)
+dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 
@@ -260,10 +260,10 @@ all_fig.show()
 df
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=0)
+dynamics.get_diagnostic_rxn_data(rxn_index=0)
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=1)
+dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 

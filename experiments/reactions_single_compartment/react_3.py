@@ -16,11 +16,13 @@
 # ## Association/Dissociation reaction `A + B <-> C`
 # #### with 1st-order kinetics for each species, taken to equilibrium.
 # #### Exploration of debugging and diagnostics options
-# (Adaptive variable time substeps are used)
+# (Adaptive variable time substeps are used) ************ TODO: change
 #
-# _See also the experiment "1D/reactions/reaction_4"_ 
+# _See also the experiment "1D/reactions/reaction_4"_  
 #
-#   # For the 0-th reaction (the only reaction in our case)
+# LAST REVISED: Mar. 7, 2023  
+#
+# # For the 0-th reaction (the only reaction in our case)
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -162,6 +164,6 @@ dynamics.plot_curves(colors=['red', 'violet', 'green'])
 # ### The above diagnostics are based on the following diagnostic data:
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=0)
+dynamics.get_diagnostic_rxn_data(rxn_index=0)
 
 # %%

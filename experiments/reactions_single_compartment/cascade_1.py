@@ -20,7 +20,7 @@
 #
 # (Adaptive variable time resolution is used, with extensive diagnostics.)
 #
-# LAST REVISED: Feb. 5, 2023
+# LAST REVISED: Mar. 7, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -192,16 +192,16 @@ dynamics.diagnostic_data_baselines.get()
 # %%
 # Concentration increments due to reaction 0 (A <-> B)
 # Note that [C] is not affected
-dynamics.get_diagnostic_data(rxn_index=0)
+dynamics.get_diagnostic_rxn_data(rxn_index=0)
 
 # %%
 # Concentration increments due to reaction 1 (B <-> C)
 # Note that [A] is not affected
-dynamics.get_diagnostic_data(rxn_index=1)
+dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 # Expand the last part of the above table
-dynamics.get_diagnostic_data(rxn_index=1).loc[60:]
+dynamics.get_diagnostic_rxn_data(rxn_index=1).loc[60:]
 
 # %%
 
