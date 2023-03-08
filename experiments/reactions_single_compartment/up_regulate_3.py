@@ -22,7 +22,7 @@
 # Invoking [Le Chatelier's principle](https://www.chemguide.co.uk/physical/equilibria/lechatelier.html), it can be seen that, starting from equilibrium, when [U] goes up, so does [S]; and when [S] goes up, so does [X].   
 # Conversely, when [U] goes down, so does [S]; and when [S] goes down, so does [X].   
 #
-# This experiment is a counterpart of `up_regulate_2`, with "upstream" rather than "downstream" reactions.
+# This experiment is a counterpart of experiment `up_regulate_2`, with "upstream" rather than "downstream" reactions.
 #
 # Note: numerical errors in the same reactions (with the same initial conditions) is explored in the experiment "large_time_steps_2"
 #

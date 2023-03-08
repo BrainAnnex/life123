@@ -1,4 +1,4 @@
-### VERSION 1.0-beta25
+### VERSION 1.0-beta26_IN_PROGRESS
 
 
 
