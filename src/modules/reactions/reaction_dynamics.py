@@ -50,18 +50,12 @@ class ReactionDynamics:
                                         #   EXAMPLE : { 1: "F", 4: "S", 5: "F" , 8: "S" }
                                         #   Any reaction with a missing entry is regarded as "F" (Fast)
 
-        self.last_abs_fast_threshold = None # The last-used value of the threshold for fast reactions
 
-        self.fast_criterion_use_baseline = False    # TODO: EXPERIMENTAL - Probably to be phased out,
-                                                    #       because True gives poor results
-
-
-        self.variable_steps = False     # If True, the (main) steps will get automatically adjusted
 
         self.variable_steps_threshold_low = 0.25    # EXPERIMENTAL default value
         self.variable_steps_threshold_high = 0.64   # EXPERIMENTAL default value
 
-        self.variable_steps_threshold_abort = 1.44  # EXPERIMENTAL
+        self.variable_steps_threshold_abort = 1.44  # EXPERIMENTAL.   TODO: maybe detach from its dependence on variable steps
         self.abort_step_reduction_factor = 2.       # Factor by which to divide the time step
                                                     #   in case of error from excessive step size
 
@@ -540,7 +534,7 @@ class ReactionDynamics:
             raise Exception("single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
                             "(because the number of steps will vary); specify `reaction_duration` or `stop_time` instead")
 
-        self.variable_steps = variable_steps
+
         if thresholds:
             if "low" in thresholds:
                 self.variable_steps_threshold_low = thresholds["low"]
@@ -593,14 +587,15 @@ class ReactionDynamics:
 
         i = 0
         while self.system_time < stop_time:
-            if (not self.variable_steps) and (i == n_steps) and np.allclose(self.system_time, stop_time):
+            if (not variable_steps) and (i == n_steps) and np.allclose(self.system_time, stop_time):
                 break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
                             #   the System Time is below the stop_time because of roundoff error
 
 
             # ----------  CORE OPERATION OF MAIN LOOP  ----------
             delta_concentrations, step_actually_taken, recommended_next_step = \
-                    self.reaction_step_orchestrator(delta_time_full=time_step, conc_array=self.system)
+                    self.reaction_step_orchestrator(delta_time_full=time_step, conc_array=self.system,
+                                                    variable_steps=variable_steps)
 
             # Update the System State
             self.system += delta_concentrations
@@ -632,7 +627,7 @@ class ReactionDynamics:
                 self.diagnostic_data_baselines.store(par=self.system_time,
                                                      data_snapshot=system_data)
 
-            if self.variable_steps:
+            if variable_steps:
                 time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
         # END while
 
@@ -643,7 +638,7 @@ class ReactionDynamics:
         if extra_steps > 0:
             print(f"The computation took {extra_steps} extra step(s) - "
                   f"automatically added to prevent negative concentrations")
-            if self.variable_steps:
+            if variable_steps:
                 print("(or to prevent excessively large concentration changes)")
 
 
@@ -656,7 +651,8 @@ class ReactionDynamics:
 
 
 
-    def reaction_step_orchestrator(self, delta_time_full: float, conc_array) -> (np.array, float, float):
+    def reaction_step_orchestrator(self, delta_time_full: float, conc_array,
+                                   variable_steps=False) -> (np.array, float, float):
         """     TODO: the word "orchestrator" may no longer be a good descriptor.
                       NAME IDEAS: reaction_step_manager(), reaction_step_common()
         This is the common entry point for both single-compartment reactions,
@@ -680,6 +676,7 @@ class ReactionDynamics:
         :param conc_array:      All initial concentrations at the start of the reaction step,
                                     as a Numpy array for ALL the chemical species, in their index order;
                                     this can be thought of as the "SYSTEM STATE"
+        :param variable_steps:  If True, the (main) steps will get automatically adjusted
 
         :return:                The triplet:
                                     1) increment vector for the concentrations of ALL the chemical species,
@@ -726,7 +723,7 @@ class ReactionDynamics:
                     diagnostic_data_snapshot = self._delta_conc_dict(delta_concentrations)  # A dict
 
 
-                if self.variable_steps:
+                if variable_steps:
                     n_chems = self.reaction_data.number_of_chemicals()
 
                     # The following are normalized by the number of steps and the number of chemicals
@@ -1068,7 +1065,7 @@ class ReactionDynamics:
 
 
     def criterion_fast_reaction(self, delta_conc, time_subdivision, fast_threshold_fraction,
-                                baseline_conc=None) -> bool:
+                                baseline_conc=None, use_baseline=False) -> bool:
         """
         Apply a criterion to determine, from the given data,
         whether the originating reaction (the source of the data) needs to be classified as "Fast".
@@ -1078,11 +1075,12 @@ class ReactionDynamics:
         :param time_subdivision:
         :param fast_threshold_fraction:
         :param baseline_conc:           # TODO: probably phase out
+        :param use_baseline:            # TODO: gave poor results when used for substeps
 
         :return:                        True if the concentration change is so large (based on some criteria)
                                             that the reaction that caused it, ought to be regarded as "fast"
         """
-        if self.fast_criterion_use_baseline:    # TODO: this criterion gives poor results, and will probably be eliminated
+        if use_baseline:    # TODO: this criterion gives poor results, and will probably be eliminated
             # if abs(delta_conc) / baseline_conc > fast_threshold_fraction / time_subdivision
             # Perhaps more intuitive as shown above;
             # but, to avoid time-consuming divisions (and potential divisions by zero), re-formulated as below:
@@ -1135,7 +1133,8 @@ class ReactionDynamics:
                                 delta_conc_array: np.array,
                                 time_subdivision: int,
                                 fast_threshold_fraction,
-                                baseline_conc_array=None
+                                baseline_conc_array=None,
+                                use_baseline=False
                                 ) -> None:
         """
         Examine the requested concentration changes given by delta_conc_array
@@ -1164,6 +1163,7 @@ class ReactionDynamics:
                                             IMPORTANT: this refers to the FULL step size, and will be scaled for time_subdivision
                                             (e.g. a time_subdivision of 2 signifies 1/2 a time step,
                                             and will mean that just 1/2 of the change will constitute a threshold)
+        :param use_baseline:            # TODO: gave poor results when used for substeps
 
         :return:                        None (the equation is marked as "Fast", if appropriate, in its data structure)
         """
@@ -1196,7 +1196,8 @@ class ReactionDynamics:
 
             # Determine whether the reaction needs to be classified as "Fast"
             if self.criterion_fast_reaction(delta_conc=delta_conc, baseline_conc=baseline_conc,
-                                            time_subdivision=time_subdivision, fast_threshold_fraction=fast_threshold_fraction):
+                                            time_subdivision=time_subdivision, fast_threshold_fraction=fast_threshold_fraction,
+                                            use_baseline=use_baseline):
                 self.set_rxn_speed(rxn_index, "F")
                 if "substeps" in self.verbose_list:
                     print(f"        Rxn # {rxn_index} FLIPPED TAG to 'F', "
