@@ -21,6 +21,9 @@
 #
 # LAST REVISED: Mar. 6, 2023
 
+# %% [markdown]
+# ![Adaptive time steps](../../docs/variable_steps.png)
+
 # %%
 # Extend the sys.path variable, to contain the project's root directory
 import set_path

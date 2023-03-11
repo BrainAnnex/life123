@@ -95,7 +95,7 @@ class ReactionDynamics:
     #                                ~  TO SET/READ DATA  ~                                     #
     #                                                                                           #
     #############################################################################################
-    def ___________TO_SET_AND_READ_DATA___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
+    def ________TO_SET_AND_READ_DATA________(DIVIDER):  # Used to get a better structure view in IDEs such asPycharm
         pass
 
 
@@ -333,7 +333,7 @@ class ReactionDynamics:
     #                                   TO VISUALIZE SYSTEM                                     #
     #                                                                                           #
     #############################################################################################
-    def ___________TO_VISUALIZE_SYSTEM___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
+    def ________TO_VISUALIZE_SYSTEM________(DIVIDER):  # Used to get a better structure view in IDEs such asPycharm
         pass
 
 
@@ -359,14 +359,13 @@ class ReactionDynamics:
 
 
 
-    #############################################################################################
-    #                                                                                           #
-    #                                       HISTORY                                             #
-    #                                                                                           #
-    #############################################################################################
-    def ___________HISTORY___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
-        pass
+    #####################################################################################################
 
+    '''                                      ~   HISTORY   ~                                          '''
+
+    def ________HISTORY________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
     def add_snapshot(self, species=None, caption="", time=None, system_data=None) -> None:
         """
@@ -449,7 +448,7 @@ class ReactionDynamics:
     #                                TO PERFORM THE REACTIONS                                   #
     #                                                                                           #
     #############################################################################################
-    def ___________TO_PERFORM_THE_REACTIONS___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
+    def ________TO_PERFORM_THE_REACTIONS________(DIVIDER):  # Used to get a better structure view in IDEs such asPycharm
         pass
 
 
@@ -1459,7 +1458,7 @@ class ReactionDynamics:
     #                                      FOR DIAGNOSTICS                                      #
     #                                                                                           #
     #############################################################################################
-    def _________FOR_DIAGNOSTICS___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
+    def ________FOR_DIAGNOSTICS________(DIVIDER):  # Used to get a better structure view in IDEs such asPycharm
         pass
 
 
@@ -2179,14 +2178,13 @@ class ReactionDynamics:
 
 
 
-    #############################################################################################
-    #                                                                                           #
-    #                                       GRAPHICS                                            #
-    #                                                                                           #
-    #############################################################################################
-    def _________GRAPHICS___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
-        pass
+    #####################################################################################################
 
+    '''                                    ~   GRAPHICS   ~                                           '''
+
+    def ________GRAPHICS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
     def plot_curves(self, chemicals=None, colors=None, title=None,
                     vertical_lines=None, show_intervals=False, suppress=False) -> Union[None, go.Figure]:
@@ -2329,14 +2327,13 @@ class ReactionDynamics:
 
 
 
-    #############################################################################################
-    #                                                                                           #
-    #                                   RESULT ANALYSIS                                         #
-    #                                                                                           #
-    #############################################################################################
-    def _________RESULT_ANALYSIS___________(DIVIDER):  # Used to get a better structure listing in IDEs such asPycharm
-        pass
+    #####################################################################################################
 
+    '''                                ~   RESULT ANALYSIS   ~                                        '''
+
+    def ________RESULT_ANALYSIS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
     def curve_intersection(self, t_start, t_end, var1, var2) -> (float, float):
         """

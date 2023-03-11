@@ -1,4 +1,4 @@
-### VERSION 1.0-beta26_IN_PROGRESS
+### BETA 26 (v0.26.0) IN-PROGRESS
 
 
 
