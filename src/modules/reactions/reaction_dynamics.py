@@ -80,7 +80,7 @@ class ReactionDynamics:
                                         # An expanded version of the normal System History.
                                         #   This is also referred to as "diagnostic concentration data".
                                         #   Columns of the dataframes:
-                                        #       'TIME' 	'A' 'B' ...  'is_primary' 'primary_timestep' 'n_substeps' 'substep_number' 'caption'
+                                        #       'TIME' 	'A' 'B' ...  'primary_timestep' 'n_substeps' 'substep_number' 'caption'
                                         #   Note: if an interval run is aborted, NO entry is created here
 
         self.diagnostic_delta_conc_data = MovieTabular(parameter_name="TIME")
@@ -480,7 +480,8 @@ class ReactionDynamics:
 
 
 
-    def single_compartment_react(self, reaction_duration=None, stop_time=None, time_step=None, n_steps=None,
+    def single_compartment_react(self, reaction_duration=None, stop_time=None, end_time=None,
+                                 initial_step=None, time_step=None, n_steps=None,
                                  snapshots=None, silent=False,
                                  dynamic_substeps=1,
                                  variable_steps=False, thresholds=None) -> None:
@@ -495,9 +496,13 @@ class ReactionDynamics:
         :param reaction_duration:  The overall time advance for the reactions (i.e. time_step * n_steps)
         :param stop_time:       The final time at which to stop the reaction
                                     If both stop_time and reaction_duration are specified, an error will result
+        :param end_time:        TODO: new name for stop_time
+
+        :param initial_step:    TODO: new name for time_step
         :param time_step:       The size of each time step.
                                 Note: if a dynamic_substeps > 1 is passed, then the time step will get internally
                                 subdivided for the "fast" reactions
+
         :param n_steps:         The desired number of steps
 
         :param snapshots:       OPTIONAL dict that may contain any the following keys:
@@ -523,6 +528,17 @@ class ReactionDynamics:
         if dynamic_substeps != 1:   # Intercept OBSOLETE option
             raise Exception("*** ReactionDynamics.single_compartment_react(): "
                             "the `dynamic_substeps` option was ELIMINATED in version Beta 26.  Use `variable_steps` instead")
+        if initial_step and time_step:
+            raise Exception("*** ReactionDynamics.single_compartment_react(): cannot use both `initial_step` and `time_step`.  Just use `initial_step` instead")
+
+        if time_step:
+            initial_step = time_step
+
+        if stop_time and end_time:
+            raise Exception("*** ReactionDynamics.single_compartment_react(): cannot use both `stop_time` and `end_time`.  Just use `end_time` instead")
+
+        if end_time:
+            stop_time = end_time
 
 
         # Validation
@@ -531,7 +547,7 @@ class ReactionDynamics:
 
         if variable_steps and n_steps is not None:
             raise Exception("single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
-                            "(because the number of steps will vary); specify `reaction_duration` or `stop_time` instead")
+                            "(because the number of steps will vary); specify `reaction_duration` or `end_time` instead")
 
 
         if thresholds:
@@ -555,7 +571,7 @@ class ReactionDynamics:
         # Determine the time step (the full step, regardless of optional substeps),
         # as well as the required number of such steps
         time_step, n_steps = self.specify_steps(total_duration=reaction_duration,
-                                                time_step=time_step,
+                                                time_step=initial_step,
                                                 n_steps=n_steps)
 
         if stop_time is None:
@@ -578,7 +594,6 @@ class ReactionDynamics:
         if self.diagnostics:
             # Save up the current System State, with some extra info, as "diagnostic 'baseline' data"
             system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
-            system_data["is_primary"] = True
             system_data["primary_timestep"] = time_step
             self.diagnostic_data_baselines.store(par=self.system_time,
                                                  data_snapshot=system_data)
@@ -621,7 +636,6 @@ class ReactionDynamics:
             if self.diagnostics:
                 # Save up the current System State, with some extra info, as "diagnostic 'baseline' data"
                 system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
-                system_data["is_primary"] = True
                 system_data["primary_timestep"] = time_step
                 self.diagnostic_data_baselines.store(par=self.system_time,
                                                      data_snapshot=system_data)
@@ -635,10 +649,12 @@ class ReactionDynamics:
 
         extra_steps = n_steps_taken - n_steps
         if extra_steps > 0:
-            print(f"The computation took {extra_steps} extra step(s) - "
-                  f"automatically added to prevent negative concentrations")
             if variable_steps:
-                print("(or to prevent excessively large concentration changes)")
+                print(f"Some steps were backtracked and re-done, "
+                      f"to prevent negative concentrations or to prevent excessively large concentration changes")
+            else:
+                print(f"The computation took {extra_steps} extra step(s) - "
+                      f"automatically added to prevent negative concentrations")
 
 
         if not silent:
@@ -741,10 +757,10 @@ class ReactionDynamics:
 
                     # Abort the current step if the rate of change is deemed excessive.  TODO: maybe ALWAYS check this, regardless of variable-steps option
                     if L2_rate > self.variable_steps_threshold_abort:
-                        msg =   f"The current time step ({delta_time_full}) " \
-                                f"leads to an 'L2 rate' ({L2_rate:.4g}) that is higher than the specified HIGH threshold ({self.variable_steps_threshold_abort}):\n" \
-                                f"ACTION: IMMEDIATE ABORT. Will abort this step, and re-do it with a SMALLER time interval. " \
-                                f"[The current step started at System Time: {self.system_time:.5g}, and will rewind there]"
+                        msg =   f"INFO: The current time step ({delta_time_full}) " \
+                                f"leads to an 'adjusted L2 rate' ({L2_rate:.4g}) > HIGH threshold ({self.variable_steps_threshold_abort}):\n" \
+                                f"      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time_full/self.abort_step_reduction_factor:.5g} " \
+                                f"[Step started at t={self.system_time:.5g}, and will rewind there]"
                         #print("WARNING: ", msg)
                         if self.diagnostics:
                             # Expand the dict diagnostic_data_snapshot
@@ -817,7 +833,7 @@ class ReactionDynamics:
                 #       2. negative concentration from the combined effect of multiple reactions - caught in this function
                 #       3. excessive L2_rate of the overall step - caught in this function (currently only checked in case of the variable-steps option)
 
-                if "substeps" in self.verbose_list:
+                if True: #if "substeps" in self.verbose_list:
                     print(ex)
 
                 delta_time_full /= self.abort_step_reduction_factor       # Reduce the excessive time step by a pre-set factor
@@ -1745,7 +1761,7 @@ class ReactionDynamics:
         Note: if an interval run is aborted, NO entry is created here
 
         :return: A Pandas dataframe, with the columns:
-                    'TIME' 	'A' 'B' ...  'is_primary' 'primary_timestep' 'n_substeps' 'substep_number' 'caption'
+                    'TIME' 	'A' 'B' ...  'primary_timestep' 'n_substeps' 'substep_number' 'caption'
         """
         return self.diagnostic_data_baselines.get()
 

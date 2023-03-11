@@ -18,7 +18,7 @@
 #
 # See also the experiment _"1D/reactions/reaction_1"_ ; this is the "single-compartment" version of it.
 #
-# LAST REVISED: Feb. 5, 2023
+# LAST REVISED: Mar. 11, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -53,7 +53,8 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["A", "B"])
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+chem_data.add_reaction(reactants=["A"], products=["B"], 
+                       forward_rate=3., reverse_rate=2.)
 
 print("Number of reactions: ", chem_data.number_of_reactions())
 
@@ -73,7 +74,7 @@ dynamics = ReactionDynamics(reaction_data=chem_data)
 
 # %%
 # Initial concentrations of all the chemicals, in index order
-dynamics.set_conc([10., 50.], snapshot=True)
+dynamics.set_conc([10., 50.])
 
 # %%
 dynamics.describe_state()
@@ -86,17 +87,20 @@ dynamics.get_history()
 
 # %%
 # First step of reaction
-dynamics.single_compartment_react(time_step=0.1, n_steps=1,
+dynamics.single_compartment_react(initial_step=0.1, n_steps=1,
                                   snapshots={"initial_caption": "first reaction step"})
 
 # %%
 dynamics.get_history()
 
 # %%
-# Numerous more steps
-dynamics.single_compartment_react(time_step=0.1, n_steps=10,
+# Numerous more fixed steps
+dynamics.single_compartment_react(initial_step=0.1, n_steps=10,
                                   snapshots={"initial_caption": "2nd reaction step",
                                              "final_caption": "last reaction step"})
+
+# %% [markdown]
+# #### NOTE: for demonstration purposes, we're using FIXED time steps...  Typically, one would use the option for automated variable time steps (see experiment `react 2`)
 
 # %%
 dynamics.get_history()
@@ -108,8 +112,7 @@ dynamics.get_history()
 dynamics.get_system_conc()
 
 # %% [markdown]
-# NOTE: Consistent with the 3/2 ratio of forward/reverse rates (and the 1st order reactions),
-#  the systems settles in the following equilibrium:
+# NOTE: Consistent with the 3/2 ratio of forward/reverse rates (and the 1:1 stoichiometry, and the 1st order reactions), the systems settles in the following equilibrium:
 #
 # [A] = 23.99316406
 #  
@@ -121,7 +124,7 @@ dynamics.get_system_conc()
 dynamics.is_in_equilibrium()
 
 # %% [markdown]
-# #### Note that, because of the high initial concentration of B relative to A, the overall reaction has proceeded **in reverse**
+# ### Note that, because of the high initial concentration of B relative to A, the overall reaction has proceeded **in reverse**
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time
@@ -134,7 +137,7 @@ fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B"],
 fig.show()
 
 # %% [markdown]
-# ### Note the raggedness of the left-side (early times) of the curves.  In experiment "react_2" this simulation gets repeated with an adaptive variable time resolution that takes smaller steps at the beginning, when the reaction is proceeding faster
+# ### Note the raggedness of the left-side (early times) of the curves.  In experiment `react_2` this simulation gets repeated with an adaptive variable time resolution that takes smaller steps at the beginning, when the reaction is proceeding faster
 
 # %%
 df = dynamics.get_history()

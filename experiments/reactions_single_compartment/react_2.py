@@ -13,12 +13,12 @@
 # ---
 
 # %% [markdown]
-# ### Adaptive time substeps (variable time resolution) for reaction `A <-> B`,
+# ### Adaptive time steps (variable time resolution) for reaction `A <-> B`,
 # with 1st-order kinetics in both directions, taken to equilibrium
 #
-# Same as the experiment _"react_1"_ , but with adaptive time substeps  ************** TODO: change
+# Same as the experiment _"react_1"_ , but with adaptive variable time steps
 #
-# LAST REVISED: Mar. 7, 2023
+# LAST REVISED: Mar. 11, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -54,7 +54,8 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["A", "B"])
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+chem_data.add_reaction(reactants=["A"], products=["B"], 
+                       forward_rate=3., reverse_rate=2.)
 
 print("Number of reactions: ", chem_data.number_of_reactions())
 
@@ -74,7 +75,7 @@ dynamics = ReactionDynamics(reaction_data=chem_data)
 
 # %%
 # Initial concentrations of all the chemicals, in index order
-dynamics.set_conc([10., 50.], snapshot=True)
+dynamics.set_conc([10., 50.])
 
 dynamics.describe_state()
 
@@ -87,13 +88,14 @@ dynamics.history.get()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-dynamics.single_compartment_react(time_step=0.1, n_steps=11,
+dynamics.single_compartment_react(initial_step=0.1, end_time=1.2,
+                                  variable_steps=True, thresholds={"low": 0.5, "high": 0.8}, 
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_substeps=2, rel_fast_threshold=100)
+                                  )
 
 # %% [markdown]
-# ## The argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using the specified value of _fast_threshold_ )
+# ## The flag _variable_steps_ automatically adjusts up or down the time step,  whenever the changes of concentrations are, respectively, "slow" or "fast" (as determined using the specified _thresholds_ )
 
 # %%
 df = dynamics.get_history()   # The system's history, saved during the run of single_compartment_react()
@@ -103,15 +105,8 @@ df
 dynamics.explain_time_advance()
 
 # %% [markdown]
-# ## Notice how the reaction proceeds in smaller steps (half steps) in the early times, when [A] and [B] are changing much more rapidly
-# ### That resulted from passing the argument _dynamic_steps=2_ to single_compartment_react()
-#
-# * For example, upon completing the half step to t=0.30, i.e. **going from 0.25 to 0.30**, the last change in [A] was (21.508301 - 20.677734) = 0.830567  
-# The threshold we specified for a reaction to be considered fast is 100% per full step, for any of the involved chemicals.  For a half step, that corresponds to 50%, i.e. 0.5   
-# Since abs(0.830567) > 0.5 , the reaction is therefore marked "FAST" (as it has been so far), and the simulation then proceeds in a half step, to t=0.35
-
-# %% [markdown]
-# * (Note: at t=0, in the absence of any simulation data, ALL reactions are _assumed_ to be fast)
+# ## Notice how the reaction proceeds in smaller steps in the early times, when [A] and [B] are changing much more rapidly
+# ### That resulted from passing the flag _variable_steps_ to single_compartment_react()
 
 # %% [markdown]
 # * By contrast, upon completing the half step to t=0.40, i.e. **going from 0.35 to 0.40**, the following changes occur in [A] and [B]:  
@@ -143,20 +138,6 @@ s_0_40     # Concentrations of A and B at t=0.40
 # ### Check the final equilibrium
 
 # %%
-dynamics.get_system_conc()
-
-# %% [markdown]
-# NOTE: Consistent with the 3/2 ratio of forward/reverse rates (and the 1st order reactions),
-#  the systems settles in the following equilibrium:
-#
-# [A] = 23.99316406
-#  
-# [B] = 36.00683594
-#
-# The presence of equilibrium may be automatically checked withe the following handy function:
-#
-
-# %%
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium()
 
@@ -180,7 +161,7 @@ fig.show()
 # # Diagnostics of the run may be investigated as follows:
 
 # %%
-dynamics.diagnostic_data_baselines.get()
+dynamics.get_diagnostic_conc_data()
 
 # %%
 dynamics.get_diagnostic_rxn_data(rxn_index=0)      # For the 0-th reaction (the only reaction in our case)

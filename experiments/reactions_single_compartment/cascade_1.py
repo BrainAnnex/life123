@@ -187,7 +187,7 @@ dynamics.stoichiometry_checker_entire_run()
 
 # %%
 # This table contains a subset of a typical system history
-dynamics.diagnostic_data_baselines.get()
+dynamics.get_diagnostic_conc_data()
 
 # %%
 # Concentration increments due to reaction 0 (A <-> B)

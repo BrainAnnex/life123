@@ -160,6 +160,6 @@ dynamics.plot_curves(colors=['red', 'green'],
 
 #dynamics.get_diagnostic_rxn_data(rxn_index=0)
 
-#dynamics.diagnostic_data_baselines.get()
+#dynamics.get_diagnostic_conc_data()
 
 # %%
