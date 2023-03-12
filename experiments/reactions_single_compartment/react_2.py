@@ -93,6 +93,7 @@ dynamics.single_compartment_react(initial_step=0.1, target_end_time=1.2,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   )
+# Note: we are accepting the default variable_steps_threshold_abort = 1.44 and abort_step_reduction_factor = 2.
 
 # %% [markdown]
 # ## The flag _variable_steps_ automatically adjusts up or down the time step,  whenever the changes of concentrations are, respectively, "slow" or "fast" (as determined using the specified _thresholds_ )
@@ -104,61 +105,104 @@ df
 # %%
 dynamics.explain_time_advance()
 
-# %% [markdown]
+# %% [markdown] tags=[]
 # ## Notice how the reaction proceeds in smaller steps in the early times, when [A] and [B] are changing much more rapidly
 # ### That resulted from passing the flag _variable_steps_ to single_compartment_react()
 
-# %% [markdown]
-# * By contrast, upon completing the half step to t=0.40, i.e. **going from 0.35 to 0.40**, the following changes occur in [A] and [B]:  
+# %% [markdown] tags=[]
+# ## Detailed Example 1: **going from 0.1375 to 0.1875**    
 
 # %%
-df.iloc[7]
+lookup = pd.merge_asof(pd.DataFrame({'lookup':[0.1375, 0.1875]}), df,
+              right_on='SYSTEM TIME', left_on='lookup',
+              direction='nearest')
+lookup
 
 # %%
-df.iloc[8]
-
-# %%
-s_0_35 = df.iloc[7][['A', 'B']].to_numpy()
-s_0_35     # Concentrations of A and B at t=0.35
-
-# %%
-s_0_40 = df.iloc[8][['A', 'B']].to_numpy()
-s_0_40     # Concentrations of A and B at t=0.40
-
-# %%
-(s_0_40 - s_0_35)
+delta_concentrations = (lookup.iloc[1][['A', 'B']] - 
+                        lookup.iloc[0][['A', 'B']]).to_numpy()
+delta_concentrations
 
 # %% [markdown]
-# Again, the threshold we specified for a reaction to be considered fast is 100% per full step, for any of the involved chemicals.  
-# For a half step, that corresponds to 50%, i.e. 0.5    
-# BOTH A's change of abs(0.46) AND B's change of abs(-0.46) are SMALLER than that.   
-# The reaction is therefore marked "SLOW", and the simulation then proceeds in a _full time step_ of 0.1 (i.e. a more relaxed time resolution), to t=0.50
+# As expected by the 1:1 stoichiometry, delta_A = - delta_B
+#
+# The above values coud also be looked up from the diagnostic data, since we only have 1 reaction:
+
+# %%
+rxn_data = dynamics.get_diagnostic_rxn_data(rxn_index=0)
+
+# %%
+rxn_data[0:12]
+
+# %%
+delta_row = rxn_data.iloc[rxn_data['TIME'].sub(0.1375).abs().idxmin()] # Locate the interval's start time
+delta_row
+
+# %%
+delta_row[["Delta A", "Delta B"]].to_numpy()   # Gives same value as delta_concentrations, above
+
+# %%
+adjusted_L2_rate = dynamics.norm_A(delta_concentrations)  # A measure of how large delta_concentrations is
+adjusted_L2_rate
+
+# %%
+dynamics.step_determiner_A(adjusted_L2_rate)
 
 # %% [markdown]
-# ### Check the final equilibrium
+# #### The above conclusion is that the step will be **HALVED** at the next round : that's because the adjusted_L2_rate > the "high" value given in the argument _thresholds={"low": 0.5, "high": 0.8}_
+
+# %% [markdown] tags=[]
+# ## Detailed Example 2: **going from 0.1875 to 0.2125**   
+
+# %%
+lookup = pd.merge_asof(pd.DataFrame({'lookup':[0.1875, 0.2125]}), df,
+              right_on='SYSTEM TIME', left_on='lookup',
+              direction='nearest')
+lookup
+
+# %%
+delta_concentrations = (lookup.iloc[1][['A', 'B']] - 
+                        lookup.iloc[0][['A', 'B']]).to_numpy()
+delta_concentrations
+
+# %% [markdown]
+# Note how substantially smaller _delta_concentrations_ is, compared to the previous example
+
+# %%
+adjusted_L2_rate = dynamics.norm_A(delta_concentrations)  # A measure of how large delta_concentrations is
+adjusted_L2_rate
+
+# %%
+dynamics.step_determiner_A(adjusted_L2_rate)
+
+# %% [markdown]
+# #### The above conclusion is that the step will be **DOUBLED** at the next round : that's because the adjusted_L2_rate < the "low" value given in the argument _thresholds={"low": 0.5, "high": 0.8}_
+
+# %% [markdown]
+# # Check the final equilibrium
 
 # %%
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium()
 
 # %% [markdown] tags=[]
-# ## Plots of changes of concentration with time
+# # Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="Reaction A <-> B .  Changes in concentrations with time",
-              color_discrete_sequence = ['navy', 'darkorange'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(colors=['blue', 'orange'])
 
 # %% [markdown]
-# ## Note how the left-hand side of this plot is much smoother than it was in experiment "react_1", where no adaptive time substeps were used!
+# ## Note how the left-hand side of this plot is much smoother than it was in experiment `react_1`, where no adaptive time steps were used!
+
+# %%
+dynamics.plot_curves(colors=['blue', 'orange'], show_intervals=True)
+
+# %%
+dynamics.plot_step_sizes(show_intervals=True)
 
 # %% [markdown]
-#
-
-# %% [markdown]
-# # Diagnostics of the run may be investigated as follows:
+# # Diagnostics of the run may be investigated as follows:  
+# _(note - this is possible because we make a call to set_diagnostics() prior to running the simulation)_
 
 # %%
 dynamics.get_diagnostic_conc_data()

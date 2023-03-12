@@ -643,7 +643,7 @@ class ReactionDynamics:
         if extra_steps > 0:
             if variable_steps:
                 print(f"Some steps were backtracked and re-done, "
-                      f"to prevent negative concentrations or to prevent excessively large concentration changes")
+                      f"to prevent negative concentrations or excessively large concentration changes")
             else:
                 print(f"The computation took {extra_steps} extra step(s) - "
                       f"automatically added to prevent negative concentrations")
@@ -731,12 +731,7 @@ class ReactionDynamics:
 
 
                 if variable_steps:
-                    n_chems = self.reaction_data.number_of_chemicals()
-
-                    # The following are normalized by the number of steps and the number of chemicals
-                    #L2_rate = np.linalg.norm(delta_concentrations) / n_chems
-                    #L2_rate = np.sqrt(np.sum(delta_concentrations * delta_concentrations)) / n_chems
-                    L2_rate = np.sum(delta_concentrations * delta_concentrations) / (n_chems * n_chems)   # The square of the rate above
+                    adjusted_L2_rate =self.norm_A(delta_concentrations)
 
                     if "variable_steps" in self.verbose_list:
                         print(f"EXAMINING CONCENTRATION CHANGES at System Time {self.system_time:.5g} from the upcoming single step (for all rxns):")
@@ -744,19 +739,19 @@ class ReactionDynamics:
                         print("    Deltas:   ", delta_concentrations)
                         #print("    Relative Deltas:   ", delta_concentrations / conc_array)
                         #print("    L_inf norm:   ", np.linalg.norm(delta_concentrations, ord=np.inf) / delta_time_full)
-                        print("    Adjusted L2 norm:   ", L2_rate)
+                        print("    Adjusted L2 norm:   ", adjusted_L2_rate)
                         #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
 
                     # Abort the current step if the rate of change is deemed excessive.  TODO: maybe ALWAYS check this, regardless of variable-steps option
-                    if L2_rate > self.variable_steps_threshold_abort:
+                    if adjusted_L2_rate > self.variable_steps_threshold_abort:
                         msg =   f"INFO: The current time step ({delta_time_full}) " \
-                                f"leads to an 'adjusted L2 rate' ({L2_rate:.4g}) > HIGH threshold ({self.variable_steps_threshold_abort}):\n" \
+                                f"leads to an 'adjusted L2 rate' ({adjusted_L2_rate:.4g}) > HIGH threshold ({self.variable_steps_threshold_abort}):\n" \
                                 f"      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time_full/self.abort_step_reduction_factor:.5g} " \
                                 f"[Step started at t={self.system_time:.5g}, and will rewind there]"
                         #print("WARNING: ", msg)
                         if self.diagnostics:
                             # Expand the dict diagnostic_data_snapshot
-                            diagnostic_data_snapshot['L2'] = L2_rate
+                            diagnostic_data_snapshot['L2'] = adjusted_L2_rate
                             diagnostic_data_snapshot['action'] = "ABORT"
                             diagnostic_data_snapshot['caption'] = "excessive L2_rate"
                             diagnostic_data_snapshot['step_factor'] = 1/self.abort_step_reduction_factor
@@ -766,12 +761,12 @@ class ReactionDynamics:
                         raise ExcessiveTimeStep(msg)    # ABORT THE CURRENT STEP
 
 
-                    step_factor = self.step_determiner_1(L2_rate)
+                    step_factor = self.step_determiner_A(adjusted_L2_rate)
                     recommended_next_step = delta_time_full * step_factor
 
                     if self.diagnostics:
                         # Expand the dict diagnostic_data_snapshot
-                        diagnostic_data_snapshot['L2'] = L2_rate
+                        diagnostic_data_snapshot['L2'] = adjusted_L2_rate
                         diagnostic_data_snapshot['action'] = "OK"
                         diagnostic_data_snapshot['step_factor'] = step_factor
 
@@ -779,7 +774,7 @@ class ReactionDynamics:
 
 
                     if "variable_steps" in self.verbose_list:
-                        msg =   f"The chosen time step ({delta_time_full}) results in an 'L2 rate' ({L2_rate:.4g}) that leads to the following:\n"
+                        msg =   f"The chosen time step ({delta_time_full}) results in an 'L2 rate' ({adjusted_L2_rate:.4g}) that leads to the following:\n"
 
                         if step_factor > 1:     # "INCREASE"
                             msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER by a factor {step_factor} (set to {recommended_next_step}) at the next round!"
@@ -843,7 +838,23 @@ class ReactionDynamics:
 
 
 
-    def step_determiner_1(self, norm) -> Union[float, int]:
+    def norm_A(self, delta_concentrations) -> float:
+        """
+        Return "version A" of a measure based on the concentration changes of all the chemicals at a time step
+        :param delta_concentrations:
+        :return:
+        """
+        n_chems = self.reaction_data.number_of_chemicals()
+
+        # The following are normalized by the number of steps and the number of chemicals
+        #L2_rate = np.linalg.norm(delta_concentrations) / n_chems
+        #L2_rate = np.sqrt(np.sum(delta_concentrations * delta_concentrations)) / n_chems
+        adjusted_L2_rate = np.sum(delta_concentrations * delta_concentrations) / (n_chems * n_chems)   # The square of the rate above
+        return adjusted_L2_rate
+
+
+
+    def step_determiner_A(self, norm) -> Union[float, int]:
         """
         Given a value for a norm (or other measure) about the concentration deltas at a time step,
         generate a factor by which to multiple the time step at the next iteration round,
@@ -1821,7 +1832,7 @@ class ReactionDynamics:
         L2_values = sq_arr/(len(fields)**2)     # TODO: it'd be more robust to store these values during the run than to re-compute them
 
         actions = np.where(L2_values > self.variable_steps_threshold_abort, "ABORT", "OK")
-        step_factors = np.vectorize(self.step_determiner_1)(L2_values)
+        step_factors = np.vectorize(self.step_determiner_A)(L2_values)
 
         new_df = df.assign(L2_computed = L2_values, actions_computed=actions, step_factors_computed=step_factors)  # Add columns to the Pandas dataframe
 

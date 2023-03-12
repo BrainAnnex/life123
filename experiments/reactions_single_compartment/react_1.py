@@ -130,14 +130,15 @@ dynamics.is_in_equilibrium()
 # ## Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="Reaction A <-> B .  Changes in concentrations with time",
-              color_discrete_sequence = ['navy', 'darkorange'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_curves(colors=['blue', 'orange'])
 
 # %% [markdown]
-# ### Note the raggedness of the left-side (early times) of the curves.  In experiment `react_2` this simulation gets repeated with an adaptive variable time resolution that takes smaller steps at the beginning, when the reaction is proceeding faster
+# ### Note the raggedness of the left-side (early times) of the curves.  
+# ### In experiment `react_2` this simulation gets repeated with an adaptive variable time resolution that takes smaller steps at the beginning, when the reaction is proceeding faster   
+# ### By contrast, here we used FIXED steps (see below), which is generally a bad approach
+
+# %%
+dynamics.plot_curves(colors=['blue', 'orange'], show_intervals=True)
 
 # %%
 df = dynamics.get_history()
