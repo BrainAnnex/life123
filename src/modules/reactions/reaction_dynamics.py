@@ -480,10 +480,9 @@ class ReactionDynamics:
 
 
 
-    def single_compartment_react(self, reaction_duration=None, stop_time=None, end_time=None,
+    def single_compartment_react(self, reaction_duration=None, stop_time=None, target_end_time=None,
                                  initial_step=None, time_step=None, n_steps=None,
                                  snapshots=None, silent=False,
-                                 dynamic_substeps=1,
                                  variable_steps=False, thresholds=None) -> None:
         """
         Perform ALL the reactions in the single compartment -
@@ -496,12 +495,10 @@ class ReactionDynamics:
         :param reaction_duration:  The overall time advance for the reactions (i.e. time_step * n_steps)
         :param stop_time:       The final time at which to stop the reaction
                                     If both stop_time and reaction_duration are specified, an error will result
-        :param end_time:        TODO: new name for stop_time
+        :param target_end_time: TODO: new name for stop_time
 
         :param initial_step:    TODO: new name for time_step
         :param time_step:       The size of each time step.
-                                Note: if a dynamic_substeps > 1 is passed, then the time step will get internally
-                                subdivided for the "fast" reactions
 
         :param n_steps:         The desired number of steps
 
@@ -515,8 +512,6 @@ class ReactionDynamics:
                                     of "frequency" reaction steps (default 1, i.e. at every step.)
                                     EXAMPLE: snapshots={"frequency": 2, "species": ["A", "H"]}
 
-        :param dynamic_substeps:    TODO: OBSOLETED.  TO DROP
-
         :param silent:              If True, less output is generated
 
         :param variable_steps:      If True, the steps sizes will get automatically adjusted, based on thresholds
@@ -525,20 +520,17 @@ class ReactionDynamics:
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
-        if dynamic_substeps != 1:   # Intercept OBSOLETE option
-            raise Exception("*** ReactionDynamics.single_compartment_react(): "
-                            "the `dynamic_substeps` option was ELIMINATED in version Beta 26.  Use `variable_steps` instead")
         if initial_step and time_step:
             raise Exception("*** ReactionDynamics.single_compartment_react(): cannot use both `initial_step` and `time_step`.  Just use `initial_step` instead")
 
         if time_step:
             initial_step = time_step
 
-        if stop_time and end_time:
+        if stop_time and target_end_time:
             raise Exception("*** ReactionDynamics.single_compartment_react(): cannot use both `stop_time` and `end_time`.  Just use `end_time` instead")
 
-        if end_time:
-            stop_time = end_time
+        if target_end_time:
+            stop_time = target_end_time
 
 
         # Validation
