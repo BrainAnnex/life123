@@ -10,13 +10,14 @@ from src.modules.movies.movies import MovieTabular, MovieArray, MovieGeneral
 
 def test_MovieTabular():
     m = MovieTabular()
-    m.store(par=10, data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")
+
+    m.store(par=10, data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")  # Add a snapshot
     assert len(m) == 1
     assert str(m) == "MovieTabular object with 1 snapshot(s) parametrized by `SYSTEM TIME`"
     row = list(m.movie.iloc[0])                 # By row index
     assert row == [10, 1, 2, 3, 'first entry']
 
-    m.store(par=20, data_snapshot={"A": 10, "B": 20, "C": 30}, caption="second entry")
+    m.store(par=20, data_snapshot={"A": 10, "B": 20, "C": 30}, caption="second entry")  # Add a snapshot
     assert len(m) == 2
     assert str(m) == "MovieTabular object with 2 snapshot(s) parametrized by `SYSTEM TIME`"
     row = list(m.movie.iloc[0])                 # By row index
@@ -24,7 +25,7 @@ def test_MovieTabular():
     row = list(m.movie.iloc[1])                 # By row index
     assert row == [20, 10, 20, 30, 'second entry']
 
-    m.store(par=30, data_snapshot={"A": -1, "B": -2, "C": -3})
+    m.store(par=30, data_snapshot={"A": -1, "B": -2, "C": -3})      # Add a snapshot
     assert len(m) == 3
     assert str(m) == "MovieTabular object with 3 snapshot(s) parametrized by `SYSTEM TIME`"
     row = list(m.movie.iloc[0])                 # By row index
@@ -34,27 +35,27 @@ def test_MovieTabular():
     row = list(m.movie.iloc[2])                 # By row index
     assert row == [30, -1, -2, -3, '']
 
-    m.store(par=40, data_snapshot={"A": 111, "B": 222}, caption="notice that C is missing")
+    m.store(par=40, data_snapshot={"A": 111, "B": 222}, caption="notice that C is missing")  # Add a snapshot
     assert len(m) == 4
     assert str(m) == "MovieTabular object with 4 snapshot(s) parametrized by `SYSTEM TIME`"
     df = m.movie
-    values = [{"SYSTEM TIME": 10, "A": 1,   "B": 2,  "C": 3,  "caption": "first entry"},
-              {"SYSTEM TIME": 20, "A": 10,  "B": 20, "C": 30, "caption": "second entry"},
-              {"SYSTEM TIME": 30, "A": -1,  "B": -2, "C": -3, "caption": ""},
-              {"SYSTEM TIME": 40, "A": 111, "B": 222,         "caption": "notice that C is missing"}
-              ]
-    expected = pd.DataFrame(values)
+    data_values = [{"SYSTEM TIME": 10, "A": 1,   "B": 2,  "C": 3,  "caption": "first entry"},
+                  {"SYSTEM TIME": 20, "A": 10,  "B": 20, "C": 30, "caption": "second entry"},
+                  {"SYSTEM TIME": 30, "A": -1,  "B": -2, "C": -3, "caption": ""},
+                  {"SYSTEM TIME": 40, "A": 111, "B": 222,         "caption": "notice that C is missing"}
+                  ]
+    expected = pd.DataFrame(data_values)
     assert df.equals(expected)
 
-    m.store(par=50, data_snapshot={"A": 8, "B": 88, "C": 888, "D": 1}, caption="notice the newly-appeared D")
+    m.store(par=50, data_snapshot={"A": 8, "B": 88, "C": 888, "D": 1}, caption="notice the newly-appeared D")  # Add a snapshot
     assert len(m) == 5
     assert str(m) == "MovieTabular object with 5 snapshot(s) parametrized by `SYSTEM TIME`"
     df = m.movie
 
-    values.append({"SYSTEM TIME": 50, "A": 8, "B": 88, "C": 888, "D": 1, "caption": "notice the newly-appeared D"})
-    expected = pd.DataFrame(values)
-    assert_frame_equal(df, expected, check_dtype=False)    # To allow for floating-point slight discrepancies
-                                                           # (ints get converted to floats in columns with Nan's)
+    data_values.append({"SYSTEM TIME": 50, "A": 8, "B": 88, "C": 888, "D": 1, "caption": "notice the newly-appeared D"})
+    expected = pd.DataFrame(data_values)
+    assert_frame_equal(df, expected, check_dtype=False)    # To allow for slight discrepancies in floating-point
+                                                           # (since int's get converted to floats in columns with Nan's)
     """
        SYSTEM TIME    A    B      C                      caption    D
     0           10    1    2    3.0                  first entry  NaN
@@ -63,6 +64,65 @@ def test_MovieTabular():
     3           40  111  222    NaN     notice that C is missing  NaN
     4           50    8   88  888.0  notice the newly-appeared D  1.0
     """
+
+
+def test_get():
+    m = MovieTabular()
+
+    # Same data as used in test_MovieTabular(), except that the `SYSTEM TIME` parameter now has floats values
+    m.store(par=10,   data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")
+    m.store(par=12.4, data_snapshot={"A": 10, "B": 20, "C": 30}, caption="second entry")
+    m.store(par=33.1, data_snapshot={"A": -1, "B": -2, "C": -3})
+    m.store(par=40,   data_snapshot={"A": 111, "B": 222}, caption="notice that C is missing")
+    m.store(par=50.5, data_snapshot={"A": 8, "B": 88, "C": 888, "D": 1}, caption="notice the newly-appeared D")
+
+    """
+       SYSTEM TIME      A    B      C                      caption    D
+    0           10      1    2    3.0                  first entry  NaN
+    1           12.4   10   20   30.0                 second entry  NaN
+    2           33.1   -1   -2   -3.0                               NaN
+    3           40    111  222    NaN     notice that C is missing  NaN
+    4           50.5    8   88  888.0  notice the newly-appeared D  1.0
+    """
+    # Check the extraction of the last row
+    df_last_row = m.get(tail=1)
+    #print("\n", df_last_row)
+
+    data_values = [{"SYSTEM TIME": 50.5, "A": 8, "B": 88, "C": 888, "caption": "notice the newly-appeared D", "D": 1}]
+    expected_df = pd.DataFrame(data_values, index=[4])
+    #print("\n", expected_df)
+
+    assert_frame_equal(df_last_row, expected_df, check_dtype=False) # To allow for slight discrepancies in floating-point
+                                                                    # (since int's get converted to floats in columns with Nan's)
+
+    # Check the extraction of the last 2 rows
+    df_last_2_rows = m.get(tail=2)
+
+    data_values = [ {"SYSTEM TIME": 40, "A": 111, "B": 222, "C": np.nan, "caption": "notice that C is missing"},
+                    {"SYSTEM TIME": 50.5, "A": 8, "B": 88, "C": 888,   "caption": "notice the newly-appeared D", "D": 1}]
+    expected_df = pd.DataFrame(data_values, index=[3, 4])
+
+    assert_frame_equal(df_last_2_rows, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
+
+
+    # Check the extraction of a row by value (from a smaller value for "SYSTEM TIME" than what is in the dataframe)
+    df_extracted_row = m.get(select_name="SYSTEM TIME", select_value=33.099)
+
+    data_values = [{"SYSTEM TIME": 33.1, "A": -1, "B": -2, "C": -3.0, "caption": "", "D": np.nan}]
+    expected_df = pd.DataFrame(data_values, index=[2])
+    #print("\n", expected_df)
+
+    assert_frame_equal(df_extracted_row, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
+
+
+    # Check the extraction of a row by value (from a larger value for "SYSTEM TIME" than what is in the dataframe)
+    df_extracted_row = m.get(select_name="SYSTEM TIME", select_value=33.1234)
+    #print("\n", df_extracted_row)
+    # Note: the same row is expected, as in the lookup just before
+    assert_frame_equal(df_extracted_row, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
+
+
+
 
 
 def test_set_caption_last_snapshot():

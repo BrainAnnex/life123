@@ -74,18 +74,32 @@ class MovieTabular:
 
 
 
-    def get(self, tail=None) -> pd.DataFrame:
+    def get(self, select_name=None, select_value=None, tail=None) -> pd.DataFrame:
         """
-        Return the main data structure - a Pandas dataframe
+        Return the main data structure (a Pandas dataframe) - or part thereof.
 
-        :param tail:    If an integer value is provided, only show the last several rows,
-                            as many as specified by that number
-        :return:        A Pandas dataframe
+        Optionally, limit the dataframe to a specified numbers of rows at the end,
+        or just return one entry corresponding to a specific value in the given column
+        (the row with the CLOSEST value to the requested one.)
+
+        :param select_name: (OPTIONAL) String with the name of a column in the dataframe,
+                                against which to match the value below
+        :param select_value:(OPTIONAL) Number with value to look up in the above column
+        :param tail:        (OPTIONAL) Integer.  If provided, only show the last several rows;
+                                as many as specified by that number
+
+        :return:            A Pandas dataframe, with all or some of the rows
+                                that were stored in the main data structure
         """
-        if tail is None:
-            return self.movie
+        df = self.movie     # The main data structure (a Pandas dataframe), with the "saved snapshots"
+
+        if (select_name is not None) and (select_value is not None):
+            index = df[select_name].sub(select_value).abs().idxmin()
+            return df.iloc[index : index+1]
+        elif tail is None:
+            return df
         else:
-            return self.movie.tail(tail)
+            return df.tail(tail)
 
 
 

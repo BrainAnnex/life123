@@ -18,7 +18,7 @@
 #
 # Same as the experiment _"react_1"_ , but with adaptive variable time steps
 #
-# LAST REVISED: Mar. 11, 2023
+# LAST REVISED: Mar. 12, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -33,6 +33,7 @@ from src.modules.reactions.reaction_data import ReactionData as chem
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
+import pandas as pd
 import plotly.express as px
 from src.modules.visualization.graphic_log import GraphicLog
 
@@ -135,7 +136,7 @@ rxn_data = dynamics.get_diagnostic_rxn_data(rxn_index=0)
 rxn_data[0:12]
 
 # %%
-delta_row = rxn_data.iloc[rxn_data['TIME'].sub(0.1375).abs().idxmin()] # Locate the interval's start time
+delta_row = dynamics.get_diagnostic_rxn_data(rxn_index=0, t=0.1375) # Locate the row with interval's start time
 delta_row
 
 # %%

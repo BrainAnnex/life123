@@ -70,10 +70,9 @@ class ReactionDynamics:
         self.diagnostics = False
 
         self.diagnostic_rxn_data = {}   # "Diagnostic reaction data": this gets turned into a dict with as many entries as reactions.
-                                        #   The keys are the reaction indices; the values are Pandas dataframes
-                                        #   This is also referred to as
-                                        #   Columns of the dataframes:
-                                        #       'TIME' 'Delta A' 'Delta B'...	'reaction' 	'substep' 'time_subdivision' 'delta_time' 'caption'
+                                        #   The keys are the reaction indices; the values are objects of type "MovieTabular",
+                                        #   which contain Pandas dataframes with the following columns:
+                                        #       'TIME' 'Delta A' 'Delta B'...	'reaction' 	'delta_time' 'caption'
                                         #   Note: entries are always added, even if an interval run is aborted
 
         self.diagnostic_data_baselines = MovieTabular(parameter_name="TIME")                        # TODO: rename(?)
@@ -1729,24 +1728,36 @@ class ReactionDynamics:
 
 
 
-    def get_diagnostic_rxn_data(self, rxn_index: int, tail=None, print_reaction=True) -> pd.DataFrame:
+    def get_diagnostic_rxn_data(self, rxn_index: int,
+                                t=None, tail=None, print_reaction=True) -> pd.DataFrame:
         """
-        Return a Pandas data frame with the diagnostic data of the requested reaction: in particular,
-        the "Delta" values for each of the chemicals involved in the reaction - the change in
-        their concentration over the time interval that STARTS at the value in the TIME column.
+        Return a Pandas dataframe with the diagnostic run data of the requested SINGLE reaction,
+        from the time that the diagnostics were activated by a call to set_diagnostics().
+
+        In particular, the dataframe contains the "Delta" values for each of the chemicals
+        involved in the reaction - the change in their concentrations
+        over the time interval that *STARTS* at the value in the "TIME" column.
         (So, there'll be no row with the final current System Time)
 
-        Also, optionally print out a brief description of the reaction.
-        Optionally, restrict the result with a start and/or end times,
-        or by limiting to a specified numbers of rows at the end
-        Note: entries are always added, even if an interval run is aborted
+        Note: entries are always added, even if an interval run is aborted, and automatically re-done.
 
-        :param rxn_index:   An integer that indexes the reaction of interest (numbering starts at 0)
-        :param tail:        (OPTIONAL) Number of records to consider, from the end of the diagnostic dataframe
+        Optionally, print out a brief description of the reaction.
+
+        Optionally, limit the dataframe to a specified numbers of rows at the end,
+        or just return one entry corresponding to a specific time
+        (the row with the CLOSEST time to the requested one.)
+
+        :param rxn_index:       An integer that indexes the reaction of interest (numbering starts at 0)
+        :param t:               (OPTIONAL) Individual time to pluck out from the dataframe;
+                                    the row with closest time will be returned
+        :param tail:            (OPTIONAL) Number of records to consider, from the end of the diagnostic dataframe.
+                                    If the "t" argument is passed, this argument will get ignored
         :param print_reaction:  (OPTIONAL) If True (default), concisely print out the requested reaction
-        :return:            A Pandas data frame with (all or some of) the diagnostic data of the requested reaction.
-                                Columns of the dataframes:
-                                'TIME' 'Delta A' 'Delta B'...	'reaction' 	'substep' 'time_subdivision' 'delta_time' 'caption'
+
+        :return:                A Pandas data frame with (all or some of)
+                                    the diagnostic data of the specified reaction.
+                                    Columns of the dataframes:
+                                    'TIME' 'Delta A' 'Delta B'...	'reaction' 'delta_time' 'caption'
         """
         # First, validate the reaction index
         self.reaction_data.assert_valid_rxn_index(rxn_index)
@@ -1754,7 +1765,9 @@ class ReactionDynamics:
         if print_reaction:
             print("Reaction: ", self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True))
 
-        return self.diagnostic_rxn_data[rxn_index].get(tail=tail)
+        movie_obj = self.diagnostic_rxn_data[rxn_index]    # Objects of type "MovieTabular"
+
+        return movie_obj.get(tail=tail, select_name="TIME", select_value=t)
 
 
 
