@@ -106,7 +106,7 @@ def test_get():
 
 
     # Check the extraction of a row by value (from a smaller value for "SYSTEM TIME" than what is in the dataframe)
-    df_extracted_row = m.get(select_name="SYSTEM TIME", select_value=33.099)
+    df_extracted_row = m.get(search_col="SYSTEM TIME", search_val=33.099)
 
     data_values = [{"SYSTEM TIME": 33.1, "A": -1, "B": -2, "C": -3.0, "caption": "", "D": np.nan}]
     expected_df = pd.DataFrame(data_values, index=[2])
@@ -116,7 +116,7 @@ def test_get():
 
 
     # Check the extraction of a row by value (from a larger value for "SYSTEM TIME" than what is in the dataframe)
-    df_extracted_row = m.get(select_name="SYSTEM TIME", select_value=33.1234)
+    df_extracted_row = m.get(search_col="SYSTEM TIME", search_val=33.1234)
     #print("\n", df_extracted_row)
     # Note: the same row is expected, as in the lookup just before
     assert_frame_equal(df_extracted_row, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point

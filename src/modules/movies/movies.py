@@ -74,28 +74,48 @@ class MovieTabular:
 
 
 
-    def get(self, select_name=None, select_value=None, tail=None) -> pd.DataFrame:
+    def get(self, search_col=None, search_val=None, tail=None) -> pd.DataFrame:
         """
-        Return the main data structure (a Pandas dataframe) - or part thereof.
+        Return the main data structure (a Pandas dataframe) 
+        - or a part thereof (in which case insert a column named "search_value" to the left.)
 
         Optionally, limit the dataframe to a specified numbers of rows at the end,
-        or just return one entry corresponding to a specific value in the given column
-        (the row with the CLOSEST value to the requested one.)
+        or just return row(s) corresponding to a specific search value(s) in the specified column
+        - i.e. the row(s) with the CLOSEST value to the requested one(s).
 
-        :param select_name: (OPTIONAL) String with the name of a column in the dataframe,
+        :param search_col:  (OPTIONAL) String with the name of a column in the dataframe,
                                 against which to match the value below
-        :param select_value:(OPTIONAL) Number with value to look up in the above column
+        :param search_val:  (OPTIONAL) Number, or list/tuple of numbers, with value(s)
+                                to search in the above column
         :param tail:        (OPTIONAL) Integer.  If provided, only show the last several rows;
-                                as many as specified by that number
+                                as many as specified by that number.
+                                If the "select_name" and "select_value" arguments are passed,
+                                this argument will get ignored
 
         :return:            A Pandas dataframe, with all or some of the rows
-                                that were stored in the main data structure
+                                that were stored in the main data structure.
+                                If a search was requested, insert a column named "search_value" to the left
         """
         df = self.movie     # The main data structure (a Pandas dataframe), with the "saved snapshots"
 
-        if (select_name is not None) and (select_value is not None):
-            index = df[select_name].sub(select_value).abs().idxmin()
-            return df.iloc[index : index+1]
+        if (search_col is not None) and (search_val is not None):
+            # Perform a lookup of a value, or set of values,
+            # in the specified column
+            if (type(search_val) == tuple) or (type(search_val) == list):
+                # Looking up a group of values
+                lookup = pd.merge_asof(pd.DataFrame({'search_value':search_val}), df,
+                                       right_on=search_col, left_on='search_value',
+                                       direction='nearest')
+                # Note: the above operation will insert a column named "search_value" to the left
+                return lookup
+            else:
+                # Looking up a single value lookup
+                index = df[search_col].sub(search_val).abs().idxmin()   # Locate index of row with smallest
+                                                                        # absolute value of differences from the search value
+                lookup = df.iloc[index : index+1]               # Select 1 row
+                lookup.insert(0, 'search_value', [search_val])  # Insert a column named "search_value" to the left
+                return lookup
+
         elif tail is None:
             return df
         else:

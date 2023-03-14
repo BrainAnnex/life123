@@ -1767,7 +1767,7 @@ class ReactionDynamics:
 
         movie_obj = self.diagnostic_rxn_data[rxn_index]    # Objects of type "MovieTabular"
 
-        return movie_obj.get(tail=tail, select_name="TIME", select_value=t)
+        return movie_obj.get(tail=tail, search_col="TIME", search_val=t)
 
 
 

@@ -18,7 +18,7 @@
 #
 # Same as the experiment _"react_1"_ , but with adaptive variable time steps
 #
-# LAST REVISED: Mar. 12, 2023
+# LAST REVISED: Mar. 13, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory
@@ -114,9 +114,7 @@ dynamics.explain_time_advance()
 # ## Detailed Example 1: **going from 0.1375 to 0.1875**    
 
 # %%
-lookup = pd.merge_asof(pd.DataFrame({'lookup':[0.1375, 0.1875]}), df,
-              right_on='SYSTEM TIME', left_on='lookup',
-              direction='nearest')
+lookup = dynamics.get_history(t_start=0.1375, t_end=0.1875)
 lookup
 
 # %%
@@ -156,9 +154,7 @@ dynamics.step_determiner_A(adjusted_L2_rate)
 # ## Detailed Example 2: **going from 0.1875 to 0.2125**   
 
 # %%
-lookup = pd.merge_asof(pd.DataFrame({'lookup':[0.1875, 0.2125]}), df,
-              right_on='SYSTEM TIME', left_on='lookup',
-              direction='nearest')
+lookup = dynamics.get_history(t_start=0.1875, t_end=0.2125)
 lookup
 
 # %%
