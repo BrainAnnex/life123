@@ -18,7 +18,7 @@
 #
 # Same as the experiment _"react_1"_ , but with adaptive variable time steps
 #
-# LAST REVISED: Mar. 13, 2023
+# LAST REVISED: Mar. 14, 2023
 
 # %%
 # Extend the sys.path variable, to contain the project's root directory

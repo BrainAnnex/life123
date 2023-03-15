@@ -69,17 +69,16 @@ class ReactionDynamics:
 
         self.diagnostics = False
 
-        self.diagnostic_rxn_data = {}   # "Diagnostic reaction data": this gets turned into a dict with as many entries as reactions.
+        self.diagnostic_rxn_data = {}   # "Diagnostic reaction data": a dict with as many entries as reactions.
                                         #   The keys are the reaction indices; the values are objects of type "MovieTabular",
                                         #   which contain Pandas dataframes with the following columns:
                                         #       'TIME' 'Delta A' 'Delta B'...	'reaction' 	'delta_time' 'caption'
                                         #   Note: entries are always added, even if an interval run is aborted
 
-        self.diagnostic_data_baselines = MovieTabular(parameter_name="TIME")  # TODO: rename to "diagnostic_conc_data"
+        self.diagnostic_conc_data = MovieTabular(parameter_name="TIME")
                                         # An expanded version of the normal System History.
-                                        #   This is also referred to as "diagnostic concentration data".
                                         #   Columns of the dataframes:
-                                        #       'TIME' 	'A' 'B' ...  'primary_timestep' 'n_substeps' 'substep_number' 'caption'
+                                        #       'TIME' 	'A' 'B' ...  'primary_timestep' 'caption'
                                         #   Note: if an interval run is aborted, NO entry is created here
 
         self.diagnostic_delta_conc_data = MovieTabular(parameter_name="TIME")
@@ -581,8 +580,8 @@ class ReactionDynamics:
             # Save up the current System State, with some extra info, as "diagnostic 'baseline' data"
             system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
             system_data["primary_timestep"] = time_step
-            self.diagnostic_data_baselines.store(par=self.system_time,
-                                                 data_snapshot=system_data)
+            self.diagnostic_conc_data.store(par=self.system_time,
+                                            data_snapshot=system_data)
 
 
         i = 0
@@ -623,8 +622,8 @@ class ReactionDynamics:
                 # Save up the current System State, with some extra info, as "diagnostic 'baseline' data"
                 system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
                 system_data["primary_timestep"] = time_step
-                self.diagnostic_data_baselines.store(par=self.system_time,
-                                                     data_snapshot=system_data)
+                self.diagnostic_conc_data.store(par=self.system_time,
+                                                data_snapshot=system_data)
 
             if variable_steps:
                 time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
@@ -1774,7 +1773,7 @@ class ReactionDynamics:
         :return: A Pandas dataframe, with the columns:
                     'TIME' 	'A' 'B' ...  'primary_timestep' 'n_substeps' 'substep_number' 'caption'
         """
-        return self.diagnostic_data_baselines.get()
+        return self.diagnostic_conc_data.get()
 
 
 
@@ -1883,7 +1882,7 @@ class ReactionDynamics:
             diagnostic_df = self.diagnostic_rxn_data[rxn_index].get()
             number_diagnostic_points = len(diagnostic_df)
 
-            baselines_df = self.diagnostic_data_baselines.get()
+            baselines_df = self.diagnostic_conc_data.get()
 
             assert len(baselines_df) == number_diagnostic_points + 1, \
                 f"diagnose_variable_time_steps(): error in relative lengths of diagnostic changes Pandas frame ({number_diagnostic_points}) " \
@@ -1958,7 +1957,7 @@ class ReactionDynamics:
                                        row_baseline=row_baseline, row_list=row_list)
 
 
-        while row_baseline < len(self.diagnostic_data_baselines.get()) - 2:
+        while row_baseline < len(self.diagnostic_conc_data.get()) - 2:
             row_baseline += 1
             #if self.get_diagnostic_data(rxn_index=0).loc[row_list[0]]['time_subdivision'] == self.get_diagnostic_data(rxn_index=1).loc[row_list[1]]['time_subdivision']:
             if active_list == [0, 1]:    # ALL the reactions  TODO: generalize
@@ -2034,7 +2033,7 @@ class ReactionDynamics:
         print("-----------")
         print("ROW of baseline data: ", row_baseline)
 
-        current_time = self.diagnostic_data_baselines.get().loc[row_baseline]['TIME']
+        current_time = self.diagnostic_conc_data.get().loc[row_baseline]['TIME']
         print(f"TIME = {current_time:.5g}")
 
         print("row_list: ", row_list)
@@ -2043,7 +2042,7 @@ class ReactionDynamics:
         chemical_list = self.reaction_data.get_all_names()
         chemical_delta_list = self._delta_names()
 
-        conc_arr_before = self.diagnostic_data_baselines.get().loc[row_baseline][chemical_list].to_numpy().astype(float)
+        conc_arr_before = self.diagnostic_conc_data.get().loc[row_baseline][chemical_list].to_numpy().astype(float)
         print("baseline concentrations: ", conc_arr_before)
 
         delta_cumulative = np.zeros(self.reaction_data.number_of_chemicals(),
@@ -2072,7 +2071,7 @@ class ReactionDynamics:
         conc_after = conc_arr_before + delta_cumulative
         print("updated concentrations: ", conc_after)
 
-        next_system_state = self.diagnostic_data_baselines.get().loc[row_baseline+1][chemical_list].to_numpy()
+        next_system_state = self.diagnostic_conc_data.get().loc[row_baseline + 1][chemical_list].to_numpy()
         print(f"concentrations from the next row ({row_baseline + 1}) of the system state: ", next_system_state)
 
         status = np.allclose(conc_after.astype(float), next_system_state.astype(float))
@@ -2108,7 +2107,7 @@ class ReactionDynamics:
         assert self.diagnostics, "ReactionDynamics.explain_time_advance(): diagnostics must first be enabled; " \
                                  "call set_diagnostics() prior to the reaction run"
 
-        df = self.diagnostic_data_baselines.get()
+        df = self.diagnostic_conc_data.get()
         assert df is not None, \
             "ReactionDynamics.explain_time_advance(): no diagnostic data found.  " \
             "Did you call set_diagnostics() prior to the reaction run?"

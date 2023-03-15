@@ -147,7 +147,7 @@ class MovieTabular:
                 return lookup
 
 
-        print("MovieTabular.get(): a search cannot be performed without specifying a `search_val` argument; returning the full dataset")
+        # In the absence of a passed search_val, return the full dataset
         return df
 
 

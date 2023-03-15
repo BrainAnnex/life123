@@ -965,58 +965,58 @@ def test_explain_time_advance():
         rxn.explain_time_advance(return_times=True)      # No diagnostic data yet present
 
     # Start out with uniform steps
-    rxn.diagnostic_data_baselines.store(par=20.,
-                                        data_snapshot={"primary_timestep": 100.})
+    rxn.diagnostic_conc_data.store(par=20.,
+                                   data_snapshot={"primary_timestep": 100.})
 
     assert rxn.explain_time_advance(return_times=True, silent=True) is None
 
 
-    rxn.diagnostic_data_baselines.store(par=30.,
-                                        data_snapshot={"primary_timestep": 100.})
+    rxn.diagnostic_conc_data.store(par=30.,
+                                   data_snapshot={"primary_timestep": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)    # TODO: also test the returned step sizes
     assert np.allclose(result, [20., 30.])
 
-    rxn.diagnostic_data_baselines.store(par=40.,
-                                        data_snapshot={"primary_timestep": 100.})
+    rxn.diagnostic_conc_data.store(par=40.,
+                                   data_snapshot={"primary_timestep": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40.])
 
     # Switching to smaller step
-    rxn.diagnostic_data_baselines.store(par=45.,
-                                        data_snapshot={"primary_timestep": 100.})
+    rxn.diagnostic_conc_data.store(par=45.,
+                                   data_snapshot={"primary_timestep": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 45.])
 
-    rxn.diagnostic_data_baselines.store(par=50.,
-                                        data_snapshot={"primary_timestep": 100.})
+    rxn.diagnostic_conc_data.store(par=50.,
+                                   data_snapshot={"primary_timestep": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50.])
 
     # Switching to larger step
-    rxn.diagnostic_data_baselines.store(par=70.,
-                                        data_snapshot={"primary_timestep": 100.})
+    rxn.diagnostic_conc_data.store(par=70.,
+                                   data_snapshot={"primary_timestep": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70.])
 
     # Yet larger
-    rxn.diagnostic_data_baselines.store(par=95.,
-                                        data_snapshot={"primary_timestep": 100.})
+    rxn.diagnostic_conc_data.store(par=95.,
+                                   data_snapshot={"primary_timestep": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95.])
 
     # Smaller again
-    rxn.diagnostic_data_baselines.store(par=96.,
-                                        data_snapshot={"primary_timestep": 100.})
+    rxn.diagnostic_conc_data.store(par=96.,
+                                   data_snapshot={"primary_timestep": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 96.])
 
-    rxn.diagnostic_data_baselines.store(par=97.,
-                                        data_snapshot={"primary_timestep": 100.})
+    rxn.diagnostic_conc_data.store(par=97.,
+                                   data_snapshot={"primary_timestep": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 97.])
 
-    rxn.diagnostic_data_baselines.store(par=98.,
-                                        data_snapshot={"primary_timestep": 100.})
+    rxn.diagnostic_conc_data.store(par=98.,
+                                   data_snapshot={"primary_timestep": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 98.])
 
