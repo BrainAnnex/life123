@@ -74,7 +74,7 @@ class MovieTabular:
 
 
 
-    def get(self, search_col=None, search_val=None, tail=None) -> pd.DataFrame:
+    def get(self, search_col=None, search_val=None, val_start=None, val_end=None, tail=None) -> pd.DataFrame:
         """
         Return the main data structure (a Pandas dataframe) 
         - or a part thereof (in which case insert a column named "search_value" to the left.)
@@ -87,10 +87,17 @@ class MovieTabular:
                                 against which to match the value below
         :param search_val:  (OPTIONAL) Number, or list/tuple of numbers, with value(s)
                                 to search in the above column
+
+        :param val_start:  (OPTIONAL) Perform a FILTERING using the start value in the the specified column
+                                - ASSUMING the dataframe is ordered by that value (e.g. a system time)
+        :param val_end:    (OPTIONAL) FILTER by end value.
+                                Either one or both of start/end values may be provided
+
         :param tail:        (OPTIONAL) Integer.  If provided, only show the last several rows;
                                 as many as specified by that number.
-                                If the "select_name" and "select_value" arguments are passed,
-                                this argument will get ignored
+
+        NOTE: if multiple options to restrict the dataset are present, only one is carried out;
+              the priority is:  1) tail,  2) filtering,  3) search
 
         :return:            A Pandas dataframe, with all or some of the rows
                                 that were stored in the main data structure.
@@ -98,7 +105,30 @@ class MovieTabular:
         """
         df = self.movie     # The main data structure (a Pandas dataframe), with the "saved snapshots"
 
-        if (search_col is not None) and (search_val is not None):
+        if tail is not None:
+            return df.tail(tail)    # This request is given top priority
+
+        if search_col is None:
+            return df               # Without a search column, neither filtering nor search are possible;
+                                    #   so, return everything
+
+
+        # If we get thus far, we're doing a SEARCH or FILTERING, and were given a column name;
+        # we'll first look into whether we have a FILTERING request
+
+        if (val_start is not None) and (val_end is not None):
+            return df[df[search_col].between(val_start, val_end)]
+
+        if val_start is not None:
+            return df[df[search_col] >= val_start]
+
+        if val_end is not None:
+            return df[df[search_col] <= val_end]
+
+
+        # If we get thus far, we're doing a SEARCH, and were given a column name
+
+        if search_val is not None:
             # Perform a lookup of a value, or set of values,
             # in the specified column
             if (type(search_val) == tuple) or (type(search_val) == list):
@@ -116,10 +146,9 @@ class MovieTabular:
                 lookup.insert(0, 'search_value', [search_val])  # Insert a column named "search_value" to the left
                 return lookup
 
-        elif tail is None:
-            return df
-        else:
-            return df.tail(tail)
+
+        print("MovieTabular.get(): a search cannot be performed without specifying a `search_val` argument; returning the full dataset")
+        return df
 
 
 

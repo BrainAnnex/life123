@@ -75,7 +75,7 @@ class ReactionDynamics:
                                         #       'TIME' 'Delta A' 'Delta B'...	'reaction' 	'delta_time' 'caption'
                                         #   Note: entries are always added, even if an interval run is aborted
 
-        self.diagnostic_data_baselines = MovieTabular(parameter_name="TIME")                        # TODO: rename(?)
+        self.diagnostic_data_baselines = MovieTabular(parameter_name="TIME")  # TODO: rename to "diagnostic_conc_data"
                                         # An expanded version of the normal System History.
                                         #   This is also referred to as "diagnostic concentration data".
                                         #   Columns of the dataframes:
@@ -84,18 +84,19 @@ class ReactionDynamics:
 
         self.diagnostic_delta_conc_data = MovieTabular(parameter_name="TIME")
                                         #   Columns of the dataframes:
-                                        #       'TIME' 	'DELTA A' 'DELTA B' ...  [plus, if applicable, other fields such as 'L2', 'actions', 'step_factors']
+                                        #       'TIME' 	'DELTA A' 'DELTA B' ...
+                                        #               [plus, if applicable, other fields such as 'L2', 'actions', 'step_factors']
                                         #   Note: entries are always added, even if an interval run is aborted
 
 
 
-    #############################################################################################
-    #                                                                                           #
-    #                                ~  TO SET/READ DATA  ~                                     #
-    #                                                                                           #
-    #############################################################################################
-    def ________TO_SET_AND_READ_DATA________(DIVIDER):  # Used to get a better structure view in IDEs such asPycharm
-        pass
+    #####################################################################################################
+
+    '''                             ~   TO SET/READ DATA   ~                                          '''
+
+    def ________TO_SET_AND_READ_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
 
     def set_conc(self, conc: Union[list, tuple, dict], snapshot=True) -> None:     # TODO: maybe rename set_all_conc()
@@ -104,8 +105,10 @@ class ReactionDynamics:
 
         :param conc:        A list or tuple of concentration values for ALL the chemicals, in their index order;
                                 alternatively, a dict indexed by the chemical names, again for ALL the chemicals
-                                EXAMPLE of the latter: {"A": 12.4, "B": 0.23, "C": 2.6}  (assuming that "A", "B", "C" are ALL the chemicals)
-                                (Any previous values will get over-written)
+                                EXAMPLE of the latter:  {"A": 12.4, "B": 0.23, "C": 2.6}
+                                                        (assuming that "A", "B", "C" are ALL the chemicals)
+
+                                Note: any previous values will get over-written)
                                 TODO: [maybe the dict version should be the responsibility of set_chem_conc() instead;] OR
                                       allow the dict to be a subset of all chemicals
                                 TODO: also allow a Numpy array; make sure to do a copy() to it!
@@ -407,16 +410,8 @@ class ReactionDynamics:
         :param tail:    (OPTIONAL) Number of records to consider, from the end of the dataframe
         :return:        A Pandas dataframe
         """
-        df = self.history.get(tail=tail)
-
-        if (t_start is not None) and (t_end is not None):
-            return df[df["SYSTEM TIME"].between(t_start, t_end)]
-
-        if t_start is not None:
-            return df[df["SYSTEM TIME"] >= t_start]
-
-        if t_end is not None:
-            return df[df["SYSTEM TIME"] <= t_end]
+        df = self.history.get(tail=tail,
+                              search_col="SYSTEM TIME", val_start=t_start, val_end=t_end)
 
         return df
 
@@ -2217,6 +2212,7 @@ class ReactionDynamics:
     def ________GRAPHICS________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
+
 
     def plot_curves(self, chemicals=None, colors=None, title=None,
                     vertical_lines=None, show_intervals=False, suppress=False) -> Union[None, go.Figure]:

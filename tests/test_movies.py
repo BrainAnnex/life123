@@ -99,28 +99,38 @@ def test_get():
     df_last_2_rows = m.get(tail=2)
 
     data_values = [ {"SYSTEM TIME": 40, "A": 111, "B": 222, "C": np.nan, "caption": "notice that C is missing"},
-                    {"SYSTEM TIME": 50.5, "A": 8, "B": 88, "C": 888,   "caption": "notice the newly-appeared D", "D": 1}]
+                    {"SYSTEM TIME": 50.5, "A": 8, "B": 88,  "C": 888,    "caption": "notice the newly-appeared D", "D": 1}]
     expected_df = pd.DataFrame(data_values, index=[3, 4])
 
     assert_frame_equal(df_last_2_rows, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
 
 
-    # Check the extraction of a row by value (from a smaller value for "SYSTEM TIME" than what is in the dataframe)
+    # Check the extraction of a row by value SEARCH (using a value for "SYSTEM TIME" a tad smaller than what is in the dataframe)
     df_extracted_row = m.get(search_col="SYSTEM TIME", search_val=33.099)
 
-    data_values = [{"SYSTEM TIME": 33.1, "A": -1, "B": -2, "C": -3.0, "caption": "", "D": np.nan}]
+    data_values = [{"search_value": 33.099, "SYSTEM TIME": 33.1, "A": -1, "B": -2, "C": -3.0, "caption": "", "D": np.nan}]
     expected_df = pd.DataFrame(data_values, index=[2])
     #print("\n", expected_df)
-
     assert_frame_equal(df_extracted_row, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
 
 
-    # Check the extraction of a row by value (from a larger value for "SYSTEM TIME" than what is in the dataframe)
+    # Check the extraction of a row by value (this time using a slightly larger value for "SYSTEM TIME" than what is in the dataframe)
     df_extracted_row = m.get(search_col="SYSTEM TIME", search_val=33.1234)
     #print("\n", df_extracted_row)
-    # Note: the same row is expected, as in the lookup just before
+
+    data_values = [{"search_value": 33.1234, "SYSTEM TIME": 33.1, "A": -1, "B": -2, "C": -3.0, "caption": "", "D": np.nan}]
+    expected_df = pd.DataFrame(data_values, index=[2])
     assert_frame_equal(df_extracted_row, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
 
+
+    # Check the extraction of a group of row by value-range filtering
+    df_filtered = m.get(search_col="SYSTEM TIME", val_start=35)        # This corresponds to the last 2 rows
+
+    data_values = [ {"SYSTEM TIME": 40, "A": 111, "B": 222, "C": np.nan, "caption": "notice that C is missing"},
+                    {"SYSTEM TIME": 50.5, "A": 8, "B": 88,  "C": 888,    "caption": "notice the newly-appeared D", "D": 1}]
+    expected_df = pd.DataFrame(data_values, index=[3, 4])
+
+    assert_frame_equal(df_filtered, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
 
 
 
