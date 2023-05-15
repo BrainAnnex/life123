@@ -157,7 +157,7 @@ dynamics.get_history(tail=5)
 dynamics.single_compartment_react(time_step=0.0005, stop_time=0.070,
                                   dynamic_substeps=2, rel_fast_threshold=15)
 
-df = dynamics.history.get()
+df = dynamics.history.get_movie()
 df
 
 # %%

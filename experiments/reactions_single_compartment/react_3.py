@@ -156,14 +156,6 @@ dynamics.plot_curves(colors=['red', 'violet', 'green'])
 # # Take a peek at internal diagnostic data from the reactions
 
 # %%
-# This approach, from internal diagnostic data, 
-# is more generally applicable also to runs with multiple reactions
-#dynamics.diagnose_variable_time_steps()
-
-# %% [markdown]
-# ### The above diagnostics are based on the following diagnostic data:
-
-# %%
 dynamics.get_diagnostic_rxn_data(rxn_index=0)
 
 # %%

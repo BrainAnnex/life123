@@ -156,7 +156,7 @@ dynamics.get_history(tail=3)
 dynamics.single_compartment_react(time_step=0.03, stop_time=1.6,
                                   dynamic_substeps=2, rel_fast_threshold=120)
 
-df = dynamics.history.get()
+df = dynamics.history.get_movie()
 df
 
 # %%
@@ -189,7 +189,7 @@ dynamics.get_history(tail=3)
 dynamics.single_compartment_react(time_step=0.03, stop_time=2.3,
                                   dynamic_substeps=2, rel_fast_threshold=80)
 
-df = dynamics.history.get()
+df = dynamics.history.get_movie()
 df
 
 # %%

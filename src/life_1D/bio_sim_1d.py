@@ -4,7 +4,6 @@ import math
 from scipy.fft import rfft, rfftfreq    # Fast Fourier Transforms to extract frequency components
 from scipy.stats import norm
 from typing import Union, List, Tuple
-#from src.modules.movies.movies import Movie    # OBSOLETED
 from src.modules.movies.movies import MovieTabular
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 import plotly.express as px
@@ -1283,8 +1282,8 @@ class BioSim1D:
         # TODO: validation; also, implement "species" option for snapshots
         first_snapshot = True
         if snapshots:
-            frequency = snapshots.get("frequency", 1)   # If not present, it will be 1
-            sample_bin = snapshots.get("sample_bin", None)   # If not present, it will be None
+            frequency = snapshots.get_movie("frequency", 1)   # If not present, it will be 1
+            sample_bin = snapshots.get_movie("sample_bin", None)   # If not present, it will be None
         else:
             frequency = None
             sample_bin = None
@@ -1640,7 +1639,7 @@ class BioSim1D:
 
         :return:        a Pandas dataframe
         """
-        return self.history.get()
+        return self.history.get_movie()
 
 
 

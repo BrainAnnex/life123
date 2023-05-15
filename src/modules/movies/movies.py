@@ -74,7 +74,7 @@ class MovieTabular:
 
 
 
-    def get(self, search_col=None, search_val=None, val_start=None, val_end=None, tail=None) -> pd.DataFrame:
+    def get_movie(self, search_col=None, search_val=None, val_start=None, val_end=None, tail=None) -> pd.DataFrame:
         """
         Return the main data structure (a Pandas dataframe) 
         - or a part thereof (in which case insert a column named "search_value" to the left.)
@@ -359,7 +359,7 @@ class MovieGeneral:
 
 
 
-    def get(self) -> list:
+    def get_movie(self) -> list:
         """
         Return the main data structure - the list of snapshots, with their attributes
 

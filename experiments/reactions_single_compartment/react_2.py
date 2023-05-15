@@ -18,13 +18,10 @@
 #
 # Same as the experiment _"react_1"_ , but with adaptive variable time steps
 #
-# LAST REVISED: Mar. 14, 2023
+# LAST REVISED: Mar. 23, 2023
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -81,7 +78,7 @@ dynamics.set_conc([10., 50.])
 dynamics.describe_state()
 
 # %%
-dynamics.history.get()
+dynamics.history.get_movie()
 
 # %% [markdown] tags=[]
 # ## Run the reaction
