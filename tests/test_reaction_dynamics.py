@@ -1,7 +1,10 @@
 import pytest
 import numpy as np
+import pandas as pd
+from pandas.testing import assert_frame_equal
 from src.modules.reactions.reaction_data import ReactionData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.movies.movies import MovieTabular
 
 
 
@@ -1055,12 +1058,68 @@ def test_save_diagnostic_rxn_data():
     dyn = ReactionDynamics(chem_data)
     assert len(dyn.diagnostic_rxn_data) == 0
 
-    dyn.system_time = 10.
-    dyn.save_diagnostic_rxn_data(rxn_index=0, delta_time=0.5, increment_vector_single_rxn=np.array([2.4, -2.4, 0]))
+    dyn.system_time = 100
+    with pytest.raises(Exception):
+        dyn.save_diagnostic_rxn_data(rxn_index=0, delta_time=4,
+                                    increment_vector_single_rxn=np.array([2, -2])) # Wrong size of Numpy array
+
+    # Add data for reaction 0
+    dyn.save_diagnostic_rxn_data(rxn_index=0, delta_time=4,
+                                 increment_vector_single_rxn=np.array([2, -2, 0, 0]))
 
     assert len(dyn.diagnostic_rxn_data) == 3    # Same as the number of reactions
 
-    # TODO: verify that dyn.diagnostic_rxn_data got set correctly
+    diagnostic_data_rxn_0 = dyn.diagnostic_rxn_data[0]
+    diagnostic_data_rxn_1 = dyn.diagnostic_rxn_data[1]
+    diagnostic_data_rxn_2 = dyn.diagnostic_rxn_data[2]
+
+    assert (type(diagnostic_data_rxn_0)) == MovieTabular
+    assert (type(diagnostic_data_rxn_1)) == MovieTabular
+    assert (type(diagnostic_data_rxn_2)) == MovieTabular
+
+    df_0 = diagnostic_data_rxn_0.get_dataframe()
+    df_1 = diagnostic_data_rxn_1.get_dataframe()
+    df_2 = diagnostic_data_rxn_2.get_dataframe()
+
+    expected_df_0 = pd.DataFrame([[100, 2, -2, 0, 0, 4, ""]],
+                                 columns = ["START TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+    assert_frame_equal(df_0, expected_df_0, check_dtype=False)
+
+    assert df_1.empty
+    assert df_2.empty
+
+    # Add data for reaction 1
+    dyn.save_diagnostic_rxn_data(rxn_index=1, delta_time=4,
+                                increment_vector_single_rxn=np.array([7, 0, 0, -7]))
+
+    df_0 = diagnostic_data_rxn_0.get_dataframe()
+    df_1 = diagnostic_data_rxn_1.get_dataframe()
+    df_2 = diagnostic_data_rxn_2.get_dataframe()
+
+    assert_frame_equal(df_0, expected_df_0, check_dtype=False)  # Nothing was done to df_0 by processing reaction index 1
+
+    expected_df_1 = pd.DataFrame([[100, 7, 0, 0, -7, 4, ""]],
+                                 columns = ["START TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+    assert_frame_equal(df_1, expected_df_1, check_dtype=False)
+
+    assert df_2.empty
+
+    # Add data for reaction 2
+    dyn.save_diagnostic_rxn_data(rxn_index=2, delta_time=4,
+                                 increment_vector_single_rxn=np.array([-8, -8, 0, 8]))
+
+    df_0 = diagnostic_data_rxn_0.get_dataframe()
+    df_1 = diagnostic_data_rxn_1.get_dataframe()
+    df_2 = diagnostic_data_rxn_2.get_dataframe()
+
+    assert_frame_equal(df_0, expected_df_0, check_dtype=False)  # Nothing was done to df_0 by processing reaction index 1
+    assert_frame_equal(df_1, expected_df_1, check_dtype=False)  # Nothing was done to df_1 by processing reaction index 1
+
+    expected_df_2 = pd.DataFrame([[100, -8, -8, 0, 8, 4, ""]],
+                                 columns = ["START TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
+
+    #print(df_0.equals(expected_df) )
 
 
 

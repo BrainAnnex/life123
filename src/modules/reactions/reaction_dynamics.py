@@ -416,8 +416,8 @@ class ReactionDynamics:
         :param tail:    (OPTIONAL) Number of records to consider, from the end of the dataframe
         :return:        A Pandas dataframe
         """
-        df = self.history.get_movie(tail=tail,
-                                    search_col="SYSTEM TIME", val_start=t_start, val_end=t_end)
+        df = self.history.get_dataframe(tail=tail,
+                                        search_col="SYSTEM TIME", val_start=t_start, val_end=t_end)
 
         return df
 
@@ -571,10 +571,10 @@ class ReactionDynamics:
 
 
         if snapshots:
-            frequency = snapshots.get_movie("frequency", 1)   # If not present, it will be 1
-            species = snapshots.get_movie("species")          # If not present, it will be None (meaning show all)
+            frequency = snapshots.get_dataframe("frequency", 1)   # If not present, it will be 1
+            species = snapshots.get_dataframe("species")          # If not present, it will be None (meaning show all)
             first_snapshot = True
-            if not snapshots.get_movie("show_intermediates"):
+            if not snapshots.get_dataframe("show_intermediates"):
                 snapshots["show_intermediates"] = True
         else:
             snapshots = {"frequency": 1, "show_intermediates": True, "species": None, "first_snapshot": True}
@@ -1126,7 +1126,7 @@ class ReactionDynamics:
                                 ) -> None:
         """
         TODO: unclear if there's any use for this anymore
-        
+
         Examine the requested concentration changes given by delta_conc_array
         (typically, as computed by an ODE solver),
         relative to their baseline (pre-reaction) values baseline_conc_array,
@@ -1677,6 +1677,15 @@ class ReactionDynamics:
         :param caption:                     OPTIONAL string to describe the snapshot
         :return:                            None
         """
+        # Validate the reaction index
+        self.reaction_data.assert_valid_rxn_index(rxn_index)
+
+        # Validate increment_vector_single_rxn
+        assert len(increment_vector_single_rxn) == self.reaction_data.number_of_chemicals(), \
+            f"save_diagnostic_rxn_data(): the length of the Numpy array increment_vector_single_rxn " \
+            f"({len(increment_vector_single_rxn)}) doesn't match the total numbers of chemicals ({self.reaction_data.number_of_chemicals()})"
+
+
         if self.diagnostic_rxn_data == {}:    # INITIALIZE the dictionary self.diagnostic_rxn_data, if needed
             for i in range(self.reaction_data.number_of_reactions()):
                 self.diagnostic_rxn_data[i] = MovieTabular(parameter_name="START TIME")       # One per reaction
@@ -1725,7 +1734,7 @@ class ReactionDynamics:
                                     Columns of the dataframes:
                                     'START TIME' 'Delta A' 'Delta B'... 'delta_time' 'caption'
         """
-        # First, validate the reaction index
+        # Validate the reaction index
         self.reaction_data.assert_valid_rxn_index(rxn_index)
 
         if print_reaction:
@@ -1749,7 +1758,7 @@ class ReactionDynamics:
         :return: A Pandas dataframe, with the columns:
                     'TIME' 	'A' 'B' ...  'primary_timestep' 'n_substeps' 'substep_number' 'caption'
         """
-        return self.diagnostic_conc_data.get_movie()
+        return self.diagnostic_conc_data.get_dataframe()
 
 
 
@@ -1759,7 +1768,7 @@ class ReactionDynamics:
 
         :return:    A Pandas dataframe with a "TIME" column, and columns for all the "Delta concentration" values
         """
-        return self.diagnostic_delta_conc_data.get_movie()
+        return self.diagnostic_delta_conc_data.get_dataframe()
 
 
 
@@ -1855,7 +1864,7 @@ class ReactionDynamics:
                                        row_baseline=row_baseline, row_list=row_list)
 
 
-        while row_baseline < len(self.diagnostic_conc_data.get_movie()) - 2:
+        while row_baseline < len(self.diagnostic_conc_data.get_dataframe()) - 2:
             row_baseline += 1
 
             print("Advance a single-step across all tables")
@@ -1887,7 +1896,7 @@ class ReactionDynamics:
         print("-----------")
         print("ROW of baseline data: ", row_baseline)
 
-        current_time = self.diagnostic_conc_data.get_movie().loc[row_baseline]['TIME']
+        current_time = self.diagnostic_conc_data.get_dataframe().loc[row_baseline]['TIME']
         print(f"TIME = {current_time:.5g}")
 
         print("row_list: ", row_list)
@@ -1896,7 +1905,7 @@ class ReactionDynamics:
         chemical_list = self.reaction_data.get_all_names()
         chemical_delta_list = self._delta_names()
 
-        conc_arr_before = self.diagnostic_conc_data.get_movie().loc[row_baseline][chemical_list].to_numpy().astype(float)
+        conc_arr_before = self.diagnostic_conc_data.get_dataframe().loc[row_baseline][chemical_list].to_numpy().astype(float)
         print("baseline concentrations: ", conc_arr_before)
 
         delta_cumulative = np.zeros(self.reaction_data.number_of_chemicals(),
@@ -1924,7 +1933,7 @@ class ReactionDynamics:
         conc_after = conc_arr_before + delta_cumulative
         print("updated concentrations: ", conc_after)
 
-        next_system_state = self.diagnostic_conc_data.get_movie().loc[row_baseline + 1][chemical_list].to_numpy()
+        next_system_state = self.diagnostic_conc_data.get_dataframe().loc[row_baseline + 1][chemical_list].to_numpy()
         print(f"concentrations from the next row ({row_baseline + 1}) of the system state: ", next_system_state)
 
         status = np.allclose(conc_after.astype(float), next_system_state.astype(float))
@@ -1960,7 +1969,7 @@ class ReactionDynamics:
         assert self.diagnostics, "ReactionDynamics.explain_time_advance(): diagnostics must first be enabled; " \
                                  "call set_diagnostics() prior to the reaction run"
 
-        df = self.diagnostic_conc_data.get_movie()
+        df = self.diagnostic_conc_data.get_dataframe()
         assert df is not None, \
             "ReactionDynamics.explain_time_advance(): no diagnostic data found.  " \
             "Did you call set_diagnostics() prior to the reaction run?"

@@ -28,7 +28,7 @@ class MovieTabular:
         """
         self.parameter_name = parameter_name
 
-        self.movie = None      # Pandas dataframe
+        self.movie = pd.DataFrame()      # Empty Pandas dataframe
 
 
 
@@ -60,7 +60,7 @@ class MovieTabular:
         :param caption:         OPTIONAL string to describe the snapshot
         :return:                None (the object variable "self.movie" will get updated)
         """
-        if self.movie is None:     # No Pandas dataframe was yet started
+        if self.movie.empty:     # No Pandas dataframe was yet started
             assert type(data_snapshot) == dict, \
                 "MovieTabular.store(): The argument `data_snapshot` must be a dictionary"
 
@@ -74,7 +74,7 @@ class MovieTabular:
 
 
 
-    def get_movie(self, search_col=None, search_val=None, val_start=None, val_end=None, tail=None) -> pd.DataFrame:
+    def get_dataframe(self, search_col=None, search_val=None, val_start=None, val_end=None, tail=None) -> pd.DataFrame:
         """
         Return the main data structure (a Pandas dataframe) 
         - or a part thereof (in which case insert a column named "search_value" to the left.)

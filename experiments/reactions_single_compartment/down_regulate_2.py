@@ -110,7 +110,7 @@ dynamics.set_chem_conc(species_name="A", conc=40., snapshot=True)
 dynamics.describe_state()
 
 # %%
-dynamics.history.get_movie(tail=5)
+dynamics.history.get_dataframe(tail=5)
 
 # %% [markdown]
 # ### Again, take the system to equilibrium
@@ -119,7 +119,7 @@ dynamics.history.get_movie(tail=5)
 dynamics.single_compartment_react(time_step=0.001, n_steps=40,
                                   dynamic_substeps=2, rel_fast_threshold=15)
 
-df = dynamics.history.get_movie()
+df = dynamics.history.get_dataframe()
 df
 
 # %%
@@ -142,7 +142,7 @@ dynamics.set_chem_conc(species_name="A", conc=30., snapshot=True)
 dynamics.describe_state()
 
 # %%
-dynamics.history.get_movie(tail=5)
+dynamics.history.get_dataframe(tail=5)
 
 # %% [markdown]
 # ### Yet again, take the system to equilibrium

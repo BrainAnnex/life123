@@ -78,7 +78,7 @@ dynamics.set_conc([10., 50.])
 dynamics.describe_state()
 
 # %%
-dynamics.history.get_movie()
+dynamics.history.get_dataframe()
 
 # %% [markdown] tags=[]
 # ## Run the reaction

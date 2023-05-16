@@ -130,7 +130,7 @@ dynamics.stoichiometry_checker(rxn_index=0,
 # #### Indeed, it can be easy checked that the drop in [A] is -119.920000 , twice the 59.96 increase in [C], as dictated by the stoichiometry
 
 # %%
-dynamics.diagnostic_rxn_data[0].get_movie().loc[0]    # Conveniently seen in the diagnostic data
+dynamics.diagnostic_rxn_data[0].get_dataframe().loc[0]    # Conveniently seen in the diagnostic data
 
 # %% [markdown]
 # ## Note: "A" (now largely depleted) is the limiting reagent
