@@ -279,7 +279,7 @@ def test_single_reaction_step_5():
 
     result = rxn._reaction_elemental_step(delta_time=0.02, conc_array=conc_array)
     assert np.allclose(result, [-1.4 , 0.7])
-    assert  np.allclose(result[0] /2 , -result[1])      # From the stoichiometry
+    assert np.allclose(result[0] /2 , -result[1])      # From the stoichiometry
 
 
 
@@ -297,9 +297,9 @@ def test_single_reaction_step_6():
 
     result = rxn._reaction_elemental_step(delta_time=0.02, conc_array=conc_array)
     assert np.allclose(result, [-1.46 , -1.46  , 1.404 , -0.056 ,  0.056])
-    assert  np.allclose(result[0] , result[1])                  # From the stoichiometry
-    assert  np.allclose(result[3] , -result[4])                 # From the stoichiometry
-    assert  np.allclose(result[0] + result[4], -result[2])      # From the stoichiometry
+    assert np.allclose(result[0] , result[1])                  # From the stoichiometry
+    assert np.allclose(result[3] , -result[4])                 # From the stoichiometry
+    assert np.allclose(result[0] + result[4], -result[2])      # From the stoichiometry
                                                                 # The increase in [A] and [E] combined
                                                                 # must match the decrease in [C]
 
@@ -1042,3 +1042,27 @@ def test__delta_conc_dict():
 
     with pytest.raises(Exception):
         dyn._delta_conc_dict(np.array([10, 20, 30, 40]))    # One element too many
+
+
+
+def test_save_diagnostic_rxn_data():
+    chem_data = ReactionData(names=["A", "B", "C", "X"])
+    # Add 3 reactions
+    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=5., reverse_rate=2.)
+    chem_data.add_reaction(reactants=["A"], products=["X"], forward_rate=5., reverse_rate=2.)
+    chem_data.add_reaction(reactants=["A", "B"], products=["X"], forward_rate=5., reverse_rate=2.)
+
+    dyn = ReactionDynamics(chem_data)
+    assert len(dyn.diagnostic_rxn_data) == 0
+
+    dyn.system_time = 10.
+    dyn.save_diagnostic_rxn_data(rxn_index=0, delta_time=0.5, increment_vector_single_rxn=np.array([2.4, -2.4, 0]))
+
+    assert len(dyn.diagnostic_rxn_data) == 3    # Same as the number of reactions
+
+    # TODO: verify that dyn.diagnostic_rxn_data got set correctly
+
+
+
+def test_get_diagnostic_rxn_data():
+    pass

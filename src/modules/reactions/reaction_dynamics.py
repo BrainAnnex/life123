@@ -73,10 +73,10 @@ class ReactionDynamics:
                                         #   The keys are the reaction indices; the values are objects of type "MovieTabular",
                                         #   which contain Pandas dataframes with the following columns
                                         #   (referring to 1 reaction):
-                                        #           'TIME' 'Delta A' 'Delta B'...	'delta_time' 'caption'
+                                        #           'START TIME' , 'Delta A' , 'Delta B' ...'delta_time' , 'caption'
                                         #
                                         #   Notes:  - entries are always added, even if an interval run is aborted
-                                        #           - the various 'Delta concentrations' are for only the affected chemicals,
+                                        #           - the various 'Delta concentrations' are for ALL the chemicals (in the reaction or not),
                                         #                   over the time interval that *STARTS* at the value in the "TIME" column
 
         self.diagnostic_conc_data = MovieTabular(parameter_name="TIME")
@@ -722,8 +722,7 @@ class ReactionDynamics:
                     print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s) with a single step")
 
                 # CORE OPERATION IN CASE OF *NOT* ALLOWING FOR SUBSTEPS
-                delta_concentrations = self._reaction_elemental_step(delta_time=delta_time_full, conc_array=conc_array, rxn_list=None,
-                                                                     tag_reactions=False)
+                delta_concentrations = self._reaction_elemental_step(delta_time=delta_time_full, conc_array=conc_array, rxn_list=None)
 
 
                 if self.diagnostics:
@@ -875,7 +874,7 @@ class ReactionDynamics:
 
 
 
-    def _reaction_elemental_step(self, delta_time: float, conc_array: np.array, rxn_list=None, tag_reactions=False) -> np.array:
+    def _reaction_elemental_step(self, delta_time: float, conc_array: np.array, rxn_list=None) -> np.array:
         """
         Using the given concentration data of ALL the chemical species,
         do the specified SINGLE TIME STEP for ONLY the requested reactions (by default all).
@@ -903,8 +902,6 @@ class ReactionDynamics:
         :param rxn_list:        OPTIONAL list of reactions (specified by their indices) to include in this simulation step ;
                                     EXAMPLE: [1, 3, 7]
                                     If None, do all the reactions
-        :param tag_reactions:   OPTIONAL boolean indicating whether to consider a pre-determined "measure of change" in the concentrations
-                                    caused by each reaction, and store the results with the reactions
 
         :return:            The increment vector for the concentrations of ALL the chemical species
                                 (whether involved in the reactions or not),
@@ -945,11 +942,6 @@ class ReactionDynamics:
 
 
             # If requested to evaluate the reaction "speeds"
-            if tag_reactions:
-                self.set_rxn_speed(rxn_index, "S")  # TENTATIVE assignment, that will be changed
-                                                    #   if ANY chemical experiences significant concentration changes
-                if "substeps" in self.verbose_list:
-                    print(f"      (tentatively tagging rxn #{rxn_index} as 'S')")
 
 
             """
@@ -985,14 +977,6 @@ class ReactionDynamics:
                                                                 # TODO: consider using a small dict in lieu of increment_vector_single_rxn
 
 
-            # If requested to evaluate the reaction "speeds"
-            if tag_reactions:
-                # Mark the reaction "fast", if appropriate
-                self.examine_increment_array(rxn_index=rxn_index,
-                                             delta_conc_array=increment_vector_single_rxn, baseline_conc_array=conc_array,
-                                             time_subdivision=1,
-                                             fast_threshold_fraction=0.)
-
             if self.diagnostics:
                 self.save_diagnostic_rxn_data(delta_time, increment_vector_single_rxn, rxn_index)
         # END for (over rxn_list)
@@ -1002,7 +986,7 @@ class ReactionDynamics:
 
 
     def _reaction_elemental_step_SINGLE_REACTION(self, delta_time: float, conc_array: np.array, increment_vector,
-                                                 rxn_index: int, tag_reactions :bool,
+                                                 rxn_index: int,
                                                  delta_dict):     # TODO: EXPERIMENTAL; not yet in use
 
         if 2 in self.verbose_list:
@@ -1018,13 +1002,6 @@ class ReactionDynamics:
         reactants = self.reaction_data.get_reactants(rxn_index)
         products = self.reaction_data.get_products(rxn_index)
 
-
-        # If requested to evaluate the reaction "speeds"    TODO: maybe move to calling function
-        if tag_reactions:
-            self.set_rxn_speed(rxn_index, "S")  # TENTATIVE assignment, that will be changed
-            #   if ANY chemical experiences significant concentration changes
-            if "substeps" in self.verbose_list:
-                print(f"      (tentatively tagging rxn #{rxn_index} as 'S')")
 
 
         """
@@ -1069,13 +1046,6 @@ class ReactionDynamics:
         # TODO: need a version of examine_increment_array() and save_diagnostic_data() that accept increment_dict_single_rxn
         #       instead of increment_vector_single_rxn [also, maybe move one or both of them to calling function]
         '''  
-        if tag_reactions:
-            # Mark the reaction "fast", if appropriate
-            self.examine_increment_array(rxn_index=rxn_index,
-                                         delta_conc_array=increment_vector_single_rxn, baseline_conc_array=conc_array,
-                                         time_subdivision=time_subdivision,
-                                         fast_threshold_fraction=fast_threshold_fraction)
-
         if self.diagnostics:
             self.save_diagnostic_data(delta_time, increment_vector_single_rxn, rxn_index, substep_number, time_subdivision)
         '''
@@ -1155,6 +1125,8 @@ class ReactionDynamics:
                                 use_baseline=False
                                 ) -> None:
         """
+        TODO: unclear if there's any use for this anymore
+        
         Examine the requested concentration changes given by delta_conc_array
         (typically, as computed by an ODE solver),
         relative to their baseline (pre-reaction) values baseline_conc_array,
@@ -1188,9 +1160,6 @@ class ReactionDynamics:
 
         if self.get_rxn_speed(rxn_index) == "F":
             # If the reaction was already marked as "Fast" then no action is taken
-            if "substeps" in self.verbose_list:
-                print(f"        Rxn # {rxn_index}: no action taken because already tagged as 'F'")
-
             return
 
 
@@ -1198,9 +1167,6 @@ class ReactionDynamics:
 
         # If the reaction was (tentatively) labeled as "Slow", decide whether to flip it to "Fast"
         #   Note: the status will be used for the current simulation sub-cycle
-
-        if "substeps" in self.verbose_list:
-            print(f"        For Rxn # {rxn_index}, checking concentrations of chems: {self.reaction_data.get_chemicals_in_reaction(rxn_index)}")
 
 
         # Loop over just the chemicals in the given reaction (not over ALL the chemicals!)
@@ -1227,15 +1193,6 @@ class ReactionDynamics:
 
         # END for
         # If we get thus far, the reaction is still regarded as "Slow", and its status is left unchanged
-
-        if "substeps" in self.verbose_list:
-            chem_list = self.reaction_data.get_chemicals_in_reaction(rxn_index)
-            delta_conc_array_relevant = np.array([delta_conc_array[n] for n in chem_list])
-            baseline_conc_array_relevant = np.array([baseline_conc_array[n] for n in chem_list])
-            print(f"        Rxn # {rxn_index} left tagged as 'S', "
-                  f"based on a change of {delta_conc_array_relevant} (rel. to baseline of {baseline_conc_array_relevant}) :\n"
-                  f"        elements of abs({100 * delta_conc_array_relevant / (baseline_conc_array_relevant+1e-09)}%) are all < ({100 * fast_threshold_fraction:.3g}% /{time_subdivision})"
-                  )   # Note: we're adding a tiny amount to baseline_conc to avoid potential divisions by zero
 
 
 
@@ -1706,31 +1663,33 @@ class ReactionDynamics:
 
 
 
-    def save_diagnostic_rxn_data(self, delta_time, increment_vector_single_rxn: np.array, rxn_index: int) -> None:
+    def save_diagnostic_rxn_data(self, delta_time, increment_vector_single_rxn: np.array,
+                                 rxn_index: int, caption="") -> None:
         """
-        Save up diagnostic data for the 1 reaction specified by its index
+        Save up diagnostic data for 1 reaction, for a simulation step
+        (by convention, regardless of whether the step is completed or aborted)
 
         :param delta_time:                  The duration of the current simulation step
         :param increment_vector_single_rxn: A Numpy array of size equal to the total number of chemical species,
                                                 containing the "delta concentrations" for
-                                                all the chemicals in the reaction of interest
-                                                (elements of chemicals not in this reaction are ignored)
+                                                ALL the chemicals (whether involved in the reaction or not)
         :param rxn_index:                   An integer that indexes the reaction of interest (numbering starts at 0)
+        :param caption:                     OPTIONAL string to describe the snapshot
         :return:                            None
         """
-        if self.diagnostic_rxn_data == {}:    # INITIALIZE the dictionary self.diagnostic_data, if needed
+        if self.diagnostic_rxn_data == {}:    # INITIALIZE the dictionary self.diagnostic_rxn_data, if needed
             for i in range(self.reaction_data.number_of_reactions()):
-                self.diagnostic_rxn_data[i] = MovieTabular(parameter_name="TIME")       # One per reaction
+                self.diagnostic_rxn_data[i] = MovieTabular(parameter_name="START TIME")       # One per reaction
 
         data_snapshot = {}
-        # Add more entries to the above dictionary, starting with the Delta conc. for all the chemicals
+        # Add entries to the above dictionary, starting with the Delta conc. for all the chemicals
         for index, conc in enumerate(increment_vector_single_rxn):
             data_snapshot["Delta " + self.reaction_data.get_name(index)] = conc
 
         #data_snapshot["reaction"] = rxn_index           # TODO: now redundant because factored out into separate data frames
         data_snapshot["delta_time"] = delta_time
         self.diagnostic_rxn_data[rxn_index].store(par=self.system_time,
-                                                  data_snapshot=data_snapshot)
+                                                  data_snapshot=data_snapshot, caption=caption)
 
 
 
@@ -1764,7 +1723,7 @@ class ReactionDynamics:
         :return:                A Pandas data frame with (all or some of)
                                     the diagnostic data of the specified reaction.
                                     Columns of the dataframes:
-                                    'TIME' 'Delta A' 'Delta B'... 'delta_time' 'caption'
+                                    'START TIME' 'Delta A' 'Delta B'... 'delta_time' 'caption'
         """
         # First, validate the reaction index
         self.reaction_data.assert_valid_rxn_index(rxn_index)
