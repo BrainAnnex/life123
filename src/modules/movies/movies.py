@@ -74,7 +74,9 @@ class MovieTabular:
 
 
 
-    def get_dataframe(self, search_col=None, search_val=None, val_start=None, val_end=None, tail=None) -> pd.DataFrame:
+    def get_dataframe(self, head=None, tail=None,
+                      val_start=None, val_end=None,
+                      search_col=None, search_val=None) -> pd.DataFrame:
         """
         Return the main data structure (a Pandas dataframe) 
         - or a part thereof (in which case insert a column named "search_value" to the left.)
@@ -83,21 +85,24 @@ class MovieTabular:
         or just return row(s) corresponding to a specific search value(s) in the specified column
         - i.e. the row(s) with the CLOSEST value to the requested one(s).
 
-        :param search_col:  (OPTIONAL) String with the name of a column in the dataframe,
-                                against which to match the value below
-        :param search_val:  (OPTIONAL) Number, or list/tuple of numbers, with value(s)
-                                to search in the above column
+        IMPORTANT:  if multiple options to restrict the dataset are present, only one is carried out;
+                    the priority is:  1) head,  2) tail,  3) filtering,  3) search
+
+        :param head:        (OPTIONAL) Integer.  If provided, only show the first several rows;
+                                as many as specified by that number.
+        :param tail:        (OPTIONAL) Integer.  If provided, only show the last several rows;
+                                as many as specified by that number.
+                                If the "head" argument is passed, this argument will get ignored
 
         :param val_start:  (OPTIONAL) Perform a FILTERING using the start value in the the specified column
                                 - ASSUMING the dataframe is ordered by that value (e.g. a system time)
         :param val_end:    (OPTIONAL) FILTER by end value.
                                 Either one or both of start/end values may be provided
 
-        :param tail:        (OPTIONAL) Integer.  If provided, only show the last several rows;
-                                as many as specified by that number.
-
-        NOTE: if multiple options to restrict the dataset are present, only one is carried out;
-              the priority is:  1) tail,  2) filtering,  3) search
+        :param search_col:  (OPTIONAL) String with the name of a column in the dataframe,
+                                against which to match the value below
+        :param search_val:  (OPTIONAL) Number, or list/tuple of numbers, with value(s)
+                                to search in the above column
 
         :return:            A Pandas dataframe, with all or some of the rows
                                 that were stored in the main data structure.
@@ -105,8 +110,11 @@ class MovieTabular:
         """
         df = self.movie     # The main data structure (a Pandas dataframe), with the "saved snapshots"
 
+        if head is not None:
+            return df.head(head)    # This request is given top priority
+
         if tail is not None:
-            return df.tail(tail)    # This request is given top priority
+            return df.tail(tail)    # This request is given next-highest priority
 
         if search_col is None:
             return df               # Without a search column, neither filtering nor search are possible;

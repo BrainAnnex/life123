@@ -1082,7 +1082,7 @@ def test_save_diagnostic_rxn_data():
     df_2 = diagnostic_data_rxn_2.get_dataframe()
 
     expected_df_0 = pd.DataFrame([[100, 2, -2, 0, 0, 4, ""]],
-                                 columns = ["START TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)
 
     assert df_1.empty
@@ -1099,14 +1099,15 @@ def test_save_diagnostic_rxn_data():
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)  # Nothing was done to df_0 by processing reaction index 1
 
     expected_df_1 = pd.DataFrame([[100, 7, 0, 0, -7, 4, ""]],
-                                 columns = ["START TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
     assert_frame_equal(df_1, expected_df_1, check_dtype=False)
 
     assert df_2.empty
 
     # Add data for reaction 2
     dyn.save_diagnostic_rxn_data(rxn_index=2, delta_time=4,
-                                 increment_vector_single_rxn=np.array([-8, -8, 0, 8]))
+                                 increment_vector_single_rxn=np.array([-8, -8, 0, 8]),
+                                 caption="I'm a caption")
 
     df_0 = diagnostic_data_rxn_0.get_dataframe()
     df_1 = diagnostic_data_rxn_1.get_dataframe()
@@ -1115,13 +1116,101 @@ def test_save_diagnostic_rxn_data():
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)  # Nothing was done to df_0 by processing reaction index 1
     assert_frame_equal(df_1, expected_df_1, check_dtype=False)  # Nothing was done to df_1 by processing reaction index 1
 
-    expected_df_2 = pd.DataFrame([[100, -8, -8, 0, 8, 4, ""]],
-                                 columns = ["START TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+    expected_df_2 = pd.DataFrame([[100, -8, -8, 0, 8, 4, "I'm a caption"]],
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
-    #print(df_0.equals(expected_df) )
+    #TODO: test adding multiple entries for any reaction
 
 
 
 def test_get_diagnostic_rxn_data():
-    pass
+    chem_data = ReactionData(names=["A", "B", "C", "X"])
+    # Add 3 reactions
+    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=5., reverse_rate=2.)
+    chem_data.add_reaction(reactants=["A"], products=["X"], forward_rate=5., reverse_rate=2.)
+    chem_data.add_reaction(reactants=["A", "B"], products=["X"], forward_rate=5., reverse_rate=2.)
+
+    dyn = ReactionDynamics(chem_data)
+
+    dyn.system_time = 100
+
+    # Add data for reaction 0
+    dyn.save_diagnostic_rxn_data(rxn_index=0, delta_time=4,
+                                 increment_vector_single_rxn=np.array([2, -2, 0, 0]))
+
+    df_0 = dyn.get_diagnostic_rxn_data(rxn_index=0, print_reaction=False)
+
+    expected_df_0 = pd.DataFrame([[100, 2, -2, 0, 0, 4, ""]],
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+    assert_frame_equal(df_0, expected_df_0, check_dtype=False)
+
+    df_1 = dyn.get_diagnostic_rxn_data(rxn_index=1, print_reaction=False)
+    assert df_1.empty
+    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False)
+    assert df_2.empty
+
+    # Add data for reaction 1
+    dyn.save_diagnostic_rxn_data(rxn_index=1, delta_time=4,
+                                 increment_vector_single_rxn=np.array([7, 0, 0, -7]))
+
+    df_1 = dyn.get_diagnostic_rxn_data(rxn_index=1, print_reaction=False)
+
+    expected_df_1 = pd.DataFrame([[100, 7, 0, 0, -7, 4, ""]],
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+    assert_frame_equal(df_1, expected_df_1, check_dtype=False)
+
+    df_0 = dyn.get_diagnostic_rxn_data(rxn_index=0, print_reaction=False)
+    assert_frame_equal(df_0, expected_df_0, check_dtype=False)      # No change made to df_0 from the last step
+
+    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False)
+    assert df_2.empty
+
+    # Add data for reaction 2
+    dyn.save_diagnostic_rxn_data(rxn_index=2, delta_time=4,
+                                 increment_vector_single_rxn=np.array([-8, -8, 0, 8]),
+                                 caption="I'm a caption")
+
+    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, tail=1) # With just one row, tail=1 won't make a difference
+
+    expected_df_2 = pd.DataFrame([[100, -8, -8, 0, 8, 4, "I'm a caption"]],
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
+
+    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, t=50) # With just one row, the time selector won't matter
+
+    expected_df_2 = pd.DataFrame([[50, 100, -8, -8, 0, 8, 4, "I'm a caption"]],
+                                 columns = ["search_value", "START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+
+    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
+
+    # Add a 2nd data row for reaction 2
+    dyn.system_time = 104
+    dyn.save_diagnostic_rxn_data(rxn_index=2, delta_time=4,
+                                 increment_vector_single_rxn=np.array([-11, -11, 0, 11]),
+                                 caption="2nd row")
+
+    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False)
+    expected_df_2 = pd.DataFrame([[100, -8, -8, 0, 8, 4, "I'm a caption"] , [104, -11, -11, 0, 11, 4, "2nd row"]],
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
+
+    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, tail=2)   # The full dataset, again
+    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
+
+    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, tail=1)   # Just the last row
+    expected_df_2 = pd.DataFrame([[104, -11, -11, 0, 11, 4, "2nd row"]],
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+    expected_df_2.index = [1]   # To conform to the original index, which the tail parameter doesn't alter
+    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
+
+    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, t=150)   # The row closest in time will be the last row
+    expected_df_2 = pd.DataFrame([[150, 104, -11, -11, 0, 11, 4, "2nd row"]],
+                                 columns = ["search_value", "START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+    expected_df_2.index = [1]   # To conform to the original index, which the t parameter doesn't alter
+    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
+
+    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, t=30)   # The row closest in time will be the first row
+    expected_df_2 = pd.DataFrame([[30, 100, -8, -8, 0, 8, 4, "I'm a caption"]],
+                                 columns = ["search_value", "START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+    assert_frame_equal(df_2, expected_df_2, check_dtype=False)

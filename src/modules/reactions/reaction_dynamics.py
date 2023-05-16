@@ -571,10 +571,10 @@ class ReactionDynamics:
 
 
         if snapshots:
-            frequency = snapshots.get_dataframe("frequency", 1)   # If not present, it will be 1
-            species = snapshots.get_dataframe("species")          # If not present, it will be None (meaning show all)
+            frequency = snapshots.get("frequency", 1)   # If not present, it will be 1
+            species = snapshots.get("species")          # If not present, it will be None (meaning show all)
             first_snapshot = True
-            if not snapshots.get_dataframe("show_intermediates"):
+            if not snapshots.get("show_intermediates"):
                 snapshots["show_intermediates"] = True
         else:
             snapshots = {"frequency": 1, "show_intermediates": True, "species": None, "first_snapshot": True}
@@ -1688,7 +1688,7 @@ class ReactionDynamics:
 
         if self.diagnostic_rxn_data == {}:    # INITIALIZE the dictionary self.diagnostic_rxn_data, if needed
             for i in range(self.reaction_data.number_of_reactions()):
-                self.diagnostic_rxn_data[i] = MovieTabular(parameter_name="START TIME")       # One per reaction
+                self.diagnostic_rxn_data[i] = MovieTabular(parameter_name="START_TIME")       # One per reaction
 
         data_snapshot = {}
         # Add entries to the above dictionary, starting with the Delta conc. for all the chemicals
@@ -1702,8 +1702,8 @@ class ReactionDynamics:
 
 
 
-    def get_diagnostic_rxn_data(self, rxn_index: int,
-                                t=None, tail=None, print_reaction=True) -> pd.DataFrame:
+    def get_diagnostic_rxn_data(self, rxn_index: int, head=None, tail=None,
+                                t=None, print_reaction=True) -> pd.DataFrame:
         """
         Return a Pandas dataframe with the diagnostic run data of the requested SINGLE reaction,
         from the time that the diagnostics were activated by a call to set_diagnostics().
@@ -1719,20 +1719,29 @@ class ReactionDynamics:
 
         Optionally, limit the dataframe to a specified numbers of rows at the end,
         or just return one entry corresponding to a specific time
-        (the row with the CLOSEST time to the requested one.)
+        (the row with the CLOSEST time to the requested one, which will appear in an extra column
+        called "search_value".)
 
         :param rxn_index:       An integer that indexes the reaction of interest (numbering starts at 0)
-        :param t:               (OPTIONAL) Individual time to pluck out from the dataframe;
-                                    the row with closest time will be returned
+
+        :param head:            (OPTIONAL) Number of records to return,
+                                    from the start of the diagnostic dataframe.
         :param tail:            (OPTIONAL) Number of records to return,
                                     from the end of the diagnostic dataframe.
-                                    If the "t" argument is passed, this argument will get ignored
+                                    If either the "head" arguments is passed, this argument will get ignored
+
+        :param t:               (OPTIONAL) Individual time to pluck out from the dataframe;
+                                    the row with closest time will be returned.
+                                    If this parameter is specified, an extra column - called "search_value" -
+                                    is inserted at the beginning of the dataframe
+                                    If either the "head" or the "tail" arguments are passed, this argument will get ignored
+
         :param print_reaction:  (OPTIONAL) If True (default), concisely print out the requested reaction
 
         :return:                A Pandas data frame with (all or some of)
                                     the diagnostic data of the specified reaction.
                                     Columns of the dataframes:
-                                    'START TIME' 'Delta A' 'Delta B'... 'delta_time' 'caption'
+                                    'START_TIME' 'Delta A' 'Delta B'... 'delta_time' 'caption'
         """
         # Validate the reaction index
         self.reaction_data.assert_valid_rxn_index(rxn_index)
@@ -1746,7 +1755,7 @@ class ReactionDynamics:
             raise Exception(f"get_diagnostic_rxn_data(): no diagnostics data exists for reaction index {rxn_index} ;"
                             f" did you call set_diagnostics() prior to the simulation run?")
 
-        return movie_obj.get(tail=tail, search_col="TIME", search_val=t)
+        return movie_obj.get_dataframe(head=head, tail=tail, search_col="START_TIME", search_val=t)
 
 
 
