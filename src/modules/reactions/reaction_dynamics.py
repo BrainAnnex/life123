@@ -82,7 +82,7 @@ class ReactionDynamics:
         self.diagnostic_conc_data = MovieTabular(parameter_name="TIME")
                                         # An expanded version of the normal System History.
                                         #   Columns of the dataframes:
-                                        #       'TIME' 	'A' 'B' ...  'primary_timestep' 'caption'
+                                        #       'TIME' 	'A' 'B' ...  'delta_time' 'caption'
                                         #
                                         #   Note: if an interval run is aborted, NO entry is created here
                                         #         (this approach DIFFERS from that of other diagnostic data)
@@ -586,9 +586,9 @@ class ReactionDynamics:
         if self.diagnostics:
             # Save up the current System State, with some extra info, as "diagnostic 'baseline' data"
             system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
-            system_data["primary_timestep"] = time_step
-            self.diagnostic_conc_data.store(par=self.system_time,
-                                            data_snapshot=system_data)
+            system_data["delta_time"] = time_step
+            self.save_diagnostic_conc_data(system_data)
+            #self.diagnostic_conc_data.store(par=self.system_time, data_snapshot=system_data)
 
 
         i = 0
@@ -628,9 +628,9 @@ class ReactionDynamics:
             if self.diagnostics:
                 # Save up the current System State, with some extra info, as "diagnostic 'baseline' data"
                 system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
-                system_data["primary_timestep"] = time_step
-                self.diagnostic_conc_data.store(par=self.system_time,
-                                                data_snapshot=system_data)
+                system_data["delta_time"] = time_step
+                self.save_diagnostic_conc_data(system_data)
+                #self.diagnostic_conc_data.store(par=self.system_time, data_snapshot=system_data)
 
             if variable_steps:
                 time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
@@ -1758,14 +1758,25 @@ class ReactionDynamics:
         return movie_obj.get_dataframe(head=head, tail=tail, search_col="START_TIME", search_val=t)
 
 
+    def save_diagnostic_conc_data(self, system_data) -> None:
+        """
+        Used to save the diagnostic concentration data during the run, indexed by the current System Time.
+        Note: if an interval run is aborted, by convention NO entry is created here
+
+        :return: None
+        """
+        self.diagnostic_conc_data.store(par=self.system_time,
+                                        data_snapshot=system_data)
+
+
 
     def get_diagnostic_conc_data(self) -> pd.DataFrame:
         """
         Return the diagnostic concentration data saved during the run.
-        Note: if an interval run is aborted, NO entry is created here
+        Note: if an interval run is aborted, by convention NO entry is created here
 
         :return: A Pandas dataframe, with the columns:
-                    'TIME' 	'A' 'B' ...  'primary_timestep' 'n_substeps' 'substep_number' 'caption'
+                    'TIME' 	'A' 'B' ...  'delta_time' 'caption'
         """
         return self.diagnostic_conc_data.get_dataframe()
 
@@ -1873,7 +1884,7 @@ class ReactionDynamics:
                                        row_baseline=row_baseline, row_list=row_list)
 
 
-        while row_baseline < len(self.diagnostic_conc_data.get_dataframe()) - 2:
+        while row_baseline < len(self.get_diagnostic_conc_data()) - 2:
             row_baseline += 1
 
             print("Advance a single-step across all tables")
@@ -1905,7 +1916,7 @@ class ReactionDynamics:
         print("-----------")
         print("ROW of baseline data: ", row_baseline)
 
-        current_time = self.diagnostic_conc_data.get_dataframe().loc[row_baseline]['TIME']
+        current_time = self.get_diagnostic_conc_data().loc[row_baseline]['TIME']
         print(f"TIME = {current_time:.5g}")
 
         print("row_list: ", row_list)
@@ -1914,7 +1925,7 @@ class ReactionDynamics:
         chemical_list = self.reaction_data.get_all_names()
         chemical_delta_list = self._delta_names()
 
-        conc_arr_before = self.diagnostic_conc_data.get_dataframe().loc[row_baseline][chemical_list].to_numpy().astype(float)
+        conc_arr_before = self.get_diagnostic_conc_data().loc[row_baseline][chemical_list].to_numpy().astype(float)
         print("baseline concentrations: ", conc_arr_before)
 
         delta_cumulative = np.zeros(self.reaction_data.number_of_chemicals(),
@@ -1942,7 +1953,7 @@ class ReactionDynamics:
         conc_after = conc_arr_before + delta_cumulative
         print("updated concentrations: ", conc_after)
 
-        next_system_state = self.diagnostic_conc_data.get_dataframe().loc[row_baseline + 1][chemical_list].to_numpy()
+        next_system_state = self.get_diagnostic_conc_data().loc[row_baseline + 1][chemical_list].to_numpy()
         print(f"concentrations from the next row ({row_baseline + 1}) of the system state: ", next_system_state)
 
         status = np.allclose(conc_after.astype(float), next_system_state.astype(float))
@@ -1978,7 +1989,7 @@ class ReactionDynamics:
         assert self.diagnostics, "ReactionDynamics.explain_time_advance(): diagnostics must first be enabled; " \
                                  "call set_diagnostics() prior to the reaction run"
 
-        df = self.diagnostic_conc_data.get_dataframe()
+        df = self.get_diagnostic_conc_data()
         assert df is not None, \
             "ReactionDynamics.explain_time_advance(): no diagnostic data found.  " \
             "Did you call set_diagnostics() prior to the reaction run?"
@@ -2009,9 +2020,9 @@ class ReactionDynamics:
             if not np.allclose(grad[i], grad_shifted[i]):
                 #print (f"   Detection at element {i} : time={t[i]}")
                 #print (f"   From time {start_interval} to {t[i]}, in steps of {grad_shifted[i]}")
-                primary_timestep = df.loc[i, "primary_timestep"]
+                delta_time = df.loc[i, "delta_time"]
                 n_full_steps_taken = self._explain_time_advance_helper(t_start=start_interval, t_end=t[i],
-                                                                             delta_baseline=grad_shifted[i], primary_timestep=primary_timestep, silent=silent)
+                                                                             delta_baseline=grad_shifted[i], delta_time=delta_time, silent=silent)
 
                 start_interval = t[i]
                 if n_full_steps_taken > 0:
@@ -2021,9 +2032,9 @@ class ReactionDynamics:
 
 
         # Final wrap-up of the interval's endpoint
-        primary_timestep = df.loc[n_entries-1, "primary_timestep"]
+        delta_time = df.loc[n_entries-1, "delta_time"]
         n_full_steps_taken = self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1],
-                                                                     delta_baseline=grad_shifted[-1], primary_timestep=primary_timestep, silent=silent)
+                                                                     delta_baseline=grad_shifted[-1], delta_time=delta_time, silent=silent)
 
         if n_full_steps_taken > 0:
             total_number_full_steps += n_full_steps_taken
@@ -2038,21 +2049,21 @@ class ReactionDynamics:
 
 
 
-    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, primary_timestep, silent) -> Union[int, float]:
+    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, delta_time, silent) -> Union[int, float]:
         """
         Using the provided data, about a group of same-size steps, create and print a description of it for the user
 
         :param t_start:
         :param t_end:
         :param delta_baseline:
-        :param primary_timestep:
+        :param delta_time:
         :return:                The corresponding number of FULL steps taken (it may be fractional)
         """
         if np.allclose(t_start, t_end):
             #print(f"   [Ignoring interval starting and ending at same time {t_start:.3g}]")
             return 0
 
-        if np.allclose(delta_baseline, primary_timestep):
+        if np.allclose(delta_baseline, delta_time):
             n_steps = round((t_end - t_start) / delta_baseline)
             step_s = "step" if n_steps == 1 else "steps"  # singular vs. plural
             if not silent:
@@ -2060,17 +2071,17 @@ class ReactionDynamics:
             return n_steps
         else:
             # Detected "reduced steps" (which maybe be due to substeps or to steps that were aborted and automatically re-run
-            #print(f"primary_timestep/delta_baseline is:  {primary_timestep}/{delta_baseline} = {primary_timestep/delta_baseline}")
+            #print(f"delta_time/delta_baseline is:  {delta_time}/{delta_baseline} = {delta_time/delta_baseline}")
             n_steps = round((t_end - t_start) / delta_baseline)
             if not silent:
                 if n_steps == 1:    # Use wording for the singular
                     print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} reduced step of {delta_baseline:.3g} "
-                          f"(1/{round(primary_timestep/delta_baseline)} of requested step)") # Formerly saying "substep" and "full step"
+                          f"(1/{round(delta_time/delta_baseline)} of requested step)") # Formerly saying "substep" and "full step"
                 else:               # Use wording for the plural
                     print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} reduced step of {delta_baseline:.3g} "
-                          f"(each 1/{round(primary_timestep/delta_baseline)} of requested step)")
+                          f"(each 1/{round(delta_time/delta_baseline)} of requested step)")
 
-            return (n_steps *  delta_baseline / primary_timestep)
+            return (n_steps *  delta_baseline / delta_time)
 
 
 
