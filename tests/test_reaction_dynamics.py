@@ -679,13 +679,13 @@ def test_examine_increment_array():
 
     # INITIAL THRESHOLD (fast_threshold_fraction=0.05)
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([4.98, 0, 0]), baseline_conc_array=np.array([100., 0, 0]),
-                                time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([4.98, 0, 0]), baseline_conc_array=np.array([100., 0, 0]),
+                                         time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag
 
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 5.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 5.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
+                                         time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
     assert rxn.fast_rxns() == [0]       # The one reaction present got marked as "Fast" b/c of large delta_conc
     assert not rxn.are_all_slow_rxns()
 
@@ -693,31 +693,31 @@ def test_examine_increment_array():
     rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, -4.98, 0]), baseline_conc_array=np.array([ 0, 100.,0]),
-                                time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -4.98, 0]), baseline_conc_array=np.array([0, 100., 0]),
+                                         time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([-5.01, 0, 0]), baseline_conc_array=np.array([100., 0, 0]),
-                                time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([-5.01, 0, 0]), baseline_conc_array=np.array([100., 0, 0]),
+                                         time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
     assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc)
 
     rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, -5.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -5.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
+                                         time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
     assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc),
                                         # no matter which chemical species is being affected
 
     rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([2.49, 0, 0]), baseline_conc_array=np.array([100., 0, 0]),
-                                time_subdivision=2, fast_threshold_fraction=0.05, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([2.49, 0, 0]), baseline_conc_array=np.array([100., 0, 0]),
+                                         time_subdivision=2, fast_threshold_fraction=0.05, use_baseline = True)
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 2.51, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                time_subdivision=2, fast_threshold_fraction=0.05, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 2.51, 0]), baseline_conc_array=np.array([0, 100., 0]),
+                                         time_subdivision=2, fast_threshold_fraction=0.05, use_baseline = True)
     assert rxn.fast_rxns() == [0]       # The reaction got marked as "Fast" b/c of large delta_conc for a time_subdivision of 2
     assert not rxn.are_all_slow_rxns()
 
@@ -734,32 +734,32 @@ def test_examine_increment_array():
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 0, 5.01]), baseline_conc_array=np.array([0, 0, 100.]),
-                                time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 0, 5.01]), baseline_conc_array=np.array([0, 0, 100.]),
+                                         time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
     assert rxn.slow_rxns() == [0, 1]    # No change, because the threshold is now higher
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 9.99, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 0, -9.99]), baseline_conc_array=np.array([0, 0, 100.]),
-                                time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([9.99, 0, 0]), baseline_conc_array=np.array([100., 0, 0]),
-                                time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, -9.99, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 9.99, 0]), baseline_conc_array=np.array([0, 100., 0]),
+                                         time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 0, -9.99]), baseline_conc_array=np.array([0, 0, 100.]),
+                                         time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([9.99, 0, 0]), baseline_conc_array=np.array([100., 0, 0]),
+                                         time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -9.99, 0]), baseline_conc_array=np.array([0, 100., 0]),
+                                         time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
     assert rxn.slow_rxns() == [0, 1]    # Still no change, because all the abs(delta_conc) still below threshold
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=1, delta_conc_array=np.array([0, 10.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=1, delta_conc_array=np.array([0, 10.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
+                                         time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
     assert rxn.slow_rxns() == [0]       # The last function call was "the straw that broke the camel's back" for reaction 1 (no longer "slow")!
     assert rxn.fast_rxns() == [1]
     assert not rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, -10.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -10.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
+                                         time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
     assert rxn.slow_rxns() == []        # The last function call was "straw that broke the camel's back" for reaction 0 (no longer "slow")!
     assert rxn.fast_rxns() == [0, 1]
     assert not rxn.are_all_slow_rxns()
@@ -768,20 +768,20 @@ def test_examine_increment_array():
     rxn.set_rxn_speed(1, "S")
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 0, 3.32]), baseline_conc_array=np.array([0, 0, 100.]),
-                                time_subdivision=3, fast_threshold_fraction=0.1, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 0, 3.32]), baseline_conc_array=np.array([0, 0, 100.]),
+                                         time_subdivision=3, fast_threshold_fraction=0.1, use_baseline = True)
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag for reaction 0
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 3.34, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                time_subdivision=3, fast_threshold_fraction=0.1, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 3.34, 0]), baseline_conc_array=np.array([0, 100., 0]),
+                                         time_subdivision=3, fast_threshold_fraction=0.1, use_baseline = True)
     assert rxn.fast_rxns() == [0]       # Reaction 0 got marked as "Fast" b/c of large delta_conc for a time_subdivision of 3
 
-    rxn.examine_increment_array(rxn_index=1, delta_conc_array=np.array([0, 0, -0.99]), baseline_conc_array=np.array([0, 0, 100.]),
-                                time_subdivision=10, fast_threshold_fraction=0.1, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=1, delta_conc_array=np.array([0, 0, -0.99]), baseline_conc_array=np.array([0, 0, 100.]),
+                                         time_subdivision=10, fast_threshold_fraction=0.1, use_baseline = True)
     assert rxn.fast_rxns() == [0]       # The small increment didn't trip the current "slow reaction" tag for reaction 1
 
-    rxn.examine_increment_array(rxn_index=1, delta_conc_array=np.array([0, -1.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                time_subdivision=10, fast_threshold_fraction=0.1, use_baseline = True)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=1, delta_conc_array=np.array([0, -1.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
+                                         time_subdivision=10, fast_threshold_fraction=0.1, use_baseline = True)
     assert rxn.fast_rxns() == [0, 1]    # Reaction 1 got marked as "Fast" b/c of large delta_conc for a time_subdivision of 3
 
 
@@ -798,13 +798,13 @@ def test_examine_increment_array_2():
 
     # INITIAL THRESHOLD (fast_threshold_fraction=5.)
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([4.98, 0, 0]),
-                                time_subdivision=1, fast_threshold_fraction=5.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([4.98, 0, 0]),
+                                         time_subdivision=1, fast_threshold_fraction=5.)
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag
 
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 5.01, 0]),
-                                time_subdivision=1, fast_threshold_fraction=5.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 5.01, 0]),
+                                         time_subdivision=1, fast_threshold_fraction=5.)
     assert rxn.fast_rxns() == [0]       # The one reaction present got marked as "Fast" b/c of large delta_conc
     assert not rxn.are_all_slow_rxns()
 
@@ -812,31 +812,31 @@ def test_examine_increment_array_2():
     rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, -4.98, 0]),
-                                time_subdivision=1, fast_threshold_fraction=5.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -4.98, 0]),
+                                         time_subdivision=1, fast_threshold_fraction=5.)
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([-5.01, 0, 0]),
-                                time_subdivision=1, fast_threshold_fraction=5.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([-5.01, 0, 0]),
+                                         time_subdivision=1, fast_threshold_fraction=5.)
     assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc)
 
     rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, -5.01, 0]),
-                                time_subdivision=1, fast_threshold_fraction=5.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -5.01, 0]),
+                                         time_subdivision=1, fast_threshold_fraction=5.)
     assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc),
     # no matter which chemical species is being affected
 
     rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([2.49, 0, 0]),
-                                time_subdivision=2, fast_threshold_fraction=5.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([2.49, 0, 0]),
+                                         time_subdivision=2, fast_threshold_fraction=5.)
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 2.51, 0]),
-                                time_subdivision=2, fast_threshold_fraction=5.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 2.51, 0]),
+                                         time_subdivision=2, fast_threshold_fraction=5.)
     assert rxn.fast_rxns() == [0]       # The reaction got marked as "Fast" b/c of large delta_conc for a time_subdivision of 2
     assert not rxn.are_all_slow_rxns()
 
@@ -853,32 +853,32 @@ def test_examine_increment_array_2():
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 0, 5.01]),
-                                time_subdivision=1, fast_threshold_fraction=10.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 0, 5.01]),
+                                         time_subdivision=1, fast_threshold_fraction=10.)
     assert rxn.slow_rxns() == [0, 1]    # No change, because the threshold is now higher
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 9.99, 0]),
-                                time_subdivision=1, fast_threshold_fraction=10.)
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 0, -9.99]),
-                                time_subdivision=1, fast_threshold_fraction=10.)
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([9.99, 0, 0]),
-                                time_subdivision=1, fast_threshold_fraction=10.)
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, -9.99, 0]),
-                                time_subdivision=1, fast_threshold_fraction=10.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 9.99, 0]),
+                                         time_subdivision=1, fast_threshold_fraction=10.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 0, -9.99]),
+                                         time_subdivision=1, fast_threshold_fraction=10.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([9.99, 0, 0]),
+                                         time_subdivision=1, fast_threshold_fraction=10.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -9.99, 0]),
+                                         time_subdivision=1, fast_threshold_fraction=10.)
     assert rxn.slow_rxns() == [0, 1]    # Still no change, because all the abs(delta_conc) still below threshold
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=1, delta_conc_array=np.array([0, 10.01, 0]),
-                                time_subdivision=1, fast_threshold_fraction=10.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=1, delta_conc_array=np.array([0, 10.01, 0]),
+                                         time_subdivision=1, fast_threshold_fraction=10.)
     assert rxn.slow_rxns() == [0]       # The last function call was "the straw that broke the camel's back" for reaction 1 (no longer "slow")!
     assert rxn.fast_rxns() == [1]
     assert not rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, -10.01, 0]),
-                                time_subdivision=1, fast_threshold_fraction=10.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -10.01, 0]),
+                                         time_subdivision=1, fast_threshold_fraction=10.)
     assert rxn.slow_rxns() == []        # The last function call was "straw that broke the camel's back" for reaction 0 (no longer "slow")!
     assert rxn.fast_rxns() == [0, 1]
     assert not rxn.are_all_slow_rxns()
@@ -887,20 +887,20 @@ def test_examine_increment_array_2():
     rxn.set_rxn_speed(1, "S")
     assert rxn.are_all_slow_rxns()
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 0, 3.32]),
-                                time_subdivision=3, fast_threshold_fraction=10.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 0, 3.32]),
+                                         time_subdivision=3, fast_threshold_fraction=10.)
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag for reaction 0
 
-    rxn.examine_increment_array(rxn_index=0, delta_conc_array=np.array([0, 3.34, 0]),
-                                time_subdivision=3, fast_threshold_fraction=10.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 3.34, 0]),
+                                         time_subdivision=3, fast_threshold_fraction=10.)
     assert rxn.fast_rxns() == [0]       # Reaction 0 got marked as "Fast" b/c of large delta_conc for a time_subdivision of 3
 
-    rxn.examine_increment_array(rxn_index=1, delta_conc_array=np.array([0, 0, -0.99]),
-                                time_subdivision=10, fast_threshold_fraction=10.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=1, delta_conc_array=np.array([0, 0, -0.99]),
+                                         time_subdivision=10, fast_threshold_fraction=10.)
     assert rxn.fast_rxns() == [0]       # The small increment didn't trip the current "slow reaction" tag for reaction 1
 
-    rxn.examine_increment_array(rxn_index=1, delta_conc_array=np.array([0, -1.01, 0]),
-                                time_subdivision=10, fast_threshold_fraction=10.)
+    rxn.examine_increment_array_OBSOLETE(rxn_index=1, delta_conc_array=np.array([0, -1.01, 0]),
+                                         time_subdivision=10, fast_threshold_fraction=10.)
     assert rxn.fast_rxns() == [0, 1]    # Reaction 1 got marked as "Fast" b/c of large delta_conc for a time_subdivision of 3
 
 
