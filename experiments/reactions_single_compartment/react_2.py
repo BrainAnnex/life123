@@ -18,10 +18,10 @@
 #
 # Same as the experiment _"react_1"_ , but with adaptive variable time steps
 #
-# LAST REVISED: Mar. 23, 2023
+# LAST REVISED: May 16, 2023
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+import set_path      # Importing this module will add the project's home directory +to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -55,8 +55,6 @@ chem_data = chem(names=["A", "B"])
 chem_data.add_reaction(reactants=["A"], products=["B"], 
                        forward_rate=3., reverse_rate=2.)
 
-print("Number of reactions: ", chem_data.number_of_reactions())
-
 # %%
 chem_data.describe_reactions()
 
@@ -78,7 +76,7 @@ dynamics.set_conc([10., 50.])
 dynamics.describe_state()
 
 # %%
-dynamics.history.get_dataframe()
+dynamics.get_history()
 
 # %% [markdown] tags=[]
 # ## Run the reaction
@@ -87,11 +85,13 @@ dynamics.history.get_dataframe()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 dynamics.single_compartment_react(initial_step=0.1, target_end_time=1.2,
-                                  variable_steps=True, thresholds={"low": 0.5, "high": 0.8},
+                                  variable_steps=True, 
+                                  thresholds={"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.},
                                   snapshots={"initial_caption": "1st reaction step",
-                                             "final_caption": "last reaction step"},
+                                             "final_caption": "last reaction step"}
                                   )
-# Note: we are accepting the default variable_steps_threshold_abort = 1.44 and abort_step_reduction_factor = 2.
+
+# Note: default values exist, and could be used, for all the thresholds
 
 # %% [markdown]
 # ## The flag _variable_steps_ automatically adjusts up or down the time step,  whenever the changes of concentrations are, respectively, "slow" or "fast" (as determined using the specified _thresholds_ )
@@ -105,18 +105,20 @@ dynamics.explain_time_advance()
 
 # %% [markdown] tags=[]
 # ## Notice how the reaction proceeds in smaller steps in the early times, when [A] and [B] are changing much more rapidly
-# ### That resulted from passing the flag _variable_steps_ to single_compartment_react()
+# ### That resulted from passing the flag _variable_steps=True_ to single_compartment_react()
 
 # %% [markdown] tags=[]
-# ## Detailed Example 1: **going from 0.1375 to 0.1875**    
+# ## Scrutinizing some instances of step-size changes
+
+# %% [markdown] tags=[]
+# ### Detailed Example 1: **going from 0.1375 to 0.1875**    
 
 # %%
 lookup = dynamics.get_history(t_start=0.1375, t_end=0.1875)
 lookup
 
 # %%
-delta_concentrations = (lookup.iloc[1][['A', 'B']] - 
-                        lookup.iloc[0][['A', 'B']]).to_numpy()
+delta_concentrations = dynamics.extract_delta_concentrations(lookup, 7, 8, ['A', 'B'])
 delta_concentrations
 
 # %% [markdown]
@@ -131,7 +133,7 @@ rxn_data = dynamics.get_diagnostic_rxn_data(rxn_index=0)
 rxn_data[0:12]
 
 # %%
-delta_row = dynamics.get_diagnostic_rxn_data(rxn_index=0, t=0.1375) # Locate the row with interval's start time
+delta_row = dynamics.get_diagnostic_rxn_data(rxn_index=0, t=0.1375) # Locate the row with the interval's start time
 delta_row
 
 # %%
@@ -145,18 +147,17 @@ adjusted_L2_rate
 dynamics.step_determiner_A(adjusted_L2_rate)
 
 # %% [markdown]
-# #### The above conclusion is that the step will be **HALVED** at the next round : that's because the adjusted_L2_rate > the "high" value given in the argument _thresholds={"low": 0.5, "high": 0.8}_
+# #### The above conclusion is that the step will be **HALVED** at the next round : that's because the adjusted_L2_rate > the "high" value given in the argument _thresholds={"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.}_ , and the and the step_determiner() function returned 0.5
 
 # %% [markdown] tags=[]
-# ## Detailed Example 2: **going from 0.1875 to 0.2125**   
+# ### Detailed Example 2: **going from 0.1875 to 0.2125**   
 
 # %%
 lookup = dynamics.get_history(t_start=0.1875, t_end=0.2125)
 lookup
 
 # %%
-delta_concentrations = (lookup.iloc[1][['A', 'B']] - 
-                        lookup.iloc[0][['A', 'B']]).to_numpy()
+delta_concentrations = dynamics.extract_delta_concentrations(lookup, 8, 9, ['A', 'B'])
 delta_concentrations
 
 # %% [markdown]
@@ -170,7 +171,7 @@ adjusted_L2_rate
 dynamics.step_determiner_A(adjusted_L2_rate)
 
 # %% [markdown]
-# #### The above conclusion is that the step will be **DOUBLED** at the next round : that's because the adjusted_L2_rate < the "low" value given in the argument _thresholds={"low": 0.5, "high": 0.8}_
+# #### The above conclusion is that the step will be **DOUBLED** at the next round : that's because the adjusted_L2_rate < the "low" value given in the argument _thresholds={"low": 0.5}_ , and the step_determiner() function returned 2
 
 # %% [markdown]
 # # Check the final equilibrium
@@ -191,6 +192,9 @@ dynamics.plot_curves(colors=['blue', 'orange'])
 # %%
 dynamics.plot_curves(colors=['blue', 'orange'], show_intervals=True)
 
+# %% [markdown]
+# #### Compare the above with the fixed step sizes (always 0.1) of experiment `react_1`
+
 # %%
 dynamics.plot_step_sizes(show_intervals=True)
 
@@ -203,5 +207,11 @@ dynamics.get_diagnostic_conc_data()
 
 # %%
 dynamics.get_diagnostic_rxn_data(rxn_index=0)      # For the 0-th reaction (the only reaction in our case)
+
+# %% [markdown]
+# ### Note that diagnostic data with Delta Concentrations - above and below - also record the values that were considered (but not actually used) during ABORTED steps
+
+# %%
+dynamics.get_diagnostic_delta_conc_data()
 
 # %%

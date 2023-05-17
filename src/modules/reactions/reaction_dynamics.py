@@ -87,9 +87,9 @@ class ReactionDynamics:
                                         #   Note: if an interval run is aborted, NO entry is created here
                                         #         (this approach DIFFERS from that of other diagnostic data)
 
-        self.diagnostic_delta_conc_data = MovieTabular(parameter_name="TIME")
+        self.diagnostic_delta_conc_data = MovieTabular(parameter_name="START_TIME")
                                         #   Columns of the dataframes:
-                                        #       'TIME' 	'Delta A' 'Delta B' ...
+                                        #       'START_TIME' 	'Delta A' 'Delta B' ...
                                         #               [plus, if applicable, other fields such as 'action', 'L2', 'step_factors']
                                         #
                                         #   Note: entries are always added, even if an interval run is aborted
@@ -515,8 +515,10 @@ class ReactionDynamics:
         :param silent:              If True, less output is generated
 
         :param variable_steps:      If True, the steps sizes will get automatically adjusted, based on thresholds
-        :param thresholds:          (OPTIONAL) dict.  For now only used for variable_steps.
-                                        EXAMPLE: {"low": 0.5, "high": 0.8}
+
+        :param thresholds:          (OPTIONAL) dict, to over-ride various default values.
+                                        Allowed keys are "low", "high", "abort", "reduction_factor" (any other key is ignored)
+                                        EXAMPLE: {"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.}
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
@@ -547,6 +549,10 @@ class ReactionDynamics:
                 self.variable_steps_threshold_low = thresholds["low"]
             if "high" in thresholds:
                 self.variable_steps_threshold_high = thresholds["high"]
+            if "abort"  in thresholds:
+                self.variable_steps_threshold_abort = thresholds["abort"]
+            if "reduction_factor"  in thresholds:
+                self.abort_step_reduction_factor = thresholds["reduction_factor"]
 
         """
         Determine all the various time parameters that were not explicitly provided
@@ -738,7 +744,7 @@ class ReactionDynamics:
                     # Abort the current step if the rate of change is deemed excessive.  TODO: maybe ALWAYS check this, regardless of variable-steps option
                     if adjusted_L2_rate > self.variable_steps_threshold_abort:
                         msg =   f"INFO: The current time step ({delta_time_full}) " \
-                                f"leads to an 'adjusted L2 rate' ({adjusted_L2_rate:.4g}) > HIGH threshold ({self.variable_steps_threshold_abort}):\n" \
+                                f"leads to an 'adjusted L2 rate' ({adjusted_L2_rate:.4g}) > ABORT threshold ({self.variable_steps_threshold_abort}):\n" \
                                 f"      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time_full/self.abort_step_reduction_factor:.5g} " \
                                 f"[Step started at t={self.system_time:.5g}, and will rewind there]"
                         #print("WARNING: ", msg)
@@ -858,7 +864,7 @@ class ReactionDynamics:
         :return:     A factor by which to multiple the time step at the next iteration round;
                         if no change is deemed necessary, 1 is returned
         """
-        factor = 2
+        factor = 2      # TODO: perhaps allow a way to change this
 
         if norm > self.variable_steps_threshold_high:
             return 1/factor     # "DECREASE"
@@ -1265,154 +1271,6 @@ class ReactionDynamics:
 
 
 
-    def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True) -> Union[bool, dict]:
-        """
-        Ascertain whether the given concentrations are in equilibrium for the specified reactions
-        (by default, for all reactions)
-        TODO: optionally display last lines in diagnostic data
-
-        :param rxn_index:   The index (0-based integer) to identify the reaction of interest;
-                                if None, then check all the reactions
-        :param conc:        Dict with the concentrations of the species involved in the reaction(s).
-                            The keys are the chemical names
-                                EXAMPLE: {'A': 23.9, 'B': 36.1}
-                            If None, then use the current System concentrations
-        :param tolerance:   Allowable relative tolerance, as a PERCENTAGE, to establish satisfactory equality
-        :param explain:     If True, print out details about the analysis,
-                                incl. the formula(s) being used to check the equilibrium
-                                EXAMPLES:   "([C][D]) / ([A][B])"
-                                            "[B] / [A]^2"
-
-        :return:            Return True if ALL the reactions are close enough to an equilibrium,
-                                as allowed by the requested tolerance;
-                                otherwise, return a dict of the form {False: [list of reaction index]}
-                                for all the reactions that failed the criterion
-                                (EXAMPLE:  {False:  [3, 6:]})
-        """
-        if conc is None:
-            conc=self.get_conc_dict()   # Use the current System concentrations
-
-        failures_dict = {False: []}     # 1-element dict whose value is
-                                        # a list of reactions that fail to meet the criterion for equilibrium
-
-        if rxn_index is not None:
-            # Check the 1 given reaction
-            if explain:
-                description = self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)
-                print(description)
-
-            status = self.reaction_in_equilibrium(rxn_index=rxn_index, conc=conc, tolerance=tolerance, explain=explain)
-            if not status:
-                failures_dict = {False: [rxn_index]}
-
-        else:
-            # Check all the reactions
-            status = True   # Overall status
-            description_list = self.reaction_data.multiple_reactions_describe(concise=True)
-            for i in range(self.reaction_data.number_of_reactions()):
-                # For each reaction
-                if explain:
-                    print(description_list[i])
-
-                single_status = self.reaction_in_equilibrium(rxn_index=i, conc=conc, tolerance=tolerance, explain=explain)
-
-                if not single_status:
-                    status = False
-                    failures_dict[False].append(i)
-
-        if status:
-            return True
-        else:
-            return failures_dict
-
-
-
-    def reaction_in_equilibrium(self, rxn_index, conc, tolerance, explain: bool) -> bool:
-        """
-        Ascertain whether the given concentrations are in equilibrium for the specified SINGLE reaction;
-        return True or False, accordingly.
-
-        :param rxn_index:   The index (0-based integer) to identify the reaction of interest
-        :param conc:        Dict with the concentrations of the species involved in the reaction.
-                            The keys are the chemical names
-                                EXAMPLE: {'A': 23.9, 'B': 36.1}
-        :param tolerance:   Allowable relative tolerance, as a PERCENTAGE, to establish satisfactory equality
-        :param explain:     If True, print out the formula being used, as well as some other info.
-                                EXAMPLES of formulas:   "([C][D]) / ([A][B])"
-                                                        "[B] / [A]^2"
-        :return:            True if the given reaction is close enough to an equilibrium,
-                            as allowed by the requested tolerance
-        """
-        rxn = self.reaction_data.get_reaction(rxn_index)
-
-        reactants = self.reaction_data.extract_reactants(rxn)     # A list of triplets
-        products = self.reaction_data.extract_products(rxn)      # A list of triplets
-        kF = self.reaction_data.extract_forward_rate(rxn)
-        kB = self.reaction_data.extract_back_rate(rxn)
-
-        rate_ratio = kF / kB                    # Ratio of forward/reverse reaction rates
-
-        conc_ratio = 1.
-        numerator = ""
-        denominator = ""
-        all_concs = []      # List of strings
-
-        for p in products:
-            # Loop over the reaction products
-            species_index = self.reaction_data.extract_species_index(p)
-            rxn_order = self.reaction_data.extract_rxn_order(p)
-
-            species_name = self.reaction_data.get_name(species_index)
-            species_conc = conc.get(species_name)
-            assert species_conc is not None, f"reaction_in_equilibrium(): unable to proceed because the " \
-                                             f"concentration of `{species_name}` was not provided"
-            conc_ratio *= (species_conc ** rxn_order)
-            if explain:
-                all_concs.append(f"[{species_name}] = {species_conc:,.4g}")
-                numerator += f"[{species_name}]"
-                if rxn_order > 1:
-                    numerator += f"^{rxn_order} "
-
-        if explain and len(products) > 1:
-            numerator = f"({numerator})"
-
-        for r in reactants:
-            # Loop over the return
-            species_index = self.reaction_data.extract_species_index(r)
-            rxn_order = self.reaction_data.extract_rxn_order(r)
-
-            species_name = self.reaction_data.get_name(species_index)
-            species_conc = conc.get(species_name)
-            assert species_conc is not None, f"reaction_in_equilibrium(): unable to proceed because the " \
-                                             f"concentration of `{species_name}` was not provided"
-            conc_ratio /= (species_conc ** rxn_order)
-            if explain:
-                all_concs.append(f"[{species_name}] = {species_conc:,.4g}")
-                denominator += f"[{species_name}]"
-                if rxn_order > 1:
-                    denominator += f"^{rxn_order} "
-
-
-        status = np.allclose(conc_ratio, rate_ratio, rtol=tolerance/100., atol=0)
-
-        if explain:
-            if len(reactants) > 1:
-                denominator = f"({denominator})"
-
-            print(f"Final concentrations: ", " ; ".join(all_concs))
-            print(f"1. Ratio of reactant/product concentrations, adjusted for reaction orders: {conc_ratio:,.6g}")
-            print(f"    Formula used:  {numerator} / {denominator}")
-            print(f"2. Ratio of forward/reverse reaction rates: {rate_ratio}")
-            print(f"Discrepancy between the two values: {100 * abs(conc_ratio - rate_ratio)/rate_ratio :,.4g} %")
-            if status:
-                print(f"Reaction IS in equilibrium (within {tolerance:.2g}% tolerance)\n")
-            else:
-                print(f"Reaction is NOT in equilibrium (not within {tolerance:.2g}% tolerance)\n")
-
-        return status
-
-
-
 
     #############################################################################################
     #                                                                                           #
@@ -1788,7 +1646,7 @@ class ReactionDynamics:
 
         df_sum = rxn_0[fields]
 
-        time_col = rxn_0["TIME"]
+        time_col = rxn_0["START_TIME"]
 
         n_rows = len(df_sum)
 
@@ -1798,7 +1656,7 @@ class ReactionDynamics:
                                         "of diagnostic reaction data have different numbers of rows"
             df_sum += rxn[fields]
 
-        df_sum.insert(0, "TIME", time_col)
+        df_sum.insert(0, "START_TIME", time_col)
 
         return df_sum
 
@@ -2049,7 +1907,7 @@ class ReactionDynamics:
             n_steps = round((t_end - t_start) / delta_baseline)
             step_s = "step" if n_steps == 1 else "steps"  # singular vs. plural
             if not silent:
-                print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} FULL {step_s} of {delta_baseline:.3g}")
+                print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} {step_s} of {delta_baseline:.3g}")
             return n_steps
         else:
             # Detected "reduced steps" (which maybe be due to steps that were aborted and automatically re-run
@@ -2058,10 +1916,10 @@ class ReactionDynamics:
             if not silent:
                 if n_steps == 1:    # Use wording for the singular
                     print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} reduced step of {delta_baseline:.3g} "
-                          f"(1/{round(delta_time/delta_baseline)} of requested step)")
+                          f"(1/{round(delta_time/delta_baseline)} of the {delta_time} step first attempted)")
                 else:               # Use wording for the plural
                     print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} reduced step of {delta_baseline:.3g} "
-                          f"(each 1/{round(delta_time/delta_baseline)} of requested step)")
+                          f"(each 1/{round(delta_time/delta_baseline)} of the {delta_time} step first attempted)")
 
             return (n_steps *  delta_baseline / delta_time)
 
@@ -2225,6 +2083,174 @@ class ReactionDynamics:
     def ________RESULT_ANALYSIS________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
+
+
+    def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True) -> Union[bool, dict]:
+        """
+        Ascertain whether the given concentrations are in equilibrium for the specified reactions
+        (by default, for all reactions)
+        TODO: optionally display last lines in diagnostic data
+
+        :param rxn_index:   The index (0-based integer) to identify the reaction of interest;
+                                if None, then check all the reactions
+        :param conc:        Dict with the concentrations of the species involved in the reaction(s).
+                            The keys are the chemical names
+                                EXAMPLE: {'A': 23.9, 'B': 36.1}
+                            If None, then use the current System concentrations
+        :param tolerance:   Allowable relative tolerance, as a PERCENTAGE, to establish satisfactory equality
+        :param explain:     If True, print out details about the analysis,
+                                incl. the formula(s) being used to check the equilibrium
+                                EXAMPLES:   "([C][D]) / ([A][B])"
+                                            "[B] / [A]^2"
+
+        :return:            Return True if ALL the reactions are close enough to an equilibrium,
+                                as allowed by the requested tolerance;
+                                otherwise, return a dict of the form {False: [list of reaction index]}
+                                for all the reactions that failed the criterion
+                                (EXAMPLE:  {False:  [3, 6:]})
+        """
+        if conc is None:
+            conc=self.get_conc_dict()   # Use the current System concentrations
+
+        failures_dict = {False: []}     # 1-element dict whose value is
+        # a list of reactions that fail to meet the criterion for equilibrium
+
+        if rxn_index is not None:
+            # Check the 1 given reaction
+            if explain:
+                description = self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)
+                print(description)
+
+            status = self.reaction_in_equilibrium(rxn_index=rxn_index, conc=conc, tolerance=tolerance, explain=explain)
+            if not status:
+                failures_dict = {False: [rxn_index]}
+
+        else:
+            # Check all the reactions
+            status = True   # Overall status
+            description_list = self.reaction_data.multiple_reactions_describe(concise=True)
+            for i in range(self.reaction_data.number_of_reactions()):
+                # For each reaction
+                if explain:
+                    print(description_list[i])
+
+                single_status = self.reaction_in_equilibrium(rxn_index=i, conc=conc, tolerance=tolerance, explain=explain)
+
+                if not single_status:
+                    status = False
+                    failures_dict[False].append(i)
+
+        if status:
+            return True
+        else:
+            return failures_dict
+
+
+
+    def reaction_in_equilibrium(self, rxn_index, conc, tolerance, explain: bool) -> bool:
+        """
+        Ascertain whether the given concentrations are in equilibrium for the specified SINGLE reaction;
+        return True or False, accordingly.
+
+        :param rxn_index:   The index (0-based integer) to identify the reaction of interest
+        :param conc:        Dict with the concentrations of the species involved in the reaction.
+                            The keys are the chemical names
+                                EXAMPLE: {'A': 23.9, 'B': 36.1}
+        :param tolerance:   Allowable relative tolerance, as a PERCENTAGE, to establish satisfactory equality
+        :param explain:     If True, print out the formula being used, as well as some other info.
+                                EXAMPLES of formulas:   "([C][D]) / ([A][B])"
+                                                        "[B] / [A]^2"
+        :return:            True if the given reaction is close enough to an equilibrium,
+                            as allowed by the requested tolerance
+        """
+        rxn = self.reaction_data.get_reaction(rxn_index)
+
+        reactants = self.reaction_data.extract_reactants(rxn)     # A list of triplets
+        products = self.reaction_data.extract_products(rxn)      # A list of triplets
+        kF = self.reaction_data.extract_forward_rate(rxn)
+        kB = self.reaction_data.extract_back_rate(rxn)
+
+        rate_ratio = kF / kB                    # Ratio of forward/reverse reaction rates
+
+        conc_ratio = 1.
+        numerator = ""
+        denominator = ""
+        all_concs = []      # List of strings
+
+        for p in products:
+            # Loop over the reaction products
+            species_index = self.reaction_data.extract_species_index(p)
+            rxn_order = self.reaction_data.extract_rxn_order(p)
+
+            species_name = self.reaction_data.get_name(species_index)
+            species_conc = conc.get(species_name)
+            assert species_conc is not None, f"reaction_in_equilibrium(): unable to proceed because the " \
+                                             f"concentration of `{species_name}` was not provided"
+            conc_ratio *= (species_conc ** rxn_order)
+            if explain:
+                all_concs.append(f"[{species_name}] = {species_conc:,.4g}")
+                numerator += f"[{species_name}]"
+                if rxn_order > 1:
+                    numerator += f"^{rxn_order} "
+
+        if explain and len(products) > 1:
+            numerator = f"({numerator})"
+
+        for r in reactants:
+            # Loop over the return
+            species_index = self.reaction_data.extract_species_index(r)
+            rxn_order = self.reaction_data.extract_rxn_order(r)
+
+            species_name = self.reaction_data.get_name(species_index)
+            species_conc = conc.get(species_name)
+            assert species_conc is not None, f"reaction_in_equilibrium(): unable to proceed because the " \
+                                             f"concentration of `{species_name}` was not provided"
+            conc_ratio /= (species_conc ** rxn_order)
+            if explain:
+                all_concs.append(f"[{species_name}] = {species_conc:,.4g}")
+                denominator += f"[{species_name}]"
+                if rxn_order > 1:
+                    denominator += f"^{rxn_order} "
+
+
+        status = np.allclose(conc_ratio, rate_ratio, rtol=tolerance/100., atol=0)
+
+        if explain:
+            if len(reactants) > 1:
+                denominator = f"({denominator})"
+
+            print(f"Final concentrations: ", " ; ".join(all_concs))
+            print(f"1. Ratio of reactant/product concentrations, adjusted for reaction orders: {conc_ratio:,.6g}")
+            print(f"    Formula used:  {numerator} / {denominator}")
+            print(f"2. Ratio of forward/reverse reaction rates: {rate_ratio}")
+            print(f"Discrepancy between the two values: {100 * abs(conc_ratio - rate_ratio)/rate_ratio :,.4g} %")
+            if status:
+                print(f"Reaction IS in equilibrium (within {tolerance:.2g}% tolerance)\n")
+            else:
+                print(f"Reaction is NOT in equilibrium (not within {tolerance:.2g}% tolerance)\n")
+
+        return status
+
+
+
+    def extract_delta_concentrations(self, df, row_from: int, row_to: int, chem_list: [str]) -> np.array:
+        """
+        Extract the concentration changes of the specified chemical species from a Pandas dataframe
+        of concentration values
+
+        EXAMPLE:  extract_delta_concentrations(my_dataframe, 7, 8, ['A', 'B'])
+
+        :param df:
+        :param row_from:
+        :param row_to:
+        :param chem_list:
+        :return:
+        """
+        from_values = df.loc[row_from][chem_list]
+        to_values = df.loc[row_to][chem_list]
+        return (to_values - from_values).astype(float).to_numpy()
+
+
 
     def curve_intersection(self, t_start, t_end, var1, var2) -> (float, float):
         """

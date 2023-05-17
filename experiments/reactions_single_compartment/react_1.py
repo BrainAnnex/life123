@@ -18,7 +18,7 @@
 #
 # See also the experiment _"1D/reactions/reaction_1"_ ; this is the "single-compartment" version of it.
 #
-# LAST REVISED: Mar. 23, 2023
+# LAST REVISED: May 16, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -162,7 +162,7 @@ A_dot = np.gradient(A, 0.1)      # 0.1 is the constant step size
 A_dot
 
 # %%
-df['A_dot'] = A_dot
+df['A_dot'] = A_dot     # Add a column to the dataframe
 
 # %%
 df
@@ -178,6 +178,6 @@ fig.show()
 # ### At t=0, [A]=10 and [A] has a high rate of change (70);  
 # ### as the system approaches equilibrium, [A] approaches a value of 24, and its rate of change decays to zero.
 #
-# The curves are jagged because of limitations of numerically estimating derivatives.
+# The curves are jagged because of limitations of numerically estimating derivatives, as well as the large time steps taken (especially in the early times, when there's a lot of change.)
 
 # %%
