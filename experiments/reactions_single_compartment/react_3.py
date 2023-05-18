@@ -16,19 +16,16 @@
 # ## Association/Dissociation reaction `A + B <-> C`
 # #### with 1st-order kinetics for each species, taken to equilibrium.
 # #### Exploration of debugging and diagnostics options
-# (Adaptive variable time substeps are used) ************ TODO: change
+# (Adaptive variable time steps are used)
 #
 # _See also the experiment "1D/reactions/reaction_4"_  
 #
-# LAST REVISED: Mar. 7, 2023  
+# LAST REVISED: May 17, 2023 
 #
 # # For the 0-th reaction (the only reaction in our case)
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -61,9 +58,6 @@ chem_data = chem(names=["A", "B", "C"])
 chem_data.add_reaction(reactants=["A" , "B"], products=["C"],
                        forward_rate=5., reverse_rate=2.)
 
-print("Number of reactions: ", chem_data.number_of_reactions())
-
-# %%
 chem_data.describe_reactions()
 
 # %%
@@ -92,12 +86,14 @@ dynamics.get_history()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-#dynamics.verbose_list = ["substeps"]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
-dynamics.single_compartment_react(time_step=0.004, reaction_duration=0.06,
+# All of these are the currently the default values, but subject to change
+dynamics.set_thresholds(thresholds={"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.})
+
+dynamics.single_compartment_react(initial_step=0.004, reaction_duration=0.06,
+                                  variable_steps=True,
                                   snapshots={"initial_caption": "1st reaction step",
-                                             "final_caption": "last reaction step"},
-                                  dynamic_substeps=2, rel_fast_threshold=1)
+                                             "final_caption": "last reaction step"})
 
 # %% [markdown]
 # ### Note: the argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using the given value of _fast_threshold_ )
@@ -136,7 +132,7 @@ dynamics.is_in_equilibrium()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['red', 'violet', 'green'])
+dynamics.plot_curves(colors=['red', 'violet', 'green'], show_intervals=True)
 
 # %%
 
@@ -144,18 +140,16 @@ dynamics.plot_curves(colors=['red', 'violet', 'green'])
 # # Everthing below is just for diagnostic insight 
 # ## into the adaptive variable time steps
 
-# %% [markdown]
-# ## WARNING: The explanations below are based on an older system of using RELATIVE concentration changes, and no longer applicable to the newer approach; it'll be corrected in future versions (COMMENTED OUT FOR NOW)
+# %%
+dynamics.get_diagnostic_delta_conc_data()
 
 # %%
-# This approach, from the run data, is only usable with single-reaction runs
-#dynamics.examine_run(df=df, time_step=0.004, rel_fast_threshold=1)
-# The arguments step MUST match the value used in call to single_compartment_react()
-
-# %% [markdown]
-# # Take a peek at internal diagnostic data from the reactions
+dynamics.get_diagnostic_conc_data()
 
 # %%
 dynamics.get_diagnostic_rxn_data(rxn_index=0)
+
+# %%
+dynamics.examine_run(df=df)
 
 # %%

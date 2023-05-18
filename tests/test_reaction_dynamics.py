@@ -325,8 +325,10 @@ def test_single_compartment_react_variable_steps_1():
     dynamics = ReactionDynamics(reaction_data=chem_data)
     dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
+    dynamics.set_thresholds(thresholds={"low": 0.25, "high": 0.64})
+
     dynamics.single_compartment_react(time_step=0.01, stop_time=0.2,
-                                      variable_steps=True, thresholds={"low": 0.25, "high": 0.64})
+                                      variable_steps=True)
 
     df = dynamics.get_history()
     #print(df)
