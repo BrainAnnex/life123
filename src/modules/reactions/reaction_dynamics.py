@@ -87,8 +87,7 @@ class ReactionDynamics:
                                         #   Note: if an interval run is aborted, NO entry is created here
                                         #         (this approach DIFFERS from that of other diagnostic data)
 
-        # TODO: rename more distinctively - such as diagnostic_decisions_data or diagnostic_actions_data
-        self.diagnostic_delta_conc_data = MovieTabular(parameter_name="START_TIME")
+        self.diagnostic_decisions_data = MovieTabular(parameter_name="START_TIME")
                                         #   Columns of the dataframes:
                                         #       'START_TIME' 	'Delta A' 'Delta B' ...
                                         #               [plus, if applicable, other fields such as 'action', 'L2', 'step_factors']
@@ -762,11 +761,11 @@ class ReactionDynamics:
                             diagnostic_data_snapshot['action'] = "ABORT"
                             diagnostic_data_snapshot['caption'] = "excessive L2_rate"
                             diagnostic_data_snapshot['step_factor'] = 1/self.abort_step_reduction_factor
-                            self.save_diagnostic_delta_conc_data(data=diagnostic_data_snapshot)
+                            diagnostic_data_snapshot['step_size'] = delta_time
+                            self.save_diagnostic_decisions_data(data=diagnostic_data_snapshot)
 
                             # Make a note of the abort action in all the reaction-specific diagnostics
-                            for rxn_index in range(self.reaction_data.number_of_reactions()):
-                                self.diagnostic_rxn_data[rxn_index].set_caption_last_snapshot("aborted")
+                            self.comment_diagnostic_rxn_data("aborted because of excessive L2_rate")
 
                         raise ExcessiveTimeStep(msg)    # ABORT THE CURRENT STEP
 
@@ -779,6 +778,7 @@ class ReactionDynamics:
                         diagnostic_data_snapshot['L2'] = adjusted_L2_rate
                         diagnostic_data_snapshot['action'] = "OK"
                         diagnostic_data_snapshot['step_factor'] = step_factor
+                        diagnostic_data_snapshot['step_size'] = delta_time
 
                         #self.diagnostic_delta_conc_data.movie.loc[self.diagnostic_delta_conc_data.movie.index[-1], 'L2'] = L2_rate
 
@@ -798,7 +798,7 @@ class ReactionDynamics:
 
 
                 if self.diagnostics:
-                    self.save_diagnostic_delta_conc_data(data=diagnostic_data_snapshot)
+                    self.save_diagnostic_decisions_data(data=diagnostic_data_snapshot)
 
 
 
@@ -806,19 +806,20 @@ class ReactionDynamics:
                 if self.system is not None:     # IMPORTANT: usage of this function doesn't always involve self.system
                     tentative_updated_system = self.system + delta_concentrations
                     if min(tentative_updated_system) < 0:
-                        print(f"******** CAUTION: negative concentration resulting from the combined effect of multiple reactions, "
+                        print(f"*** CAUTION: negative concentration resulting from the combined effect of multiple reactions, "
                               f"upon advancing reactions from system time t={self.system_time:,.5g}\n"
-                              f"         It will be AUTOMATICALLY CORRECTED with a reduction in the time step size")
+                              f"         It will be AUTOMATICALLY CORRECTED with a reduction in time step size")
                         if self.diagnostics:
-                            self.save_diagnostic_delta_conc_data(data={"action": "ABORT", "step_factor": 1 / self.abort_step_reduction_factor,
-                                                                       "caption": "neg. conc. from combined effect of multiple rxns"})
-                            #self.diagnostic_delta_conc_data.store(par=self.system_time,
-                                                                  #data_snapshot={"action": "ABORT", "step_factor": 1/self.abort_step_reduction_factor,
-                                                                                 #"caption": "neg. conc. from combined effect of multiple rxns"})
-                        raise ExcessiveTimeStep(f"The chosen time interval ({delta_time}) "
+                            self.save_diagnostic_decisions_data(data={"action": "ABORT",
+                                                                      "step_factor": 1 / self.abort_step_reduction_factor,
+                                                                      "caption": "neg. conc. from combined effect of multiple rxns",
+                                                                      "step_size": delta_time})
+                            self.comment_diagnostic_rxn_data("aborted: neg. conc. from combined effect of multiple reactions")
+
+                        raise ExcessiveTimeStep(f"INFO: The current time step ({delta_time}) "
                                                 f"leads to a NEGATIVE concentration of one of the chemicals: "
-                                                f"MUST MAKE THE INTERVAL SMALLER!\n"
-                                                f"[System Time: {self.system_time:.5g} : Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
+                                                f"\n      -> will backtrack, and re-do step with a SMALLER delta time "
+                                                f"[Step started at t={self.system_time:.5g}, and will rewind there.  Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
 
 
                 break       # IMPORTANT: this is needed because, in the absence of errors, we need to go thru the WHILE loop only once!
@@ -831,8 +832,9 @@ class ReactionDynamics:
                 #       2. negative concentration from the combined effect of multiple reactions - caught in this function
                 #       3. excessive L2_rate of the overall step - caught in this function (currently only checked in case of the variable-steps option)
 
-                if True:
-                    print(ex)
+                print(ex)
+
+                self.comment_diagnostic_rxn_data(f"aborted: negative concentration")
 
                 delta_time /= self.abort_step_reduction_factor       # Reduce the excessive time step by a pre-set factor
                 recommended_next_step = delta_time
@@ -1103,19 +1105,20 @@ class ReactionDynamics:
         :return:                        None (an Exception is raised if a negative concentration is detected)
         """
         if (baseline_conc + delta_conc) < 0:
-            print(f"******** CAUTION: negative concentration in chemical `{self.reaction_data.get_name(species_index)}`.  "
-                  f"It will be AUTOMATICALLY CORRECTED with a reduction in the time step size")
+            print(f"\n*** CAUTION: negative concentration in chemical `{self.reaction_data.get_name(species_index)}`.  "
+                  f"It will be AUTOMATICALLY CORRECTED with a reduction in time step size, as follows:")
             if self.diagnostics:
-                self.save_diagnostic_delta_conc_data(data={"action": "ABORT", "step_factor": 1 / self.abort_step_reduction_factor,
-                                                           "caption": f"neg. conc. in {self.reaction_data.get_name(species_index)} from rxn # {rxn_index}"})
-                #self.diagnostic_delta_conc_data.store(par=self.system_time,
-                                                  #data_snapshot={"action": "ABORT", "step_factor": 1/self.abort_step_reduction_factor,
-                                                                 #"caption": f"neg. conc. in {self.reaction_data.get_name(species_index)} from rxn # {rxn_index}"})
-            raise ExcessiveTimeStep(f"The chosen time interval ({delta_time}) "
+                self.save_diagnostic_decisions_data(data={"action": "ABORT",
+                                                          "step_factor": 1 / self.abort_step_reduction_factor,
+                                                          "caption": f"neg. conc. in {self.reaction_data.get_name(species_index)} from rxn # {rxn_index}",
+                                                          "step_size": delta_time})
+                #self.comment_diagnostic_rxn_data(f"aborted: neg. conc. in chemical `{self.reaction_data.get_name(species_index)}`")
+
+            raise ExcessiveTimeStep(f"    INFO: The current time step ({delta_time}) "
                                     f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` (chem index {species_index}) "
                                     f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
-                                    f"MUST MAKE THE INTERVAL SMALLER!\n"
-                                    f"[System Time: {self.system_time:.5g} : Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}]")
+                                    f"\n      -> will backtrack, and re-do step with a SMALLER delta time "
+                                    f"[Step started at t={self.system_time:.5g}, and will rewind there.  Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}]")
 
 
 
@@ -1524,6 +1527,18 @@ class ReactionDynamics:
 
 
 
+    def comment_diagnostic_rxn_data(self, msg: str) -> None:
+        """
+        Set the comment field of the last record for EACH of the reaction-specific dataframe
+
+        :param msg: Value to set the comment field to
+        :return:    None
+        """
+        for rxn_index in range(self.reaction_data.number_of_reactions()):
+            self.diagnostic_rxn_data[rxn_index].set_caption_last_snapshot(msg)
+
+
+
     def get_diagnostic_rxn_data(self, rxn_index: int, head=None, tail=None,
                                 t=None, print_reaction=True) -> pd.DataFrame:
         """
@@ -1609,27 +1624,28 @@ class ReactionDynamics:
 
     #####  3. diagnostic_delta_conc_data  #####
 
-    def save_diagnostic_delta_conc_data(self, data) -> None:
+    def save_diagnostic_decisions_data(self, data) -> None:
         """
         Used to save the diagnostic concentration data during the run, indexed by the current System Time.
         Note: if an interval run is aborted, by convention an entry is STILL created here
 
         :return: None
         """
-        self.diagnostic_delta_conc_data.store(par=self.system_time,
-                                              data_snapshot=data)
+        self.diagnostic_decisions_data.store(par=self.system_time,
+                                             data_snapshot=data)
 
-    def get_diagnostic_delta_conc_data(self) -> pd.DataFrame:
+
+    def get_diagnostic_decisions_data(self) -> pd.DataFrame:
         """
         Determine and return the diagnostic data about concentration changes at every step - EVEN aborted ones
 
         :return:    A Pandas dataframe with a "TIME" column, and columns for all the "Delta concentration" values
         """
-        return self.diagnostic_delta_conc_data.get_dataframe()
+        return self.diagnostic_decisions_data.get_dataframe()
 
 
 
-    def get_diagnostic_delta_conc_data_ALT(self) -> pd.DataFrame:
+    def get_diagnostic_decisions_data_ALT(self) -> pd.DataFrame:
         """
         Determine and return the diagnostic data about concentration changes at every step - EVEN aborted ones
         TODO: OBSOLETE - BEING PHASED OUT
@@ -1668,7 +1684,7 @@ class ReactionDynamics:
                     plus an "L2" column and a "step_actions" action.
                     Note that this is a superset of the dataframe returned by get_diagnostic_delta_data()
         """
-        df = self.get_diagnostic_delta_conc_data()
+        df = self.get_diagnostic_decisions_data()
         fields = self._delta_names()    # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
 
         # Compute the L2 norms, since this data (at least for now) is not being saved.  TODO: save it!

@@ -141,7 +141,7 @@ dynamics.plot_curves(colors=['red', 'violet', 'green'], show_intervals=True)
 # ## into the adaptive variable time steps
 
 # %%
-dynamics.get_diagnostic_delta_conc_data()
+dynamics.get_diagnostic_decisions_data()
 
 # %%
 dynamics.get_diagnostic_conc_data()

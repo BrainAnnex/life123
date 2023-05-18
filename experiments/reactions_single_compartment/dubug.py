@@ -128,7 +128,7 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 dynamics.get_diagnostic_conc_data()
 
 # %%
-dynamics.get_diagnostic_delta_conc_data()
+dynamics.get_diagnostic_decisions_data()
 
 # %%
 dynamics.get_diagnostic_L2_data()

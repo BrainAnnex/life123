@@ -131,13 +131,13 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 dynamics.get_diagnostic_conc_data()
 
 # %%
-dynamics.get_diagnostic_delta_conc_data()
+dynamics.get_diagnostic_decisions_data()
 
 # %% [markdown]
 # #### Notice how the first step got aborted, and re-run, because of the large adjusted L2 value in the concentrations 
 
 # %%
-dynamics.get_diagnostic_delta_conc_data_ALT()      # TODO: OBSOLETE!
+dynamics.get_diagnostic_decisions_data_ALT()      # TODO: OBSOLETE!
 
 # %%
 dynamics.get_diagnostic_L2_data()      # TODO: OBSOLETE!

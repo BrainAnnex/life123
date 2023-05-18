@@ -18,10 +18,10 @@
 #
 # Same as the experiment _"react_1"_ , but with adaptive variable time steps
 #
-# LAST REVISED: May 17, 2023
+# LAST REVISED: May 16, 2023
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+import set_path      # Importing this module will add the project's home directory +to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -84,14 +84,14 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# All of these are the currently the default values, but subject to change
-dynamics.set_thresholds(thresholds={"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.})
-
 dynamics.single_compartment_react(initial_step=0.1, target_end_time=1.2,
                                   variable_steps=True, 
+                                  thresholds={"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.},
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"}
                                   )
+
+# Note: default values exist, and could be used, for all the thresholds
 
 # %% [markdown]
 # ## The flag _variable_steps_ automatically adjusts up or down the time step,  whenever the changes of concentrations are, respectively, "slow" or "fast" (as determined using the specified _thresholds_ )
@@ -212,6 +212,6 @@ dynamics.get_diagnostic_rxn_data(rxn_index=0)      # For the 0-th reaction (the 
 # ### Note that diagnostic data with Delta Concentrations - above and below - also record the values that were considered (but not actually used) during ABORTED steps
 
 # %%
-dynamics.get_diagnostic_delta_conc_data()
+dynamics.get_diagnostic_decisions_data()
 
 # %%
