@@ -750,7 +750,7 @@ class ReactionDynamics:
                     # Abort the current step if the rate of change is deemed excessive.
                     # TODO: maybe ALWAYS check this, regardless of variable-steps option
                     if adjusted_L2_rate > self.variable_steps_threshold_abort:
-                        msg =   f"INFO: The current time step ({delta_time}) " \
+                        msg =   f"INFO: current time step ({delta_time}) " \
                                 f"leads to an 'adjusted L2 rate' ({adjusted_L2_rate:.4g}) > ABORT threshold ({self.variable_steps_threshold_abort}):\n" \
                                 f"      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time / self.abort_step_reduction_factor:.5g} " \
                                 f"[Step started at t={self.system_time:.5g}, and will rewind there]"
@@ -759,13 +759,12 @@ class ReactionDynamics:
                             # Expand the dict diagnostic_data_snapshot
                             diagnostic_data_snapshot['L2'] = adjusted_L2_rate
                             diagnostic_data_snapshot['action'] = "ABORT"
-                            diagnostic_data_snapshot['caption'] = "excessive L2_rate"
                             diagnostic_data_snapshot['step_factor'] = 1/self.abort_step_reduction_factor
                             diagnostic_data_snapshot['step_size'] = delta_time
-                            self.save_diagnostic_decisions_data(data=diagnostic_data_snapshot)
+                            self.save_diagnostic_decisions_data(data=diagnostic_data_snapshot, caption="excessive L2_rate")
 
                             # Make a note of the abort action in all the reaction-specific diagnostics
-                            self.comment_diagnostic_rxn_data("aborted because of excessive L2_rate")
+                            self.comment_diagnostic_rxn_data("aborted: excessive L2_rate")
 
                         raise ExcessiveTimeStep(msg)    # ABORT THE CURRENT STEP
 
@@ -809,14 +808,18 @@ class ReactionDynamics:
                         print(f"*** CAUTION: negative concentration resulting from the combined effect of multiple reactions, "
                               f"upon advancing reactions from system time t={self.system_time:,.5g}\n"
                               f"         It will be AUTOMATICALLY CORRECTED with a reduction in time step size")
+
                         if self.diagnostics:
                             self.save_diagnostic_decisions_data(data={"action": "ABORT",
                                                                       "step_factor": 1 / self.abort_step_reduction_factor,
                                                                       "caption": "neg. conc. from combined effect of multiple rxns",
                                                                       "step_size": delta_time})
-                            self.comment_diagnostic_rxn_data("aborted: neg. conc. from combined effect of multiple reactions")
+                            for rxn_index in range(self.reaction_data.number_of_reactions()):
+                                self.save_diagnostic_rxn_data(rxn_index=rxn_index, delta_time=delta_time,
+                                                             increment_vector_single_rxn=None,
+                                                             caption=f"aborted: neg. conc. from combined multiple rxns")
 
-                        raise ExcessiveTimeStep(f"INFO: The current time step ({delta_time}) "
+                        raise ExcessiveTimeStep(f"INFO: current time step ({delta_time}) "
                                                 f"leads to a NEGATIVE concentration of one of the chemicals: "
                                                 f"\n      -> will backtrack, and re-do step with a SMALLER delta time "
                                                 f"[Step started at t={self.system_time:.5g}, and will rewind there.  Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
@@ -833,8 +836,6 @@ class ReactionDynamics:
                 #       3. excessive L2_rate of the overall step - caught in this function (currently only checked in case of the variable-steps option)
 
                 print(ex)
-
-                self.comment_diagnostic_rxn_data(f"aborted: negative concentration")
 
                 delta_time /= self.abort_step_reduction_factor       # Reduce the excessive time step by a pre-set factor
                 recommended_next_step = delta_time
@@ -976,12 +977,12 @@ class ReactionDynamics:
                 increment_vector_single_rxn[species_index] += delta_conc
 
 
-            increment_vector += increment_vector_single_rxn     # Accumulate the increment vector across all reactions
+            increment_vector += increment_vector_single_rxn     # Accumulate the increment vector across ALL reactions
                                                                 # TODO: consider using a small dict in lieu of increment_vector_single_rxn
 
-
             if self.diagnostics:
-                self.save_diagnostic_rxn_data(delta_time, increment_vector_single_rxn, rxn_index)
+                self.save_diagnostic_rxn_data(rxn_index=rxn_index, delta_time=delta_time,
+                                              increment_vector_single_rxn=increment_vector_single_rxn)
         # END for (over rxn_list)
 
         return increment_vector
@@ -1107,18 +1108,22 @@ class ReactionDynamics:
         if (baseline_conc + delta_conc) < 0:
             print(f"\n*** CAUTION: negative concentration in chemical `{self.reaction_data.get_name(species_index)}`.  "
                   f"It will be AUTOMATICALLY CORRECTED with a reduction in time step size, as follows:")
+
             if self.diagnostics:
                 self.save_diagnostic_decisions_data(data={"action": "ABORT",
                                                           "step_factor": 1 / self.abort_step_reduction_factor,
                                                           "caption": f"neg. conc. in {self.reaction_data.get_name(species_index)} from rxn # {rxn_index}",
                                                           "step_size": delta_time})
-                #self.comment_diagnostic_rxn_data(f"aborted: neg. conc. in chemical `{self.reaction_data.get_name(species_index)}`")
+                self.save_diagnostic_rxn_data(rxn_index=rxn_index, delta_time=delta_time,
+                                              increment_vector_single_rxn=None,
+                                              caption=f"aborted: neg. conc. in `{self.reaction_data.get_name(species_index)}`")
 
-            raise ExcessiveTimeStep(f"    INFO: The current time step ({delta_time}) "
-                                    f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` (chem index {species_index}) "
+            raise ExcessiveTimeStep(f"    INFO: current time step ({delta_time}) "
+                                    f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` "
                                     f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
+                                    f"\n      Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}"
                                     f"\n      -> will backtrack, and re-do step with a SMALLER delta time "
-                                    f"[Step started at t={self.system_time:.5g}, and will rewind there.  Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}]")
+                                    f"[Step started at t={self.system_time:.5g}, and will rewind there]")
 
 
 
@@ -1488,7 +1493,7 @@ class ReactionDynamics:
 
     #####  1. diagnostic_rxn_data  #####
 
-    def save_diagnostic_rxn_data(self, delta_time, increment_vector_single_rxn: np.array,
+    def save_diagnostic_rxn_data(self, delta_time, increment_vector_single_rxn: Union[np.array, None],
                                  rxn_index: int, caption="") -> None:
         """
         Save up diagnostic data for 1 reaction, for a simulation step
@@ -1506,9 +1511,12 @@ class ReactionDynamics:
         self.reaction_data.assert_valid_rxn_index(rxn_index)
 
         # Validate increment_vector_single_rxn
-        assert len(increment_vector_single_rxn) == self.reaction_data.number_of_chemicals(), \
-            f"save_diagnostic_rxn_data(): the length of the Numpy array increment_vector_single_rxn " \
-            f"({len(increment_vector_single_rxn)}) doesn't match the total numbers of chemicals ({self.reaction_data.number_of_chemicals()})"
+        if increment_vector_single_rxn is None:     # If the values aren't available (as is the case in aborts)
+            increment_vector_single_rxn = np.full(self.reaction_data.number_of_chemicals(), np.nan)
+        else:
+            assert len(increment_vector_single_rxn) == self.reaction_data.number_of_chemicals(), \
+                f"save_diagnostic_rxn_data(): the length of the Numpy array increment_vector_single_rxn " \
+                f"({len(increment_vector_single_rxn)}) doesn't match the total numbers of chemicals ({self.reaction_data.number_of_chemicals()})"
 
 
         if self.diagnostic_rxn_data == {}:    # INITIALIZE the dictionary self.diagnostic_rxn_data, if needed
@@ -1624,7 +1632,7 @@ class ReactionDynamics:
 
     #####  3. diagnostic_delta_conc_data  #####
 
-    def save_diagnostic_decisions_data(self, data) -> None:
+    def save_diagnostic_decisions_data(self, data, caption="") -> None:
         """
         Used to save the diagnostic concentration data during the run, indexed by the current System Time.
         Note: if an interval run is aborted, by convention an entry is STILL created here
@@ -1632,7 +1640,7 @@ class ReactionDynamics:
         :return: None
         """
         self.diagnostic_decisions_data.store(par=self.system_time,
-                                             data_snapshot=data)
+                                             data_snapshot=data, caption=caption)
 
 
     def get_diagnostic_decisions_data(self) -> pd.DataFrame:

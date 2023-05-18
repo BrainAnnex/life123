@@ -144,10 +144,10 @@ dynamics.plot_curves(colors=['red', 'violet', 'green'], show_intervals=True)
 dynamics.get_diagnostic_decisions_data()
 
 # %%
-dynamics.get_diagnostic_conc_data()
+dynamics.get_diagnostic_rxn_data(rxn_index=0)
 
 # %%
-dynamics.get_diagnostic_rxn_data(rxn_index=0)
+dynamics.get_diagnostic_conc_data()
 
 # %%
 dynamics.examine_run(df=df)
