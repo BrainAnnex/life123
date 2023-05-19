@@ -51,7 +51,8 @@ class ReactionDynamics:
                                         #   Any reaction with a missing entry is regarded as "F" (Fast)
 
 
-        self.thresholds = [{"norm": self.norm_A, "low": 0.25, "high": 0.64, "abort": 1.44}]
+        self.thresholds = [{"norm": self.norm_A, "low": 0.25, "high": 0.64, "abort": 1.44},
+                           {"norm": self.norm_B}]
         self.step_factors = {"abort": 0.5, "downshift": 0.5, "upshift": 2.0}
 
 
@@ -726,7 +727,8 @@ class ReactionDynamics:
                     print("    NO adaptive variable time resolution used")
                     print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s) with a single step")
 
-                # CORE OPERATION IN CASE OF *NOT* ALLOWING FOR SUBSTEPS
+
+                # *****  CORE OPERATION  *****
                 delta_concentrations = self._reaction_elemental_step(delta_time=delta_time, conc_array=conc_array, rxn_list=None)
 
 
@@ -738,10 +740,17 @@ class ReactionDynamics:
                     adjusted_L2_rate =self.norm_A(delta_concentrations)
 
                     if "variable_steps" in self.verbose_list:
-                        print(f"EXAMINING CONCENTRATION CHANGES at System Time {self.system_time:.5g} from the upcoming single step (for all rxns):")
+                        decision_data = self.adjust_speed(delta_conc=delta_concentrations, baseline_conc=conc_array)
+
+                        print(f"\nEXAMINING CONCENTRATION CHANGES from System Time {self.system_time:.5g} "
+                              f"due to tentative single step of {delta_time} (for all rxns):")
                         print("    Baseline: ", conc_array)
                         print("    Deltas:   ", delta_concentrations)
-                        #print("    Relative Deltas:   ", delta_concentrations / conc_array)
+                        print("    Relative Deltas:   ", delta_concentrations / conc_array)
+                        print("    Norms:    ", decision_data[1])
+                        print("    Speed factor:    ", decision_data[0])
+
+                        #
                         #print("    L_inf norm:   ", np.linalg.norm(delta_concentrations, ord=np.inf) / delta_time_full)
                         print("    Adjusted L2 norm:   ", adjusted_L2_rate)
                         #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
@@ -906,38 +915,44 @@ class ReactionDynamics:
 
 
 
-    def adjust_speed(self, delta_conc: np.array, baseline_conc=None) -> Union[float, int]:
+    def adjust_speed(self, delta_conc: np.array, baseline_conc=None) -> (Union[float, int], list):
         """
 
         :param delta_conc:
         :param baseline_conc:
-        :return:                A factor by which to multiple the time step at the next iteration round;
-                                    if no change is deemed necessary, 1 is returned
+        :return:                A pair:
+                                    1) A factor by which to multiple the time step at the next iteration round;
+                                       if no change is deemed necessary, 1 is returned
+                                    2) A list of all the computed norms (any of the last ones, except the first one, may be None)
         """
+        all_norms = [None for rule in self.thresholds]
+
         all_small = True
 
-        for rule in self.thresholds:
+        for i, rule in enumerate(self.thresholds):
             if rule["norm"] == self.norm_A:
                 result = self.norm_A(delta_conc)
             else:
                 result = self.norm_B(baseline_conc, delta_conc)
 
-            if result > rule["abort"]:
-                return self.step_factors["abort"]
+            all_norms[i] = result
 
-            if result > rule["high"]:
-                return self.step_factors["downshift"]
+            if ("abort" in rule) and (result > rule["abort"]):
+                return (self.step_factors["abort"], all_norms)
 
-            if all_small:
-                if result >= rule["small"]:
+            if ("high" in rule) and (result > rule["high"]):
+                return (self.step_factors["downshift"], all_norms)
+
+            if all_small and ("low" in rule):
+                if result >= rule["low"]:
                     all_small = False
 
 
         if all_small:
-            return self.step_factors["upshift"]
+            return (self.step_factors["upshift"], all_norms)
 
-        return 1
-                                  
+        return (1, all_norms)
+
 
 
     def step_determiner_A(self, norm) -> Union[float, int]:
