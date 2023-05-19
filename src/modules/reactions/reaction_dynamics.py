@@ -82,7 +82,7 @@ class ReactionDynamics:
         self.diagnostic_conc_data = MovieTabular(parameter_name="TIME")
                                         # An expanded version of the normal System History.
                                         #   Columns of the dataframes:
-                                        #       'TIME' 	'A' 'B' ...  'time_step' 'caption'
+                                        #       'TIME' 	'A' 'B' ...  'caption'
                                         #
                                         #   Note: if an interval run is aborted, NO entry is created here
                                         #         (this approach DIFFERS from that of other diagnostic data)
@@ -596,11 +596,9 @@ class ReactionDynamics:
 
 
         if self.diagnostics:
-            # Save up the current System State, with some extra info, as "diagnostic 'baseline' data"
+            # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
             system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
-            system_data["time_step"] = time_step
             self.save_diagnostic_conc_data(system_data)
-            #self.diagnostic_conc_data.store(par=self.system_time, data_snapshot=system_data)
 
 
         i = 0
@@ -635,14 +633,12 @@ class ReactionDynamics:
             if i > 1000 * n_steps:  # To catch infinite loops
                 raise Exception("single_compartment_react(): "
                                 "the computation is taking a very large number of steps, probably from automatically trying to correct instability;"
-                                " trying reducing the time_step")
+                                " trying reducing the time_step")   # TODO: is the explanation correctly phrased?
 
             if self.diagnostics:
-                # Save up the current System State, with some extra info, as "diagnostic 'baseline' data"
+                # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
                 system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
-                system_data["time_step"] = time_step
                 self.save_diagnostic_conc_data(system_data)
-                #self.diagnostic_conc_data.store(par=self.system_time, data_snapshot=system_data)
 
             if variable_steps:
                 time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
@@ -1604,7 +1600,7 @@ class ReactionDynamics:
 
     def save_diagnostic_conc_data(self, system_data) -> None:
         """
-        Used to save the diagnostic concentration data during the run, indexed by the current System Time.
+        To save the diagnostic concentration data during the run, indexed by the current System Time.
         Note: if an interval run is aborted, by convention NO entry is created here
 
         :return: None
@@ -1617,16 +1613,20 @@ class ReactionDynamics:
     def get_diagnostic_conc_data(self) -> pd.DataFrame:
         """
         Return the diagnostic concentration data saved during the run.
+        This will be a complete set of simulation steps,
+        even if we only saved part of the history during the run
+
         Note: if an interval run is aborted, by convention NO entry is created here
 
         :return: A Pandas dataframe, with the columns:
-                    'TIME' 	'A' 'B' ...  'time_step' 'caption'
+                    'TIME' 	'A' 'B' ... 'caption'
+                 where 'A', 'B', ... are all the chemicals
         """
         return self.diagnostic_conc_data.get_dataframe()
 
 
 
-    #####  3. diagnostic_delta_conc_data  #####
+    #####  3. save_diagnostic_decisions_data  #####
 
     def save_diagnostic_decisions_data(self, data, caption="") -> None:
         """
@@ -1842,9 +1842,6 @@ class ReactionDynamics:
                                         1 - list of time values
                                         2 - list of step sizes  (will have one less element than the first list)
         """
-        assert self.diagnostics, "ReactionDynamics.explain_time_advance(): diagnostics must first be enabled; " \
-                                 "call set_diagnostics() prior to the reaction run"
-
         df = self.get_diagnostic_conc_data()
         assert df is not None, \
             "ReactionDynamics.explain_time_advance(): no diagnostic data found.  " \
@@ -1876,9 +1873,8 @@ class ReactionDynamics:
             if not np.allclose(grad[i], grad_shifted[i]):
                 #print (f"   Detection at element {i} : time={t[i]}")
                 #print (f"   From time {start_interval} to {t[i]}, in steps of {grad_shifted[i]}")
-                delta_time = df.loc[i, "time_step"]
                 n_full_steps_taken = self._explain_time_advance_helper(t_start=start_interval, t_end=t[i],
-                                                                             delta_baseline=grad_shifted[i], delta_time=delta_time, silent=silent)
+                                                                       delta_baseline=grad_shifted[i], silent=silent)
 
                 start_interval = t[i]
                 if n_full_steps_taken > 0:
@@ -1888,9 +1884,8 @@ class ReactionDynamics:
 
 
         # Final wrap-up of the interval's endpoint
-        delta_time = df.loc[n_entries-1, "time_step"]
         n_full_steps_taken = self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1],
-                                                                     delta_baseline=grad_shifted[-1], delta_time=delta_time, silent=silent)
+                                                               delta_baseline=grad_shifted[-1], silent=silent)
 
         if n_full_steps_taken > 0:
             total_number_full_steps += n_full_steps_taken
@@ -1905,39 +1900,25 @@ class ReactionDynamics:
 
 
 
-    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, delta_time, silent) -> Union[int, float]:
+    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, silent: bool) -> Union[int, float]:
         """
         Using the provided data, about a group of same-size steps, create and print a description of it for the user
 
         :param t_start:
         :param t_end:
         :param delta_baseline:
-        :param delta_time:
-        :return:                The corresponding number of FULL steps taken (it may be fractional)
+        :param silent:          If True, nothing gets printed; otherwise, a line is printed out
+        :return:                The corresponding number of FULL steps taken
         """
         if np.allclose(t_start, t_end):
             #print(f"   [Ignoring interval starting and ending at same time {t_start:.3g}]")
             return 0
 
-        if np.allclose(delta_baseline, delta_time):
-            n_steps = round((t_end - t_start) / delta_baseline)
-            step_s = "step" if n_steps == 1 else "steps"  # singular vs. plural
-            if not silent:
-                print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} {step_s} of {delta_baseline:.3g}")
-            return n_steps
-        else:
-            # Detected "reduced steps" (which maybe be due to steps that were aborted and automatically re-run
-            #print(f"delta_time/delta_baseline is:  {delta_time}/{delta_baseline} = {delta_time/delta_baseline}")
-            n_steps = round((t_end - t_start) / delta_baseline)
-            if not silent:
-                if n_steps == 1:    # Use wording for the singular
-                    print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} reduced step of {delta_baseline:.3g} "
-                          f"(1/{round(delta_time/delta_baseline)} of the {delta_time} step first attempted)")
-                else:               # Use wording for the plural
-                    print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} reduced step of {delta_baseline:.3g} "
-                          f"(each 1/{round(delta_time/delta_baseline)} of the {delta_time} step first attempted)")
-
-            return (n_steps *  delta_baseline / delta_time)
+        n_steps = round((t_end - t_start) / delta_baseline)
+        step_s = "step" if n_steps == 1 else "steps"  # singular vs. plural
+        if not silent:
+            print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} {step_s} of {delta_baseline:.3g}")
+        return n_steps
 
 
 

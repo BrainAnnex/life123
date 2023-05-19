@@ -205,13 +205,13 @@ dynamics.plot_step_sizes(show_intervals=True)
 # _(note - this is possible because we make a call to set_diagnostics() prior to running the simulation)_
 
 # %%
-dynamics.get_diagnostic_conc_data()
+dynamics.get_diagnostic_conc_data()   # This will be complete, even if we only saved part of the history during the run
 
 # %%
 dynamics.get_diagnostic_rxn_data(rxn_index=0)      # For the 0-th reaction (the only reaction in our case)
 
 # %% [markdown]
-# ### Note that diagnostic data with Delta Concentrations - above and below - also record the values that were considered (but not actually used) during ABORTED steps
+# ### Note that diagnostic data with the DELTA Concentrations - above and below - also record the values that were considered (but not actually used) during ABORTED steps
 
 # %%
 dynamics.get_diagnostic_decisions_data()
