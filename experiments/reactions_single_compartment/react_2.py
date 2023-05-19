@@ -84,9 +84,11 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
+# All of these are the currently the default values, but subject to change
+dynamics.set_thresholds(thresholds={"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.})
+
 dynamics.single_compartment_react(initial_step=0.1, target_end_time=1.2,
                                   variable_steps=True, 
-                                  thresholds={"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.},
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"}
                                   )

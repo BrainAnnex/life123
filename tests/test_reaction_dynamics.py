@@ -682,12 +682,12 @@ def test_examine_increment_array():
     # INITIAL THRESHOLD (fast_threshold_fraction=0.05)
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([4.98, 0, 0]), baseline_conc_array=np.array([100., 0, 0]),
-                                         time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
+                                         fast_threshold_fraction=0.05, use_baseline = True)
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag
 
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 5.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                         time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
+                                         fast_threshold_fraction=0.05, use_baseline = True)
     assert rxn.fast_rxns() == [0]       # The one reaction present got marked as "Fast" b/c of large delta_conc
     assert not rxn.are_all_slow_rxns()
 
@@ -696,18 +696,18 @@ def test_examine_increment_array():
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -4.98, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                         time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
+                                         fast_threshold_fraction=0.05, use_baseline = True)
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([-5.01, 0, 0]), baseline_conc_array=np.array([100., 0, 0]),
-                                         time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
+                                         fast_threshold_fraction=0.05, use_baseline = True)
     assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc)
 
     rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -5.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                         time_subdivision=1, fast_threshold_fraction=0.05, use_baseline = True)
+                                         fast_threshold_fraction=0.05, use_baseline = True)
     assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc),
                                         # no matter which chemical species is being affected
 
@@ -715,11 +715,12 @@ def test_examine_increment_array():
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([2.49, 0, 0]), baseline_conc_array=np.array([100., 0, 0]),
-                                         time_subdivision=2, fast_threshold_fraction=0.05, use_baseline = True)
+                                         fast_threshold_fraction=0.05, use_baseline = True)
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag
 
+
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 2.51, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                         time_subdivision=2, fast_threshold_fraction=0.05, use_baseline = True)
+                                         fast_threshold_fraction=0.025, use_baseline = True)
     assert rxn.fast_rxns() == [0]       # The reaction got marked as "Fast" b/c of large delta_conc for a time_subdivision of 2
     assert not rxn.are_all_slow_rxns()
 
@@ -737,31 +738,31 @@ def test_examine_increment_array():
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 0, 5.01]), baseline_conc_array=np.array([0, 0, 100.]),
-                                         time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
+                                         fast_threshold_fraction=0.1, use_baseline = True)
     assert rxn.slow_rxns() == [0, 1]    # No change, because the threshold is now higher
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 9.99, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                         time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
+                                         fast_threshold_fraction=0.1, use_baseline = True)
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 0, -9.99]), baseline_conc_array=np.array([0, 0, 100.]),
-                                         time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
+                                         fast_threshold_fraction=0.1, use_baseline = True)
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([9.99, 0, 0]), baseline_conc_array=np.array([100., 0, 0]),
-                                         time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
+                                         fast_threshold_fraction=0.1, use_baseline = True)
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -9.99, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                         time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
+                                         fast_threshold_fraction=0.1, use_baseline = True)
     assert rxn.slow_rxns() == [0, 1]    # Still no change, because all the abs(delta_conc) still below threshold
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=1, delta_conc_array=np.array([0, 10.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                         time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
+                                         fast_threshold_fraction=0.1, use_baseline = True)
     assert rxn.slow_rxns() == [0]       # The last function call was "the straw that broke the camel's back" for reaction 1 (no longer "slow")!
     assert rxn.fast_rxns() == [1]
     assert not rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -10.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                         time_subdivision=1, fast_threshold_fraction=0.1, use_baseline = True)
+                                         fast_threshold_fraction=0.1, use_baseline = True)
     assert rxn.slow_rxns() == []        # The last function call was "straw that broke the camel's back" for reaction 0 (no longer "slow")!
     assert rxn.fast_rxns() == [0, 1]
     assert not rxn.are_all_slow_rxns()
@@ -771,19 +772,19 @@ def test_examine_increment_array():
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 0, 3.32]), baseline_conc_array=np.array([0, 0, 100.]),
-                                         time_subdivision=3, fast_threshold_fraction=0.1, use_baseline = True)
+                                         fast_threshold_fraction=0.03, use_baseline = True)
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag for reaction 0
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 3.34, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                         time_subdivision=3, fast_threshold_fraction=0.1, use_baseline = True)
+                                         fast_threshold_fraction=0.03, use_baseline = True)
     assert rxn.fast_rxns() == [0]       # Reaction 0 got marked as "Fast" b/c of large delta_conc for a time_subdivision of 3
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=1, delta_conc_array=np.array([0, 0, -0.99]), baseline_conc_array=np.array([0, 0, 100.]),
-                                         time_subdivision=10, fast_threshold_fraction=0.1, use_baseline = True)
+                                         fast_threshold_fraction=0.01, use_baseline = True)
     assert rxn.fast_rxns() == [0]       # The small increment didn't trip the current "slow reaction" tag for reaction 1
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=1, delta_conc_array=np.array([0, -1.01, 0]), baseline_conc_array=np.array([0, 100., 0]),
-                                         time_subdivision=10, fast_threshold_fraction=0.1, use_baseline = True)
+                                         fast_threshold_fraction=0.01, use_baseline = True)
     assert rxn.fast_rxns() == [0, 1]    # Reaction 1 got marked as "Fast" b/c of large delta_conc for a time_subdivision of 3
 
 
@@ -801,12 +802,12 @@ def test_examine_increment_array_2():
     # INITIAL THRESHOLD (fast_threshold_fraction=5.)
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([4.98, 0, 0]),
-                                         time_subdivision=1, fast_threshold_fraction=5.)
+                                         fast_threshold_fraction=5.)
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag
 
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 5.01, 0]),
-                                         time_subdivision=1, fast_threshold_fraction=5.)
+                                         fast_threshold_fraction=5.)
     assert rxn.fast_rxns() == [0]       # The one reaction present got marked as "Fast" b/c of large delta_conc
     assert not rxn.are_all_slow_rxns()
 
@@ -815,18 +816,18 @@ def test_examine_increment_array_2():
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -4.98, 0]),
-                                         time_subdivision=1, fast_threshold_fraction=5.)
+                                         fast_threshold_fraction=5.)
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([-5.01, 0, 0]),
-                                         time_subdivision=1, fast_threshold_fraction=5.)
+                                         fast_threshold_fraction=5.)
     assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc)
 
     rxn.set_rxn_speed(0, "S")           # Reset the lone reaction to "Slow"
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -5.01, 0]),
-                                         time_subdivision=1, fast_threshold_fraction=5.)
+                                         fast_threshold_fraction=5.)
     assert not rxn.are_all_slow_rxns()  # The one reaction present got marked as "Fast" b/c of large abs(delta_conc),
     # no matter which chemical species is being affected
 
@@ -834,11 +835,11 @@ def test_examine_increment_array_2():
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([2.49, 0, 0]),
-                                         time_subdivision=2, fast_threshold_fraction=5.)
+                                         fast_threshold_fraction=2.5)
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 2.51, 0]),
-                                         time_subdivision=2, fast_threshold_fraction=5.)
+                                         fast_threshold_fraction=2.5)
     assert rxn.fast_rxns() == [0]       # The reaction got marked as "Fast" b/c of large delta_conc for a time_subdivision of 2
     assert not rxn.are_all_slow_rxns()
 
@@ -856,31 +857,31 @@ def test_examine_increment_array_2():
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 0, 5.01]),
-                                         time_subdivision=1, fast_threshold_fraction=10.)
+                                         fast_threshold_fraction=10.)
     assert rxn.slow_rxns() == [0, 1]    # No change, because the threshold is now higher
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 9.99, 0]),
-                                         time_subdivision=1, fast_threshold_fraction=10.)
+                                         fast_threshold_fraction=10.)
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 0, -9.99]),
-                                         time_subdivision=1, fast_threshold_fraction=10.)
+                                         fast_threshold_fraction=10.)
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([9.99, 0, 0]),
-                                         time_subdivision=1, fast_threshold_fraction=10.)
+                                         fast_threshold_fraction=10.)
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -9.99, 0]),
-                                         time_subdivision=1, fast_threshold_fraction=10.)
+                                         fast_threshold_fraction=10.)
     assert rxn.slow_rxns() == [0, 1]    # Still no change, because all the abs(delta_conc) still below threshold
     assert rxn.fast_rxns() == []
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=1, delta_conc_array=np.array([0, 10.01, 0]),
-                                         time_subdivision=1, fast_threshold_fraction=10.)
+                                         fast_threshold_fraction=10.)
     assert rxn.slow_rxns() == [0]       # The last function call was "the straw that broke the camel's back" for reaction 1 (no longer "slow")!
     assert rxn.fast_rxns() == [1]
     assert not rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, -10.01, 0]),
-                                         time_subdivision=1, fast_threshold_fraction=10.)
+                                         fast_threshold_fraction=10.)
     assert rxn.slow_rxns() == []        # The last function call was "straw that broke the camel's back" for reaction 0 (no longer "slow")!
     assert rxn.fast_rxns() == [0, 1]
     assert not rxn.are_all_slow_rxns()
@@ -890,19 +891,19 @@ def test_examine_increment_array_2():
     assert rxn.are_all_slow_rxns()
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 0, 3.32]),
-                                         time_subdivision=3, fast_threshold_fraction=10.)
+                                         fast_threshold_fraction=3.3)
     assert rxn.are_all_slow_rxns()      # The small increment didn't trip the current "slow reaction" tag for reaction 0
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=0, delta_conc_array=np.array([0, 3.34, 0]),
-                                         time_subdivision=3, fast_threshold_fraction=10.)
+                                         fast_threshold_fraction=3.3)
     assert rxn.fast_rxns() == [0]       # Reaction 0 got marked as "Fast" b/c of large delta_conc for a time_subdivision of 3
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=1, delta_conc_array=np.array([0, 0, -0.99]),
-                                         time_subdivision=10, fast_threshold_fraction=10.)
+                                         fast_threshold_fraction=1.)
     assert rxn.fast_rxns() == [0]       # The small increment didn't trip the current "slow reaction" tag for reaction 1
 
     rxn.examine_increment_array_OBSOLETE(rxn_index=1, delta_conc_array=np.array([0, -1.01, 0]),
-                                         time_subdivision=10, fast_threshold_fraction=10.)
+                                         fast_threshold_fraction=1.)
     assert rxn.fast_rxns() == [0, 1]    # Reaction 1 got marked as "Fast" b/c of large delta_conc for a time_subdivision of 3
 
 
@@ -971,57 +972,57 @@ def test_explain_time_advance():
 
     # Start out with uniform steps
     rxn.diagnostic_conc_data.store(par=20.,
-                                   data_snapshot={"delta_time": 100.})
+                                   data_snapshot={"time_step": 100.})
 
     assert rxn.explain_time_advance(return_times=True, silent=True) is None
 
 
     rxn.diagnostic_conc_data.store(par=30.,
-                                   data_snapshot={"delta_time": 100.})
+                                   data_snapshot={"time_step": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)    # TODO: also test the returned step sizes
     assert np.allclose(result, [20., 30.])
 
     rxn.diagnostic_conc_data.store(par=40.,
-                                   data_snapshot={"delta_time": 100.})
+                                   data_snapshot={"time_step": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40.])
 
     # Switching to smaller step
     rxn.diagnostic_conc_data.store(par=45.,
-                                   data_snapshot={"delta_time": 100.})
+                                   data_snapshot={"time_step": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 45.])
 
     rxn.diagnostic_conc_data.store(par=50.,
-                                   data_snapshot={"delta_time": 100.})
+                                   data_snapshot={"time_step": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50.])
 
     # Switching to larger step
     rxn.diagnostic_conc_data.store(par=70.,
-                                   data_snapshot={"delta_time": 100.})
+                                   data_snapshot={"time_step": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70.])
 
     # Yet larger
     rxn.diagnostic_conc_data.store(par=95.,
-                                   data_snapshot={"delta_time": 100.})
+                                   data_snapshot={"time_step": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95.])
 
     # Smaller again
     rxn.diagnostic_conc_data.store(par=96.,
-                                   data_snapshot={"delta_time": 100.})
+                                   data_snapshot={"time_step": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 96.])
 
     rxn.diagnostic_conc_data.store(par=97.,
-                                   data_snapshot={"delta_time": 100.})
+                                   data_snapshot={"time_step": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 97.])
 
     rxn.diagnostic_conc_data.store(par=98.,
-                                   data_snapshot={"delta_time": 100.})
+                                   data_snapshot={"time_step": 100.})
     result, _ = rxn.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 98.])
 
@@ -1062,11 +1063,11 @@ def test_save_diagnostic_rxn_data():
 
     dyn.system_time = 100
     with pytest.raises(Exception):
-        dyn.save_diagnostic_rxn_data(rxn_index=0, delta_time=4,
-                                    increment_vector_single_rxn=np.array([2, -2])) # Wrong size of Numpy array
+        dyn.save_diagnostic_rxn_data(rxn_index=0, time_step=4,
+                                     increment_vector_single_rxn=np.array([2, -2])) # Wrong size of Numpy array
 
     # Add data for reaction 0
-    dyn.save_diagnostic_rxn_data(rxn_index=0, delta_time=4,
+    dyn.save_diagnostic_rxn_data(rxn_index=0, time_step=4,
                                  increment_vector_single_rxn=np.array([2, -2, 0, 0]))
 
     assert len(dyn.diagnostic_rxn_data) == 3    # Same as the number of reactions
@@ -1084,15 +1085,15 @@ def test_save_diagnostic_rxn_data():
     df_2 = diagnostic_data_rxn_2.get_dataframe()
 
     expected_df_0 = pd.DataFrame([[100, 2, -2, 0, 0, 4, ""]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)
 
     assert df_1.empty
     assert df_2.empty
 
     # Add data for reaction 1
-    dyn.save_diagnostic_rxn_data(rxn_index=1, delta_time=4,
-                                increment_vector_single_rxn=np.array([7, 0, 0, -7]))
+    dyn.save_diagnostic_rxn_data(rxn_index=1, time_step=4,
+                                 increment_vector_single_rxn=np.array([7, 0, 0, -7]))
 
     df_0 = diagnostic_data_rxn_0.get_dataframe()
     df_1 = diagnostic_data_rxn_1.get_dataframe()
@@ -1101,13 +1102,13 @@ def test_save_diagnostic_rxn_data():
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)  # Nothing was done to df_0 by processing reaction index 1
 
     expected_df_1 = pd.DataFrame([[100, 7, 0, 0, -7, 4, ""]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
     assert_frame_equal(df_1, expected_df_1, check_dtype=False)
 
     assert df_2.empty
 
     # Add data for reaction 2
-    dyn.save_diagnostic_rxn_data(rxn_index=2, delta_time=4,
+    dyn.save_diagnostic_rxn_data(rxn_index=2, time_step=4,
                                  increment_vector_single_rxn=np.array([-8, -8, 0, 8]),
                                  caption="I'm a caption")
 
@@ -1119,7 +1120,7 @@ def test_save_diagnostic_rxn_data():
     assert_frame_equal(df_1, expected_df_1, check_dtype=False)  # Nothing was done to df_1 by processing reaction index 1
 
     expected_df_2 = pd.DataFrame([[100, -8, -8, 0, 8, 4, "I'm a caption"]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
     #TODO: test adding multiple entries for any reaction
@@ -1138,13 +1139,13 @@ def test_get_diagnostic_rxn_data():
     dyn.system_time = 100
 
     # Add data for reaction 0
-    dyn.save_diagnostic_rxn_data(rxn_index=0, delta_time=4,
+    dyn.save_diagnostic_rxn_data(rxn_index=0, time_step=4,
                                  increment_vector_single_rxn=np.array([2, -2, 0, 0]))
 
     df_0 = dyn.get_diagnostic_rxn_data(rxn_index=0, print_reaction=False)
 
     expected_df_0 = pd.DataFrame([[100, 2, -2, 0, 0, 4, ""]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)
 
     df_1 = dyn.get_diagnostic_rxn_data(rxn_index=1, print_reaction=False)
@@ -1153,13 +1154,13 @@ def test_get_diagnostic_rxn_data():
     assert df_2.empty
 
     # Add data for reaction 1
-    dyn.save_diagnostic_rxn_data(rxn_index=1, delta_time=4,
+    dyn.save_diagnostic_rxn_data(rxn_index=1, time_step=4,
                                  increment_vector_single_rxn=np.array([7, 0, 0, -7]))
 
     df_1 = dyn.get_diagnostic_rxn_data(rxn_index=1, print_reaction=False)
 
     expected_df_1 = pd.DataFrame([[100, 7, 0, 0, -7, 4, ""]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
     assert_frame_equal(df_1, expected_df_1, check_dtype=False)
 
     df_0 = dyn.get_diagnostic_rxn_data(rxn_index=0, print_reaction=False)
@@ -1169,32 +1170,32 @@ def test_get_diagnostic_rxn_data():
     assert df_2.empty
 
     # Add data for reaction 2
-    dyn.save_diagnostic_rxn_data(rxn_index=2, delta_time=4,
+    dyn.save_diagnostic_rxn_data(rxn_index=2, time_step=4,
                                  increment_vector_single_rxn=np.array([-8, -8, 0, 8]),
                                  caption="I'm a caption")
 
     df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, tail=1) # With just one row, tail=1 won't make a difference
 
     expected_df_2 = pd.DataFrame([[100, -8, -8, 0, 8, 4, "I'm a caption"]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
     df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, t=50) # With just one row, the time selector won't matter
 
     expected_df_2 = pd.DataFrame([[50, 100, -8, -8, 0, 8, 4, "I'm a caption"]],
-                                 columns = ["search_value", "START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+                                 columns = ["search_value", "START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
 
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
     # Add a 2nd data row for reaction 2
     dyn.system_time = 104
-    dyn.save_diagnostic_rxn_data(rxn_index=2, delta_time=4,
+    dyn.save_diagnostic_rxn_data(rxn_index=2, time_step=4,
                                  increment_vector_single_rxn=np.array([-11, -11, 0, 11]),
                                  caption="2nd row")
 
     df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False)
     expected_df_2 = pd.DataFrame([[100, -8, -8, 0, 8, 4, "I'm a caption"] , [104, -11, -11, 0, 11, 4, "2nd row"]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
     df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, tail=2)   # The full dataset, again
@@ -1205,22 +1206,22 @@ def test_get_diagnostic_rxn_data():
 
     df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, head=1)   # Just the first row
     expected_df_2 = pd.DataFrame([[100, -8, -8, 0, 8, 4, "I'm a caption"]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
     df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, tail=1)   # Just the last row
     expected_df_2 = pd.DataFrame([[104, -11, -11, 0, 11, 4, "2nd row"]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
     expected_df_2.index = [1]   # To conform to the original index, which the tail parameter doesn't alter
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
     df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, t=150)   # The row closest in time will be the last row
     expected_df_2 = pd.DataFrame([[150, 104, -11, -11, 0, 11, 4, "2nd row"]],
-                                 columns = ["search_value", "START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+                                 columns = ["search_value", "START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
     expected_df_2.index = [1]   # To conform to the original index, which the t parameter doesn't alter
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
     df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, t=30)   # The row closest in time will be the first row
     expected_df_2 = pd.DataFrame([[30, 100, -8, -8, 0, 8, 4, "I'm a caption"]],
-                                 columns = ["search_value", "START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "delta_time", "caption"])
+                                 columns = ["search_value", "START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
