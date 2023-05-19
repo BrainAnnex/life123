@@ -51,6 +51,9 @@ class ReactionDynamics:
                                         #   Any reaction with a missing entry is regarded as "F" (Fast)
 
 
+        self.thresholds = [{"norm": self.norm_A, "low": 0.25, "high": 0.64, "abort": 1.44}]
+        self.step_factors = {"abort": 0.5, "downshift": 0.5, "upshift": 2.0}
+
 
         self.variable_steps_threshold_low = 0.25    # EXPERIMENTAL default value
         self.variable_steps_threshold_high = 0.64   # EXPERIMENTAL default value
@@ -903,10 +906,44 @@ class ReactionDynamics:
 
 
 
+    def adjust_speed(self, delta_conc: np.array, baseline_conc=None) -> Union[float, int]:
+        """
+
+        :param delta_conc:
+        :param baseline_conc:
+        :return:                A factor by which to multiple the time step at the next iteration round;
+                                    if no change is deemed necessary, 1 is returned
+        """
+        all_small = True
+
+        for rule in self.thresholds:
+            if rule["norm"] == self.norm_A:
+                result = self.norm_A(delta_conc)
+            else:
+                result = self.norm_B(baseline_conc, delta_conc)
+
+            if result > rule["abort"]:
+                return self.step_factors["abort"]
+
+            if result > rule["high"]:
+                return self.step_factors["downshift"]
+
+            if all_small:
+                if result >= rule["small"]:
+                    all_small = False
+
+
+        if all_small:
+            return self.step_factors["upshift"]
+
+        return 1
+                                  
+
+
     def step_determiner_A(self, norm) -> Union[float, int]:
         """
         Given a value for a norm (or other measure) about the concentration deltas at a time step,
-        generate a factor by which to multiple the time step at the next iteration round,
+        generate a factor by which to multiply the time step at the next iteration round,
         upon consulting various thresholds stored in object variables
 
         :param norm: Value for a norm (or other measure) about the concentration deltas at a time step
