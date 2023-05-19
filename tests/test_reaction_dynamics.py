@@ -407,6 +407,44 @@ def test_single_compartment_correct_neg_conc_1():
 ###########################  LOWER-LEVEL METHODS  ###########################
 
 
+def test_norm_A():
+    chem_data = ReactionData(names=["A", "B"])
+    rxn = ReactionDynamics(chem_data)
+
+    delta_conc = np.array([1, 4])
+    result = rxn.norm_A(delta_conc)
+    assert np.allclose(result, 4.25)
+
+    delta_conc = np.array([.5, 2])
+    result = rxn.norm_A(delta_conc)
+    assert np.allclose(result, 1.0625)
+
+    delta_conc = np.array([.5, 2, 1])
+    with pytest.raises(Exception):
+        rxn.norm_A(delta_conc)      # Too many entries in array
+
+
+def test_norm_B():
+    chem_data = ReactionData(names=["A", "B"])
+    rxn = ReactionDynamics(chem_data)
+
+    base = np.array([10, 2])
+    delta = np.array([4, -1])
+    result = rxn.norm_B(baseline_conc=base, delta_conc=delta)
+    assert np.allclose(result, 0.5)
+
+    base = np.array([10, 0])
+    result = rxn.norm_B(baseline_conc=base, delta_conc=delta)
+    assert np.allclose(result, 0.4)     # The zero baseline concentration is disregarded
+
+    with pytest.raises(Exception):
+        rxn.norm_B(baseline_conc=np.array([1, 2, 3]), delta_conc=delta) # Too many entries in array
+
+    with pytest.raises(Exception):
+        rxn.norm_B(baseline_conc=base, delta_conc=np.array([1]))    # Too few entries in array
+
+
+
 def test_step_determiner_A ():
     chem_data = ReactionData()
     rxn = ReactionDynamics(chem_data)

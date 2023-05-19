@@ -845,19 +845,61 @@ class ReactionDynamics:
 
 
 
-    def norm_A(self, delta_concentrations) -> float:
+    def norm_A(self, delta_conc: np.array) -> float:
         """
-        Return "version A" of a measure based on the concentration changes of all the chemicals at a time step
-        :param delta_concentrations:
-        :return:
+        Return "version A" of a measure of change, based on the average concentration changes
+        of ALL chemicals across a time step, adjusted for the number of chemicals
+
+        :param delta_conc:  A Numpy array with the concentration changes
+                                of all the chemicals across a time step
+        :return:            A measure of change in the concentrations across a simulation step
         """
         n_chems = self.reaction_data.number_of_chemicals()
 
-        # The following are normalized by the number of steps and the number of chemicals
+        assert n_chems == len(delta_conc), \
+            f"norm_A(): the number of entries in the passed array ({len(delta_conc)}) " \
+            f"does not match the number of registered chemicals ({n_chems})"
+
+
+        # The following are normalized by the number of chemicals
         #L2_rate = np.linalg.norm(delta_concentrations) / n_chems
         #L2_rate = np.sqrt(np.sum(delta_concentrations * delta_concentrations)) / n_chems
-        adjusted_L2_rate = np.sum(delta_concentrations * delta_concentrations) / (n_chems * n_chems)   # The square of the rate above
+        adjusted_L2_rate = np.sum(delta_conc * delta_conc) / (n_chems * n_chems)   # The square of the rate above
         return adjusted_L2_rate
+
+
+    def norm_B(self, baseline_conc: np.array, delta_conc: np.array) -> float:
+        """
+        Return "version B" of a measure of change, based on the max absolute relative concentration
+        change of all the chemicals across a time step (based on an L infinity norm - but disregarding
+        any baseline concentration that is very close to zero)
+
+        :param baseline_conc:   A Numpy array with the concentration of all the chemicals
+                                    at the start of a simulation time step
+        :param delta_conc:      A Numpy array with the concentration changes
+                                    of all the chemicals across a time step
+        :return:                A measure of change in the concentrations across a simulation step
+        """
+        n_chems = self.reaction_data.number_of_chemicals()
+
+        assert n_chems == len(baseline_conc), \
+            f"norm_B(): the number of entries in the array passed in the arg `baseline_conc` ({len(baseline_conc)}) " \
+            f"does not match the number of registered chemicals ({n_chems})"
+
+        assert n_chems == len(delta_conc), \
+            f"norm_B(): the number of entries in the array passed in the arg `delta_conc` ({len(delta_conc)}) " \
+            f"does not match the number of registered chemicals ({n_chems})"
+
+        largest = 0.
+        for i in range(len(baseline_conc)):
+            if np.allclose(baseline_conc[i], 0):
+                continue            # We ignore any baseline concentrations that are very close to zero
+
+            abs_ratio = abs(delta_conc[i] / baseline_conc[i])
+            if abs_ratio > largest:
+                largest = abs_ratio
+
+        return largest
 
 
 
