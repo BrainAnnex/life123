@@ -51,8 +51,10 @@ class ReactionDynamics:
                                         #   Any reaction with a missing entry is regarded as "F" (Fast)
 
 
-        self.thresholds = [{"norm": self.norm_A, "low": 0.25, "high": 0.64, "abort": 1.44},
-                           {"norm": self.norm_B}]
+        #self.thresholds = [{"norm": self.norm_A, "low": 0.5, "high": 0.8, "abort": 1.44},
+        #                   {"norm": self.norm_B}]
+        self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
+                           {"norm": "norm_B", "low": 0.04, "high": 0.5, "abort": 1.5}]
         self.step_factors = {"abort": 0.5, "downshift": 0.5, "upshift": 2.0}
 
 
@@ -484,7 +486,7 @@ class ReactionDynamics:
 
 
 
-    def set_thresholds(self, thresholds: dict) -> None:
+    def set_thresholds(self, thresholds: dict, norm=None) -> None:
         """
         Over-ride default values for simulation parameters
 
@@ -493,6 +495,9 @@ class ReactionDynamics:
                             EXAMPLE: {"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.}
         :return:            None
         """
+        if norm is None:
+            norm = self.norm_A
+
         if "low" in thresholds:
             self.variable_steps_threshold_low = thresholds["low"]
         if "high" in thresholds:
@@ -738,51 +743,63 @@ class ReactionDynamics:
 
                 if variable_steps:
                     adjusted_L2_rate =self.norm_A(delta_concentrations)
+                    decision_data = self.adjust_speed(delta_conc=delta_concentrations, baseline_conc=conc_array)
+                    speed_factor = decision_data[1]
+                    action = decision_data[0]
+                    all_norms = decision_data[2]
 
                     if "variable_steps" in self.verbose_list:
-                        decision_data = self.adjust_speed(delta_conc=delta_concentrations, baseline_conc=conc_array)
 
                         print(f"\nEXAMINING CONCENTRATION CHANGES from System Time {self.system_time:.5g} "
                               f"due to tentative single step of {delta_time} (for all rxns):")
                         print("    Baseline: ", conc_array)
                         print("    Deltas:   ", delta_concentrations)
                         print("    Relative Deltas:   ", delta_concentrations / conc_array)
-                        print("    Norms:    ", decision_data[1])
-                        print("    Speed factor:    ", decision_data[0])
+                        print("    Norms:    ", all_norms)
+                        print("    Action:    ", action)
+                        print("    Speed factor:    ", speed_factor)
+                        print("    Thresholds:    ")
+                        for rule in  self.thresholds:
+                            print(f"                   {rule['norm']} = {all_norms.get(rule['norm'])}: low {rule.get('low')} | high {rule.get('high')} | abort {rule.get('abort')}" )
 
-                        #
-                        #print("    L_inf norm:   ", np.linalg.norm(delta_concentrations, ord=np.inf) / delta_time_full)
-                        print("    Adjusted L2 norm:   ", adjusted_L2_rate)
-                        #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
+                        print("    Step Factors:    ", self.step_factors)
+                        #print("    Adjusted L2 norm:   ", adjusted_L2_rate)
+
 
                     # Abort the current step if the rate of change is deemed excessive.
                     # TODO: maybe ALWAYS check this, regardless of variable-steps option
-                    if adjusted_L2_rate > self.variable_steps_threshold_abort:
-                        msg =   f"INFO: current time step ({delta_time}) " \
-                                f"leads to an 'adjusted L2 rate' ({adjusted_L2_rate:.4g}) > ABORT threshold ({self.variable_steps_threshold_abort}):\n" \
+                    if action == "abort":
+                    #if adjusted_L2_rate > self.variable_steps_threshold_abort:
+                        msg =   f"INFO: the tentative time step ({delta_time}) " \
+                                f"leads to a least one norm value > its ABORT threshold:\n" \
                                 f"      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time / self.abort_step_reduction_factor:.5g} " \
                                 f"[Step started at t={self.system_time:.5g}, and will rewind there]"
                         #print("WARNING: ", msg)
                         if self.diagnostics:
                             # Expand the dict diagnostic_data_snapshot
-                            diagnostic_data_snapshot['L2'] = adjusted_L2_rate
+                            #diagnostic_data_snapshot['L2'] = adjusted_L2_rate
+                            diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
+                            diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
                             diagnostic_data_snapshot['action'] = "ABORT"
                             diagnostic_data_snapshot['step_factor'] = 1/self.abort_step_reduction_factor
                             diagnostic_data_snapshot['time_step'] = delta_time
-                            self.save_diagnostic_decisions_data(data=diagnostic_data_snapshot, caption="excessive L2_rate")
+                            self.save_diagnostic_decisions_data(data=diagnostic_data_snapshot, caption="excessive norm value(s)")
 
                             # Make a note of the abort action in all the reaction-specific diagnostics
-                            self.comment_diagnostic_rxn_data("aborted: excessive L2_rate")
+                            self.comment_diagnostic_rxn_data("aborted: excessive norm value(s)")
 
                         raise ExcessiveTimeStep(msg)    # ABORT THE CURRENT STEP
 
 
-                    step_factor = self.step_determiner_A(adjusted_L2_rate)
+                    step_factor = speed_factor
+                    #step_factor = self.step_determiner_A(adjusted_L2_rate)
                     recommended_next_step = delta_time * step_factor
 
                     if self.diagnostics:
                         # Expand the dict diagnostic_data_snapshot
-                        diagnostic_data_snapshot['L2'] = adjusted_L2_rate
+                        #diagnostic_data_snapshot['L2'] = adjusted_L2_rate
+                        diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
+                        diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
                         diagnostic_data_snapshot['action'] = "OK"
                         diagnostic_data_snapshot['step_factor'] = step_factor
                         diagnostic_data_snapshot['time_step'] = delta_time
@@ -791,7 +808,7 @@ class ReactionDynamics:
 
 
                     if "variable_steps" in self.verbose_list:
-                        msg =   f"The chosen time step ({delta_time}) results in an 'L2 rate' ({adjusted_L2_rate:.4g}) that leads to the following:\n"
+                        msg =   f"the tentative time step ({delta_time}) results in norm values that leads to the following:\n"
 
                         if step_factor > 1:     # "INCREASE"
                             msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER by a factor {step_factor} (set to {recommended_next_step}) at the next round!"
@@ -827,7 +844,7 @@ class ReactionDynamics:
                                                               increment_vector_single_rxn=None,
                                                               caption=f"aborted: neg. conc. from combined multiple rxns")
 
-                        raise ExcessiveTimeStep(f"INFO: current time step ({delta_time}) "
+                        raise ExcessiveTimeStep(f"INFO: the tentative time step ({delta_time}) "
                                                 f"leads to a NEGATIVE concentration of one of the chemicals: "
                                                 f"\n      -> will backtrack, and re-do step with a SMALLER delta time "
                                                 f"[Step started at t={self.system_time:.5g}, and will rewind there.  Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
@@ -841,7 +858,7 @@ class ReactionDynamics:
                 #   under the following scenarios:
                 #       1. negative concentrations from any one reaction - caught by  validate_increment()
                 #       2. negative concentration from the combined effect of multiple reactions - caught in this function
-                #       3. excessive L2_rate of the overall step - caught in this function (currently only checked in case of the variable-steps option)
+                #       3. excessive norm(s) measures in the overall step - caught in this function (currently only checked in case of the variable-steps option)
 
                 print(ex)
 
@@ -876,6 +893,9 @@ class ReactionDynamics:
         # The following are normalized by the number of chemicals
         #L2_rate = np.linalg.norm(delta_concentrations) / n_chems
         #L2_rate = np.sqrt(np.sum(delta_concentrations * delta_concentrations)) / n_chems
+        #print("    L_inf norm:   ", np.linalg.norm(delta_concentrations, ord=np.inf) / delta_time)
+        #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
+
         adjusted_L2_rate = np.sum(delta_conc * delta_conc) / (n_chems * n_chems)   # The square of the rate above
         return adjusted_L2_rate
 
@@ -915,33 +935,38 @@ class ReactionDynamics:
 
 
 
-    def adjust_speed(self, delta_conc: np.array, baseline_conc=None) -> (Union[float, int], list):
+    def adjust_speed(self, delta_conc: np.array, baseline_conc=None) -> (str, Union[float, int], dict):
         """
 
         :param delta_conc:
         :param baseline_conc:
-        :return:                A pair:
-                                    1) A factor by which to multiple the time step at the next iteration round;
+        :return:                A triplet:
+                                    1) String with action name
+                                    2) A factor by which to multiple the time step at the next iteration round;
                                        if no change is deemed necessary, 1 is returned
-                                    2) A list of all the computed norms (any of the last ones, except the first one, may be None)
+                                    3) A dict of all the computed norms (any of the last ones, except the first one, may be None),
+                                       indexed by their names
         """
-        all_norms = [None for rule in self.thresholds]
+        #all_norms = [None for rule in self.thresholds]
+        all_norms = {}
 
         all_small = True
 
         for i, rule in enumerate(self.thresholds):
-            if rule["norm"] == self.norm_A:
+            norm_name = rule["norm"]
+            if norm_name == "norm_A":     # self.norm_A:
                 result = self.norm_A(delta_conc)
             else:
                 result = self.norm_B(baseline_conc, delta_conc)
 
-            all_norms[i] = result
+            #all_norms[i] = result
+            all_norms[norm_name] = result
 
             if ("abort" in rule) and (result > rule["abort"]):
-                return (self.step_factors["abort"], all_norms)
+                return ("abort", self.step_factors["abort"], all_norms)
 
             if ("high" in rule) and (result > rule["high"]):
-                return (self.step_factors["downshift"], all_norms)
+                return ("high", self.step_factors["downshift"], all_norms)
 
             if all_small and ("low" in rule):
                 if result >= rule["low"]:
@@ -949,9 +974,9 @@ class ReactionDynamics:
 
 
         if all_small:
-            return (self.step_factors["upshift"], all_norms)
+            return ("low", self.step_factors["upshift"], all_norms)
 
-        return (1, all_norms)
+        return ("stay", 1, all_norms)
 
 
 
@@ -1195,7 +1220,7 @@ class ReactionDynamics:
         :return:                        None (an Exception is raised if a negative concentration is detected)
         """
         if (baseline_conc + delta_conc) < 0:
-            print(f"\n*** CAUTION: negative concentration in chemical `{self.reaction_data.get_name(species_index)}`.  "
+            print(f"\n*** CAUTION: negative concentration in chemical `{self.reaction_data.get_name(species_index)}` in step starting at t={self.system_time:.4g}.  "
                   f"It will be AUTOMATICALLY CORRECTED with a reduction in time step size, as follows:")
 
             if self.diagnostics:
@@ -1207,7 +1232,7 @@ class ReactionDynamics:
                                               increment_vector_single_rxn=None,
                                               caption=f"aborted: neg. conc. in `{self.reaction_data.get_name(species_index)}`")
 
-            raise ExcessiveTimeStep(f"    INFO: current time step ({delta_time}) "
+            raise ExcessiveTimeStep(f"    INFO: the tentative time step ({delta_time}) "
                                     f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` "
                                     f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
                                     f"\n      Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}"
