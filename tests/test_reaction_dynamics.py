@@ -325,7 +325,9 @@ def test_single_compartment_react_variable_steps_1():
     dynamics = ReactionDynamics(reaction_data=chem_data)
     dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
-    dynamics.set_thresholds(thresholds={"low": 0.25, "high": 0.64})
+    dynamics.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
+    dynamics.set_thresholds(norm="norm_B", low=None, high=None, abort=None)
+    dynamics.set_step_factors(abort=0.5, downshift=0.5, upshift=2.0)
 
     dynamics.single_compartment_react(time_step=0.01, stop_time=0.2,
                                       variable_steps=True)
@@ -442,24 +444,6 @@ def test_norm_B():
 
     with pytest.raises(Exception):
         rxn.norm_B(baseline_conc=base, delta_conc=np.array([1]))    # Too few entries in array
-
-
-
-def test_step_determiner_A ():
-    chem_data = ReactionData()
-    rxn = ReactionDynamics(chem_data)
-    rxn.variable_steps_threshold_low = 50
-    rxn.variable_steps_threshold_high = 100
-    rxn.variable_steps_threshold_abort = 200
-
-    assert rxn.step_determiner_A (0) == 2
-    assert rxn.step_determiner_A (49.9) == 2
-    assert rxn.step_determiner_A (50.1) == 1
-    assert rxn.step_determiner_A (99.0) == 1
-    assert np.allclose(rxn.step_determiner_A (100.1), 0.5)
-    assert np.allclose(rxn.step_determiner_A (199.9), 0.5)
-    assert np.allclose(rxn.step_determiner_A (200.1), 0.5)
-    assert np.allclose(rxn.step_determiner_A (10000), 0.5)
 
 
 

@@ -20,9 +20,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_4"_  
 #
-# LAST REVISED: May 19, 2023 
-#
-# # For the 0-th reaction (the only reaction in our case)
+# LAST REVISED: May 20, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -87,31 +85,37 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-dynamics.verbose_list = ["variable_steps"]
-
-# All of these are the currently the default values, but subject to change
-dynamics.set_thresholds(thresholds={"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.})
+# All of these settings are the currently the default values... but subject to change
+dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
+dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
+dynamics.set_step_factors(abort=0.5, downshift=0.5, upshift=1.5)
 
 dynamics.single_compartment_react(initial_step=0.004, reaction_duration=0.06,
-                                  variable_steps=True,
+                                  variable_steps=True, explain_variable_steps=False,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"})
 
-# %% [markdown]
-# ### Note: the argument _dynamic_step=2_ splits the time steps in 2 whenever the reaction is "fast" (as determined using the given value of _fast_threshold_ )
-
 # %%
-df = dynamics.get_history()
-df
+dynamics.get_history()
+
+# %% [markdown]
+# ## Note: "A" (now largely depleted) is the limiting reagent
 
 # %%
 dynamics.explain_time_advance()
 
 # %% [markdown]
-# ### Notice how the reaction proceeds in smaller steps in the early times, when the concentrations are changing much more rapidly
+# ### Notice how the reaction proceeds in smaller steps in the early times, when the concentrations are changing much more rapidly.
+# #### The argument argument _variable_steps=True_ dynamically adjusts the initial_step (which is initially found to be too large, leading to some backtracking
 
-# %% [markdown]
-# ## Note: "A" (now largely depleted) is the limiting reagent
+# %%
+dynamics.plot_step_sizes(show_intervals=True)
+
+# %% [markdown] tags=[]
+# ## Plots of changes of concentration with time
+
+# %%
+dynamics.plot_curves(colors=['red', 'violet', 'green'], show_intervals=True)
 
 # %% [markdown]
 # ### Check the final equilibrium
@@ -120,17 +124,11 @@ dynamics.explain_time_advance()
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium(tolerance=2)
 
-# %% [markdown] tags=[]
-# ## Plots of changes of concentration with time
-
-# %%
-dynamics.plot_curves(colors=['red', 'violet', 'green'], show_intervals=True)
-
 # %%
 
 # %% [markdown]
 # # Everthing below is just for diagnostic insight 
-# ## into the adaptive variable time steps
+# ### into the adaptive variable time steps
 
 # %%
 dynamics.get_diagnostic_decisions_data()
@@ -140,8 +138,5 @@ dynamics.get_diagnostic_rxn_data(rxn_index=0)
 
 # %%
 dynamics.get_diagnostic_conc_data()
-
-# %%
-dynamics.examine_run(df=df)
 
 # %%

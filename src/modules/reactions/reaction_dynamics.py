@@ -51,26 +51,22 @@ class ReactionDynamics:
                                         #   Any reaction with a missing entry is regarded as "F" (Fast)
 
 
+        # Note: the "aborts" below are "elective" aborts - not aborts from hard errors (further below)
         self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
                            {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
         self.step_factors = {"abort": 0.5, "downshift": 0.5, "upshift": 1.5}
 
+        self.error_abort_step_factor = 0.5      # MUST BE < 1.  Factor by which to multiply the time step
+                                                #   in case of negative-concentration error from excessive step size
+                                                #   NOTE: this is from ERROR aborts, not to be confused with high-threshold aborts
 
-        self.variable_steps_threshold_low = 0.25    # EXPERIMENTAL default value    TODO: OBSOLETE
-        self.variable_steps_threshold_high = 0.64   # EXPERIMENTAL default value    TODO: OBSOLETE
 
-        self.variable_steps_threshold_abort = 1.44  # EXPERIMENTAL.     TODO: OBSOLETE  TODO: maybe detach from its dependence on variable steps
-        self.abort_step_reduction_factor = 2.       # Factor by which to divide the time step
-                                                    #   in case of negative-concentration error from excessive step size
-                                                    #   NOTE: this is from ERROR aborts, not to be confused with high-threshold aborts
-
+        # ***  FOR DIAGNOSTICS  ***
 
         self.verbose_list = []          # A list of integers or strings with the codes of the desired verbose checkpoints
                                         #   EXAMPLE: [1, "variable_steps"] to invoke sections of code marked as 1 or 3
                                         #   Those sections will have entry points such as:  if "variable_steps" in self.verbose_list
 
-
-        # ***  FOR DIAGNOSTICS  ***
 
         self.diagnostics = False        # Overall flag about whether using diagnostics
 
@@ -95,7 +91,7 @@ class ReactionDynamics:
         self.diagnostic_decisions_data = MovieTabular(parameter_name="START_TIME")
                                         #   Columns of the dataframes:
                                         #       'START_TIME' 	'Delta A' 'Delta B' ...
-                                        #               [plus, if applicable, other fields such as 'action', 'L2', 'step_factors']
+                                        #               [plus, if applicable, other fields such as 'action', 'norm_A', 'norm_B', 'step_factors']
                                         #
                                         #   Note: entries are always added, even if an interval run is aborted
 
@@ -485,33 +481,76 @@ class ReactionDynamics:
 
 
 
-    def set_thresholds(self, thresholds: dict, norm=None) -> None:
+    def set_thresholds(self, norm="norm_A", low=None, high=None, abort=None) -> None:
         """
         Over-ride default values for simulation parameters
 
         :param thresholds:  Dict of simulation parameters to over-ride various default values.
                             Allowed keys are "low", "high", "abort", "reduction_factor" (any other key is ignored)
                             EXAMPLE: {"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.}
+        :param norm:
         :return:            None
         """
-        if norm is None:
-            norm = self.norm_A
+        for t in self.thresholds:
+            if t.get("norm") == norm:
+                if low is None:
+                    del t["low"]
+                else:
+                    t["low"] = low
 
-        if "low" in thresholds:
-            self.variable_steps_threshold_low = thresholds["low"]
-        if "high" in thresholds:
-            self.variable_steps_threshold_high = thresholds["high"]
-        if "abort"  in thresholds:
-            self.variable_steps_threshold_abort = thresholds["abort"]
-        if "reduction_factor"  in thresholds:
-            self.abort_step_reduction_factor = thresholds["reduction_factor"]
+                if high is None:
+                    del t["high"]
+                else:
+                    t["high"] = high
+
+                if abort is None:
+                    del t["abort"]
+                else:
+                    t["abort"] = abort
+
+                return
+
+        new_t = {}
+        if low is not None:
+            new_t["low"] = low
+        if high is not None:
+            new_t["high"] = high
+        if abort is not None:
+            new_t["abort"] = abort
+
+        if self.thresholds is None:
+            self.thresholds = [new_t]
+        else:
+            self.thresholds.append(new_t)
+
+
+
+    def set_step_factors(self, abort, downshift, upshift) -> None:
+        """
+
+        Over-ride default values for simulation parameters
+
+        :param abort:
+        :param downshift:
+        :param upshift:
+        :return:
+        """
+        if self.step_factors is None:
+            self.step_factors = {}
+
+        if abort is not None:
+            self.step_factors["abort"] = abort
+        if downshift is not None:
+            self.step_factors["downshift"] = downshift
+        if upshift is not None:
+            self.step_factors["upshift"] = upshift
 
 
 
     def single_compartment_react(self, reaction_duration=None, stop_time=None, target_end_time=None,
                                  initial_step=None, time_step=None, n_steps=None,
                                  snapshots=None, silent=False,
-                                 variable_steps=False) -> None:
+                                 variable_steps=False, explain_variable_steps=False) -> None:
         """
         Perform ALL the reactions in the single compartment -
         based on the INITIAL concentrations,
@@ -543,6 +582,7 @@ class ReactionDynamics:
         :param silent:              If True, less output is generated
 
         :param variable_steps:      If True, the steps sizes will get automatically adjusted, based on thresholds
+        :param explain_variable_steps:
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
@@ -618,12 +658,13 @@ class ReactionDynamics:
 
             # ----------  CORE OPERATION OF MAIN LOOP  ----------
             delta_concentrations, step_actually_taken, recommended_next_step = \
-                    self.reaction_step_orchestrator(delta_time=time_step, conc_array=self.system,
-                                                    variable_steps=variable_steps)
+                    self.reaction_step_common(delta_time=time_step, conc_array=self.system,
+                                              variable_steps=variable_steps, explain_variable_steps=explain_variable_steps,
+                                              step_counter=i)
 
             # Update the System State
             self.system += delta_concentrations
-            if min(self.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_orchestrator() now does that
+            if min(self.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
                 print(f"+++++++++++ SYSTEM STATE ERROR: FAILED TO CATCH negative concentration upon advancing reactions from system time t={self.system_time:,.4g}")
 
             self.system_time += step_actually_taken
@@ -674,10 +715,9 @@ class ReactionDynamics:
 
 
 
-    def reaction_step_orchestrator(self, delta_time: float, conc_array,
-                                   variable_steps=False) -> (np.array, float, float):
-        """     TODO: the word "orchestrator" may no longer be a good descriptor.
-                      NAME IDEAS: reaction_step_manager(), reaction_step_common()
+    def reaction_step_common(self, delta_time: float, conc_array,
+                             variable_steps=False, explain_variable_steps=False, step_counter=1) -> (np.array, float, float):
+        """
         This is the common entry point for both single-compartment reactions,
         and the reaction part of reaction-diffusions in 1D, 2D and 3D.
 
@@ -700,6 +740,7 @@ class ReactionDynamics:
                                     as a Numpy array for ALL the chemical species, in their index order;
                                     this can be thought of as the "SYSTEM STATE"
         :param variable_steps:  If True, the step sizes will get automatically adjusted
+        :param explain_variable_steps:
 
         :return:                The triplet:
                                     1) increment vector for the concentrations of ALL the chemical species,
@@ -713,11 +754,11 @@ class ReactionDynamics:
         recommended_next_step = delta_time     # Baseline; no reason yet to suggest a change in step size
 
         # Validate arguments
-        assert conc_array is not None, "reaction_step_orchestrator(): the argument 'conc_array' must be a Numpy array"
+        assert conc_array is not None, "reaction_step_common(): the argument 'conc_array' must be a Numpy array"
 
 
         if 2 in self.verbose_list:
-            print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_orchestrator() with:")
+            print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_common() with:")
             print(f"             delta_time={delta_time}, conc_array={conc_array}, ")
 
 
@@ -746,9 +787,9 @@ class ReactionDynamics:
                     action = decision_data[0]
                     all_norms = decision_data[2]
 
-                    if "variable_steps" in self.verbose_list:
-                        print(f"\nANALYSIS: Examining Concentration Changes from System Time {self.system_time:.5g} "
-                              f"due to tentative single step of {delta_time}:")
+                    if explain_variable_steps:
+                        print(f"\n(STEP {step_counter}) ANALYSIS: Examining Conc. Changes from System Time {self.system_time:.5g} "
+                              f"due to tentative single step of {delta_time:.5g}:")
                         print("    Baseline: ", conc_array)
                         print("    Deltas:   ", delta_concentrations)
                         print("    Relative Deltas:   ", delta_concentrations / conc_array)
@@ -764,10 +805,10 @@ class ReactionDynamics:
 
                     # Abort the current step if the rate of change is deemed excessive.
                     # TODO: maybe ALWAYS check this, regardless of variable-steps option
-                    if action == "abort":
+                    if action == "abort":       # NOTE: this is a "strategic" abort, not a hard one
                         msg =   f"INFO: the tentative time step ({delta_time:.5g}) " \
                                 f"leads to a least one norm value > its ABORT threshold:\n" \
-                                f"      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time / self.abort_step_reduction_factor:.5g} " \
+                                f"      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time * step_factor:.5g} " \
                                 f"[Step started at t={self.system_time:.5g}, and will rewind there]"
                         #print("WARNING: ", msg)
                         if self.diagnostics:
@@ -775,7 +816,7 @@ class ReactionDynamics:
                             diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
                             diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
                             diagnostic_data_snapshot['action'] = "ABORT"
-                            diagnostic_data_snapshot['step_factor'] = 1/self.abort_step_reduction_factor
+                            diagnostic_data_snapshot['step_factor'] = step_factor
                             diagnostic_data_snapshot['time_step'] = delta_time
                             self.save_diagnostic_decisions_data(data=diagnostic_data_snapshot, caption="excessive norm value(s)")
 
@@ -791,12 +832,13 @@ class ReactionDynamics:
                         # Expand the dict diagnostic_data_snapshot
                         diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
                         diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
-                        diagnostic_data_snapshot['action'] = "OK"
+                        diagnostic_data_snapshot['action'] = f"OK ({action})"
                         diagnostic_data_snapshot['step_factor'] = step_factor
                         diagnostic_data_snapshot['time_step'] = delta_time
 
 
-                    if "variable_steps" in self.verbose_list:
+                    #if "variable_steps" in self.verbose_list:
+                    if explain_variable_steps:
                         msg =   f"the tentative time step ({delta_time:.5g}) results in norm values that leads to the following:\n"
 
                         if step_factor > 1:         # "INCREASE
@@ -818,17 +860,18 @@ class ReactionDynamics:
 
 
                 # Check whether the COMBINED delta_concentrations will make any conc negative
-                if self.system is not None:     # IMPORTANT: usage of this function doesn't always involve self.system
+                if self.system is not None:     # TODO - IMPORTANT: usage of this function doesn't always involve self.system
                     tentative_updated_system = self.system + delta_concentrations
                     if min(tentative_updated_system) < 0:
-                        print(f"*** CAUTION: negative concentration resulting from the combined effect of multiple reactions, "
+                        print(f"*** CAUTION: negative concentration resulting from the combined effect of all reactions, "
                               f"upon advancing reactions from system time t={self.system_time:,.5g}\n"
                               f"         It will be AUTOMATICALLY CORRECTED with a reduction in time step size")
 
+                        # A type of HARD ABORT is detected (a negative concentration resulting from the combined effect of all reactions)
                         if self.diagnostics:
                             self.save_diagnostic_decisions_data(data={"action": "ABORT",
-                                                                      "step_factor": 1 / self.abort_step_reduction_factor,
-                                                                      "caption": "neg. conc. from combined effect of multiple rxns",
+                                                                      "step_factor": self.error_abort_step_factor,
+                                                                      "caption": "neg. conc. from combined effect of all rxns",
                                                                       "time_step": delta_time})
                             for rxn_index in range(self.reaction_data.number_of_reactions()):
                                 self.save_diagnostic_rxn_data(rxn_index=rxn_index, time_step=delta_time,
@@ -843,7 +886,7 @@ class ReactionDynamics:
 
                 break       # IMPORTANT: this is needed because, in the absence of errors, we need to go thru the WHILE loop only once!
 
-            # CATCH any 'ExcessiveTimeStep' exception raised in the loop
+            # CATCH any 'ExcessiveTimeStep' exception raised in the loop  (i.e. a HARD ABORT)
             except ExcessiveTimeStep as ex:
                 # Single reactions steps can fail with this error condition if the attempted time step was too large,
                 #   under the following scenarios:
@@ -853,13 +896,13 @@ class ReactionDynamics:
 
                 print(ex)
 
-                delta_time /= self.abort_step_reduction_factor       # Reduce the excessive time step by a pre-set factor
+                delta_time *= self.error_abort_step_factor       # Reduce the excessive time step by a pre-set factor
                 recommended_next_step = delta_time
         # END while
 
 
         if delta_concentrations is None:
-            raise Exception("reaction_step_orchestrator(): unable to complete the reaction step")
+            raise Exception("reaction_step_common(): unable to complete the reaction step")
 
         return  (delta_concentrations, delta_time, recommended_next_step)     # TODO: consider returning tentative_updated_system , since we already computed it
 
@@ -1220,9 +1263,11 @@ class ReactionDynamics:
             print(f"\n*** CAUTION: negative concentration in chemical `{self.reaction_data.get_name(species_index)}` in step starting at t={self.system_time:.4g}.  "
                   f"It will be AUTOMATICALLY CORRECTED with a reduction in time step size, as follows:")
 
+            # A type of HARD ABORT is detected (a single reaction that, by itself, would lead to a negative concentration;
+            #   while it's possible that other coupled reactions might counterbalance this - nonetheless, it's taken as a sign of excessive step size)
             if self.diagnostics:
                 self.save_diagnostic_decisions_data(data={"action": "ABORT",
-                                                          "step_factor": 1 / self.abort_step_reduction_factor,
+                                                          "step_factor": self.error_abort_step_factor,
                                                           "caption": f"neg. conc. in {self.reaction_data.get_name(species_index)} from rxn # {rxn_index}",
                                                           "time_step": delta_time})
                 self.save_diagnostic_rxn_data(rxn_index=rxn_index, time_step=delta_time,
@@ -1548,46 +1593,8 @@ class ReactionDynamics:
 
 
 
-    def examine_run(self, df) -> None:
-        """
-        Analyze, primarily for debugging purposes, the data produced by a run of single_compartment_react()
-        The primary focus is for diagnostic information
 
-        TODO: simplify.  Maybe obsolete, now that substeps are no longer in use
-
-        CAUTION: this approach is only usable with single-reaction runs or non-overlapping multiple reactions,
-                 because it looks into concentration changes of the various chemicals,
-                 which in the case of multiple coupled reactions can be attributed to multiple reactions
-
-        :param df:  A Pandas data frame, as created by single_compartment_react()
-        :return:    None
-        """
-        number_datapoints = len(df)
-        chemical_list = self.reaction_data.get_all_names()
-        print("Examining the reaction data for the chemicals: ", chemical_list)
-
-        if self.reaction_data.number_of_reactions() > 1:
-            print(f"*** WARNING: {self.reaction_data.number_of_reactions()} reactions are present.  "
-                  f"The analysis below won't be meaningful if any of the reactions are coupled!")
-
-        for i in range(number_datapoints - 1):   # The -1 is b/c this analysis needs to look ahead to following data point
-            sys_time = df.iloc[i]['SYSTEM TIME']
-            print(f"\n------ Reaction step {i} (Initial SYSTEM TIME: {sys_time:,.4g}) ------")
-
-            before = df.iloc[i][chemical_list].to_numpy()       # Concentrations at the start of this step
-            print("Baseline conc's at start: ", before)
-
-            after = df.iloc[i+1][chemical_list].to_numpy()      # Concentrations at the end of this step
-
-            rel_changes = (after - before) / before * 100.      # Relative conc. changes (in %)
-            largest_abs_rel_change = max(abs(rel_changes))      # Max of absolute values of % relative conc. changes
-
-            print("Final conc's: ", after)
-            print("Delta conc's: ", after - before)
-            print("Relative conc. changes (%): ", rel_changes)
-            print(f"Largest MAX rel. change in abs. value (%):  {largest_abs_rel_change:.3g}")
-
-
+    #####  DIAGNOSTICS  #####
 
     def set_diagnostics(self):
         # Turn on the overall diagnostics mode
