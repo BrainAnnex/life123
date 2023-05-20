@@ -51,19 +51,18 @@ class ReactionDynamics:
                                         #   Any reaction with a missing entry is regarded as "F" (Fast)
 
 
-        #self.thresholds = [{"norm": self.norm_A, "low": 0.5, "high": 0.8, "abort": 1.44},
-        #                   {"norm": self.norm_B}]
         self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
-                           {"norm": "norm_B", "low": 0.04, "high": 0.5, "abort": 1.5}]
-        self.step_factors = {"abort": 0.5, "downshift": 0.5, "upshift": 2.0}
+                           {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
+        self.step_factors = {"abort": 0.5, "downshift": 0.5, "upshift": 1.5}
 
 
-        self.variable_steps_threshold_low = 0.25    # EXPERIMENTAL default value
-        self.variable_steps_threshold_high = 0.64   # EXPERIMENTAL default value
+        self.variable_steps_threshold_low = 0.25    # EXPERIMENTAL default value    TODO: OBSOLETE
+        self.variable_steps_threshold_high = 0.64   # EXPERIMENTAL default value    TODO: OBSOLETE
 
-        self.variable_steps_threshold_abort = 1.44  # EXPERIMENTAL.   TODO: maybe detach from its dependence on variable steps
+        self.variable_steps_threshold_abort = 1.44  # EXPERIMENTAL.     TODO: OBSOLETE  TODO: maybe detach from its dependence on variable steps
         self.abort_step_reduction_factor = 2.       # Factor by which to divide the time step
-                                                    #   in case of error from excessive step size
+                                                    #   in case of negative-concentration error from excessive step size
+                                                    #   NOTE: this is from ERROR aborts, not to be confused with high-threshold aborts
 
 
         self.verbose_list = []          # A list of integers or strings with the codes of the desired verbose checkpoints
@@ -742,42 +741,37 @@ class ReactionDynamics:
 
 
                 if variable_steps:
-                    adjusted_L2_rate =self.norm_A(delta_concentrations)
                     decision_data = self.adjust_speed(delta_conc=delta_concentrations, baseline_conc=conc_array)
-                    speed_factor = decision_data[1]
+                    step_factor = decision_data[1]
                     action = decision_data[0]
                     all_norms = decision_data[2]
 
                     if "variable_steps" in self.verbose_list:
-
-                        print(f"\nEXAMINING CONCENTRATION CHANGES from System Time {self.system_time:.5g} "
-                              f"due to tentative single step of {delta_time} (for all rxns):")
+                        print(f"\nANALYSIS: Examining Concentration Changes from System Time {self.system_time:.5g} "
+                              f"due to tentative single step of {delta_time}:")
                         print("    Baseline: ", conc_array)
                         print("    Deltas:   ", delta_concentrations)
                         print("    Relative Deltas:   ", delta_concentrations / conc_array)
                         print("    Norms:    ", all_norms)
                         print("    Action:    ", action)
-                        print("    Speed factor:    ", speed_factor)
+                        print("    Speed factor:    ", step_factor)
                         print("    Thresholds:    ")
                         for rule in  self.thresholds:
-                            print(f"                   {rule['norm']} = {all_norms.get(rule['norm'])}: low {rule.get('low')} | high {rule.get('high')} | abort {rule.get('abort')}" )
+                             print(self.display_thresholds(rule, all_norms.get(rule['norm'])))
 
                         print("    Step Factors:    ", self.step_factors)
-                        #print("    Adjusted L2 norm:   ", adjusted_L2_rate)
 
 
                     # Abort the current step if the rate of change is deemed excessive.
                     # TODO: maybe ALWAYS check this, regardless of variable-steps option
                     if action == "abort":
-                    #if adjusted_L2_rate > self.variable_steps_threshold_abort:
-                        msg =   f"INFO: the tentative time step ({delta_time}) " \
+                        msg =   f"INFO: the tentative time step ({delta_time:.5g}) " \
                                 f"leads to a least one norm value > its ABORT threshold:\n" \
                                 f"      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time / self.abort_step_reduction_factor:.5g} " \
                                 f"[Step started at t={self.system_time:.5g}, and will rewind there]"
                         #print("WARNING: ", msg)
                         if self.diagnostics:
                             # Expand the dict diagnostic_data_snapshot
-                            #diagnostic_data_snapshot['L2'] = adjusted_L2_rate
                             diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
                             diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
                             diagnostic_data_snapshot['action'] = "ABORT"
@@ -791,33 +785,30 @@ class ReactionDynamics:
                         raise ExcessiveTimeStep(msg)    # ABORT THE CURRENT STEP
 
 
-                    step_factor = speed_factor
-                    #step_factor = self.step_determiner_A(adjusted_L2_rate)
                     recommended_next_step = delta_time * step_factor
 
                     if self.diagnostics:
                         # Expand the dict diagnostic_data_snapshot
-                        #diagnostic_data_snapshot['L2'] = adjusted_L2_rate
                         diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
                         diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
                         diagnostic_data_snapshot['action'] = "OK"
                         diagnostic_data_snapshot['step_factor'] = step_factor
                         diagnostic_data_snapshot['time_step'] = delta_time
 
-                        #self.diagnostic_delta_conc_data.movie.loc[self.diagnostic_delta_conc_data.movie.index[-1], 'L2'] = L2_rate
-
 
                     if "variable_steps" in self.verbose_list:
-                        msg =   f"the tentative time step ({delta_time}) results in norm values that leads to the following:\n"
+                        msg =   f"the tentative time step ({delta_time:.5g}) results in norm values that leads to the following:\n"
 
-                        if step_factor > 1:     # "INCREASE"
-                            msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER by a factor {step_factor} (set to {recommended_next_step}) at the next round!"
+                        if step_factor > 1:         # "INCREASE
+                            msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER, " \
+                            f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because all norms are low"
                         elif step_factor < 1:     # "DECREASE"
-                            msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL SMALLER by a factor {1/step_factor} (set to {recommended_next_step}) at the next round!"
+                            msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL SMALLER, " \
+                            f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because at least one norm is high"
                         else:   # "STAY THE COURSE"
                             msg +=  f"ACTION: COMPLETE NORMALLY - we're inside the target range.  No change to step size."
 
-                        msg += f" [The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time:.5g}]"
+                        msg += f"\n        [The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time:.5g}]"
                         print("NOTICE:", msg)
 
 
@@ -844,7 +835,7 @@ class ReactionDynamics:
                                                               increment_vector_single_rxn=None,
                                                               caption=f"aborted: neg. conc. from combined multiple rxns")
 
-                        raise ExcessiveTimeStep(f"INFO: the tentative time step ({delta_time}) "
+                        raise ExcessiveTimeStep(f"INFO: the tentative time step ({delta_time:.5g}) "
                                                 f"leads to a NEGATIVE concentration of one of the chemicals: "
                                                 f"\n      -> will backtrack, and re-do step with a SMALLER delta time "
                                                 f"[Step started at t={self.system_time:.5g}, and will rewind there.  Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
@@ -947,19 +938,17 @@ class ReactionDynamics:
                                     3) A dict of all the computed norms (any of the last ones, except the first one, may be None),
                                        indexed by their names
         """
-        #all_norms = [None for rule in self.thresholds]
         all_norms = {}
 
         all_small = True
 
         for i, rule in enumerate(self.thresholds):
             norm_name = rule["norm"]
-            if norm_name == "norm_A":     # self.norm_A:
+            if norm_name == "norm_A":
                 result = self.norm_A(delta_conc)
             else:
                 result = self.norm_B(baseline_conc, delta_conc)
 
-            #all_norms[i] = result
             all_norms[norm_name] = result
 
             if ("abort" in rule) and (result > rule["abort"]):
@@ -980,24 +969,32 @@ class ReactionDynamics:
 
 
 
-    def step_determiner_A(self, norm) -> Union[float, int]:
+
+    def display_thresholds(self, rule, value):
         """
-        Given a value for a norm (or other measure) about the concentration deltas at a time step,
-        generate a factor by which to multiply the time step at the next iteration round,
-        upon consulting various thresholds stored in object variables
 
-        :param norm: Value for a norm (or other measure) about the concentration deltas at a time step
-        :return:     A factor by which to multiple the time step at the next iteration round;
-                        if no change is deemed necessary, 1 is returned
+        :param rule:
+        :param value:
+        :return:
         """
-        factor = 2      # TODO: perhaps allow a way to change this
+        s = f"                   {rule['norm']} : "
 
-        if norm > self.variable_steps_threshold_high:
-            return 1/factor     # "DECREASE"
-        if norm > self.variable_steps_threshold_low:
-            return 1            # "STAY"
+        if value is None:
+            return s + " None"
 
-        return factor           # "INCREASE"
+        low = rule.get('low')
+        high = rule.get('high')
+        abort = rule.get('abort')
+        if low is not None and value < low:
+            return f"{s}(VALUE {value:.5g}) | low {low} | high {high} | abort {abort}"
+
+        if high is not None and value < high:
+            return f"{s}low {low} | (VALUE {value:.5g}) | high {high} | abort {abort}"
+
+        if abort is not None and value < abort:
+            return f"{s}low {low} | high {high} | (VALUE {value:.5g}) | abort {abort}"
+
+        return f"{s}low {low} | high {high} | abort {abort} | (VALUE {value:.5g})"
 
 
 
@@ -1232,7 +1229,7 @@ class ReactionDynamics:
                                               increment_vector_single_rxn=None,
                                               caption=f"aborted: neg. conc. in `{self.reaction_data.get_name(species_index)}`")
 
-            raise ExcessiveTimeStep(f"    INFO: the tentative time step ({delta_time}) "
+            raise ExcessiveTimeStep(f"    INFO: the tentative time step ({delta_time:.5g}) "
                                     f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` "
                                     f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
                                     f"\n      Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}"
@@ -1794,37 +1791,6 @@ class ReactionDynamics:
         df_sum.insert(0, "START_TIME", time_col)
 
         return df_sum
-
-
-
-    def get_diagnostic_L2_data(self) -> pd.DataFrame:   # TODO: OBSOLETE.  To phase out
-        """
-        Return the diagnostic data about concentration changes at every step - EVEN aborted ones - plus
-        the L2 norms about the concentration deltas at those steps, and a code for the resolution that was taken:
-        "ABORT", "DECREASE", "INCREASE", "STAY"
-
-        :return:    A Pandas dataframe with a "TIME" column, and columns for all the "Delta concentration" values,
-                    plus an "L2" column and a "step_actions" action.
-                    Note that this is a superset of the dataframe returned by get_diagnostic_delta_data()
-        """
-        df = self.get_diagnostic_decisions_data()
-        fields = self._delta_names()    # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
-
-        # Compute the L2 norms, since this data (at least for now) is not being saved.  TODO: save it!
-        sq_arr = np.zeros(len(df))
-
-        for field_name in fields:
-            sq_arr += df[field_name]**2
-
-        #L2_values = np.sqrt(sq_arr)/len(fields)     # Pandas series, with one element per time point in diagnostic dataframe
-        L2_values = sq_arr/(len(fields)**2)     # TODO: it'd be more robust to store these values during the run than to re-compute them
-
-        actions = np.where(L2_values > self.variable_steps_threshold_abort, "ABORT", "OK")
-        step_factors = np.vectorize(self.step_determiner_A)(L2_values)
-
-        new_df = df.assign(L2_computed = L2_values, actions_computed=actions, step_factors_computed=step_factors)  # Add columns to the Pandas dataframe
-
-        return new_df
 
 
 

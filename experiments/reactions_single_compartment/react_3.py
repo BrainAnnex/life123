@@ -20,7 +20,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_4"_  
 #
-# LAST REVISED: May 18, 2023 
+# LAST REVISED: May 19, 2023 
 #
 # # For the 0-th reaction (the only reaction in our case)
 
@@ -87,6 +87,8 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
+dynamics.verbose_list = ["variable_steps"]
+
 # All of these are the currently the default values, but subject to change
 dynamics.set_thresholds(thresholds={"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.})
 
@@ -115,18 +117,8 @@ dynamics.explain_time_advance()
 # ### Check the final equilibrium
 
 # %%
-dynamics.get_system_conc()
-
-# %% [markdown]
-# NOTE: Consistent with the 3/2 ratio of forward/reverse rates (and the 1st order reactions),  
-#  the systems settles in the following equilibrium:
-#
-# [A] = 0.29487741 , [B] = 40.29487741 , [C] = 29.70512259
-#
-
-# %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium()
+dynamics.is_in_equilibrium(tolerance=2)
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time

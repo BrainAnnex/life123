@@ -140,6 +140,3 @@ dynamics.get_diagnostic_decisions_data()
 dynamics.get_diagnostic_decisions_data_ALT()      # TODO: OBSOLETE!
 
 # %%
-dynamics.get_diagnostic_L2_data()      # TODO: OBSOLETE!
-
-# %%

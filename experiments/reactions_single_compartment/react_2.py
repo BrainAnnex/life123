@@ -93,8 +93,6 @@ dynamics.single_compartment_react(initial_step=0.1, target_end_time=1.2,
                                              "final_caption": "last reaction step"}
                                   )
 
-# Note: default values exist, and could be used, for all the thresholds
-
 # %% [markdown]
 # ## The flag _variable_steps_ automatically adjusts up or down the time step,  whenever the changes of concentrations are, respectively, "slow" or "fast" (as determined using the specified _thresholds_ )
 
@@ -146,7 +144,7 @@ adjusted_L2_rate = dynamics.norm_A(delta_concentrations)  # A measure of how lar
 adjusted_L2_rate
 
 # %%
-dynamics.step_determiner_A(adjusted_L2_rate)
+dynamics.adjust_speed(delta_concentrations)
 
 # %% [markdown]
 # #### The above conclusion is that the step will be **HALVED** at the next round : that's because the adjusted_L2_rate > the "high" value given in the argument _thresholds={"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.}_ , and the and the step_determiner() function returned 0.5
@@ -170,7 +168,7 @@ adjusted_L2_rate = dynamics.norm_A(delta_concentrations)  # A measure of how lar
 adjusted_L2_rate
 
 # %%
-dynamics.step_determiner_A(adjusted_L2_rate)
+dynamics.adjust_speed(delta_concentrations)
 
 # %% [markdown]
 # #### The above conclusion is that the step will be **DOUBLED** at the next round : that's because the adjusted_L2_rate < the "low" value given in the argument _thresholds={"low": 0.5}_ , and the step_determiner() function returned 2

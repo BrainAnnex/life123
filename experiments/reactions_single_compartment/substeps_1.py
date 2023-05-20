@@ -134,9 +134,6 @@ dynamics.get_diagnostic_decisions_data()
 # %% [markdown]
 # #### Notice how the first step got aborted, and re-run, because of the large adjusted L2 value in the concentrations 
 
-# %%
-dynamics.get_diagnostic_L2_data()      # TODO: OBSOLETE!
-
 # %% [markdown]
 # # At time t=0.185 :   
 
