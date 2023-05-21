@@ -483,15 +483,16 @@ class ReactionDynamics:
 
     def set_thresholds(self, norm="norm_A", low=None, high=None, abort=None) -> None:
         """
-        Over-ride default values for simulation parameters
+        Over-ride default values for simulation parameters.
+        The default None values can be used to eliminate some of the threshold rules, for the specified norm
 
-        :param thresholds:  Dict of simulation parameters to over-ride various default values.
-                            Allowed keys are "low", "high", "abort", "reduction_factor" (any other key is ignored)
-                            EXAMPLE: {"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.}
         :param norm:
+        :param low:
+        :param high:
+        :param abort:
         :return:            None
         """
-        for t in self.thresholds:
+        for i, t in enumerate(self.thresholds):
             if t.get("norm") == norm:
                 if low is None:
                     del t["low"]
@@ -508,8 +509,11 @@ class ReactionDynamics:
                 else:
                     t["abort"] = abort
 
+                if len(t) == 1:
+                    del self.thresholds[i]      # Completely eliminate this un-used norm
                 return
 
+        # If we get here, it means that we're handling a norm not currently present in the list self.thresholds
         new_t = {}
         if low is not None:
             new_t["low"] = low
@@ -975,10 +979,10 @@ class ReactionDynamics:
         :param delta_conc:
         :param baseline_conc:
         :return:                A triplet:
-                                    1) String with action name
+                                    1) String with the name of the action to take: either "low", "stay", "high" or "abort"
                                     2) A factor by which to multiple the time step at the next iteration round;
                                        if no change is deemed necessary, 1 is returned
-                                    3) A dict of all the computed norms (any of the last ones, except the first one, may be None),
+                                    3) A dict of all the computed norms (any of the last ones, except the first one, may be missing),
                                        indexed by their names
         """
         all_norms = {}
@@ -987,6 +991,7 @@ class ReactionDynamics:
 
         for i, rule in enumerate(self.thresholds):
             norm_name = rule["norm"]
+
             if norm_name == "norm_A":
                 result = self.norm_A(delta_conc)
             else:

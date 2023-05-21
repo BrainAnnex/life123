@@ -18,7 +18,7 @@
 #
 # Same as the experiment _"react_1"_ , but with adaptive variable time steps
 #
-# LAST REVISED: May 16, 2023
+# LAST REVISED: May 20, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory +to sys.path
@@ -84,11 +84,20 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# All of these are the currently the default values, but subject to change
-dynamics.set_thresholds(thresholds={"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.})
+# All of these settings are the currently the default values... but subject to change
+dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
+dynamics.set_thresholds(norm="norm_B")
+dynamics.set_step_factors(abort=0.5, downshift=0.5, upshift=2.0)
 
+# %%
+dynamics.thresholds
+
+# %% [markdown]
+# #### Note how we UNSET the defaults for "norm_B" (i.e. it won't be used)
+
+# %%
 dynamics.single_compartment_react(initial_step=0.1, target_end_time=1.2,
-                                  variable_steps=True, 
+                                  variable_steps=True, explain_variable_steps=False,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"}
                                   )
@@ -130,7 +139,7 @@ delta_concentrations
 rxn_data = dynamics.get_diagnostic_rxn_data(rxn_index=0)
 
 # %%
-rxn_data[0:12]
+rxn_data[8:12]
 
 # %%
 delta_row = dynamics.get_diagnostic_rxn_data(rxn_index=0, t=0.1375) # Locate the row with the interval's start time
@@ -140,14 +149,14 @@ delta_row
 delta_row[["Delta A", "Delta B"]].to_numpy()   # Gives same value as delta_concentrations, above
 
 # %%
-adjusted_L2_rate = dynamics.norm_A(delta_concentrations)  # A measure of how large delta_concentrations is
-adjusted_L2_rate
-
-# %%
-dynamics.adjust_speed(delta_concentrations)
+# Computes a measure of how large delta_concentrations is, and propose a course of action
+dynamics.adjust_speed(delta_concentrations)  
 
 # %% [markdown]
-# #### The above conclusion is that the step will be **HALVED** at the next round : that's because the adjusted_L2_rate > the "high" value given in the argument _thresholds={"low": 0.5, "high": 0.8, "abort": 1.44, "reduction_factor": 2.}_ , and the and the step_determiner() function returned 0.5
+# #### The above conclusion is that the time step is on the "high" side, and should be **HALVED** at the next round : that's because the computed norm is > than the "high" value previously given in the argument to _set_thresholds()_ (but doesn't exceed the "abort" threshold)
+
+# %%
+dynamics.thresholds   # Consult the previously-set threshold values
 
 # %% [markdown] tags=[]
 # ### Detailed Example 2: **going from 0.1875 to 0.2125**   
@@ -164,14 +173,13 @@ delta_concentrations
 # Note how substantially smaller _delta_concentrations_ is, compared to the previous example
 
 # %%
-adjusted_L2_rate = dynamics.norm_A(delta_concentrations)  # A measure of how large delta_concentrations is
-adjusted_L2_rate
-
-# %%
 dynamics.adjust_speed(delta_concentrations)
 
 # %% [markdown]
-# #### The above conclusion is that the step will be **DOUBLED** at the next round : that's because the adjusted_L2_rate < the "low" value given in the argument _thresholds={"low": 0.5}_ , and the step_determiner() function returned 2
+# #### The above conclusion is that the time step is on the "low" side, and should be **DOUBLED** at the next round : that's because the computed norm is < than the "low" value previously given in the argument to _set_thresholds()_
+
+# %%
+dynamics.thresholds   # Consult the previously-set threshold values
 
 # %% [markdown]
 # # Check the final equilibrium
