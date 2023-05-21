@@ -8,13 +8,27 @@ from src.modules.movies.movies import MovieTabular
 from src.modules.numerical.numerical import Numerical as num
 
 
-class ExcessiveTimeStep(Exception):
+class ExcessiveTimeStep(Exception):     # TODO: phase out in favor of the 2 more specific Exceptions, below
     """
     Used to raise Exceptions arising from excessively large time steps
     (that lead to negative concentration values)
     """
     pass
 
+
+class ExcessiveTimeStepHard(Exception):
+    """
+    Used to raise Exceptions arising from excessively large time steps
+    (that lead to negative concentration values, i.e. "HARD" errors)
+    """
+    pass
+
+class ExcessiveTimeStepSoft(Exception):
+    """
+    Used to raise Exceptions arising from excessively large time steps
+    (that lead to norms regarded as excessive because of user-specified values, i.e. "SOFT" errors)
+    """
+    pass
 
 #############################################################################################
 
@@ -64,8 +78,8 @@ class ReactionDynamics:
         # ***  FOR DIAGNOSTICS  ***
 
         self.verbose_list = []          # A list of integers or strings with the codes of the desired verbose checkpoints
-                                        #   EXAMPLE: [1, "variable_steps"] to invoke sections of code marked as 1 or 3
-                                        #   Those sections will have entry points such as:  if "variable_steps" in self.verbose_list
+                                        #   EXAMPLE: [1, "my_ad_hoc_tag"] to invoke sections of code marked as 1 or 3
+                                        #   Those sections will have entry points such as:  if "my_ad_hoc_tag" in self.verbose_list
 
 
         self.diagnostics = False        # Overall flag about whether using diagnostics
@@ -745,6 +759,7 @@ class ReactionDynamics:
                                     this can be thought of as the "SYSTEM STATE"
         :param variable_steps:  If True, the step sizes will get automatically adjusted
         :param explain_variable_steps:
+        :param step_counter:
 
         :return:                The triplet:
                                     1) increment vector for the concentrations of ALL the chemical species,
@@ -768,13 +783,13 @@ class ReactionDynamics:
 
         delta_concentrations = None
 
-        while delta_time > 0.00001:   # TODO: tweak this number (used to prevent infinite loops).  Maybe 1/10 or 1/100 of original value?
-            try:    # We want to catch errors that can arise from excessively large time steps
-                    #   that lead to negative concentrations or other problems
+        SMALLEST_VALUE_TO_TRY = delta_time / 1000.       # Used to prevent infinite loops
 
-                if 2 in self.verbose_list:
-                    print("    NO adaptive variable time resolution used")
-                    print(f"    Processing ALL the {self.reaction_data.number_of_reactions()} reaction(s) with a single step")
+        normal_exit = False
+
+        while delta_time > SMALLEST_VALUE_TO_TRY:       # TODO: consider moving the inside of the WHILE loop into a separate function
+            try:    # We want to catch Exceptions that can arise from excessively large time steps
+                    #   that lead to negative concentrations or violation of user-set thresholds ("HARD" or "SOFT" aborts)
 
 
                 # *****  CORE OPERATION  *****
@@ -782,7 +797,7 @@ class ReactionDynamics:
 
 
                 if self.diagnostics:
-                    diagnostic_data_snapshot = self._delta_conc_dict(delta_concentrations)  # A dict
+                    diagnostic_data_snapshot = self._delta_conc_dict(delta_concentrations)      # A dict
 
 
                 if variable_steps:
@@ -798,13 +813,12 @@ class ReactionDynamics:
                         print("    Deltas:   ", delta_concentrations)
                         print("    Relative Deltas:   ", delta_concentrations / conc_array)
                         print("    Norms:    ", all_norms)
-                        print("    Action:    ", action)
-                        print("    Speed factor:    ", step_factor)
                         print("    Thresholds:    ")
                         for rule in  self.thresholds:
                              print(self.display_thresholds(rule, all_norms.get(rule['norm'])))
 
                         print("    Step Factors:    ", self.step_factors)
+                        print(f"    => Action:    {action}  (with step size factor of {step_factor})")
 
 
                     # Abort the current step if the rate of change is deemed excessive.
@@ -841,7 +855,6 @@ class ReactionDynamics:
                         diagnostic_data_snapshot['time_step'] = delta_time
 
 
-                    #if "variable_steps" in self.verbose_list:
                     if explain_variable_steps:
                         msg =   f"the tentative time step ({delta_time:.5g}) results in norm values that leads to the following:\n"
 
@@ -869,7 +882,7 @@ class ReactionDynamics:
                     if min(tentative_updated_system) < 0:
                         print(f"*** CAUTION: negative concentration resulting from the combined effect of all reactions, "
                               f"upon advancing reactions from system time t={self.system_time:,.5g}\n"
-                              f"         It will be AUTOMATICALLY CORRECTED with a reduction in time step size")
+                              f"         It'll be AUTOMATICALLY CORRECTED with a reduction in time step size")
 
                         # A type of HARD ABORT is detected (a negative concentration resulting from the combined effect of all reactions)
                         if self.diagnostics:
@@ -884,13 +897,14 @@ class ReactionDynamics:
 
                         raise ExcessiveTimeStep(f"INFO: the tentative time step ({delta_time:.5g}) "
                                                 f"leads to a NEGATIVE concentration of one of the chemicals: "
-                                                f"\n      -> will backtrack, and re-do step with a SMALLER delta time "
+                                                f"\n      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time * self.error_abort_step_factor:.5g} "
                                                 f"[Step started at t={self.system_time:.5g}, and will rewind there.  Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
 
 
+                normal_exit = True
                 break       # IMPORTANT: this is needed because, in the absence of errors, we need to go thru the WHILE loop only once!
 
-            # CATCH any 'ExcessiveTimeStep' exception raised in the loop  (i.e. a HARD ABORT)
+            # CATCH any 'ExcessiveTimeStep' exception raised in the loop  (i.e. a HARD ABORT) TODO: or SOFT !
             except ExcessiveTimeStep as ex:
                 # Single reactions steps can fail with this error condition if the attempted time step was too large,
                 #   under the following scenarios:
@@ -900,13 +914,15 @@ class ReactionDynamics:
 
                 print(ex)
 
-                delta_time *= self.error_abort_step_factor       # Reduce the excessive time step by a pre-set factor
+                delta_time *= self.error_abort_step_factor       # Reduce the excessive time step by a pre-set factor  TODO: may be a SOFT abort!
                 recommended_next_step = delta_time
         # END while
 
 
-        if delta_concentrations is None:
-            raise Exception("reaction_step_common(): unable to complete the reaction step")
+        if not normal_exit:         # i.e., if no reaction simulation took place in the WHILE loop, above
+            raise Exception(f"reaction_step_common(): unable to complete the reaction step.  "
+                            f"In spite of numerous automated reductions of the time step, it continues to lead to concentration changes that are considered excessive; "
+                            f"consider reducing the original time step, and/or increasing the 'abort' thresholds with set_thresholds(). Current values: {self.thresholds}")
 
         return  (delta_concentrations, delta_time, recommended_next_step)     # TODO: consider returning tentative_updated_system , since we already computed it
 
@@ -1028,7 +1044,7 @@ class ReactionDynamics:
         s = f"                   {rule['norm']} : "
 
         if value is None:
-            return s + " None"
+            return s + " (skipped; not needed)"
 
         low = rule.get('low')
         high = rule.get('high')
@@ -1283,7 +1299,7 @@ class ReactionDynamics:
                                     f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` "
                                     f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
                                     f"\n      Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}"
-                                    f"\n      -> will backtrack, and re-do step with a SMALLER delta time "
+                                    f"\n      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time * self.error_abort_step_factor:.5g} "
                                     f"[Step started at t={self.system_time:.5g}, and will rewind there]")
 
 
@@ -1685,9 +1701,10 @@ class ReactionDynamics:
         Optionally, limit the dataframe to a specified numbers of rows at the end,
         or just return one entry corresponding to a specific time
         (the row with the CLOSEST time to the requested one, which will appear in an extra column
-        called "search_value".)
+        called "search_value")
 
         :param rxn_index:       An integer that indexes the reaction of interest (numbering starts at 0)
+                                TODO: if not specified, show all reactions in turn
 
         :param head:            (OPTIONAL) Number of records to return,
                                     from the start of the diagnostic dataframe.

@@ -17,17 +17,14 @@
 # #### with 2nd-order kinetics for `A`,  
 # #### and 1-st order kinetics for `C`
 #
-# Taken to equilibrium.  (Adaptive variable time substeps are used)
+# Taken to equilibrium.  (Adaptive variable time teps are used)
 #
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #
-# LAST REVISED: May 15, 2023
+# LAST REVISED: May 21, 2023
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -61,9 +58,6 @@ chem_data.add_reaction(reactants=[(2, "A", 2)], products=["C"],
                        forward_rate=3., reverse_rate=2.)   
 # Note: the first 2 in (2, "A", 2) is the stoichiometry coefficient, while the other one is the order
 
-print("Number of reactions: ", chem_data.number_of_reactions())
-
-# %%
 chem_data.describe_reactions()
 
 # %%
@@ -92,14 +86,16 @@ dynamics.get_history()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-#dynamics.verbose_list = ["substeps"]      # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
-# The changes of concentrations vary very rapidly early on; so, we'll be using dynamic_substeps=4 , i.e. increase time resolution
-# by x4 initially, as long as the reaction remains "fast" (based on a threshold of 5% change)
+# All of these settings are the currently the default values... but subject to change
+dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
+dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
+dynamics.set_step_factors(abort=0.5, downshift=0.5, upshift=1.5)
+
 dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.04,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_substeps=4, rel_fast_threshold=60)
+                                  variable_steps=True, explain_variable_steps=True)
 
 # %% [markdown]
 # ### Note: the argument _dynamic_step=4_ splits the time steps in 4 whenever the reaction is "fast" (as determined using the given value of _fast_threshold_ )
@@ -153,8 +149,7 @@ dynamics.plot_curves(colors=['red', 'green'],
 # #### For diagnostic insight, uncomment the following lines:
 
 # %%
-#dynamics.examine_run(df=df, time_step=0.002, rel_fast_threshold=60)
-# the time step MUST match the value used in call to single_compartment_react()
+#dynamics.get_diagnostic_decisions_data()
 
 #dynamics.get_diagnostic_rxn_data(rxn_index=0)
 
