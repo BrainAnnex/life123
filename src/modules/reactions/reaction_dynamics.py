@@ -8,13 +8,6 @@ from src.modules.movies.movies import MovieTabular
 from src.modules.numerical.numerical import Numerical as num
 
 
-class ExcessiveTimeStep(Exception):     # TODO: phase out in favor of the 2 more specific Exceptions, below
-    """
-    Used to raise Exceptions arising from excessively large time steps
-    (that lead to negative concentration values)
-    """
-    pass
-
 
 class ExcessiveTimeStepHard(Exception):
     """
@@ -823,7 +816,7 @@ class ReactionDynamics:
 
                     # Abort the current step if the rate of change is deemed excessive.
                     # TODO: maybe ALWAYS check this, regardless of variable-steps option
-                    if action == "abort":       # NOTE: this is a "strategic" abort, not a hard one
+                    if action == "abort":       # NOTE: this is a "strategic" abort, not a hard one from error
                         msg =   f"INFO: the tentative time step ({delta_time:.5g}) " \
                                 f"leads to a least one norm value > its ABORT threshold:\n" \
                                 f"      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time * step_factor:.5g} " \
@@ -841,7 +834,7 @@ class ReactionDynamics:
                             # Make a note of the abort action in all the reaction-specific diagnostics
                             self.comment_diagnostic_rxn_data("aborted: excessive norm value(s)")
 
-                        raise ExcessiveTimeStep(msg)    # ABORT THE CURRENT STEP
+                        raise ExcessiveTimeStepSoft(msg)    # ABORT THE CURRENT STEP
 
 
                     recommended_next_step = delta_time * step_factor
@@ -895,7 +888,7 @@ class ReactionDynamics:
                                                               increment_vector_single_rxn=None,
                                                               caption=f"aborted: neg. conc. from combined multiple rxns")
 
-                        raise ExcessiveTimeStep(f"INFO: the tentative time step ({delta_time:.5g}) "
+                        raise ExcessiveTimeStepHard(f"INFO: the tentative time step ({delta_time:.5g}) "
                                                 f"leads to a NEGATIVE concentration of one of the chemicals: "
                                                 f"\n      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time * self.error_abort_step_factor:.5g} "
                                                 f"[Step started at t={self.system_time:.5g}, and will rewind there.  Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
@@ -904,18 +897,28 @@ class ReactionDynamics:
                 normal_exit = True
                 break       # IMPORTANT: this is needed because, in the absence of errors, we need to go thru the WHILE loop only once!
 
-            # CATCH any 'ExcessiveTimeStep' exception raised in the loop  (i.e. a HARD ABORT) TODO: or SOFT !
-            except ExcessiveTimeStep as ex:
+            # CATCH any 'ExcessiveTimeStepHard' exception raised in the loop  (i.e. a HARD ABORT)
+            except ExcessiveTimeStepHard as ex:
                 # Single reactions steps can fail with this error condition if the attempted time step was too large,
-                #   under the following scenarios:
+                # under the following scenarios:
                 #       1. negative concentrations from any one reaction - caught by  validate_increment()
                 #       2. negative concentration from the combined effect of multiple reactions - caught in this function
-                #       3. excessive norm(s) measures in the overall step - caught in this function (currently only checked in case of the variable-steps option)
-
+                #print("*** CAUGHT a HARD ABORT")
                 print(ex)
-
-                delta_time *= self.error_abort_step_factor       # Reduce the excessive time step by a pre-set factor  TODO: may be a SOFT abort!
+                delta_time *= self.error_abort_step_factor       # Reduce the excessive time step by a pre-set factor
                 recommended_next_step = delta_time
+
+
+            # CATCH any 'ExcessiveTimeStepSoft' exception raised in the loop  (i.e. a SOFT ABORT)
+            except ExcessiveTimeStepSoft as ex:
+                # Single reactions steps can fail with this error condition if the attempted time step was too large,
+                #   under the following scenario:
+                #       3. excessive norm(s) measures in the overall step - caught in this function (currently only checked in case of the variable-steps option)
+                #print("*** CAUGHT a soft ABORT")
+                print(ex)
+                delta_time *= self.step_factors["abort"]       # Reduce the excessive time step by a pre-set factor
+                recommended_next_step = delta_time
+
         # END while
 
 
@@ -1267,7 +1270,7 @@ class ReactionDynamics:
         for the given SINGLE chemical species and SINGLE reaction.
 
         If the concentration change would render the concentration negative,
-        raise an Exception (of custom type "ExcessiveTimeStep")
+        raise an Exception (of custom type "ExcessiveTimeStepHard")
 
         :param delta_conc:              The change in concentration computed by the ode solver
                                             (for the specified chemical, in the given reaction)
@@ -1295,7 +1298,7 @@ class ReactionDynamics:
                                               increment_vector_single_rxn=None,
                                               caption=f"aborted: neg. conc. in `{self.reaction_data.get_name(species_index)}`")
 
-            raise ExcessiveTimeStep(f"    INFO: the tentative time step ({delta_time:.5g}) "
+            raise ExcessiveTimeStepHard(f"    INFO: the tentative time step ({delta_time:.5g}) "
                                     f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` "
                                     f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
                                     f"\n      Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}"
