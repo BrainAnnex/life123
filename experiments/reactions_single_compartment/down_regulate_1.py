@@ -294,7 +294,7 @@ fig = px.line(data_frame=dynamics3.get_history().loc[:96], x="SYSTEM TIME", y=["
 fig.show()
 
 # %%
-dynamics3.curve_intersection(t_start=0, t_end=0.08, var1="A", var2="B")
+dynamics3.curve_intersection(t_start=0, t_end=0.08, chem1="A", chem2="B")
 
 # %%
 # Verify that the stoichiometry is respected at every reaction step/substep (NOTE: it requires earlier activation of saving diagnostic data)

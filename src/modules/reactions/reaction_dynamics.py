@@ -412,7 +412,7 @@ class ReactionDynamics:
 
 
 
-    def get_history(self, t_start=None, t_end=None, tail=None) -> pd.DataFrame:
+    def get_history(self, t_start=None, t_end=None, head=None, tail=None, t=None) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
         using add_snapshot()
@@ -421,10 +421,17 @@ class ReactionDynamics:
 
         :param t_start: (OPTIONAL) Start time in the "SYSTEM TIME" column
         :param t_end:   (OPTIONAL) End time
+        :param head:    (OPTIONAL) Number of records to return,
+                                   from the start of the diagnostic dataframe.
         :param tail:    (OPTIONAL) Number of records to consider, from the end of the dataframe
+        :param t:       (OPTIONAL) Individual time to pluck out from the dataframe;
+                                   the row with closest time will be returned.
+                                   If this parameter is specified, an extra column - called "search_value" -
+                                   is inserted at the beginning of the dataframe.
+                                   If either the "head" or the "tail" arguments are passed, this argument will get ignored
         :return:        A Pandas dataframe
         """
-        df = self.history.get_dataframe(tail=tail,
+        df = self.history.get_dataframe(head=head, tail=tail, search_val=t,
                                         search_col="SYSTEM TIME", val_start=t_start, val_end=t_end)
 
         return df
@@ -784,118 +791,12 @@ class ReactionDynamics:
             try:    # We want to catch Exceptions that can arise from excessively large time steps
                     #   that lead to negative concentrations or violation of user-set thresholds ("HARD" or "SOFT" aborts)
 
-
-                # *****  CORE OPERATION  *****
-                delta_concentrations = self._reaction_elemental_step(delta_time=delta_time, conc_array=conc_array, rxn_list=None)
-
-
-                if self.diagnostics:
-                    diagnostic_data_snapshot = self._delta_conc_dict(delta_concentrations)      # A dict
-
-
-                if variable_steps:
-                    decision_data = self.adjust_speed(delta_conc=delta_concentrations, baseline_conc=conc_array)
-                    step_factor = decision_data[1]
-                    action = decision_data[0]
-                    all_norms = decision_data[2]
-
-                    if explain_variable_steps:
-                        print(f"\n(STEP {step_counter}) ANALYSIS: Examining Conc. Changes from System Time {self.system_time:.5g} "
-                              f"due to tentative single step of {delta_time:.5g}:")
-                        print("    Baseline: ", conc_array)
-                        print("    Deltas:   ", delta_concentrations)
-                        print("    Relative Deltas:   ", delta_concentrations / conc_array)
-                        print("    Norms:    ", all_norms)
-                        print("    Thresholds:    ")
-                        for rule in  self.thresholds:
-                             print(self.display_thresholds(rule, all_norms.get(rule['norm'])))
-
-                        print("    Step Factors:    ", self.step_factors)
-                        print(f"    => Action:    {action}  (with step size factor of {step_factor})")
-
-
-                    # Abort the current step if the rate of change is deemed excessive.
-                    # TODO: maybe ALWAYS check this, regardless of variable-steps option
-                    if action == "abort":       # NOTE: this is a "strategic" abort, not a hard one from error
-                        msg =   f"INFO: the tentative time step ({delta_time:.5g}) " \
-                                f"leads to a least one norm value > its ABORT threshold:\n" \
-                                f"      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time * step_factor:.5g} " \
-                                f"[Step started at t={self.system_time:.5g}, and will rewind there]"
-                        #print("WARNING: ", msg)
-                        if self.diagnostics:
-                            # Expand the dict diagnostic_data_snapshot
-                            diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
-                            diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
-                            diagnostic_data_snapshot['action'] = "ABORT"
-                            diagnostic_data_snapshot['step_factor'] = step_factor
-                            diagnostic_data_snapshot['time_step'] = delta_time
-                            self.save_diagnostic_decisions_data(data=diagnostic_data_snapshot, caption="excessive norm value(s)")
-
-                            # Make a note of the abort action in all the reaction-specific diagnostics
-                            self.comment_diagnostic_rxn_data("aborted: excessive norm value(s)")
-
-                        raise ExcessiveTimeStepSoft(msg)    # ABORT THE CURRENT STEP
-
-
-                    recommended_next_step = delta_time * step_factor
-
-                    if self.diagnostics:
-                        # Expand the dict diagnostic_data_snapshot
-                        diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
-                        diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
-                        diagnostic_data_snapshot['action'] = f"OK ({action})"
-                        diagnostic_data_snapshot['step_factor'] = step_factor
-                        diagnostic_data_snapshot['time_step'] = delta_time
-
-
-                    if explain_variable_steps:
-                        msg =   f"the tentative time step ({delta_time:.5g}) results in norm values that leads to the following:\n"
-
-                        if step_factor > 1:         # "INCREASE
-                            msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER, " \
-                            f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because all norms are low"
-                        elif step_factor < 1:     # "DECREASE"
-                            msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL SMALLER, " \
-                            f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because at least one norm is high"
-                        else:   # "STAY THE COURSE"
-                            msg +=  f"ACTION: COMPLETE NORMALLY - we're inside the target range.  No change to step size."
-
-                        msg += f"\n        [The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time:.5g}]"
-                        print("NOTICE:", msg)
-
-
-                if self.diagnostics:
-                    self.save_diagnostic_decisions_data(data=diagnostic_data_snapshot)
-
-
-
-                # Check whether the COMBINED delta_concentrations will make any conc negative
-                if self.system is not None:     # TODO - IMPORTANT: usage of this function doesn't always involve self.system
-                    tentative_updated_system = self.system + delta_concentrations
-                    if min(tentative_updated_system) < 0:
-                        print(f"*** CAUTION: negative concentration resulting from the combined effect of all reactions, "
-                              f"upon advancing reactions from system time t={self.system_time:,.5g}\n"
-                              f"         It'll be AUTOMATICALLY CORRECTED with a reduction in time step size")
-
-                        # A type of HARD ABORT is detected (a negative concentration resulting from the combined effect of all reactions)
-                        if self.diagnostics:
-                            self.save_diagnostic_decisions_data(data={"action": "ABORT",
-                                                                      "step_factor": self.error_abort_step_factor,
-                                                                      "caption": "neg. conc. from combined effect of all rxns",
-                                                                      "time_step": delta_time})
-                            for rxn_index in range(self.reaction_data.number_of_reactions()):
-                                self.save_diagnostic_rxn_data(rxn_index=rxn_index, time_step=delta_time,
-                                                              increment_vector_single_rxn=None,
-                                                              caption=f"aborted: neg. conc. from combined multiple rxns")
-
-                        raise ExcessiveTimeStepHard(f"INFO: the tentative time step ({delta_time:.5g}) "
-                                                f"leads to a NEGATIVE concentration of one of the chemicals: "
-                                                f"\n      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time * self.error_abort_step_factor:.5g} "
-                                                f"[Step started at t={self.system_time:.5g}, and will rewind there.  Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
-
-
+                (delta_concentrations, recommended_next_step) = \
+                        self.attempt_reaction_step(recommended_next_step, delta_time, conc_array, variable_steps, explain_variable_steps, step_counter)
                 normal_exit = True
+
                 break       # IMPORTANT: this is needed because, in the absence of errors, we need to go thru the WHILE loop only once!
+
 
             # CATCH any 'ExcessiveTimeStepHard' exception raised in the loop  (i.e. a HARD ABORT)
             except ExcessiveTimeStepHard as ex:
@@ -928,6 +829,134 @@ class ReactionDynamics:
                             f"consider reducing the original time step, and/or increasing the 'abort' thresholds with set_thresholds(). Current values: {self.thresholds}")
 
         return  (delta_concentrations, delta_time, recommended_next_step)     # TODO: consider returning tentative_updated_system , since we already computed it
+
+
+
+
+    def attempt_reaction_step(self, recommended_next_step, delta_time, conc_array, variable_steps, explain_variable_steps, step_counter):
+        """
+
+        :param recommended_next_step:
+        :param delta_time:
+        :param conc_array:
+        :param variable_steps:
+        :param explain_variable_steps:
+        :param step_counter:
+
+        :return:                        The pair (delta_concentrations, recommended_next_step)
+        """
+
+        # *****  CORE OPERATION  *****
+        delta_concentrations = self._reaction_elemental_step(delta_time=delta_time, conc_array=conc_array, rxn_list=None)
+
+
+        if self.diagnostics:
+            diagnostic_data_snapshot = self._delta_conc_dict(delta_concentrations)      # A dict
+
+
+        if variable_steps:
+            decision_data = self.adjust_speed(delta_conc=delta_concentrations, baseline_conc=conc_array)
+            step_factor = decision_data[1]
+            action = decision_data[0]
+            all_norms = decision_data[2]
+
+            if explain_variable_steps:
+                print(f"\n(STEP {step_counter}) ANALYSIS: Examining Conc. Changes from System Time {self.system_time:.5g} "
+                      f"due to tentative single step of {delta_time:.5g}:")
+                print("    Baseline: ", conc_array)
+                print("    Deltas:   ", delta_concentrations)
+                print("    Relative Deltas:   ", delta_concentrations / conc_array)
+                print("    Norms:    ", all_norms)
+                print("    Thresholds:    ")
+                for rule in  self.thresholds:
+                    print(self.display_thresholds(rule, all_norms.get(rule['norm'])))
+
+                print("    Step Factors:    ", self.step_factors)
+                print(f"    => Action:    {action}  (with step size factor of {step_factor})")
+
+
+            # Abort the current step if the rate of change is deemed excessive.
+            # TODO: maybe ALWAYS check this, regardless of variable-steps option
+            if action == "abort":       # NOTE: this is a "strategic" abort, not a hard one from error
+                msg =   f"INFO: the tentative time step ({delta_time:.5g}) " \
+                        f"leads to a least one norm value > its ABORT threshold:\n" \
+                        f"      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time * step_factor:.5g} " \
+                        f"[Step started at t={self.system_time:.5g}, and will rewind there]"
+                #print("WARNING: ", msg)
+                if self.diagnostics:
+                    # Expand the dict diagnostic_data_snapshot
+                    diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
+                    diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
+                    diagnostic_data_snapshot['action'] = "ABORT"
+                    diagnostic_data_snapshot['step_factor'] = step_factor
+                    diagnostic_data_snapshot['time_step'] = delta_time
+                    self.save_diagnostic_decisions_data(data=diagnostic_data_snapshot, caption="excessive norm value(s)")
+
+                    # Make a note of the abort action in all the reaction-specific diagnostics
+                    self.comment_diagnostic_rxn_data("aborted: excessive norm value(s)")
+
+                raise ExcessiveTimeStepSoft(msg)    # ABORT THE CURRENT STEP
+
+
+            recommended_next_step = delta_time * step_factor
+
+            if self.diagnostics:
+                # Expand the dict diagnostic_data_snapshot
+                diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
+                diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
+                diagnostic_data_snapshot['action'] = f"OK ({action})"
+                diagnostic_data_snapshot['step_factor'] = step_factor
+                diagnostic_data_snapshot['time_step'] = delta_time
+
+
+            if explain_variable_steps:
+                msg =   f"the tentative time step ({delta_time:.5g}) results in norm values that leads to the following:\n"
+
+                if step_factor > 1:         # "INCREASE
+                    msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER, " \
+                            f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because all norms are low"
+                elif step_factor < 1:     # "DECREASE"
+                    msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL SMALLER, " \
+                            f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because at least one norm is high"
+                else:   # "STAY THE COURSE"
+                    msg +=  f"ACTION: COMPLETE NORMALLY - we're inside the target range.  No change to step size."
+
+                msg += f"\n        [The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time:.5g}]"
+                print("NOTICE:", msg)
+
+
+        if self.diagnostics:
+            self.save_diagnostic_decisions_data(data=diagnostic_data_snapshot)
+
+
+        # Check whether the COMBINED delta_concentrations will make any conc negative
+        if self.system is not None:     # TODO - IMPORTANT: usage of this function doesn't always involve self.system
+            tentative_updated_system = self.system + delta_concentrations
+            if min(tentative_updated_system) < 0:
+                print(f"*** CAUTION: negative concentration resulting from the combined effect of all reactions, "
+                      f"upon advancing reactions from system time t={self.system_time:,.5g}\n"
+                      f"         It'll be AUTOMATICALLY CORRECTED with a reduction in time step size")
+
+                # A type of HARD ABORT is detected (a negative concentration resulting from the combined effect of all reactions)
+                if self.diagnostics:
+                    self.save_diagnostic_decisions_data(data={"action": "ABORT",
+                                                              "step_factor": self.error_abort_step_factor,
+                                                              "caption": "neg. conc. from combined effect of all rxns",
+                                                              "time_step": delta_time})
+                    for rxn_index in range(self.reaction_data.number_of_reactions()):
+                        self.save_diagnostic_rxn_data(rxn_index=rxn_index, time_step=delta_time,
+                                                      increment_vector_single_rxn=None,
+                                                      caption=f"aborted: neg. conc. from combined multiple rxns")
+
+                raise ExcessiveTimeStepHard(f"INFO: the tentative time step ({delta_time:.5g}) "
+                                            f"leads to a NEGATIVE concentration of one of the chemicals: "
+                                            f"\n      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time * self.error_abort_step_factor:.5g} "
+                                            f"[Step started at t={self.system_time:.5g}, and will rewind there.  Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
+
+
+        return  (delta_concentrations, recommended_next_step)
+
+
 
 
 
@@ -2366,7 +2395,7 @@ class ReactionDynamics:
 
 
 
-    def curve_intersection(self, t_start, t_end, var1, var2) -> (float, float):
+    def curve_intersection(self, chem1, chem2, t_start, t_end) -> (float, float):
         """
         Find and return the intersection of the 2 curves in the columns var1 and var2,
         in the time interval [t_start, t_end]
@@ -2375,16 +2404,16 @@ class ReactionDynamics:
               and then one curve jumps on the opposite side of the other curve, at at BIGGER distance.
               See the missed intersection at the end of experiment "reactions_single_compartment/up_regulate_1"
 
+        :param chem1:   The name of the 1st chemical of interest
+        :param chem2:   The name of the 2nd chemical of interest
         :param t_start: The start of the time interval being considered
         :param t_end:   The end of the time interval being considered
-        :param var1:    The name of the 1st chemical of interest
-        :param var2:    The name of the 2nd chemical of interest
         :return:        The pair (time of intersection, common value)
         """
         df = self.get_history(t_start=t_start, t_end=t_end)
-        row_index = abs(df[var1] - df[var2]).idxmin()   # The index of the Pandas dataframe row
+        row_index = abs(df[chem1] - df[chem2]).idxmin()   # The index of the Pandas dataframe row
                                                         #   with the smallest absolute value of difference in concentrations
         print(f"Min abs distance found at row: {row_index}")
 
         return num.curve_intersect_interpolate(df, row_index,
-                                               x="SYSTEM TIME", var1=var1, var2=var2)
+                                               x="SYSTEM TIME", var1=chem1, var2=chem2)

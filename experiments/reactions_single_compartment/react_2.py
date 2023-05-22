@@ -117,7 +117,7 @@ dynamics.explain_time_advance()
 # ### That resulted from passing the flag _variable_steps=True_ to single_compartment_react()
 
 # %% [markdown] tags=[]
-# ## Scrutinizing some instances of step-size changes
+# # Scrutinizing some instances of step-size changes:
 
 # %% [markdown] tags=[]
 # ### Detailed Example 1: **going from 0.1375 to 0.1875**    

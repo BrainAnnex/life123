@@ -163,13 +163,13 @@ dynamics.plot_curves(title="Coupled reactions A <-> B and B <-> C",
                      colors=['blue', 'red', 'green'])
 
 # %%
-dynamics.curve_intersection(t_start=0, t_end=0.05, var1="A", var2="B")
+dynamics.curve_intersection(t_start=0, t_end=0.05, chem1="A", chem2="B")
 
 # %%
-dynamics.curve_intersection(t_start=0, t_end=0.05, var1="A", var2="C")
+dynamics.curve_intersection(t_start=0, t_end=0.05, chem1="A", chem2="C")
 
 # %%
-dynamics.curve_intersection(t_start=0.05, t_end=0.1, var1="B", var2="C")
+dynamics.curve_intersection(t_start=0.05, t_end=0.1, chem1="B", chem2="C")
 
 # %%
 
@@ -239,13 +239,13 @@ fig = px.line(data_frame=dynamics2.get_history(), x="SYSTEM TIME", y=["A", "B", 
 fig.show()
 
 # %%
-dynamics2.curve_intersection(t_start=0, t_end=0.05, var1="A", var2="B")
+dynamics2.curve_intersection(t_start=0, t_end=0.05, chem1="A", chem2="B")
 
 # %%
-dynamics2.curve_intersection(t_start=0, t_end=0.05, var1="A", var2="C")
+dynamics2.curve_intersection(t_start=0, t_end=0.05, chem1="A", chem2="C")
 
 # %%
-dynamics2.curve_intersection(t_start=0.05, t_end=0.1, var1="B", var2="C")
+dynamics2.curve_intersection(t_start=0.05, t_end=0.1, chem1="B", chem2="C")
 
 # %%
 df2 = dynamics2.get_history()

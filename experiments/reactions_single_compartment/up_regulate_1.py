@@ -180,10 +180,10 @@ dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
 
 # %%
 # Look up the some of the intersections of the [A] and [B] curves
-dynamics.curve_intersection(t_start=0, t_end=0.01, var1="A", var2="B")
+dynamics.curve_intersection(t_start=0, t_end=0.01, chem1="A", chem2="B")
 
 # %%
-dynamics.curve_intersection(t_start=0.0151, t_end=0.02, var1="A", var2="B")
+dynamics.curve_intersection(t_start=0.0151, t_end=0.02, chem1="A", chem2="B")
 
 # %% [markdown]
 # Note: the _curve_intersection()_ function currently cannot location the intersection at t=0.015 (the vertical rise in the red line); this issue will get addressed in future versions...

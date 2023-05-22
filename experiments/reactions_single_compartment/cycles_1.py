@@ -141,16 +141,16 @@ dynamics.plot_curves(chemicals=["A", "B", "C"])
 run1 = []
 
 # %%
-run1.append(dynamics.curve_intersection(t_start=1., t_end=2., var1="E_high", var2="E_low"))
+run1.append(dynamics.curve_intersection(t_start=1., t_end=2., chem1="E_high", chem2="E_low"))
 
 # %%
-run1.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, var1="A", var2="B"))
+run1.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, chem1="A", chem2="B"))
 
 # %%
-run1.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="A", var2="C"))
+run1.append(dynamics.curve_intersection(t_start=3., t_end=4., chem1="A", chem2="C"))
 
 # %%
-run1.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="B", var2="C"))
+run1.append(dynamics.curve_intersection(t_start=3., t_end=4., chem1="B", chem2="C"))
 
 # %%
 run1
@@ -219,16 +219,16 @@ dynamics.plot_curves(chemicals=["A", "B", "C"])
 run2 = []
 
 # %%
-run2.append(dynamics.curve_intersection(t_start=1., t_end=2., var1="E_high", var2="E_low"))
+run2.append(dynamics.curve_intersection(t_start=1., t_end=2., chem1="E_high", chem2="E_low"))
 
 # %%
-run2.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, var1="A", var2="B"))
+run2.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, chem1="A", chem2="B"))
 
 # %%
-run2.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="A", var2="C"))
+run2.append(dynamics.curve_intersection(t_start=3., t_end=4., chem1="A", chem2="C"))
 
 # %%
-run2.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="B", var2="C"))
+run2.append(dynamics.curve_intersection(t_start=3., t_end=4., chem1="B", chem2="C"))
 
 # %%
 run2
@@ -285,16 +285,16 @@ dynamics.plot_curves(chemicals=["A", "B", "C"])
 run3 = []
 
 # %%
-run3.append(dynamics.curve_intersection(t_start=1., t_end=2., var1="E_high", var2="E_low"))
+run3.append(dynamics.curve_intersection(t_start=1., t_end=2., chem1="E_high", chem2="E_low"))
 
 # %%
-run3.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, var1="A", var2="B"))
+run3.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, chem1="A", chem2="B"))
 
 # %%
-run3.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="A", var2="C"))
+run3.append(dynamics.curve_intersection(t_start=3., t_end=4., chem1="A", chem2="C"))
 
 # %%
-run3.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="B", var2="C"))
+run3.append(dynamics.curve_intersection(t_start=3., t_end=4., chem1="B", chem2="C"))
 
 # %%
 run3
