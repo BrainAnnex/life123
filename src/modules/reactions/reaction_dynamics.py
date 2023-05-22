@@ -375,89 +375,6 @@ class ReactionDynamics:
 
 
 
-    #####################################################################################################
-
-    '''                                      ~   HISTORY   ~                                          '''
-
-    def ________HISTORY________(DIVIDER):
-        pass        # Used to get a better structure view in IDEs
-    #####################################################################################################
-
-    def add_snapshot(self, species=None, caption="", time=None, system_data=None) -> None:
-        """
-        Preserve some or all the chemical concentrations into the history,
-        linked to the passed time (by default the current System Time),
-        with an optional caption.
-
-        EXAMPLES:  add_snapshot()
-                    add_snapshot(species=['A', 'B']), caption="Just prior to infusion")
-
-        :param species:     (OPTIONAL) list of name of the chemical species whose concentrations we want to preserve for later use.
-                                If not specified, save all
-        :param caption:     (OPTIONAL) caption to attach to this preserved data
-        :param time:        (OPTIONAL) time value to attach to the snapshot (default: current System Time)
-        :param system_data: (OPTIONAL) a Numpy array of concentration values, in the same order as the
-                                index of the chemical species; by default, use the SYSTEM DATA
-                                (which is set and managed by various functions)
-        :return:            None
-        """
-
-        data_snapshot = self.get_conc_dict(species=species, system_data=system_data)    # This will be a dict
-
-        if time is None:
-            time = self.system_time     # By default, use the system time
-
-        self.history.store(par=time,
-                           data_snapshot=data_snapshot, caption=caption)
-
-
-
-    def get_history(self, t_start=None, t_end=None, head=None, tail=None, t=None) -> pd.DataFrame:
-        """
-        Retrieve and return a Pandas dataframe with the system history that had been saved
-        using add_snapshot()
-        Optionally, restrict the result with a start and/or end times,
-        or by limiting to a specified numbers of rows at the end
-
-        :param t_start: (OPTIONAL) Start time in the "SYSTEM TIME" column
-        :param t_end:   (OPTIONAL) End time
-        :param head:    (OPTIONAL) Number of records to return,
-                                   from the start of the diagnostic dataframe.
-        :param tail:    (OPTIONAL) Number of records to consider, from the end of the dataframe
-        :param t:       (OPTIONAL) Individual time to pluck out from the dataframe;
-                                   the row with closest time will be returned.
-                                   If this parameter is specified, an extra column - called "search_value" -
-                                   is inserted at the beginning of the dataframe.
-                                   If either the "head" or the "tail" arguments are passed, this argument will get ignored
-        :return:        A Pandas dataframe
-        """
-        df = self.history.get_dataframe(head=head, tail=tail, search_val=t,
-                                        search_col="SYSTEM TIME", val_start=t_start, val_end=t_end)
-
-        return df
-
-
-
-    def get_historical_concentrations(self, row: int, df=None) -> np.array:
-        """
-        Return a Numpy array with ALL the chemical concentrations (in their index order)
-        from the specified row number of given Pandas data frame (by default, the system history)
-
-        :param row: Integer with the zero-based row number of the system history (which is a Pandas data frame)
-        :param df:  (OPTIONAL) A Pandas data frame with concentration information in columns that have
-                        the names of the chemicals (if None, the system history is used)
-        :return:    A Numpy array.  EXAMPLE: array([200., 40.5])
-        """
-        if df is None:
-            df = self.get_history()
-
-        chem_list = self.reaction_data.get_all_names()  # List of all the chemicals' names
-        arr = df.loc[row][chem_list].to_numpy()
-        return arr
-
-
-
-
     #############################################################################################
     #                                                                                           #
     #                                TO PERFORM THE REACTIONS                                   #
@@ -2221,6 +2138,90 @@ class ReactionDynamics:
 
     #####################################################################################################
 
+    '''                                      ~   HISTORY   ~                                          '''
+
+    def ________HISTORY________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def add_snapshot(self, species=None, caption="", time=None, system_data=None) -> None:
+        """
+        Preserve some or all the chemical concentrations into the history,
+        linked to the passed time (by default the current System Time),
+        with an optional caption.
+
+        EXAMPLES:  add_snapshot()
+                    add_snapshot(species=['A', 'B']), caption="Just prior to infusion")
+
+        :param species:     (OPTIONAL) list of name of the chemical species whose concentrations we want to preserve for later use.
+                                If not specified, save all
+        :param caption:     (OPTIONAL) caption to attach to this preserved data
+        :param time:        (OPTIONAL) time value to attach to the snapshot (default: current System Time)
+        :param system_data: (OPTIONAL) a Numpy array of concentration values, in the same order as the
+                                index of the chemical species; by default, use the SYSTEM DATA
+                                (which is set and managed by various functions)
+        :return:            None
+        """
+
+        data_snapshot = self.get_conc_dict(species=species, system_data=system_data)    # This will be a dict
+
+        if time is None:
+            time = self.system_time     # By default, use the system time
+
+        self.history.store(par=time,
+                           data_snapshot=data_snapshot, caption=caption)
+
+
+
+    def get_history(self, t_start=None, t_end=None, head=None, tail=None, t=None) -> pd.DataFrame:
+        """
+        Retrieve and return a Pandas dataframe with the system history that had been saved
+        using add_snapshot()
+        Optionally, restrict the result with a start and/or end times,
+        or by limiting to a specified numbers of rows at the end
+
+        :param t_start: (OPTIONAL) Start time in the "SYSTEM TIME" column
+        :param t_end:   (OPTIONAL) End time
+        :param head:    (OPTIONAL) Number of records to return,
+                                   from the start of the diagnostic dataframe.
+        :param tail:    (OPTIONAL) Number of records to consider, from the end of the dataframe
+        :param t:       (OPTIONAL) Individual time to pluck out from the dataframe;
+                                   the row with closest time will be returned.
+                                   If this parameter is specified, an extra column - called "search_value" -
+                                   is inserted at the beginning of the dataframe.
+                                   If either the "head" or the "tail" arguments are passed, this argument will get ignored
+        :return:        A Pandas dataframe
+        """
+        df = self.history.get_dataframe(head=head, tail=tail, search_val=t,
+                                        search_col="SYSTEM TIME", val_start=t_start, val_end=t_end)
+
+        return df
+
+
+
+    def get_historical_concentrations(self, row: int, df=None) -> np.array:
+        """
+        Return a Numpy array with ALL the chemical concentrations (in their index order)
+        from the specified row number of given Pandas data frame (by default, the system history)
+
+        :param row: Integer with the zero-based row number of the system history (which is a Pandas data frame)
+        :param df:  (OPTIONAL) A Pandas data frame with concentration information in columns that have
+                        the names of the chemicals (if None, the system history is used)
+        :return:    A Numpy array.  EXAMPLE: array([200., 40.5])
+        """
+        if df is None:
+            df = self.get_history()
+
+        chem_list = self.reaction_data.get_all_names()  # List of all the chemicals' names
+        arr = df.loc[row][chem_list].to_numpy()
+        return arr
+
+
+
+
+
+    #####################################################################################################
+
     '''                                ~   RESULT ANALYSIS   ~                                        '''
 
     def ________RESULT_ANALYSIS________(DIVIDER):
@@ -2410,10 +2411,12 @@ class ReactionDynamics:
         :param t_end:   The end of the time interval being considered
         :return:        The pair (time of intersection, common value)
         """
-        df = self.get_history(t_start=t_start, t_end=t_end)
-        row_index = abs(df[chem1] - df[chem2]).idxmin()   # The index of the Pandas dataframe row
-                                                        #   with the smallest absolute value of difference in concentrations
-        print(f"Min abs distance found at row: {row_index}")
+        df = self.get_history(t_start=t_start, t_end=t_end) # A Pandas dataframe
+
+        row_index = abs(df[chem1] - df[chem2]).idxmin()     # The index of the Pandas dataframe row
+                                                            #   with the smallest absolute value
+                                                            #   of difference in concentrations
+        print(f"Min abs distance found at data row: {row_index}")
 
         return num.curve_intersect_interpolate(df, row_index,
                                                x="SYSTEM TIME", var1=chem1, var2=chem2)
