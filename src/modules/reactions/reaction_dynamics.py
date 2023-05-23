@@ -460,15 +460,14 @@ class ReactionDynamics:
 
 
 
-    def set_step_factors(self, abort, downshift, upshift) -> None:
+    def set_step_factors(self, upshift, downshift, abort) -> None:
         """
-
         Over-ride default values for simulation parameters
 
-        :param abort:
-        :param downshift:
         :param upshift:
-        :return:
+        :param downshift:
+        :param abort:
+        :return:            None
         """
         if self.step_factors is None:
             self.step_factors = {}
@@ -479,6 +478,20 @@ class ReactionDynamics:
             self.step_factors["downshift"] = downshift
         if upshift is not None:
             self.step_factors["upshift"] = upshift
+
+
+    def set_error_step_factor(self, value) -> None:
+        """
+        Over-ride the default value for the simulation parameter error_abort_step_factor
+
+        :param value:
+        :return:        None
+        """
+        assert value < 1, "set_error_step_factor(): the argument must strictly be < 1"
+        assert value > 0, "set_error_step_factor(): the argument must be a non-zero positive number"
+
+        self.error_abort_step_factor = value
+
 
 
 

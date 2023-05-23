@@ -18,7 +18,7 @@
 #
 # Same as the experiment _"react_1"_ , but with adaptive variable time steps
 #
-# LAST REVISED: May 20, 2023
+# LAST REVISED: May 22, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory +to sys.path
@@ -84,10 +84,11 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are the currently the default values... but subject to change
+# All of these settings are currently close to the default values... but subject to change; set for repeatability
 dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
-dynamics.set_thresholds(norm="norm_B")
-dynamics.set_step_factors(abort=0.5, downshift=0.5, upshift=2.0)
+dynamics.set_thresholds(norm="norm_B")  # This has the effect of turning off use of "norm_B"
+dynamics.set_step_factors(upshift=2.0, downshift=0.5, abort=0.5)
+dynamics.set_error_step_factor(0.5)
 
 # %%
 dynamics.thresholds
@@ -106,8 +107,7 @@ dynamics.single_compartment_react(initial_step=0.1, target_end_time=1.2,
 # ## The flag _variable_steps_ automatically adjusts up or down the time step,  whenever the changes of concentrations are, respectively, "slow" or "fast" (as determined using the specified _thresholds_ )
 
 # %%
-df = dynamics.get_history()   # The system's history, saved during the run of single_compartment_react()
-df
+dynamics.get_history()   # The system's history, saved during the run of single_compartment_react()
 
 # %%
 dynamics.explain_time_advance()

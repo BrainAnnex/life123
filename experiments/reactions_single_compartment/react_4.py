@@ -87,10 +87,11 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are slight variations of the currently the default values... but subject to change
+# All of these settings are currently close to the default values... but subject to change; set for repeatability
 dynamics.set_thresholds(norm="norm_A", low=1.0, high=2.0, abort=3.5)
 dynamics.set_thresholds(norm="norm_B", low=0.1, high=0.5, abort=3.0)
-dynamics.set_step_factors(abort=0.5, downshift=0.5, upshift=1.5)
+dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5)
+dynamics.set_error_step_factor(0.5)
 
 dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.04,
                                   snapshots={"initial_caption": "1st reaction step",

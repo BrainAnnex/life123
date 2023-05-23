@@ -20,7 +20,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_4"_  
 #
-# LAST REVISED: May 20, 2023
+# LAST REVISED: May 22, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -85,10 +85,11 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are the currently the default values... but subject to change
+# All of these settings are currently close to the default values... but subject to change; set for repeatability
 dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
 dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-dynamics.set_step_factors(abort=0.5, downshift=0.5, upshift=1.5)
+dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5)
+dynamics.set_error_step_factor(0.5)
 
 dynamics.single_compartment_react(initial_step=0.004, reaction_duration=0.06,
                                   variable_steps=True, explain_variable_steps=False,
