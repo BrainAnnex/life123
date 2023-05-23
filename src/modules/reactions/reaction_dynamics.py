@@ -782,8 +782,11 @@ class ReactionDynamics:
                       f"due to tentative single step of {delta_time:.5g}:")
                 print("    Baseline: ", conc_array)
                 print("    Deltas:   ", delta_concentrations)
-                print("    Relative Deltas:   ", delta_concentrations / conc_array)
+                with np.errstate(divide='ignore'):  # Suppress warning about divisions by zero,
+                                                    # which are expected, and no issue here
+                    print("    Relative Deltas:   ", delta_concentrations / conc_array)
                 print("    Norms:    ", all_norms)
+
                 print("    Thresholds:    ")
                 for rule in  self.thresholds:
                     print(self.display_thresholds(rule, all_norms.get(rule['norm'])))
@@ -797,7 +800,7 @@ class ReactionDynamics:
             if action == "abort":       # NOTE: this is a "strategic" abort, not a hard one from error
                 msg =   f"INFO: the tentative time step ({delta_time:.5g}) " \
                         f"leads to a least one norm value > its ABORT threshold:\n" \
-                        f"      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time * step_factor:.5g} " \
+                        f"      -> will backtrack, and re-do step with a SMALLER delta time, multiplied by {step_factor} (set to {delta_time * step_factor:.5g}) " \
                         f"[Step started at t={self.system_time:.5g}, and will rewind there]"
                 #print("WARNING: ", msg)
                 if self.diagnostics:
@@ -867,7 +870,8 @@ class ReactionDynamics:
 
                 raise ExcessiveTimeStepHard(f"INFO: the tentative time step ({delta_time:.5g}) "
                                             f"leads to a NEGATIVE concentration of one of the chemicals: "
-                                            f"\n      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time * self.error_abort_step_factor:.5g} "
+                                            f"\n      -> will backtrack, and re-do step with a SMALLER delta time, "
+                                            f"multiplied by {self.error_abort_step_factor} (set to {delta_time * self.error_abort_step_factor:.5g}) "
                                             f"[Step started at t={self.system_time:.5g}, and will rewind there.  Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
 
 
@@ -1248,7 +1252,8 @@ class ReactionDynamics:
                                     f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` "
                                     f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
                                     f"\n      Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}"
-                                    f"\n      -> will backtrack, and re-do step with a SMALLER delta time of {delta_time * self.error_abort_step_factor:.5g} "
+                                    f"\n      -> will backtrack, and re-do step with a SMALLER delta time, "
+                                    f"multiplied by {self.error_abort_step_factor} (set to {delta_time * self.error_abort_step_factor:.5g}) "
                                     f"[Step started at t={self.system_time:.5g}, and will rewind there]")
 
 
@@ -1453,18 +1458,25 @@ class ReactionDynamics:
         NOTE: the concentration changes in chemicals not involved in the specified reaction are ignored
 
         :param rxn_index:   Integer to identify the reaction of interest
-        :param delta_arr:   Numpy array with the concentrations changes of ALL the chemicals (whether involved
-                                in the reaction or not), in their index order, as a result of JUST the reaction of interest
+        :param delta_arr:   Numpy array of numbers, with the concentrations changes of ALL the chemicals (whether involved
+                                in the reaction or not), in their index order,
+                                as a result of JUST the reaction of interest
                             TODO: maybe also accept a Panda's data frame row
         :param suppress_warning:
         :return:            True if the change in reactant/product concentrations is consistent with the
                                 reaction's stoichiometry, or False otherwise
+                                Note: if any of the elements of the passed Numpy array is NaN, then True is returned
+                                      (because NaN values are indicative of aborted steps; can't invalidate the stoichiometry
+                                      check because of that)
         """
         if (not suppress_warning) and (self.reaction_data.number_of_reactions() > 1):
             print(f"*** WARNING: {self.reaction_data.number_of_reactions()} reactions are present.  "
                   f"stoichiometry_checker() currently only works for 1-reaction simulations")
 
         self.reaction_data.assert_valid_rxn_index(rxn_index)
+
+        if np.isnan(delta_arr).any():
+            return True         # The presence of a NaN, anywhere in delta_arr, is indicative of an aborted step
 
         reactants = self.reaction_data.get_reactants(rxn_index)
         products = self.reaction_data.get_products(rxn_index)
@@ -1512,16 +1524,22 @@ class ReactionDynamics:
                   "the diagnostics must be turned on, with set_diagnostics(), prior to the simulation run!")
             return False
 
-        for rxn_index in range(self.reaction_data.number_of_reactions()):
+        number_rxns = self.reaction_data.number_of_reactions()
+        assert number_rxns == 1, \
+                f"stoichiometry_checker_entire_run(): this function is currently designed for just 1 reaction " \
+                f"(whereas {number_rxns} are present)"
+
+        for rxn_index in range(number_rxns):
             diagnostic_data = self.get_diagnostic_rxn_data(rxn_index=rxn_index, print_reaction=False)
             for row_index in range(len(diagnostic_data)):
                 df_row = diagnostic_data.loc[row_index]     # Row in the Panda's data frame of diagnostic data
                 chemical_delta_list = self._delta_names()           # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
-                delta = df_row[chemical_delta_list].to_numpy()      # Extract select columns from the data frame row, and turn into Numpy array
+                delta = df_row[chemical_delta_list].to_numpy(dtype='float32')      # Extract select columns from the data frame row, and turn into Numpy array
                 status = self.stoichiometry_checker_from_deltas(rxn_index=rxn_index, delta_arr=delta, suppress_warning=True)
                 if not status:
                     print(f"Stoichiometry NOT satisfied by reaction # {rxn_index}: "
-                          f"see row # {row_index} in the diagnostic data for that reaction")
+                          f"see row # {row_index} in the diagnostic data for that reaction, from get_diagnostic_rxn_data()")
+                    print(df_row )
                     return False
 
         return True
@@ -1845,7 +1863,7 @@ class ReactionDynamics:
         chemical_list = self.reaction_data.get_all_names()
         chemical_delta_list = self._delta_names()
 
-        conc_arr_before = self.get_diagnostic_conc_data().loc[row_baseline][chemical_list].to_numpy().astype(float)
+        conc_arr_before = self.get_diagnostic_conc_data().loc[row_baseline][chemical_list].to_numpy(dtype='float16')
         print("baseline concentrations: ", conc_arr_before)
 
         delta_cumulative = np.zeros(self.reaction_data.number_of_chemicals(),
@@ -1855,11 +1873,11 @@ class ReactionDynamics:
         for rxn_index in range(self.reaction_data.number_of_reactions()):
             if (rxn_index in active_list):  # If reaction is tagged as "fast"
                 row = row_list[rxn_index]   # Row in the data frame for the diagnostic data on this reaction
-                delta_rxn = self.get_diagnostic_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy().astype(float)
+                delta_rxn = self.get_diagnostic_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
                 print(f"From fast rxn {rxn_index}: delta_rxn = {delta_rxn}")
             else:                           # If reaction is tagged as "slow"
                 row = row_list[rxn_index]   # Row in the data frame for the diagnostic data on this reaction
-                delta_rxn = self.get_diagnostic_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy().astype(float)
+                delta_rxn = self.get_diagnostic_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
                 #delta_rxn = np.zeros(self.reaction_data.number_of_chemicals(),
                 #                     dtype=float)   # This is the way it was in release beta 19
                 print(f"From slow rxn {rxn_index}: delta_rxn = {delta_rxn}")
@@ -1873,7 +1891,7 @@ class ReactionDynamics:
         conc_after = conc_arr_before + delta_cumulative
         print("updated concentrations: ", conc_after)
 
-        next_system_state = self.get_diagnostic_conc_data().loc[row_baseline + 1][chemical_list].to_numpy()
+        next_system_state = self.get_diagnostic_conc_data().loc[row_baseline + 1][chemical_list].to_numpy(dtype='float16')
         print(f"concentrations from the next row ({row_baseline + 1}) of the system state: ", next_system_state)
 
         status = np.allclose(conc_after.astype(float), next_system_state.astype(float))
@@ -1955,6 +1973,8 @@ class ReactionDynamics:
             critical_times.append(t[-1])
             step_sizes.append(grad_shifted[-1])
 
+        if not silent:
+            print(f"({total_number_full_steps} steps total)")
 
         if return_times:
             assert len(critical_times) == len(step_sizes) + 1, \
@@ -2207,15 +2227,14 @@ class ReactionDynamics:
         :param row: Integer with the zero-based row number of the system history (which is a Pandas data frame)
         :param df:  (OPTIONAL) A Pandas data frame with concentration information in columns that have
                         the names of the chemicals (if None, the system history is used)
-        :return:    A Numpy array.  EXAMPLE: array([200., 40.5])
+        :return:    A Numpy array of floats.  EXAMPLE: array([200., 40.5])
         """
         if df is None:
             df = self.get_history()
 
         chem_list = self.reaction_data.get_all_names()  # List of all the chemicals' names
-        arr = df.loc[row][chem_list].to_numpy()
+        arr = df.loc[row][chem_list].to_numpy(dtype='float32')
         return arr
-
 
 
 
@@ -2388,11 +2407,11 @@ class ReactionDynamics:
         :param row_from:
         :param row_to:
         :param chem_list:
-        :return:
+        :return:            A Numpy array of floats
         """
         from_values = df.loc[row_from][chem_list]
         to_values = df.loc[row_to][chem_list]
-        return (to_values - from_values).astype(float).to_numpy()
+        return (to_values - from_values).astype(float).to_numpy(dtype='float32')
 
 
 

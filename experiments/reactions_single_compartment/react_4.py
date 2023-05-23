@@ -21,7 +21,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #
-# LAST REVISED: May 21, 2023
+# LAST REVISED: May 22, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -158,6 +158,9 @@ dynamics.get_diagnostic_rxn_data(rxn_index=0, head=15)    # Easily seen in the d
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium()
 
+# %%
+dynamics.stoichiometry_checker_entire_run()
+
 # %% [markdown] tags=[]
 # ## Display the variable time steps
 
@@ -170,6 +173,8 @@ dynamics.plot_curves(colors=['red', 'green'], show_intervals=True,
 
 # %%
 dynamics.curve_intersection('A', 'C', t_start=0, t_end=0.01)
+
+# %%
 
 # %% [markdown]
 # #### For diagnostic insight, uncomment the following lines:

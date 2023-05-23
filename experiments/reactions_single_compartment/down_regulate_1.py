@@ -26,7 +26,7 @@
 #
 # All reactions 1st order, mostly forward.  Taken to equilibrium.
 #
-# LAST REVISED: Feb. 5, 2023
+# LAST REVISED: May 22, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -38,10 +38,7 @@
 # ![Downregulated by shunt](../../docs/down_regulate_1.png)
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -92,40 +89,37 @@ dynamics.describe_state()
 
 # %%
 dynamics.set_diagnostics()          # To save diagnostic information about the call to single_compartment_react()
-#dynamics.verbose_list = ["substeps", 2, 3]   # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
-# The changes of concentrations vary very rapidly early on; 
-# so, we'll be using the dynamic_substeps option to increase time resolution,
-# as long as the reaction remains "fast" (based on a threshold of % change, as specified by fast_threshold)
-dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.05,
+# All of these settings are the currently close to the default values... but subject to change
+dynamics.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.44)
+dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
+dynamics.set_step_factors(abort=0.5, downshift=0.5, upshift=1.5)
+
+# The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
+dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.3,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_substeps=4, rel_fast_threshold=25)
+                                  variable_steps=True, explain_variable_steps=False)
 
 # %%
-df_iterm = dynamics.get_history()
-df_iterm
-
-# %%
-# Continue running the reaction at lover resolution
-dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.25,
-                                  snapshots={"initial_caption": "1st reaction step",
-                                             "final_caption": "last reaction step"},
-                                  dynamic_substeps=4, rel_fast_threshold=10)
-
-# %%
-df = dynamics.get_history()
-df
+dynamics.get_history()
 
 # %%
 dynamics.explain_time_advance()
 
 # %%
-# Verify that all the reactions have reached equilibrium
-dynamics.is_in_equilibrium()
+dynamics.plot_curves(colors=["blue", "orange"], title="Single reaction A <-> B (no downregulation)", 
+                     show_intervals=True)
+
+# %% [markdown]
+# #### Notice the intersection at the exact midpoint of the 2 initial concentrations (50 and 0):
 
 # %%
-dynamics.plot_curves(colors=["blue", "green"], title="Single reaction A <-> B (no downregulation)")
+dynamics.curve_intersection('A', 'B', t_start=0, t_end=0.1)
+
+# %%
+# Verify that all the reactions have reached equilibrium
+dynamics.is_in_equilibrium(tolerance=2)
 
 # %%
 
@@ -163,49 +157,38 @@ dynamics.describe_state()
 
 # %%
 dynamics.set_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
-#dynamics.verbose_list = ["substeps", 2, 3]  # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
 
-# The changes of concentrations vary very rapidly early on; 
-# so, we'll be using the dynamic_substeps option to increase time resolution,
-# as long as the reaction remains "fast" (based on a threshold of % change, as specified by fast_threshold)
-dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.05,
+# All of these settings are the currently close to the default values... but subject to change
+dynamics.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.44)
+dynamics.set_thresholds(norm="norm_B", low=0.05, high=0.5, abort=1.5)
+dynamics.set_step_factors(abort=0.5, downshift=0.5, upshift=1.4)
+dynamics.error_abort_step_factor = 0.333 
+
+# The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
+dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.3,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  dynamic_substeps=4, rel_fast_threshold=10)
+                                  variable_steps=True, explain_variable_steps=False)
 
 # %%
-# Continue running the reaction at lover resolution
-dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.25,
-                                  snapshots={"initial_caption": "1st reaction step",
-                                             "final_caption": "last reaction step"},
-                                  dynamic_substeps=4, rel_fast_threshold=10)
-
-# %%
-df = dynamics.get_history()
-df
+dynamics.plot_curves(colors=["blue", "green", "orange"], 
+                     title="Coupled reactions A <-> B and A <-> S (fast but disadvantaged energetically)",
+                     show_intervals=True)
 
 # %% [markdown]
-# ### Check the final equilibrium
-
-# %%
-# Verify that all the reactions have reached equilibrium
-dynamics.is_in_equilibrium(tolerance=3)
-
-# %% [markdown] tags=[]
-# ## <a name="react_5_plot"></a>Plots of changes of concentration with time
-
-# %%
-dynamics.plot_curves(colors=["blue", "green", "red"], 
-                     title="Coupled reactions A <-> B and A <-> S (fast but disadvantaged energetically)")
-
-# %% [markdown]
-# ### Notice how the "alternate (shunt) path" of the reaction, i.e. S (red)   
+# ### Notice how the "alternate (shunt) path" of the reaction, i.e. S (orange)   
 # ### has a FAST START (fast kinetics),
 # ### but EVENTUALLY PETERS OUT (energy dis-advantage)
 
 # %%
-# Verify that the stoichiometry is respected at every reaction step/substep (NOTE: it requires earlier activation of saving diagnostic data)
-dynamics.stoichiometry_checker_entire_run()
+dynamics.explain_time_advance()
+
+# %%
+dynamics.get_history()
+
+# %%
+# Verify that all the reactions have reached equilibrium
+dynamics.is_in_equilibrium()
 
 # %%
 
@@ -217,87 +200,79 @@ dynamics.stoichiometry_checker_entire_run()
 
 # %%
 # Specify the chemicals  (notice that we're starting with new objects)
-chem_data3 = chem(names=["A", "B", "S"])
+chem_data = chem(names=["A", "B", "S"])
 
 # Reaction A <-> B (as before)
-chem_data3.add_reaction(reactants=["A"], products=["B"],
+chem_data.add_reaction(reactants=["A"], products=["B"],
                        forward_rate=30., reverse_rate=5.) 
 
 # Reaction A <-> S (slow shunt, excellent thermodynamical energetic advantage)
-chem_data3.add_reaction(reactants=["A"], products=["S"],
+chem_data.add_reaction(reactants=["A"], products=["S"],
                        forward_rate=3., reverse_rate=0.1)
 
-chem_data3.describe_reactions()
+chem_data.describe_reactions()
 
 # %% [markdown]
 # ### Set the initial concentrations of all the chemicals, in their index order
 
 # %%
-dynamics3 = ReactionDynamics(reaction_data=chem_data3)
-dynamics3.set_conc([50., 0, 0.], snapshot=True)
-dynamics3.describe_state()
+dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics.set_conc([50., 0, 0.], snapshot=True)
+dynamics.describe_state()
 
 # %% [markdown] tags=[]
 # ### Run the reaction
 
 # %%
-dynamics3.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-#dynamics3.verbose_list = ["substeps", 2, 3]  # Uncomment for detailed run information (meant for debugging the adaptive variable time step)
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# The changes of concentrations vary very rapidly early on; 
-# so, we'll be using the dynamic_substeps option to increase time resolution,
-# as long as the reaction remains "fast" (based on a threshold of % change, as specified by fast_threshold)
-dynamics3.single_compartment_react(time_step=0.005, reaction_duration=0.3,
+# All of these settings are the currently close to the default values... but subject to change
+dynamics.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.44)
+dynamics.set_thresholds(norm="norm_B", low=0.05, high=0.5, abort=1.5)
+dynamics.set_step_factors(abort=0.5, downshift=0.5, upshift=1.4)
+dynamics.error_abort_step_factor = 0.333 
+
+# The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
+
+dynamics.single_compartment_react(time_step=0.005, reaction_duration=7.0,
                                    snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                   dynamic_substeps=5, rel_fast_threshold=10)
+                                   variable_steps=True, explain_variable_steps=False)
 
 # %%
-# Continue running the reaction at lover resolution
-dynamics3.single_compartment_react(time_step=0.25, reaction_duration=6.7,
-                                   snapshots={"initial_caption": "1st reaction step",
-                                             "final_caption": "last reaction step"},
-                                   dynamic_substeps=5, rel_fast_threshold=10)
+dynamics.plot_curves(colors=["blue", "green", "orange"], 
+                      title="Coupled reactions A <-> B and A <-> S (slow but with energetic advantage)")
+
+# %% [markdown]
+# ### Notice how the "alternate (shunt) path" of the reaction, i.e. S (orange)   
+# ### has a SLOW START (slow kinetics),
+# ### but EVENTUALLY DOMINATES (energy advantage)
 
 # %%
-df3 = dynamics3.get_history()
-df3
+dynamics.explain_time_advance()
+
+# %%
+dynamics.get_history()
 
 # %% [markdown]
 # ### Check the final equilibrium
 
 # %%
 # Verify that all the reactions have reached equilibrium
-dynamics3.is_in_equilibrium(tolerance=13)
-
-# %% [markdown] tags=[]
-# ## <a name="react_5_plot"></a>Plots of changes of concentration with time
-
-# %%
-dynamics3.plot_curves(colors=["blue", "green", "red"], 
-                      title="Coupled reactions A <-> B and A <-> S (slow but with energetic advantage)")
-
-# %% [markdown]
-# ### Notice how the "alternate (shunt) path" of the reaction, i.e. S (red)   
-# ### has a SLOW START (slow kinetics),
-# ### but EVENTUALLY DOMINATES (energy advantage)
+dynamics.is_in_equilibrium(tolerance=13)
 
 # %% [markdown]
 # #### Please note the much-longer timescale from the earlier plots
 # If we look at the initial [0-0.1] interval, this is what it looks like:
 
 # %%
-fig = px.line(data_frame=dynamics3.get_history().loc[:96], x="SYSTEM TIME", y=["A", "B", "S"], 
+fig = px.line(data_frame=dynamics.get_history().loc[:96], x="SYSTEM TIME", y=["A", "B", "S"], 
               title="Same as above, both only showing initial detail",
-              color_discrete_sequence = ['blue', 'green', 'red'],
+              color_discrete_sequence = ["blue", "green", "orange"],
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
 # %%
-dynamics3.curve_intersection(t_start=0, t_end=0.08, chem1="A", chem2="B")
-
-# %%
-# Verify that the stoichiometry is respected at every reaction step/substep (NOTE: it requires earlier activation of saving diagnostic data)
-dynamics.stoichiometry_checker_entire_run()
+dynamics.curve_intersection(t_start=0, t_end=0.08, chem1="A", chem2="B")
 
 # %%
