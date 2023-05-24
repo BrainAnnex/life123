@@ -21,13 +21,10 @@
 #
 # See also 1D/reactions/down_regulation_1
 #
-# LAST REVISED: Feb. 5, 2023
+# LAST REVISED: May 23, 2023
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -75,35 +72,43 @@ dynamics.set_conc(conc={"A": 5., "B": 100., "Y": 0.},
 dynamics.describe_state()
 
 # %% [markdown] tags=[]
-# ### Take the initial system to equilibrium
+# # 1. Take the initial system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, n_steps=30,
-                                  dynamic_substeps=2, rel_fast_threshold=15)
+# All of these settings are currently close to the default values... but subject to change; set for repeatability
+dynamics.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.44)
+dynamics.set_thresholds(norm="norm_B", low=0.2, high=0.5, abort=1.5)
+dynamics.set_step_factors(upshift=1.4, downshift=0.5, abort=0.5)
+dynamics.set_error_step_factor(0.333)
 
-df = dynamics.get_history()
-df
+dynamics.single_compartment_react(initial_step=0.0005, reaction_duration=0.015,
+                                  variable_steps=True, explain_variable_steps=False)
 
 # %% [markdown]
 # A, as the scarse limiting reagent, stops the reaction.  
 # When A is low, B is also low.
 
+# %%
+dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
+                     title="Changes in concentrations (reaction A + 2 B <-> Y)")
+
+# %%
+dynamics.get_history()
+
+# %%
+dynamics.explain_time_advance(use_history=True)
+
 # %% [markdown]
-# ### <a name="sec_equilibrium"></a>Equilibrium
+# #### Equilibrium
 
 # %%
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium()
 
-# %% [markdown] tags=[]
-# ## Plots of changes of concentration with time
-
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
-                     title="Changes in concentrations (reaction A + 2 B <-> Y)")
 
 # %% [markdown] tags=[]
-# # Now, let's suddenly increase [A]
+# # 2. Now, let's suddenly increase [A]
 
 # %%
 dynamics.set_chem_conc(species_name="A", conc=40., snapshot=True)
@@ -116,15 +121,8 @@ dynamics.history.get_dataframe(tail=5)
 # ### Again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.001, n_steps=40,
-                                  dynamic_substeps=2, rel_fast_threshold=15)
-
-df = dynamics.history.get_dataframe()
-df
-
-# %%
-# Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(tolerance=6)
+dynamics.single_compartment_react(initial_step=0.0005, target_end_time=0.055,
+                                  variable_steps=True, explain_variable_steps=False)
 
 # %%
 dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
@@ -134,8 +132,17 @@ dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
 # **A**, still the limiting reagent, is again stopping the reaction.  
 # The (transiently) high value of [A] led to a high value of [B]
 
+# %%
+dynamics.get_history()
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium()
+
+# %%
+
 # %% [markdown] tags=[]
-# # Let's again suddenly increase [A]
+# # 3. Let's again suddenly increase [A]
 
 # %%
 dynamics.set_chem_conc(species_name="A", conc=30., snapshot=True)
@@ -148,19 +155,19 @@ dynamics.history.get_dataframe(tail=5)
 # ### Yet again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.001, n_steps=35,
-                                  dynamic_substeps=2, rel_fast_threshold=15)
-
-df = dynamics.get_history()
-df
-
-# %%
-# Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium()
+dynamics.single_compartment_react(initial_step=0.001, target_end_time=0.09,
+                                  variable_steps=True, explain_variable_steps=False)
 
 # %%
 dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
                      title="Changes in concentrations (reaction A + 2 B <-> Y)")
+
+# %%
+dynamics.get_history()
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium()
 
 # %% [markdown]
 # **A**, again the scarse limiting reagent, stops the reaction yet again
@@ -168,7 +175,7 @@ dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
 # %%
 
 # %% [markdown]
-# ## A can down-regulate B, but it cannot bring it up to any significant amount
+# # 4. A can down-regulate B, but it cannot bring it up to any significant amount
 # #### Even if A is completely taken out (i.e., [A] set to 0), [B] can only slightly increase, from the reverse reaction ("Le Chatelier's principle".)  
 # Let's try it:
 
@@ -177,18 +184,20 @@ dynamics.set_chem_conc(species_name="A", conc=0., snapshot=True)   # Completely 
 dynamics.describe_state()
 
 # %%
-dynamics.single_compartment_react(time_step=0.001, n_steps=70,
-                                  dynamic_substeps=2, rel_fast_threshold=15)
+dynamics.single_compartment_react(initial_step=0.001, target_end_time=0.16,
+                                  variable_steps=True, explain_variable_steps=False)
 
-dynamics.get_history()
-
-# %%
-# Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(tolerance=2)
 
 # %%
 dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
                      title="Changes in concentrations (reaction A + 2 B <-> Y)")
+
+# %%
+dynamics.get_history()
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium()
 
 # %% [markdown]
 # #### As expected, even the complete withdrawal of A (red), brings about only a modest increase of B's concentration, from the reverse reaction (i.e. [B] slightly increases at the expense of [Y].)  

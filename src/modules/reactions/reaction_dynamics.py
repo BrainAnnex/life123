@@ -61,7 +61,7 @@ class ReactionDynamics:
         # Note: the "aborts" below are "elective" aborts - not aborts from hard errors (further below)
         self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
                            {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
-        self.step_factors = {"abort": 0.5, "downshift": 0.5, "upshift": 1.5}
+        self.step_factors = {"upshift": 1.5, "downshift": 0.5, "abort": 0.5}
 
         self.error_abort_step_factor = 0.5      # MUST BE < 1.  Factor by which to multiply the time step
                                                 #   in case of negative-concentration error from excessive step size
@@ -495,8 +495,8 @@ class ReactionDynamics:
 
 
 
-    def single_compartment_react(self, reaction_duration=None, stop_time=None, target_end_time=None,
-                                 initial_step=None, time_step=None, n_steps=None,
+    def single_compartment_react(self, reaction_duration=None, target_end_time=None,
+                                 initial_step=None, n_steps=None,
                                  snapshots=None, silent=False,
                                  variable_steps=False, explain_variable_steps=False) -> None:
         """
@@ -507,13 +507,12 @@ class ReactionDynamics:
         Update the system state and the system time accordingly
         (object attributes self.system and self.system_time)
 
-        :param reaction_duration:  The overall time advance for the reactions (i.e. time_step * n_steps)
-        :param stop_time:       The final time at which to stop the reaction
+        :param reaction_duration:  The overall time advance for the reactions (i.e. initial_step * n_steps)
+        :param target_end_time: The final time at which to stop the reaction
                                     If both stop_time and reaction_duration are specified, an error will result
-        :param target_end_time: TODO: new name for stop_time
 
-        :param initial_step:    TODO: new name for time_step
-        :param time_step:       The size of each time step.
+        :param initial_step:    The suggested size of the first step (it might be reduced automatically,
+                                    in case of "hard" errors from large steps
 
         :param n_steps:         The desired number of steps
 
@@ -534,17 +533,7 @@ class ReactionDynamics:
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
-        if initial_step and time_step:
-            raise Exception("*** ReactionDynamics.single_compartment_react(): cannot use both `initial_step` and `time_step`.  Just use `initial_step` instead")
-
-        if time_step:
-            initial_step = time_step
-
-        if stop_time and target_end_time:
-            raise Exception("*** ReactionDynamics.single_compartment_react(): cannot use both `stop_time` and `end_time`.  Just use `end_time` instead")
-
-        if target_end_time:
-            stop_time = target_end_time
+        stop_time = target_end_time
 
 
         # Validation
@@ -1919,7 +1908,8 @@ class ReactionDynamics:
 
 
 
-    def explain_time_advance(self, return_times=False, silent=False) -> Union[None, tuple]:
+    def explain_time_advance(self, return_times=False, silent=False, use_history=False) \
+                                                                    -> Union[None, tuple]:
         """
         Use the saved-up diagnostic data, to print out details of the timescales of the reaction run
 
@@ -1932,17 +1922,29 @@ class ReactionDynamics:
         :param return_times:    If True, all the critical times (times where the interval steps change)
                                     are saved and returned as a list
         :param silent:          If True, nothing gets printed out
+        :param use_history:     If True, use the system history in lieu of the diagnostic data;
+                                    to keep in mind is the fact that the user might only have asked
+                                    for PART of the history to be saved
         :return:                Depending on the argument return_times, either None, or a pair with 2 lists:
                                         1 - list of time values
                                         2 - list of step sizes  (will have one less element than the first list)
         """
-        df = self.get_diagnostic_conc_data()
-        assert df is not None, \
-            "ReactionDynamics.explain_time_advance(): no diagnostic data found.  " \
-            "Did you call set_diagnostics() prior to the reaction run?"
+        if use_history:
+            df = self.get_history()
+            assert not df.empty , \
+                "ReactionDynamics.explain_time_advance(): no history data found.  " \
+                "Did you run the reaction simulation prior to calling this function?"
+        else:
+            df = self.get_diagnostic_conc_data()
+            assert not df.empty , \
+                "ReactionDynamics.explain_time_advance(): no diagnostic data found.  " \
+                "Did you call set_diagnostics() prior to the reaction run?"
 
         n_entries = len(df)
-        t = list(df["TIME"])    # List of times (simulation step points)
+        if use_history:
+            t = list(df["SYSTEM TIME"])    # List of times (simulation step points)
+        else:
+            t = list(df["TIME"])    # List of times (simulation step points)
 
         if n_entries == 1:
             print(f"ReactionDynamics.explain_time_advance(): no time advance found. "

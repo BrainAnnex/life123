@@ -103,7 +103,7 @@ def test_single_compartment_react():
     dynamics.set_conc(conc=initial_conc, snapshot=False)
 
     dynamics.set_diagnostics()
-    dynamics.single_compartment_react(time_step=0.0010, stop_time=0.0035)
+    dynamics.single_compartment_react(initial_step=0.0010, target_end_time=0.0035)
 
     run1 = dynamics.get_system_conc()
     assert np.allclose(run1, [9.69124339e+01, 3.06982519e+00, 1.77408783e-02, 9.99985757e+02, 1.42431633e-02])
@@ -119,9 +119,9 @@ def test_single_compartment_react():
     dynamics2.set_conc(conc=initial_conc, snapshot=False)
 
     dynamics2.set_diagnostics()
-    dynamics2.single_compartment_react(time_step=0.0010, n_steps=2)
-    dynamics2.single_compartment_react(time_step=0.0005, n_steps=1)
-    dynamics2.single_compartment_react(time_step=0.0010, n_steps=1)
+    dynamics2.single_compartment_react(initial_step=0.0010, n_steps=2)
+    dynamics2.single_compartment_react(initial_step=0.0005, n_steps=1)
+    dynamics2.single_compartment_react(initial_step=0.0010, n_steps=1)
     run2 = dynamics.get_system_conc()
     assert np.allclose(run2, run1)      # Same result as before
     assert np.allclose(dynamics2.system_time, 0.0035)
@@ -329,7 +329,7 @@ def test_single_compartment_react_variable_steps_1():
     dynamics.set_thresholds(norm="norm_B", low=None, high=None, abort=None)
     dynamics.set_step_factors(abort=0.5, downshift=0.5, upshift=2.0)
 
-    dynamics.single_compartment_react(time_step=0.01, stop_time=0.2,
+    dynamics.single_compartment_react(initial_step=0.01, target_end_time=0.2,
                                       variable_steps=True)
 
     df = dynamics.get_history()
@@ -371,7 +371,7 @@ def test_single_compartment_correct_neg_conc_1():
 
     dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-    dynamics.single_compartment_react(time_step=0.1, stop_time=0.8, variable_steps=False)
+    dynamics.single_compartment_react(initial_step=0.1, target_end_time=0.8, variable_steps=False)
     # Note: negative concentrations that would arise from the given step size, get automatically intercepted - and
     #       the step sizes get reduced as needed
 

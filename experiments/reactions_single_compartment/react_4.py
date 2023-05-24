@@ -21,7 +21,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #
-# LAST REVISED: May 22, 2023
+# LAST REVISED: May 23, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -93,7 +93,7 @@ dynamics.set_thresholds(norm="norm_B", low=0.1, high=0.5, abort=3.0)
 dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5)
 dynamics.set_error_step_factor(0.5)
 
-dynamics.single_compartment_react(time_step=0.002, reaction_duration=0.04,
+dynamics.single_compartment_react(initial_step=0.002, reaction_duration=0.04,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   variable_steps=True, explain_variable_steps=False)

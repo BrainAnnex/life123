@@ -26,7 +26,7 @@
 #
 # All reactions 1st order, mostly forward.  Taken to equilibrium.
 #
-# LAST REVISED: May 22, 2023
+# LAST REVISED: May 23, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -99,7 +99,7 @@ dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5)
 dynamics.set_error_step_factor(0.5)
 
 # The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
-dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.3,
+dynamics.single_compartment_react(initial_step=0.001, reaction_duration=0.3,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   variable_steps=True, explain_variable_steps=False)
@@ -168,7 +168,7 @@ dynamics.set_step_factors(upshift=1.4, downshift=0.5, abort=0.5)
 dynamics.set_error_step_factor(0.333)
 
 # The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
-dynamics.single_compartment_react(time_step=0.001, reaction_duration=0.3,
+dynamics.single_compartment_react(initial_step=0.001, reaction_duration=0.3,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   variable_steps=True, explain_variable_steps=False)
@@ -236,7 +236,7 @@ dynamics.set_step_factors(upshift=1.5, downshift=0.25, abort=0.25)
 dynamics.set_error_step_factor(0.2)
 
 # The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
-dynamics.single_compartment_react(time_step=0.005, reaction_duration=7.0,
+dynamics.single_compartment_react(initial_step=0.005, reaction_duration=7.0,
                                    snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                    variable_steps=True, explain_variable_steps=False)
