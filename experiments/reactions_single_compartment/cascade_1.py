@@ -108,7 +108,7 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are currently close to the default values... but subject to change; set for repeatability
+# These settings can be tweaked to make the time resolution finer or coarser
 dynamics.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.44)
 dynamics.set_thresholds(norm="norm_B", low=0.2, high=0.5, abort=1.5)
 dynamics.set_step_factors(upshift=1.4, downshift=0.5, abort=0.5)
@@ -118,6 +118,9 @@ dynamics.single_compartment_react(initial_step=0.02, reaction_duration=0.4,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   variable_steps=True, explain_variable_steps=False)
+
+# %% [markdown]
+# ### <a name="cascade_1_plot"></a> Plots of changes of concentration with time
 
 # %%
 dynamics.plot_curves(title="Coupled reactions A <-> B and B <-> C",

@@ -19,13 +19,27 @@
 #
 # Same as `variable_steps_1`, but with substeps.
 #
-# LAST REVISED: Mar. 6, 2023
+# LAST REVISED: Mar. 6, 2023    **THIS IS AN ARCHIVED EXPERIMENT**
+
+# %% [markdown]
+# # IMPORTANT: DO NOT ATTEMPT TO RUN THIS NOTEBOOK!   
+# ## This is a **"frozen run"** that depends on an old version of Life123, for demonstration purposes  
+# (newer versions don't contain this implementation of substeps.)  
+# If you bypass the execution exit in the first cell, and run the other cells, you WILL NOT REPLICATE the results below!
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+# To stop the current and subsequent cells: USED TO PREVENT ACCIDENTAL RUNS OF THIS NOTEBOOK!
+
+class StopExecution(Exception):
+    def _render_traceback_(self):
+        return []
+
+raise StopExecution     # See: https://stackoverflow.com/a/56953105/5478830
+
+# %%
+
+# %%
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -181,6 +195,6 @@ no_substep_error
 # At any rates, substeps are far less relevant ever since the introduction of variable (main) step.
 
 # %% [markdown]
-# # => The current implementation of substeps is now deprecated - and will be taken out at a later release
+# # => This implementation of substeps was deprecated - and no longer part of current releases
 
 # %%

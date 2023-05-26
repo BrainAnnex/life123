@@ -181,29 +181,21 @@ dynamics.describe_state()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %%
-# All of these settings are currently close to the default values... but subject to change; set for repeatability
-dynamics.set_thresholds(norm="norm_A", low=0.008, high=0.009, abort=0.01)
+# These settings can be tweaked to make the time resolution finer or coarser
+dynamics.set_thresholds(norm="norm_A", low=0.01, high=0.012, abort=0.015)
 dynamics.set_thresholds(norm="norm_B", low=0.002, high=0.4, abort=0.5)
-dynamics.set_step_factors(upshift=1.05, downshift=0.15, abort=0.05)
+dynamics.set_step_factors(upshift=1.6, downshift=0.15, abort=0.05)
 dynamics.set_error_step_factor(0.05)
 
 dynamics.single_compartment_react(initial_step=0.0001, target_end_time=8.0,
                                   variable_steps=True, explain_variable_steps=False)
 
-# %%
-dynamics.plot_curves(chemicals=["A", "B", "C"])
-
-# %%
-#dynamics.get_history()
-
-# %% [markdown]
-# ### Notice we created 8,149 data points, a fair bit more than in run #1
-
-# %%
-#dynamics.explain_time_advance()
-
 # %% [markdown] tags=[]
-# ## Plots of changes of concentration with time
+# ### Notice we created 9,499 data points, a fair bit more than in run #1
+
+# %%
+# dynamics.get_history()
+# dynamics.explain_time_advance()
 
 # %%
 dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
@@ -312,7 +304,7 @@ num.compare_results(run1, run3)
 num.compare_results(run2, run3)
 
 # %% [markdown]
-# The fact that our measure of distance of run 2 (with intermediate resolution) from run3 is actually GREATER than the distance of run 1 (with low resolution) from run3, might be an artifact of the limited accuracy in the extraction of intersection coordinates from the saved run data.
+# The fact that our measure of distance of run 2 (with intermediate resolution) from run3 is actually a little GREATER than the distance of run 1 (with low resolution) from run3, might be an artifact of the limited accuracy in the extraction of intersection coordinates from the saved run data.
 
 # %% [markdown]
 # #### The coordinates of the 4 critical points, from the 3 different runs, are pretty similar to one another - as can be easily seen:

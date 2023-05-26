@@ -19,13 +19,10 @@
 #
 # Same as `substeps_1`, but with fixed steps: a lot of tiny steps - as a proxy for the "exact value"
 #
-# LAST REVISED: Mar. 6, 2023
+# LAST REVISED: May 25, 2023
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -77,9 +74,8 @@ dynamics.describe_state()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-#dynamics.verbose_list = ["substeps", "variable_steps"]
 
-dynamics.single_compartment_react(time_step=0.0001, stop_time=0.3, 
+dynamics.single_compartment_react(initial_step=0.0001, target_end_time=0.3, 
                                   variable_steps=False)
 
 df = dynamics.get_history()

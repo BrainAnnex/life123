@@ -16,22 +16,19 @@
 # %% [markdown]
 # ## Violating the Laws of Physics for Fun and Insight!
 # ###  A cascade of reactions `A <-> B <-> C` , mostly in the forward direction
-# ### PART 1 : the above, together with a PHYSICALLY-IMPOSSIBLE "closing" of the cycle with :
+# ### [PART 1](#impossible_1_part1) : the above, together with a PHYSICALLY-IMPOSSIBLE "closing" of the cycle with :
 # #### `C <-> A`,  *ALSO* mostly in the forward direction (never mind the laws of thermodymics)!
-# ### PART 2 : restoring the law of physics (by letting `C <-> A` adjust its kinetics based on the energy difference.)
+# ### [PART 2](#impossible_1_part2) : restoring the law of physics (by letting `C <-> A` adjust its kinetics based on the energy difference.)
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: Mar. 7, 2023
+# LAST REVISED: May 25, 2023
 
 # %% [markdown]
 # ![Temporarily suspending the Laws of Physics](../../docs/impossible_1.png)
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -71,7 +68,7 @@ chem_data.add_reaction(reactants="B", products="C",
                        forward_rate=8., reverse_rate=4.)
 
 # %% [markdown]
-# # Part 1 - "Turning off the Laws of Physics"!
+# # <a name="impossible_1_part1"></a> Part 1 - "Turning off the Laws of Physics"!
 
 # %%
 # LET'S VIOLATE THE LAWS OF PHYSICS!
@@ -106,34 +103,23 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-dynamics.single_compartment_react(time_step=0.001, stop_time=0.05,
-                                  dynamic_substeps=4, rel_fast_threshold=80.)
+# All of these settings are currently close to the default values... but subject to change; set for repeatability
+dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
+dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
+dynamics.set_step_factors(upshift=1.1, downshift=0.4, abort=0.3)
+dynamics.set_error_step_factor(0.2)
 
-dynamics.explain_time_advance()
+dynamics.single_compartment_react(initial_step=0.001, target_end_time=2.0,
+                                  variable_steps=True, explain_variable_steps=False)
 
-# dynamics.get_history()
-
-# %%
-dynamics.single_compartment_react(time_step=0.005, stop_time=0.3,
-                                  dynamic_substeps=4, rel_fast_threshold=100.)
-
-dynamics.explain_time_advance()
-
-#dynamics.get_history()
-
-# %%
-dynamics.single_compartment_react(time_step=0.01, stop_time=2.,
-                                  dynamic_substeps=4, rel_fast_threshold=120.)
-
-dynamics.explain_time_advance()
-
-#dynamics.get_history()
-
-# %% [markdown] tags=[]
-# ## Plots of changes of concentration with time
 
 # %%
 dynamics.plot_curves()
+
+# %%
+# dynamics.explain_time_advance()
+
+# dynamics.get_history()
 
 # %% [markdown]
 # ### It might look like an equilibrium has been reached.  But NOT!  Verify the LACK of final equilibrium state:
@@ -159,7 +145,7 @@ dynamics.get_diagnostic_rxn_data(rxn_index=2, tail=1)
 # %%
 
 # %% [markdown]
-# # PART 2 - Let's restore the Laws of Physics!
+# # <a name="impossible_1_part2"></a> PART 2 - Let's restore the Laws of Physics!
 
 # %%
 chem_data.describe_reactions()
@@ -198,10 +184,10 @@ chem_data.describe_reactions()
 # ### Now, let's continue with this "legit" set of reactions, from where we left off in our fantasy world at time t=2:
 
 # %%
-dynamics.single_compartment_react(time_step=0.008, stop_time=4.,
-                                  dynamic_substeps=4, rel_fast_threshold=120.)
+dynamics.single_compartment_react(initial_step=0.01, target_end_time=4.0,
+                                  variable_steps=True, explain_variable_steps=False)
 
-dynamics.explain_time_advance()
+#dynamics.explain_time_advance()
 
 #dynamics.get_history()
 

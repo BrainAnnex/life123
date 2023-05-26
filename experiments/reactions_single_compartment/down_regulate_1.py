@@ -229,7 +229,7 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are currently close to the default values... but subject to change; set for repeatability
+# These settings can be tweaked to make the time resolution finer or coarser
 dynamics.set_thresholds(norm="norm_A", low=2.0, high=5.0, abort=10.0)
 dynamics.set_thresholds(norm="norm_B", low=0.008, high=0.5, abort=2.0)    # The "low" value here seems especially critical to fend off instabilities
 dynamics.set_step_factors(upshift=1.5, downshift=0.25, abort=0.25)
