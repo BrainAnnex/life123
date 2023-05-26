@@ -14,21 +14,19 @@
 # ---
 
 # %% [markdown]
-# ## Exploration of variable time steps in the simulation of the coupled reactions `2 S <-> U` and `S <-> X`   
+# ## Exploration of variable time steps in the simulation of the coupled reactions:
+# ### `2 S <-> U` and `S <-> X`   
 # Both mostly forward.  1st-order kinetics throughout.   
 #
 # Based on the reactions and initial conditions of the experiment `up_regulate_3`
 #
-# LAST REVISED: Mar. 6, 2023
+# LAST REVISED: May 26, 2023
 
 # %% [markdown]
 # ![Adaptive time steps](../../docs/variable_steps.png)
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -80,13 +78,18 @@ dynamics.describe_state()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-#dynamics.verbose_list = ["substeps", "variable_steps"]  # Uncomment for debug data
 
-dynamics.single_compartment_react(time_step=0.01, stop_time=2.0, 
-                                  variable_steps=True, thresholds={"low": 0.25, "high": 0.64})
+# All of these settings are currently close to the default values... but subject to change; set for repeatability
+dynamics.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
+dynamics.set_thresholds(norm="norm_B")   # We are disabling norm_B (to conform to the original run)
+dynamics.set_step_factors(upshift=2.0, downshift=0.5, abort=0.5)    # Note: upshift=2.0 seems to often be excessive.  About 1.4 is currently recommended
+dynamics.set_error_step_factor(0.5)
 
-df = dynamics.get_history()
-df
+dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0, 
+                                  variable_steps=True, explain_variable_steps=True)
+
+# %%
+dynamics.get_history()
 
 # %%
 (transition_times, step_sizes) = dynamics.explain_time_advance(return_times=True)
@@ -134,7 +137,9 @@ dynamics.get_diagnostic_conc_data()
 dynamics.get_diagnostic_decisions_data()
 
 # %% [markdown]
-# #### Notice how the first step got aborted, and re-run, because of the large adjusted L2 value in the concentrations 
+# #### Notice how the first step got aborted, and re-run, because of the large value of `norm_A`
+
+# %%
 
 # %%
 dynamics.get_diagnostic_decisions_data_ALT()      # TODO: OBSOLETE!
