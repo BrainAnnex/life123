@@ -14,8 +14,8 @@ even if the project's root folder is already present in sys.path.
 Adding the project's root folder to sys.path permits
 the use of absolute paths in import of modules into notebooks.
 
-# IMPORTANT: change the level number as needed,
-             in the function call at the very bottom of this file!
+# IMPORTANT: if cloning this file, change the level number as needed,
+             in the function call at the very bottom of this script!
 
 
 TO USE:
@@ -33,7 +33,7 @@ import pathlib
 
 def add_ancestor_dir_to_syspath(level: int, verbose=True) -> None:
     """
-    Add the ancestor (at the specified level) of the current working directory to the system path.
+    Add the ancestor (at the specified level) of the current working directory, to the system path.
     Doing so will allow the use of absolute paths (starting at that ancestor folder)
     in import of modules into notebooks.
 
@@ -49,7 +49,7 @@ def add_ancestor_dir_to_syspath(level: int, verbose=True) -> None:
     for _ in range(level):
         directory = directory.parent    # Navigate up one level in the file hierarchy
 
-    sys.path.append(str(directory))
+    sys.path.append(str(directory))     # Append the located ancestral directory to the system path
 
     if verbose:
         print(f"Added '{directory}' to sys.path")
