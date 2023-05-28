@@ -2029,7 +2029,6 @@ class ReactionDynamics:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-
     def plot_curves(self, chemicals=None, colors=None, title=None,
                     vertical_lines=None, show_intervals=False, suppress=False) -> Union[None, go.Figure]:
         """
