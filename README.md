@@ -1,9 +1,9 @@
-### BETA 26 (v0.26.0) IN-PROGRESS
+### BETA 26.1 (v0.26.1)
 
 
 
 # Life123
-Detailed quantitative modeling of biological systems in 1, 2 and 3D (as well as single-compartment reactions)
+Dynamical Modeling of Biological Systems in 1, 2 and 3D (as well as single-compartment reactions)
 
 Includes diffusion, reactions, diffusion/reaction and (coming soon) membranes and compartments.
 
