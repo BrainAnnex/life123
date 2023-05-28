@@ -19,7 +19,7 @@
 #
 # 1st-order kinetics throughout.   
 #
-# LAST REVISED: Feb. 11, 2023
+# LAST REVISED: Mar. 7, 2023   **THIS IS AN ARCHIVED EXPERIMENT**
 #
 # * [RUN 1 : negative concentrations are detected but otherwise ignored](#negative_concentrations_1_run_1)  
 # (_"DEMONIC"_ in figure below)
@@ -60,10 +60,7 @@ raise StopExecution     # See: https://stackoverflow.com/a/56953105/5478830
 # ## The `StopExecution` above is on purpose, TO PREVENT ACCIDENTAL RUNS OF THIS NOTEBOOK!
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -176,10 +173,10 @@ all_fig.show()
 df
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=0)
+dynamics.get_diagnostic_rxn_data(rxn_index=0)
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=1)
+dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 
@@ -260,10 +257,10 @@ all_fig.show()
 df
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=0)
+dynamics.get_diagnostic_rxn_data(rxn_index=0)
 
 # %%
-dynamics.get_diagnostic_data(rxn_index=1)
+dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 

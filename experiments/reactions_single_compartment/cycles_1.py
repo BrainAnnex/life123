@@ -22,13 +22,10 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: Feb. 5, 2023
+# LAST REVISED: May 24, 2023
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -93,6 +90,9 @@ initial_conc
 # ### and we'll do MULTIPLE RUNS, at varying time resolutions.
 
 # %% [markdown]
+#
+
+# %% [markdown]
 # # Run # 1 : FIXED time resolution, with COARSE time steps   
 # (trial and error, not shown, reveals that increasing any of the time steps below, leads to "excessive time step" errors)
 
@@ -105,19 +105,18 @@ dynamics.describe_state()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %%
-dynamics.single_compartment_react(time_step=0.0008, stop_time=0.03)
+dynamics.single_compartment_react(initial_step=0.0008, target_end_time=0.03)
 #dynamics.get_history()
 
 # %%
-dynamics.single_compartment_react(time_step=0.001, stop_time=5.)
+dynamics.single_compartment_react(initial_step=0.001, target_end_time=5.)
 #dynamics.get_history()
 
 # %%
-dynamics.single_compartment_react(time_step=0.005, stop_time=8.)
+dynamics.single_compartment_react(initial_step=0.005, target_end_time=8.)
 
 # %%
-df = dynamics.get_history()
-df
+dynamics.get_history()
 
 # %% [markdown]
 # ### Notice we created 5,609 data points
@@ -141,16 +140,16 @@ dynamics.plot_curves(chemicals=["A", "B", "C"])
 run1 = []
 
 # %%
-run1.append(dynamics.curve_intersection(t_start=1., t_end=2., var1="E_high", var2="E_low"))
+run1.append(dynamics.curve_intersection("E_high", "E_low", t_start=1., t_end=2.))
 
 # %%
-run1.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, var1="A", var2="B"))
+run1.append(dynamics.curve_intersection("A", "B", t_start=2.31, t_end=2.33))
 
 # %%
-run1.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="A", var2="C"))
+run1.append(dynamics.curve_intersection("A", "C", t_start=3., t_end=4.))
 
 # %%
-run1.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="B", var2="C"))
+run1.append(dynamics.curve_intersection("B", "C", t_start=3., t_end=4.))
 
 # %%
 run1
@@ -161,15 +160,17 @@ run1
 # %%
 dynamics.is_in_equilibrium()
 
-# %%
+# %% [markdown]
+#
 
-# %%
+# %% [markdown]
+#
 
 # %% [markdown]
 # # _NOTE: Everything below is JUST A REPEAT of the same experiment, with different time steps, for accuracy comparisons_
 
 # %% [markdown]
-# # Run # 2. VARIABLE time resolution, using the same primary time steps as in run #1
+# # Run # 2. VARIABLE time resolution
 
 # %%
 dynamics = ReactionDynamics(reaction_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
@@ -180,31 +181,21 @@ dynamics.describe_state()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %%
-dynamics.single_compartment_react(time_step=0.0008, stop_time=0.03,
-                                  dynamic_substeps=2, abs_fast_threshold=750.)
-# Note: the threshold values were picked by trial and error (not shown) 
-# to be neither too small nor too large - leading to substeps being used roughly 1/2 of the time
+# These settings can be tweaked to make the time resolution finer or coarser
+dynamics.set_thresholds(norm="norm_A", low=0.01, high=0.012, abort=0.015)
+dynamics.set_thresholds(norm="norm_B", low=0.002, high=0.4, abort=0.5)
+dynamics.set_step_factors(upshift=1.6, downshift=0.15, abort=0.05)
+dynamics.set_error_step_factor(0.05)
 
-# %%
-dynamics.single_compartment_react(time_step=0.001, stop_time=5.,
-                                  dynamic_substeps=2, abs_fast_threshold=250.)
-
-# %%
-dynamics.single_compartment_react(time_step=0.005, stop_time=8.,
-                                  dynamic_substeps=2, abs_fast_threshold=2.)
-
-# %%
-df = dynamics.get_history()
-df
-
-# %% [markdown]
-# ### Notice we created 8,149 data points, a fair bit more than in run #1
-
-# %%
-dynamics.explain_time_advance()
+dynamics.single_compartment_react(initial_step=0.0001, target_end_time=8.0,
+                                  variable_steps=True, explain_variable_steps=False)
 
 # %% [markdown] tags=[]
-# ## Plots of changes of concentration with time
+# ### Notice we created 9,499 data points, a fair bit more than in run #1
+
+# %%
+# dynamics.get_history()
+# dynamics.explain_time_advance()
 
 # %%
 dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
@@ -219,16 +210,16 @@ dynamics.plot_curves(chemicals=["A", "B", "C"])
 run2 = []
 
 # %%
-run2.append(dynamics.curve_intersection(t_start=1., t_end=2., var1="E_high", var2="E_low"))
+run2.append(dynamics.curve_intersection(t_start=1., t_end=2., chem1="E_high", chem2="E_low"))
 
 # %%
-run2.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, var1="A", var2="B"))
+run2.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, chem1="A", chem2="B"))
 
 # %%
-run2.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="A", var2="C"))
+run2.append(dynamics.curve_intersection(t_start=3., t_end=4., chem1="A", chem2="C"))
 
 # %%
-run2.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="B", var2="C"))
+run2.append(dynamics.curve_intersection(t_start=3., t_end=4., chem1="B", chem2="C"))
 
 # %%
 run2
@@ -251,17 +242,16 @@ dynamics.describe_state()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %% tags=[]
-dynamics.single_compartment_react(time_step=0.0004, stop_time=0.03)
+dynamics.single_compartment_react(initial_step=0.0004, target_end_time=0.03)
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, stop_time=5.)
+dynamics.single_compartment_react(initial_step=0.0005, target_end_time=5.)
 
 # %%
-dynamics.single_compartment_react(time_step=0.0025, stop_time=8.)
+dynamics.single_compartment_react(initial_step=0.0025, target_end_time=8.)
 
 # %%
-df = dynamics.get_history()
-df
+dynamics.get_history()
 
 # %% [markdown]
 # ### Notice we created 11,217 data points, a fair bit more than in run #2, and a good deal more than in run #1
@@ -285,16 +275,16 @@ dynamics.plot_curves(chemicals=["A", "B", "C"])
 run3 = []
 
 # %%
-run3.append(dynamics.curve_intersection(t_start=1., t_end=2., var1="E_high", var2="E_low"))
+run3.append(dynamics.curve_intersection(t_start=1., t_end=2., chem1="E_high", chem2="E_low"))
 
 # %%
-run3.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, var1="A", var2="B"))
+run3.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, chem1="A", chem2="B"))
 
 # %%
-run3.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="A", var2="C"))
+run3.append(dynamics.curve_intersection(t_start=3., t_end=4., chem1="A", chem2="C"))
 
 # %%
-run3.append(dynamics.curve_intersection(t_start=3., t_end=4., var1="B", var2="C"))
+run3.append(dynamics.curve_intersection(t_start=3., t_end=4., chem1="B", chem2="C"))
 
 # %%
 run3
@@ -314,7 +304,7 @@ num.compare_results(run1, run3)
 num.compare_results(run2, run3)
 
 # %% [markdown]
-# The fact that our measure of distance of run 2 (with intermediate resolution) from run3 is actually GREATER than the distance of run 1 (with low resolution) from run3, might be an artifact of the limited accuracy in the extraction of intersection coordinates from the saved run data.
+# The fact that our measure of distance of run 2 (with intermediate resolution) from run3 is actually a little GREATER than the distance of run 1 (with low resolution) from run3, might be an artifact of the limited accuracy in the extraction of intersection coordinates from the saved run data.
 
 # %% [markdown]
 # #### The coordinates of the 4 critical points, from the 3 different runs, are pretty similar to one another - as can be easily seen:

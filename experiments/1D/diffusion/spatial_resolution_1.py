@@ -17,13 +17,10 @@
 # #### From the same initial setup, diffusion is carried out over a fixed time span,
 # #### at different spatial resolutions - and then the respective results are compared
 #
-# LAST REVISED: Nov. 29, 2022
+# LAST REVISED: May 27, 2023
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 from experiments.get_notebook_info import get_notebook_basename

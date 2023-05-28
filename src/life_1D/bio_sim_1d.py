@@ -4,7 +4,6 @@ import math
 from scipy.fft import rfft, rfftfreq    # Fast Fourier Transforms to extract frequency components
 from scipy.stats import norm
 from typing import Union, List, Tuple
-#from src.modules.movies.movies import Movie    # OBSOLETED
 from src.modules.movies.movies import MovieTabular
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 import plotly.express as px
@@ -1283,8 +1282,8 @@ class BioSim1D:
         # TODO: validation; also, implement "species" option for snapshots
         first_snapshot = True
         if snapshots:
-            frequency = snapshots.get("frequency", 1)   # If not present, it will be 1
-            sample_bin = snapshots.get("sample_bin", None)   # If not present, it will be None
+            frequency = snapshots.get("frequency", 1)         # If not present, it will be 1
+            sample_bin = snapshots.get("sample_bin", None)    # If not present, it will be None
         else:
             frequency = None
             sample_bin = None
@@ -1345,7 +1344,8 @@ class BioSim1D:
             #print(f"\conc_array in bin {bin_n}: ", conc_array)
 
             # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-            increment_vector, _, _ = self.reaction_dynamics.reaction_step_orchestrator(delta_time_full=delta_time, conc_array=conc_array)
+            increment_vector, _, _ = self.reaction_dynamics.reaction_step_common(delta_time=delta_time, conc_array=conc_array,
+                                                                                 variable_steps=False)  # Using fixed time steps
 
             # Replace the "bin_n" column of the self.delta_reactions matrix with the contents of the vector increment_vector
             self.delta_reactions[:, bin_n] = np.array([increment_vector])
@@ -1361,7 +1361,7 @@ class BioSim1D:
                 #print(f"\n Post-membrane side conc_dict in bin {bin_n}: ", conc_dict)
 
                 # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-                increment_vector, _, _ = self.reaction_dynamics.reaction_step_orchestrator(delta_time_full=delta_time, conc_array=conc_array)
+                increment_vector, _, _ = self.reaction_dynamics.reaction_step_common(delta_time=delta_time, conc_array=conc_array)
 
                 # Replace the "bin_n" column of the self.delta_reactions_B matrix with the contents of the vector increment_vector
                 self.delta_reactions_B[:, bin_n] = np.array([increment_vector])
@@ -1405,19 +1405,22 @@ class BioSim1D:
 
 
 
-    #########################################################################
-    #                                                                       #
-    #                           VISUALIZATION                               #
-    #                                                                       #
-    #########################################################################
+    #####################################################################################################
 
-    def visualize_system(self, caption=None, colors=None):
+    '''                                    ~   VISUALIZATION   ~                                           '''
+
+    def ________VISUALIZATION________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def visualize_system(self, caption=None, colors=None) -> None:
         """
-        Visualize the current state of the system as a line plot
+        Visualize the current state of the system as a line plot,
+        using plotly
 
         :param caption: Optional caption to prefix to the default one
-        :param colors:
-        :return:
+        :param colors:  [Not yet used]
+        :return:        None
         """
         title = f"System snapshot at time t={self.system_time}"
         if caption:
@@ -1640,7 +1643,7 @@ class BioSim1D:
 
         :return:        a Pandas dataframe
         """
-        return self.history.get()
+        return self.history.get_dataframe()
 
 
 

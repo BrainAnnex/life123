@@ -18,17 +18,14 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: Feb. 5, 2023
+# LAST REVISED: May 28, 2023
 #
-# * [First Step](#sec_2_first_step)
-# * [Numerous more steps](#sec_2)
-# * [Equilibrium](#sec_2_equilibrium)
+# * [First Step](#reaction_2_sec_2_first_step)
+# * [Numerous more steps](#reaction_2_sec_2)
+# * [Equilibrium](#reaction_2_sec_2_equilibrium)
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 from experiments.get_notebook_info import get_notebook_basename
@@ -78,7 +75,7 @@ graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown] tags=[]
-# ### <a name="sec_2_first_step"></a>First step
+# ### <a name="reaction_2_sec_2_first_step"></a>First step
 
 # %%
 # First step
@@ -93,7 +90,7 @@ bio.describe_state()
 bio.get_history()
 
 # %% [markdown]
-# ### <a name="sec_2"></a>Numerous more steps
+# ### <a name="reaction_2_sec_2"></a>Numerous more steps
 
 # %%
 # Numerous more steps
@@ -102,7 +99,7 @@ bio.react(time_step=0.1, n_steps=10, snapshots={"sample_bin": 0})
 bio.describe_state()
 
 # %% [markdown] tags=[]
-# ### <a name="sec_2_equilibrium"></a>Equilibrium
+# ### <a name="reaction_2_sec_2_equilibrium"></a>Equilibrium
 
 # %% [markdown]
 # Consistent with the 5/2 ratio of forward/reverse rates (and the 1st order reactions),

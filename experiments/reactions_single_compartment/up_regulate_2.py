@@ -22,13 +22,10 @@
 # Invoking [Le Chatelier's principle](https://www.chemguide.co.uk/physical/equilibria/lechatelier.html), it can be seen that, starting from equilibrium, when [U] goes up, so does [D]; and when [D] goes up, so does [X].   
 # Conversely, when [U] goes down, so does [D]; and when [D] goes down, so does [X].     
 #
-# LAST REVISED: Feb. 11, 2023
+# LAST REVISED: May 26, 2023
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -78,17 +75,24 @@ dynamics = ReactionDynamics(reaction_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "D": 0.})
 dynamics.describe_state()
 
+# %%
+
 # %% [markdown] tags=[]
 # # 1. Take the initial system to equilibrium
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-dynamics.single_compartment_react(time_step=0.03, stop_time=0.5,
-                                  dynamic_substeps=2, rel_fast_threshold=50)
+# All of these settings are currently close to the default values... but subject to change; set for repeatability
+dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
+dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
+dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5)
+dynamics.set_error_step_factor(0.5)
 
-df = dynamics.get_history()
-df
+dynamics.single_compartment_react(initial_step=0.03, target_end_time=0.5,
+                                  variable_steps=True, explain_variable_steps=False)
+
+dynamics.get_history()
 
 # %%
 dynamics.explain_time_advance()
@@ -106,6 +110,8 @@ dynamics.plot_curves(colors=['red', 'green', 'gray'])
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium()
 
+# %%
+
 # %% [markdown] tags=[]
 # # 2. Now, let's suddenly increase [U]
 
@@ -120,14 +126,12 @@ dynamics.get_history(tail=3)
 # ### Again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.03, stop_time=1,
-                                  dynamic_substeps=2, rel_fast_threshold=50)
-
-df = dynamics.get_history()
-df
+dynamics.single_compartment_react(initial_step=0.03, target_end_time=1,
+                                  variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.explain_time_advance()
+#dynamics.get_history()
+#dynamics.explain_time_advance()
 
 # %%
 dynamics.plot_curves(colors=['red', 'green', 'gray'])
@@ -137,7 +141,9 @@ dynamics.plot_curves(colors=['red', 'green', 'gray'])
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(tolerance=2)
+dynamics.is_in_equilibrium()
+
+# %%
 
 # %% [markdown] tags=[]
 # # 3. Let's again suddenly increase [U]
@@ -153,14 +159,12 @@ dynamics.get_history(tail=3)
 # ### Yet again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.03, stop_time=1.6,
-                                  dynamic_substeps=2, rel_fast_threshold=120)
-
-df = dynamics.history.get()
-df
+dynamics.single_compartment_react(initial_step=0.03, target_end_time=1.6,
+                                  variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.explain_time_advance()
+#dynamics.get_history()
+#dynamics.explain_time_advance()
 
 # %%
 dynamics.plot_curves(colors=['red', 'green', 'gray'])
@@ -170,7 +174,9 @@ dynamics.plot_curves(colors=['red', 'green', 'gray'])
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(explain=False)
+dynamics.is_in_equilibrium(tolerance=2)
+
+# %%
 
 # %% [markdown] tags=[]
 # # 4. Now, instead, let's DECREASE [U]
@@ -186,14 +192,12 @@ dynamics.get_history(tail=3)
 # ### Take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.03, stop_time=2.3,
-                                  dynamic_substeps=2, rel_fast_threshold=80)
-
-df = dynamics.history.get()
-df
+dynamics.single_compartment_react(initial_step=0.03, target_end_time=2.3,
+                                  variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.explain_time_advance()
+#dynamics.get_history()
+#dynamics.explain_time_advance()
 
 # %%
 dynamics.plot_curves(colors=['red', 'green', 'gray'])

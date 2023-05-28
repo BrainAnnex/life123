@@ -16,13 +16,10 @@
 # ### Exploring the data structures of MEMBRANES, and reactions in them 
 # #### - with NO DIFFUSION
 #
-# LAST REVISED: Feb. 5, 2023
+# LAST REVISED: May 28, 2023
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up 
-                                         # to reach the project's home from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 from src.modules.reactions.reaction_data import ReactionData as chem

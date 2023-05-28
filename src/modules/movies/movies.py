@@ -28,7 +28,7 @@ class MovieTabular:
         """
         self.parameter_name = parameter_name
 
-        self.movie = None      # Pandas dataframe
+        self.movie = pd.DataFrame()      # Empty Pandas dataframe
 
 
 
@@ -60,7 +60,7 @@ class MovieTabular:
         :param caption:         OPTIONAL string to describe the snapshot
         :return:                None (the object variable "self.movie" will get updated)
         """
-        if self.movie is None:     # No Pandas dataframe was yet started
+        if self.movie.empty:     # No Pandas dataframe was yet started
             assert type(data_snapshot) == dict, \
                 "MovieTabular.store(): The argument `data_snapshot` must be a dictionary"
 
@@ -74,18 +74,89 @@ class MovieTabular:
 
 
 
-    def get(self, tail=None) -> pd.DataFrame:
+    def get_dataframe(self, head=None, tail=None,
+                      val_start=None, val_end=None,
+                      search_col=None, search_val=None) -> pd.DataFrame:
         """
-        Return the main data structure - a Pandas dataframe
+        Return the main data structure (a Pandas dataframe) 
+        - or a part thereof (in which case insert a column named "search_value" to the left.)
 
-        :param tail:    If an integer value is provided, only show the last several rows,
-                            as many as specified by that number
-        :return:        A Pandas dataframe
+        Optionally, limit the dataframe to a specified numbers of rows at the end,
+        or just return row(s) corresponding to a specific search value(s) in the specified column
+        - i.e. the row(s) with the CLOSEST value to the requested one(s).
+
+        IMPORTANT:  if multiple options to restrict the dataset are present, only one is carried out;
+                    the priority is:  1) head,  2) tail,  3) filtering,  3) search
+
+        :param head:        (OPTIONAL) Integer.  If provided, only show the first several rows;
+                                as many as specified by that number.
+        :param tail:        (OPTIONAL) Integer.  If provided, only show the last several rows;
+                                as many as specified by that number.
+                                If the "head" argument is passed, this argument will get ignored
+
+        :param val_start:  (OPTIONAL) Perform a FILTERING using the start value in the the specified column
+                                - ASSUMING the dataframe is ordered by that value (e.g. a system time)
+        :param val_end:    (OPTIONAL) FILTER by end value.
+                                Either one or both of start/end values may be provided
+
+        :param search_col:  (OPTIONAL) String with the name of a column in the dataframe,
+                                against which to match the value below
+        :param search_val:  (OPTIONAL) Number, or list/tuple of numbers, with value(s)
+                                to search in the above column
+
+        :return:            A Pandas dataframe, with all or some of the rows
+                                that were stored in the main data structure.
+                                If a search was requested, insert a column named "search_value" to the left
         """
-        if tail is None:
-            return self.movie
-        else:
-            return self.movie.tail(tail)
+        df = self.movie     # The main data structure (a Pandas dataframe), with the "saved snapshots"
+
+        if head is not None:
+            return df.head(head)    # This request is given top priority
+
+        if tail is not None:
+            return df.tail(tail)    # This request is given next-highest priority
+
+        if search_col is None:
+            return df               # Without a search column, neither filtering nor search are possible;
+                                    #   so, return everything
+
+
+        # If we get thus far, we're doing a SEARCH or FILTERING, and were given a column name;
+        # we'll first look into whether we have a FILTERING request
+
+        if (val_start is not None) and (val_end is not None):
+            return df[df[search_col].between(val_start, val_end)]
+
+        if val_start is not None:
+            return df[df[search_col] >= val_start]
+
+        if val_end is not None:
+            return df[df[search_col] <= val_end]
+
+
+        # If we get thus far, we're doing a SEARCH, and were given a column name
+
+        if search_val is not None:
+            # Perform a lookup of a value, or set of values,
+            # in the specified column
+            if (type(search_val) == tuple) or (type(search_val) == list):
+                # Looking up a group of values
+                lookup = pd.merge_asof(pd.DataFrame({'search_value':search_val}), df,
+                                       right_on=search_col, left_on='search_value',
+                                       direction='nearest')
+                # Note: the above operation will insert a column named "search_value" to the left
+                return lookup
+            else:
+                # Looking up a single value lookup
+                index = df[search_col].sub(search_val).abs().idxmin()   # Locate index of row with smallest
+                                                                        # absolute value of differences from the search value
+                lookup = df.iloc[index : index+1]               # Select 1 row
+                lookup.insert(0, 'search_value', [search_val])  # Insert a column named "search_value" to the left
+                return lookup
+
+
+        # In the absence of a passed search_val, return the full dataset
+        return df
 
 
 
@@ -296,7 +367,7 @@ class MovieGeneral:
 
 
 
-    def get(self) -> list:
+    def get_movie(self) -> list:
         """
         Return the main data structure - the list of snapshots, with their attributes
 

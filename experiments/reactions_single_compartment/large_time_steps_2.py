@@ -23,13 +23,27 @@
 # * for an exploration of instabilities, see the experiment `negative_concentrations_1`
 # * for an accurate longer run of the same reactions (with the same initial conditions), see the experiment "up_regulate_3"
 #
-# LAST REVISED: Feb. 11, 2023
+# LAST REVISED: Feb. 11, 2023  **THIS IS AN ARCHIVED EXPERIMENT**
+
+# %% [markdown]
+# # IMPORTANT: DO NOT ATTEMPT TO RUN THIS NOTEBOOK!   
+# ## This is a **"frozen run"** that depends on an old version of Life123, for demonstration purposes  
+# (newer versions tend to recover from instability more gracefully.)  
+# If you bypass the execution exit in the first cell, and run the other cells, you WILL NOT REPLICATE the results below!
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+# To stop the current and subsequent cells: USED TO PREVENT ACCIDENTAL RUNS OF THIS NOTEBOOK!
+
+class StopExecution(Exception):
+    def _render_traceback_(self):
+        return []
+
+raise StopExecution     # See: https://stackoverflow.com/a/56953105/5478830
+
+# %%
+
+# %%
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename

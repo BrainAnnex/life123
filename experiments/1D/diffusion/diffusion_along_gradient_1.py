@@ -18,13 +18,10 @@
 # Contrary to perhaps an intuition of a "pile sliding down a sand dune as a unit", the concentration peak
 # remains in place, and simply spreads out from there
 #
-# LAST REVISED: Nov. 28, 2022
+# LAST REVISED: May 27, 2023
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(3)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 from src.life_1D.bio_sim_1d import BioSim1D

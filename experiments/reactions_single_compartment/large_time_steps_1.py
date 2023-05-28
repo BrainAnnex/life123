@@ -18,22 +18,36 @@
 # ### Based on experiment `cycles_1`
 # #### A cycle of reactions `A <-> B <-> C <-> A` and `C + E_High <-> A + E_Low`
 #
-# ### RUN 1 - Initially, very large time steps are taken - at the edge of pushing some concentrations into negative values.
+# ### [RUN 1](#large_time_steps_1_run1) - Initially, very large time steps are taken - at the edge of pushing some concentrations into negative values.
 # The system automatic detects those problems, intercepts the problematic steps and re-runs them with 1/2 the time step.   
 # Negative concentrations are automatically avoided, but nonetheless the plots are ragged... and the solutions are eventually unstable.
 #
-# ### RUN 2 - Same primary steps as for run #1, but with the option of using 1/2 substeps as needed, 
+# ### [RUN 2](#large_time_steps_1_run2) - Same primary steps as for run #1, but with the option of using 1/2 substeps as needed, 
 # with thresholds that lead to those substeps being actually utilized a fair part of the time.   
 # The raggedness and instabilities are now eliminated.
 # (Note: the 1/2 substeps are on a per-reaction basis)
 #
-# LAST REVISED: Feb. 5, 2023
+# LAST REVISED: Feb. 5, 2023     **THIS IS AN ARCHIVED EXPERIMENT**
+
+# %% [markdown]
+# # IMPORTANT: DO NOT ATTEMPT TO RUN THIS NOTEBOOK!   
+# ## This is a **"frozen run"** that depends on an old version of Life123, for demonstration purposes  
+# (newer versions tend to recover from instability more gracefully.)  
+# If you bypass the execution exit in the first cell, and run the other cells, you WILL NOT REPLICATE the results below!
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+# To stop the current and subsequent cells: USED TO PREVENT ACCIDENTAL RUNS OF THIS NOTEBOOK!
+
+class StopExecution(Exception):
+    def _render_traceback_(self):
+        return []
+
+raise StopExecution     # See: https://stackoverflow.com/a/56953105/5478830
+
+# %%
+
+# %%
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -96,7 +110,7 @@ initial_conc
 # Time [5.-8.] slow changes, as we approach equilibrium  
 
 # %% [markdown]
-# ## RUN 1 - Initially, very large time steps are taken - at the edge of pushing some concentrations into negative values.
+# ## <a name="large_time_steps_1_run1"></a> RUN 1 - Initially, very large time steps are taken - at the edge of pushing some concentrations into negative values.
 # The system automatic detects those problems, intercepts the problematic steps and re-runs them with 1/2 the time step.   
 # Negative concentrations are automatically avoided, but nonetheless the plots are ragged... and the solutions are eventually unstable.
 
@@ -164,7 +178,7 @@ dynamics.plot_curves(chemicals=["A", "B", "C"])
 # %%
 
 # %% [markdown]
-# ## RUN 2 - Same primary steps as for run #1, but with the option of using 1/2 substeps as needed, 
+# ## <a name="large_time_steps_1_run2"></a> RUN 2 - Same primary steps as for run #1, but with the option of using 1/2 substeps as needed, 
 # with thresholds that lead to those substeps being actually utilized a fair part of the time.   
 # The raggedness and instabilities are now eliminated.
 # (Note: the 1/2 substeps are on a per-reaction basis)

@@ -21,13 +21,10 @@
 #
 # See also the experiment "1D/reactions/up_regulation_1"
 #
-# LAST REVISED: Feb. 5, 2023
+# LAST REVISED: May 26, 2023
 
 # %%
-# Extend the sys.path variable, to contain the project's root directory
-import set_path
-set_path.add_ancestor_dir_to_syspath(2)  # The number of levels to go up 
-                                         # to reach the project's home, from the folder containing this notebook
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
@@ -80,15 +77,24 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-dynamics.single_compartment_react(time_step=0.0005, stop_time=0.015,
-                                  dynamic_substeps=2, rel_fast_threshold=15)
+# All of these settings are currently close to the default values... but subject to change; set for repeatability
+dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
+dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
+dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5)
+dynamics.set_error_step_factor(0.5)
 
-df = dynamics.get_history()
-df
+dynamics.single_compartment_react(initial_step=0.0005, reaction_duration=0.015,
+                                  variable_steps=True, explain_variable_steps=False)
+
+# %%
+dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
 
 # %% [markdown]
-# A, as the scarse limiting reagent, stops the reaction.  
-# When A is low, B is also low.
+# **A, as the scarse limiting reagent, stops the reaction.  
+# As long as A is low, B also remains low.**
+
+# %%
+dynamics.get_history()
 
 # %%
 dynamics.explain_time_advance()
@@ -100,11 +106,7 @@ dynamics.explain_time_advance()
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium()
 
-# %% [markdown] tags=[]
-# ## Plots of changes of concentration with time
-
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
 
 # %% [markdown] tags=[]
 # # Now, let's suddenly increase [A]
@@ -120,18 +122,8 @@ dynamics.get_history(tail=5)
 # ### Again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, stop_time=0.035,
-                                  dynamic_substeps=2, rel_fast_threshold=15)
-
-df = dynamics.get_history()
-df
-
-# %%
-dynamics.explain_time_advance()
-
-# %%
-# Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(tolerance=2)
+dynamics.single_compartment_react(initial_step=0.0005, target_end_time=0.035,
+                                  variable_steps=True, explain_variable_steps=False)
 
 # %%
 dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
@@ -139,6 +131,17 @@ dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
 # %% [markdown]
 # **A**, still the limiting reagent, is again stopping the reaction.  
 # The (transiently) high value of [A] led to a high value of [B]
+
+# %%
+#dynamics.get_history()
+
+#dynamics.explain_time_advance()
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium()
+
+# %%
 
 # %% [markdown] tags=[]
 # # Let's again suddenly increase [A]
@@ -154,38 +157,37 @@ dynamics.get_history(tail=5)
 # ### Yet again, take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(time_step=0.0005, stop_time=0.070,
-                                  dynamic_substeps=2, rel_fast_threshold=15)
-
-df = dynamics.history.get()
-df
-
-# %%
-dynamics.explain_time_advance()
-
-# %%
-# Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(tolerance=2)
+dynamics.single_compartment_react(initial_step=0.0005, target_end_time=0.070,
+                                  variable_steps=True, explain_variable_steps=False)
 
 # %%
 dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
 
 # %% [markdown]
 # `A`, again the scarce limiting reagent, stops the reaction yet again.  
-# And, again, the (transiently) high value of [A] up-regulated [B]  
+# And, again, the (transiently) high value of [A] up-regulated [B]
 #
 # Notes:   
 # `A` can up-regulate `B`, but it cannot bring it down.  
-# `X` will soon need to be replenished, if `A` is to continue being the limiting reagent.
+# `X` will soon need to be replenished, if `A` is to continue being the limiting reagent.**
 
 # %%
 # Look up the some of the intersections of the [A] and [B] curves
-dynamics.curve_intersection(t_start=0, t_end=0.01, var1="A", var2="B")
+dynamics.curve_intersection("A", "B", t_start=0, t_end=0.01)
 
 # %%
-dynamics.curve_intersection(t_start=0.0151, t_end=0.02, var1="A", var2="B")
+dynamics.curve_intersection("A", "B", t_start=0.0151, t_end=0.02)
 
 # %% [markdown]
 # Note: the _curve_intersection()_ function currently cannot location the intersection at t=0.015 (the vertical rise in the red line); this issue will get addressed in future versions...
+
+# %%
+#dynamics.get_history()
+
+#dynamics.explain_time_advance()
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium()
 
 # %%
