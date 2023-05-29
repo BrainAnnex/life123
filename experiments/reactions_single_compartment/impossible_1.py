@@ -17,12 +17,12 @@
 # ## Violating the Laws of Physics for Fun and Insight!
 # ###  A cascade of reactions `A <-> B <-> C` , mostly in the forward direction
 # ### [PART 1](#impossible_1_part1) : the above, together with a PHYSICALLY-IMPOSSIBLE "closing" of the cycle with :
-# #### `C <-> A`,  *ALSO* mostly in the forward direction (never mind the laws of thermodymics)!
+# #### `C <-> A`,  *ALSO* mostly in the forward direction _(never mind the laws of thermodymics)!_
 # ### [PART 2](#impossible_1_part2) : restoring the law of physics (by letting `C <-> A` adjust its kinetics based on the energy difference.)
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: May 25, 2023
+# LAST REVISED: May 29, 2023
 
 # %% [markdown]
 # ![Temporarily suspending the Laws of Physics](../../docs/impossible_1.png)
@@ -103,14 +103,8 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are currently close to the default values... but subject to change; set for repeatability
-dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
-dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-dynamics.set_step_factors(upshift=1.1, downshift=0.4, abort=0.3)
-dynamics.set_error_step_factor(0.2)
-
-dynamics.single_compartment_react(initial_step=0.001, target_end_time=2.0,
-                                  variable_steps=True, explain_variable_steps=False)
+dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0,
+                                  variable_steps=False)   # To avoid extra complexity, we're sticking to simple fixed-time steps
 
 
 # %%
@@ -130,16 +124,16 @@ dynamics.is_in_equilibrium()
 # %% [markdown]
 # ## Not surprisingly, none of the reactions of this physically-impossible hypothetical system are in equilibrium
 # ### Even though the concentrations don't change, it's NOT from equilibrium in the reactions - but rather from a balancing out of consuming and replenishing across reactions. 
-# #### Consider, for example, the concentrations of `A` at the end time, and contributions to its change ("Delta A") from _individual_ reactions affecting `A`, as available from the diagnostic data:
+# #### Consider, for example, the concentrations of the chemical `A` at the end time, and contributions to its change ("Delta A") from the _individual_ reactions affecting `A`, as available from the diagnostic data:
 
 # %%
-dynamics.get_diagnostic_rxn_data(rxn_index=0, tail=1)
+dynamics.get_diagnostic_rxn_data(rxn_index=0, tail=3)
 
 # %%
-dynamics.get_diagnostic_rxn_data(rxn_index=2, tail=1)
+dynamics.get_diagnostic_rxn_data(rxn_index=2, tail=3)
 
 # %% [markdown]
-# ### Looking at the last row from each of the 2 dataframes above, one case see that, at every reaction cycle, [A] gets reduced by 0.914286 by the reaction `A <-> B`, while simultaneously getting increased by the SAME amount by the (fictional) reaction `C <-> A`.   
+# ### Looking at the last row from each of the 2 dataframes above, one case see that, at every reaction cycle, [A] gets reduced by some quantity (0.914286) by the reaction `A <-> B`, while simultaneously getting increased by the SAME amount by the (fictional) reaction `C <-> A`.   
 # ### Hence, the concentration of A remains constant - but none of the reactions is in equilibrium!
 
 # %%
@@ -184,8 +178,8 @@ chem_data.describe_reactions()
 # ### Now, let's continue with this "legit" set of reactions, from where we left off in our fantasy world at time t=2:
 
 # %%
-dynamics.single_compartment_react(initial_step=0.01, target_end_time=4.0,
-                                  variable_steps=True, explain_variable_steps=False)
+dynamics.single_compartment_react(initial_step=0.005, target_end_time=4.0,
+                                  variable_steps=False)
 
 #dynamics.explain_time_advance()
 

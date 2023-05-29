@@ -20,7 +20,9 @@
 #
 # Based on the reactions and initial conditions of the experiment `up_regulate_3`
 #
-# LAST REVISED: May 26, 2023
+# This experiment gets repeated, with very fine _fixed_ steps (as a proxy for the "exact value"), in `variable_steps_2`
+#
+# LAST REVISED: May 29, 2023
 
 # %% [markdown]
 # ![Adaptive time steps](../../docs/variable_steps.png)
@@ -105,6 +107,9 @@ np.array(transition_times)    # Note: there will be one more transition time (th
 
 # %%
 dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+
+# %%
+dynamics.curve_intersection("U", "X", t_start=0.3, t_end=0.35)  # Compare with the value from experiment "variable_steps_2"
 
 # %%
 dynamics.plot_curves(colors=['green', 'orange', 'blue'], show_intervals=True)
