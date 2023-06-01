@@ -77,25 +77,23 @@ class ReactionData:
 
 
 
-    #########################################################################
-    #                                                                       #
-    #                        TO READ DATA STRUCTURES                        #
-    #                                                                       #
-    #########################################################################
+    #####################################################################################################
+
+    '''          ~   TO READ DATA STRUCTURES of the CHEMICALS (incl. diffusion data)  ~               '''
+
+    def ________READ_CHEM_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
     def number_of_chemicals(self) -> int:
         # Return the number of registered chemicals - exclusive of water
         return self.n_species
 
-    def number_of_reactions(self) -> int:
-        # Return the number of registered chemical reactions
-        return len(self.reaction_list)
-
 
 
     def assert_valid_species_index(self, species_index: int) -> None:
         """
-        Raise an Exception if the specified species_index isn't valid
+        Raise an Exception if the specified species_index (meant to identify a chemical) isn't valid
 
         :param species_index:   An integer that indexes the chemical of interest (numbering starts at 0)
         :return:                None
@@ -103,25 +101,6 @@ class ReactionData:
         assert (type(species_index) == int) and \
                0 <= species_index < self.n_species, \
             f"The requested species index ({species_index}) is not the expected integer the range [0 - {self.n_species - 1}], inclusive"
-
-
-    def assert_valid_rxn_index(self, index) -> None:
-        """
-        Raise an Exception if the specified reaction index isn't valid
-
-        :param index:   An integer that indexes the reaction of interest (numbering starts at 0)
-        :return:        None
-        """
-        assert self.number_of_reactions() > 0, \
-            f"ReactionData.assert_valid_rxn_index(): there are no reactions defined yet.  Use add_reaction() to add them first"
-
-        assert (type(index) == int), \
-            f"ReactionData.assert_valid_rxn_index(): the requested reaction index must be an integer; " \
-            f"the provided value ({index}) is of type {type(index)}"
-
-        assert 0 <= index < self.number_of_reactions(), \
-            f"ReactionData.assert_valid_rxn_index(): the requested reaction index is not the expected range [0 to {self.number_of_reactions() - 1}], inclusive; " \
-            f"the value passed was: {index} (there is no reaction whose index is {index})"
 
 
 
@@ -185,7 +164,7 @@ class ReactionData:
 
     def get_diffusion_rate(self, species_index: int) -> Union[str, None]:
         """
-        Return the diffusion rate of the species with the given index.
+        Return the diffusion rate of the chemical species with the given index.
         If no name was assigned, return None.
 
         :param species_index:   An integer (starting with zero) corresponding to the
@@ -212,8 +191,10 @@ class ReactionData:
 
     def missing_diffusion_rate(self) -> bool:
         """
-        Return True if any of the diffusion rates is missing; False otherwise
-        :return:
+        Determine whether any of the registered chemicals has a missing diffusion rates
+
+        :return:    True if any of the diffusion rates (for all the registered chemicals) is missing;
+                        False otherwise
         """
         for c in self.chemical_data:
             if "diff" not in c:
@@ -223,7 +204,39 @@ class ReactionData:
 
 
 
-    ############  For reactions   ############
+    #####################################################################################################
+
+    '''                      ~   TO READ DATA STRUCTURES of the REACTIONS  ~                           '''
+
+    def ________READ_RXN_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def number_of_reactions(self) -> int:
+        # Return the number of registered chemical reactions
+        return len(self.reaction_list)
+
+
+
+    def assert_valid_rxn_index(self, index) -> None:
+        """
+        Raise an Exception if the specified reaction index isn't valid
+
+        :param index:   An integer that indexes the reaction of interest (numbering starts at 0)
+        :return:        None
+        """
+        assert self.number_of_reactions() > 0, \
+            f"ReactionData.assert_valid_rxn_index(): there are no reactions defined yet.  Use add_reaction() to add them first"
+
+        assert (type(index) == int), \
+            f"ReactionData.assert_valid_rxn_index(): the requested reaction index must be an integer; " \
+            f"the provided value ({index}) is of type {type(index)}"
+
+        assert 0 <= index < self.number_of_reactions(), \
+            f"ReactionData.assert_valid_rxn_index(): the requested reaction index is not the expected range [0 to {self.number_of_reactions() - 1}], inclusive; " \
+            f"the value passed was: {index} (there is no reaction whose index is {index})"
+
+
 
     def get_reaction(self, i: int) -> dict:
         """
@@ -423,11 +436,14 @@ class ReactionData:
 
 
 
-    ############################################################################
-    #                                                                          #
-    #                                TO SET DATA                               #
-    #                                                                          #
-    ############################################################################
+
+    #####################################################################################################
+
+    '''                                  ~   TO SET DATA  ~                                           '''
+
+    def ________SET_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
     def init_chemical_data(self, names=None, diffusion_rates=None)  -> None:
         """
@@ -538,13 +554,13 @@ class ReactionData:
 
 
 
-    def set_diffusion_rate(self, name, diff_rate):
+    def set_diffusion_rate(self, name: str, diff_rate) -> None:
         """
-        Set the diffusion rate of the given chemical species
+        Set the diffusion rate of the given chemical species (identified by its name)
 
         :param name:
         :param diff_rate:
-        :return:
+        :return:            None
         """
         self.assert_valid_diffusion(diff_rate)
         index = self.get_index(name)
@@ -553,12 +569,14 @@ class ReactionData:
 
 
 
-    def set_temp(self, temp, units="K"):
+    def set_temp(self, temp, units="K") -> None:
         """
+        Specify the temperature of the environment
+        (for now assumed uniform everywhere)
 
         :param temp:    Temperature, in Kelvins, or None
         :param units:   Not yet implemented
-        :return:
+        :return:        None
         """
         self.temp = temp
 
@@ -675,11 +693,13 @@ class ReactionData:
 
 
 
-    #########################################################################
-    #                                                                       #
-    #                         TO DESCRIBE THE DATA                          #
-    #                                                                       #
-    #########################################################################
+    #####################################################################################################
+
+    '''                                ~   TO DESCRIBE THE DATA  ~                                    '''
+
+    def ________DESCRIBE_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
     def describe_reactions(self, concise=False) -> None:
         """
@@ -797,11 +817,13 @@ class ReactionData:
 
 
 
-    #########################################################################
-    #                                                                       #
-    #              SUPPORT FOR CREATION OF NETWORK DIAGRAMS                 #
-    #                                                                       #
-    #########################################################################
+    #####################################################################################################
+
+    '''                          ~   FOR CREATION OF NETWORK DIAGRAMS  ~                              '''
+
+    def ________NETWORK_DIAGRAMS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
     def prepare_graph_network(self) -> dict:
         """
@@ -900,11 +922,13 @@ class ReactionData:
 
 
 
-    #########################################################################
-    #                                                                       #
-    #                               PRIVATE                                 #
-    #                                                                       #
-    #########################################################################
+    #####################################################################################################
+
+    '''                                    ~   PRIVATE  ~                                              '''
+
+    def ________PRIVATE________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
     def _internal_reactions_data(self) -> None:
         """
