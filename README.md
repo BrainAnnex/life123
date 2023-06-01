@@ -1,4 +1,4 @@
-### BETA 27 (v0.27.0) IN-PROGRESS
+### BETA 26.2 (v0.26.2)
 
 
 
