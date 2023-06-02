@@ -3,27 +3,19 @@ import math
 import numpy as np
 
 
-class ReactionData:
+class Reaction:     #TODO: in progress
     """
-    Data about all the chemicals and (if applicable) reactions,
+    Data about a SINGLE reaction,
     including:
-        - names
-        - diffusion rates
-        - stoichiometry of reactions
+        - stoichiometry
         - kinetic data (reaction rates, reaction orders)
         - thermodynamic data (temperature, changes in enthalpy/entropy/Gibbs Free Energy)
+        - list of involved enzymes
 
 
-    Note: for now, the temperature is assumed constant everywhere, and unvarying (or very slowly varying)
+    (Note: this will eventually be stored in a Neo4j graph database)
 
-    DATA STRUCTURE:
-
-        The chemicals are assigned an index position (starting from zero)
-        based on the order with which they were first added.
-
-        TODO: maybe turn individual reactions into objects
-        List of reactions (Note: this will eventually be stored in a Neo4j graph database)
-        Each reaction is a Python dictionary with the following keys:
+    Each reaction contains:
             "reactants"
             "products"
             "kF"    (forward reaction rate constant)
