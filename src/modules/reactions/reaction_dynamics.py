@@ -1480,29 +1480,30 @@ class ReactionDynamics:
         if np.isnan(delta_arr).any():
             return True         # The presence of a NaN, anywhere in delta_arr, is indicative of an aborted step
 
+        rxn = self.reaction_data.get_reaction(rxn_index)
         reactants = self.reaction_data.get_reactants(rxn_index)
         products = self.reaction_data.get_products(rxn_index)
 
         # Pick (arbitrarily) the first reactant,
         # to establish a baseline change in concentration relative to its stoichiometric coefficient
         baseline_term = reactants[0]
-        baseline_species = self.reaction_data.extract_species_index(baseline_term)
-        baseline_stoichiometry = self.reaction_data.extract_stoichiometry(baseline_term)
+        baseline_species = rxn.extract_species_index(baseline_term)
+        baseline_stoichiometry = rxn.extract_stoichiometry(baseline_term)
         baseline_ratio =  (delta_arr[baseline_species]) / baseline_stoichiometry
         #print("baseline_ratio: ", baseline_ratio)
 
         for i, term in enumerate(reactants):
             if i != 0:
-                species = self.reaction_data.extract_species_index(term)
-                stoichiometry = self.reaction_data.extract_stoichiometry(term)
+                species = rxn.extract_species_index(term)
+                stoichiometry = rxn.extract_stoichiometry(term)
                 ratio =  (delta_arr[species]) / stoichiometry
                 #print(f"ratio for `{self.reaction_data.get_name(species)}`: {ratio}")
                 if not np.allclose(ratio, baseline_ratio):
                     return False
 
         for term in products:
-            species = self.reaction_data.extract_species_index(term)
-            stoichiometry = self.reaction_data.extract_stoichiometry(term)
+            species = rxn.extract_species_index(term)
+            stoichiometry = rxn.extract_stoichiometry(term)
             ratio =  - (delta_arr[species]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn
             #print(f"ratio for `{self.reaction_data.get_name(species)}`: {ratio}")
             if not np.allclose(ratio, baseline_ratio):
@@ -2342,12 +2343,12 @@ class ReactionDynamics:
         """
         rxn = self.reaction_data.get_reaction(rxn_index)
 
-        reactants = self.reaction_data.extract_reactants(rxn)     # A list of triplets
-        products = self.reaction_data.extract_products(rxn)      # A list of triplets
-        kF = self.reaction_data.extract_forward_rate(rxn)
-        kB = self.reaction_data.extract_back_rate(rxn)
+        reactants = rxn.extract_reactants()    # A list of triplets
+        products = rxn.extract_products()      # A list of triplets
+        kF = rxn.extract_forward_rate()
+        kR = rxn.extract_reverse_rate()
 
-        rate_ratio = kF / kB                    # Ratio of forward/reverse reaction rates
+        rate_ratio = kF / kR                    # Ratio of forward/reverse reaction rates
 
         conc_ratio = 1.
         numerator = ""
@@ -2356,10 +2357,10 @@ class ReactionDynamics:
 
         for p in products:
             # Loop over the reaction products
-            species_index = self.reaction_data.extract_species_index(p)
-            rxn_order = self.reaction_data.extract_rxn_order(p)
+            species_index =  rxn.extract_species_index(p)
+            rxn_order =  rxn.extract_rxn_order(p)
 
-            species_name = self.reaction_data.get_name(species_index)
+            species_name =  self.reaction_data.get_name(species_index)
             species_conc = conc.get(species_name)
             assert species_conc is not None, f"reaction_in_equilibrium(): unable to proceed because the " \
                                              f"concentration of `{species_name}` was not provided"
@@ -2375,8 +2376,8 @@ class ReactionDynamics:
 
         for r in reactants:
             # Loop over the return
-            species_index = self.reaction_data.extract_species_index(r)
-            rxn_order = self.reaction_data.extract_rxn_order(r)
+            species_index =  rxn.extract_species_index(r)
+            rxn_order =  rxn.extract_rxn_order(r)
 
             species_name = self.reaction_data.get_name(species_index)
             species_conc = conc.get(species_name)

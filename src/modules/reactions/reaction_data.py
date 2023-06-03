@@ -1,9 +1,8 @@
 from typing import Union
-#from reaction import Reaction
 from src.modules.reactions.reaction import Reaction
 
 
-class ReactionData:
+class ReactionData:     # TODO: perhaps rename ChemData
     """
     Data about all the chemicals and (if applicable) reactions,
     including:
@@ -22,7 +21,7 @@ class ReactionData:
         If chemical names and their diffusion rates are both provided, they must have the same count,
         and appear in the same order.
         It's ok not to pass any data, and later add it.
-        Reactions can be added later by means of calls to add_reaction()
+        Reactions, if present, need to be added later by means of calls to add_reaction()
 
         :param names:           [OPTIONAL] A list with the names of the chemicals
         :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals
@@ -58,6 +57,7 @@ class ReactionData:
     def ________READ_CHEM_DATA________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
+
 
     def number_of_chemicals(self) -> int:
         # Return the number of registered chemicals - exclusive of water
@@ -180,11 +180,12 @@ class ReactionData:
 
     #####################################################################################################
 
-    '''                      ~   TO READ DATA STRUCTURES of the REACTIONS  ~                           '''
+    '''                      ~   TO READ DATA STRUCTURES of the REACTIONS  ~                          '''
 
     def ________READ_RXN_DATA________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
+
 
     def number_of_reactions(self) -> int:
         # Return the number of registered chemical reactions
@@ -331,6 +332,7 @@ class ReactionData:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
+
     def init_chemical_data(self, names=None, diffusion_rates=None)  -> None:
         """
         Initialize the names (if provided) and diffusion rates (if provided)
@@ -434,7 +436,7 @@ class ReactionData:
 
 
         self.name_dict[name] = len(self.chemical_data) - 1  # The next available positional index
-        # (for the mapping of names to indices)
+                                                            # (for the mapping of names to indices)
 
         self.n_species += 1
 
@@ -498,9 +500,7 @@ class ReactionData:
                                 (note: the object variable self.reaction_list gets appended to)
         """
 
-        rxn = Reaction(self)
-
-        rxn.define_reaction(reactants, products, forward_rate, reverse_rate,
+        rxn = Reaction(self, reactants, products, forward_rate, reverse_rate,
                             Delta_H, Delta_S, Delta_G)
 
         self.reaction_list.append(rxn)
@@ -594,6 +594,7 @@ class ReactionData:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
+
     def prepare_graph_network(self) -> dict:
         """
 
@@ -671,7 +672,7 @@ class ReactionData:
                                        'name': self.get_name(species_index),
                                        'diff_rate': self.get_diffusion_rate(species_index),
                                        'stoich': rxn.extract_stoichiometry(term),
-                                       'rxn_order': rxnact_rxn_order(term)
+                                       'rxn_order': rxn.extract_rxn_order(term)
                                        })
                 # Append edge from reactant to "reaction node"
                 graph_data.append({'id': next_available_id, 'source': species_index, 'target': rxn_id, 'name': 'reacts'})
@@ -698,6 +699,7 @@ class ReactionData:
     def ________PRIVATE________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
+
 
     def _internal_reactions_data(self) -> None:
         """

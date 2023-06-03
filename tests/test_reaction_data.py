@@ -161,8 +161,8 @@ def test_add_reaction():
         chem.add_reaction(reactants=["A", "B"], products=["A", "B"])
     with pytest.raises(Exception):
         chem.add_reaction(reactants=["A", (3, "B")], products=["A", (3, "B")])
-    #with pytest.raises(Exception):
-        #chem.add_reaction(reactants=["A", "B"], products=["B", "A"])   #TODO: ought to be able to catch this
+    with pytest.raises(Exception):
+        chem.add_reaction(reactants=["A", "B"], products=["B", "A"])
 
 
     # Add the first (0-th) reaction
@@ -170,14 +170,14 @@ def test_add_reaction():
 
     assert chem.number_of_reactions() == 1
     r = chem.get_reaction(0)
-    assert np.allclose(r["kF"] , 3.)
-    assert np.allclose(r["kR"] , 2.)
-    assert np.allclose(r["K"] , 3./2.)
-    assert r["reactants"] == [(1, 0, 1)]
-    assert r["products"] == [(1, 1, 1)]
-    assert r["Delta_H"] is None
-    assert r["Delta_S"] is None
-    assert r["Delta_G"] is None
+    assert np.allclose(r.kF , 3.)
+    assert np.allclose(r.kR , 2.)
+    assert np.allclose(r.K , 3./2.)
+    assert r.reactants == [(1, 0, 1)]
+    assert r.products == [(1, 1, 1)]
+    assert r.Delta_H is None
+    assert r.Delta_S is None
+    assert r.Delta_G is None
 
     assert chem.get_reactants(0) == [(1, 0, 1)]
     assert chem.get_reactants_formula(0) == "A"
@@ -195,24 +195,24 @@ def test_add_reaction():
     assert chem.number_of_reactions() == 2
 
     r = chem.get_reaction(0)
-    assert np.allclose(r["kF"] , 3.)
-    assert np.allclose(r["kR"] , 2.)
-    assert np.allclose(r["K"] , 3./2.)
-    assert r["reactants"] == [(1, 0, 1)]
-    assert r["products"] == [(1, 1, 1)]
-    assert r["Delta_H"] is None
-    assert r["Delta_S"] is None
-    assert r["Delta_G"] is None
+    assert np.allclose(r.kF , 3.)
+    assert np.allclose(r.kR , 2.)
+    assert np.allclose(r.K , 3./2.)
+    assert r.reactants == [(1, 0, 1)]
+    assert r.products == [(1, 1, 1)]
+    assert r.Delta_H is None
+    assert r.Delta_S is None
+    assert r.Delta_G is None
 
     r = chem.get_reaction(1)
-    assert np.allclose(r["kF"] , 9.)
-    assert np.allclose(r["kR"] , 7.)
-    assert np.allclose(r["K"] , 9./7.)
-    assert r["reactants"] == [(2, 1, 1)]
-    assert r["products"] == [(5, 2, 1)]
-    assert r["Delta_H"] is None
-    assert r["Delta_S"] is None
-    assert r["Delta_G"] is None
+    assert np.allclose(r.kF , 9.)
+    assert np.allclose(r.kR , 7.)
+    assert np.allclose(r.K , 9./7.)
+    assert r.reactants == [(2, 1, 1)]
+    assert r.products == [(5, 2, 1)]
+    assert r.Delta_H is None
+    assert r.Delta_S is None
+    assert r.Delta_G is None
 
 
     # Add another reaction (reaction index 2).  This time, first set the temperature
@@ -222,14 +222,14 @@ def test_add_reaction():
     assert chem.number_of_reactions() == 3
 
     r = chem.get_reaction(2)
-    assert np.allclose(r["kF"] , 11.)
-    assert np.allclose(r["kR"] , 13.)
-    assert np.allclose(r["K"] , 11./13.)
-    assert r["reactants"] == [(2, 3, 3)]
-    assert r["products"] == [(1, 2, 2)]
-    assert r["Delta_H"] is None
-    assert r["Delta_S"] is None
-    assert np.allclose(r["Delta_G"], 277.7928942715384)   # - RT log(K)
+    assert np.allclose(r.kF , 11.)
+    assert np.allclose(r.kR , 13.)
+    assert np.allclose(r.K , 11./13.)
+    assert r.reactants == [(2, 3, 3)]
+    assert r.products == [(1, 2, 2)]
+    assert r.Delta_H is None
+    assert r.Delta_S is None
+    assert np.allclose(r.Delta_G , 277.7928942715384)   # - RT log(K)
 
 
     # Add a multi-term reaction (reaction index 3)
@@ -237,14 +237,14 @@ def test_add_reaction():
     assert chem.number_of_reactions() == 4
 
     r = chem.get_reaction(3)
-    assert np.allclose(r["kF"] , 5.)
-    assert np.allclose(r["kR"] , 1.)
-    assert np.allclose(r["K"] , 5./1.)
-    assert r["reactants"] == [(1, 0, 1), (2, 1, 1)]
-    assert r["products"] == [(3, 2, 2), (1, 3, 1)]
-    assert r["Delta_H"] is None
-    assert r["Delta_S"] is None
-    assert np.allclose(r["Delta_G"], -2676.321364705849)   # - RT log(K)   
+    assert np.allclose(r.kF , 5.)
+    assert np.allclose(r.kR , 1.)
+    assert np.allclose(r.K , 5./1.)
+    assert r.reactants == [(1, 0, 1), (2, 1, 1)]
+    assert r.products == [(3, 2, 2), (1, 3, 1)]
+    assert r.Delta_H is None
+    assert r.Delta_S is None
+    assert np.allclose(r.Delta_G , -2676.321364705849)   # - RT log(K)
 
     # Check the descriptions we has so far
     rxn_info = chem.multiple_reactions_describe()
@@ -261,14 +261,14 @@ def test_add_reaction():
     assert chem.number_of_reactions() == 5
 
     r = chem.get_reaction(4)
-    assert r["reactants"] == [(1, 0, 1)]
-    assert r["products"] == [(2, 1, 1)]
-    assert r["Delta_H"] == 5.
-    assert r["Delta_S"] == 0.4
-    assert np.allclose(r["Delta_G"], -75.0)         # 5 - 200 * 0.4
-    assert np.allclose(r["K"], 1.0461347154679432)  # exp(75/(8.3144598 * 200))
-    assert np.allclose(r["kF"] , 10.)
-    assert np.allclose(r["kR"] , 9.558998331803693) # 10. / 1.0461347154679432
+    assert r.reactants == [(1, 0, 1)]
+    assert r.products == [(2, 1, 1)]
+    assert r.Delta_H == 5.
+    assert r.Delta_S == 0.4
+    assert np.allclose(r.Delta_G , -75.0)         # 5 - 200 * 0.4
+    assert np.allclose(r.K , 1.0461347154679432)  # exp(75/(8.3144598 * 200))
+    assert np.allclose(r.kF , 10.)
+    assert np.allclose(r.kR , 9.558998331803693) # 10. / 1.0461347154679432
     
 
     
@@ -281,19 +281,6 @@ def test_clear_reactions():
 
 def test_describe_reactions():
     pass
-
-
-def test_extract_rxn_properties():
-    chem = ReactionData(names=["A", "B"])
-    chem.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-    rxn = chem.get_reaction(0)
-
-    result = chem.extract_rxn_properties(rxn)
-    #print(result)
-    assert np.allclose(result["kF"] , 3.)
-    assert np.allclose(result["kR"] , 2.)
-    assert np.allclose(result["K"] , 1.5)
-    assert np.allclose(result["Delta_G"] , -1005.1305052750387)
 
 
 
@@ -344,34 +331,3 @@ def test_create_graph_network_data():
                 {'id': 4, 'name': 'reacts', 'source': 0, 'target': 2}
                 ]
     assert network_data == expected
-
-
-
-
-# For PRIVATE methods
-
-def test_parse_reaction_term():
-    chem = ReactionData(names=["A", "B", "C", "D", "E", "F"])
-
-    with pytest.raises(Exception):
-        chem._parse_reaction_term(5)    # The argument is not a string nor a tuple or list
-
-    assert chem._parse_reaction_term("F") == (1, 5, 1)
-
-    with pytest.raises(Exception):
-        chem._parse_reaction_term("Not the name of any chemical")
-
-    with pytest.raises(Exception):
-        chem._parse_reaction_term( (3, 5) )   # The last item in the pair is not a string
-
-    assert chem._parse_reaction_term( (3, "F") ) == (3, 5, 1)
-    assert chem._parse_reaction_term( [3, "F"] ) == (3, 5, 1)
-
-    with pytest.raises(Exception):
-        chem._parse_reaction_term( (3, 5, 2) )   # The mid-item in the triplet is not a string
-
-    assert chem._parse_reaction_term( (3, "F", 2) ) == (3, 5, 2)
-    assert chem._parse_reaction_term( [3, "F", 2] ) == (3, 5, 2)
-
-    with pytest.raises(Exception):
-        chem._parse_reaction_term( (3, 5, 2, 123) )     # Extra element in tuple
