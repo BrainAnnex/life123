@@ -282,8 +282,6 @@ def test_clear_reactions():
 def test_describe_reactions():
     pass
 
-def test_standard_form_chem_eqn():
-    pass
 
 def test_extract_rxn_properties():
     chem = ReactionData(names=["A", "B"])
