@@ -30,7 +30,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_data import ChemData as chem
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np

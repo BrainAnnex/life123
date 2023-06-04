@@ -34,7 +34,7 @@ import set_path      # Importing this module will add the project's home directo
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.life_1D.bio_sim_1d import BioSim1D
-from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_data import ChemData as chem
 from src.modules.movies.movies import MovieArray
 from src.modules.numerical.numerical import Numerical as num
 

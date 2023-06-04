@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
-from src.modules.reactions.reaction_data import ReactionData
+from src.modules.reactions.reaction_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 from src.modules.movies.movies import MovieTabular
 
@@ -10,7 +10,7 @@ from src.modules.movies.movies import MovieTabular
 
 def test_set_conc():
     #TODO: test the snapshot argument
-    chem_data = ReactionData(names=["A", "B", "C"])
+    chem_data = ChemData(names=["A", "B", "C"])
     rxn = ReactionDynamics(chem_data)
 
     with pytest.raises(Exception):
@@ -28,7 +28,7 @@ def test_set_conc():
 
 
 def test_get_conc():
-    chem_data = ReactionData(names=["A", "B", "C"])
+    chem_data = ChemData(names=["A", "B", "C"])
     rxn = ReactionDynamics(chem_data)
     rxn.set_conc(conc=(10., 20., 30.))
 
@@ -37,7 +37,7 @@ def test_get_conc():
 
 
 def test_get_conc_dict():
-    chem_data = ReactionData(names=["A", "B", "C", "D"])
+    chem_data = ChemData(names=["A", "B", "C", "D"])
     rxn = ReactionDynamics(chem_data)
     rxn.set_conc(conc=(100, 200, 300, 400))
 
@@ -83,7 +83,7 @@ def test_specify_steps():
 def test_single_compartment_react():
 
     # Test based on experiment "cycles_1"
-    chem_data = ReactionData(names=["A", "B", "C", "E_high", "E_low"])
+    chem_data = ChemData(names=["A", "B", "C", "E_high", "E_low"])
 
     # Reaction A <-> B, mostly in forward direction (favored energetically)
     chem_data.add_reaction(reactants="A", products="B",
@@ -134,7 +134,7 @@ def test_single_compartment_react():
 
 
 def test_single_reaction_fixed_step():
-    chem_data = ReactionData(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     rxn = ReactionDynamics(chem_data)
 
     conc_array = np.array([10., 50.])
@@ -170,7 +170,7 @@ def test_single_reaction_fixed_step():
 
 
 def test_single_reaction_variable_step_1():
-    chem_data = ReactionData(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     rxn = ReactionDynamics(chem_data)
 
     conc_array = np.array([10., 50.])
@@ -206,7 +206,7 @@ def test_single_reaction_variable_step_1():
 
 
 def test_single_reaction_step_2():
-    chem_data = ReactionData(names=["A", "B", "C"])
+    chem_data = ChemData(names=["A", "B", "C"])
     rxn = ReactionDynamics(chem_data)
 
     conc_array = np.array([10., 50., 20.])
@@ -234,7 +234,7 @@ def test_single_reaction_step_2():
 
 
 def test_single_reaction_step_3():
-    chem_data = ReactionData(names=["A", "C", "D"])
+    chem_data = ChemData(names=["A", "C", "D"])
     rxn = ReactionDynamics(chem_data)
 
     conc_array = np.array([4., 7., 2.])
@@ -252,7 +252,7 @@ def test_single_reaction_step_3():
 
 
 def test_single_reaction_step_4():
-    chem_data = ReactionData(names=["A", "B", "C", "D"])
+    chem_data = ChemData(names=["A", "B", "C", "D"])
     rxn = ReactionDynamics(chem_data)
 
     conc_array = np.array([4., 7., 5., 2.])
@@ -271,7 +271,7 @@ def test_single_reaction_step_4():
 
 
 def test_single_reaction_step_5():
-    chem_data = ReactionData(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     rxn = ReactionDynamics(chem_data)
 
     conc_array = np.array([3., 5.])
@@ -287,7 +287,7 @@ def test_single_reaction_step_5():
 
 
 def test_single_reaction_step_6():
-    chem_data = ReactionData(names=["A", "B", "C", "D", "E"])
+    chem_data = ChemData(names=["A", "B", "C", "D", "E"])
     rxn = ReactionDynamics(chem_data)
 
     conc_array = np.array([3., 5., 1., 0.4, 0.1])
@@ -312,7 +312,7 @@ def test_single_compartment_react_variable_steps_1():
     # Based on experiment "variable_steps_1"
 
     # Initialize the system
-    chem_data = ReactionData(names=["U", "X", "S"])
+    chem_data = ChemData(names=["U", "X", "S"])
 
     # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
     chem_data.add_reaction(reactants=[(2, "S")], products="U",
@@ -356,7 +356,7 @@ def test_single_compartment_correct_neg_conc_1():
     # Based on "Run 3" of experiment "negative_concentrations_1
 
     # Initialize the system
-    chem_data = ReactionData(names=["U", "X", "S"])
+    chem_data = ChemData(names=["U", "X", "S"])
 
     # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
     chem_data.add_reaction(reactants=[(2, "S")], products="U",
@@ -410,7 +410,7 @@ def test_single_compartment_correct_neg_conc_1():
 
 
 def test_norm_A():
-    chem_data = ReactionData(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     rxn = ReactionDynamics(chem_data)
 
     delta_conc = np.array([1, 4])
@@ -427,7 +427,7 @@ def test_norm_A():
 
 
 def test_norm_B():
-    chem_data = ReactionData(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     rxn = ReactionDynamics(chem_data)
 
     base = np.array([10, 2])
@@ -448,7 +448,7 @@ def test_norm_B():
 
 
 def test_compute_all_rate_deltas():
-    chem_data = ReactionData(names=["A", "B", "C", "D"])
+    chem_data = ChemData(names=["A", "B", "C", "D"])
     rxn = ReactionDynamics(chem_data)
 
     # Start with reaction A <-> B , with 1st-order kinetics in both directions
@@ -507,7 +507,7 @@ def test_compute_all_rate_deltas():
 
 
 def test_compute_rate_delta():
-    chem_data = ReactionData(names=["A", "B", "C", "D"])
+    chem_data = ChemData(names=["A", "B", "C", "D"])
     rxn = ReactionDynamics(chem_data)
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
@@ -544,7 +544,7 @@ def test_compute_rate_delta():
 
 
 def test_is_in_equilibrium():
-    chem_data = ReactionData(names=["A", "B", "C", "D", "E", "F"])
+    chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
     rxn = ReactionDynamics(chem_data)
 
     # Reaction 0 : A <-> B
@@ -581,7 +581,7 @@ def test_is_in_equilibrium():
 
 
 def test_reaction_in_equilibrium():
-    chem_data = ReactionData(names=["A", "B", "C", "D", "E", "F"])
+    chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
     rxn = ReactionDynamics(chem_data)
 
     # Reaction 0 : A <-> B
@@ -642,7 +642,7 @@ def test_reaction_in_equilibrium():
 def test_reaction_speeds():
     # To test that newly-added reactions are automatically tentatively marked "Fast",
     # and to test the methods managing the "Slow/Fast" data structure
-    chem_data = ReactionData(names=["A", "B", "C"])
+    chem_data = ChemData(names=["A", "B", "C"])
     rxn = ReactionDynamics(chem_data)
     assert rxn.slow_rxns() == []        # There are no reactions yet
     assert rxn.fast_rxns() == []        # There are no reactions yet
@@ -677,7 +677,7 @@ def test_reaction_speeds():
 
 
 def test_validate_increment():
-    chem_data = ReactionData(names=["A", "B", "C"])
+    chem_data = ChemData(names=["A", "B", "C"])
     rxn = ReactionDynamics(chem_data)
 
     chem_data.add_reaction(reactants=["A"], products=["B"])
@@ -691,7 +691,7 @@ def test_validate_increment():
 
 
 def test_examine_increment_array():
-    chem_data = ReactionData(names=["A", "B", "C"])
+    chem_data = ChemData(names=["A", "B", "C"])
     rxn = ReactionDynamics(chem_data)
 
     rxn.fast_criterion_use_baseline = True   # TODO: This will probably be phased out
@@ -812,7 +812,7 @@ def test_examine_increment_array():
 
 
 def test_examine_increment_array_2():
-    chem_data = ReactionData(names=["A", "B", "C"])
+    chem_data = ChemData(names=["A", "B", "C"])
     rxn = ReactionDynamics(chem_data)
 
 
@@ -932,7 +932,7 @@ def test_examine_increment_array_2():
 
 
 def test_stoichiometry_checker():
-    chem = ReactionData(names=["A", "B", "C", "D"])
+    chem = ChemData(names=["A", "B", "C", "D"])
     rxn = ReactionDynamics(chem)
 
     chem.add_reaction(reactants=["A"], products=["B"])          # Reaction 0:   A <--> B
@@ -1054,7 +1054,7 @@ def test_explain_time_advance():
 
 
 def test__delta_names():
-    chem_data = ReactionData(names=["A", "B", "X"])
+    chem_data = ChemData(names=["A", "B", "X"])
     dyn = ReactionDynamics(chem_data)
 
     assert dyn._delta_names() == ["Delta A", "Delta B", "Delta X"]
@@ -1062,7 +1062,7 @@ def test__delta_names():
 
 
 def test__delta_conc_dict():
-    chem_data = ReactionData(names=["A", "B", "X"])
+    chem_data = ChemData(names=["A", "B", "X"])
     dyn = ReactionDynamics(chem_data)
 
     assert dyn._delta_conc_dict(np.array([10, 20, 30])) == \
@@ -1074,7 +1074,7 @@ def test__delta_conc_dict():
 
 
 def test_save_diagnostic_rxn_data():
-    chem_data = ReactionData(names=["A", "B", "C", "X"])
+    chem_data = ChemData(names=["A", "B", "C", "X"])
     # Add 3 reactions
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=5., reverse_rate=2.)
     chem_data.add_reaction(reactants=["A"], products=["X"], forward_rate=5., reverse_rate=2.)
@@ -1150,7 +1150,7 @@ def test_save_diagnostic_rxn_data():
 
 
 def test_get_diagnostic_rxn_data():
-    chem_data = ReactionData(names=["A", "B", "C", "X"])
+    chem_data = ChemData(names=["A", "B", "C", "X"])
     # Add 3 reactions
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=5., reverse_rate=2.)
     chem_data.add_reaction(reactants=["A"], products=["X"], forward_rate=5., reverse_rate=2.)

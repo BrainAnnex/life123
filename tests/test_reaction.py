@@ -1,12 +1,12 @@
 import pytest
 import numpy as np
-from src.modules.reactions.reaction_data import ReactionData
+from src.modules.reactions.reaction_data import ChemData
 from src.modules.reactions.reaction import Reaction
 
 
 
 def test_initialize():
-    chem_data = ReactionData(names=['A', 'B'])
+    chem_data = ChemData(names=['A', 'B'])
 
     rxn = Reaction(chem_data, reactants="A", products="B")
 
@@ -22,7 +22,7 @@ def test_initialize():
 
 
     # More complex scenarios
-    chem_data = ReactionData(names=["A", "B", "C", "D", "E", "F"])
+    chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
     chem_data.set_temp(None)
 
     # Reactants and the products can't be the same
@@ -107,7 +107,7 @@ def test_initialize():
     # Add a reaction with thermodynamic data;
     # the reverse reaction rate will get computed from the thermodynamic data
     rxn = Reaction(chem_data, reactants=["A"], products=[(2, "B")], forward_rate=10.,
-                        Delta_H = 5., Delta_S = 0.4)
+                   delta_H= 5., delta_S= 0.4)
 
     assert rxn.extract_reactants() == [(1, 0, 1)]
     assert rxn.extract_products() == [(2, 1, 1)]
@@ -121,26 +121,26 @@ def test_initialize():
 
 
 def test_extract_reactants():
-    chem_data = ReactionData(names=["CH4", "O2", "CO2", "H2O"])
+    chem_data = ChemData(names=["CH4", "O2", "CO2", "H2O"])
     rxn = Reaction(chem_data, reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")])
     assert rxn.extract_reactants() == [(1, 0, 1), (2, 1, 1)]
 
 
 def test_extract_reactants_formula():
-    chem_data = ReactionData(names=["CH4", "O2", "CO2", "H2O"])
+    chem_data = ChemData(names=["CH4", "O2", "CO2", "H2O"])
     rxn = Reaction(chem_data, reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")])
     assert rxn.extract_reactants_formula() == "CH4 + 2 O2"
 
 
 
 def test_extract_products():
-    chem_data = ReactionData(names=["CH4", "O2", "CO2", "H2O"])
+    chem_data = ChemData(names=["CH4", "O2", "CO2", "H2O"])
     rxn = Reaction(chem_data, reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")])
     assert rxn.extract_products() == [(1, 2, 1), (2, 3, 1)]
 
 
 def test_extract_products_formula():
-    chem_data = ReactionData(names=["CH4", "O2", "CO2", "H2O"])
+    chem_data = ChemData(names=["CH4", "O2", "CO2", "H2O"])
     rxn = Reaction(chem_data, reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")])
     assert rxn.extract_products_formula() == "CO2 + 2 H2O"
 
@@ -149,7 +149,7 @@ def test_extract_products_formula():
 #######  TO DESCRIBE THE DATA  #######
 
 def test_describe():
-    chem_data = ReactionData(names=["CH4", "O2", "CO2", "H2O"])
+    chem_data = ChemData(names=["CH4", "O2", "CO2", "H2O"])
     rxn = Reaction(chem_data, reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")])
 
     assert rxn.describe(concise=True) == "CH4 + 2 O2 <-> CO2 + 2 H2O"
@@ -157,7 +157,7 @@ def test_describe():
 
 
     # Start over
-    chem_data = ReactionData(names=["A", "B", "C", "D", "E", "F"])
+    chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
     chem_data.set_temp(None)
 
     rxn = Reaction(chem_data, reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
@@ -180,7 +180,7 @@ def test_describe():
 
 
 def test_extract_rxn_properties():
-    chem = ReactionData(names=["A", "B"])
+    chem = ChemData(names=["A", "B"])
     rxn = Reaction(chem, reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
     result = rxn.extract_rxn_properties()
@@ -195,7 +195,7 @@ def test_extract_rxn_properties():
 #######  For PRIVATE methods  #######
 
 def test__standard_form_chem_eqn():
-    chem_data = ReactionData(names=['Fe', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'Cl'])
+    chem_data = ChemData(names=['Fe', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'Cl'])
     rxn = Reaction(chem_data, reactants="A", products="B")  # Won't actually use reactants/products
 
     assert rxn._standard_form_chem_eqn([(1, 0, 1), (2, 8, 1)]) == "Fe + 2 Cl"
@@ -205,7 +205,7 @@ def test__standard_form_chem_eqn():
 
 
 def test__parse_reaction_term():
-    chem_data = ReactionData(names=["A", "B", "C", "D", "E", "F"])
+    chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
     rxn = Reaction(chem_data, reactants="A", products="B")  # Won't actually use reactants/products
 
     with pytest.raises(Exception):

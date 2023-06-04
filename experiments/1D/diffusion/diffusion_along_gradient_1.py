@@ -27,7 +27,7 @@ import set_path      # Importing this module will add the project's home directo
 from src.life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
-from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_data import ChemData as chem
 
 # %%
 # Initialize the system

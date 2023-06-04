@@ -1,6 +1,4 @@
 from typing import Union
-#from reaction_data import ReactionData
-#from src.modules.reactions.reaction_data import ReactionData
 import math
 import numpy as np
 
@@ -38,9 +36,9 @@ class Reaction:
     R = 8.314462           # Ideal gas constant, in units of Joules / (Kelvin * Mole)
 
 
-    def __init__(self, chem_data, reactants: Union[int, str, tuple, list], products: Union[int, str, tuple, list],
+    def __init__(self, chem_data, reactants: Union[int, str, list], products: Union[int, str, list],
                  forward_rate=None, reverse_rate=None,
-                 Delta_H=None, Delta_S=None, Delta_G=None):
+                 delta_H=None, delta_S=None, delta_G=None):
         """
        Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
         The involved chemicals must be already registered - use add_chemical() if needed.
@@ -49,7 +47,8 @@ class Reaction:
               they're assumed to be 1.
               Their full structure is the triplet (stoichiometry coefficient, name, reaction order)
 
-        EXAMPLES of formats for reactants and products (*assuming* that the chemical species with index 5 is called "F"):
+        EXAMPLES of formats for each item of the reactants and products
+        (*assuming* that the chemical species with index 5 is called "F"):
                     "F"         gets turned into:   (1, 5, 1)
                     (3, "F")                        (3, 5, 1)
                     (3, "F", 2)                     (3, 5, 2)
@@ -57,14 +56,16 @@ class Reaction:
 
         :param chem_data:       Object of type "ReactionData"
         :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
-                                    or simplified terms in various formats; for details, see above
+                                    or simplified terms in various formats; for details, see above.
+                                    If not a list, it will get turned into one
         :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction),
-                                    or simplified terms in various formats; for details, see above
+                                    or simplified terms in various formats; for details, see above.
+                                    If not a list, it will get turned into one
         :param forward_rate:    [OPTIONAL] Forward reaction rate constant
         :param reverse_rate:    [OPTIONAL] Reverse reaction rate constant
-        :param Delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
-        :param Delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
-        :param Delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
+        :param delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
+        :param delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
+        :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
 
         """
         self.chem_data = chem_data
@@ -78,6 +79,16 @@ class Reaction:
         self.Delta_G = None
         self.K = None
         self.enzyme = None
+
+        assert reactants is not None, "Reaction(): the argument `reactants` is a required one, and can't be None"
+        if type(reactants) != list:
+            reactants = [reactants]
+
+
+        assert products is not None, "Reaction(): the argument `products` is a required one, and can't be None"
+        if type(products) != list:
+            products = [products]
+
 
         reactant_list = [self._parse_reaction_term(r, "reactant") for r in reactants]   # A list of triples of integers
         product_list = [self._parse_reaction_term(r, "product") for r in products]      # A list of triples of integers
@@ -129,23 +140,23 @@ class Reaction:
 
 
         # Process thermodynamic data, if available
-        if Delta_H is not None:
-            self.Delta_H = Delta_H
+        if delta_H is not None:
+            self.Delta_H = delta_H
 
-        if Delta_S is not None:
-            self.Delta_S = Delta_S
-            if (self.chem_data.temp is not None) and (Delta_H is not None):
+        if delta_S is not None:
+            self.Delta_S = delta_S
+            if (self.chem_data.temp is not None) and (delta_H is not None):
                 # If all the thermodynamic data is available...
-                Delta_G = Delta_H - self.chem_data.temp * Delta_S                  # ...compute the change in Gibbs Free Energy
+                delta_G = delta_H - self.chem_data.temp * delta_S                  # ...compute the change in Gibbs Free Energy
 
                 if self.Delta_G is not None:      # If already set from kinetic data, make sure that the two match!
-                    assert np.allclose(Delta_G, self.Delta_G), \
+                    assert np.allclose(delta_G, self.Delta_G), \
                         f"define_reaction(): Kinetic data (leading to Delta_G {self.Delta_G}) " \
-                        f"is inconsistent with thermodynamic data (leading to Delta_G {Delta_G})"
+                        f"is inconsistent with thermodynamic data (leading to Delta_G {delta_G})"
                 else:
                     # The kinetic data was incomplete; fill in the missing parts from the thermodynamic data
-                    self.Delta_G = Delta_G
-                    equil_const = math.exp(- Delta_G / (self.R * self.chem_data.temp))    # Compute the equilibrium constant (from the thermodynamic data)
+                    self.Delta_G = delta_G
+                    equil_const = math.exp(- delta_G / (self.R * self.chem_data.temp))    # Compute the equilibrium constant (from the thermodynamic data)
                     self.K = equil_const
                     # If only one of the Forward or Reverse rates was provided, compute the other one
                     if (self.kF is None) and (self.kR is not None):
@@ -154,10 +165,10 @@ class Reaction:
                         self.kR = self.kF / equil_const
 
         # TODO: add more combinations of arguments supplied
-        elif (Delta_G is not None) and (self.chem_data.temp is not None):
+        elif (delta_G is not None) and (self.chem_data.temp is not None):
             # The kinetic data was incomplete; fill in the missing parts from the thermodynamic data
-            self.Delta_G = Delta_G
-            equil_const = math.exp(- Delta_G / (self.R * self.chem_data.temp))    # Compute the equilibrium constant (from the thermodynamic data)
+            self.Delta_G = delta_G
+            equil_const = math.exp(- delta_G / (self.R * self.chem_data.temp))    # Compute the equilibrium constant (from the thermodynamic data)
             self.K = equil_const
             # If only one of the Forward or Reverse rates was provided, compute the other one
             if (self.kF is None) and (self.kR is not None):
@@ -329,13 +340,12 @@ class Reaction:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def describe(self, rxn_index=0, concise=False) -> str:
+    def describe(self, concise=False) -> str:
         """
         Return as a string, a user-friendly plain-text form of the reaction
         EXAMPLE (concise):      "CH4 + 2 O2 <-> CO2 + 2 H2O"
-        EXAMPLE (not concise):  "(0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
+        EXAMPLE (not concise):  "CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
 
-        :param rxn_index:   Integer associated to this reaction.  Only used if concise is False
         :param concise:     If True, less detail is shown
         :return:            A string with a description of the specified reaction
         """
@@ -348,9 +358,10 @@ class Reaction:
         if concise:
             return f"{left} <-> {right}"        # Concise start point for a description of the reaction
 
+
         # If we get this far, we're looking for a more detailed description
 
-        rxn_description = f"{rxn_index}: {left} <-> {right}"        # Start point for a description of the reaction
+        rxn_description = f"{left} <-> {right}"        # Start point for a description of the reaction
         details = []
         rxn_properties = self.extract_rxn_properties()
         for k,v in rxn_properties.items():
@@ -358,6 +369,11 @@ class Reaction:
 
         rxn_description += "  (" + ' / '.join(details) + ")"    # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
 
+        # If an enzyme is involved, show it
+        if self.enzyme is not None:
+            rxn_description += f" | Enzyme: {self.chem_data.get_name(self.enzyme)}"
+
+        # Show details about the order of the reaction
         high_order = False      # Is there any term whose order is greater than 1 ?
         for r in reactants:
             if r[2] > 1:

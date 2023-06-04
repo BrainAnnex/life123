@@ -1,0 +1,137 @@
+# ---
+# jupyter:
+#   jupytext:
+#     formats: ipynb,py:percent
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.14.1
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
+# %% [markdown]
+# ## Comparing the reaction `A` <-> `B` with and without an enzyme
+#
+# LAST REVISED: June 3, 2023
+
+# %%
+import set_path      # Importing this module will add the project's home directory to sys.path
+
+# %% tags=[]
+from src.modules.reactions.reaction_data import ChemData
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
+
+import numpy as np
+import plotly.express as px
+
+# %% [markdown]
+# # 1. WITHOUT ENZYME
+# ### `A` <-> `B`
+
+# %%
+# Initialize the system
+chem_data = ChemData(names=["A", "B"])
+
+# Reaction A <-> B , with 1st-order kinetics, and a forward rate that is slower than it would be with the enzyme of part 2
+chem_data.add_reaction(reactants="A", products="B",
+                       forward_rate=1., delta_G=-3989.73)
+
+chem_data.describe_reactions()
+
+# %% [markdown]
+# ### Set the initial concentrations of all the chemicals
+
+# %%
+dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics.set_conc(conc={"A": 20., "B": 0.},
+                  snapshot=True)
+dynamics.describe_state()
+
+# %% [markdown] tags=[]
+# ### Take the initial system to equilibrium
+
+# %%
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+# All of these settings are currently close to the default values... but subject to change; set for repeatability
+dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
+dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
+dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5)
+dynamics.set_error_step_factor(0.5)
+
+dynamics.single_compartment_react(initial_step=0.1, reaction_duration=3.0,
+                                  variable_steps=True, explain_variable_steps=False)
+
+# %%
+#dynamics.explain_time_advance()
+
+# %%
+dynamics.plot_curves(colors=['darkorange', 'green'])
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium(tolerance=3)
+
+# %%
+
+# %% [markdown]
+# # 2. WITH ENZYME `E`
+# ### `A` + `E` <-> `B` + `E`
+
+# %% [markdown]
+# ### Note: for the sake of the demo, we'll completely ignore the concomitant reaction A <-> B
+# This in an approximation that we'll drop in later experiments
+
+# %%
+# Initialize the system
+chem_data = ChemData(names=["A", "B", "E"])
+
+# Reaction A + E <-> B + E , with 1st-order kinetics, and a forward rate that is faster than it was without the enzyme
+# Thermodynamically, there's no change from the reaction without the enzyme
+chem_data.add_reaction(reactants=["A", "E"], products=["B", "E"],
+                       forward_rate=10., delta_G=-3989.73)
+
+chem_data.describe_reactions()  # Notice how the enzyme `E` is noted in the printout below
+
+# %% [markdown]
+# ### Notice how, while the ratio kF/kR is the same as it was without the enzyme (since it'd dictated by the energy difference), the individual values of kF and kR are now each 10 times bigger
+
+# %% [markdown]
+# ### Set the initial concentrations of all the chemicals
+
+# %%
+dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics.set_conc(conc={"A": 20., "B": 0., "E": 30.},
+                  snapshot=True)      # Plenty of enzyme `E`
+dynamics.describe_state()
+
+# %% [markdown] tags=[]
+# ### Take the initial system to equilibrium
+
+# %%
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+# All of these settings are currently close to the default values... but subject to change; set for repeatability
+dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
+dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
+dynamics.set_step_factors(upshift=1.1, downshift=0.4, abort=0.3)
+dynamics.set_error_step_factor(0.25)
+
+dynamics.single_compartment_react(initial_step=0.1, reaction_duration=0.15,
+                                  variable_steps=True, explain_variable_steps=True)
+
+# %%
+#dynamics.explain_time_advance()
+
+# %%
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'])
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium()
+
+# %%

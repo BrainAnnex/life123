@@ -2,7 +2,7 @@ from typing import Union
 from src.modules.reactions.reaction import Reaction
 
 
-class ReactionData:     # TODO: perhaps rename ChemData
+class ChemData:
     """
     Data about all the chemicals and (if applicable) reactions,
     including:
@@ -86,10 +86,10 @@ class ReactionData:     # TODO: perhaps rename ChemData
         :return:        None
         """
         assert type(diff) == float or type(diff) == int, \
-            f"ReactionData.assert_valid_diffusion(): The value for the diffusion rate ({diff}) is not a number (float or int)"
+            f"ChemData.assert_valid_diffusion(): The value for the diffusion rate ({diff}) is not a number (float or int)"
 
         assert diff >= 0., \
-            f"ReactionData.assert_valid_diffusion(): the diffusion rate ({diff}) cannot be negative"
+            f"ChemData.assert_valid_diffusion(): the diffusion rate ({diff}) cannot be negative"
 
 
 
@@ -103,7 +103,7 @@ class ReactionData:     # TODO: perhaps rename ChemData
         """
         index =  self.name_dict.get(name)
         assert index is not None, \
-            f"ReactionData.get_index(): No chemical species named `{name}` was found"
+            f"ChemData.get_index(): No chemical species named `{name}` was found"
 
         return index
 
@@ -201,14 +201,14 @@ class ReactionData:     # TODO: perhaps rename ChemData
         :return:        None
         """
         assert self.number_of_reactions() > 0, \
-            f"ReactionData.assert_valid_rxn_index(): there are no reactions defined yet.  Use add_reaction() to add them first"
+            f"ChemData.assert_valid_rxn_index(): there are no reactions defined yet.  Use add_reaction() to add them first"
 
         assert (type(index) == int), \
-            f"ReactionData.assert_valid_rxn_index(): the requested reaction index must be an integer; " \
+            f"ChemData.assert_valid_rxn_index(): the requested reaction index must be an integer; " \
             f"the provided value ({index}) is of type {type(index)}"
 
         assert 0 <= index < self.number_of_reactions(), \
-            f"ReactionData.assert_valid_rxn_index(): the requested reaction index is not the expected range [0 to {self.number_of_reactions() - 1}], inclusive; " \
+            f"ChemData.assert_valid_rxn_index(): the requested reaction index is not the expected range [0 to {self.number_of_reactions() - 1}], inclusive; " \
             f"the value passed was: {index} (there is no reaction whose index is {index})"
 
 
@@ -349,29 +349,29 @@ class ReactionData:     # TODO: perhaps rename ChemData
         """
         # Validate
         assert not self.chemical_data, \
-            f"ReactionData.init_chemical_data(): function can be invoked only once, before any chemical data is set"
+            f"ChemData.init_chemical_data(): function can be invoked only once, before any chemical data is set"
 
         if names:
             arg_type = type(names)
             assert arg_type == list or arg_type == tuple, \
-                f"ReactionData.init_chemical_data(): the names must be a list or tuple.  What was passed was of type {arg_type}"
+                f"ChemData.init_chemical_data(): the names must be a list or tuple.  What was passed was of type {arg_type}"
             if self.n_species != 0:
                 assert len(names) == self.n_species, \
-                    f"ReactionData.init_chemical_data(): the passed number of names ({len(names)}) " \
+                    f"ChemData.init_chemical_data(): the passed number of names ({len(names)}) " \
                     f"doesn't match the previously-set number of chemical species (self.n_species)"
 
         if diffusion_rates:
             arg_type = type(diffusion_rates)
             assert arg_type == list or arg_type == tuple, \
-                f"ReactionData.init_chemical_data(): the diffusion_rates must be a list or tuple.  What was passed was of type {arg_type}"
+                f"ChemData.init_chemical_data(): the diffusion_rates must be a list or tuple.  What was passed was of type {arg_type}"
             if self.n_species != 0:
                 assert len(diffusion_rates) == self.n_species, \
-                    f"ReactionData.init_chemical_data(): the passed number of diffusion rates ({len(diffusion_rates)}) " \
+                    f"ChemData.init_chemical_data(): the passed number of diffusion rates ({len(diffusion_rates)}) " \
                     f"doesn't match the previously-set number of chemical species (self.n_species)"
 
         if diffusion_rates and names:
             assert len(names) == len(diffusion_rates), \
-                f"ReactionData.init_chemical_data(): the supplied names and diffusion_rates " \
+                f"ChemData.init_chemical_data(): the supplied names and diffusion_rates " \
                 f"don't match in number ({len(names)} vs. {len(diffusion_rates)})"
 
 
@@ -392,7 +392,7 @@ class ReactionData:     # TODO: perhaps rename ChemData
         else:   # names is not None
             for i, chem_name in enumerate(names):
                 assert type(chem_name) == str, \
-                    f"ReactionData.init_chemical_data(): all the names must be strings.  The passed value ({chem_name}) is of type {type(chem_name)}"
+                    f"ChemData.init_chemical_data(): all the names must be strings.  The passed value ({chem_name}) is of type {type(chem_name)}"
                 if diffusion_rates is None:
                     self.chemical_data.append({"name": chem_name})
                 else:
@@ -416,7 +416,7 @@ class ReactionData:     # TODO: perhaps rename ChemData
         :return:                None
         """
         assert type(name) == str, \
-            f"ReactionData.add_chemical(): a chemical's name must be provided, as a string value.  " \
+            f"ChemData.add_chemical(): a chemical's name must be provided, as a string value.  " \
             f"What was passed was of type {type(name)}"
 
         if diffusion_rate:
@@ -470,9 +470,9 @@ class ReactionData:     # TODO: perhaps rename ChemData
 
 
 
-    def add_reaction(self, reactants: Union[int, str, tuple, list], products: Union[int, str, tuple, list],
+    def add_reaction(self, reactants: Union[int, str, list], products: Union[int, str, list],
                      forward_rate=None, reverse_rate=None,
-                     Delta_H=None, Delta_S=None, Delta_G=None) -> Reaction:
+                     delta_H=None, delta_S=None, delta_G=None) -> Reaction:
         """
         Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
         The involved chemicals must be already registered - use add_chemical() if needed.
@@ -481,27 +481,30 @@ class ReactionData:     # TODO: perhaps rename ChemData
               they're assumed to be 1.
               Their full structure is the triplet (stoichiometry coefficient, name, reaction order)
 
-        EXAMPLES of formats for reactants and products (*assuming* that the chemical species with index 5 is called "F"):
+        EXAMPLES of formats for each item of the reactants and products
+        (*assuming* that the chemical species with index 5 is called "F"):
                     "F"         gets turned into:   (1, 5, 1)
                     (3, "F")                        (3, 5, 1)
                     (3, "F", 2)                     (3, 5, 2)
                     It's equally acceptable to use LISTS in lieu of tuples
 
         :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
-                                    or simplified terms in various formats; for details, see above
+                                    or simplified terms in various formats; for details, see above.
+                                    If not a list, it will get turned into one
         :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction),
-                                    or simplified terms in various formats; for details, see above
+                                    or simplified terms in various formats; for details, see above.
+                                    If not a list, it will get turned into one
         :param forward_rate:    [OPTIONAL] Forward reaction rate constant
         :param reverse_rate:    [OPTIONAL] Reverse reaction rate constant
-        :param Delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
-        :param Delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
-        :param Delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
+        :param delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
+        :param delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
+        :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
         :return:                Object of type "Reaction"
                                 (note: the object variable self.reaction_list gets appended to)
         """
 
         rxn = Reaction(self, reactants, products, forward_rate, reverse_rate,
-                            Delta_H, Delta_S, Delta_G)
+                       delta_H, delta_S, delta_G)
 
         self.reaction_list.append(rxn)
 
@@ -554,15 +557,16 @@ class ReactionData:     # TODO: perhaps rename ChemData
         :param rxn_list:    Either a list of integers, to identify the reactions of interest,
                                 or None, meaning ALL reactions
         :param concise:     If True, less detail is shown
-        :return:            A list of strings
+        :return:            A list of strings; each string is the description of one of the reactions
         """
         if rxn_list is None:
-            rxn_list = range(self.number_of_reactions())
+            rxn_list = range(self.number_of_reactions())    # Show ALL reactions, by default
 
-        out = []    # Output list being built (item-wise)
+        out = []    # Output list being built
 
         for i in rxn_list:
             description = self.single_reaction_describe(rxn_index=i, concise=concise)
+            description = f"{i} : {description}"
             out.append(description)
 
         return out
@@ -573,7 +577,7 @@ class ReactionData:     # TODO: perhaps rename ChemData
         """
         Return as a string, a user-friendly plain-text form of the given reaction
         EXAMPLE (concise):      "CH4 + 2 O2 <-> CO2 + 2 H2O"
-        EXAMPLE (not concise):  "(0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
+        EXAMPLE (not concise):  "CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
 
         :param rxn_index:   Integer to identify the reaction of interest
         :param concise:     If True, less detail is shown
@@ -581,7 +585,7 @@ class ReactionData:     # TODO: perhaps rename ChemData
         """
         rxn = self.get_reaction(rxn_index)
 
-        return rxn.describe(rxn_index)
+        return rxn.describe(concise)
 
 
 

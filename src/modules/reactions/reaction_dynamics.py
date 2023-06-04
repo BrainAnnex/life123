@@ -507,12 +507,12 @@ class ReactionDynamics:
         Update the system state and the system time accordingly
         (object attributes self.system and self.system_time)
 
-        :param reaction_duration:  The overall time advance for the reactions (i.e. initial_step * n_steps)
+        :param reaction_duration:  The overall time advance for the reactions (it might be exceeded in case of variable steps)
         :param target_end_time: The final time at which to stop the reaction
-                                    If both stop_time and reaction_duration are specified, an error will result
+                                    If both target_end_time and reaction_duration are specified, an error will result
 
         :param initial_step:    The suggested size of the first step (it might be reduced automatically,
-                                    in case of "hard" errors from large steps
+                                    in case of "hard" errors from large steps)
 
         :param n_steps:         The desired number of steps
 
@@ -533,38 +533,41 @@ class ReactionDynamics:
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
-        stop_time = target_end_time
-
 
         # Validation
         assert self.system is not None, "ReactionDynamics.single_compartment_react(): " \
                                         "the concentration values of the various chemicals must be set first"
 
         if variable_steps and n_steps is not None:
-            raise Exception("single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
-                            "(because the number of steps will vary); specify `reaction_duration` or `end_time` instead")
+            raise Exception("ReactionDynamics.single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
+                            "(because the number of steps will vary); specify `reaction_duration` or `target_end_time` instead")
 
 
         """
         Determine all the various time parameters that were not explicitly provided
         """
 
-        if stop_time is not None:
+        if target_end_time is not None:
             if reaction_duration is not None:
-                raise Exception("single_compartment_react(): cannot provide values for BOTH `stop_time` and `reaction_duration`")
+                raise Exception("single_compartment_react(): cannot provide values for BOTH `target_end_time` and `reaction_duration`")
             else:
-                assert stop_time > self.system_time, \
-                    f"single_compartment_react(): `stop_time` must be larger than the current System Time ({self.system_time})"
-                reaction_duration = stop_time - self.system_time
+                assert target_end_time > self.system_time, \
+                    f"single_compartment_react(): `target_end_time` must be larger than the current System Time ({self.system_time})"
+                reaction_duration = target_end_time - self.system_time
 
         # Determine the time step,
         # as well as the required number of such steps
         time_step, n_steps = self.specify_steps(total_duration=reaction_duration,
                                                 time_step=initial_step,
                                                 n_steps=n_steps)
+        # Note: if variable steps are requested then n_steps stops being particularly meaningful; it becomes a
+        #       hypothetical value, in the (unlikely) event that the step size were never changed
 
-        if stop_time is None:
-            stop_time = self.system_time + time_step * n_steps
+        if target_end_time is None:
+            if variable_steps:
+                target_end_time = self.system_time + reaction_duration
+            else:
+                target_end_time = self.system_time + time_step * n_steps
 
 
         if snapshots:
@@ -587,10 +590,10 @@ class ReactionDynamics:
 
 
         i = 0
-        while self.system_time < stop_time:
-            if (not variable_steps) and (i == n_steps) and np.allclose(self.system_time, stop_time):
+        while self.system_time < target_end_time:
+            if (not variable_steps) and (i == n_steps) and np.allclose(self.system_time, target_end_time):
                 break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
-                            #   the System Time is below the stop_time because of roundoff error
+                            #   the System Time is below the target_end_time because of roundoff error
 
 
             # ----------  CORE OPERATION OF MAIN LOOP  ----------
