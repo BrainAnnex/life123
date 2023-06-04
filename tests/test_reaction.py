@@ -153,7 +153,7 @@ def test_describe():
     rxn = Reaction(chem_data, reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")])
 
     assert rxn.describe(concise=True) == "CH4 + 2 O2 <-> CO2 + 2 H2O"
-    assert rxn.describe(concise=False) == "0: CH4 + 2 O2 <-> CO2 + 2 H2O  () | 1st order in all reactants & products"   # TODO: eliminate the ()
+    assert rxn.describe(concise=False) == "CH4 + 2 O2 <-> CO2 + 2 H2O  () | 1st order in all reactants & products"   # TODO: eliminate the ()
 
 
     # Start over
@@ -162,20 +162,20 @@ def test_describe():
 
     rxn = Reaction(chem_data, reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
     assert rxn.describe(concise=True) == "A <-> B"
-    assert rxn.describe(concise=False) == "0: A <-> B  (kF = 3 / kR = 2 / K = 1.5) | 1st order in all reactants & products"
+    assert rxn.describe(concise=False) == "A <-> B  (kF = 3 / kR = 2 / K = 1.5) | 1st order in all reactants & products"
 
     rxn = Reaction(chem_data, reactants=[(2, "B")], products=[(5, "C")], forward_rate=9., reverse_rate=7.)
     assert rxn.describe(concise=True) == "2 B <-> 5 C"
-    assert rxn.describe(concise=False, rxn_index=1) == "1: 2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.28571) | 1st order in all reactants & products"
+    assert rxn.describe(concise=False) == "2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.28571) | 1st order in all reactants & products"
 
     chem_data.set_temp(200)
     rxn = Reaction(chem_data, reactants=[(2, "D", 3)], products=[(1, "C", 2)], forward_rate=11., reverse_rate=13.)
     assert rxn.describe(concise=True) == "2 D <-> C"
-    assert rxn.describe(concise=False, rxn_index=2) == "2: 2 D <-> C  (kF = 11 / kR = 13 / Delta_G = 277.793 / K = 0.846154) | 3-th order in reactant D | 2-th order in product C"
+    assert rxn.describe(concise=False) == "2 D <-> C  (kF = 11 / kR = 13 / Delta_G = 277.793 / K = 0.846154) | 3-th order in reactant D | 2-th order in product C"
 
     rxn = Reaction(chem_data, reactants=["A", (2, "B")], products=[(3, "C", 2), "D"], forward_rate=5., reverse_rate=1.)
     assert rxn.describe(concise=True) == "A + 2 B <-> 3 C + D"
-    assert rxn.describe(concise=False, rxn_index=3) == "3: A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / Delta_G = -2,676.32 / K = 5) | 2-th order in product C"
+    assert rxn.describe(concise=False) == "A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / Delta_G = -2,676.32 / K = 5) | 2-th order in product C"
 
 
 

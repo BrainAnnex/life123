@@ -566,7 +566,7 @@ class ChemData:
 
         for i in rxn_list:
             description = self.single_reaction_describe(rxn_index=i, concise=concise)
-            description = f"{i} : {description}"
+            description = f"{i}: {description}"
             out.append(description)
 
         return out
