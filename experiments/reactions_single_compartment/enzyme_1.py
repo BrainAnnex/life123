@@ -70,7 +70,13 @@ dynamics.single_compartment_react(initial_step=0.1, reaction_duration=3.0,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green'])
+dynamics.plot_curves(colors=['darkorange', 'green'], show_intervals=True, title_prefix="WITHOUT enzyme")
+
+# %% [markdown]
+# #### Note how the time steps get automatically adjusted, as needed by the amount of change - include a complete step abort/redo at time=0
+
+# %%
+dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
 
 # %%
 # Verify that the reaction has reached equilibrium
@@ -118,20 +124,33 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 # All of these settings are currently close to the default values... but subject to change; set for repeatability
 dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
 dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-dynamics.set_step_factors(upshift=1.1, downshift=0.4, abort=0.3)
+dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4)
 dynamics.set_error_step_factor(0.25)
 
-dynamics.single_compartment_react(initial_step=0.1, reaction_duration=0.15,
-                                  variable_steps=True, explain_variable_steps=True)
+dynamics.single_compartment_react(initial_step=0.1, reaction_duration=0.1,
+                                  variable_steps=True, explain_variable_steps=False)
+
+# %% [markdown]
+# #### Note how the (proposed) initial step - kept the same as the previous run - is now _extravagantly large_, given the much-faster reaction dynamics.  However, the variable-step engine intercepts and automatically corrects the problem!
 
 # %%
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'])
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="WITH enzyme")
+
+# %%
+dynamics.curve_intersection("A", "B", t_start=0, t_end=0.02)
 
 # %%
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium()
+
+# %% [markdown]
+# ## Thanks to the (abundant) enzyme, the reaction reaches equilibrium roughtly around t=0.02, far sooner than the roughly t=3.5 without enzyme
+# The concentrations of `A` and `B` now become equal (cross-over) at t=0.00246 , rather than t=0.740
+
+# %%
+dynamics.get_history()
 
 # %%

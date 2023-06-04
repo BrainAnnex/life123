@@ -62,11 +62,12 @@ class ReactionDynamics:
         self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
                            {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
         self.step_factors = {"upshift": 1.5, "downshift": 0.5, "abort": 0.5}
+                            # TODO: consider more conservative defaults upshift=1.2, downshift=0.5, abort=0.4
 
         self.error_abort_step_factor = 0.5      # MUST BE < 1.  Factor by which to multiply the time step
                                                 #   in case of negative-concentration error from excessive step size
                                                 #   NOTE: this is from ERROR aborts, not to be confused with high-threshold aborts
-
+        # TODO: consider more conservative default 0.25
 
         # ***  FOR DIAGNOSTICS  ***
 
@@ -803,7 +804,7 @@ class ReactionDynamics:
             # Abort the current step if the rate of change is deemed excessive.
             # TODO: maybe ALWAYS check this, regardless of variable-steps option
             if action == "abort":       # NOTE: this is a "strategic" abort, not a hard one from error
-                msg =   f"INFO: the tentative time step ({delta_time:.5g}) " \
+                msg =   f"* INFO: the tentative time step ({delta_time:.5g}) " \
                         f"leads to a least one norm value > its ABORT threshold:\n" \
                         f"      -> will backtrack, and re-do step with a SMALLER delta time, multiplied by {step_factor} (set to {delta_time * step_factor:.5g}) " \
                         f"[Step started at t={self.system_time:.5g}, and will rewind there]"
@@ -2033,7 +2034,7 @@ class ReactionDynamics:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def plot_curves(self, chemicals=None, colors=None, title=None,
+    def plot_curves(self, chemicals=None, colors=None, title=None, title_prefix=None,
                     vertical_lines=None, show_intervals=False, suppress=False) -> Union[None, go.Figure]:
         """
         Using plotly, draw the plots of concentration values over time, based on the saved history data.
@@ -2092,6 +2093,9 @@ class ReactionDynamics:
                 rxn_text_0 = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)
                 rxn_text_1 = self.reaction_data.single_reaction_describe(rxn_index=1, concise=True)
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
+
+        if title_prefix is not None:
+            title = f"{title_prefix}.  {title}"
 
         if show_intervals:
             vertical_lines = df["SYSTEM TIME"]
