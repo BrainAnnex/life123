@@ -188,6 +188,7 @@ class Reaction:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
+
     def extract_reactants(self) -> [(int, int, int)]:
         """
         Return a list of triplets with details of the reactants of the given reaction
