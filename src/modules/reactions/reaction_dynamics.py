@@ -1068,18 +1068,19 @@ class ReactionDynamics:
         for rxn_index in rxn_list:      # Consider each reaction in turn
             # TODO: maybe switch to a call to the experimental _reaction_elemental_step_SINGLE_REACTION()
 
-            if 2 in self.verbose_list:
-                print(f"      Determining the conc.'s changes as a result of rxn # {rxn_index}")
-
             # One element per chemical species; notice that this array is being RESET for EACH REACTION
             # TODO: instead of using a potentially very large array (mostly of zeros) for each rxn, consider a dict instead
             #       then combine then at end
             increment_vector_single_rxn = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)
 
-            # TODO: turn into a more efficient single step, as as:
+            rxn = self.reaction_data.get_reaction(rxn_index)
+            reactants = rxn.extract_reactants()
+            products = rxn.extract_products()
+
+            # TO DO: turn into a more efficient single step, as as:
             #(reactants, products) = cls.all_reactions.unpack_terms(rxn_index)
-            reactants = self.reaction_data.get_reactants(rxn_index)
-            products = self.reaction_data.get_products(rxn_index)
+            #reactants = self.reaction_data.get_reactants(rxn_index)
+            #products = self.reaction_data.get_products(rxn_index)
 
 
             """
@@ -1088,11 +1089,15 @@ class ReactionDynamics:
             """
 
             # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
-            for r in reactants:
-                stoichiometry, species_index, order = r                 # Unpack
+            for r in reactants:     # TODO: skip if r is an enzyme
+                # Unpack data from the reactant r
+                stoichiometry = rxn.extract_stoichiometry(r)
+                species_index = rxn.extract_species_index(r)
+                #stoichiometry, species_index, order = r                 # Unpack
                 delta_conc = stoichiometry * (- delta_dict[rxn_index])  # Increment to this reactant from the reaction being considered
                 # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
-                # Note: not enough to detect conc going negative from combined changes from multiple reactions!  Further testing done upstream
+                # Note: not enough to detect conc going negative from combined changes from multiple reactions!
+                #       Further testing done upstream
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
@@ -1100,8 +1105,11 @@ class ReactionDynamics:
 
 
             # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
-            for p in products:
-                stoichiometry, species_index, order = p             # Unpack
+            for p in products:    # TODO: skip if p is an enzyme
+                # Unpack data from the reactant r
+                stoichiometry = rxn.extract_stoichiometry(p)
+                species_index = rxn.extract_species_index(p)
+                #stoichiometry, species_index, order = p             # Unpack
                 delta_conc = stoichiometry * delta_dict[rxn_index]  # Increment to this reaction product from the reaction being considered
                 # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
                 # Note: not enough to detect conc going negative from combined changes from multiple reactions!
@@ -1403,7 +1411,7 @@ class ReactionDynamics:
 
         forward_rate = fwd_rate_constant
         for r in reactants:
-            #stoichiometry, species_index, order = r     # Unpack the data of the reactant r
+            # Unpack data from the reactant r
             species_index = rxn.extract_species_index(r)
             order = rxn.extract_rxn_order(r)
             conc = conc_array[species_index]
