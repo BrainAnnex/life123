@@ -22,7 +22,7 @@
 #
 # This experiment gets repeated, with very fine _fixed_ steps (as a proxy for the "exact value"), in `variable_steps_2`
 #
-# LAST REVISED: May 29, 2023
+# LAST REVISED: June 4, 2023
 
 # %% [markdown]
 # ![Adaptive time steps](../../docs/variable_steps.png)

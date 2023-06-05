@@ -1061,6 +1061,7 @@ class ReactionDynamics:
         if rxn_list is None:    # Meaning ALL reactions
             rxn_list = range(self.reaction_data.number_of_reactions())  # This will be a list of all the reaction index numbers
 
+        number_chemicals = self.reaction_data.number_of_chemicals()
 
         # For each applicable reaction, find the needed adjustments ("deltas")
         #   to the concentrations of the reactants and products,
@@ -1071,17 +1072,11 @@ class ReactionDynamics:
             # One element per chemical species; notice that this array is being RESET for EACH REACTION
             # TODO: instead of using a potentially very large array (mostly of zeros) for each rxn, consider a dict instead
             #       then combine then at end
-            increment_vector_single_rxn = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)
+            increment_vector_single_rxn = np.zeros(number_chemicals, dtype=float)
 
             rxn = self.reaction_data.get_reaction(rxn_index)
             reactants = rxn.extract_reactants()
             products = rxn.extract_products()
-
-            # TO DO: turn into a more efficient single step, as as:
-            #(reactants, products) = cls.all_reactions.unpack_terms(rxn_index)
-            #reactants = self.reaction_data.get_reactants(rxn_index)
-            #products = self.reaction_data.get_products(rxn_index)
-
 
             """
             Determine the concentration adjustments as a result of this reaction step, 
@@ -1089,11 +1084,15 @@ class ReactionDynamics:
             """
 
             # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
-            for r in reactants:     # TODO: skip if r is an enzyme
+            for r in reactants:
                 # Unpack data from the reactant r
-                stoichiometry = rxn.extract_stoichiometry(r)
                 species_index = rxn.extract_species_index(r)
-                #stoichiometry, species_index, order = r                 # Unpack
+                if species_index == rxn.enzyme:
+                    #print(f"*** SKIPPING reactant ENZYME {species_index} in reaction {rxn_index}")
+                    continue    # Skip if r is an enzyme for this reaction
+
+                stoichiometry = rxn.extract_stoichiometry(r)
+
                 delta_conc = stoichiometry * (- delta_dict[rxn_index])  # Increment to this reactant from the reaction being considered
                 # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
                 # Note: not enough to detect conc going negative from combined changes from multiple reactions!
@@ -1105,11 +1104,15 @@ class ReactionDynamics:
 
 
             # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
-            for p in products:    # TODO: skip if p is an enzyme
+            for p in products:
                 # Unpack data from the reactant r
-                stoichiometry = rxn.extract_stoichiometry(p)
                 species_index = rxn.extract_species_index(p)
-                #stoichiometry, species_index, order = p             # Unpack
+                if species_index == rxn.enzyme:
+                    #print(f"*** SKIPPING product ENZYME {species_index} in reaction {rxn_index}")
+                    continue    # Skip if p is an enzyme for this reaction
+
+                stoichiometry = rxn.extract_stoichiometry(p)
+
                 delta_conc = stoichiometry * delta_dict[rxn_index]  # Increment to this reaction product from the reaction being considered
                 # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
                 # Note: not enough to detect conc going negative from combined changes from multiple reactions!

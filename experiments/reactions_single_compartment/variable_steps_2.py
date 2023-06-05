@@ -19,7 +19,7 @@
 #
 # Same as `variable_steps_1`, but with fixed steps: a lot of tiny steps - as a proxy for the "exact value"
 #
-# LAST REVISED: May 29, 2023
+# LAST REVISED: June 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

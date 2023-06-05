@@ -18,7 +18,7 @@
 #
 # See also the experiment _"1D/reactions/reaction_1"_ ; this is the "single-compartment" version of it.
 #
-# LAST REVISED: May 16, 2023
+# LAST REVISED: June 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

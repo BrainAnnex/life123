@@ -25,7 +25,7 @@
 # -Temporal resolution ("delta t")    
 # -Alternate methods of estimating numerical derivatives
 #
-# LAST REVISED: May 27, 2023
+# LAST REVISED: June 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

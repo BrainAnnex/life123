@@ -22,7 +22,7 @@
 #
 # Based on experiment "reactions_single_compartment/down_regulate_2"
 #
-# LAST REVISED: May 28, 2023
+# LAST REVISED: June 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

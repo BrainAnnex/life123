@@ -22,7 +22,7 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: May 24, 2023
+# LAST REVISED: June 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -30,7 +30,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_data import ChemData as chem
+from src.modules.reactions.reaction_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 from src.modules.numerical.numerical import Numerical as num
 
@@ -52,7 +52,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = chem(names=["A", "B", "C", "E_high", "E_low"])
+chem_data = ChemData(names=["A", "B", "C", "E_high", "E_low"])
 
 # Reaction A <-> B, mostly in forward direction (favored energetically)
 # Note: all reactions in this experiment have 1st-order kinetics for all species

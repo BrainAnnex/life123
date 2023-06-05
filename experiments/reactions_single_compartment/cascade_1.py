@@ -20,7 +20,7 @@
 #
 # (Adaptive variable time resolution is used, with extensive diagnostics.)
 #
-# LAST REVISED: May 23, 2023
+# LAST REVISED: June 4, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -42,7 +42,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_data import ChemData as chem
+from src.modules.reactions.reaction_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
@@ -64,7 +64,7 @@ GraphicLog.config(filename=log_file,
 
 # %% tags=[]
 # Specify the chemicals
-chem_data = chem(names=["A", "B", "C"])
+chem_data = ChemData(names=["A", "B", "C"])
 
 # Reaction A <-> B (fast)
 chem_data.add_reaction(reactants=["A"], products=["B"],

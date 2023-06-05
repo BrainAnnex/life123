@@ -19,7 +19,7 @@
 # The system starts out with a uniform concentration.  
 # Then identical concentrations are repeatedly *injected to the left* and *drained from the right*
 #
-# LAST REVISED: May 27, 2023
+# LAST REVISED: June 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

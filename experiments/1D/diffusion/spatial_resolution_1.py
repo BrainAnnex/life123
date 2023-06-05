@@ -17,7 +17,7 @@
 # #### From the same initial setup, diffusion is carried out over a fixed time span,
 # #### at different spatial resolutions - and then the respective results are compared
 #
-# LAST REVISED: May 27, 2023
+# LAST REVISED: June 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

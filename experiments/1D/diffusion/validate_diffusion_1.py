@@ -19,7 +19,7 @@
 # In this "PART 1", we'll be looking at a tiny system with just 10 bins, to easily inspect the numbers directly.
 # We'll use concentrations initialized to an upward-shifted sine wave with 1 cycle over the length system
 #
-# LAST REVISED: May 27, 2023
+# LAST REVISED: June 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

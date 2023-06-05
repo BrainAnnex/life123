@@ -26,7 +26,7 @@
 #
 # All reactions 1st order, mostly forward.  Taken to equilibrium.
 #
-# LAST REVISED: May 23, 2023
+# LAST REVISED: June 4, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:

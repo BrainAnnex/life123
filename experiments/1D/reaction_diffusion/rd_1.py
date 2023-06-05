@@ -27,7 +27,7 @@
 # A LOT of plots are sent to the log file from this experiment; the reason is to compare two
 # graphic elements, "vue_curves_3" and "vue_curves_4"
 #
-# LAST REVISED: May 28, 2023
+# LAST REVISED: June 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
