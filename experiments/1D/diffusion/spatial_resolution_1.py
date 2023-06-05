@@ -17,7 +17,7 @@
 # #### From the same initial setup, diffusion is carried out over a fixed time span,
 # #### at different spatial resolutions - and then the respective results are compared
 #
-# LAST REVISED: May 27, 2023
+# LAST REVISED: June 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -26,7 +26,7 @@ import set_path      # Importing this module will add the project's home directo
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.life_1D.bio_sim_1d import BioSim1D
-from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_data import ChemData as chem
 from src.modules.numerical.numerical import Numerical as num
 
 import plotly.express as px

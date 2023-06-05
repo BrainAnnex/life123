@@ -62,11 +62,12 @@ class ReactionDynamics:
         self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
                            {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
         self.step_factors = {"upshift": 1.5, "downshift": 0.5, "abort": 0.5}
+                            # TODO: consider more conservative defaults upshift=1.2, downshift=0.5, abort=0.4
 
         self.error_abort_step_factor = 0.5      # MUST BE < 1.  Factor by which to multiply the time step
                                                 #   in case of negative-concentration error from excessive step size
                                                 #   NOTE: this is from ERROR aborts, not to be confused with high-threshold aborts
-
+        # TODO: consider more conservative default 0.25
 
         # ***  FOR DIAGNOSTICS  ***
 
@@ -507,12 +508,12 @@ class ReactionDynamics:
         Update the system state and the system time accordingly
         (object attributes self.system and self.system_time)
 
-        :param reaction_duration:  The overall time advance for the reactions (i.e. initial_step * n_steps)
+        :param reaction_duration:  The overall time advance for the reactions (it might be exceeded in case of variable steps)
         :param target_end_time: The final time at which to stop the reaction
-                                    If both stop_time and reaction_duration are specified, an error will result
+                                    If both target_end_time and reaction_duration are specified, an error will result
 
         :param initial_step:    The suggested size of the first step (it might be reduced automatically,
-                                    in case of "hard" errors from large steps
+                                    in case of "hard" errors from large steps)
 
         :param n_steps:         The desired number of steps
 
@@ -533,38 +534,41 @@ class ReactionDynamics:
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
-        stop_time = target_end_time
-
 
         # Validation
         assert self.system is not None, "ReactionDynamics.single_compartment_react(): " \
                                         "the concentration values of the various chemicals must be set first"
 
         if variable_steps and n_steps is not None:
-            raise Exception("single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
-                            "(because the number of steps will vary); specify `reaction_duration` or `end_time` instead")
+            raise Exception("ReactionDynamics.single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
+                            "(because the number of steps will vary); specify `reaction_duration` or `target_end_time` instead")
 
 
         """
         Determine all the various time parameters that were not explicitly provided
         """
 
-        if stop_time is not None:
+        if target_end_time is not None:
             if reaction_duration is not None:
-                raise Exception("single_compartment_react(): cannot provide values for BOTH `stop_time` and `reaction_duration`")
+                raise Exception("single_compartment_react(): cannot provide values for BOTH `target_end_time` and `reaction_duration`")
             else:
-                assert stop_time > self.system_time, \
-                    f"single_compartment_react(): `stop_time` must be larger than the current System Time ({self.system_time})"
-                reaction_duration = stop_time - self.system_time
+                assert target_end_time > self.system_time, \
+                    f"single_compartment_react(): `target_end_time` must be larger than the current System Time ({self.system_time})"
+                reaction_duration = target_end_time - self.system_time
 
         # Determine the time step,
         # as well as the required number of such steps
         time_step, n_steps = self.specify_steps(total_duration=reaction_duration,
                                                 time_step=initial_step,
                                                 n_steps=n_steps)
+        # Note: if variable steps are requested then n_steps stops being particularly meaningful; it becomes a
+        #       hypothetical value, in the (unlikely) event that the step size were never changed
 
-        if stop_time is None:
-            stop_time = self.system_time + time_step * n_steps
+        if target_end_time is None:
+            if variable_steps:
+                target_end_time = self.system_time + reaction_duration
+            else:
+                target_end_time = self.system_time + time_step * n_steps
 
 
         if snapshots:
@@ -587,10 +591,10 @@ class ReactionDynamics:
 
 
         i = 0
-        while self.system_time < stop_time:
-            if (not variable_steps) and (i == n_steps) and np.allclose(self.system_time, stop_time):
+        while self.system_time < target_end_time:
+            if (not variable_steps) and (i == n_steps) and np.allclose(self.system_time, target_end_time):
                 break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
-                            #   the System Time is below the stop_time because of roundoff error
+                            #   the System Time is below the target_end_time because of roundoff error
 
 
             # ----------  CORE OPERATION OF MAIN LOOP  ----------
@@ -800,7 +804,7 @@ class ReactionDynamics:
             # Abort the current step if the rate of change is deemed excessive.
             # TODO: maybe ALWAYS check this, regardless of variable-steps option
             if action == "abort":       # NOTE: this is a "strategic" abort, not a hard one from error
-                msg =   f"INFO: the tentative time step ({delta_time:.5g}) " \
+                msg =   f"* INFO: the tentative time step ({delta_time:.5g}) " \
                         f"leads to a least one norm value > its ABORT threshold:\n" \
                         f"      -> will backtrack, and re-do step with a SMALLER delta time, multiplied by {step_factor} (set to {delta_time * step_factor:.5g}) " \
                         f"[Step started at t={self.system_time:.5g}, and will rewind there]"
@@ -1057,6 +1061,7 @@ class ReactionDynamics:
         if rxn_list is None:    # Meaning ALL reactions
             rxn_list = range(self.reaction_data.number_of_reactions())  # This will be a list of all the reaction index numbers
 
+        number_chemicals = self.reaction_data.number_of_chemicals()
 
         # For each applicable reaction, find the needed adjustments ("deltas")
         #   to the concentrations of the reactants and products,
@@ -1064,19 +1069,14 @@ class ReactionDynamics:
         for rxn_index in rxn_list:      # Consider each reaction in turn
             # TODO: maybe switch to a call to the experimental _reaction_elemental_step_SINGLE_REACTION()
 
-            if 2 in self.verbose_list:
-                print(f"      Determining the conc.'s changes as a result of rxn # {rxn_index}")
-
             # One element per chemical species; notice that this array is being RESET for EACH REACTION
             # TODO: instead of using a potentially very large array (mostly of zeros) for each rxn, consider a dict instead
             #       then combine then at end
-            increment_vector_single_rxn = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)
+            increment_vector_single_rxn = np.zeros(number_chemicals, dtype=float)
 
-            # TODO: turn into a more efficient single step, as as:
-            #(reactants, products) = cls.all_reactions.unpack_terms(rxn_index)
-            reactants = self.reaction_data.get_reactants(rxn_index)
-            products = self.reaction_data.get_products(rxn_index)
-
+            rxn = self.reaction_data.get_reaction(rxn_index)
+            reactants = rxn.extract_reactants()
+            products = rxn.extract_products()
 
             """
             Determine the concentration adjustments as a result of this reaction step, 
@@ -1085,10 +1085,18 @@ class ReactionDynamics:
 
             # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
             for r in reactants:
-                stoichiometry, species_index, order = r                 # Unpack
+                # Unpack data from the reactant r
+                species_index = rxn.extract_species_index(r)
+                if species_index == rxn.enzyme:
+                    #print(f"*** SKIPPING reactant ENZYME {species_index} in reaction {rxn_index}")
+                    continue    # Skip if r is an enzyme for this reaction
+
+                stoichiometry = rxn.extract_stoichiometry(r)
+
                 delta_conc = stoichiometry * (- delta_dict[rxn_index])  # Increment to this reactant from the reaction being considered
                 # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
-                # Note: not enough to detect conc going negative from combined changes from multiple reactions!  Further testing done upstream
+                # Note: not enough to detect conc going negative from combined changes from multiple reactions!
+                #       Further testing done upstream
                 self.validate_increment(delta_conc=delta_conc, baseline_conc=conc_array[species_index],
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
@@ -1097,7 +1105,14 @@ class ReactionDynamics:
 
             # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
             for p in products:
-                stoichiometry, species_index, order = p             # Unpack
+                # Unpack data from the reactant r
+                species_index = rxn.extract_species_index(p)
+                if species_index == rxn.enzyme:
+                    #print(f"*** SKIPPING product ENZYME {species_index} in reaction {rxn_index}")
+                    continue    # Skip if p is an enzyme for this reaction
+
+                stoichiometry = rxn.extract_stoichiometry(p)
+
                 delta_conc = stoichiometry * delta_dict[rxn_index]  # Increment to this reaction product from the reaction being considered
                 # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
                 # Note: not enough to detect conc going negative from combined changes from multiple reactions!
@@ -1358,23 +1373,26 @@ class ReactionDynamics:
 
         # Process the requested reactions
         for i in rxn_list:      # Consider each reaction in turn
-            delta = self.compute_reaction_delta(rxn_index=i, conc_array=conc_array, delta_time=delta_time)
+            rxn = self.reaction_data.get_reaction(i)
+            delta = self.compute_reaction_delta(rxn=rxn, conc_array=conc_array, delta_time=delta_time)
             delta_dict[i] = delta
 
         return delta_dict
 
 
 
-    def compute_reaction_delta(self, rxn_index: int, delta_time: float, conc_array: np.array) -> float:
+    def compute_reaction_delta(self, rxn, delta_time: float, conc_array: np.array) -> float:
         """
         For the SINGLE specified reaction, the given time interval, and the specified concentrations of chemicals,
         compute the difference of the reaction's forward and back "conversions",
         a non-standard term we're using here to refer to delta_time * (Forward_Rate − Reverse_Rate)
 
+        TODO: maybe take the multiplication with delta_time to the calling function
+
         For background info: https://life123.science/reactions
         What we're computing here, is referred to as:  (Δt)∗delta_forward(n)
 
-        :param rxn_index:   An integer that indexes the reaction of interest (numbering starts at 0)
+        :param rxn:         An object of type "Reaction"
         :param conc_array:  ALL initial concentrations at the start of the reaction step,
                                 as a Numpy array for ALL the chemical species, in their index order
                                 (regardless of their involvement in the reaction of interest);
@@ -1387,30 +1405,34 @@ class ReactionDynamics:
                                 for the given reaction during the specified time span
         """
 
-        # TODO: turn into a more efficient single step, as as:
+        # TODO: maybe turn into a more efficient single step, as as:
         #(reactants, products, fwd_rate_constant, rev_rate_constant) = cls.all_reactions.unpack_reaction(i)
-        reactants = self.reaction_data.get_reactants(rxn_index)
-        products = self.reaction_data.get_products(rxn_index)
-        fwd_rate_constant = self.reaction_data.get_forward_rate(rxn_index)
-        rev_rate_constant = self.reaction_data.get_reverse_rate(rxn_index)
+        reactants = rxn.extract_reactants()
+        products = rxn.extract_products()
+        fwd_rate_constant = rxn.extract_forward_rate()
+        rev_rate_constant = rxn.extract_reverse_rate()
 
         forward_rate = fwd_rate_constant
         for r in reactants:
-            stoichiometry, species_index, order = r     # Unpack the data of the reactant r
+            # Unpack data from the reactant r
+            species_index = rxn.extract_species_index(r)
+            order = rxn.extract_rxn_order(r)
             conc = conc_array[species_index]
             #assert conc is not None, \
-            #f"ReactionDynamics.compute_rate_delta(): lacking the value for the concentration of the chemical species `{self.reaction_data.get_name(species_index)}`"
+            #   f"ReactionDynamics.compute_reaction_delta(): lacking the value for the concentration of the chemical species `{self.reaction_data.get_name(species_index)}`"
             forward_rate *= conc ** order      # Raise to power
 
         reverse_rate = rev_rate_constant
         for p in products:
-            stoichiometry, species_index, order = p     # Unpack the data of the reaction product p
+            #stoichiometry, species_index, order = p     # Unpack the data of the reaction product p
+            species_index = rxn.extract_species_index(p)
+            order = rxn.extract_rxn_order(p)
             conc = conc_array[species_index]
             #assert conc is not None, \
-            #f"ReactionDynamics.compute_rate_delta(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
+            #   f"ReactionDynamics.compute_reaction_delta(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
             reverse_rate *= conc ** order     # Raise to power
 
-        return delta_time * (forward_rate - reverse_rate)
+        return delta_time * (forward_rate - reverse_rate)   # TODO: maybe take the multiplication with delta_time to the calling function
 
 
 
@@ -1480,29 +1502,30 @@ class ReactionDynamics:
         if np.isnan(delta_arr).any():
             return True         # The presence of a NaN, anywhere in delta_arr, is indicative of an aborted step
 
+        rxn = self.reaction_data.get_reaction(rxn_index)
         reactants = self.reaction_data.get_reactants(rxn_index)
         products = self.reaction_data.get_products(rxn_index)
 
         # Pick (arbitrarily) the first reactant,
         # to establish a baseline change in concentration relative to its stoichiometric coefficient
         baseline_term = reactants[0]
-        baseline_species = self.reaction_data.extract_species_index(baseline_term)
-        baseline_stoichiometry = self.reaction_data.extract_stoichiometry(baseline_term)
+        baseline_species = rxn.extract_species_index(baseline_term)
+        baseline_stoichiometry = rxn.extract_stoichiometry(baseline_term)
         baseline_ratio =  (delta_arr[baseline_species]) / baseline_stoichiometry
         #print("baseline_ratio: ", baseline_ratio)
 
         for i, term in enumerate(reactants):
             if i != 0:
-                species = self.reaction_data.extract_species_index(term)
-                stoichiometry = self.reaction_data.extract_stoichiometry(term)
+                species = rxn.extract_species_index(term)
+                stoichiometry = rxn.extract_stoichiometry(term)
                 ratio =  (delta_arr[species]) / stoichiometry
                 #print(f"ratio for `{self.reaction_data.get_name(species)}`: {ratio}")
                 if not np.allclose(ratio, baseline_ratio):
                     return False
 
         for term in products:
-            species = self.reaction_data.extract_species_index(term)
-            stoichiometry = self.reaction_data.extract_stoichiometry(term)
+            species = rxn.extract_species_index(term)
+            stoichiometry = rxn.extract_stoichiometry(term)
             ratio =  - (delta_arr[species]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn
             #print(f"ratio for `{self.reaction_data.get_name(species)}`: {ratio}")
             if not np.allclose(ratio, baseline_ratio):
@@ -2029,7 +2052,7 @@ class ReactionDynamics:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def plot_curves(self, chemicals=None, colors=None, title=None,
+    def plot_curves(self, chemicals=None, colors=None, title=None, title_prefix=None,
                     vertical_lines=None, show_intervals=False, suppress=False) -> Union[None, go.Figure]:
         """
         Using plotly, draw the plots of concentration values over time, based on the saved history data.
@@ -2088,6 +2111,9 @@ class ReactionDynamics:
                 rxn_text_0 = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)
                 rxn_text_1 = self.reaction_data.single_reaction_describe(rxn_index=1, concise=True)
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
+
+        if title_prefix is not None:
+            title = f"{title_prefix}.  {title}"
 
         if show_intervals:
             vertical_lines = df["SYSTEM TIME"]
@@ -2342,12 +2368,12 @@ class ReactionDynamics:
         """
         rxn = self.reaction_data.get_reaction(rxn_index)
 
-        reactants = self.reaction_data.extract_reactants(rxn)     # A list of triplets
-        products = self.reaction_data.extract_products(rxn)      # A list of triplets
-        kF = self.reaction_data.extract_forward_rate(rxn)
-        kB = self.reaction_data.extract_back_rate(rxn)
+        reactants = rxn.extract_reactants()    # A list of triplets
+        products = rxn.extract_products()      # A list of triplets
+        kF = rxn.extract_forward_rate()
+        kR = rxn.extract_reverse_rate()
 
-        rate_ratio = kF / kB                    # Ratio of forward/reverse reaction rates
+        rate_ratio = kF / kR                    # Ratio of forward/reverse reaction rates
 
         conc_ratio = 1.
         numerator = ""
@@ -2356,10 +2382,10 @@ class ReactionDynamics:
 
         for p in products:
             # Loop over the reaction products
-            species_index = self.reaction_data.extract_species_index(p)
-            rxn_order = self.reaction_data.extract_rxn_order(p)
+            species_index =  rxn.extract_species_index(p)
+            rxn_order =  rxn.extract_rxn_order(p)
 
-            species_name = self.reaction_data.get_name(species_index)
+            species_name =  self.reaction_data.get_name(species_index)
             species_conc = conc.get(species_name)
             assert species_conc is not None, f"reaction_in_equilibrium(): unable to proceed because the " \
                                              f"concentration of `{species_name}` was not provided"
@@ -2375,8 +2401,8 @@ class ReactionDynamics:
 
         for r in reactants:
             # Loop over the return
-            species_index = self.reaction_data.extract_species_index(r)
-            rxn_order = self.reaction_data.extract_rxn_order(r)
+            species_index =  rxn.extract_species_index(r)
+            rxn_order =  rxn.extract_rxn_order(r)
 
             species_name = self.reaction_data.get_name(species_index)
             species_conc = conc.get(species_name)

@@ -17,7 +17,7 @@
 #
 # The system starts out with a pulse in bins near the *left* and the *right* endpoints
 #
-# LAST REVISED: May 27, 2023
+# LAST REVISED: June 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -29,7 +29,7 @@ from src.life_1D.bio_sim_1d import BioSim1D
 
 import plotly.express as px
 
-from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_data import ChemData as chem
 from src.modules.html_log.html_log import HtmlLog as log
 from src.modules.visualization.graphic_log import GraphicLog
 

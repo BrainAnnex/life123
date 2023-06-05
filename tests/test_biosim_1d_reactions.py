@@ -2,13 +2,13 @@
 # for general tests of 1D system, see test_biosim_1d.py
 
 import numpy as np
-from src.modules.reactions.reaction_data import ReactionData
+from src.modules.reactions.reaction_data import ChemData
 from src.life_1D.bio_sim_1d import BioSim1D
 
 
 
 def test_initialization():
-    chem_data = ReactionData(names=["A", "B", "C"])
+    chem_data = ChemData(names=["A", "B", "C"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
     chem_data.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=8., reverse_rate=2.)
@@ -19,7 +19,7 @@ def test_initialization():
 
 def test_reaction_step_1():
     # Based on experiment "reaction1"
-    chem_data = ReactionData(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
@@ -41,7 +41,7 @@ def test_reaction_step_1():
 
 def test_reaction_step_1b():
     # Based on experiment "reaction1"
-    chem_data = ReactionData(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
+    chem_data = ChemData(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
@@ -77,7 +77,7 @@ def test_reaction_step_1b():
 
 def test_react_1():
     # Based on experiment "reaction2"
-    chem_data = ReactionData(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
+    chem_data = ChemData(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
 
     # Reaction A <-> 3B , with 1st-order kinetics in both directions
     chem_data.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
@@ -97,7 +97,7 @@ def test_react_1():
 
 def test_react_2():
     # Based on experiment "reaction3"
-    chem_data = ReactionData(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
+    chem_data = ChemData(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
 
     # Reaction 2A <-> 3B , with 1st-order kinetics in both directions
     chem_data.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
@@ -121,7 +121,7 @@ def test_react_2():
 
 def test_react_3():
     # Based on experiment "reaction4"
-    chem_data = ReactionData(diffusion_rates=[0.1, 0.1, 0.1], names=["A", "B", "C"])   # NOTE: diffusion_rates not used
+    chem_data = ChemData(diffusion_rates=[0.1, 0.1, 0.1], names=["A", "B", "C"])   # NOTE: diffusion_rates not used
 
     # Reaction A + B <-> C , with 1st-order kinetics for each species
     chem_data.add_reaction(reactants=[("A") , ("B")], products=[("C")],
@@ -147,7 +147,7 @@ def test_react_3():
 
 def test_react_4():
     # Based on experiment "reaction5"
-    chem_data = ReactionData(diffusion_rates=[0.1, 0.1, 0.1], names=["A", "C", "D"])   # NOTE: diffusion_rates not used
+    chem_data = ChemData(diffusion_rates=[0.1, 0.1, 0.1], names=["A", "C", "D"])   # NOTE: diffusion_rates not used
 
     # Reaction A <-> 2C + D , with 1st-order kinetics for each species
     chem_data.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
@@ -171,7 +171,7 @@ def test_react_4():
 
 def test_react_5():
     # Based on experiment "reaction6"
-    chem_data = ReactionData(diffusion_rates=[0.1, 0.1, 0.1, 0.1], names=["A", "B", "C", "D"])   # NOTE: diffusion_rates not used
+    chem_data = ChemData(diffusion_rates=[0.1, 0.1, 0.1, 0.1], names=["A", "B", "C", "D"])   # NOTE: diffusion_rates not used
 
     # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
     chem_data.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
@@ -201,7 +201,7 @@ def test_react_5():
 
 def test_react_6():
     # Based on experiment "reaction7"
-    chem_data = ReactionData(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
+    chem_data = ChemData(diffusion_rates=[0.1, 0.1], names=["A", "B"])   # NOTE: diffusion_rates not used
 
     # Reaction  2A <-> B , with 2nd-order kinetics in forward reaction, and 1st-order in reverse
     chem_data.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
@@ -226,7 +226,7 @@ def test_react_6():
 
 def test_react_7():
     # Based on experiment "reaction8"
-    chem_data = ReactionData(diffusion_rates=[.1, .1, .1, .1, .1], names=["A", "B", "C", "D", "E"])   # NOTE: diffusion_rates not used
+    chem_data = ChemData(diffusion_rates=[.1, .1, .1, .1, .1], names=["A", "B", "C", "D", "E"])   # NOTE: diffusion_rates not used
 
     # Coupled reactions A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species
     chem_data.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=5., reverse_rate=2.)
@@ -266,7 +266,7 @@ def test_react_7():
 
 def test_react_with_membrane():
     # Based on experiment "reaction/membranes_1"
-    chem_data = ReactionData(names=["A", "B", "C"])     # NOTE: Diffusion not done
+    chem_data = ChemData(names=["A", "B", "C"])     # NOTE: Diffusion not done
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.set_membranes(membrane_pos=[1])   # A single membrane, passing thru bin 1

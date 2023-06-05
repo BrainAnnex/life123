@@ -27,7 +27,7 @@ class Numerical:
         """
         df_size = len(df)
         assert df_size >= 3, \
-            f"the Pandas dataframe must have at least 3 rows (it has {df_size})"
+            f"curve_intersect_interpolate(): the Pandas dataframe must have at least 3 rows (it has {df_size}). Not enough data..."
 
         # The next 2 integers are the indices of the boundaries of the passed dataframe
         first_index = df.iloc[0].name           # TODO: try df.index[0]

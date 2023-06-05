@@ -4,7 +4,7 @@
 
 import numpy as np
 from src.life_2D.bio_sim_2d import BioSim2D
-from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_data import ChemData as chem
 from src.modules.numerical.numerical import Numerical as num
 
 

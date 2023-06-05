@@ -22,7 +22,7 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: May 29, 2023
+# LAST REVISED: June 4, 2023
 
 # %% [markdown]
 # ![Temporarily suspending the Laws of Physics](../../docs/impossible_1.png)
@@ -33,7 +33,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_data import ChemData as chem
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 from src.modules.numerical.numerical import Numerical as num
 
@@ -164,8 +164,8 @@ chem_data.describe_reactions()
 # We'll use the same forward rate as before, but we'll let the reverse rate be picked by the system, 
 # based of thermodynamic data consistent with the previous 2 reactions : i.e. an energy difference of -(-2,723.41 - 1,718.28) = +4,441.69 (reflecting the  
 # "going uphill energetically" from C to A
-chem_data.add_reaction(reactants="C" , products="A",
-                       forward_rate=3., Delta_G=4441.69)   # Notice the positive Delta G: we're going from "C", to the higher-energy level of "A"
+chem_data.add_reaction(reactants="C", products="A",
+                       forward_rate=3., delta_G=4441.69)   # Notice the positive Delta G: we're going from "C", to the higher-energy level of "A"
 
 # %%
 chem_data.describe_reactions()

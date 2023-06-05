@@ -19,7 +19,7 @@
 #
 # Same as `variable_steps_1`, but with fixed steps: a lot of tiny steps - as a proxy for the "exact value"
 #
-# LAST REVISED: May 29, 2023
+# LAST REVISED: June 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -27,7 +27,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_data import ChemData as chem
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np

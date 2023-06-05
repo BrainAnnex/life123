@@ -23,7 +23,7 @@
 #
 # Based on experiment "reactions_single_compartment/up_regulate_1"
 #
-# LAST REVISED: May 28, 2023
+# LAST REVISED: June 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -31,7 +31,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 from src.life_1D.bio_sim_1d import BioSim1D
 
@@ -50,7 +50,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = chem(names=["A", "X", "B"])     # NOTE: Diffusion not applicable (just 1 bin)
+chem_data = ChemData(names=["A", "X", "B"])     # NOTE: Diffusion not applicable (just 1 bin)
 
 # Reaction A + X <-> 2B , with 1st-order kinetics for all species
 chem_data.add_reaction(reactants=[("A") , ("X")], products=[(2, "B")],

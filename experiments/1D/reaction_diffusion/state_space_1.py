@@ -16,11 +16,13 @@
 # ### One-bin A <-> 3B reaction, with 1st-order kinetics in both directions, taken to equilibrium
 # ### Examine State Space trajectory, using [A] and [B] as state variables
 #
-# Based on reactions/reaction_2
+# Based on experiment "1D/reaction/reaction_2"
 #
-# Diffusion not applicable (just 1 bin)
+# Diffusion not applicable (just 1 bin).
 #
-# LAST REVISED: May 28, 2023
+# This is the 1D version of the single-compartment reaction by the same name
+#
+# LAST REVISED: June 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -28,7 +30,7 @@ import set_path      # Importing this module will add the project's home directo
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_data import ReactionData as chem
+from src.modules.reactions.reaction_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 from src.life_1D.bio_sim_1d import BioSim1D
 
@@ -48,7 +50,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = chem(names=["A", "B"])     # NOTE: Diffusion not applicable (just 1 bin)
+chem_data = ChemData(names=["A", "B"])     # NOTE: Diffusion not applicable (just 1 bin)
 
 
 
@@ -102,7 +104,11 @@ px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B"],
               labels={"value":"concentration", "variable":"Chemical"})
 
 # %%
-# Same data, but shown differently
+
+# %% [markdown]
+# ## Same data, but shown differently
+
+# %%
 fig0 = px.line(data_frame=bio.get_history(), x="A", y="B", 
               title="State space of reaction A <-> 3B : [A] vs. [B]",
               color_discrete_sequence = ['#C83778'],
@@ -112,7 +118,7 @@ fig0.show()
 # %%
 # Now show the individual data points
 
-df['SYSTEM TIME'] = round(df['SYSTEM TIME'], 2)    # To avoid clutter from too many digits
+df['SYSTEM TIME'] = round(df['SYSTEM TIME'], 2)    # To avoid clutter from too many digits, in the column
 
 fig1 = px.scatter(data_frame=df, x="A", y="B",
                   title="Trajectory in State space: [A] vs. [B]",
