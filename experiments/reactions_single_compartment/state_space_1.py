@@ -13,12 +13,14 @@
 # ---
 
 # %% [markdown]
-# ### `A <-> 3B` reaction, with 1st-order kinetics in both directions, taken to equilibrium
+# ### `A <-> 3B` reaction, taken to equilibrium.
 # ### Examine State Space trajectory, using [A] and [B] as state variables
+#
+# 1st-order kinetics in both directions
 #
 # Based on experiment "1D/reaction/reaction_2"
 #
-# LAST REVISED: June 4, 2023
+# LAST REVISED: June 5, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

@@ -14,7 +14,7 @@
 # ---
 
 # %% [markdown]
-# ## Exploration of errors in the implementation of substeps, for the simulation of the coupled reactions `2 S <-> U` and `S <-> X`   
+# ## Exploration of numerical errors in the implementation of substeps, for the simulation of the coupled reactions `2 S <-> U` and `S <-> X`   
 # Both mostly forward.  1st-order kinetics throughout.   
 #
 # Same as `variable_steps_1`, but with substeps.
@@ -24,7 +24,7 @@
 # %% [markdown]
 # # IMPORTANT: DO NOT ATTEMPT TO RUN THIS NOTEBOOK!   
 # ## This is a **"frozen run"** that depends on an old version of Life123, for demonstration purposes  
-# (newer versions don't contain this implementation of substeps.)  
+# **(current versions don't contain this implementation of substeps.)** 
 # If you bypass the execution exit in the first cell, and run the other cells, you WILL NOT REPLICATE the results below!
 
 # %%
@@ -195,6 +195,6 @@ no_substep_error
 # At any rates, substeps are far less relevant ever since the introduction of variable (main) step.
 
 # %% [markdown]
-# # => This implementation of substeps was deprecated - and no longer part of current releases
+# # => IMPORTANT: This implementation of substeps was OBSOLETED in release Beta 26.3 - and is no longer used in Life123
 
 # %%

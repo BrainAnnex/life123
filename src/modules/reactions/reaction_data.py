@@ -1,6 +1,7 @@
 from typing import Union
 from src.modules.reactions.reaction import Reaction
 
+# TODO: rename filename to "chem_data.py" (perhaps in its own folder)
 
 class ChemData:
     """
