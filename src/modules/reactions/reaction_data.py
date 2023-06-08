@@ -1,7 +1,7 @@
 from typing import Union
 from src.modules.reactions.reaction import Reaction
 
-# TODO: rename filename to "chem_data.py" (perhaps in its own folder)
+# TODO: rename filename to "chem_data.py" (perhaps in its own "chemicals" folder)
 
 class ChemData:
     """
@@ -9,9 +9,8 @@ class ChemData:
     including:
         - names
         - diffusion rates
-        - stoichiometry of reactions
-        - kinetic data (reaction rates, reaction orders)
-        - thermodynamic data (temperature, changes in enthalpy/entropy/Gibbs Free Energy)
+        - macro-molecules Binding Site Affinities
+        - reaction data (see class "Reaction", in "reaction_data.py")
 
 
     Note: for now, the temperature is assumed constant everywhere, and unvarying (or very slowly varying)
@@ -22,23 +21,37 @@ class ChemData:
         If chemical names and their diffusion rates are both provided, they must have the same count,
         and appear in the same order.
         It's ok not to pass any data, and later add it.
-        Reactions, if present, need to be added later by means of calls to add_reaction()
+        Reactions, if applicable, need to be added later by means of calls to add_reaction()
+        Macro-molecules, if applicable, need to be added later
 
         :param names:           [OPTIONAL] A list with the names of the chemicals
         :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals
-        :param n_species:       [OPTIONAL] The number of chemicals, exclusive of water
+        :param n_species:       [OPTIONAL] The number of chemicals, exclusive of water of of macro-molecules
+                                           If this value is provided, but no names given, the names will be auto-assigned
+                                           as "Chemical 1", "Chemical 2", ...   TODO: is this actually useful???
 
         """
-        self.n_species = n_species if (n_species is not None) else 0   # The number of chemicals - exclusive of water
+        self.n_species = n_species if (n_species is not None) else 0    # The number of chemicals -
+                                                                        # exclusive of water and of macro-molecules
+                                                                        # TODO: maybe phase out this redundant value
 
-        self.chemical_data = []     # EXAMPLE: [{"name": "A", "diff": 6.4} ,
+        self.chemical_data = []     # Data for all chemicals, *except* water and macro-molecules
+                                    # EXAMPLE: [{"name": "A", "diff": 6.4} ,
                                     #           {"name": "B", "diff": 12.0, "note": "some note"}]
                                     # The position in the list is referred to as the "index" of that chemical
                                     # TODO: maybe use a Pandas dataframe
 
         self.name_dict = {}         # To map assigned names to their positional index (in the ordered list of chemicals);
-                                    # this is automatically set and maintained
+                                    # this is automatically set and maintained.   TODO: maybe extend to macro-molecules
                                     # EXAMPLE: {"A": 0, "B": 1, "C": 2}
+
+        self.macro_molecules = []   # List of names.  EXAMPLE: ["M1", "M2"]
+                                    # The position in the list is referred to as the "index" of that macro-molecule
+
+        self.binding_sites = {}     # EXAMPLE: {"M1": {"A": 2.4, "B": 853.} }       # Alt: [("A", 2.4), ("B", 853.)]
+                                    #   where "M1" is a macro-molecule, and "A" and "B" are bulk chemicals
+                                    #   (such as transcription factors), all previously-declared;
+                                    #   the numbers are Binding Site Affinities : https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6787930/
 
         self.reaction_list = []     # List of dicts.  Each item is an object of class "Reaction"
 
@@ -443,6 +456,30 @@ class ChemData:
 
 
 
+    # MACRO-MOLECULES
+
+    def add_macromolecules(self, names: [str]):
+        self.macro_molecules += names   # Concatenate lists
+
+    def set_binding_site_affinity(self, macromolecule, chemical, affinity):
+        if self.binding_sites.get(macromolecule) is None:
+            self.binding_sites[macromolecule] = {}
+
+        binding_data = self.binding_sites[macromolecule]
+        binding_data[chemical] = affinity   # Note: any previously-existing value will get over-written
+
+    def reset_macromolecule(self, macromolecule):
+        if self.binding_sites.get(macromolecule) is not None:
+            del self.binding_sites[macromolecule]
+
+    def clear_macromolecules(self):
+        # Reset to original state
+        self.macro_molecules = []
+        self.binding_sites = {}
+
+
+
+
     def set_diffusion_rate(self, name: str, diff_rate) -> None:
         """
         Set the diffusion rate of the given chemical species (identified by its name)
@@ -517,6 +554,7 @@ class ChemData:
         """
         Get rid of all reactions; start again with "an empty slate" (but still with reference
         to the same data object about the chemicals)
+
         :return:    None
         """
         self.reaction_list = []
