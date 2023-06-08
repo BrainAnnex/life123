@@ -16,7 +16,7 @@ class ChemData:
     Note: for now, the temperature is assumed constant everywhere, and unvarying (or very slowly varying)
     """
 
-    def __init__(self, names=None, diffusion_rates=None, n_species=None):
+    def __init__(self, names=None, diffusion_rates=None):
         """
         If chemical names and their diffusion rates are both provided, they must have the same count,
         and appear in the same order.
@@ -26,15 +26,9 @@ class ChemData:
 
         :param names:           [OPTIONAL] A list with the names of the chemicals
         :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals
-        :param n_species:       [OPTIONAL] The number of chemicals, exclusive of water of of macro-molecules
-                                           If this value is provided, but no names given, the names will be auto-assigned
-                                           as "Chemical 1", "Chemical 2", ...   TODO: is this actually useful???
-
+                                           If diffusion rates are provided, but no names given, the names will be
+                                           auto-assigned as "Chemical 1", "Chemical 2", ...
         """
-        self.n_species = n_species if (n_species is not None) else 0    # The number of chemicals -
-                                                                        # exclusive of water and of macro-molecules
-                                                                        # TODO: maybe phase out this redundant value
-
         self.chemical_data = []     # Data for all chemicals, *except* water and macro-molecules
                                     # EXAMPLE: [{"name": "A", "diff": 6.4} ,
                                     #           {"name": "B", "diff": 12.0, "note": "some note"}]
@@ -58,8 +52,14 @@ class ChemData:
         self.temp = 298.15          # Temperature in Kelvins.  (By default, 25 C)
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
 
+        self.n_species = 0          # The number of chemicals -
+                                    # exclusive of water and of macro-molecules
+                                    # TODO: maybe phase out this redundant value
 
-        self.init_chemical_data(names, diffusion_rates)
+
+        if (names is not None) or (diffusion_rates is not None):
+            self.init_chemical_data(names, diffusion_rates)     # This wll set self.chemical_data, self.name_dict and self.n_species
+
 
 
 
@@ -381,7 +381,7 @@ class ChemData:
             if self.n_species != 0:
                 assert len(diffusion_rates) == self.n_species, \
                     f"ChemData.init_chemical_data(): the passed number of diffusion rates ({len(diffusion_rates)}) " \
-                    f"doesn't match the previously-set number of chemical species (self.n_species)"
+                    f"doesn't match the previously-set number of chemical species ({self.n_species})"
 
         if diffusion_rates and names:
             assert len(names) == len(diffusion_rates), \
