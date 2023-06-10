@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
-from src.modules.reactions.reaction_data import ChemData
+from src.modules.chemicals.chem_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 from src.modules.movies.movies import MovieTabular
 

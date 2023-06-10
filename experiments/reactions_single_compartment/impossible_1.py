@@ -28,16 +28,13 @@
 # ![Temporarily suspending the Laws of Physics](../../docs/impossible_1.png)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_data import ChemData as chem
+from src.modules.chemicals.chem_data import ChemData as chem
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
-from src.modules.numerical.numerical import Numerical as num
 
-import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from src.modules.visualization.graphic_log import GraphicLog

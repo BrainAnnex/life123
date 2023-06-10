@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 from scipy.ndimage import shift
 from src.life_1D.bio_sim_1d import BioSim1D
-from src.modules.reactions.reaction_data import ChemData as chem
+from src.modules.chemicals.chem_data import ChemData as chem
 from src.modules.numerical.numerical import Numerical as num
 from src.modules.movies.movies import MovieArray
 

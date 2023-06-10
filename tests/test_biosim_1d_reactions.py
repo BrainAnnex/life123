@@ -2,7 +2,7 @@
 # for general tests of 1D system, see test_biosim_1d.py
 
 import numpy as np
-from src.modules.reactions.reaction_data import ChemData
+from src.modules.chemicals.chem_data import ChemData
 from src.life_1D.bio_sim_1d import BioSim1D
 
 

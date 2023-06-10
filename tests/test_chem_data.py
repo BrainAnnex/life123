@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from src.modules.reactions.reaction_data import ChemData
+from src.modules.chemicals.chem_data import ChemData
 
 
 

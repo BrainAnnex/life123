@@ -23,17 +23,15 @@
 # LAST REVISED: June 5, 2023
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_data import ChemData
+from src.modules.chemicals.chem_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import plotly.express as px
 import plotly.graph_objects as go
-from src.modules.html_log.html_log import HtmlLog as log
 from src.modules.visualization.graphic_log import GraphicLog
 
 # %%
