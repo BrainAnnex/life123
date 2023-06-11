@@ -43,6 +43,143 @@ def test_initialize():
     assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14])
 
+    assert np.allclose(chem_data.temp, 298.15)      # The default temperature
+
+
+
+
+#############  TO READ DATA STRUCTURES of the CHEMICALS (incl. diffusion data)  #############
+
+def test_number_of_chemicals():
+    chem_data = ChemData(names=['A', 'B', 'C'])
+    assert chem_data.number_of_chemicals() == 3
+
+    chem_data = ChemData(names=[])
+    assert chem_data.number_of_chemicals() == 0
+
+
+
+def test_assert_valid_species_index():
+    pass    # TODO
+
+def test_assert_valid_diffusion():
+    pass    # TODO
+
+
+
+def test_get_index():
+    chem_data = ChemData(names=['A', 'B', 'C'])
+    assert chem_data.get_index('A') == 0
+    assert chem_data.get_index('B') == 1
+    assert chem_data.get_index('C') == 2
+    with pytest.raises(Exception):
+        assert chem_data.get_index('X')     # Not found
+
+
+
+def test_get_name():
+    chem_data = ChemData(names=['A', 'B', 'C'])
+    assert chem_data.get_name(0) == 'A'
+    assert chem_data.get_name(1) == 'B'
+    assert chem_data.get_name(2) == 'C'
+
+    with pytest.raises(Exception):
+        chem_data.get_name(3)               # Out of bounds
+    with pytest.raises(Exception):
+        chem_data.get_name(-1)              # Invalid argument value
+    with pytest.raises(Exception):
+        chem_data.get_name("some string")   # Invalid argument type
+    with pytest.raises(Exception):
+        chem_data.get_name(3.14)            # Invalid argument type
+
+
+
+def test_get_all_names():
+    pass    # TODO
+
+def test_get_diffusion_rate():
+    pass    # TODO
+
+def test_get_all_diffusion_rates():
+    pass    # TODO
+
+def test_missing_diffusion_rate():
+    pass    # TODO
+
+
+
+
+#############  TO READ DATA STRUCTURES of the REACTIONS  #############
+
+def test_number_of_reactions():
+    pass   # TODO
+
+def test_assert_valid_rxn_index():
+    pass   # TODO
+
+def test_get_reaction():
+    pass   # TODO
+
+def test_get_reactants():
+    pass   # TODO
+
+def test_get_reactants_formula():
+    pass   # TODO
+
+def test_get_products():
+    pass   # TODO
+
+def test_get_products_formula():
+    pass   # TODO
+
+def test_get_forward_rate():
+    pass   # TODO
+
+def test_get_reverse_rate():
+    pass   # TODO
+
+
+
+def test_get_chemicals_in_reaction():
+    chem = ChemData(names=["A", "B"])
+
+    with pytest.raises(Exception):
+        chem.get_chemicals_in_reaction(0)   # There are no reactions defined yet
+
+    chem.add_reaction(reactants="A", products="B")  # Reaction 0 : A <-> B
+    assert chem.get_chemicals_in_reaction(0) == {0, 1}
+
+    with pytest.raises(Exception):
+        chem.get_chemicals_in_reaction(1)   # There is no reaction 1
+
+    chem.add_chemical("C")
+
+    chem.add_reaction(reactants=["B"], products=[(2, "C")])  # Reaction 1 : B <-> 2C
+    assert chem.get_chemicals_in_reaction(0) == {0, 1}
+    assert chem.get_chemicals_in_reaction(1) == {1, 2}
+
+    chem.add_reaction(reactants=["A"], products=["C"])      # Reaction 2 : A <-> C
+    assert chem.get_chemicals_in_reaction(0) == {0, 1}
+    assert chem.get_chemicals_in_reaction(1) == {1, 2}
+    assert chem.get_chemicals_in_reaction(2) == {0, 2}
+
+    chem.add_chemical("D")
+    chem.add_reaction(reactants=["A", "B"], products="D")    # Reaction 3 : A + B <-> D
+    assert chem.get_chemicals_in_reaction(0) == {0, 1}
+    assert chem.get_chemicals_in_reaction(1) == {1, 2}
+    assert chem.get_chemicals_in_reaction(2) == {0, 2}
+    assert chem.get_chemicals_in_reaction(3) == {0, 1, 3}
+
+
+
+
+def test_get_reactions_participating_in():
+    pass   # TODO
+
+
+
+
+##############    TO SET DATA   ##############
 
 
 def test_init_chemical_data():
@@ -75,42 +212,6 @@ def test_init_chemical_data():
 
 
 
-def test_number_of_chemicals():
-    chem_data = ChemData(names=['A', 'B', 'C'])
-    assert chem_data.number_of_chemicals() == 3
-
-    chem_data = ChemData(names=[])
-    assert chem_data.number_of_chemicals() == 0
-
-
-
-def test_get_name():
-    chem_data = ChemData(names=['A', 'B', 'C'])
-    assert chem_data.get_name(0) == 'A'
-    assert chem_data.get_name(1) == 'B'
-    assert chem_data.get_name(2) == 'C'
-
-    with pytest.raises(Exception):
-        chem_data.get_name(3)               # Out of bounds
-    with pytest.raises(Exception):
-        chem_data.get_name(-1)              # Invalid argument value
-    with pytest.raises(Exception):
-        chem_data.get_name("some string")   # Invalid argument type
-    with pytest.raises(Exception):
-        chem_data.get_name(3.14)            # Invalid argument type
-
-
-
-def test_get_index():
-    chem_data = ChemData(names=['A', 'B', 'C'])
-    assert chem_data.get_index('A') == 0
-    assert chem_data.get_index('B') == 1
-    assert chem_data.get_index('C') == 2
-    with pytest.raises(Exception):
-        assert chem_data.get_index('X')     # Not found
-
-
-
 def test_add_chemical():
     chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2, 3.14])
     assert chem_data.n_species == 3
@@ -137,6 +238,91 @@ def test_add_chemical():
     assert chem_data.get_all_names() == ['A', 'B', 'C', 'D', 'E']
     assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14, 8, 25])
+
+
+
+####  MACRO-MOLECULES  ####
+
+
+def test_add_macromolecules():
+    chem_data = ChemData()
+    chem_data.add_macromolecules(["M1", "M2"])
+    assert chem_data.get_macromolecules() == ["M1", "M2"]
+    chem_data.add_macromolecules(["M3"])
+    assert chem_data.get_macromolecules() == ["M1", "M2", "M3"]
+
+def test_get_macromolecules():
+    chem_data = ChemData()
+    assert chem_data.get_macromolecules() == []
+    chem_data.add_macromolecules(["M1", "M2"])
+    assert chem_data.get_macromolecules() == ["M1", "M2"]
+    chem_data.add_macromolecules(["M3"])
+    assert chem_data.get_macromolecules() == ["M1", "M2", "M3"]
+
+
+
+def test_set_binding_site_affinity():
+    chem_data = ChemData(["A", "B"])
+    chem_data.add_macromolecules(["M1", "M2"])
+
+    chem_data.set_binding_site_affinity("M1", "A", 3)
+    assert chem_data.get_binding_site_affinity("M1", "A") == 3
+
+    chem_data.set_binding_site_affinity("M1", "B", 5)
+    assert chem_data.get_binding_site_affinity("M1", "A") == 3
+    assert chem_data.get_binding_site_affinity("M1", "B") == 5
+
+    chem_data.set_binding_site_affinity("M2", "B", 11)
+    assert chem_data.get_binding_site_affinity("M1", "A") == 3
+    assert chem_data.get_binding_site_affinity("M1", "B") == 5
+    assert chem_data.get_binding_site_affinity("M2", "B") == 11
+
+    chem_data.set_binding_site_affinity("M1", "A", 999)     # Over-write previous value
+    assert chem_data.get_binding_site_affinity("M1", "A") == 999
+    assert chem_data.get_binding_site_affinity("M1", "B") == 5
+    assert chem_data.get_binding_site_affinity("M2", "B") == 11
+
+
+    chem_data.set_binding_site_affinity("M3", "A", 4)
+    assert chem_data.get_binding_site_affinity("M3", "A") == 4
+    assert chem_data.get_macromolecules() == ["M1", "M2", "M3"]     # Got automatically added
+    assert chem_data.get_binding_site_affinity("M1", "A") == 999
+    assert chem_data.get_binding_site_affinity("M1", "B") == 5
+    assert chem_data.get_binding_site_affinity("M2", "B") == 11
+
+    with pytest.raises(Exception):
+        chem_data.set_binding_site_affinity("M1", "X", 100)     # Unknown chemical "X"
+
+
+
+def test_get_binding_site_affinity():
+    pass  # TODO
+
+
+
+def test_reset_macromolecule():
+    pass   # TODO
+
+
+def test_clear_macromolecules():
+    chem_data = ChemData()
+    chem_data.add_macromolecules(["M1", "M2"])
+    chem_data.clear_macromolecules()
+    assert chem_data.macro_molecules == []
+    assert chem_data.binding_sites == {}
+
+
+
+
+def test_set_diffusion_rate():
+    pass   # TODO
+
+
+    
+def test_set_temp():
+    chem_data = ChemData()
+    chem_data.set_temp(123)
+    assert chem_data.temp == 123
 
 
 
@@ -269,55 +455,34 @@ def test_add_reaction():
     assert np.allclose(r.K , 1.0461347154679432)  # exp(75/(8.3144598 * 200))
     assert np.allclose(r.kF , 10.)
     assert np.allclose(r.kR , 9.558998331803693) # 10. / 1.0461347154679432
-    
-
-    
-def test_clear_reactions():
-    pass
 
 
+def test_clear_reactions_data():
+    pass   # TODO
 
-# TO DESCRIBE THE DATA
+
+
+
+#################  TO DESCRIBE THE DATA  #################
 
 def test_describe_reactions():
     pass
 
+def test_multiple_reactions_describe():
+    pass   # TODO
 
-
-def test_get_chemicals_in_reaction():
-    chem = ChemData(names=["A", "B"])
-
-    with pytest.raises(Exception):
-        chem.get_chemicals_in_reaction(0)   # There are no reactions defined yet
-
-    chem.add_reaction(reactants="A", products="B")  # Reaction 0 : A <-> B
-    assert chem.get_chemicals_in_reaction(0) == {0, 1}
-
-    with pytest.raises(Exception):
-        chem.get_chemicals_in_reaction(1)   # There is no reaction 1
-
-    chem.add_chemical("C")
-
-    chem.add_reaction(reactants=["B"], products=[(2, "C")])  # Reaction 1 : B <-> 2C
-    assert chem.get_chemicals_in_reaction(0) == {0, 1}
-    assert chem.get_chemicals_in_reaction(1) == {1, 2}
-
-    chem.add_reaction(reactants=["A"], products=["C"])      # Reaction 2 : A <-> C
-    assert chem.get_chemicals_in_reaction(0) == {0, 1}
-    assert chem.get_chemicals_in_reaction(1) == {1, 2}
-    assert chem.get_chemicals_in_reaction(2) == {0, 2}
-
-    chem.add_chemical("D")
-    chem.add_reaction(reactants=["A", "B"], products="D")    # Reaction 3 : A + B <-> D
-    assert chem.get_chemicals_in_reaction(0) == {0, 1}
-    assert chem.get_chemicals_in_reaction(1) == {1, 2}
-    assert chem.get_chemicals_in_reaction(2) == {0, 2}
-    assert chem.get_chemicals_in_reaction(3) == {0, 1, 3}
+def test_single_reaction_describe():
+    pass   # TODO
 
 
 
 
-###  SUPPORT FOR CREATION OF NETWORK DIAGRAMS  ###
+#############  FOR CREATION OF NETWORK DIAGRAMS  #############
+
+def test_prepare_graph_network():
+    pass   # TODO
+
+
 
 def test_create_graph_network_data():
     chem = ChemData(names=["A", "B"])
@@ -331,3 +496,16 @@ def test_create_graph_network_data():
                 {'id': 4, 'name': 'reacts', 'source': 0, 'target': 2}
                 ]
     assert network_data == expected
+
+
+
+def test_assign_color_mapping():
+    pass   # TODO
+
+
+
+
+#############  PRIVATE METHODS  #############
+
+def test__internal_reactions_data():
+    pass   # TODO
