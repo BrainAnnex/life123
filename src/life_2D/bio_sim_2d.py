@@ -86,7 +86,7 @@ class BioSim2D:
         if reactions:
             self.reaction_dynamics = reactions
         else:
-            self.reaction_dynamics = ReactionDynamics(reaction_data=chem_data)
+            self.reaction_dynamics = ReactionDynamics(chem_data=chem_data)
 
         self.n_bins_x = n_cells_x
         self.n_bins_y = n_cells_y

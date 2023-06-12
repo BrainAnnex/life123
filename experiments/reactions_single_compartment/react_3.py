@@ -64,7 +64,7 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 # # Start the simulation
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 
 # %%
 # Initial concentrations of all the chemicals, in index order

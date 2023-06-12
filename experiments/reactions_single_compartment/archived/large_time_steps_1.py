@@ -111,7 +111,7 @@ initial_conc
 # Negative concentrations are automatically avoided, but nonetheless the plots are ragged... and the solutions are eventually unstable.
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 
@@ -180,7 +180,7 @@ dynamics.plot_curves(chemicals=["A", "B", "C"])
 # (Note: the 1/2 substeps are on a per-reaction basis)
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
+dynamics = ReactionDynamics(chem_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
 dynamics.set_conc(conc=initial_conc, snapshot=True) 
 dynamics.describe_state()
 

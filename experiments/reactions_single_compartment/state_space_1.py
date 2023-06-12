@@ -54,7 +54,7 @@ chem_data.add_reaction(reactants="A", products=[(3,"B")], forward_rate=5., rever
 chem_data.describe_reactions()
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"A": 10., "B": 50.},
                   snapshot=True)
 dynamics.describe_state()

@@ -86,7 +86,7 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 # # Run 1 : extremely small fixed time steps (no substeps)
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -105,7 +105,7 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 # # Run 2 : very small time steps, with dynamic substeps
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -125,7 +125,7 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 # # Run 3 : small-ish time steps, with dynamic substeps
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -145,7 +145,7 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 # # Run 4 : same as previous run, but fewer dynamic substeps
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -165,7 +165,7 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 # # Run 5 : same as previous run, but slightly larger primary step
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -188,7 +188,7 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 # # Run 6 : same as previous run, but no substeps
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 

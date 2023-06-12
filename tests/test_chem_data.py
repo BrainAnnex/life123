@@ -465,9 +465,6 @@ def test_clear_reactions_data():
 
 #################  TO DESCRIBE THE DATA  #################
 
-def test_describe_reactions():
-    pass
-
 def test_multiple_reactions_describe():
     pass   # TODO
 

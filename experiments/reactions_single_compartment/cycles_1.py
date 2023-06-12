@@ -94,7 +94,7 @@ initial_conc
 # (trial and error, not shown, reveals that increasing any of the time steps below, leads to "excessive time step" errors)
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 
@@ -170,7 +170,7 @@ dynamics.is_in_equilibrium()
 # # Run # 2. VARIABLE time resolution
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
+dynamics = ReactionDynamics(chem_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
 dynamics.set_conc(conc=initial_conc, snapshot=True) 
 dynamics.describe_state()
 
@@ -231,7 +231,7 @@ run2
 #
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
+dynamics = ReactionDynamics(chem_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
 dynamics.set_conc(conc=initial_conc, snapshot=True) 
 dynamics.describe_state()
 

@@ -99,7 +99,7 @@ def test_single_compartment_react():
 
     initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
 
-    dynamics = ReactionDynamics(reaction_data=chem_data)
+    dynamics = ReactionDynamics(chem_data=chem_data)
     dynamics.set_conc(conc=initial_conc, snapshot=False)
 
     dynamics.set_diagnostics()
@@ -115,7 +115,7 @@ def test_single_compartment_react():
     # The above computation automatically took 2 normal steps, 1 half-size step and 1 normal step;
     # now repeat the process manually
 
-    dynamics2 = ReactionDynamics(reaction_data=chem_data)
+    dynamics2 = ReactionDynamics(chem_data=chem_data)
     dynamics2.set_conc(conc=initial_conc, snapshot=False)
 
     dynamics2.set_diagnostics()
@@ -322,7 +322,7 @@ def test_single_compartment_react_variable_steps_1():
     chem_data.add_reaction(reactants="S", products="X",
                            forward_rate=6., reverse_rate=3.)
 
-    dynamics = ReactionDynamics(reaction_data=chem_data)
+    dynamics = ReactionDynamics(chem_data=chem_data)
     dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
     dynamics.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
@@ -366,7 +366,7 @@ def test_single_compartment_correct_neg_conc_1():
     chem_data.add_reaction(reactants="S", products="X",
                            forward_rate=6., reverse_rate=3.)
 
-    dynamics = ReactionDynamics(reaction_data=chem_data)
+    dynamics = ReactionDynamics(chem_data=chem_data)
     dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
     dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
@@ -659,7 +659,7 @@ def test_reaction_speeds():
     assert rxn.are_all_slow_rxns()
 
     chem_data.add_reaction(reactants=["B"], products=["C"], forward_rate=13., reverse_rate=12.)
-    assert rxn.reaction_data.number_of_reactions() == 2
+    assert rxn.chem_data.number_of_reactions() == 2
     assert rxn.slow_rxns() == [0]
     assert rxn.fast_rxns() == [1]       # The newly-added one
     rxn.set_rxn_speed(1, "S")
@@ -750,7 +750,7 @@ def test_examine_increment_array():
     # NEW THRESHOLD (fast_threshold_fraction=0.1)
 
     chem_data.add_reaction(reactants=["B"], products=["C"], forward_rate=13., reverse_rate=12.)   # 2nd reaction: B <-> C
-    assert rxn.reaction_data.number_of_reactions() == 2
+    assert rxn.chem_data.number_of_reactions() == 2
     assert rxn.get_rxn_speed(1) == "F"  # Newly-added reactions are assumed "Fast" (until proven otherwise!)
 
     rxn.set_rxn_speed(0, "S")           # Reset reactions to "Slow"
@@ -869,7 +869,7 @@ def test_examine_increment_array_2():
     # NEW THRESHOLD (fast_threshold_fraction=10.)
 
     chem_data.add_reaction(reactants=["B"], products=["C"], forward_rate=13., reverse_rate=12.)   # 2nd reaction: B <-> C
-    assert rxn.reaction_data.number_of_reactions() == 2
+    assert rxn.chem_data.number_of_reactions() == 2
     assert rxn.get_rxn_speed(1) == "F"  # Newly-added reactions are assumed "Fast" (until proven otherwise!)
 
     rxn.set_rxn_speed(0, "S")           # Reset reactions to "Slow"

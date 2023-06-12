@@ -42,7 +42,7 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"A": 20., "B": 0.},
                   snapshot=True)
 dynamics.describe_state()
@@ -106,7 +106,7 @@ chem_data.describe_reactions()  # Notice how the enzyme `E` is noted in the prin
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"A": 20., "B": 0., "E": 30.},
                   snapshot=True)      # Plenty of enzyme `E`
 dynamics.describe_state()

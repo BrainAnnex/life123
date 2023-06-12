@@ -86,7 +86,7 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 # # Start the simulation
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 
 # %% [markdown]
 # ### Set the initial concentrations of all the chemicals, in their index order
@@ -182,7 +182,7 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 # We'll use constant steps of size 0.0005, which is 1/4 of the smallest steps (the "substep" size) previously used in the variable-step run
 
 # %%
-dynamics2 = ReactionDynamics(reaction_data=chem_data)
+dynamics2 = ReactionDynamics(chem_data=chem_data)
 
 # %% tags=[]
 dynamics2.set_conc([50., 0, 0.], snapshot=True)

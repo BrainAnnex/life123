@@ -122,12 +122,12 @@ class BioSim1D:
         if chem_data:
             self.chem_data = chem_data
         else:
-            self.chem_data = reactions.reaction_data
+            self.chem_data = reactions.chem_data
 
         if reactions:
             self.reaction_dynamics = reactions
         else:
-            self.reaction_dynamics = ReactionDynamics(reaction_data=chem_data)
+            self.reaction_dynamics = ReactionDynamics(chem_data=chem_data)
 
         self.n_bins = n_bins
 

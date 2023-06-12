@@ -13,7 +13,7 @@ def test_initialization():
 
     chem_data.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=8., reverse_rate=2.)
 
-    assert bio.reaction_dynamics.reaction_data == chem_data
+    assert bio.reaction_dynamics.chem_data == chem_data
 
 
 

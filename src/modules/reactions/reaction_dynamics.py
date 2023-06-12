@@ -31,14 +31,14 @@ class ReactionDynamics:
     In the context of Life123, this may be thought of as a "zero-dimensional system"
     """
 
-    def __init__(self, reaction_data):
+    def __init__(self, chem_data):
         """
-        :param reaction_data:   Object of type "ReactionData" (with data about the chemicals and their reactions)
+        :param chem_data:   Object of type "ChemData" (with data about the chemicals and their reactions)
                                     It's acceptable to pass None,
                                     and take care of it later (though probably a bad idea!)
                                     TODO: maybe offer an option to let the constructor instantiate that object?
         """
-        self.reaction_data = reaction_data
+        self.chem_data = chem_data
 
         self.system = None  # Concentration data in the single compartment we're simulating, for all the chemicals
                             # A Numpy array of the concentrations of all the chemical species, in their index order
@@ -134,14 +134,14 @@ class ReactionDynamics:
         """
         # TODO: more validations, incl. of individual values being wrong data type
 
-        assert len(conc) == self.reaction_data.number_of_chemicals(), \
+        assert len(conc) == self.chem_data.number_of_chemicals(), \
             f"ReactionDynamics.set_conc(): the number of concentration values passed in the argument 'conc' ({len(conc)}) " \
-            f"must match the number of declared chemicals ({self.reaction_data.number_of_chemicals()})"
+            f"must match the number of declared chemicals ({self.chem_data.number_of_chemicals()})"
 
         if type(conc) == dict:
             conc_list = []
-            for species_index in range(self.reaction_data.number_of_chemicals()):
-                name = self.reaction_data.get_name(species_index)
+            for species_index in range(self.chem_data.number_of_chemicals()):
+                name = self.chem_data.get_name(species_index)
                 if name is None:
                     raise Exception(f"ReactionDynamics.set_conc(): to use a dictionary for the `conc` arguments, "
                                     f"all the chemicals must first be given names - to be used as keys for the dictionary "
@@ -186,9 +186,9 @@ class ReactionDynamics:
             f"ReactionDynamics.set_chem_conc(): chemical concentrations cannot be negative (value passed: {conc})"
 
         if species_name is not None:
-            species_index = self.reaction_data.get_index(species_name)
+            species_index = self.chem_data.get_index(species_name)
         elif species_index is not None:
-            self.reaction_data.assert_valid_species_index(species_index)
+            self.chem_data.assert_valid_species_index(species_index)
         else:
             raise Exception("ReactionDynamics.set_chem_conc(): at least one "
                             "of the arguments `species_index` or `species_name` must be provided")
@@ -202,7 +202,7 @@ class ReactionDynamics:
                                         #       as returned by get_reactions_participating_in()
 
         if snapshot:
-            self.add_snapshot(caption=f"Set concentration of `{self.reaction_data.get_name(species_index)}`")
+            self.add_snapshot(caption=f"Set concentration of `{self.chem_data.get_name(species_index)}`")
 
 
 
@@ -232,16 +232,16 @@ class ReactionDynamics:
         if system_data is None:
             system_data = self.system
         else:
-            assert system_data.size == self.reaction_data.number_of_chemicals(), \
+            assert system_data.size == self.chem_data.number_of_chemicals(), \
                 f"ReactionDynamics.get_conc_dict(): the argument `system_data` must be a 1-D Numpy array with as many entries " \
-                f"as the declared number of chemicals ({self.reaction_data.number_of_chemicals()})"
+                f"as the declared number of chemicals ({self.chem_data.number_of_chemicals()})"
 
 
         if species is None:
             if system_data is None:
                 return {}
             else:
-                return {self.reaction_data.get_name(index): system_data[index]
+                return {self.chem_data.get_name(index): system_data[index]
                         for index, conc in enumerate(system_data)}
         else:
             assert type(species) == list or  type(species) == tuple, \
@@ -250,7 +250,7 @@ class ReactionDynamics:
 
             conc_dict = {}
             for name in species:
-                species_index = self.reaction_data.get_index(name)
+                species_index = self.chem_data.get_index(name)
                 conc_dict[name] = system_data[species_index]
 
             return conc_dict
@@ -277,7 +277,7 @@ class ReactionDynamics:
         Return a list of all the reactions that are marked as "fast"
         :return:
         """
-        return [i for i in range(self.reaction_data.number_of_reactions())
+        return [i for i in range(self.chem_data.number_of_reactions())
                 if i not in self.slow_rxns()]
         # Alternate way:
         # return list(set(range(self.reaction_data.number_of_reactions()).difference(self.slow_rxns()))
@@ -289,7 +289,7 @@ class ReactionDynamics:
         Return True iff all the reactions are marked as "slow"
         :return:
         """
-        return len(self.slow_rxns()) == self.reaction_data.number_of_reactions()
+        return len(self.slow_rxns()) == self.chem_data.number_of_reactions()
 
 
 
@@ -314,7 +314,7 @@ class ReactionDynamics:
         :return:            None
         """
         assert speed in ["S", "F"], "set_rxn_speed(): `speed` argument must be either 'S' or 'F'"
-        self.reaction_data.assert_valid_rxn_index(rxn_index)
+        self.chem_data.assert_valid_rxn_index(rxn_index)
         self.reaction_speeds[rxn_index] = speed
 
 
@@ -339,7 +339,7 @@ class ReactionDynamics:
 
         :return:    None
         """
-        self.reaction_data.clear_reactions_data()
+        self.chem_data.clear_reactions_data()
         self.set_rxn_speed_all_fast()   # Reset all the reaction speeds to "Fast".      TODO: obsolete
 
 
@@ -361,11 +361,11 @@ class ReactionDynamics:
         """
         print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
 
-        n_species = self.reaction_data.number_of_chemicals()
+        n_species = self.chem_data.number_of_chemicals()
         print(f"{n_species} species:")
 
         # Show a line of line of data for each chemical species in turn
-        for species_index, name in enumerate(self.reaction_data.get_all_names()):
+        for species_index, name in enumerate(self.chem_data.get_all_names()):
             if name:    # If a name was provided, show it
                 name = f" ({name})"
             else:
@@ -869,7 +869,7 @@ class ReactionDynamics:
                                                               "step_factor": self.error_abort_step_factor,
                                                               "caption": "neg. conc. from combined effect of all rxns",
                                                               "time_step": delta_time})
-                    for rxn_index in range(self.reaction_data.number_of_reactions()):
+                    for rxn_index in range(self.chem_data.number_of_reactions()):
                         self.save_diagnostic_rxn_data(rxn_index=rxn_index, time_step=delta_time,
                                                       increment_vector_single_rxn=None,
                                                       caption=f"aborted: neg. conc. from combined multiple rxns")
@@ -896,7 +896,7 @@ class ReactionDynamics:
                                 of all the chemicals across a time step
         :return:            A measure of change in the concentrations across a simulation step
         """
-        n_chems = self.reaction_data.number_of_chemicals()
+        n_chems = self.chem_data.number_of_chemicals()
 
         assert n_chems == len(delta_conc), \
             f"norm_A(): the number of entries in the passed array ({len(delta_conc)}) " \
@@ -925,7 +925,7 @@ class ReactionDynamics:
                                     of all the chemicals across a time step
         :return:                A measure of change in the concentrations across a simulation step
         """
-        n_chems = self.reaction_data.number_of_chemicals()
+        n_chems = self.chem_data.number_of_chemicals()
 
         assert n_chems == len(baseline_conc), \
             f"norm_B(): the number of entries in the array passed in the arg `baseline_conc` ({len(baseline_conc)}) " \
@@ -1050,7 +1050,7 @@ class ReactionDynamics:
                             EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):   array([7. , -21.])
         """
         # The increment vector is cumulative for ALL the requested reactions
-        increment_vector = np.zeros(self.reaction_data.number_of_chemicals(), dtype=float)       # One element per chemical species
+        increment_vector = np.zeros(self.chem_data.number_of_chemicals(), dtype=float)       # One element per chemical species
 
         # Compute the forward and reverse "conversions" of all the applicable reactions
         delta_dict = self.compute_all_reaction_deltas(conc_array=conc_array, delta_time=delta_time, rxn_list=rxn_list)
@@ -1059,9 +1059,9 @@ class ReactionDynamics:
 
 
         if rxn_list is None:    # Meaning ALL reactions
-            rxn_list = range(self.reaction_data.number_of_reactions())  # This will be a list of all the reaction index numbers
+            rxn_list = range(self.chem_data.number_of_reactions())  # This will be a list of all the reaction index numbers
 
-        number_chemicals = self.reaction_data.number_of_chemicals()
+        number_chemicals = self.chem_data.number_of_chemicals()
 
         # For each applicable reaction, find the needed adjustments ("deltas")
         #   to the concentrations of the reactants and products,
@@ -1074,7 +1074,7 @@ class ReactionDynamics:
             #       then combine then at end
             increment_vector_single_rxn = np.zeros(number_chemicals, dtype=float)
 
-            rxn = self.reaction_data.get_reaction(rxn_index)
+            rxn = self.chem_data.get_reaction(rxn_index)
             reactants = rxn.extract_reactants()
             products = rxn.extract_products()
 
@@ -1149,8 +1149,8 @@ class ReactionDynamics:
 
         # TODO: turn into a more efficient single step, as as:
         #(reactants, products) = cls.all_reactions.unpack_terms(rxn_index)
-        reactants = self.reaction_data.get_reactants(rxn_index)
-        products = self.reaction_data.get_products(rxn_index)
+        reactants = self.chem_data.get_reactants(rxn_index)
+        products = self.chem_data.get_products(rxn_index)
 
 
         """
@@ -1251,7 +1251,7 @@ class ReactionDynamics:
         :return:                        None (an Exception is raised if a negative concentration is detected)
         """
         if (baseline_conc + delta_conc) < 0:
-            print(f"\n*** CAUTION: negative concentration in chemical `{self.reaction_data.get_name(species_index)}` in step starting at t={self.system_time:.4g}.  "
+            print(f"\n*** CAUTION: negative concentration in chemical `{self.chem_data.get_name(species_index)}` in step starting at t={self.system_time:.4g}.  "
                   f"It will be AUTOMATICALLY CORRECTED with a reduction in time step size, as follows:")
 
             # A type of HARD ABORT is detected (a single reaction that, by itself, would lead to a negative concentration;
@@ -1259,15 +1259,15 @@ class ReactionDynamics:
             if self.diagnostics:
                 self.save_diagnostic_decisions_data(data={"action": "ABORT",
                                                           "step_factor": self.error_abort_step_factor,
-                                                          "caption": f"neg. conc. in {self.reaction_data.get_name(species_index)} from rxn # {rxn_index}",
+                                                          "caption": f"neg. conc. in {self.chem_data.get_name(species_index)} from rxn # {rxn_index}",
                                                           "time_step": delta_time})
                 self.save_diagnostic_rxn_data(rxn_index=rxn_index, time_step=delta_time,
                                               increment_vector_single_rxn=None,
-                                              caption=f"aborted: neg. conc. in `{self.reaction_data.get_name(species_index)}`")
+                                              caption=f"aborted: neg. conc. in `{self.chem_data.get_name(species_index)}`")
 
             raise ExcessiveTimeStepHard(f"    INFO: the tentative time step ({delta_time:.5g}) "
-                                    f"leads to a NEGATIVE concentration of `{self.reaction_data.get_name(species_index)}` "
-                                    f"from reaction {self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
+                                    f"leads to a NEGATIVE concentration of `{self.chem_data.get_name(species_index)}` "
+                                    f"from reaction {self.chem_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
                                     f"\n      Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}"
                                     f"\n      -> will backtrack, and re-do step with a SMALLER delta time, "
                                     f"multiplied by {self.error_abort_step_factor} (set to {delta_time * self.error_abort_step_factor:.5g}) "
@@ -1325,7 +1325,7 @@ class ReactionDynamics:
 
 
         # Loop over just the chemicals in the given reaction (not over ALL the chemicals!)
-        for i in self.reaction_data.get_chemicals_in_reaction(rxn_index):
+        for i in self.chem_data.get_chemicals_in_reaction(rxn_index):
 
             delta_conc = delta_conc_array[i]
             if baseline_conc_array is None:
@@ -1369,11 +1369,11 @@ class ReactionDynamics:
         delta_dict = {}
 
         if rxn_list is None:    # Meaning ALL reactions
-            rxn_list = range(self.reaction_data.number_of_reactions())
+            rxn_list = range(self.chem_data.number_of_reactions())
 
         # Process the requested reactions
         for i in rxn_list:      # Consider each reaction in turn
-            rxn = self.reaction_data.get_reaction(i)
+            rxn = self.chem_data.get_reaction(i)
             delta = self.compute_reaction_delta(rxn=rxn, conc_array=conc_array, delta_time=delta_time)
             delta_dict[i] = delta
 
@@ -1493,18 +1493,18 @@ class ReactionDynamics:
                                       (because NaN values are indicative of aborted steps; can't invalidate the stoichiometry
                                       check because of that)
         """
-        if (not suppress_warning) and (self.reaction_data.number_of_reactions() > 1):
-            print(f"*** WARNING: {self.reaction_data.number_of_reactions()} reactions are present.  "
+        if (not suppress_warning) and (self.chem_data.number_of_reactions() > 1):
+            print(f"*** WARNING: {self.chem_data.number_of_reactions()} reactions are present.  "
                   f"stoichiometry_checker() currently only works for 1-reaction simulations")
 
-        self.reaction_data.assert_valid_rxn_index(rxn_index)
+        self.chem_data.assert_valid_rxn_index(rxn_index)
 
         if np.isnan(delta_arr).any():
             return True         # The presence of a NaN, anywhere in delta_arr, is indicative of an aborted step
 
-        rxn = self.reaction_data.get_reaction(rxn_index)
-        reactants = self.reaction_data.get_reactants(rxn_index)
-        products = self.reaction_data.get_products(rxn_index)
+        rxn = self.chem_data.get_reaction(rxn_index)
+        reactants = self.chem_data.get_reactants(rxn_index)
+        products = self.chem_data.get_products(rxn_index)
 
         # Pick (arbitrarily) the first reactant,
         # to establish a baseline change in concentration relative to its stoichiometric coefficient
@@ -1549,7 +1549,7 @@ class ReactionDynamics:
                   "the diagnostics must be turned on, with set_diagnostics(), prior to the simulation run!")
             return False
 
-        number_rxns = self.reaction_data.number_of_reactions()
+        number_rxns = self.chem_data.number_of_reactions()
         assert number_rxns == 1, \
                 f"stoichiometry_checker_entire_run(): this function is currently designed for just 1 reaction " \
                 f"(whereas {number_rxns} are present)"
@@ -1579,7 +1579,7 @@ class ReactionDynamics:
 
         :return:    A list of strings
         """
-        chemical_list = self.reaction_data.get_all_names()      # EXAMPLE: ["A", "B", "X"]
+        chemical_list = self.chem_data.get_all_names()      # EXAMPLE: ["A", "B", "X"]
         chemical_delta_list = ["Delta " + name
                                for name in chemical_list]
         return chemical_delta_list
@@ -1636,25 +1636,25 @@ class ReactionDynamics:
         :return:                            None
         """
         # Validate the reaction index
-        self.reaction_data.assert_valid_rxn_index(rxn_index)
+        self.chem_data.assert_valid_rxn_index(rxn_index)
 
         # Validate increment_vector_single_rxn
         if increment_vector_single_rxn is None:     # If the values aren't available (as is the case in aborts)
-            increment_vector_single_rxn = np.full(self.reaction_data.number_of_chemicals(), np.nan)
+            increment_vector_single_rxn = np.full(self.chem_data.number_of_chemicals(), np.nan)
         else:
-            assert len(increment_vector_single_rxn) == self.reaction_data.number_of_chemicals(), \
+            assert len(increment_vector_single_rxn) == self.chem_data.number_of_chemicals(), \
                 f"save_diagnostic_rxn_data(): the length of the Numpy array increment_vector_single_rxn " \
-                f"({len(increment_vector_single_rxn)}) doesn't match the total numbers of chemicals ({self.reaction_data.number_of_chemicals()})"
+                f"({len(increment_vector_single_rxn)}) doesn't match the total numbers of chemicals ({self.chem_data.number_of_chemicals()})"
 
 
         if self.diagnostic_rxn_data == {}:    # INITIALIZE the dictionary self.diagnostic_rxn_data, if needed
-            for i in range(self.reaction_data.number_of_reactions()):
+            for i in range(self.chem_data.number_of_reactions()):
                 self.diagnostic_rxn_data[i] = MovieTabular(parameter_name="START_TIME")       # One per reaction
 
         data_snapshot = {}
         # Add entries to the above dictionary, starting with the Delta conc. for all the chemicals
         for index, conc in enumerate(increment_vector_single_rxn):
-            data_snapshot["Delta " + self.reaction_data.get_name(index)] = conc
+            data_snapshot["Delta " + self.chem_data.get_name(index)] = conc
 
         #data_snapshot["reaction"] = rxn_index           # TODO: now redundant because factored out into separate data frames
         data_snapshot["time_step"] = time_step
@@ -1670,7 +1670,7 @@ class ReactionDynamics:
         :param msg: Value to set the comment field to
         :return:    None
         """
-        for rxn_index in range(self.reaction_data.number_of_reactions()):
+        for rxn_index in range(self.chem_data.number_of_reactions()):
             self.diagnostic_rxn_data[rxn_index].set_caption_last_snapshot(msg)
 
 
@@ -1718,10 +1718,10 @@ class ReactionDynamics:
                                     'START_TIME' 'Delta A' 'Delta B'... 'time_step' 'caption'
         """
         # Validate the reaction index
-        self.reaction_data.assert_valid_rxn_index(rxn_index)
+        self.chem_data.assert_valid_rxn_index(rxn_index)
 
         if print_reaction:
-            print("Reaction: ", self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True))
+            print("Reaction: ", self.chem_data.single_reaction_describe(rxn_index=rxn_index, concise=True))
 
         movie_obj = self.diagnostic_rxn_data.get(rxn_index)    # Object of type "MovieTabular"
 
@@ -1803,7 +1803,7 @@ class ReactionDynamics:
 
         n_rows = len(df_sum)
 
-        for rxn_index in range(1, self.reaction_data.number_of_reactions()):
+        for rxn_index in range(1, self.chem_data.number_of_reactions()):
             rxn = self.get_diagnostic_rxn_data(rxn_index=rxn_index, print_reaction=False)
             assert len(rxn)  == n_rows, "get_diagnostic_delta_data(): this function cannot be used because different dataframes" \
                                         "of diagnostic reaction data have different numbers of rows"
@@ -1833,7 +1833,7 @@ class ReactionDynamics:
                   "call set_diagnostics() prior to running single_compartment_react()")
             return False
 
-        number_reactions = self.reaction_data.number_of_reactions()
+        number_reactions = self.chem_data.number_of_reactions()
 
         assert number_reactions == 2, \
             "explain_reactions() currently ONLY works when exactly 2 reactions are present. " \
@@ -1885,17 +1885,17 @@ class ReactionDynamics:
         print("row_list: ", row_list)
         print("active_list: ", active_list)
 
-        chemical_list = self.reaction_data.get_all_names()
+        chemical_list = self.chem_data.get_all_names()
         chemical_delta_list = self._delta_names()
 
         conc_arr_before = self.get_diagnostic_conc_data().loc[row_baseline][chemical_list].to_numpy(dtype='float16')
         print("baseline concentrations: ", conc_arr_before)
 
-        delta_cumulative = np.zeros(self.reaction_data.number_of_chemicals(),
+        delta_cumulative = np.zeros(self.chem_data.number_of_chemicals(),
                                     dtype=float)  # One element per chemical species
 
         # For each reaction
-        for rxn_index in range(self.reaction_data.number_of_reactions()):
+        for rxn_index in range(self.chem_data.number_of_reactions()):
             if (rxn_index in active_list):  # If reaction is tagged as "fast"
                 row = row_list[rxn_index]   # Row in the data frame for the diagnostic data on this reaction
                 delta_rxn = self.get_diagnostic_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
@@ -2092,7 +2092,7 @@ class ReactionDynamics:
         df = self.get_history()     # The expected columns are "SYSTEM TIME", followed by the various chemicals
 
         if chemicals is None:
-            chemicals = self.reaction_data.get_all_names()      # List of the chemical names.  EXAMPLE: ["A", "B", "H"]
+            chemicals = self.chem_data.get_all_names()      # List of the chemical names.  EXAMPLE: ["A", "B", "H"]
 
         number_of_curves = len(chemicals)
 
@@ -2101,15 +2101,15 @@ class ReactionDynamics:
 
 
         if title is None:   # If no title was specified, create one based on how many reactions are present
-            number_of_rxns = self.reaction_data.number_of_reactions()
+            number_of_rxns = self.chem_data.number_of_reactions()
             if number_of_rxns > 2:
                 title = f"Changes in concentrations for {number_of_rxns} reactions"
             elif number_of_rxns == 1:
-                rxn_text = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)   # The only reaction
+                rxn_text = self.chem_data.single_reaction_describe(rxn_index=0, concise=True)   # The only reaction
                 title = f"Reaction `{rxn_text}` .  Changes in concentrations with time"
             else:   # Exactly 2 reactions
-                rxn_text_0 = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)
-                rxn_text_1 = self.reaction_data.single_reaction_describe(rxn_index=1, concise=True)
+                rxn_text_0 = self.chem_data.single_reaction_describe(rxn_index=0, concise=True)
+                rxn_text_1 = self.chem_data.single_reaction_describe(rxn_index=1, concise=True)
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
         if title_prefix is not None:
@@ -2272,7 +2272,7 @@ class ReactionDynamics:
         if df is None:
             df = self.get_history()
 
-        chem_list = self.reaction_data.get_all_names()  # List of all the chemicals' names
+        chem_list = self.chem_data.get_all_names()  # List of all the chemicals' names
         arr = df.loc[row][chem_list].to_numpy(dtype='float32')
         return arr
 
@@ -2321,7 +2321,7 @@ class ReactionDynamics:
         if rxn_index is not None:
             # Check the 1 given reaction
             if explain:
-                description = self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)
+                description = self.chem_data.single_reaction_describe(rxn_index=rxn_index, concise=True)
                 print(description)
 
             status = self.reaction_in_equilibrium(rxn_index=rxn_index, conc=conc, tolerance=tolerance, explain=explain)
@@ -2331,8 +2331,8 @@ class ReactionDynamics:
         else:
             # Check all the reactions
             status = True   # Overall status
-            description_list = self.reaction_data.multiple_reactions_describe(concise=True)
-            for i in range(self.reaction_data.number_of_reactions()):
+            description_list = self.chem_data.multiple_reactions_describe(concise=True)
+            for i in range(self.chem_data.number_of_reactions()):
                 # For each reaction
                 if explain:
                     print(description_list[i])
@@ -2366,7 +2366,7 @@ class ReactionDynamics:
         :return:            True if the given reaction is close enough to an equilibrium,
                             as allowed by the requested tolerance
         """
-        rxn = self.reaction_data.get_reaction(rxn_index)
+        rxn = self.chem_data.get_reaction(rxn_index)
 
         reactants = rxn.extract_reactants()    # A list of triplets
         products = rxn.extract_products()      # A list of triplets
@@ -2385,7 +2385,7 @@ class ReactionDynamics:
             species_index =  rxn.extract_species_index(p)
             rxn_order =  rxn.extract_rxn_order(p)
 
-            species_name =  self.reaction_data.get_name(species_index)
+            species_name =  self.chem_data.get_name(species_index)
             species_conc = conc.get(species_name)
             assert species_conc is not None, f"reaction_in_equilibrium(): unable to proceed because the " \
                                              f"concentration of `{species_name}` was not provided"
@@ -2404,7 +2404,7 @@ class ReactionDynamics:
             species_index =  rxn.extract_species_index(r)
             rxn_order =  rxn.extract_rxn_order(r)
 
-            species_name = self.reaction_data.get_name(species_index)
+            species_name = self.chem_data.get_name(species_index)
             species_conc = conc.get(species_name)
             assert species_conc is not None, f"reaction_in_equilibrium(): unable to proceed because the " \
                                              f"concentration of `{species_name}` was not provided"

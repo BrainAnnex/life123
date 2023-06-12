@@ -63,7 +63,7 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"A": 5., "B": 100., "Y": 0.},
                   snapshot=True)      # A is scarce, B is plentiful, Y is absent
 dynamics.describe_state()

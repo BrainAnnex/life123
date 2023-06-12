@@ -80,7 +80,7 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals, in their index order
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc([50., 0.], snapshot=True)
 dynamics.describe_state()
 
@@ -149,7 +149,7 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 # ### Set the initial concentrations of all the chemicals, in their index order
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)   # Notice we're over-writing the earlier "dynamics" object
+dynamics = ReactionDynamics(chem_data=chem_data)   # Notice we're over-writing the earlier "dynamics" object
 dynamics.set_conc([50., 0, 0.], snapshot=True)
 dynamics.describe_state()
 
@@ -217,7 +217,7 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals, in their index order
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc([50., 0, 0.], snapshot=True)
 dynamics.describe_state()
 

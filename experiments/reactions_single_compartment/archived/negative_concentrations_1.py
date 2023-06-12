@@ -92,7 +92,7 @@ chem_data.describe_reactions()
 # It cannot be replicated with current versions of Life123.  DO NOT ATTEMPT TO RE-RUN!
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 
@@ -197,7 +197,7 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 # Same as for Run #1
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 
@@ -275,7 +275,7 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 # Same as for the previous runs
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 
@@ -326,7 +326,7 @@ all_fig.show()
 
 # %%
 # Same as for the previous runs
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 
