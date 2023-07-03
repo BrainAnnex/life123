@@ -981,6 +981,18 @@ def test_stoichiometry_checker():
 
 
 
+def test_sigmoid():
+    rxn = ReactionDynamics(None)
+
+    #print(rxn.sigmoid(-10))
+    assert np.allclose(rxn.sigmoid(-100), 0)
+    assert np.allclose(rxn.sigmoid(-10), 0.00004539786)
+    assert np.allclose(rxn.sigmoid(0), 0.5)
+    assert np.allclose(rxn.sigmoid(10), 0.99995460213)
+    assert np.allclose(rxn.sigmoid(100), 1)
+
+
+
 def test_explain_time_advance():
     rxn = ReactionDynamics(None)
 

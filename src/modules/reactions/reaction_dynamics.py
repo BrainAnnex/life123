@@ -23,6 +23,8 @@ class ExcessiveTimeStepSoft(Exception):
     """
     pass
 
+
+
 #############################################################################################
 
 class ReactionDynamics:
@@ -38,10 +40,13 @@ class ReactionDynamics:
                                     and take care of it later (though probably a bad idea!)
                                     TODO: maybe offer an option to let the constructor instantiate that object?
         """
-        self.chem_data = chem_data  # Object of type "ChemData" (with data about the chemicals and their reactions)
+        self.chem_data = chem_data  # Object of type "ChemData" (with data about the chemicals and their reactions,
+                                    #       incl. macromolecules)
 
-        self.system_time = 0.   # Global time of the system, from initialization on
+        self.system_time = 0.       # Global time of the system, from initialization on
 
+        # TODO: maybe rename system to system_state, and use system to store a list or dict of the chemicals
+        #       actually involved in this dynamic simulation
         self.system = None  # Concentration data in the single compartment we're simulating, for all the (bulk) chemicals
                             # A Numpy array of the concentrations of all the chemical species, in their index order
                             # 1-dimensional NumPy array of floats, whose size is the number of chemical species.
@@ -49,7 +54,11 @@ class ReactionDynamics:
                             # Note that this is the counterpart - with 1 less dimension - of the array by the same name
                             #       in the class BioSim1D
 
-        self.macro_system = None    # The counterpart of the system data for macro-molecules, if present
+
+        self.macro_system = {}      # A dict mapping macromolecule names to their counts
+                                    # EXAMPLE:  {"M1: 1, "M2": 3, "M3": 1}
+
+        self.macro_system_state = {}    # The counterpart of the system data for macro-molecules, if present
                                     # Binding fractions of the applicable transcription factors, for all the macro-molecules
                                     # EXAMPLE:   {"M1": {"A": 0.2, "F": 0.93, "P": 0.},
                                     #             "M2": {"C": 0.5, "F": 0.1}}
@@ -69,14 +78,14 @@ class ReactionDynamics:
         self.error_abort_step_factor = 0.5      # MUST BE < 1.  Factor by which to multiply the time step
                                                 #   in case of negative-concentration error from excessive step size
                                                 #   NOTE: this is from ERROR aborts, not to be confused with high-threshold aborts
-        # TODO: consider more conservative default 0.25
+        # TODO: consider the more conservative default 0.25
 
 
         self.reaction_speeds = {}       # TODO: not in active use; possibly obsolete
-        # A dictionary, where the keys are reaction indices,
-        #   and the values are either "S" (Slow) or "F" (Fast)
-        #   EXAMPLE : { 1: "F", 4: "S", 5: "F" , 8: "S" }
-        #   Any reaction with a missing entry is regarded as "F" (Fast)
+                                        # A dictionary, where the keys are reaction indices,
+                                        #   and the values are either "S" (Slow) or "F" (Fast)
+                                        #   EXAMPLE : { 1: "F", 4: "S", 5: "F" , 8: "S" }
+                                        #   Any reaction with a missing entry is regarded as "F" (Fast)
 
 
         # ***  FOR DIAGNOSTICS  ***     TODO: maybe turn all diagnostic data/methods into a separate object
@@ -366,7 +375,7 @@ class ReactionDynamics:
 
     def describe_state(self) -> None:
         """
-        A simple printout of the state of the system
+        Print out various data on the current state of the system
         :return:        None
         """
         print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
@@ -382,6 +391,14 @@ class ReactionDynamics:
                 name = ""
 
             print(f"  Species {species_index}{name}. Conc: {self.system[species_index]}")
+
+        if self.macro_system != {}:
+            print("Macro-molecules present, with the counts: ", self.macro_system)
+
+        if self.macro_system_state != {}:
+            print("Binding fractions across the site numbers of the macro-molecules:")
+            for m in self.macro_system_state:
+                print("    ", m)
 
 
 
@@ -1443,6 +1460,33 @@ class ReactionDynamics:
             reverse_rate *= conc ** order     # Raise to power
 
         return delta_time * (forward_rate - reverse_rate)   # TODO: maybe take the multiplication with delta_time to the calling function
+
+
+
+
+    #############################################################################################
+    #                                                                                           #
+    #                                      MACROMOLECULES                                     #
+    #                                                                                           #
+    #############################################################################################
+    def ________MACROMOLECULES________(DIVIDER):  # Used to get a better structure view in IDEs such asPycharm
+        pass
+
+
+    def sigmoid(self, x: float) -> float:
+        """
+        Compute the value of the Logistic function at the given point
+        See: https://en.wikipedia.org/wiki/Logistic_function
+
+        :param x:
+        :return:
+        """
+        # Specify the parameters of the Logistic function
+        L = 1
+        k = 1
+        x0 = 0
+
+        return L / (1 + math.exp(-k*(x-x0)))
 
 
 

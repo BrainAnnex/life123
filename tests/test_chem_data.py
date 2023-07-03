@@ -299,7 +299,7 @@ def test_set_binding_site_affinity():
     assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
     assert chem_data.get_binding_site_affinity("M2", site_number=1) == ("B",11)
 
-    # Attempting to associate another chemical to to site 1 of macromolecule "M1", will result in error
+    # Attempting to associate another chemical to site 1 of macromolecule "M1", will result in error
     with pytest.raises(Exception):
         chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="ZZZ", affinity=999)
 

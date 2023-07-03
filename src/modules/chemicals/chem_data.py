@@ -55,11 +55,19 @@ class ChemData:
                                     # The position in the list is referred to as the "index" of that macro-molecule
                                     # Names will be enforced to be unique
 
-        self.binding_sites = {}     # EXAMPLE: {"M1": {"A": 2.4, "B": 853.} }       # Alt: [("A", 2.4), ("B", 853.)]
-                                    #   where "M1" is a macro-molecule, and "A" and "B" are bulk chemicals
-                                    #   (such as transcription factors), all previously-declared;
-                                    #   the numbers are Binding Site Affinities : https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6787930/
-                                    # TODO: consider {"M1": {1: ("A", 2.4), 2: ("B", 853), 3: ("A", 111)} }   # "A" might bind to multiple locations!
+        self.binding_sites = {}     # A dict whose keys are macromolecule names.  The values are in turn dicts, indexed by site number.
+                                    # EXAMPLE:
+                                    #       {"M1": {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)},
+                                    #        "M2": {1: ChemicalAffinity("C", 9.1), 2: ChemicalAffinity("B", 0.3), 3: ChemicalAffinity("A", 1.8), 4: ChemicalAffinity("C", 2.3)}
+                                    #        }
+                                    #       where "M1", "M2" are macro-molecules, and "A", "B", "C" are bulk chemicals (such as transcription factors),
+                                    #           all previously-declared;
+                                    #           the various ChemicalAffinity's are NamedTuples (objects) storing a bulk-chemical name and its affinity at that site.
+
+                                    # Info on Binding Site Affinities : https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6787930/
+
+                                    #       OLD: {"M1": {"A": 2.4, "B": 853.} }       # Alt: [("A", 2.4), ("B", 853.)]
+
 
         self.reaction_list = []     # List of dicts.  Each item is an object of class "Reaction"
 
@@ -505,9 +513,13 @@ class ChemData:
 
     def set_binding_site_affinity(self, macromolecule: str, site_number: int, chemical: str, affinity) -> None:
         """
-        Set the values of the binding affinity of the given macromolecule for the specified chemical species,
-        at the specified site of the macromolecule.
-        Any previously-set value (for that macromolecule/chemical pair) will get over-written.
+        Set the values of the binding affinity of the given macromolecule, at the indicated site on it,
+        for the specified chemical species.
+
+        Any previously-set value (for that macromolecule/site_number/chemical) will get over-written.
+
+        Only 1 chemical can be associated to a particular site of a given macromolecule; attempting
+        to associate another one will result in error.
 
         NOTE: at present, no allowance is made for the fact that if the macromolecule is already bound
               to chemical "X" then its affinity of "Y" might be different than in the absence of "X"
@@ -515,7 +527,8 @@ class ChemData:
         :param macromolecule:   Name of a macromolecule; if not previously-declared,
                                     it will get added to the list of registered macromolecules
         :param site_number:     Integer to identify a binding site on the macromolecule
-        :param chemical:        Name of a previously-declared (bulk) chemical; if not found, an Exception will be raised
+        :param chemical:        Name of a previously-declared (bulk) chemical;
+                                    if not found, an Exception will be raised       TODO: inconsistent with "macromolecule" arg
         :param affinity:        A number, in units of concentration
         :return:                None
         """
@@ -532,8 +545,7 @@ class ChemData:
             self.binding_sites[macromolecule] = {}          # Initialize the dict of binding sites for this macromolecule
 
         binding_data = self.binding_sites[macromolecule]    # This will be a dict whose key is the site_number
-        #binding_data[chemical] = affinity   # Note: any previously-existing value will get over-written
-        #binding_data[site_number] = (chemical, affinity)
+
         if site_number in binding_data:
             existing_affinity_data = binding_data[site_number]
             if existing_affinity_data.chemical != chemical:
