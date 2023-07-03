@@ -38,26 +38,28 @@ class ReactionDynamics:
                                     and take care of it later (though probably a bad idea!)
                                     TODO: maybe offer an option to let the constructor instantiate that object?
         """
-        self.chem_data = chem_data
+        self.chem_data = chem_data  # Object of type "ChemData" (with data about the chemicals and their reactions)
 
-        self.system = None  # Concentration data in the single compartment we're simulating, for all the chemicals
+        self.system_time = 0.   # Global time of the system, from initialization on
+
+        self.system = None  # Concentration data in the single compartment we're simulating, for all the (bulk) chemicals
                             # A Numpy array of the concentrations of all the chemical species, in their index order
                             # 1-dimensional NumPy array of floats, whose size is the number of chemical species.
-                            # Each entry is the concentration of the species with that index (in the "ReactionData" object)
+                            # Each entry is the concentration of the species with that index (in the "ChemData" object)
                             # Note that this is the counterpart - with 1 less dimension - of the array by the same name
                             #       in the class BioSim1D
 
-        self.system_time = 0.   # Global time of the system, from initialization on
+        self.macro_system = None    # The counterpart of the system data for macro-molecules, if present
+                                    # Binding fractions of the applicable transcription factors, for all the macro-molecules
+                                    # EXAMPLE:   {"M1": {"A": 0.2, "F": 0.93, "P": 0.},
+                                    #             "M2": {"C": 0.5, "F": 0.1}}
+                                    # For background, see: https://www.annualreviews.org/doi/10.1146/annurev-cellbio-100617-062719
 
         self.history = MovieTabular()   # To store user-selected snapshots of (some of) the chemical concentrations,
                                         #   whenever requested by the user.
 
-        self.reaction_speeds = {}       # A dictionary, where the keys are reaction indices,
-                                        #   and the values are either "S" (Slow) or "F" (Fast)
-                                        #   EXAMPLE : { 1: "F", 4: "S", 5: "F" , 8: "S" }
-                                        #   Any reaction with a missing entry is regarded as "F" (Fast)
 
-
+        # ***  FOR AUTOMATED ADAPTIVE STEP SIZES  ***
         # Note: the "aborts" below are "elective" aborts - not aborts from hard errors (further below)
         self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
                            {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
@@ -69,7 +71,15 @@ class ReactionDynamics:
                                                 #   NOTE: this is from ERROR aborts, not to be confused with high-threshold aborts
         # TODO: consider more conservative default 0.25
 
-        # ***  FOR DIAGNOSTICS  ***
+
+        self.reaction_speeds = {}       # TODO: not in active use; possibly obsolete
+        # A dictionary, where the keys are reaction indices,
+        #   and the values are either "S" (Slow) or "F" (Fast)
+        #   EXAMPLE : { 1: "F", 4: "S", 5: "F" , 8: "S" }
+        #   Any reaction with a missing entry is regarded as "F" (Fast)
+
+
+        # ***  FOR DIAGNOSTICS  ***     TODO: maybe turn all diagnostic data/methods into a separate object
 
         self.verbose_list = []          # A list of integers or strings with the codes of the desired verbose checkpoints
                                         #   EXAMPLE: [1, "my_ad_hoc_tag"] to invoke sections of code marked as 1 or 3

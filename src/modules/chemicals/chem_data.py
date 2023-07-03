@@ -1,5 +1,18 @@
-from typing import Union
+from typing import Union, List, NamedTuple
 from src.modules.reactions.reaction import Reaction
+
+
+
+
+class ChemicalAffinity(NamedTuple):
+    # Used for binding to macromolecules (e.g. Transcription Factors to DNA)
+    chemical: str
+    affinity: float
+
+
+
+########################################################################################################
+########################################################################################################
 
 
 class ChemData:
@@ -8,7 +21,7 @@ class ChemData:
     including:
         - names
         - diffusion rates
-        - macro-molecules Binding Site Affinities
+        - macro-molecules Binding Site Affinities (for Transcription Factors)
         - reaction data (see class "Reaction", in "reaction_data.py")
 
 
@@ -40,11 +53,13 @@ class ChemData:
 
         self.macro_molecules = []   # List of names.  EXAMPLE: ["M1", "M2"]
                                     # The position in the list is referred to as the "index" of that macro-molecule
+                                    # Names will be enforced to be unique
 
         self.binding_sites = {}     # EXAMPLE: {"M1": {"A": 2.4, "B": 853.} }       # Alt: [("A", 2.4), ("B", 853.)]
                                     #   where "M1" is a macro-molecule, and "A" and "B" are bulk chemicals
                                     #   (such as transcription factors), all previously-declared;
                                     #   the numbers are Binding Site Affinities : https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6787930/
+                                    # TODO: consider {"M1": {1: ("A", 2.4), 2: ("B", 853), 3: ("A", 111)} }   # "A" might bind to multiple locations!
 
         self.reaction_list = []     # List of dicts.  Each item is an object of class "Reaction"
 
@@ -456,19 +471,42 @@ class ChemData:
 
 
 
-    ####  MACRO-MOLECULES  ####
+    ############   MACRO-MOLECULES   ############
 
-    def add_macromolecules(self, names: [str]):
-        self.macro_molecules += names       # Concatenate lists
+    def add_macromolecules(self, names: Union[str, List[str]]) -> None:
+        """
+        Register one or more macromolecule species, specified by their name(s)
+        Note: this is a register of names, NOT dynamical information about counts of macromolecules in the system
+              (that's the domain of the class ReactionDynamics)
+
+        :param names:   A string, or list of strings, with the name(s) of the macromolecule(s)
+        :return:        None.  The object variable self.macro_molecules will get modified.
+        """
+        if type(names) == str:  # If a single name was given
+            names = [names]
+
+        for m in names:
+            if m in self.macro_molecules:
+                print(f"WARNING: Macromolecule `{m}` was already registered.  Skipped...")    # Redundant attempt to re-register an existing name
+            else:
+                self.macro_molecules.append(m)  # Grow the list of registered macromolecules
+
+
 
     def get_macromolecules(self) -> [str]:
+        """
+        Return a list of the names of all the registered macromolecules
+
+        :return:    A (possibly empty) list of names of all the registered macromolecules
+        """
         return self.macro_molecules
 
 
 
-    def set_binding_site_affinity(self, macromolecule: str, chemical, affinity) -> None:
+    def set_binding_site_affinity(self, macromolecule: str, site_number: int, chemical: str, affinity) -> None:
         """
-        Set the values of the binding affinity of the given macromolecule for the specified chemical species.
+        Set the values of the binding affinity of the given macromolecule for the specified chemical species,
+        at the specified site of the macromolecule.
         Any previously-set value (for that macromolecule/chemical pair) will get over-written.
 
         NOTE: at present, no allowance is made for the fact that if the macromolecule is already bound
@@ -476,6 +514,7 @@ class ChemData:
 
         :param macromolecule:   Name of a macromolecule; if not previously-declared,
                                     it will get added to the list of registered macromolecules
+        :param site_number:     Integer to identify a binding site on the macromolecule
         :param chemical:        Name of a previously-declared (bulk) chemical; if not found, an Exception will be raised
         :param affinity:        A number, in units of concentration
         :return:                None
@@ -483,34 +522,52 @@ class ChemData:
         assert chemical in self.get_all_names(), \
             f"set_binding_site_affinity(): no chemical named `{chemical}` found; use add_chemical() first"
 
+        assert type(site_number) == int, \
+            f"set_binding_site_affinity(): the argument `site_number` must be an integer"
+
         if macromolecule not in self.macro_molecules:
             self.add_macromolecules([macromolecule])
 
         if self.binding_sites.get(macromolecule) is None:
-            self.binding_sites[macromolecule] = {}
+            self.binding_sites[macromolecule] = {}          # Initialize the dict of binding sites for this macromolecule
 
-        binding_data = self.binding_sites[macromolecule]
-        binding_data[chemical] = affinity   # Note: any previously-existing value will get over-written
+        binding_data = self.binding_sites[macromolecule]    # This will be a dict whose key is the site_number
+        #binding_data[chemical] = affinity   # Note: any previously-existing value will get over-written
+        #binding_data[site_number] = (chemical, affinity)
+        if site_number in binding_data:
+            existing_affinity_data = binding_data[site_number]
+            if existing_affinity_data.chemical != chemical:
+                raise Exception(f"set_binding_site_affinity(): "
+                                f"site number {site_number} of macromolecule `{macromolecule}` was previously associated to chemical `{existing_affinity_data.chemical}` "
+                                f"(attempting to set an affinity value for chemical `{chemical}`)")
+
+        binding_data[site_number] = ChemicalAffinity(chemical=chemical, affinity=affinity)
 
 
 
-    def get_binding_site_affinity(self, macromolecule, chemical) -> Union[float, None]:
+    def get_binding_site_affinity(self, macromolecule: str, site_number: int) -> ChemicalAffinity:
         """
-        Return the value of the binding affinity of the given macromolecule
-        for the specified chemical species.  If no value was previously set, return None
+        Return the value of the binding affinity of the given macromolecule.
+        If no value was previously set, an Exception is raised
 
         :param macromolecule:   Name of a macromolecule; if not found, an Exception will get raised
-        :param chemical:        Name of a (bulk) chemical; if not found, an Exception will get raised
-        :return:                The value of the binding affinity;
-                                    if no value was previously set, return None
+        :param site_number:     Integer to identify a binding site on the macromolecule
+        :return:                The NamedTuple (chemical, affinity)
+                                    if no value was previously set, an Exception is raised
         """
         assert macromolecule in self.macro_molecules, \
             f"get_binding_site_affinity(): no macromolecule named `{macromolecule}` found"
 
-        assert chemical in self.get_all_names(), \
-            f"get_binding_site_affinity(): no chemical named `{chemical}` found"
+        assert type(site_number) == int, \
+            f"get_binding_site_affinity(): the argument `site_number` must be an integer"
 
-        return self.binding_sites[macromolecule].get(chemical)      # Will return None if not found
+        binding_data = self.binding_sites.get(macromolecule)    # This will be a dict whose key is the site_number.  (None if not found)
+        assert binding_data is not None, "not found"
+
+        chem_affinity = binding_data.get(site_number)           # Will be None if not found
+        assert chem_affinity is not None, "not found"
+
+        return chem_affinity
 
 
 
@@ -520,10 +577,15 @@ class ChemData:
 
 
     def clear_macromolecules(self):
-        # Reset to original state
+        """
+        Reset all macromolecules to their original state
+
+        :return:    None
+        """
         self.macro_molecules = []
         self.binding_sites = {}
 
+    ############   END of Macro-molecules   ############
 
 
 
