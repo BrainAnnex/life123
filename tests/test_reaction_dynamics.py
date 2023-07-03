@@ -984,12 +984,35 @@ def test_stoichiometry_checker():
 def test_sigmoid():
     rxn = ReactionDynamics(None)
 
-    #print(rxn.sigmoid(-10))
-    assert np.allclose(rxn.sigmoid(-100), 0)
-    assert np.allclose(rxn.sigmoid(-10), 0.00004539786)
-    assert np.allclose(rxn.sigmoid(0), 0.5)
-    assert np.allclose(rxn.sigmoid(10), 0.99995460213)
-    assert np.allclose(rxn.sigmoid(100), 1)
+    # When the concentration matches Kd, the occupancy is 1/2 by definition
+    assert np.allclose(rxn.sigmoid(conc=1., Kd=1.), 0.5)
+    assert np.allclose(rxn.sigmoid(conc=0.1, Kd=0.1), 0.5)
+    assert np.allclose(rxn.sigmoid(conc=10., Kd=10.), 0.5)
+
+    # When the concentration is 10% of Kd, the occupancy is about 0.1 ;
+    # when the concentration is 10 times Kd, the occupancy is about 0.9
+    assert np.allclose(rxn.sigmoid(conc=0.1, Kd=1.), 0.1)
+    assert np.allclose(rxn.sigmoid(conc=10., Kd=1.), 0.9)
+
+    assert np.allclose(rxn.sigmoid(conc=10., Kd=100.), 0.1)
+    assert np.allclose(rxn.sigmoid(conc=1000., Kd=100.), 0.9)
+
+    assert np.allclose(rxn.sigmoid(conc=0.001, Kd=0.01), 0.1)
+    assert np.allclose(rxn.sigmoid(conc=0.1, Kd=0.01), 0.9)
+
+    #print(rxn.sigmoid(conc=0.1, Kd=1.))
+
+
+
+def test_logistic():
+    rxn = ReactionDynamics(None)
+
+    #print(rxn.logistic(-10))
+    assert np.allclose(rxn.logistic(-100), 0)
+    assert np.allclose(rxn.logistic(-10), 0.00004539786)
+    assert np.allclose(rxn.logistic(0), 0.5)
+    assert np.allclose(rxn.logistic(10), 0.99995460213)
+    assert np.allclose(rxn.logistic(100), 1)
 
 
 

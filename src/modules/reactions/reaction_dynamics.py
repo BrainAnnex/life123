@@ -433,10 +433,10 @@ class ReactionDynamics:
             print(f"  Species {species_index}{name}. Conc: {self.system[species_index]}")
 
         if self.macro_system != {}:
-            print("Macro-molecules present, with the counts: ", self.macro_system)
+            print("Macro-molecules present, with their counts: ", self.macro_system)
 
         if self.macro_system_state != {}:
-            print("Binding fractions across the site numbers of the macro-molecules:")
+            print("Binding fractions across the binding-site numbers of the macro-molecules:")
             for m in self.macro_system_state:
                 print("    ", m)
 
@@ -1517,27 +1517,52 @@ class ReactionDynamics:
 
     #############################################################################################
     #                                                                                           #
-    #                                      MACROMOLECULES                                     #
+    #                                      MACROMOLECULES                                       #
     #                                                                                           #
     #############################################################################################
     def ________MACROMOLECULES________(DIVIDER):  # Used to get a better structure view in IDEs such asPycharm
         pass
 
 
-    def sigmoid(self, x: float) -> float:
+    def sigmoid(self, conc: float, Kd: float) -> float:
         """
-        Compute the value of the Logistic function at the given point
+        Return an estimate of fractional occupancy (between 0 and 1)
+        on a particular binding site on a particular macromolecule,
+        from the concentration of the ligand (such as a Transcription Factor)
+        and its affinity to that binding site.
+
+        A sigmoid curve is expected.
+
+        Based on fig. 3A of the 2019 paper "Low-Affinity Binding Sites and the
+        Transcription Factor Specificity Paradox in Eukaryotes"
+        (https://doi.org/10.1146/annurev-cellbio-100617-062719):
+
+            - at extremely low concentration, the occupancy is 0
+            - when the concentration is 10% of Kd, the occupancy is about 0.1
+            - when the concentration matches Kd, the occupancy is 1/2 by definition
+            - when the concentration is 10 times Kd, the occupancy is about 0.9
+            - at concentrations beyond that, the occupancy saturates to 1.0
+
+        :param conc:    Concentration of the ligand (such as a Transcription Factor), in microMolars
+        :param Kd:      Binding-side Affinity, in microMolars
+        :return:        Estimated binding-site fractional occupancy : a value between
+                            0. (no occupancy at all during the previous time step) and 1. (continuous occupancy)
+        """
+        return self.logistic(x = math.log10(conc), x0 = math.log10(Kd), k = 2.1972245)
+
+
+
+    def logistic(self, x: float, x0 = 0., k = 1.) -> float:
+        """
+        Compute the value of the Logistic function, in the range (0, 1), at the given point
         See: https://en.wikipedia.org/wiki/Logistic_function
 
         :param x:
-        :return:
+        :param x0:
+        :param k:
+        :return:    The value of the Logistic function at the given point x
         """
-        # Specify the parameters of the Logistic function
-        L = 1
-        k = 1
-        x0 = 0
-
-        return L / (1 + math.exp(-k*(x-x0)))
+        return 1. / ( 1 + math.exp( -k * (x-x0) ) )
 
 
 
