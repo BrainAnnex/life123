@@ -993,6 +993,50 @@ def test_sigmoid():
 
 
 
+def test_set_macromolecules():
+    chem = ChemData(names=["A", "B"])
+    chem.add_macromolecules(["M1", "M2"])
+    chem.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="A", affinity=3)
+    chem.set_binding_site_affinity(macromolecule="M1", site_number=2, chemical="B", affinity=5)
+    chem.set_binding_site_affinity(macromolecule="M2", site_number=1, chemical="B", affinity=11)
+    chem.set_binding_site_affinity(macromolecule="M2", site_number=3, chemical="B", affinity=102)
+
+    rxn = ReactionDynamics(chem)
+    rxn.set_macromolecules()
+
+    assert rxn.macro_system == {"M1": 1, "M2": 1}
+    assert len(rxn.macro_system_state) == 2
+    assert rxn.macro_system_state["M1"] == {1: ("A", 0.), 2: ("B", 0.)}
+    assert rxn.macro_system_state["M2"] == {1: ("B", 0.), 3: ("B", 0.)}
+
+
+    # Over-write the previous settings
+    rxn.set_macromolecules({"M2": 4})
+
+    assert rxn.macro_system == {"M2": 4}
+    assert len(rxn.macro_system_state) == 1
+    assert rxn.macro_system_state["M2"] == {1: ("B", 0.), 3: ("B", 0.)}
+
+
+    with pytest.raises(Exception):
+        rxn.set_macromolecules({"M999": 2})        # Unknown macromolecule
+
+    chem.add_macromolecules("M999")
+
+    # Over-write the previous settings
+    rxn.set_macromolecules({"M999": 2})
+    assert rxn.macro_system == {"M999": 2}
+    assert len(rxn.macro_system_state) == 1
+    assert rxn.macro_system_state["M999"] == {}     # No binding sites were registered
+
+    chem.set_binding_site_affinity(macromolecule="M999", site_number=12, chemical="A", affinity=4.5)
+    assert rxn.macro_system_state["M999"] == {}     # The system state has not been updated yet
+    # Over-write the previous settings
+    rxn.set_macromolecules({"M999": 2})
+    assert rxn.macro_system_state["M999"] == {12: ("A", 0.)}
+
+
+
 def test_explain_time_advance():
     rxn = ReactionDynamics(None)
 

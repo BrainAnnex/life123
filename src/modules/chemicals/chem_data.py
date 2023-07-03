@@ -478,8 +478,95 @@ class ChemData:
 
 
 
+    def set_diffusion_rate(self, name: str, diff_rate) -> None:
+        """
+        Set the diffusion rate of the given chemical species (identified by its name)
 
-    ############   MACRO-MOLECULES   ############
+        :param name:
+        :param diff_rate:
+        :return:            None
+        """
+        self.assert_valid_diffusion(diff_rate)
+        index = self.get_index(name)
+        data = self.chemical_data[index]
+        data["diff"] = diff_rate
+
+
+
+    def set_temp(self, temp, units="K") -> None:
+        """
+        Specify the temperature of the environment
+        (for now assumed uniform everywhere)
+
+        :param temp:    Temperature, in Kelvins, or None
+        :param units:   Not yet implemented
+        :return:        None
+        """
+        self.temp = temp
+
+
+
+    def add_reaction(self, reactants: Union[int, str, list], products: Union[int, str, list],
+                     forward_rate=None, reverse_rate=None,
+                     delta_H=None, delta_S=None, delta_G=None) -> Reaction:
+        """
+        Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
+        The involved chemicals must be already registered - use add_chemical() if needed.
+
+        NOTE: in the reactants and products, if the stoichiometry and/or reaction order aren't specified,
+              they're assumed to be 1.
+              Their full structure is the triplet (stoichiometry coefficient, name, reaction order)
+
+        EXAMPLES of formats for each item of the reactants and products
+        (*assuming* that the chemical species with index 5 is called "F"):
+                    "F"         gets turned into:   (1, 5, 1)
+                    (3, "F")                        (3, 5, 1)
+                    (3, "F", 2)                     (3, 5, 2)
+                    It's equally acceptable to use LISTS in lieu of tuples
+
+        :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
+                                    or simplified terms in various formats; for details, see above.
+                                    If not a list, it will get turned into one
+        :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction),
+                                    or simplified terms in various formats; for details, see above.
+                                    If not a list, it will get turned into one
+        :param forward_rate:    [OPTIONAL] Forward reaction rate constant
+        :param reverse_rate:    [OPTIONAL] Reverse reaction rate constant
+        :param delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
+        :param delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
+        :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
+        :return:                Object of type "Reaction"
+                                (note: the object variable self.reaction_list gets appended to)
+        """
+
+        rxn = Reaction(self, reactants, products, forward_rate, reverse_rate,
+                       delta_H, delta_S, delta_G)
+
+        self.reaction_list.append(rxn)
+
+        return rxn
+
+
+
+    def clear_reactions_data(self) -> None:
+        """
+        Get rid of all reactions; start again with "an empty slate" (but still with reference
+        to the same data object about the chemicals)
+
+        :return:    None
+        """
+        self.reaction_list = []
+
+
+
+
+    #####################################################################################################
+
+    '''                                  ~   MACROMOLECULES  ~                                        '''
+
+    def ________MACROMOLECULES________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
     def add_macromolecules(self, names: Union[str, List[str]]) -> None:
         """
@@ -583,9 +670,59 @@ class ChemData:
 
 
 
+    def get_binding_sites(self, macromolecule) -> [int]:
+        """
+        Get a list of all the binding-site numbers of the given macromolecule.
+        If the requested macromolecule isn't registered, an Exception will be raised
+
+        :param macromolecule:   The name of a macromolecule
+        :return:                A (possibly empty) list of integers, representing the binding-site numbers.
+                                    EXAMPLE: [1, 2]
+        """
+        binding_site_info = self.binding_sites.get(macromolecule)   # EXAMPLE: {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)}
+                                                                    #   will be None if no binding sites are found
+        if binding_site_info is None:
+            assert macromolecule in self.get_macromolecules(), \
+                f"get_binding_sites(): the requested macromolecule ({macromolecule}) isn't registered; use add_macromolecules()"
+            return []
+        return list(binding_site_info)                              # EXAMPLE: [1, 2]
+
+
+
+    def get_binding_sites_and_ligands(self, macromolecule) -> dict:
+        """
+        Return a mapping (python dict) from binding-site number to ligand species, for the given macromolecule
+        If the requested macromolecule isn't registered, an Exception will be raised
+
+        :param macromolecule:   The name of a macromolecule
+        :return:                A dict whose keys are binding-site numbers and values are their respetive ligands
+                                    EXAMPLE: {1: "A", 2: "C"}
+        """
+        binding_site_info = self.binding_sites.get(macromolecule)   # EXAMPLE: {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)}
+                                                                    #   will be None if no binding sites are found
+        if binding_site_info is None:
+            assert macromolecule in self.get_macromolecules(), \
+                f"get_binding_sites(): the requested macromolecule ({macromolecule}) isn't registered; use add_macromolecules()"
+            return {}
+
+        d = {}
+        for (site_number, affinity_obj) in binding_site_info.items():
+            ligand = affinity_obj.chemical
+            d[site_number] = ligand
+
+        return d        # EXAMPLE: {1: "A", 2: "C"}
+
+
+
     def reset_macromolecule(self, macromolecule):
+        """
+
+        :param macromolecule:
+        :return:
+        """
         if self.binding_sites.get(macromolecule) is not None:
             del self.binding_sites[macromolecule]
+
 
 
     def clear_macromolecules(self):
@@ -596,89 +733,6 @@ class ChemData:
         """
         self.macro_molecules = []
         self.binding_sites = {}
-
-    ############   END of Macro-molecules   ############
-
-
-
-    def set_diffusion_rate(self, name: str, diff_rate) -> None:
-        """
-        Set the diffusion rate of the given chemical species (identified by its name)
-
-        :param name:
-        :param diff_rate:
-        :return:            None
-        """
-        self.assert_valid_diffusion(diff_rate)
-        index = self.get_index(name)
-        data = self.chemical_data[index]
-        data["diff"] = diff_rate
-
-
-
-    def set_temp(self, temp, units="K") -> None:
-        """
-        Specify the temperature of the environment
-        (for now assumed uniform everywhere)
-
-        :param temp:    Temperature, in Kelvins, or None
-        :param units:   Not yet implemented
-        :return:        None
-        """
-        self.temp = temp
-
-
-
-    def add_reaction(self, reactants: Union[int, str, list], products: Union[int, str, list],
-                     forward_rate=None, reverse_rate=None,
-                     delta_H=None, delta_S=None, delta_G=None) -> Reaction:
-        """
-        Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
-        The involved chemicals must be already registered - use add_chemical() if needed.
-
-        NOTE: in the reactants and products, if the stoichiometry and/or reaction order aren't specified,
-              they're assumed to be 1.
-              Their full structure is the triplet (stoichiometry coefficient, name, reaction order)
-
-        EXAMPLES of formats for each item of the reactants and products
-        (*assuming* that the chemical species with index 5 is called "F"):
-                    "F"         gets turned into:   (1, 5, 1)
-                    (3, "F")                        (3, 5, 1)
-                    (3, "F", 2)                     (3, 5, 2)
-                    It's equally acceptable to use LISTS in lieu of tuples
-
-        :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
-                                    or simplified terms in various formats; for details, see above.
-                                    If not a list, it will get turned into one
-        :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction),
-                                    or simplified terms in various formats; for details, see above.
-                                    If not a list, it will get turned into one
-        :param forward_rate:    [OPTIONAL] Forward reaction rate constant
-        :param reverse_rate:    [OPTIONAL] Reverse reaction rate constant
-        :param delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
-        :param delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
-        :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
-        :return:                Object of type "Reaction"
-                                (note: the object variable self.reaction_list gets appended to)
-        """
-
-        rxn = Reaction(self, reactants, products, forward_rate, reverse_rate,
-                       delta_H, delta_S, delta_G)
-
-        self.reaction_list.append(rxn)
-
-        return rxn
-
-
-
-    def clear_reactions_data(self) -> None:
-        """
-        Get rid of all reactions; start again with "an empty slate" (but still with reference
-        to the same data object about the chemicals)
-
-        :return:    None
-        """
-        self.reaction_list = []
 
 
 

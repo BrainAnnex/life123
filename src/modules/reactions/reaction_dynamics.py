@@ -56,12 +56,16 @@ class ReactionDynamics:
 
 
         self.macro_system = {}      # A dict mapping macromolecule names to their counts
-                                    # EXAMPLE:  {"M1: 1, "M2": 3, "M3": 1}
+                                    # EXAMPLE:  {"M1": 1, "M2": 3, "M3": 1}
 
-        self.macro_system_state = {}    # The counterpart of the system data for macro-molecules, if present
-                                    # Binding fractions of the applicable transcription factors, for all the macro-molecules
-                                    # EXAMPLE:   {"M1": {"A": 0.2, "F": 0.93, "P": 0.},
-                                    #             "M2": {"C": 0.5, "F": 0.1}}
+        self.macro_system_state = {}  # The counterpart of the system data for macro-molecules, if present
+                                    # Binding fractions of the applicable transcription factors, for all the macro-molecules,
+                                    # over the previous time step, indexed by macromolecule and by binding site number
+                                    # EXAMPLE:   {"M1": {1: ("A": 0.2), 2: ("F": 0.93), ("P": 0.)},
+                                    #             "M2": {1: ("C": 0.5), 2: ("F": 0.1)}}
+
+                                    # OLD EXAMPLE:   {"M1": {"A": 0.2, "F": 0.93, "P": 0.},
+                                    #                 "M2": {"C": 0.5, "F": 0.1}}
                                     # For background, see: https://www.annualreviews.org/doi/10.1146/annurev-cellbio-100617-062719
 
         self.history = MovieTabular()   # To store user-selected snapshots of (some of) the chemical concentrations,
@@ -364,6 +368,42 @@ class ReactionDynamics:
 
 
 
+    ###  MACRO-MOLECULES ###
+
+    def set_macromolecules(self, data=None) -> None:
+        """
+        Specify the macromolecules, and their counts, to be included in the system.
+        Any previous data gets over-written
+
+        :param data:    A dict mapping macromolecule names to their counts
+                            EXAMPLE:  {"M1": 1, "M2": 3, "M3": 1}
+                        If any of the requested macromolecules isn't registered, an Exception will be raised
+                        If data=None, then the set of registered macromolecules is used,
+                            and all the counts are set to 1
+        :return:        None.
+                        The object variables self.macro_system and self.macro_system_state get set
+        """
+        if data is None:
+            # Use the registered macromolecules, and set all counts to 1
+            data = {}
+            for mm in self.chem_data.get_macromolecules():
+                data[mm] = 1
+
+        self.macro_system = data
+
+
+        self.macro_system_state = {}    # Reset
+        for mm in data.keys():   # For each macromolecule in our system
+            binding_sites_and_ligands = self.chem_data.get_binding_sites_and_ligands(mm)     # EXAMPLE: {1: "A", 2: "C"}
+            d = {}
+            for (site_number, ligand) in binding_sites_and_ligands.items():
+                d[site_number] = (ligand, 0.)           # All "binding fractions" are set to 0.
+
+            self.macro_system_state[mm] = d
+
+
+
+
     #############################################################################################
     #                                                                                           #
     #                                   TO VISUALIZE SYSTEM                                     #
@@ -618,7 +658,7 @@ class ReactionDynamics:
 
 
         i = 0
-        while self.system_time < target_end_time:
+        while self.system_time < target_end_time:   # Proceed until the system time reaches the target endtime
             if (not variable_steps) and (i == n_steps) and np.allclose(self.system_time, target_end_time):
                 break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
                             #   the System Time is below the target_end_time because of roundoff error
@@ -699,9 +739,10 @@ class ReactionDynamics:
 
         Return the increment vector for all the chemical species concentrations in the compartment
 
-        NOTES:  - the actual system concentrations are NOT changed
-                - this method doesn't decide on step sizes - except in case of aborts and repeats with smaller step - but
-                  makes suggestions to the calling module about the next step to best take
+        NOTES:  * the actual system concentrations are NOT changed
+                * this method doesn't decide on step sizes - except in case of aborts
+                    followed by repeats with smaller step - but makes suggestions
+                    to the calling module about the next step to best take
 
         :param delta_time:      The requested time duration of the overall reaction step
         :param conc_array:      All initial concentrations at the start of the reaction step,
@@ -778,6 +819,14 @@ class ReactionDynamics:
                             f"In spite of numerous automated reductions of the time step, it continues to lead to concentration changes that are considered excessive; "
                             f"consider reducing the original time step, and/or increasing the 'abort' thresholds with set_thresholds(). Current values: {self.thresholds}")
 
+        # If we get thus far, it's the normal exit of the reaction step
+
+
+        # Macro-molecule related part, if applicable
+        if self.macro_system_state != {}:
+            print("In the future, macro-molecule operations will take place here")      # TODO: implement
+
+
         return  (delta_concentrations, delta_time, recommended_next_step)     # TODO: consider returning tentative_updated_system , since we already computed it
 
 
@@ -785,6 +834,8 @@ class ReactionDynamics:
 
     def attempt_reaction_step(self, recommended_next_step, delta_time, conc_array, variable_steps, explain_variable_steps, step_counter):
         """
+        Perform the core reaction step, and then raise an Exception if it needs to be aborted.
+        If variable_steps is True, determine a new value for recommended_next_step
 
         :param recommended_next_step:
         :param delta_time:

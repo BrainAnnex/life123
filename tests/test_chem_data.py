@@ -321,6 +321,62 @@ def test_get_binding_site_affinity():
 
 
 
+def test_get_binding_sites():
+    chem_data = ChemData(["A", "B"])
+    chem_data.add_macromolecules(["M1", "M2"])
+
+    with pytest.raises(Exception):
+        chem_data.get_binding_sites("M9999")    # Unknown macromolecule
+
+    assert chem_data.get_binding_sites("M1") == []
+    assert chem_data.get_binding_sites("M2") == []
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="A", affinity=3)
+    assert chem_data.get_binding_sites("M1") == [1]
+    assert chem_data.get_binding_sites("M2") == []
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, chemical="B", affinity=5)
+    assert chem_data.get_binding_sites("M1") == [1, 2]
+    assert chem_data.get_binding_sites("M2") == []
+
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, chemical="B", affinity=11)
+    assert chem_data.get_binding_sites("M1") == [1, 2]
+    assert chem_data.get_binding_sites("M2") == [1]
+
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, chemical="B", affinity=102)
+    assert chem_data.get_binding_sites("M1") == [1, 2]
+    assert chem_data.get_binding_sites("M2") == [1, 3]
+
+
+
+def test_get_binding_sites_and_ligands():
+    chem_data = ChemData(["A", "B"])
+    chem_data.add_macromolecules(["M1", "M2"])
+
+    with pytest.raises(Exception):
+        chem_data.get_binding_sites_and_ligands("M9999")    # Unknown macromolecule
+
+    assert chem_data.get_binding_sites_and_ligands("M1") == {}
+    assert chem_data.get_binding_sites_and_ligands("M2") == {}
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="A", affinity=3)
+    assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A"}
+    assert chem_data.get_binding_sites_and_ligands("M2") == {}
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, chemical="B", affinity=5)
+    assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A", 2: "B"}
+    assert chem_data.get_binding_sites_and_ligands("M2") == {}
+
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, chemical="B", affinity=11)
+    assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A", 2: "B"}
+    assert chem_data.get_binding_sites_and_ligands("M2") == {1: "B"}
+
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, chemical="B", affinity=102)
+    assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A", 2: "B"}
+    assert chem_data.get_binding_sites_and_ligands("M2") == {1: "B", 3: "B"}
+
+
+
 def test_reset_macromolecule():
     pass   # TODO
 
