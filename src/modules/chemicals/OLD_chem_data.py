@@ -3,34 +3,101 @@ from src.modules.reactions.reaction import Reaction
 
 
 
-class ChemCore():
+
+class ChemicalAffinity(NamedTuple):
+    # Used for binding to macromolecules (e.g. Transcription Factors to DNA)
+    chemical: str
+    affinity: float
+
+
+
+########################################################################################################
+########################################################################################################
+
+
+class ChemData:
     """
-    Core data about the chemical species, such as their names and indexes (position in their listing)
+    Data about all the chemicals and (if applicable) reactions,
+    including:
+        - names
+        - diffusion rates
+        - macro-molecules Binding Site Affinities (for Transcription Factors)
+        - reaction data (see class "Reaction", in "reaction_data.py")
 
-    End users will generally utilize the class ChemData, which extends this one
+
+    Note: for now, the temperature is assumed constant everywhere, and unvarying (or very slowly varying)
     """
 
-    def __init__(self):
+    def __init__(self, names=None, diffusion_rates=None):
+        """
+        If chemical names and their diffusion rates are both provided, they must have the same count,
+        and appear in the same order.
+        It's ok not to pass any data, and later add it.
+        Reactions, if applicable, need to be added later by means of calls to add_reaction()
+        Macro-molecules, if applicable, need to be added later
 
-        self.chemical_data = [] # Basic data for all chemicals, *except* water and macro-molecules
-        # EXAMPLE: [{"name": "A"} ,
-        #           {"name": "B", "note": "some note"}]
+        :param names:           [OPTIONAL] A list with the names of the chemicals
+        :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals
+                                           If diffusion rates are provided, but no names given, the names will be
+                                           auto-assigned as "Chemical 1", "Chemical 2", ...
+        """
+        self.chemical_data = []     # Data for all chemicals, *except* water and macro-molecules
+        # EXAMPLE: [{"name": "A", "diff": 6.4} ,
+        #           {"name": "B", "diff": 12.0, "note": "some note"}]
         # The position in the list is referred to as the "index" of that chemical
         # TODO: maybe use a Pandas dataframe
 
-        self.name_dict = {}     # To map assigned names to their positional index (in the ordered list of chemicals);
-        # this is automatically set and maintained
+        self.name_dict = {}         # To map assigned names to their positional index (in the ordered list of chemicals);
+        # this is automatically set and maintained.   TODO: maybe extend to macro-molecules
         # EXAMPLE: {"A": 0, "B": 1, "C": 2}
 
+        self.macro_molecules = []   # List of names.  EXAMPLE: ["M1", "M2"]
+        # The position in the list is referred to as the "index" of that macro-molecule
+        # Names will be enforced to be unique
+
+        self.binding_sites = {}     # A dict whose keys are macromolecule names.  The values are in turn dicts, indexed by site number.
+        # EXAMPLE:
+        #       {"M1": {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)},
+        #        "M2": {1: ChemicalAffinity("C", 9.1), 2: ChemicalAffinity("B", 0.3), 3: ChemicalAffinity("A", 1.8), 4: ChemicalAffinity("C", 2.3)}
+        #        }
+        #       where "M1", "M2" are macro-molecules, and "A", "B", "C" are bulk chemicals (such as transcription factors),
+        #           all previously-declared;
+        #           the various ChemicalAffinity's are NamedTuples (objects) storing a bulk-chemical name and its affinity at that site.
+
+        # Info on Binding Site Affinities : https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6787930/
+
+        #       OLD: {"M1": {"A": 2.4, "B": 853.} }       # Alt: [("A", 2.4), ("B", 853.)]
+
+
+        self.reaction_list = []     # List of dicts.  Each item is an object of class "Reaction"
+
+        self.temp = 298.15          # Temperature in Kelvins.  (By default, 25 C)
+        # For now, assumed constant everywhere, and unvarying (or very slowly varying)
+
+        self.n_species = 0          # The number of chemicals -
+        # exclusive of water and of macro-molecules
+        # TODO: maybe phase out this redundant value
+
+
+        if (names is not None) or (diffusion_rates is not None):
+            self.init_chemical_data(names, diffusion_rates)     # This wll set self.chemical_data, self.name_dict and self.n_species
+
+
+
+
+
+    #####################################################################################################
+
+    '''          ~   TO READ DATA STRUCTURES of the CHEMICALS (incl. diffusion data)  ~               '''
+
+    def ________READ_CHEM_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
 
     def number_of_chemicals(self) -> int:
-        """
-        Return the number of registered chemicals - exclusive of water and of macro-molecules
-
-        :return:
-        """
-        return len(self.chemical_data)
+        # Return the number of registered chemicals - exclusive of water
+        return self.n_species
 
 
 
@@ -41,9 +108,24 @@ class ChemCore():
         :param species_index:   An integer that indexes the chemical of interest (numbering starts at 0)
         :return:                None
         """
-        n_species = self.number_of_chemicals()
-        assert (type(species_index) == int) and (0 <= species_index < n_species), \
-            f"The requested species index ({species_index}) is not the expected integer the range [0 - {n_species - 1}], inclusive"
+        assert (type(species_index) == int) and \
+               0 <= species_index < self.n_species, \
+            f"The requested species index ({species_index}) is not the expected integer the range [0 - {self.n_species - 1}], inclusive"
+
+
+
+    def assert_valid_diffusion(self, diff) -> None:
+        """
+        Raise an Exception if the specified diffusion value isn't valid
+
+        :param diff:    Diffusion rate
+        :return:        None
+        """
+        assert type(diff) == float or type(diff) == int, \
+            f"ChemData.assert_valid_diffusion(): The value for the diffusion rate ({diff}) is not a number (float or int)"
+
+        assert diff >= 0., \
+            f"ChemData.assert_valid_diffusion(): the diffusion rate ({diff}) cannot be negative"
 
 
 
@@ -78,11 +160,10 @@ class ChemCore():
         return self.chemical_data[species_index].get("name")    # If "name" is not present, None will be returned
 
 
-
     def get_all_names(self) -> [Union[str, None]]:
         """
         Return a list with the names of all the chemical species, in their index order.
-        If any is missing, None is used     TODO: raise an Exception instead
+        If any is missing, None is used
 
         :return:    A list of strings
         """
@@ -91,65 +172,10 @@ class ChemCore():
 
 
 
-    def add_chemical_species(self, name, note=None) -> int:     # TODO: test
-        """
-
-        :param name:
-        :param note:
-        :return:
-        """
-        index = len(self.chemical_data)     # The next available index number (list position)
-        self.name_dict[name] = index
-
-        if note is None:
-            self.chemical_data.append({"name": name})
-        else:
-            self.chemical_data.append({"name": name, "note": note})
-
-        return index
-
-
-
-
-###############################################################################################################
-###############################################################################################################
-
-
-class Diffusion(ChemCore):
-    """
-    Extend its parent class to manage diffusion-related data
-
-    End users will generally utilize the class ChemData, which extends this one
-    """
-
-    def __init__(self):
-
-        super().__init__()          # Invoke the constructor of its parent class
-
-        self.diffusion_rates = {}   # EXAMPLE: {"A": 6.4, "B": 12.0}
-
-
-
-    def assert_valid_diffusion(self, diff) -> None:
-        """
-        Raise an Exception if the specified diffusion value isn't valid
-
-        :param diff:    Diffusion rate
-        :return:        None
-        """
-        assert type(diff) == float or type(diff) == int, \
-            f"Diffusion.assert_valid_diffusion(): The value for the diffusion rate ({diff}) is not a number (float or int)"
-
-        assert diff >= 0., \
-            f"Diffusion.assert_valid_diffusion(): the diffusion rate ({diff}) cannot be negative"
-
-
-
     def get_diffusion_rate(self, species_index: int) -> Union[str, None]:
         """
         Return the diffusion rate of the chemical species with the given index.
-        If no value was assigned, return None.
-        TODO: also accept lookup by name
+        If no name was assigned, return None.
 
         :param species_index:   An integer (starting with zero) corresponding to the
                                     original order with which the chemical species were first added
@@ -158,10 +184,7 @@ class Diffusion(ChemCore):
         """
         self.assert_valid_species_index(species_index)
 
-        name = self.get_name(species_index)
-
-        return self.diffusion_rates.get(name)      # If not present, None is returned
-
+        return self.chemical_data[species_index].get("diff")  # If not present, None is returned
 
 
     def get_all_diffusion_rates(self) -> list:
@@ -173,9 +196,7 @@ class Diffusion(ChemCore):
 
         :return:    A list of numbers with the diffusion rates
         """
-        return [self.diffusion_rates.get(name) for name in self.get_all_names()]
-        # If any value is not present, None is used for it
-
+        return [c.get("diff", None) for c in self.chemical_data]      # If any value is not present, None is used
 
 
     def missing_diffusion_rate(self) -> bool:
@@ -185,51 +206,21 @@ class Diffusion(ChemCore):
         :return:    True if any of the diffusion rates (for all the registered chemicals) is missing;
                         False otherwise
         """
-        if len(self.diffusion_rates) < self.number_of_chemicals():
-            return True
-
-        for name, diff in self.diffusion_rates.items():
-            if diff is None:
-                return True     # TODO: this should never occur
+        for c in self.chemical_data:
+            if "diff" not in c:
+                return True
 
         return False
 
 
 
-    def set_diffusion_rate(self, name: str, diff_rate) -> None:
-        """
-        Set the diffusion rate of the given chemical species (identified by its name)
+    #####################################################################################################
 
-        :param name:        Name of a chemical species
-        :param diff_rate:   Diffusion rate (in water) for the above chemical
-        :return:            None
-        """
-        self.assert_valid_diffusion(diff_rate)
-        self.diffusion_rates[name] = diff_rate
+    '''                      ~   TO READ DATA STRUCTURES of the REACTIONS  ~                          '''
 
-
-
-
-###############################################################################################################
-###############################################################################################################
-
-
-class AllReactions(Diffusion):
-    """
-    Extend its parent class to manage reaction-related data
-
-    End users will generally utilize the class ChemData, which extends this one
-    """
-
-    def __init__(self):
-
-        super().__init__()          # Invoke the constructor of its parent class
-
-        self.reaction_list = []     # List of dicts.  Each item is an object of class "Reaction"
-
-        self.temp = 298.15          # Temperature in Kelvins.  (By default, 25 C)
-        # For now, assumed constant everywhere, and unvarying (or very slowly varying)
-
+    def ________READ_RXN_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
 
     def number_of_reactions(self) -> int:
@@ -368,6 +359,89 @@ class AllReactions(Diffusion):
 
 
 
+
+    #####################################################################################################
+
+    '''                                  ~   TO SET DATA  ~                                           '''
+
+    def ________SET_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
+    def init_chemical_data(self, names=None, diffusion_rates=None)  -> None:
+        """
+        Initialize the names (if provided) and diffusion rates (if provided)
+        of all the chemical species, in the given order.
+        If no names are provided, the strings "Chemical 1", "Chemical 2", ..., are used
+
+        IMPORTANT: this function can be invoked only once, before any chemical data is set.
+                   To add new chemicals later, use add_chemical()
+
+        :param names:           [OPTIONAL] List or tuple of the names of the chemical species
+        :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals,
+                                           in the same order as the names
+        :return:                None
+        """
+        # Validate
+        assert not self.chemical_data, \
+            f"ChemData.init_chemical_data(): function can be invoked only once, before any chemical data is set"
+
+        if names:
+            arg_type = type(names)
+            assert arg_type == list or arg_type == tuple, \
+                f"ChemData.init_chemical_data(): the `names` argument must be a list or tuple.  What was passed was of type {arg_type}"
+            if self.n_species != 0:
+                assert len(names) == self.n_species, \
+                    f"ChemData.init_chemical_data(): the passed number of names ({len(names)}) " \
+                    f"doesn't match the previously-set number of chemical species (self.n_species)"
+
+        if diffusion_rates:
+            arg_type = type(diffusion_rates)
+            assert arg_type == list or arg_type == tuple, \
+                f"ChemData.init_chemical_data(): the diffusion_rates must be a list or tuple.  What was passed was of type {arg_type}"
+            if self.n_species != 0:
+                assert len(diffusion_rates) == self.n_species, \
+                    f"ChemData.init_chemical_data(): the passed number of diffusion rates ({len(diffusion_rates)}) " \
+                    f"doesn't match the previously-set number of chemical species ({self.n_species})"
+
+        if diffusion_rates and names:
+            assert len(names) == len(diffusion_rates), \
+                f"ChemData.init_chemical_data(): the supplied names and diffusion_rates " \
+                f"don't match in number ({len(names)} vs. {len(diffusion_rates)})"
+
+
+        # Populate the data structure
+        if names is None:
+            if diffusion_rates is None:   # The strings "Chemical 1", "Chemical 2", ..., will be used as names
+                for i in range(self.n_species):
+                    assigned_name = f"Chemical {i+1}"
+                    self.chemical_data.append({"name": assigned_name})
+                    self.name_dict[assigned_name] = i
+            else:
+                for i, diff in enumerate(diffusion_rates):
+                    assigned_name = f"Chemical {i+1}"
+                    self.assert_valid_diffusion(diff)
+                    self.chemical_data.append({"name": assigned_name, "diff": diff})
+                    self.name_dict[assigned_name] = i
+
+        else:   # names is not None
+            for i, chem_name in enumerate(names):
+                assert type(chem_name) == str, \
+                    f"ChemData.init_chemical_data(): all the names must be strings.  The passed value ({chem_name}) is of type {type(chem_name)}"
+                if diffusion_rates is None:
+                    self.chemical_data.append({"name": chem_name})
+                else:
+                    diff = diffusion_rates[i]
+                    self.assert_valid_diffusion(diff)
+                    self.chemical_data.append({"name": chem_name, "diff": diff})
+
+                self.name_dict[chem_name] = i
+
+        self.n_species = len(self.chemical_data)
+
+
+
     def add_chemical(self, name: str, diffusion_rate=None, note=None) -> None:
         """
         Register a new chemical species, with a name and (optionally) a diffusion rate.
@@ -383,9 +457,39 @@ class AllReactions(Diffusion):
 
         if diffusion_rate:
             self.assert_valid_diffusion(diffusion_rate)
-            self.set_diffusion_rate(name=name, diff_rate=diffusion_rate)
 
-        self.add_chemical_species(name=name, note=note)
+        # Prepare the data structure for the new chemical
+        new_data = {"name": name}
+
+        if diffusion_rate:
+            new_data["diff"] = diffusion_rate
+
+        if note:
+            new_data["note"] = note
+
+        # Save the data structure for the new chemical
+        self.chemical_data.append(new_data)
+
+
+        self.name_dict[name] = len(self.chemical_data) - 1  # The next available positional index
+        # (for the mapping of names to indices)
+
+        self.n_species += 1
+
+
+
+    def set_diffusion_rate(self, name: str, diff_rate) -> None:
+        """
+        Set the diffusion rate of the given chemical species (identified by its name)
+
+        :param name:
+        :param diff_rate:
+        :return:            None
+        """
+        self.assert_valid_diffusion(diff_rate)
+        index = self.get_index(name)
+        data = self.chemical_data[index]
+        data["diff"] = diff_rate
 
 
 
@@ -455,117 +559,14 @@ class AllReactions(Diffusion):
 
 
 
+
     #####################################################################################################
 
-    '''                             ~   TO DESCRIBE THE REACTIONS  ~                                  '''
+    '''                                  ~   MACROMOLECULES  ~                                        '''
 
-    def ________DESCRIBE_RXNS________(DIVIDER):
+    def ________MACROMOLECULES________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
-
-    def describe_reactions(self, concise=False) -> None:
-        """
-        Print out a user-friendly plain-text form of all the reactions.
-        If wanting to describe just 1 reaction, use single_reaction_describe()
-
-        EXAMPLE (not concise):
-            Number of reactions: 2 (at temp. 25 C)
-            (0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
-            (1) A + B <-> C  (kF = 5.0 / kR = 1.0 / Delta_G =  / K = 5.0) | 1st order in all reactants & products"
-
-        :param concise:     If True, less detail is shown
-        :return:            None
-        """
-        print(f"Number of reactions: {self.number_of_reactions()} (at temp. {self.temp - 273.15:,.4g} C)")
-        for description in self.multiple_reactions_describe(concise=concise):
-            print(description)
-
-
-
-    def multiple_reactions_describe(self, rxn_list=None, concise=False) -> [str]:
-        """
-        The counterpart of single_reaction_describe() for many reactions
-
-        :param rxn_list:    Either a list of integers, to identify the reactions of interest,
-                                or None, meaning ALL reactions
-        :param concise:     If True, less detail is shown
-        :return:            A list of strings; each string is the description of one of the reactions
-        """
-        if rxn_list is None:
-            rxn_list = range(self.number_of_reactions())    # Show ALL reactions, by default
-
-        out = []    # Output list being built
-
-        for i in rxn_list:
-            description = self.single_reaction_describe(rxn_index=i, concise=concise)
-            description = f"{i}: {description}"
-            out.append(description)
-
-        return out
-
-
-
-    def single_reaction_describe(self, rxn_index: int, concise=False) -> str:
-        """
-        Return as a string, a user-friendly plain-text form of the given reaction
-        EXAMPLE (concise):      "CH4 + 2 O2 <-> CO2 + 2 H2O"
-        EXAMPLE (not concise):  "CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
-
-        :param rxn_index:   Integer to identify the reaction of interest
-        :param concise:     If True, less detail is shown
-        :return:            A string with a description of the specified reaction
-        """
-        rxn = self.get_reaction(rxn_index)
-
-        return rxn.describe(concise)
-
-
-
-
-
-###############################################################################################################
-###############################################################################################################
-
-
-class ChemicalAffinity(NamedTuple):
-    # Used for binding to macromolecules (e.g. Transcription Factors to DNA)
-    chemical: str
-    affinity: float
-
-
-
-class Macromolecules(AllReactions):
-    """
-    Extend its parent class to manage modeling of large molecules (such as DNA)
-    with multiple binding sites (for example, for Transcription Factors)
-
-    End users will generally utilize the class ChemData, which extends this one
-    """
-
-    def __init__(self):
-
-        super().__init__()          # Invoke the constructor of its parent class
-
-
-        self.macro_molecules = []   # List of names.  EXAMPLE: ["M1", "M2"]
-        # The position in the list is referred to as the "index" of that macro-molecule
-        # Names will be enforced to be unique
-
-        self.binding_sites = {}     # A dict whose keys are macromolecule names.  The values are in turn dicts, indexed by site number.
-        # EXAMPLE:
-        #       {"M1": {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)},
-        #        "M2": {1: ChemicalAffinity("C", 9.1), 2: ChemicalAffinity("B", 0.3), 3: ChemicalAffinity("A", 1.8), 4: ChemicalAffinity("C", 2.3)}
-        #        }
-        #       where "M1", "M2" are macro-molecules, and "A", "B", "C" are bulk chemicals (such as transcription factors),
-        #           all previously-declared;
-        #           the various ChemicalAffinity's are NamedTuples (objects) storing a bulk-chemical name and its affinity at that site.
-
-        # Info on Binding Site Affinities : https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6787930/
-
-        #       OLD: {"M1": {"A": 2.4, "B": 853.} }       # Alt: [("A", 2.4), ("B", 853.)]
-
-
-
 
     def add_macromolecules(self, names: Union[str, List[str]]) -> None:
         """
@@ -736,116 +737,69 @@ class Macromolecules(AllReactions):
 
 
 
-###############################################################################################################
-###############################################################################################################
+    #####################################################################################################
 
+    '''                                ~   TO DESCRIBE THE DATA  ~                                    '''
 
-class ChemData(Macromolecules):
-    """
-    Data about all the chemicals and (if applicable) reactions,
-    including:
-        - names
-        - diffusion rates
-        - macro-molecules Binding Site Affinities (for Transcription Factors)
-        - reaction data (see also class "Reaction", in "reaction_data.py")
+    def ________DESCRIBE_DATA________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
-
-    Notes:  - for now, the temperature is assumed constant everywhere, and unvarying (or very slowly varying)
-
-            - we're using a "daisy chain" of classes extending the previous one, starting from ChemCore
-              and ending in this user-facing class:
-              ChemCore <- Diffusion <- AllReactions <- Macromolecules <- ChemData
-    """
-    def __init__(self, names=None, diffusion_rates=None):
+    def describe_reactions(self, concise=False) -> None:
         """
-        If chemical names and their diffusion rates are both provided, they must have the same count,
-        and appear in the same order.
-        It's ok not to pass any data, and later add it.
-        Reactions, if applicable, need to be added later by means of calls to add_reaction()
-        Macro-molecules, if applicable, need to be added later
+        Print out a user-friendly plain-text form of all the reactions.
+        If wanting to describe just 1 reaction, use single_reaction_describe()
 
-        :param names:           [OPTIONAL] A list with the names of the chemicals
-        :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals
-                                           If diffusion rates are provided, but no names given, the names will be
-                                           auto-assigned as "Chemical 1", "Chemical 2", ...
+        EXAMPLE (not concise):
+            Number of reactions: 2 (at temp. 25 C)
+            (0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
+            (1) A + B <-> C  (kF = 5.0 / kR = 1.0 / Delta_G =  / K = 5.0) | 1st order in all reactants & products"
+
+        :param concise:     If True, less detail is shown
+        :return:            None
         """
-        super().__init__()       # Invoke the constructor of its parent class
-
-        # Initialize
-        if (names is not None) or (diffusion_rates is not None):
-            self.init_chemical_data(names, diffusion_rates)
+        print(f"Number of reactions: {self.number_of_reactions()} (at temp. {self.temp - 273.15:,.4g} C)")
+        for description in self.multiple_reactions_describe(concise=concise):
+            print(description)
 
 
 
-
-    def init_chemical_data(self, names=None, diffusion_rates=None)  -> None:
+    def multiple_reactions_describe(self, rxn_list=None, concise=False) -> [str]:
         """
-        Initialize the names (if provided) and diffusion rates (if provided)
-        of all the chemical species, in the given order.
-        If no names are provided, the strings "Chemical 1", "Chemical 2", ..., are used
+        The counterpart of single_reaction_describe() for many reactions
 
-        IMPORTANT: this function can be invoked only once, before any chemical data is set.
-                   To add new chemicals later, use add_chemical()
-
-        :param names:           [OPTIONAL] List or tuple of the names of the chemical species
-        :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals,
-                                           in the same order as the names
-        :return:                None
+        :param rxn_list:    Either a list of integers, to identify the reactions of interest,
+                                or None, meaning ALL reactions
+        :param concise:     If True, less detail is shown
+        :return:            A list of strings; each string is the description of one of the reactions
         """
-        # Validate
-        assert self.number_of_chemicals() == 0, \
-            f"ChemData.init_chemical_data(): function can be invoked only once, before any chemical data is set"
+        if rxn_list is None:
+            rxn_list = range(self.number_of_reactions())    # Show ALL reactions, by default
 
-        n_species = self.number_of_chemicals()
+        out = []    # Output list being built
 
-        if names:
-            arg_type = type(names)
-            assert arg_type == list or arg_type == tuple, \
-                f"ChemData.init_chemical_data(): the `names` argument must be a list or tuple.  What was passed was of type {arg_type}"
-            if n_species != 0:
-                assert len(names) == n_species, \
-                    f"ChemData.init_chemical_data(): the passed number of names ({len(names)}) " \
-                    f"doesn't match the previously-set number of chemical species (n_species)"
+        for i in rxn_list:
+            description = self.single_reaction_describe(rxn_index=i, concise=concise)
+            description = f"{i}: {description}"
+            out.append(description)
 
-        if diffusion_rates:
-            arg_type = type(diffusion_rates)
-            assert arg_type == list or arg_type == tuple, \
-                f"ChemData.init_chemical_data(): the diffusion_rates must be a list or tuple.  What was passed was of type {arg_type}"
-            if n_species != 0:
-                assert len(diffusion_rates) == n_species, \
-                    f"ChemData.init_chemical_data(): the passed number of diffusion rates ({len(diffusion_rates)}) " \
-                    f"doesn't match the previously-set number of chemical species ({n_species})"
-
-        if diffusion_rates and names:
-            assert len(names) == len(diffusion_rates), \
-                f"ChemData.init_chemical_data(): the supplied names and diffusion_rates " \
-                f"don't match in number ({len(names)} vs. {len(diffusion_rates)})"
+        return out
 
 
-        # Populate the data structure
-        if names is None:
-            if diffusion_rates is None:   # The strings "Chemical 1", "Chemical 2", ..., will be used as names
-                for i in range(n_species):
-                    assigned_name = f"Chemical {i+1}"
-                    self.add_chemical_species(assigned_name)
-            else:
-                for i, diff in enumerate(diffusion_rates):
-                    assigned_name = f"Chemical {i+1}"
-                    self.assert_valid_diffusion(diff)
-                    self.add_chemical_species(assigned_name)
-                    self.set_diffusion_rate(name=assigned_name, diff_rate=diff)
 
-        else:   # names is not None
-            for i, chem_name in enumerate(names):
-                assert type(chem_name) == str, \
-                    f"ChemData.init_chemical_data(): all the names must be strings.  The passed value ({chem_name}) is of type {type(chem_name)}"
-                if diffusion_rates is None:
-                    self.add_chemical_species(chem_name)
-                else:
-                    diff = diffusion_rates[i]
-                    self.assert_valid_diffusion(diff)
-                    self.add_chemical_species(chem_name)
-                    self.set_diffusion_rate(name=chem_name, diff_rate=diff)
+    def single_reaction_describe(self, rxn_index: int, concise=False) -> str:
+        """
+        Return as a string, a user-friendly plain-text form of the given reaction
+        EXAMPLE (concise):      "CH4 + 2 O2 <-> CO2 + 2 H2O"
+        EXAMPLE (not concise):  "CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
+
+        :param rxn_index:   Integer to identify the reaction of interest
+        :param concise:     If True, less detail is shown
+        :return:            A string with a description of the specified reaction
+        """
+        rxn = self.get_reaction(rxn_index)
+
+        return rxn.describe(concise)
 
 
 
@@ -952,3 +906,24 @@ class ChemData(Macromolecules):
             #'Product': 'neo4j_red',
             'Reaction': 'neo4j_lightbrown'
         }
+
+
+
+
+    #####################################################################################################
+
+    '''                                    ~   PRIVATE  ~                                              '''
+
+    def ________PRIVATE________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
+    def _internal_reactions_data(self) -> None:
+        """
+        Print out a partial, low-level view of the reactions data, for all reactions
+
+        :return:    None
+        """
+        for i in range(self.number_of_reactions()):
+            print(f"{i}: {self.get_reactants(i)} <-> {self.get_products(i)}   ; Fwd: {self.get_forward_rate(i)} / Back: {self.get_reverse_rate(i)}")

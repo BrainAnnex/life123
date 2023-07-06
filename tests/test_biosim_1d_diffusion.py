@@ -92,6 +92,7 @@ def test_diffuse_step_single_species_1b():
 def test_diffuse_step_single_species_2():
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
+
     bio.set_uniform_concentration(species_index=0, conc=8.0)
     with pytest.raises(Exception):
         bio.diffuse_step_single_species(time_step=.001)    # Must set the diffusion rates first

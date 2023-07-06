@@ -4,7 +4,6 @@ from src.modules.reactions.reaction import Reaction
 
 
 
-
 class ChemData():
     def __init__(self, names=None, diffusion_rates=None):
         """
@@ -21,7 +20,7 @@ class ChemData():
         self.reaction_list = []     # List of dicts.  Each item is an object of class "Reaction"
 
         self.temp = 298.15          # Temperature in Kelvins.  (By default, 25 C)
-                                    # For now, assumed constant everywhere, and unvarying (or very slowly varying)
+        # For now, assumed constant everywhere, and unvarying (or very slowly varying)
 
 
         if (names is not None) or (diffusion_rates is not None):
@@ -42,6 +41,12 @@ class ChemData():
 
     def get_name(self, species_index: int) -> Union[str, None]:
         return self.core.get_name(species_index)    # TODO: phase out
+
+    def number_of_chemicals(self) -> int:
+        return self.core.number_of_chemicals()    # TODO: phase out
+
+    def get_all_names(self) -> [Union[str, None]]:
+        return self.core.get_all_names()         # TODO: phase out
 
 
 
@@ -246,7 +251,7 @@ class ChemData():
             else:
                 for i, diff in enumerate(diffusion_rates):
                     assigned_name = f"Chemical {i+1}"
-                    self.assert_valid_diffusion(diff)
+                    self.diffusion.assert_valid_diffusion(diff)
                     self.core.add_chemical_species(assigned_name)
                     self.diffusion.set_diffusion_rate(name=assigned_name, diff_rate=diff)
                     #self.chemical_data.append({"name": assigned_name, "diff": diff})
@@ -561,14 +566,14 @@ class ChemCore():
         """
 
         self.chemical_data = []     # Basic data for all chemicals, *except* water and macro-molecules
-                                    # EXAMPLE: [{"name": "A"} ,
-                                    #           {"name": "B", "note": "some note"}]
-                                    # The position in the list is referred to as the "index" of that chemical
-                                    # TODO: maybe use a Pandas dataframe
+        # EXAMPLE: [{"name": "A"} ,
+        #           {"name": "B", "note": "some note"}]
+        # The position in the list is referred to as the "index" of that chemical
+        # TODO: maybe use a Pandas dataframe
 
         self.name_dict = {}         # To map assigned names to their positional index (in the ordered list of chemicals);
-                                    # this is automatically set and maintained
-                                    # EXAMPLE: {"A": 0, "B": 1, "C": 2}
+        # this is automatically set and maintained
+        # EXAMPLE: {"A": 0, "B": 1, "C": 2}
 
 
 
@@ -697,7 +702,8 @@ class Diffusion():
     def get_diffusion_rate(self, species_index: int) -> Union[str, None]:
         """
         Return the diffusion rate of the chemical species with the given index.
-        If no name was assigned, return None.
+        If no value was assigned, return None.
+        TODO: also accept lookup by name
 
         :param species_index:   An integer (starting with zero) corresponding to the
                                     original order with which the chemical species were first added
@@ -721,23 +727,24 @@ class Diffusion():
 
         :return:    A list of numbers with the diffusion rates
         """
-        #return [self.diffusion_rates.get(self.core.get_name(index))
-                #for index in range(self.core.number_of_chemicals())]
         return [self.diffusion_rates.get(name) for name in self.core.get_all_names()]
         # If any value is not present, None is used for it
 
 
 
-    def missing_diffusion_rate(self) -> bool:   # TODO: needs overhaul
+    def missing_diffusion_rate(self) -> bool:
         """
         Determine whether any of the registered chemicals has a missing diffusion rates
 
         :return:    True if any of the diffusion rates (for all the registered chemicals) is missing;
                         False otherwise
         """
-        for c in self.diffusion_rates:
-            if "diff" not in c:
-                return True
+        if len(self.diffusion_rates) < self.core.number_of_chemicals():
+            return True
+
+        for name, diff in self.diffusion_rates.items():
+            if diff is None:
+                return True     # TODO: this should never occur
 
         return False
 
@@ -782,21 +789,21 @@ class Macromolecules():
         self.core = core
 
         self.macro_molecules = []   # List of names.  EXAMPLE: ["M1", "M2"]
-                                    # The position in the list is referred to as the "index" of that macro-molecule
-                                    # Names will be enforced to be unique
+        # The position in the list is referred to as the "index" of that macro-molecule
+        # Names will be enforced to be unique
 
         self.binding_sites = {}     # A dict whose keys are macromolecule names.  The values are in turn dicts, indexed by site number.
-                                    # EXAMPLE:
-                                    #       {"M1": {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)},
-                                    #        "M2": {1: ChemicalAffinity("C", 9.1), 2: ChemicalAffinity("B", 0.3), 3: ChemicalAffinity("A", 1.8), 4: ChemicalAffinity("C", 2.3)}
-                                    #        }
-                                    #       where "M1", "M2" are macro-molecules, and "A", "B", "C" are bulk chemicals (such as transcription factors),
-                                    #           all previously-declared;
-                                    #           the various ChemicalAffinity's are NamedTuples (objects) storing a bulk-chemical name and its affinity at that site.
+        # EXAMPLE:
+        #       {"M1": {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)},
+        #        "M2": {1: ChemicalAffinity("C", 9.1), 2: ChemicalAffinity("B", 0.3), 3: ChemicalAffinity("A", 1.8), 4: ChemicalAffinity("C", 2.3)}
+        #        }
+        #       where "M1", "M2" are macro-molecules, and "A", "B", "C" are bulk chemicals (such as transcription factors),
+        #           all previously-declared;
+        #           the various ChemicalAffinity's are NamedTuples (objects) storing a bulk-chemical name and its affinity at that site.
 
-                                    # Info on Binding Site Affinities : https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6787930/
+        # Info on Binding Site Affinities : https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6787930/
 
-                                    #       OLD: {"M1": {"A": 2.4, "B": 853.} }       # Alt: [("A", 2.4), ("B", 853.)]
+        #       OLD: {"M1": {"A": 2.4, "B": 853.} }       # Alt: [("A", 2.4), ("B", 853.)]
 
 
     def add_macromolecules(self, names: Union[str, List[str]]) -> None:
@@ -911,7 +918,7 @@ class Macromolecules():
                                     EXAMPLE: [1, 2]
         """
         binding_site_info = self.binding_sites.get(macromolecule)   # EXAMPLE: {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)}
-                                                                    #   will be None if no binding sites are found
+        #   will be None if no binding sites are found
         if binding_site_info is None:
             assert macromolecule in self.get_macromolecules(), \
                 f"get_binding_sites(): the requested macromolecule ({macromolecule}) isn't registered; use add_macromolecules()"
@@ -930,7 +937,7 @@ class Macromolecules():
                                     EXAMPLE: {1: "A", 2: "C"}
         """
         binding_site_info = self.binding_sites.get(macromolecule)   # EXAMPLE: {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)}
-                                                                    #   will be None if no binding sites are found
+        #   will be None if no binding sites are found
         if binding_site_info is None:
             assert macromolecule in self.get_macromolecules(), \
                 f"get_binding_sites(): the requested macromolecule ({macromolecule}) isn't registered; use add_macromolecules()"

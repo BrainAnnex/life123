@@ -13,14 +13,14 @@ class ChemCore():
     def __init__(self):
 
         self.chemical_data = [] # Basic data for all chemicals, *except* water and macro-molecules
-        # EXAMPLE: [{"name": "A"} ,
-        #           {"name": "B", "note": "some note"}]
-        # The position in the list is referred to as the "index" of that chemical
-        # TODO: maybe use a Pandas dataframe
+                                # EXAMPLE: [{"name": "A"} ,
+                                #           {"name": "B", "note": "some note"}]
+                                # The position in the list is referred to as the "index" of that chemical
+                                # TODO: maybe use a Pandas dataframe
 
         self.name_dict = {}     # To map assigned names to their positional index (in the ordered list of chemicals);
-        # this is automatically set and maintained
-        # EXAMPLE: {"A": 0, "B": 1, "C": 2}
+                                # this is automatically set and maintained
+                                # EXAMPLE: {"A": 0, "B": 1, "C": 2}
 
 
 
@@ -125,7 +125,7 @@ class Diffusion(ChemCore):
     def __init__(self):
 
         super().__init__()          # Invoke the constructor of its parent class
-
+        
         self.diffusion_rates = {}   # EXAMPLE: {"A": 6.4, "B": 12.0}
 
 
@@ -228,7 +228,7 @@ class AllReactions(Diffusion):
         self.reaction_list = []     # List of dicts.  Each item is an object of class "Reaction"
 
         self.temp = 298.15          # Temperature in Kelvins.  (By default, 25 C)
-        # For now, assumed constant everywhere, and unvarying (or very slowly varying)
+                                    # For now, assumed constant everywhere, and unvarying (or very slowly varying)
 
 
 

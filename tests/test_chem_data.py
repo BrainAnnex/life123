@@ -1,18 +1,19 @@
 import pytest
 import numpy as np
+#from src.modules.chemicals.experimental_3 import ChemData
 from src.modules.chemicals.chem_data import ChemData
 
 
 
 def test_initialize():
     chem_data = ChemData()
-    assert chem_data.n_species == 0
+    assert chem_data.number_of_chemicals() == 0
 
     chem_data = ChemData(names=['A', 'B', 'C'])
-    assert chem_data.n_species == 3
+    assert chem_data.number_of_chemicals() == 3
     assert chem_data.get_all_names() == ['A', 'B', 'C']
     assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
-    assert chem_data.get_all_diffusion_rates() == [None, None, None]
+    assert chem_data.diffusion_rates == {}
 
     with pytest.raises(Exception):
         ChemData(names='this is not a list')   # Not a list/tuple
@@ -21,7 +22,7 @@ def test_initialize():
         ChemData(names=[1, 2])   # The names aren't strings
 
     chem_data = ChemData(diffusion_rates=[0.15, 1.2])
-    assert chem_data.n_species == 2
+    assert chem_data.number_of_chemicals() == 2
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2])
     assert chem_data.get_all_names() == ['Chemical 1', 'Chemical 2']
 
@@ -38,7 +39,7 @@ def test_initialize():
         ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2])  # mismatch in count
 
     chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2, 3.14])
-    assert chem_data.n_species == 3
+    assert chem_data.number_of_chemicals() == 3
     assert chem_data.get_all_names() == ['A', 'B', 'C']
     assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14])
@@ -214,13 +215,13 @@ def test_init_chemical_data():
 
 def test_add_chemical():
     chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2, 3.14])
-    assert chem_data.n_species == 3
+    assert chem_data.number_of_chemicals() == 3
     assert chem_data.get_all_names() == ['A', 'B', 'C']
     assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14])
 
     chem_data.add_chemical(name="D", diffusion_rate=8)
-    assert chem_data.n_species == 4
+    assert chem_data.number_of_chemicals() == 4
     assert chem_data.get_all_names() == ['A', 'B', 'C', 'D']
     assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14, 8])
@@ -234,7 +235,7 @@ def test_add_chemical():
         chem_data.add_chemical(name=666, diffusion_rate=25.)    # Wrong type for name
 
     chem_data.add_chemical(name="E", diffusion_rate=25.)
-    assert chem_data.n_species == 5
+    assert chem_data.number_of_chemicals() == 5
     assert chem_data.get_all_names() == ['A', 'B', 'C', 'D', 'E']
     assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14, 8, 25])
@@ -395,7 +396,7 @@ def test_set_diffusion_rate():
     pass   # TODO
 
 
-    
+
 def test_set_temp():
     chem_data = ChemData()
     chem_data.set_temp(123)
