@@ -368,7 +368,7 @@ class ReactionDynamics:
 
 
 
-    ###  MACRO-MOLECULES ###
+    #########  MACRO-MOLECULES  #########
 
     def set_macromolecules(self, data=None) -> None:
         """
@@ -393,7 +393,7 @@ class ReactionDynamics:
 
 
         self.macro_system_state = {}    # Reset
-        for mm in data.keys():   # For each macromolecule in our system
+        for mm in data.keys():          # For each macromolecule in our system
             binding_sites_and_ligands = self.chem_data.get_binding_sites_and_ligands(mm)     # EXAMPLE: {1: "A", 2: "C"}
             d = {}
             for (site_number, ligand) in binding_sites_and_ligands.items():
@@ -436,9 +436,11 @@ class ReactionDynamics:
             print("Macro-molecules present, with their counts: ", self.macro_system)
 
         if self.macro_system_state != {}:
-            print("Binding fractions across the binding-site numbers of the macro-molecules:")
-            for m in self.macro_system_state:
-                print("    ", m)
+            print("Binding Occupancy fractions at the various binding sites for each of the macro-molecules:")
+            for mm, state_dict in self.macro_system_state.items():
+                state_list = [f"{a}: {b[1]} ({b[0]})" for a, b in state_dict.items()]   # EXAMPLE: ["3: 0.1 (A)", "8: 0.6 (B)"]
+                state_str = ", ".join(state_list)                                       # EXAMPLE: "3: 0.1 (A)", "8: 0.6 (B)"
+                print(f"     {mm} | {state_str}")
 
 
 

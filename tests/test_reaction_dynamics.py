@@ -1025,7 +1025,7 @@ def test_set_macromolecules():
     chem.set_binding_site_affinity(macromolecule="M2", site_number=3, chemical="B", affinity=102)
 
     rxn = ReactionDynamics(chem)
-    rxn.set_macromolecules()
+    rxn.set_macromolecules()    # By default, set counts to 1 for all the registered macromolecules
 
     assert rxn.macro_system == {"M1": 1, "M2": 1}
     assert len(rxn.macro_system_state) == 2

@@ -548,8 +548,8 @@ class Macromolecules(AllReactions):
 
 
         self.macro_molecules = []   # List of names.  EXAMPLE: ["M1", "M2"]
-        # The position in the list is referred to as the "index" of that macro-molecule
-        # Names will be enforced to be unique
+                                    # The position in the list is referred to as the "index" of that macro-molecule
+                                    # Names will be enforced to be unique
 
         self.binding_sites = {}     # A dict whose keys are macromolecule names.  The values are in turn dicts, indexed by site number.
         # EXAMPLE:
@@ -570,18 +570,19 @@ class Macromolecules(AllReactions):
     def add_macromolecules(self, names: Union[str, List[str]]) -> None:
         """
         Register one or more macromolecule species, specified by their name(s)
-        Note: this is a register of names, NOT dynamical information about counts of macromolecules in the system
-              (that's the domain of the class ReactionDynamics)
+        Note: this is a register of names, NOT dynamical information
+              about counts of macromolecules in the system (that's the domain of the class ReactionDynamics)
 
         :param names:   A string, or list of strings, with the name(s) of the macromolecule(s)
-        :return:        None.  The object variable self.macro_molecules will get modified.
+        :return:        None.  The object attribute self.macro_molecules will get modified
         """
-        if type(names) == str:  # If a single name was given
+        if type(names) == str:  # If a single name was given, turn it into a list
             names = [names]
 
         for m in names:
             if m in self.macro_molecules:
-                print(f"WARNING: Macromolecule `{m}` was already registered.  Skipped...")    # Redundant attempt to re-register an existing name
+                # Warn of redundant attempt to re-register an existing macromolecule name
+                print(f"WARNING: Macromolecule `{m}` was already registered.  Skipped...")
             else:
                 self.macro_molecules.append(m)  # Grow the list of registered macromolecules
 
@@ -591,7 +592,7 @@ class Macromolecules(AllReactions):
         """
         Return a list of the names of all the registered macromolecules
 
-        :return:    A (possibly empty) list of names of all the registered macromolecules
+        :return:    A (possibly empty) list of the names of all the registered macromolecules
         """
         return self.macro_molecules
 
@@ -604,15 +605,16 @@ class Macromolecules(AllReactions):
 
         Any previously-set value (for that macromolecule/site_number/chemical) will get over-written.
 
-        Only 1 chemical can be associated to a particular site of a given macromolecule; attempting
-        to associate another one will result in error.
+        IMPORTANT: Only 1 chemical (ligand type) can be associated to a particular site of a given macromolecule; attempting
+        to associate another one will result in error.  In case multiple ligands can bind to the same physical site on
+        the macromolecule, simply assign multiple site numbers for each of them
 
         NOTE: at present, no allowance is made for the fact that if the macromolecule is already bound
               to chemical "X" then its affinity of "Y" might be different than in the absence of "X"
 
         :param macromolecule:   Name of a macromolecule; if not previously-declared,
                                     it will get added to the list of registered macromolecules
-        :param site_number:     Integer to identify a binding site on the macromolecule
+        :param site_number:     Unique integer to identify a binding site on the macromolecule
         :param chemical:        Name of a previously-declared (bulk) chemical;
                                     if not found, an Exception will be raised       TODO: inconsistent with "macromolecule" arg
         :param affinity:        A number, in units of concentration
@@ -698,7 +700,7 @@ class Macromolecules(AllReactions):
                                     EXAMPLE: {1: "A", 2: "C"}
         """
         binding_site_info = self.binding_sites.get(macromolecule)   # EXAMPLE: {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)}
-        #   will be None if no binding sites are found
+                                                                    #   will be None if no binding sites are found
         if binding_site_info is None:
             assert macromolecule in self.get_macromolecules(), \
                 f"get_binding_sites(): the requested macromolecule ({macromolecule}) isn't registered; use add_macromolecules()"
@@ -713,18 +715,19 @@ class Macromolecules(AllReactions):
 
 
 
-    def reset_macromolecule(self, macromolecule):
+    def reset_macromolecule(self, macromolecule) -> None:
         """
+        Erase all data for the specified macromolecule
 
-        :param macromolecule:
-        :return:
+        :param macromolecule:   The name of a macromolecule
+        :return:                None
         """
         if self.binding_sites.get(macromolecule) is not None:
             del self.binding_sites[macromolecule]
 
 
 
-    def clear_macromolecules(self):
+    def clear_macromolecules(self) -> None:
         """
         Reset all macromolecules to their original state
 
