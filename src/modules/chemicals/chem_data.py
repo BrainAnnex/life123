@@ -463,6 +463,7 @@ class AllReactions(Diffusion):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
+
     def describe_reactions(self, concise=False) -> None:
         """
         Print out a user-friendly plain-text form of all the reactions.
@@ -700,7 +701,7 @@ class Macromolecules(AllReactions):
                                     EXAMPLE: {1: "A", 2: "C"}
         """
         binding_site_info = self.binding_sites.get(macromolecule)   # EXAMPLE: {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)}
-                                                                    #   will be None if no binding sites are found
+                                                                    #   It will be None if no binding sites are found
         if binding_site_info is None:
             assert macromolecule in self.get_macromolecules(), \
                 f"get_binding_sites(): the requested macromolecule ({macromolecule}) isn't registered; use add_macromolecules()"
@@ -712,6 +713,30 @@ class Macromolecules(AllReactions):
             d[site_number] = ligand
 
         return d        # EXAMPLE: {1: "A", 2: "C"}
+
+
+
+    def get_ligand_name(self, macromolecule, site_number) -> str:   # TODO: test
+        """
+
+        :param macromolecule:
+        :param site_number:
+        :return:
+        """
+        binding_site_info = self.binding_sites.get(macromolecule)   # EXAMPLE: {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)}
+                                                                    #   It will be None if no binding sites are found
+        if binding_site_info is None:
+            assert macromolecule in self.get_macromolecules(), \
+                f"get_ligand_name(): the requested macromolecule ({macromolecule}) isn't registered; use add_macromolecules()"
+
+            raise Exception(f"get_ligand_name(): no binding sites are present on macromolecule {macromolecule}")
+
+        ligand_data = binding_site_info.get(site_number)        # EXAMPLE:  ChemicalAffinity("A", 2.4)
+                                                                # It will be None if this binding site isn't present
+        assert ligand_data is not None, \
+            f"get_ligand_name(): binding site {site_number} is not found on macromolecule {macromolecule}"
+
+        return  ligand_data.chemical
 
 
 

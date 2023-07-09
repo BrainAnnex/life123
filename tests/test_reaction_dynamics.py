@@ -27,13 +27,27 @@ def test_set_conc():
     assert np.allclose(rxn.system, [10., 20., 30.])
 
 
-def test_get_conc():
+
+def test_get_system_conc():
     chem_data = ChemData(names=["A", "B", "C"])
     rxn = ReactionDynamics(chem_data)
     rxn.set_conc(conc=(10., 20., 30.))
 
     result = rxn.get_system_conc()
     assert np.allclose(result, [10., 20., 30.])
+
+
+
+def test_get_chem_conc():
+    chem_data = ChemData(names=["A", "B"])
+    dyn = ReactionDynamics(chem_data)
+    dyn.set_conc(conc=(10., 20.))
+
+    assert np.allclose(dyn.get_chem_conc("A"), 10.)
+    assert np.allclose(dyn.get_chem_conc("B"), 20.)
+    with pytest.raises(Exception):
+        dyn.get_chem_conc("Unknown")    # Non-existent chemical
+
 
 
 def test_get_conc_dict():

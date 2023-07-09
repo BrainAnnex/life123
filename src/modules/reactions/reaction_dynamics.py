@@ -61,8 +61,8 @@ class ReactionDynamics:
         self.macro_system_state = {}  # The counterpart of the system data for macro-molecules, if present
                                     # Binding fractions of the applicable transcription factors, for all the macro-molecules,
                                     # over the previous time step, indexed by macromolecule and by binding site number
-                                    # EXAMPLE:   {"M1": {1: ("A": 0.2), 2: ("F": 0.93), ("P": 0.)},
-                                    #             "M2": {1: ("C": 0.5), 2: ("F": 0.1)}}
+                                    # EXAMPLE:   {"M1": {1: ("A", 0.2), 2: ("F", 0.93), ("P", 0.)},
+                                    #             "M2": {1: ("C", 0.5), 2: ("F", 0.1)}}
 
                                     # OLD EXAMPLE:   {"M1": {"A": 0.2, "F": 0.93, "P": 0.},
                                     #                 "M2": {"C": 0.5, "F": 0.1}}
@@ -233,17 +233,32 @@ class ReactionDynamics:
         """
         Retrieve the concentrations of ALL the chemicals as a Numpy array
 
-        :return:        Either a Numpy array with the concentrations of ALL the chemicals, in their index order
-                            EXAMPLE:  array([12.3, 4.56, 0.12])    The 0-th chemical has concentration 12.3, and so on...
+        :return:        A Numpy array with the concentrations of ALL the chemicals,
+                        in their index order
+                            EXAMPLE:  array([12.3, 4.56, 0.12])
+                                      The 0-th chemical has concentration 12.3, and so on...
         """
         return self.system
+
+
+
+    def get_chem_conc(self, name: str) -> float:
+        """
+        Return the current system concentration of the given chemical, specified by its name.
+        If no chemical by that name exists, an Exception is raised
+
+        :param name:    The name of a chemical species
+        :return:        The current system concentration of the above chemical
+        """
+        species_index = self.chem_data.get_index(name)
+        return self.system[species_index]
 
 
 
     def get_conc_dict(self, species=None, system_data=None) -> dict:
         """
         Retrieve the concentrations of the requested chemicals (by default all),
-        as a dictionary
+        as a dictionary indexed by the chemical's name
 
         :param species:     (OPTIONAL) list or tuple of names of the chemical species; by default, return all
         :param system_data: (OPTIONAL) a Numpy array of concentration values, in the same order as the
@@ -285,7 +300,7 @@ class ReactionDynamics:
     Management of reactions
     '''
 
-    def slow_rxns(self) -> [int]:
+    def slow_rxns(self) -> [int]:     # TODO: obsolete
         """
         Return a list of all the reactions that are marked as "slow"
         :return:
@@ -295,7 +310,7 @@ class ReactionDynamics:
         # return list(filter(lambda k:self.reaction_speeds[k] == "S", d ))
 
 
-    def fast_rxns(self) -> [int]:
+    def fast_rxns(self) -> [int]:     # TODO: obsolete
         """
         Return a list of all the reactions that are marked as "fast"
         :return:
@@ -307,7 +322,7 @@ class ReactionDynamics:
 
 
 
-    def are_all_slow_rxns(self) -> bool:
+    def are_all_slow_rxns(self) -> bool:     # TODO: obsolete
         """
         Return True iff all the reactions are marked as "slow"
         :return:
@@ -373,6 +388,7 @@ class ReactionDynamics:
     def set_macromolecules(self, data=None) -> None:
         """
         Specify the macromolecules, and their counts, to be included in the system.
+        The fractional occupancy is set to 0 at all binding sites.
         Any previous data gets over-written
 
         :param data:    A dict mapping macromolecule names to their counts
@@ -387,7 +403,7 @@ class ReactionDynamics:
             # Use the registered macromolecules, and set all counts to 1
             data = {}
             for mm in self.chem_data.get_macromolecules():
-                data[mm] = 1
+                data[mm] = 1        # EXAMPLE, after this operation: data = {"M1": 1}
 
         self.macro_system = data
 
@@ -397,20 +413,40 @@ class ReactionDynamics:
             binding_sites_and_ligands = self.chem_data.get_binding_sites_and_ligands(mm)     # EXAMPLE: {1: "A", 2: "C"}
             d = {}
             for (site_number, ligand) in binding_sites_and_ligands.items():
-                d[site_number] = (ligand, 0.)           # All "binding fractions" are set to 0.
+                d[site_number] = (ligand, 0.)           # All "binding occupancy fractions" are set to 0.
 
             self.macro_system_state[mm] = d
 
 
 
+    def set_occupancy(self, macromolecule, site_number, fractional_occupancy) -> None:  # TODO: test
+        """
+        Set the fractional occupancy at the given binding site of the specified macromolecule,
+        using the requested value
 
-    #############################################################################################
-    #                                                                                           #
-    #                                   TO VISUALIZE SYSTEM                                     #
-    #                                                                                           #
-    #############################################################################################
-    def ________TO_VISUALIZE_SYSTEM________(DIVIDER):  # Used to get a better structure view in IDEs such asPycharm
-        pass
+        :param macromolecule:
+        :param site_number:
+        :param fractional_occupancy:    A number between 0. and 1., inclusive
+        :return:                        None
+        """
+        assert 0. <= fractional_occupancy <= 1., \
+            f"set_occupancy(): the value for the fractional occupancy must be a number between 0. and 1. " \
+            f"Value given: {fractional_occupancy}"
+
+        ligand = self.chem_data.get_ligand_name(macromolecule=macromolecule, site_number=site_number)
+        self.macro_system_state[macromolecule][site_number] = (ligand, fractional_occupancy)
+
+
+
+
+
+    #####################################################################################################
+
+    '''                                 ~  TO VISUALIZE SYSTEM  ~                                     '''
+
+    def ________TO_VISUALIZE_SYSTEM________(DIVIDER):
+        pass         # Used to get a better structure view in IDEs such asPycharm
+    #####################################################################################################
 
 
     def describe_state(self) -> None:
@@ -445,13 +481,13 @@ class ReactionDynamics:
 
 
 
-    #############################################################################################
-    #                                                                                           #
-    #                                TO PERFORM THE REACTIONS                                   #
-    #                                                                                           #
-    #############################################################################################
-    def ________TO_PERFORM_THE_REACTIONS________(DIVIDER):  # Used to get a better structure view in IDEs such asPycharm
-        pass
+    #####################################################################################################
+
+    '''                            ~  TO PERFORM THE REACTIONS  ~                                     '''
+
+    def ________TO_PERFORM_THE_REACTIONS________(DIVIDER):
+        pass         # Used to get a better structure view in IDEs such asPycharm
+    #####################################################################################################
 
 
     def specify_steps(self, total_duration=None, time_step=None, n_steps=None) -> (float, int):
@@ -1517,13 +1553,34 @@ class ReactionDynamics:
 
 
 
-    #############################################################################################
-    #                                                                                           #
-    #                                      MACROMOLECULES                                       #
-    #                                                                                           #
-    #############################################################################################
-    def ________MACROMOLECULES________(DIVIDER):  # Used to get a better structure view in IDEs such asPycharm
-        pass
+    #####################################################################################################
+
+    '''                                 ~  MACROMOLECULE DYNAMICS ~                                   '''
+
+    def ________MACROMOLECULE_DYNAMICS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs such asPycharm
+    #####################################################################################################
+
+
+    def update_occupancy(self) -> None:  # TODO: test
+        """
+        Update the fractional occupancy at all binding sites,
+        based on the current system concentrations of the relevant ligands
+
+        :return:    None
+        """
+        for mm in self.chem_data.get_macromolecules():
+            # For each macromolecule
+            d = self.chem_data.get_binding_sites_and_ligands(mm)    # EXAMPLE: {1: "A", 2: "C"}
+            for (site_number, ligand) in d.items():
+                aff = self.chem_data.get_binding_site_affinity(mm, site_number)
+                conc = self.get_chem_conc(ligand)
+                fractional_occupancy = self.sigmoid(conc=conc, Kd=aff)
+
+                self.set_occupancy(macromolecule=mm, site_number=site_number, fractional_occupancy=fractional_occupancy)
+
+
+
 
 
     def sigmoid(self, conc: float, Kd: float) -> float:
@@ -1569,13 +1626,13 @@ class ReactionDynamics:
 
 
 
-    #############################################################################################
-    #                                                                                           #
-    #                                      FOR DIAGNOSTICS                                      #
-    #                                                                                           #
-    #############################################################################################
-    def ________FOR_DIAGNOSTICS________(DIVIDER):  # Used to get a better structure view in IDEs such asPycharm
-        pass
+    #####################################################################################################
+
+    '''                                  ~   FOR DIAGNOSTICS   ~                                      '''
+
+    def ________FOR_DIAGNOSTICS________(DIVIDER):
+        pass         # Used to get a better structure view in IDEs such asPycharm
+    #####################################################################################################
 
 
     def stoichiometry_checker(self, rxn_index: int, conc_arr_before: np.array, conc_arr_after: np.array,
