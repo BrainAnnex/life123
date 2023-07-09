@@ -24,8 +24,8 @@ class ExcessiveTimeStepSoft(Exception):
     pass
 
 
-
 #############################################################################################
+
 
 class ReactionDynamics:
     """
@@ -62,10 +62,9 @@ class ReactionDynamics:
                                     # Binding fractions of the applicable transcription factors, for all the macro-molecules,
                                     # over the previous time step, indexed by macromolecule and by binding site number
                                     # EXAMPLE:   {"M1": {1: ("A", 0.2), 2: ("F", 0.93), ("P", 0.)},
-                                    #             "M2": {1: ("C", 0.5), 2: ("F", 0.1)}}
+                                    #             "M2": {1: ("C", 0.5), 2: ("F", 0.1)},
+                                    #             "M3": {} }
 
-                                    # OLD EXAMPLE:   {"M1": {"A": 0.2, "F": 0.93, "P": 0.},
-                                    #                 "M2": {"C": 0.5, "F": 0.1}}
                                     # For background, see: https://www.annualreviews.org/doi/10.1146/annurev-cellbio-100617-062719
 
         self.history = MovieTabular()   # To store user-selected snapshots of (some of) the chemical concentrations,
@@ -139,7 +138,8 @@ class ReactionDynamics:
 
     def set_conc(self, conc: Union[list, tuple, dict], snapshot=True) -> None:     # TODO: maybe rename set_all_conc()
         """
-        Set the concentrations of ALL the chemicals at once   TODO: maybe a dict indicates a selection of chems, while a list, etc means "ALL"
+        Set the concentrations of ALL the chemicals at once
+        TODO: maybe a dict indicates a selection of chemicals, while a list, etc means "ALL"
 
         :param conc:        A list or tuple of concentration values for ALL the chemicals, in their index order;
                                 alternatively, a dict indexed by the chemical names, again for ALL the chemicals
@@ -179,7 +179,7 @@ class ReactionDynamics:
             f"(such as the passed value {min(conc)})"
 
 
-        self.system = np.array(conc)
+        self.system = np.array(conc, dtype='d')      # float64
 
         self.set_rxn_speed_all_fast()   # Reset all the reaction speeds to "Fast"    TODO: obsolete
 
@@ -379,63 +379,6 @@ class ReactionDynamics:
         """
         self.chem_data.clear_reactions_data()
         self.set_rxn_speed_all_fast()   # Reset all the reaction speeds to "Fast".      TODO: obsolete
-
-
-
-
-    #########  MACRO-MOLECULES  #########
-
-    def set_macromolecules(self, data=None) -> None:
-        """
-        Specify the macromolecules, and their counts, to be included in the system.
-        The fractional occupancy is set to 0 at all binding sites.
-        Any previous data gets over-written
-
-        :param data:    A dict mapping macromolecule names to their counts
-                            EXAMPLE:  {"M1": 1, "M2": 3, "M3": 1}
-                        If any of the requested macromolecules isn't registered, an Exception will be raised
-                        If data=None, then the set of registered macromolecules is used,
-                            and all the counts are set to 1
-        :return:        None.
-                        The object variables self.macro_system and self.macro_system_state get set
-        """
-        if data is None:
-            # Use the registered macromolecules, and set all counts to 1
-            data = {}
-            for mm in self.chem_data.get_macromolecules():
-                data[mm] = 1        # EXAMPLE, after this operation: data = {"M1": 1}
-
-        self.macro_system = data
-
-
-        self.macro_system_state = {}    # Reset
-        for mm in data.keys():          # For each macromolecule in our system
-            binding_sites_and_ligands = self.chem_data.get_binding_sites_and_ligands(mm)     # EXAMPLE: {1: "A", 2: "C"}
-            d = {}
-            for (site_number, ligand) in binding_sites_and_ligands.items():
-                d[site_number] = (ligand, 0.)           # All "binding occupancy fractions" are set to 0.
-
-            self.macro_system_state[mm] = d
-
-
-
-    def set_occupancy(self, macromolecule, site_number, fractional_occupancy) -> None:  # TODO: test
-        """
-        Set the fractional occupancy at the given binding site of the specified macromolecule,
-        using the requested value
-
-        :param macromolecule:
-        :param site_number:
-        :param fractional_occupancy:    A number between 0. and 1., inclusive
-        :return:                        None
-        """
-        assert 0. <= fractional_occupancy <= 1., \
-            f"set_occupancy(): the value for the fractional occupancy must be a number between 0. and 1. " \
-            f"Value given: {fractional_occupancy}"
-
-        ligand = self.chem_data.get_ligand_name(macromolecule=macromolecule, site_number=site_number)
-        self.macro_system_state[macromolecule][site_number] = (ligand, fractional_occupancy)
-
 
 
 
@@ -1562,6 +1505,93 @@ class ReactionDynamics:
     #####################################################################################################
 
 
+    def set_macromolecules(self, data=None) -> None:
+        """
+        Specify the macromolecules, and their counts, to be included in the system.
+        The fractional occupancy is set to 0 at all binding sites of all the specified macromolecules.
+        Any previous data gets over-written.
+
+        Note: to set a single fractional occupancy value, use set_occupancy()
+
+        :param data:    A dict mapping macromolecule names to their counts
+                            EXAMPLE:  {"M1": 1, "M2": 3, "M3": 1}
+                        If any of the requested macromolecules isn't registered, an Exception will be raised
+                        If data=None, then the set of registered macromolecules is used,
+                            and all their counts are set to 1
+        :return:        None.
+                        The object variables self.macro_system and self.macro_system_state get set
+        """
+        if data is None:
+            # Use the registered macromolecules, and set all counts to 1
+            data = {}
+            for mm in self.chem_data.get_macromolecules():
+                data[mm] = 1        # EXAMPLE, after this operation: data = {"M1": 1}
+
+        self.macro_system = data
+
+
+        self.macro_system_state = {}    # Reset
+        for mm in data.keys():          # For each macromolecule in our system
+            binding_sites_and_ligands = self.chem_data.get_binding_sites_and_ligands(mm)     # EXAMPLE: {1: "A", 2: "C"}
+            d = {}
+            for (site_number, ligand) in binding_sites_and_ligands.items():
+                d[site_number] = (ligand, 0.)           # All "binding occupancy fractions" are set to 0.
+
+            self.macro_system_state[mm] = d
+
+
+
+    def set_occupancy(self, macromolecule, site_number: int, fractional_occupancy: float) -> None:
+        """
+        Set the fractional occupancy at the given binding site of the specified macromolecule,
+        using the requested value.
+        If the specified macromolecule hasn't yet been added to the dynamical system state,
+        automatically add it with count 1
+
+        :param macromolecule:           Name of a previously-registered macromolecule
+        :param site_number:             Integer to identify a binding site on the macromolecule
+        :param fractional_occupancy:    A number between 0. and 1., inclusive
+        :return:                        None
+        """
+        assert 0. <= fractional_occupancy <= 1., \
+            f"set_occupancy(): the value for the fractional occupancy must be a number between 0. and 1. " \
+            f"Value given: {fractional_occupancy}"
+
+        ligand = self.chem_data.get_ligand_name(macromolecule=macromolecule, site_number=site_number)
+
+        # If the specified macromolecule hasn't yet been added to the dynamic system, automatically add it
+        # with count 1
+        if self.macro_system_state == {}:
+            self.set_macromolecules({macromolecule: 1})
+
+        self.macro_system_state[macromolecule][site_number] = (ligand, fractional_occupancy)
+
+
+
+    def get_occupancy(self, macromolecule, site_number) -> float:
+        """
+        Get the fractional occupancy at the given binding site of the specified macromolecule.
+
+        :param macromolecule:           Name of a previously-registered macromolecule
+        :param site_number:             Integer to identify a binding site on the macromolecule
+        :return:                        A number between 0. and 1., representing the fractional occupancy
+        """
+        assert self.macro_system_state != {}, \
+            "get_occupancy(): The system state for macromolecules has not been set yet;  " \
+            "use set_macromolecules() or set_occupancy()"
+
+        assert macromolecule in self.macro_system_state, \
+            f"get_occupancy(): No occupancy data yet set for macromolecule `{macromolecule}`"
+
+        assert site_number in self.macro_system_state[macromolecule], \
+            f"get_occupancy(): No occupancy data yet set for site number {site_number} " \
+            f"of macromolecule `{macromolecule}`"
+
+        (ligand, fractional_occupancy) = self.macro_system_state[macromolecule][site_number]
+        return fractional_occupancy
+
+
+
     def update_occupancy(self) -> None:  # TODO: test
         """
         Update the fractional occupancy at all binding sites,
@@ -1573,9 +1603,9 @@ class ReactionDynamics:
             # For each macromolecule
             d = self.chem_data.get_binding_sites_and_ligands(mm)    # EXAMPLE: {1: "A", 2: "C"}
             for (site_number, ligand) in d.items():
-                aff = self.chem_data.get_binding_site_affinity(mm, site_number)
+                aff_data = self.chem_data.get_binding_site_affinity(mm, site_number)
                 conc = self.get_chem_conc(ligand)
-                fractional_occupancy = self.sigmoid(conc=conc, Kd=aff)
+                fractional_occupancy = self.sigmoid(conc=conc, Kd=aff_data.affinity)
 
                 self.set_occupancy(macromolecule=mm, site_number=site_number, fractional_occupancy=fractional_occupancy)
 
@@ -1607,6 +1637,9 @@ class ReactionDynamics:
         :return:        Estimated binding-site fractional occupancy : a value between
                             0. (no occupancy at all during the previous time step) and 1. (continuous occupancy)
         """
+        if conc == 0:
+            conc = 1e-15     # To avoid taking log of 0
+
         return self.logistic(x = math.log10(conc), x0 = math.log10(Kd), k = 2.1972245)
 
 

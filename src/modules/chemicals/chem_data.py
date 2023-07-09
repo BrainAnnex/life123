@@ -95,7 +95,7 @@ class ChemCore():
         """
 
         :param name:
-        :param note:
+        :param note:    Optional string to attach to the given chemical
         :return:
         """
         index = len(self.chemical_data)     # The next available index number (list position)
@@ -716,20 +716,23 @@ class Macromolecules(AllReactions):
 
 
 
-    def get_ligand_name(self, macromolecule, site_number) -> str:   # TODO: test
+    def get_ligand_name(self, macromolecule: str, site_number: int) -> str:
         """
+        Return the name of the ligand associated to the specified site
+        on the given macromolecule.
+        If not found, an Exception is raised
 
-        :param macromolecule:
-        :param site_number:
-        :return:
+        :param macromolecule:   The name of a macromolecule
+        :param site_number:     Integer to identify a binding site on the macromolecule
+        :return:                The name of the ligand (chemical species)
         """
         binding_site_info = self.binding_sites.get(macromolecule)   # EXAMPLE: {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)}
                                                                     #   It will be None if no binding sites are found
         if binding_site_info is None:
             assert macromolecule in self.get_macromolecules(), \
-                f"get_ligand_name(): the requested macromolecule ({macromolecule}) isn't registered; use add_macromolecules()"
+                f"get_ligand_name(): the requested macromolecule (`{macromolecule}`) isn't registered; use add_macromolecules()"
 
-            raise Exception(f"get_ligand_name(): no binding sites are present on macromolecule {macromolecule}")
+            raise Exception(f"get_ligand_name(): no binding sites are defined on macromolecule {macromolecule}")
 
         ligand_data = binding_site_info.get(site_number)        # EXAMPLE:  ChemicalAffinity("A", 2.4)
                                                                 # It will be None if this binding site isn't present

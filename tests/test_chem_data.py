@@ -378,6 +378,32 @@ def test_get_binding_sites_and_ligands():
 
 
 
+def test_get_ligand_name():
+    chem_data = ChemData(["A", "B"])
+    chem_data.add_macromolecules(["M1", "M2"])
+
+    with pytest.raises(Exception):
+        chem_data.get_ligand_name(macromolecule="M9999", site_number=123)    # Unknown macromolecule
+
+    with pytest.raises(Exception):
+        chem_data.get_ligand_name(macromolecule="M1", site_number=1)    # M1 has no sites associated to it
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, chemical="A", affinity=3.1)
+
+    with pytest.raises(Exception):
+        chem_data.get_ligand_name(macromolecule="M1", site_number=1)    # No site number 1 on M1
+
+    assert chem_data.get_ligand_name(macromolecule="M1", site_number=2) == "A"
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="B", affinity=6.)
+    assert chem_data.get_ligand_name(macromolecule="M1", site_number=1) == "B"
+
+    chem_data.add_chemical("C")
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=5, chemical="C", affinity=11.4)
+    assert chem_data.get_ligand_name(macromolecule="M2", site_number=5) == "C"
+
+
+
 def test_reset_macromolecule():
     pass   # TODO
 

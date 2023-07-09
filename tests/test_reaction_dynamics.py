@@ -120,6 +120,7 @@ def test_single_compartment_react():
     dynamics.single_compartment_react(initial_step=0.0010, target_end_time=0.0035)
 
     run1 = dynamics.get_system_conc()
+
     assert np.allclose(run1, [9.69124339e+01, 3.06982519e+00, 1.77408783e-02, 9.99985757e+02, 1.42431633e-02])
     assert np.allclose(dynamics.system_time, 0.0035)
     assert dynamics.explain_time_advance(return_times=True, silent=True) == \
@@ -1071,6 +1072,180 @@ def test_set_macromolecules():
     # Over-write the previous settings
     rxn.set_macromolecules({"M999": 2})
     assert rxn.macro_system_state["M999"] == {12: ("A", 0.)}
+
+
+
+def test_set_occupancy():
+    chem_data = ChemData(names=["A", "B"])
+    chem_data.add_macromolecules(["M1", "M2"])
+
+    rxn = ReactionDynamics(chem_data)
+
+    with pytest.raises(Exception):
+        # Occupancy out of range
+        rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=1.1)
+
+    with pytest.raises(Exception):
+        # Occupancy out of range
+        rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=-0.3)
+
+    with pytest.raises(Exception):
+        # Unknown macromolecule
+        rxn.set_occupancy(macromolecule="Unknown", site_number=1, fractional_occupancy=0.5)
+
+    with pytest.raises(Exception):
+        # No binding sites are defined on macromolecule M1
+        rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="B", affinity=6.)
+    rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
+
+    assert rxn.macro_system == {"M1": 1}
+    assert rxn.macro_system_state == {"M1": {1: ("B", 0.5)}}
+
+    assert rxn.get_occupancy(macromolecule="M1", site_number=1) == 0.5
+
+
+
+def test_get_occupancy():
+    chem_data = ChemData(names=["A", "B", "C"])
+    chem_data.add_macromolecules(["M1", "M2"])
+
+    rxn = ReactionDynamics(chem_data)
+
+    with pytest.raises(Exception):
+        # The system state for macromolecules has not been set yet
+        rxn.get_occupancy(macromolecule="M1", site_number=1)
+
+    rxn.set_macromolecules()
+
+    with pytest.raises(Exception):
+        # No occupancy data yet set for macromolecule `Unknown`
+        rxn.get_occupancy(macromolecule="Unknown", site_number=1)
+
+    with pytest.raises(Exception):
+        # No occupancy data yet set for site number 1 of macromolecule `M1`
+        rxn.get_occupancy(macromolecule="M1", site_number=1)
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="C", affinity=23.5)
+    rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
+
+    assert rxn.macro_system == {"M1": 1, "M2": 1}
+    assert rxn.macro_system_state == {"M1": {1: ("C", 0.5)}, "M2": {} }
+
+    assert rxn.get_occupancy(macromolecule="M1", site_number=1) == 0.5
+
+
+
+def test_update_occupancy():
+    chem_data = ChemData(names=["A", "B", "C"])
+    chem_data.add_macromolecules(["M1", "M2"])
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="A", affinity=10)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, chemical="B", affinity=20)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=3, chemical="C", affinity=30)
+
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, chemical="C", affinity=3)
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=2, chemical="C", affinity=30)
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, chemical="C", affinity=300)
+
+
+    rxn = ReactionDynamics(chem_data)
+
+    rxn.set_macromolecules()
+    assert rxn.macro_system == {"M1": 1, "M2": 1}
+
+    rxn.set_conc([10, 20, 30])      # Set the concentrations, respectively, of A, B and C
+
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=1) , 0.)
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=2) , 0.)
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=3) , 0.)
+
+    rxn.update_occupancy()
+
+    # All fractional occupancies will be 1/2, because the concentrations of the ligands below
+    # exactly match their binding affinities
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=1) , 0.5)
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=2) , 0.5)
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=3) , 0.5)
+
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=1) , 0.9)  # Ligand conc is 10x binding affinity
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=2) , 0.5)  # Ligand conc = binding affinity
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=3) , 0.1)  # Ligand conc is 1/10 binding affinity
+
+
+    # Vary the concentration of ligand C, starting with zero
+    rxn.set_chem_conc(conc=0, species_name="C")     # No ligand C
+    rxn.update_occupancy()
+
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=1) , 0.5)  # Unaffected (different ligand)
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=2) , 0.5)  # Unaffected (different ligand)
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=3) , 0)    # No occupancy in absence of ligand
+
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=1) , 0)    # No occupancy in absence of ligand
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=2) , 0)    # No occupancy in absence of ligand
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=3) , 0)    # No occupancy in absence of ligand
+
+
+    # Very low concentration of ligand C
+    rxn.set_chem_conc(conc=0.3, species_name="C")
+    rxn.update_occupancy()
+
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=1) , 0.5)      # Unaffected (different ligand)
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=2) , 0.5)      # Unaffected (different ligand)
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=3) , 0.012195) # Ligand conc is 1/100 binding affinity
+
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=1) , 0.1)      # Ligand conc is 1/10 binding affinity
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=2) , 0.012195) # Ligand conc is 1/100 binding affinity
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=3) , 0.00136986)  # Ligand conc is 1/1000 binding affinity
+
+
+    # Low concentration of ligand C
+    rxn.set_chem_conc(conc=3, species_name="C")
+    rxn.update_occupancy()
+
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=3) , 0.1)      # Ligand conc is 1/10 binding affinity
+
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=1) , 0.5)      # Ligand conc = binding affinity
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=2) , 0.1)      # Ligand conc is 1/10 binding affinity
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=3) , 0.012195) # Ligand conc is 1/100 binding affinity
+
+
+    # Mid concentration of ligand C
+    rxn.set_chem_conc(conc=30, species_name="C")
+    rxn.update_occupancy()
+
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=3) , 0.5)  # Ligand conc = binding affinity
+
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=1) , 0.9)  # Ligand conc is 10x binding affinity
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=2) , 0.5)  # Ligand conc = binding affinity
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=3) , 0.1)  # Ligand conc is 1/10 binding affinity
+
+
+    # High concentration of ligand C
+    rxn.set_chem_conc(conc=300, species_name="C")
+    rxn.update_occupancy()
+
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=3) , 0.9)       # Ligand conc is 10x binding affinity
+
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=1) , 0.9878049)    # Ligand conc is 100x binding affinity
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=2) , 0.9)          # Ligand conc is 10x binding affinity
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=3) , 0.5)          # Ligand conc = binding affinity
+
+
+    # Very High concentration of ligand C
+    rxn.set_chem_conc(conc=3000, species_name="C")
+    rxn.update_occupancy()
+
+    assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=3) , 0.9878049)    # Ligand conc is 100x binding affinity
+
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=1) , 0.99863)      # Ligand conc is 1000x binding affinity
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=2) , 0.9878049)    # Ligand conc is 100x binding affinity
+    assert np.allclose(rxn.get_occupancy(macromolecule="M2", site_number=3) , 0.9)          # Ligand conc is 10x binding affinity
+
+    #print(rxn.get_occupancy(macromolecule="M2", site_number=1))
+    #print(rxn.get_occupancy(macromolecule="M2", site_number=2))
+    #print(rxn.get_occupancy(macromolecule="M2", site_number=3))
 
 
 
