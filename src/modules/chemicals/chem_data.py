@@ -742,6 +742,19 @@ class Macromolecules(AllReactions):
         return  ligand_data.chemical
 
 
+    def show_binding_affinities(self) -> None:
+        """
+
+        :return:    None
+        """
+        for mm in self.get_macromolecules():
+            binding_sites_and_ligands = self.get_binding_sites_and_ligands(mm)
+            print(mm, " :")
+            for site_number in self.get_binding_sites(mm):
+                aff = self.get_binding_site_affinity(macromolecule=mm, site_number=site_number)
+                print(f"   Site {site_number} - Binding affinity for {aff.chemical} : {aff.affinity}")
+
+
 
     def reset_macromolecule(self, macromolecule) -> None:
         """

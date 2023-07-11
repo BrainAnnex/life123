@@ -16,7 +16,7 @@
 # %% [markdown]
 # ## Macromolecules : Binding Affinity
 #
-# LAST REVISED: July 7, 2023
+# LAST REVISED: July 10, 2023
 
 # %% tags=[]
 from src.modules.chemicals.chem_data import ChemData
@@ -35,11 +35,12 @@ chem.add_macromolecules("M1")
 chem.get_macromolecules()
 
 # %%
-chem.set_binding_site_affinity("M1", 3, "A", 3.7)
+chem.set_binding_site_affinity("M1", 3, "A", 0.92)
 chem.set_binding_site_affinity("M1", 8, "B", 1.1)
 chem.set_binding_site_affinity("M1", 15, "A", 9.2)
 
 chem.set_binding_site_affinity("M2", 1, "C", 5.6)
+chem.set_binding_site_affinity("M2", 2, "A", 0.092)
 
 # %%
 chem.get_binding_sites("M1")
@@ -66,13 +67,13 @@ aff.chemical
 # %%
 aff.affinity
 
+# %%
+
 # %% [markdown]
-# ### Set the initial concentrations of all the chemicals
+# ### Start setting up the dynamical system
 
 # %%
 dynamics = ReactionDynamics(chem_data=chem)
-dynamics.set_conc(conc={"A": 20., "B": 0., "C": 10.})
-dynamics.describe_state()
 
 # %%
 dynamics.set_macromolecules()      # By default, set counts to 1 for all the registered macromolecules
@@ -88,5 +89,38 @@ dynamics.macro_system_state
 
 # %%
 dynamics.describe_state()
+
+# %%
+
+# %% [markdown]
+# ### Set the initial concentrations of all the ligands
+
+# %%
+dynamics.set_conc(conc={"A": 9.2, "B": 0., "C": 0.56})
+dynamics.describe_state()
+
+# %% [markdown]
+# ### Adjust the fractional occupancy of the various sites on the macromolecules, based on the current ligand concentrations
+
+# %%
+dynamics.update_occupancy()
+
+# %%
+dynamics.describe_state()
+
+# %%
+dynamics.chem_data.show_binding_affinities()        # Review the values the had given for the binding affinities
+
+# %% [markdown]
+# #### Notes:
+# **[B] = 0** => Occupancy of binding site 8 on M1 is also zero
+#
+# **[A] = 9.2** :   
+#             * 10x the binding affinity of A to site 3 on M1 (occupancy 0.9)  
+#             * same as the binding affinity of A to site 15 on M1 (occupancy 0.5)  
+#             * 100x the binding affinity of A to site 2 on M2 (occupancy almost 1, i.e. nearly saturated)
+#         
+#             
+# **[C] = 0.56** => 1/10 of the binding affinity of A to site 1 on M2 (occupancy 0.1)
 
 # %%

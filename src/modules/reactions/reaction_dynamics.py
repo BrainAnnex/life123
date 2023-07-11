@@ -179,7 +179,7 @@ class ReactionDynamics:
             f"(such as the passed value {min(conc)})"
 
 
-        self.system = np.array(conc, dtype='d')      # float64
+        self.system = np.array(conc, dtype='d')      # float64      TODO: allow users to specify it
 
         self.set_rxn_speed_all_fast()   # Reset all the reaction speeds to "Fast"    TODO: obsolete
 
@@ -409,7 +409,10 @@ class ReactionDynamics:
             else:
                 name = ""
 
-            print(f"  Species {species_index}{name}. Conc: {self.system[species_index]}")
+            if self.system is None:
+                print(f"  Species {species_index}{name}. No concentrations set yet")
+            else:
+                print(f"  Species {species_index}{name}. Conc: {self.system[species_index]}")
 
         if self.macro_system != {}:
             print("Macro-molecules present, with their counts: ", self.macro_system)
@@ -418,8 +421,8 @@ class ReactionDynamics:
             print("Binding Occupancy fractions at the various binding sites for each of the macro-molecules:")
             for mm, state_dict in self.macro_system_state.items():
                 state_list = [f"{a}: {b[1]} ({b[0]})" for a, b in state_dict.items()]   # EXAMPLE: ["3: 0.1 (A)", "8: 0.6 (B)"]
-                state_str = ", ".join(state_list)                                       # EXAMPLE: "3: 0.1 (A)", "8: 0.6 (B)"
-                print(f"     {mm} | {state_str}")
+                state_str = " | ".join(state_list)                                      # EXAMPLE: "3: 0.1 (A) | "8: 0.6 (B)"
+                print(f"     {mm} || {state_str}")
 
 
 
@@ -1592,7 +1595,7 @@ class ReactionDynamics:
 
 
 
-    def update_occupancy(self) -> None:  # TODO: test
+    def update_occupancy(self) -> None:
         """
         Update the fractional occupancy at all binding sites,
         based on the current system concentrations of the relevant ligands
