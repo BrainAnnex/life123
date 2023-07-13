@@ -105,7 +105,7 @@ fig1 = px.scatter(data_frame=df, x="A", y="B",
 fig1.update_traces(marker={"size": 6, "color": "#2FAC74"})    # Modify the style of the dots
 
 # Add annotations (showing the System Time value) to SOME of the points, to avoid clutter
-for ind in df.index:
+for ind in df.index:     # for each row in the Pandas dataframe
     label = df["SYSTEM TIME"][ind]
     if ind == 0:
         label = f"t={label}"

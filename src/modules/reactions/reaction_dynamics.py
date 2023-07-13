@@ -2277,11 +2277,10 @@ class ReactionDynamics:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def plot_curves(self, chemicals=None, colors=None, title=None, title_prefix=None,
+    def plot_curves(self, chemicals=None, colors=None, title=None, title_prefix=None, range_x=None,
                     vertical_lines=None, show_intervals=False, suppress=False) -> Union[None, go.Figure]:
         """
         Using plotly, draw the plots of concentration values over time, based on the saved history data.
-        TODO: offer an option to just display a part of the timeline (e.g. a t_start and t_end)
         TODO: allow alternate labels for x-axis
 
         EXAMPLE - to combine plots:
@@ -2302,9 +2301,12 @@ class ReactionDynamics:
                                     "Changes in concentrations for 5 reactions"
                                     "Reaction `A <-> 2 B` .  Changes in concentrations with time"
                                     "Changes in concentration for `2 S <-> U` and `S <-> X`"
-        :param vertical_lines: (OPTIONAL) List or tuple or Numpy array or Pandas series
+        :param title_prefix: (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
+                                    whether the title is specified by the user or automatically generated
+        :param range_x:         (OPTIONAL) list with of the form [t_start, t_end], to only show a part of the timeline
+        :param vertical_lines:  (OPTIONAL) List or tuple or Numpy array or Pandas series
                                     of x-coordinates at which to draw thin vertical dotted gray lines
-        :param show_intervals: (OPTIONAL) If True, it over-rides any value in vertical_lines, and draws
+        :param show_intervals:  (OPTIONAL) If True, it over-rides any value in vertical_lines, and draws
                                     thin vertical dotted gray lines at all the x-coords of the data points in the saved history data;
                                     also, it adds a comment to the title
         :param suppress:    If True, nothing gets shown - and a plotly "Figure" object gets returned instead;
@@ -2312,7 +2314,46 @@ class ReactionDynamics:
 
         :return:            None or a plotly "Figure" object, depending on the "suppress" flag
         """
-        default_colors = ['blue', 'green', 'brown', 'red', 'gray', 'orange', 'purple', 'cyan', 'darkorange', 'navy', 'darkred', 'black']
+        default_colors = ['blue', 'green', 'brown', 'red', 'gray',
+                          'orange', 'purple', 'cyan', 'darkorange', 'navy',
+                          'darkred', 'black', 'mediumspringgreen']
+        '''
+                aliceblue, antiquewhite, aqua, aquamarine, azure,
+                beige, bisque, black, blanchedalmond, blue,
+                blueviolet, brown, burlywood, cadetblue,
+                chartreuse, chocolate, coral, cornflowerblue,
+                cornsilk, crimson, cyan, darkblue, darkcyan,
+                darkgoldenrod, darkgray, darkgrey, darkgreen,
+                darkkhaki, darkmagenta, darkolivegreen, darkorange,
+                darkorchid, darkred, darksalmon, darkseagreen,
+                darkslateblue, darkslategray, darkslategrey,
+                darkturquoise, darkviolet, deeppink, deepskyblue,
+                dimgray, dimgrey, dodgerblue, firebrick,
+                floralwhite, forestgreen, fuchsia, gainsboro,
+                ghostwhite, gold, goldenrod, gray, grey, green,
+                greenyellow, honeydew, hotpink, indianred, indigo,
+                ivory, khaki, lavender, lavenderblush, lawngreen,
+                lemonchiffon, lightblue, lightcoral, lightcyan,
+                lightgoldenrodyellow, lightgray, lightgrey,
+                lightgreen, lightpink, lightsalmon, lightseagreen,
+                lightskyblue, lightslategray, lightslategrey,
+                lightsteelblue, lightyellow, lime, limegreen,
+                linen, magenta, maroon, mediumaquamarine,
+                mediumblue, mediumorchid, mediumpurple,
+                mediumseagreen, mediumslateblue, mediumspringgreen,
+                mediumturquoise, mediumvioletred, midnightblue,
+                mintcream, mistyrose, moccasin, navajowhite, navy,
+                oldlace, olive, olivedrab, orange, orangered,
+                orchid, palegoldenrod, palegreen, paleturquoise,
+                palevioletred, papayawhip, peachpuff, peru, pink,
+                plum, powderblue, purple, red, rosybrown,
+                royalblue, saddlebrown, salmon, sandybrown,
+                seagreen, seashell, sienna, silver, skyblue,
+                slateblue, slategray, slategrey, snow, springgreen,
+                steelblue, tan, teal, thistle, tomato, turquoise,
+                violet, wheat, white, whitesmoke, yellow,
+                yellowgreen
+        '''
 
         df = self.get_history()     # The expected columns are "SYSTEM TIME", followed by the various chemicals
 
@@ -2346,22 +2387,24 @@ class ReactionDynamics:
 
         # Create the main plot
         fig = px.line(data_frame=df, x="SYSTEM TIME", y=chemicals,
-                      title=title,
+                      title=title, range_x=range_x,
                       color_discrete_sequence = colors,
                       labels={"value":"concentration", "variable":"Chemical"})
 
 
         if vertical_lines is not None:
-            assert (type(vertical_lines) == list) or (type(vertical_lines) == tuple) or (type(vertical_lines) == np.ndarray) or (type(vertical_lines) == pd.core.series.Series), \
-                "plot_curves(): the argument `vertical_lines`, if not None, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
+            assert (type(vertical_lines) == list) or (type(vertical_lines) == tuple) \
+                or (type(vertical_lines) == np.ndarray) or (type(vertical_lines) == pd.core.series.Series), \
+                    "plot_curves(): the argument `vertical_lines`, " \
+                    "if not None, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
             for xi in vertical_lines:
                 fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
 
 
         if not suppress:
-            fig.show()
+            fig.show()      # Actually display the plot
         else:
-            return fig
+            return fig      # Return the plot data (without actually displaying the plot)
 
 
 
