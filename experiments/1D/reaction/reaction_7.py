@@ -20,9 +20,10 @@
 #
 # See also the experiment _"reactions_single_compartment/react_4"_ 
 #
-# LAST REVISED: June 4, 2023
+# LAST REVISED: July 14, 2023
 
 # %%
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 from experiments.get_notebook_info import get_notebook_basename
@@ -68,9 +69,6 @@ bio.get_history()
 
 # %%
 chem_data.describe_reactions()
-
-# %%
-chem_data._internal_reactions_data()    # Low-level view of the reactions data
 
 # %%
 # Send a header and a plot to the HTML log file
@@ -158,9 +156,6 @@ bio.get_history()
 
 # %%
 chem_data.describe_reactions()
-
-# %%
-chem_data._internal_reactions_data()    # Low-level view of the reactions data
 
 # %%
 # Send a header and a plot to the HTML log file

@@ -25,9 +25,10 @@
 # Just as seen in the case of *diffusion_along_gradient_1*, the concentration peak
 # remains in place, and simply spreads out from there
 #
-# LAST REVISED: June 4, 2023
+# LAST REVISED: July 14, 2023
 
 # %%
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 from src.life_1D.bio_sim_1d import BioSim1D

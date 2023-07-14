@@ -19,9 +19,10 @@
 # ### Afterward, the process is restarted and repeated with a frequency 5 times larger
 #
 #
-# LAST REVISED: June 4, 2023
+# LAST REVISED: July 14, 2023
 
 # %%
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 

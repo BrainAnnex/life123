@@ -1614,8 +1614,6 @@ class ReactionDynamics:
 
 
 
-
-
     def sigmoid(self, conc: float, Kd: float) -> float:
         """
         Return an estimate of fractional occupancy (between 0 and 1)

@@ -16,7 +16,10 @@
 # %% [markdown]
 # ## Macromolecules : Binding Affinity and Fractional Occupancy
 #
-# LAST REVISED: July 13, 2023
+# LAST REVISED: July 14, 2023
+
+# %%
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from src.modules.chemicals.chem_data import ChemData

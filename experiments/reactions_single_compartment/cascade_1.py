@@ -20,7 +20,7 @@
 #
 # (Adaptive variable time resolution is used, with extensive diagnostics.)
 #
-# LAST REVISED: June 4, 2023
+# LAST REVISED: July 14, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -37,6 +37,7 @@
 # ![2 Coupled Reactions](../../docs/2_coupled_reactions.png)
 
 # %%
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
