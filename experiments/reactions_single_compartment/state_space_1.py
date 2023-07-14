@@ -13,25 +13,25 @@
 # ---
 
 # %% [markdown]
-# ### `A <-> 3B` reaction, with 1st-order kinetics in both directions, taken to equilibrium
+# ### `A <-> 3B` reaction, taken to equilibrium.
 # ### Examine State Space trajectory, using [A] and [B] as state variables
+#
+# 1st-order kinetics in both directions
 #
 # Based on experiment "1D/reaction/reaction_2"
 #
-# LAST REVISED: June 4, 2023
+# LAST REVISED: June 5, 2023
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_data import ChemData
+from src.modules.chemicals.chem_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import plotly.express as px
 import plotly.graph_objects as go
-from src.modules.html_log.html_log import HtmlLog as log
 from src.modules.visualization.graphic_log import GraphicLog
 
 # %%
@@ -54,7 +54,7 @@ chem_data.add_reaction(reactants="A", products=[(3,"B")], forward_rate=5., rever
 chem_data.describe_reactions()
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"A": 10., "B": 50.},
                   snapshot=True)
 dynamics.describe_state()
@@ -105,7 +105,7 @@ fig1 = px.scatter(data_frame=df, x="A", y="B",
 fig1.update_traces(marker={"size": 6, "color": "#2FAC74"})    # Modify the style of the dots
 
 # Add annotations (showing the System Time value) to SOME of the points, to avoid clutter
-for ind in df.index:
+for ind in df.index:     # for each row in the Pandas dataframe
     label = df["SYSTEM TIME"][ind]
     if ind == 0:
         label = f"t={label}"

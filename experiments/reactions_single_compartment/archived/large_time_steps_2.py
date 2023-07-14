@@ -43,16 +43,13 @@ raise StopExecution     # See: https://stackoverflow.com/a/56953105/5478830
 # %%
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_data import ChemData as chem
+from src.modules.chemicals.chem_data import ChemData as chem
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
-import numpy as np
-import plotly.express as px
 from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
@@ -89,7 +86,7 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 # # Run 1 : extremely small fixed time steps (no substeps)
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -108,7 +105,7 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 # # Run 2 : very small time steps, with dynamic substeps
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -128,7 +125,7 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 # # Run 3 : small-ish time steps, with dynamic substeps
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -148,7 +145,7 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 # # Run 4 : same as previous run, but fewer dynamic substeps
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -168,7 +165,7 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 # # Run 5 : same as previous run, but slightly larger primary step
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -191,7 +188,7 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 # # Run 6 : same as previous run, but no substeps
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 

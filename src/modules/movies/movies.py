@@ -2,7 +2,6 @@
 
 import pandas as pd
 import numpy as np
-from typing import Union
 
 
 class MovieTabular:
@@ -42,7 +41,7 @@ class MovieTabular:
 
 
     def __str__(self):
-        return f"MovieTabular object with {len(self.movie)} snapshot(s) parametrized by `{self.parameter_name}`"
+        return f"`MovieTabular` object with {len(self.movie)} snapshot(s) parametrized by `{self.parameter_name}`"
 
 
 
@@ -79,7 +78,7 @@ class MovieTabular:
                       search_col=None, search_val=None) -> pd.DataFrame:
         """
         Return the main data structure (a Pandas dataframe) 
-        - or a part thereof (in which case insert a column named "search_value" to the left.)
+        - or a part thereof (in which case a column named "search_value" is inserted to the left.)
 
         Optionally, limit the dataframe to a specified numbers of rows at the end,
         or just return row(s) corresponding to a specific search value(s) in the specified column
@@ -157,6 +156,16 @@ class MovieTabular:
 
         # In the absence of a passed search_val, return the full dataset
         return df
+
+
+
+    def clear_dataframe(self) -> None:
+        """
+        Do a clean start
+
+        :return:    None
+        """
+        self.movie = pd.DataFrame()      # Empty Pandas dataframe
 
 
 

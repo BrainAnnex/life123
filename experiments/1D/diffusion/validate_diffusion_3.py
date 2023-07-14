@@ -23,20 +23,17 @@
 # LAST REVISED: June 4, 2023
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
-from experiments.get_notebook_info import get_notebook_basename
 
 from src.life_1D.bio_sim_1d import BioSim1D
-from src.modules.reactions.reaction_data import ChemData as chem
+from src.modules.chemicals.chem_data import ChemData as chem
 from src.modules.movies.movies import MovieArray
 from src.modules.numerical.numerical import Numerical as num
 
 import numpy as np
 
 import plotly.express as px
-import plotly.graph_objects as go
 
 # %%
 # Parameters of the simulation run.  We'll be considering just 1 chemical species, "A"

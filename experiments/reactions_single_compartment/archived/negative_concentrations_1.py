@@ -60,18 +60,14 @@ raise StopExecution     # See: https://stackoverflow.com/a/56953105/5478830
 # ## The `StopExecution` above is on purpose, TO PREVENT ACCIDENTAL RUNS OF THIS NOTEBOOK!
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
-from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_data import ChemData as chem
+from src.modules.chemicals.chem_data import ChemData as chem
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
-import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from src.modules.visualization.graphic_log import GraphicLog
 
 # %%
 # Initialize the system
@@ -96,7 +92,7 @@ chem_data.describe_reactions()
 # It cannot be replicated with current versions of Life123.  DO NOT ATTEMPT TO RE-RUN!
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 
@@ -201,7 +197,7 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 # Same as for Run #1
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 
@@ -279,7 +275,7 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 # Same as for the previous runs
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 
@@ -330,7 +326,7 @@ all_fig.show()
 
 # %%
 # Same as for the previous runs
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 

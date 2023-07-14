@@ -122,16 +122,16 @@ class BioSim1D:
         if chem_data:
             self.chem_data = chem_data
         else:
-            self.chem_data = reactions.reaction_data
+            self.chem_data = reactions.chem_data
 
         if reactions:
             self.reaction_dynamics = reactions
         else:
-            self.reaction_dynamics = ReactionDynamics(reaction_data=chem_data)
+            self.reaction_dynamics = ReactionDynamics(chem_data=chem_data)
 
         self.n_bins = n_bins
 
-        self.n_species = chem_data.n_species
+        self.n_species = chem_data.number_of_chemicals()
 
         assert self.n_species >= 1, \
             "At least 1 chemical species must be declared prior to calling initialize_system()"
@@ -200,9 +200,9 @@ class BioSim1D:
         """
         self.system = new_state["system"]
         self.n_species, self.n_bins = self.system.shape     # Extract from the new state
-        assert self.n_species == self.chem_data.n_species, \
+        assert self.n_species == self.chem_data.number_of_chemicals(), \
             f"restore_system(): inconsistency in the number of chemical species in the specified new state ({self.n_species}) " \
-            f"vs. what's stored in the `Chemicals` object ({self.chem_data.n_species})"
+            f"vs. what's stored in the `Chemicals` object ({self.chem_data.number_of_chemicals()})"
 
         self.system_time = new_state["system_time"]
 
@@ -220,7 +220,7 @@ class BioSim1D:
         """
         self.system = new_state
         self.n_species, self.n_bins = new_state.shape     # Extract from the new state
-        assert self.n_species == self.chem_data.n_species, \
+        assert self.n_species == self.chem_data.number_of_chemicals(), \
             "replace_system(): inconsistency in the number of chemical species vs. what's stored in the `Chemicals` object"
 
 
@@ -289,8 +289,8 @@ class BioSim1D:
         :param conc_list:   List or tuple of concentration values for each of the chemical species
         :return:            None
         """
-        assert len(conc_list) == self.chem_data.n_species, \
-            f"set_all_uniform_concentrations(): the argument must be a list or tuple of size {self.chem_data.n_species}"
+        assert len(conc_list) == self.chem_data.number_of_chemicals(), \
+            f"set_all_uniform_concentrations(): the argument must be a list or tuple of size {self.chem_data.number_of_chemicals()}"
 
         for i, conc in enumerate(conc_list):
             self.set_uniform_concentration(species_index=i, conc=conc)

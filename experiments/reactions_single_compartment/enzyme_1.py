@@ -14,19 +14,15 @@
 # ---
 
 # %% [markdown]
-# ## Comparing the reaction `A` <-> `B` with and without an enzyme
+# ## Comparing the reaction `A <-> B` with and without an enzyme
 #
 # LAST REVISED: June 4, 2023
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
-from src.modules.reactions.reaction_data import ChemData
+from src.modules.chemicals.chem_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
-
-import numpy as np
-import plotly.express as px
 
 # %% [markdown]
 # # 1. WITHOUT ENZYME
@@ -46,7 +42,7 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"A": 20., "B": 0.},
                   snapshot=True)
 dynamics.describe_state()
@@ -110,7 +106,7 @@ chem_data.describe_reactions()  # Notice how the enzyme `E` is noted in the prin
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"A": 20., "B": 0., "E": 30.},
                   snapshot=True)      # Plenty of enzyme `E`
 dynamics.describe_state()

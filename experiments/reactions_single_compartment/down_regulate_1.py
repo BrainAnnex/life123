@@ -38,15 +38,13 @@
 # ![Downregulated by shunt](../../docs/down_regulate_1.png)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_data import ChemData as chem
+from src.modules.chemicals.chem_data import ChemData as chem
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
-import numpy as np
 import plotly.express as px
 from src.modules.visualization.graphic_log import GraphicLog
 
@@ -82,7 +80,7 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals, in their index order
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc([50., 0.], snapshot=True)
 dynamics.describe_state()
 
@@ -151,7 +149,7 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 # ### Set the initial concentrations of all the chemicals, in their index order
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)   # Notice we're over-writing the earlier "dynamics" object
+dynamics = ReactionDynamics(chem_data=chem_data)   # Notice we're over-writing the earlier "dynamics" object
 dynamics.set_conc([50., 0, 0.], snapshot=True)
 dynamics.describe_state()
 
@@ -219,7 +217,7 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals, in their index order
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc([50., 0, 0.], snapshot=True)
 dynamics.describe_state()
 

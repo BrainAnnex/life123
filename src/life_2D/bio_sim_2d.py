@@ -86,12 +86,12 @@ class BioSim2D:
         if reactions:
             self.reaction_dynamics = reactions
         else:
-            self.reaction_dynamics = ReactionDynamics(reaction_data=chem_data)
+            self.reaction_dynamics = ReactionDynamics(chem_data=chem_data)
 
         self.n_bins_x = n_cells_x
         self.n_bins_y = n_cells_y
 
-        self.n_species = chem_data.n_species
+        self.n_species = chem_data.number_of_chemicals()
 
         # Initialize all concentrations to zero
         self.system = np.zeros((self.n_species, n_cells_x, n_cells_y), dtype=float)
@@ -430,9 +430,12 @@ class BioSim2D:
 
         :return:                A 2-D Numpy array with the CHANGE in concentration for the given species across all bins
         """
-        assert self.system is not None, "BioSim2D.diffuse_step_single_species(): Must first initialize the system"
-        assert not self.chem_data.missing_diffusion_rate(), "BioSim2D.diffuse_step_single_species(): Must first set the diffusion rates"
-        assert self.sealed == True, "BioSim2D.diffuse_step_single_species(): For now, there's no provision for exchange with the outside"
+        assert self.system is not None, \
+                "BioSim2D.diffuse_step_single_species(): Must first initialize the system"
+        assert not self.chem_data.missing_diffusion_rate(), \
+                "BioSim2D.diffuse_step_single_species(): Must first set the diffusion rates"
+        assert self.sealed == True, \
+                "BioSim2D.diffuse_step_single_species(): For now, there's no provision for exchange with the outside"
 
         increment_matrix = np.zeros((self.n_bins_x, self.n_bins_y), dtype=float)   # One element per bin
 

@@ -23,17 +23,14 @@
 # LAST REVISED: June 4, 2023
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
-from experiments.get_notebook_info import get_notebook_basename
 
 from src.life_2D.bio_sim_2d import BioSim2D
 
 import plotly.express as px
-import plotly.graph_objects as go
 
-from src.modules.reactions.reaction_data import ChemData as chem
+from src.modules.chemicals.chem_data import ChemData as chem
 
 # %%
 # Prepare the initial system, with a single non-zero bin, near the left edge of the system, positioned halfway vertically

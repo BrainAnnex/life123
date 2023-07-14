@@ -14,7 +14,7 @@
 # ---
 
 # %% [markdown]
-# ## Exploration of errors in the implementation of substeps, for the simulation of the coupled reactions `2 S <-> U` and `S <-> X`   
+# ## Exploration of numerical errors in the implementation of substeps, for the simulation of the coupled reactions `2 S <-> U` and `S <-> X`   
 # Both mostly forward.  1st-order kinetics throughout.   
 #
 # Same as `variable_steps_1`, but with substeps.
@@ -24,7 +24,7 @@
 # %% [markdown]
 # # IMPORTANT: DO NOT ATTEMPT TO RUN THIS NOTEBOOK!   
 # ## This is a **"frozen run"** that depends on an old version of Life123, for demonstration purposes  
-# (newer versions don't contain this implementation of substeps.)  
+# **(current versions don't contain this implementation of substeps.)** 
 # If you bypass the execution exit in the first cell, and run the other cells, you WILL NOT REPLICATE the results below!
 
 # %%
@@ -39,16 +39,14 @@ raise StopExecution     # See: https://stackoverflow.com/a/56953105/5478830
 # %%
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_data import ChemData as chem
+from src.modules.chemicals.chem_data import ChemData as chem
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
-import plotly.express as px
 from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
@@ -85,7 +83,7 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = ReactionDynamics(reaction_data=chem_data)
+dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 
@@ -195,6 +193,6 @@ no_substep_error
 # At any rates, substeps are far less relevant ever since the introduction of variable (main) step.
 
 # %% [markdown]
-# # => This implementation of substeps was deprecated - and no longer part of current releases
+# # => IMPORTANT: This implementation of substeps was OBSOLETED in release Beta 26.3 - and is no longer used in Life123
 
 # %%

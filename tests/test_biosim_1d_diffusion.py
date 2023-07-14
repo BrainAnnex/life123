@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 from scipy.ndimage import shift
 from src.life_1D.bio_sim_1d import BioSim1D
-from src.modules.reactions.reaction_data import ChemData as chem
+from src.modules.chemicals.chem_data import ChemData as chem
 from src.modules.numerical.numerical import Numerical as num
 from src.modules.movies.movies import MovieArray
 
@@ -92,6 +92,7 @@ def test_diffuse_step_single_species_1b():
 def test_diffuse_step_single_species_2():
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
+
     bio.set_uniform_concentration(species_index=0, conc=8.0)
     with pytest.raises(Exception):
         bio.diffuse_step_single_species(time_step=.001)    # Must set the diffusion rates first
