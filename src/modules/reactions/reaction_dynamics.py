@@ -418,7 +418,7 @@ class ReactionDynamics:
             print("Macro-molecules present, with their counts: ", self.macro_system)
 
         if self.macro_system_state != {}:
-            print("Binding Occupancy fractions at the various binding sites for each of the macro-molecules:")
+            print("Fractional Occupancy at the various binding sites for each macro-molecule:")
             for mm, state_dict in self.macro_system_state.items():
                 state_list = [f"{a}: {b[1]} ({b[0]})" for a, b in state_dict.items()]   # EXAMPLE: ["3: 0.1 (A)", "8: 0.6 (B)"]
                 state_str = " | ".join(state_list)                                      # EXAMPLE: "3: 0.1 (A) | "8: 0.6 (B)"
