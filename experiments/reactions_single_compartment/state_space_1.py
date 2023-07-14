@@ -20,9 +20,10 @@
 #
 # Based on experiment "1D/reaction/reaction_2"
 #
-# LAST REVISED: June 5, 2023
+# LAST REVISED: July 14, 2023
 
 # %%
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 from experiments.get_notebook_info import get_notebook_basename

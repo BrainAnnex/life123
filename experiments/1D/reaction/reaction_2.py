@@ -18,13 +18,14 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: June 4, 2023
+# LAST REVISED: July 14, 2023
 #
 # * [First Step](#reaction_2_sec_2_first_step)
 # * [Numerous more steps](#reaction_2_sec_2)
 # * [Equilibrium](#reaction_2_sec_2_equilibrium)
 
 # %%
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 from experiments.get_notebook_info import get_notebook_basename

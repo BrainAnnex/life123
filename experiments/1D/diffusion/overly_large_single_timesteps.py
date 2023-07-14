@@ -31,9 +31,10 @@
 #
 # That value of 0.33333 is saved in the Class variable "time_step_threshold"
 #
-# LAST REVISED: June 4, 2023
+# LAST REVISED: July 14, 2023
 
 # %%
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 from src.modules.chemicals.chem_data import ChemData as chem

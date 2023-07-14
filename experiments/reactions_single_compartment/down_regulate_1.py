@@ -26,7 +26,7 @@
 #
 # All reactions 1st order, mostly forward.  Taken to equilibrium.
 #
-# LAST REVISED: June 4, 2023
+# LAST REVISED: July 14, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -38,6 +38,7 @@
 # ![Downregulated by shunt](../../docs/down_regulate_1.png)
 
 # %%
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename

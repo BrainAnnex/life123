@@ -22,12 +22,13 @@
 #
 # This experiment gets repeated, with very fine _fixed_ steps (as a proxy for the "exact value"), in `variable_steps_2`
 #
-# LAST REVISED: June 4, 2023
+# LAST REVISED: July 14, 2023
 
 # %% [markdown]
 # ![Adaptive time steps](../../docs/variable_steps.png)
 
 # %%
+import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
