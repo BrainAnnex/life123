@@ -1034,10 +1034,10 @@ def test_logistic():
 def test_set_macromolecules():
     chem = ChemData(names=["A", "B"])
     chem.add_macromolecules(["M1", "M2"])
-    chem.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="A", affinity=3)
-    chem.set_binding_site_affinity(macromolecule="M1", site_number=2, chemical="B", affinity=5)
-    chem.set_binding_site_affinity(macromolecule="M2", site_number=1, chemical="B", affinity=11)
-    chem.set_binding_site_affinity(macromolecule="M2", site_number=3, chemical="B", affinity=102)
+    chem.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
+    chem.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
+    chem.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
+    chem.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
 
     rxn = ReactionDynamics(chem)
     rxn.set_macromolecules()    # By default, set counts to 1 for all the registered macromolecules
@@ -1067,7 +1067,7 @@ def test_set_macromolecules():
     assert len(rxn.macro_system_state) == 1
     assert rxn.macro_system_state["M999"] == {}     # No binding sites were registered
 
-    chem.set_binding_site_affinity(macromolecule="M999", site_number=12, chemical="A", affinity=4.5)
+    chem.set_binding_site_affinity(macromolecule="M999", site_number=12, ligand="A", Kd=4.5)
     assert rxn.macro_system_state["M999"] == {}     # The system state has not been updated yet
     # Over-write the previous settings
     rxn.set_macromolecules({"M999": 2})
@@ -1097,7 +1097,7 @@ def test_set_occupancy():
         # No binding sites are defined on macromolecule M1
         rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="B", affinity=6.)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="B", Kd=6.)
     rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
 
     assert rxn.macro_system == {"M1": 1}
@@ -1127,7 +1127,7 @@ def test_get_occupancy():
         # No occupancy data yet set for site number 1 of macromolecule `M1`
         rxn.get_occupancy(macromolecule="M1", site_number=1)
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="C", affinity=23.5)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="C", Kd=23.5)
     rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
 
     assert rxn.macro_system == {"M1": 1, "M2": 1}
@@ -1141,13 +1141,13 @@ def test_update_occupancy():
     chem_data = ChemData(names=["A", "B", "C"])
     chem_data.add_macromolecules(["M1", "M2"])
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="A", affinity=10)
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, chemical="B", affinity=20)
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=3, chemical="C", affinity=30)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=10)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=20)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=3, ligand="C", Kd=30)
 
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, chemical="C", affinity=3)
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=2, chemical="C", affinity=30)
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, chemical="C", affinity=300)
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="C", Kd=3)
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=2, ligand="C", Kd=30)
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="C", Kd=300)
 
 
     rxn = ReactionDynamics(chem_data)

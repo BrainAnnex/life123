@@ -43,12 +43,12 @@ chem.add_macromolecules("M1")
 chem.get_macromolecules()
 
 # %%
-chem.set_binding_site_affinity("M1", 3, "A", 1.0)
-chem.set_binding_site_affinity("M1", 8, "B", 3.2)
-chem.set_binding_site_affinity("M1", 15, "A", 10.0)
+chem.set_binding_site_affinity("M1", site_number=3,  ligand="A", Kd=1.0)
+chem.set_binding_site_affinity("M1", site_number=8,  ligand="B", Kd=3.2)
+chem.set_binding_site_affinity("M1", site_number=15, ligand="A", Kd=10.0)
 
-chem.set_binding_site_affinity("M2", 1, "C", 5.6)    # "M2" will get automatically added
-chem.set_binding_site_affinity("M2", 2, "A", 0.01)
+chem.set_binding_site_affinity("M2", site_number=1, ligand="C", Kd=5.6)    # "M2" will get automatically added
+chem.set_binding_site_affinity("M2", site_number=2, ligand="A", Kd=0.01)
 
 # %%
 chem.show_binding_affinities()        # Review the values we have given for the binding affinities
@@ -73,7 +73,7 @@ aff
 aff.chemical
 
 # %%
-aff.affinity
+aff.Kd
 
 # %%
 
@@ -115,19 +115,19 @@ dynamics.update_occupancy()
 dynamics.describe_state()
 
 # %%
-dynamics.chem_data.show_binding_affinities()        # Review the values the had given for the binding affinities
+dynamics.chem_data.show_binding_affinities()        # Review the values we had given for the dissociation constants
 
 # %% [markdown]
 # #### Notes:
 # **[B] = 0** => Occupancy of binding site 8 of M1 is also zero
 #
 # **[A] = 10.0** :   
-#             * 10x the binding affinity of A to site 3 of M1 (resulting in occupancy 0.9)  
-#             * same as the binding affinity of A to site 15 of M1 (occupancy 0.5)  
-#             * 1,000x the binding affinity of A to site 2 of M2 (occupancy almost 1, i.e. nearly saturated)
+#             * 10x the dissociation constant of A to site 3 of M1 (resulting in occupancy 0.9)  
+#             * same as the dissociation constant of A to site 15 of M1 (occupancy 0.5)  
+#             * 1,000x the dissociation constant of A to site 2 of M2 (occupancy almost 1, i.e. nearly saturated)
 #         
 #             
-# **[C] = 0.56** => 1/10 of the binding affinity of C to site 1 of M2 (occupancy 0.1)
+# **[C] = 0.56** => 1/10 of the dissociation constant of C to site 1 of M2 (occupancy 0.1)
 
 # %%
 
@@ -144,7 +144,7 @@ dynamics.update_occupancy()
 dynamics.describe_state()
 
 # %% [markdown]
-# #### Note how all the various binding sites for ligand A, across all macromolecules, now have a different value for the fractional occupancy (very close to 1 because of the large value of [A] relative to each of the binding affinities for A.)
+# #### Note how all the various binding sites for ligand A, across all macromolecules, now have a different value for the fractional occupancy (very close to 1 because of the large value of [A] relative to each of the dissociation constants for A.)
 # The fractional occupancies for the other ligands (B and C) did not change
 
 # %%
@@ -159,7 +159,7 @@ history = MovieTabular(parameter_name="[A]")  # A convenient way to store a sequ
 print(history)
 
 # %%
-# Generate a sweep of [A] values along a log scale
+# Generate a sweep of [A] values along a log scale, from very low to very high (relative to the dissociation constants)
 start = 0.001
 stop = 200.
 num_points = 100
@@ -214,11 +214,14 @@ fig.add_hline(y=0.9, line_width=1, line_dash="dot", line_color="gray")
 
 # Annotations (x values adjusted for the log scale)
 fig.add_annotation(x=-1.715, y=0.65, 
-                   text="Binding Affinity: 0.01", font=dict(size=12, color="seagreen"), showarrow=True, ax=-100, ay=-20)
+                   text="Dissociation constant: 0.01<br>(HIGHER Binding Affinity)", font=dict(size=12, color="seagreen"), showarrow=True, ax=-100, ay=-20)
 fig.add_annotation(x=0.3, y=0.65, 
-                   text="Binding Affinity: 1", font=dict(size=12, color="purple"), showarrow=True, ax=-100, ay=-20)
+                   text="Dissociation constant: 1", font=dict(size=12, color="purple"), showarrow=True, ax=-100, ay=-20)
 fig.add_annotation(x=0.6, y=0.3, 
-                   text="Binding Affinity: 10", font=dict(size=12, color="darkorange"), showarrow=True, ax=100, ay=20)
+                   text="Dissociation constant: 10<br>(LOWER Binding Affinity)", font=dict(size=12, color="darkorange"), showarrow=True, ax=100, ay=10)
+
+fig.add_annotation(x=1.8, y=0.51, 
+                   text="50% OCCUPANCY", font=dict(size=14, color="gray"), bgcolor="white", opacity=0.8, showarrow=False)
 
 # Customize y-axis tick values
 additional_y_values = [0.1, 0.5, 0.9]  # Additional values to show on y-axis
@@ -232,13 +235,19 @@ fig.add_scatter(x=[0.01, 1, 10,     0.001, 0.1, 1.,     0.1, 10, 100 ],
 fig.show()
 
 # %% [markdown]
-# Note that fractional occupancy 0.1 occurs at ligand concentrations of 1/10 the binding affinity;   
-# occupancy 0.5 occurs at ligand concentrations equals to the binding affinity;  
-# occupancy 0.9 occurs at ligand concentrations of 10x the binding affinity
+# #### When the binding affinity is lower (i.e. higher Dissociation Constant, Kd, orange curve), it takes higher ligand concentrations to attain the same fractional occupancies
+
+# %% [markdown]
+# Note that fractional occupancy 0.1 occurs at ligand concentrations of 1/10 the dissociation constant (Kd);   
+# occupancy 0.5 occurs at ligand concentrations equals to the dissociation constant;  
+# occupancy 0.9 occurs at ligand concentrations of 10x the dissociation constant.  
 
 # %% [markdown]
 # ## The above simulation captures what's shown on Fig. 3A of 
 # #### https://doi.org/10.1146/annurev-cellbio-100617-062719 
-# ("Low-Affinity Binding Sites and the Transcription Factor Specificity Paradox in Eukaryotes"), which it is based on
+# ("Low-Affinity Binding Sites and the Transcription Factor Specificity Paradox in Eukaryotes"), a paper that guided this simulation
+
+# %% [markdown]
+# #### In upcoming versions of Life123, the fractional occupancy values will regulate the rates of reactions catalyzed by the macromolecules...
 
 # %%

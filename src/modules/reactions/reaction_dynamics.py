@@ -1608,7 +1608,7 @@ class ReactionDynamics:
             for (site_number, ligand) in d.items():
                 aff_data = self.chem_data.get_binding_site_affinity(mm, site_number)
                 conc = self.get_chem_conc(ligand)
-                fractional_occupancy = self.sigmoid(conc=conc, Kd=aff_data.affinity)
+                fractional_occupancy = self.sigmoid(conc=conc, Kd=aff_data.Kd)
 
                 self.set_occupancy(macromolecule=mm, site_number=site_number, fractional_occupancy=fractional_occupancy)
 
