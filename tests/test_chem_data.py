@@ -279,32 +279,32 @@ def test_set_binding_site_affinity():
     chem_data = ChemData(["A", "B", "ZZZ"])
     chem_data.add_macromolecules(["M1", "M2"])
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="A", affinity=3)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
     result = chem_data.get_binding_site_affinity(macromolecule="M1", site_number=1)
     assert result == ("A", 3)
     assert result.chemical == "A"
-    assert result.affinity == 3
+    assert result.Kd == 3
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, chemical="B", affinity=5)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
     assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 3)
     assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
 
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, chemical="B", affinity=11)
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
     assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 3)
     assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
     assert chem_data.get_binding_site_affinity("M2", site_number=1) == ("B",11)
 
     # Over-write previous value of affinity of "A" to site 1 of macromolecule "M1"
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="A", affinity=999)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=999)
     assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 999)
     assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
     assert chem_data.get_binding_site_affinity("M2", site_number=1) == ("B",11)
 
     # Attempting to associate another chemical to site 1 of macromolecule "M1", will result in error
     with pytest.raises(Exception):
-        chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="ZZZ", affinity=999)
+        chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="ZZZ", Kd=999)
 
-    chem_data.set_binding_site_affinity(macromolecule="M3", site_number=10, chemical="A", affinity= 4)
+    chem_data.set_binding_site_affinity(macromolecule="M3", site_number=10, ligand="A", Kd= 4)
     assert chem_data.get_binding_site_affinity("M3", site_number=10) == ("A", 4)
     assert chem_data.get_macromolecules() == ["M1", "M2", "M3"]     # "M3" got automatically added
     assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 999)
@@ -313,7 +313,7 @@ def test_set_binding_site_affinity():
 
     # Unknown chemical "X"
     with pytest.raises(Exception):
-        chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="X", affinity=100)
+        chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="X", Kd=100)
 
 
 
@@ -332,19 +332,19 @@ def test_get_binding_sites():
     assert chem_data.get_binding_sites("M1") == []
     assert chem_data.get_binding_sites("M2") == []
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="A", affinity=3)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
     assert chem_data.get_binding_sites("M1") == [1]
     assert chem_data.get_binding_sites("M2") == []
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, chemical="B", affinity=5)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
     assert chem_data.get_binding_sites("M1") == [1, 2]
     assert chem_data.get_binding_sites("M2") == []
 
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, chemical="B", affinity=11)
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
     assert chem_data.get_binding_sites("M1") == [1, 2]
     assert chem_data.get_binding_sites("M2") == [1]
 
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, chemical="B", affinity=102)
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
     assert chem_data.get_binding_sites("M1") == [1, 2]
     assert chem_data.get_binding_sites("M2") == [1, 3]
 
@@ -360,19 +360,19 @@ def test_get_binding_sites_and_ligands():
     assert chem_data.get_binding_sites_and_ligands("M1") == {}
     assert chem_data.get_binding_sites_and_ligands("M2") == {}
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="A", affinity=3)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
     assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A"}
     assert chem_data.get_binding_sites_and_ligands("M2") == {}
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, chemical="B", affinity=5)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
     assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A", 2: "B"}
     assert chem_data.get_binding_sites_and_ligands("M2") == {}
 
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, chemical="B", affinity=11)
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
     assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A", 2: "B"}
     assert chem_data.get_binding_sites_and_ligands("M2") == {1: "B"}
 
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, chemical="B", affinity=102)
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
     assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A", 2: "B"}
     assert chem_data.get_binding_sites_and_ligands("M2") == {1: "B", 3: "B"}
 
@@ -388,18 +388,18 @@ def test_get_ligand_name():
     with pytest.raises(Exception):
         chem_data.get_ligand_name(macromolecule="M1", site_number=1)    # M1 has no sites associated to it
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, chemical="A", affinity=3.1)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="A", Kd=3.1)
 
     with pytest.raises(Exception):
         chem_data.get_ligand_name(macromolecule="M1", site_number=1)    # No site number 1 on M1
 
     assert chem_data.get_ligand_name(macromolecule="M1", site_number=2) == "A"
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, chemical="B", affinity=6.)
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="B", Kd=6.)
     assert chem_data.get_ligand_name(macromolecule="M1", site_number=1) == "B"
 
     chem_data.add_chemical("C")
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=5, chemical="C", affinity=11.4)
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=5, ligand="C", Kd=11.4)
     assert chem_data.get_ligand_name(macromolecule="M2", site_number=5) == "C"
 
 
@@ -412,7 +412,7 @@ def test_clear_macromolecules():
     chem_data = ChemData()
     chem_data.add_macromolecules(["M1", "M2"])
     chem_data.clear_macromolecules()
-    assert chem_data.macro_molecules == []
+    assert chem_data.macromolecules == []
     assert chem_data.binding_sites == {}
 
 
