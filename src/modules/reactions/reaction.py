@@ -3,22 +3,22 @@ import math
 import numpy as np
 
 
-class ThermoDynamics:   # TODO: TEST
+class ThermoDynamics:
     """
     Manage the Thermodynamics aspects
     """
 
     # Class Attribute
-    R = 8.314462           # Ideal gas constant, in units of Joules / (Kelvin * Mole)
+    R = 8.31446261815324          # Ideal gas constant, in units of Joules / (Kelvin * Mole)
 
 
 
     @classmethod
-    def K_from_delta_G(cls, delta_G, temp) -> float:    # TODO: test
+    def K_from_delta_G(cls, delta_G, temp) -> float:
         """
         Compute a reaction's equilibrium constant from the thermodynamic data
 
-        :param delta_G: Change in Gibbs Free Energy (from reactants to products)
+        :param delta_G: Change in Gibbs Free Energy (from reactants to products), in Joules
         :param temp:    System's temperature, in degree Kelvins
         :return:        The reaction's equilibrium constant
         """
@@ -27,13 +27,13 @@ class ThermoDynamics:   # TODO: TEST
 
 
     @classmethod
-    def delta_G_from_K(cls, K, temp) -> float:         # TODO: test
+    def delta_G_from_K(cls, K, temp) -> float:
         """
         Compute a reaction's change in its Gibbs Free Energy from its equilibrium constant, at the specified temperature
 
         :param K:       The reaction's equilibrium constant
         :param temp:    System's temperature, in degree Kelvins
-        :return:        The reaction's change in Gibbs Free Energy (from reactants to products)
+        :return:        The reaction's change in Gibbs Free Energy (from reactants to products), in Joules
         """
         return -cls.R * temp * math.log(K)      # Natural log
 
