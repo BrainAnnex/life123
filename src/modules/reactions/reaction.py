@@ -58,7 +58,7 @@ class ThermoDynamics:
 ############################################################################################################################
 ############################################################################################################################
 
-class Reaction:     # TODO:  use the class Reaction
+class Reaction:
     """
     Data about a SINGLE reaction,
     including:
@@ -180,7 +180,7 @@ class Reaction:     # TODO:  use the class Reaction
                   f" {[self.chem_data.get_name(e) for e in enzyme_list]}")
 
 
-        # Process kinetic data, if available
+        # Process kinetic data, if available (extracting thermodynamic data when feasible)
         if forward_rate:
             self.kF = forward_rate
 
@@ -191,10 +191,11 @@ class Reaction:     # TODO:  use the class Reaction
                 equil_const = forward_rate / reverse_rate    # ...compute the equilibrium constant (from kinetic data)
                 self.K = equil_const
                 if self.chem_data.temp:
-                    self.Delta_G = - self.R * self.chem_data.temp * math.log(equil_const)   # the change in Gibbs Free Energy
+                    # If the temperature is set, compute the change in Gibbs Free Energy
+                    self.Delta_G = ThermoDynamics.delta_G_from_K(K = equil_const, temp = self.chem_data.temp)
 
 
-        # Process thermodynamic data, if available
+        # Process thermodynamic data, if available (extracting kinetic data when feasible)
         if delta_H is not None:
             self.Delta_H = delta_H
 
@@ -202,7 +203,9 @@ class Reaction:     # TODO:  use the class Reaction
             self.Delta_S = delta_S
             if (self.chem_data.temp is not None) and (delta_H is not None):
                 # If all the thermodynamic data is available...
-                delta_G = delta_H - self.chem_data.temp * delta_S                  # ...compute the change in Gibbs Free Energy
+
+                # Compute the change in Gibbs Free Energy
+                delta_G = ThermoDynamics.delta_G_from_enthalpy(delta_H = delta_H, delta_S = delta_S, temp = self.chem_data.temp)
 
                 if self.Delta_G is not None:      # If already set from kinetic data, make sure that the two match!
                     assert np.allclose(delta_G, self.Delta_G), \
@@ -211,7 +214,8 @@ class Reaction:     # TODO:  use the class Reaction
                 else:
                     # The kinetic data was incomplete; fill in the missing parts from the thermodynamic data
                     self.Delta_G = delta_G
-                    equil_const = math.exp(- delta_G / (self.R * self.chem_data.temp))    # Compute the equilibrium constant (from the thermodynamic data)
+                    # Compute the equilibrium constant (from the thermodynamic data)
+                    equil_const = ThermoDynamics.K_from_delta_G(delta_G = delta_G, temp = self.chem_data.temp)
                     self.K = equil_const
                     # If only one of the Forward or Reverse rates was provided, compute the other one
                     if (self.kF is None) and (self.kR is not None):
@@ -223,7 +227,8 @@ class Reaction:     # TODO:  use the class Reaction
         elif (delta_G is not None) and (self.chem_data.temp is not None):
             # The kinetic data was incomplete; fill in the missing parts from the thermodynamic data
             self.Delta_G = delta_G
-            equil_const = math.exp(- delta_G / (self.R * self.chem_data.temp))    # Compute the equilibrium constant (from the thermodynamic data)
+            # Compute the equilibrium constant (from the thermodynamic data)
+            equil_const = ThermoDynamics.K_from_delta_G(delta_G = delta_G, temp = self.chem_data.temp)
             self.K = equil_const
             # If only one of the Forward or Reverse rates was provided, compute the other one
             if (self.kF is None) and (self.kR is not None):
