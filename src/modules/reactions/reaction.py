@@ -40,7 +40,7 @@ class ThermoDynamics:
 
 
     @classmethod
-    def delta_G_from_enthalpy(cls, delta_H, delta_S, temp) -> float:         # TODO: test
+    def delta_G_from_enthalpy(cls, delta_H, delta_S, temp) -> float:
         """
         Compute the change in Gibbs Free Energy, from Enthalpy and Entropy changes
 
@@ -51,6 +51,31 @@ class ThermoDynamics:
         """
         return delta_H - temp * delta_S
 
+
+    @classmethod
+    def delta_H_from_gibbs(cls, delta_G, delta_S, temp) -> float:
+        """
+        Compute the change in Enthalpy, from changes in Gibbs Free Energy and in Entropy
+
+        :param delta_G: The reaction's change in Gibbs Free Energy (from reactants to products)
+        :param delta_S: The reaction's change in Entropy (from reactants to products)
+        :param temp:    System's temperature, in degree Kelvins
+        :return:        The reaction's change in Enthalpy (from reactants to products)
+        """
+        return delta_G + temp * delta_S
+
+
+    @classmethod
+    def delta_S_from_gibbs(cls, delta_G, delta_H, temp) -> float:
+        """
+        Compute the change in Entropy, from  changes in the Gibbs Free Energy and in Enthalpy
+
+        :param delta_G: The reaction's change in Gibbs Free Energy (from reactants to products)
+        :param delta_H: The reaction's change in Enthalpy (from reactants to products)
+        :param temp:    System's temperature, in degree Kelvins
+        :return:        The reaction's change in Entropy (from reactants to products)
+        """
+        return (delta_H - delta_G) / temp
 
 
 
@@ -87,15 +112,12 @@ class Reaction:
         The "reaction order" refers to the forward reaction for reactants, and the reverse reaction for products.
     """
 
-    # Class Attribute
-    R = 8.314462           # Ideal gas constant, in units of Joules / (Kelvin * Mole)
-
 
     def __init__(self, chem_data, reactants: Union[int, str, list], products: Union[int, str, list],
                  forward_rate=None, reverse_rate=None,
                  delta_H=None, delta_S=None, delta_G=None):
         """
-       Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
+        Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
         The involved chemicals must be already registered - use add_chemical() if needed.
 
         NOTE: in the reactants and products, if the stoichiometry and/or reaction order aren't specified,
@@ -110,10 +132,10 @@ class Reaction:
                     It's equally acceptable to use LISTS in lieu of tuples
 
         :param chem_data:       Object of type "ReactionData"
-        :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
+        :param reactants:       A list of triplets (stoichiometry, species name, reaction order),
                                     or simplified terms in various formats; for details, see above.
                                     If not a list, it will get turned into one
-        :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction),
+        :param products:        A list of triplets (stoichiometry, species name, reaction order of REVERSE reaction),
                                     or simplified terms in various formats; for details, see above.
                                     If not a list, it will get turned into one
         :param forward_rate:    [OPTIONAL] Forward reaction rate constant
@@ -180,6 +202,9 @@ class Reaction:
                   f" {[self.chem_data.get_name(e) for e in enzyme_list]}")
 
 
+
+
+
         # Process kinetic data, if available (extracting thermodynamic data when feasible)
         if forward_rate:
             self.kF = forward_rate
@@ -236,6 +261,78 @@ class Reaction:
             if (self.kR is None) and (self.kF is not None):
                 self.kR = self.kF / equil_const
 
+
+
+
+    def _set_kinetic_and_thermodynamic(self, forward_rate, reverse_rate,
+                                       delta_H, delta_S, delta_G, temp) -> None:
+        """
+        Set all the kinetic and thermodynamic data derivable - directly or indirectly - from the passed arguments,
+        storing it in object attributes.
+        Raise an Exception if any inconsistency is detected.
+
+        :return:    None
+        """
+        self.kF = forward_rate
+        self.kR = reverse_rate
+        self.Delta_H = delta_H
+        self.Delta_S = delta_S
+        self.Delta_G = delta_G
+
+
+        # Process kinetic data, if available
+        #       (extracting thermodynamic data when feasible)
+        if (self.kF is not None) and (self.kR is not None):
+            # If all the kinetic data is available...
+            self.K = self.kF / self.kR    # ...compute the equilibrium constant (from kinetic data)
+
+            if temp:
+                # If the temperature is set, compute the change in Gibbs Free Energy
+                delta_G_kinetic = ThermoDynamics.delta_G_from_K(K = self.K, temp = temp)
+                if self.Delta_G is None:
+                    self.Delta_G = delta_G_kinetic
+                else:   # If already present (passed as argument), make sure that the two match!
+                    assert np.allclose(delta_G_kinetic, self.Delta_G), \
+                        f"_set_kinetic_and_thermodynamic(): Kinetic data (leading to Delta_G={delta_G_kinetic}) " \
+                        f"is inconsistent with the passed value of Delta_G={self.Delta_G})"
+
+
+        if (self.Delta_H is not None) and (self.Delta_S is not None) and (temp is not None):
+            # If all the thermodynamic data (possibly except delta_G) is available...
+
+            # Compute the change in Gibbs Free Energy from delta_H and delta_S, at the current temperature
+            delta_G_thermo = ThermoDynamics.delta_G_from_enthalpy(delta_H = self.Delta_H, delta_S = self.Delta_S, temp = temp)
+
+            if self.Delta_G is None:
+                self.Delta_G = delta_G_thermo
+            else:  # If already present (passed as argument or was set from kinetic data), make sure that the two match!
+                if not np.allclose(delta_G_thermo, self.Delta_G):
+                    if delta_G is not None:
+                        raise Exception(f"_set_kinetic_and_thermodynamic(): thermodynamic data (leading to Delta_G={delta_G_thermo}) "
+                                        f"is inconsistent with the passed value of delta_G={delta_G})")
+                    else:
+                        raise Exception(f"_set_kinetic_and_thermodynamic(): thermodynamic data (leading to Delta_G={delta_G_thermo}) "
+                                        f"is inconsistent with kinetic data (leading to Delta_G={self.Delta_G})")
+
+
+        if self.Delta_G is not None:
+            if (self.K is None) and (temp is not None):
+                # If the temperature is known, compute the equilibrium constant (from the thermodynamic data)
+                # Note: no need to do it if self.K is present, because we ALREADY handled that case
+                self.K = ThermoDynamics.K_from_delta_G(delta_G = self.Delta_G, temp = temp)
+
+                # If only one of the Forward or Reverse rates was provided, compute the other one
+                if (self.kF is None) and (self.kR is not None):
+                    self.kF = self.K * self.kR
+                if (self.kR is None) and (self.kF is not None):
+                    self.kR = self.kF / self.K
+
+            if temp is not None:
+                # If either Enthalpy or Entropy is missing, but the other one is known, compute the missing one
+                if (self.Delta_H is None) and (self.Delta_S is not None):
+                    self.Delta_H = ThermoDynamics.delta_H_from_gibbs(delta_G=self.Delta_G, delta_S=self.Delta_S, temp=temp)
+                elif (self.Delta_H is not None) and (self.Delta_S is None):
+                    self.Delta_S = ThermoDynamics.delta_S_from_gibbs(delta_G=self.Delta_G, delta_H=self.Delta_H, temp=temp)
 
 
 
@@ -513,8 +610,8 @@ class Reaction:
                             where all terms are integers
         """
         if type(term) == str:
-            return  (1, self.chem_data.get_index(term), 1)    # Accept simply the chemical name as a shortcut
-                                                    # for when the stoichiometry coefficient and reaction order are both 1
+            return  (1, self.chem_data.get_index(term), 1)  # Accept simply the chemical name as a shortcut
+                                                            # for when the stoichiometry coefficient and reaction order are both 1
         elif type(term) != tuple and type(term) != list:
             raise Exception(f"_parse_reaction_term(): {name} item must be either a string (a chemical name), "
                             f"or a pair (stoichiometry coeff, name) or a triplet (stoichiometry coeff, name, reaction order). "
@@ -525,6 +622,9 @@ class Reaction:
             raise Exception(f"_parse_reaction_term(): Unexpected length for {name} tuple/list: it should be 2 or 3. Instead, it is {len(term)}")
 
         stoichiometry = term[0]
+        assert type(stoichiometry) == int, \
+            f"_parse_reaction_term(): The stoichiometry coefficient, if provided, must be an integer. Instead, it is {stoichiometry}"
+
         species = term[1]
         if type(species) == str:
             species = self.chem_data.get_index(species)

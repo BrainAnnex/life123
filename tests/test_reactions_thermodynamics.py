@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 from src.modules.reactions.reaction import ThermoDynamics
 
@@ -54,6 +55,7 @@ def test_delta_G_from_enthalpy():
     assert np.allclose(800. , ThermoDynamics.delta_G_from_enthalpy(delta_H=800., delta_S=-15., temp=0))
     assert np.allclose(800. , ThermoDynamics.delta_G_from_enthalpy(delta_H=800., delta_S=50.,  temp=0))
 
+    # But as soon as the temperature deviates from absolute zero, they're no longer the same
     assert not np.allclose(800. , ThermoDynamics.delta_G_from_enthalpy(delta_H=800., delta_S=50.,  temp=1))
 
     # Progressively larger changes in Entropy will make the reaction increasingly favored energetically
@@ -71,3 +73,37 @@ def test_delta_G_from_enthalpy():
     assert np.allclose(3000. , ThermoDynamics.delta_G_from_enthalpy(delta_H=2000., delta_S=-10., temp=100))
     assert np.allclose(4000. , ThermoDynamics.delta_G_from_enthalpy(delta_H=2000., delta_S=-10., temp=200))
     assert np.allclose(5000. , ThermoDynamics.delta_G_from_enthalpy(delta_H=2000., delta_S=-10., temp=300))
+
+
+
+def test_delta_H_from_gibbs():
+    # When there's no Entropy change, the Delta_H equals the change in Gibbs free energy
+    assert np.allclose(800. , ThermoDynamics.delta_H_from_gibbs(delta_G=800., delta_S=0., temp=100))
+    assert np.allclose(800. , ThermoDynamics.delta_H_from_gibbs(delta_G=800., delta_S=0., temp=200))
+
+    # Likewise, at absolute zero temperature, the Delta_H would equal to the change in Gibbs free energy
+    assert np.allclose(800. , ThermoDynamics.delta_H_from_gibbs(delta_G=800., delta_S=-15., temp=0))
+    assert np.allclose(800. , ThermoDynamics.delta_H_from_gibbs(delta_G=800., delta_S=50.,  temp=0))
+
+    # But as soon as the temperature deviates from absolute zero, they're no longer the same
+    assert not np.allclose(800. , ThermoDynamics.delta_H_from_gibbs(delta_G=800., delta_S=50.,  temp=1))
+
+    delta_H = ThermoDynamics.delta_H_from_gibbs(delta_G=3000., delta_S=20.,temp=100)
+    assert np.allclose(delta_H, 5000.)
+    # Get back the original delta_G
+    assert np.allclose(3000. , ThermoDynamics.delta_G_from_enthalpy(delta_H=delta_H, delta_S=20., temp=100))
+
+
+
+def test_delta_S_from_gibbs():
+    with pytest.raises(Exception):
+        # Division by zero
+        ThermoDynamics.delta_S_from_gibbs(delta_G=3000, delta_H=3000, temp=0)
+
+    # If delta_G and delta_H are the same, then there's no Entropy change
+    assert np.allclose(0. , ThermoDynamics.delta_S_from_gibbs(delta_G=2000, delta_H=2000, temp=100))
+
+    delta_S = ThermoDynamics.delta_S_from_gibbs(delta_G=3000, delta_H=5000, temp=100)
+    assert np.allclose(delta_S, 20.)
+    # Get back the original delta_G
+    assert np.allclose(3000. , ThermoDynamics.delta_G_from_enthalpy(delta_H=5000, delta_S=delta_S, temp=100))

@@ -951,7 +951,7 @@ class ChemData(Macromolecules):
             rxn_properties = rxn.extract_rxn_properties()
             for k,v in rxn_properties.items():
                 node_data[k] = f"{v:,.6g}"
-                #'kF': self.extract_forward_rate(rxn), 'kR': self.extract_back_rate(rxn)})
+                #'kF': self.extract_forward_rate(rxn), 'kR': self.extract_reverse_rate(rxn)})
 
             graph_data.append(node_data)
 
