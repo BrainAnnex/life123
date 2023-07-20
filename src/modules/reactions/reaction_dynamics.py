@@ -732,7 +732,7 @@ class ReactionDynamics:
         :param conc_array:      All initial concentrations at the start of the reaction step,
                                     as a Numpy array for ALL the chemical species, in their index order;
                                     this can be thought of as the "SYSTEM STATE"
-        :param variable_steps:  If True, the step sizes will get automatically adjusted
+        :param variable_steps:  If True, the step sizes will get automatically adjusted with an adaptive algorithm
         :param explain_variable_steps:
         :param step_counter:
 
@@ -767,7 +767,7 @@ class ReactionDynamics:
                     #   that lead to negative concentrations or violation of user-set thresholds ("HARD" or "SOFT" aborts)
 
                 (delta_concentrations, recommended_next_step) = \
-                        self.attempt_reaction_step(recommended_next_step, delta_time, conc_array, variable_steps, explain_variable_steps, step_counter)
+                        self._attempt_reaction_step(recommended_next_step, delta_time, conc_array, variable_steps, explain_variable_steps, step_counter)
                 normal_exit = True
 
                 break       # IMPORTANT: this is needed because, in the absence of errors, we need to go thru the WHILE loop only once!
@@ -816,19 +816,21 @@ class ReactionDynamics:
 
 
 
-    def attempt_reaction_step(self, recommended_next_step, delta_time, conc_array, variable_steps, explain_variable_steps, step_counter):
+    def _attempt_reaction_step(self, recommended_next_step, delta_time, conc_array, variable_steps, explain_variable_steps, step_counter) -> (np.array, float):
         """
         Perform the core reaction step, and then raise an Exception if it needs to be aborted.
         If variable_steps is True, determine a new value for recommended_next_step
 
         :param recommended_next_step:
         :param delta_time:
-        :param conc_array:
-        :param variable_steps:
+        :param conc_array:      All initial concentrations at the start of the reaction step,
+                                    as a Numpy array for ALL the chemical species, in their index order;
+                                    this can be thought of as the "SYSTEM STATE"
+        :param variable_steps:  If True, the step sizes will get automatically adjusted with an adaptive algorithm
         :param explain_variable_steps:
         :param step_counter:
 
-        :return:                        The pair (delta_concentrations, recommended_next_step)
+        :return:                The pair (delta_concentrations, recommended_next_step)
         """
 
         # *****  CORE OPERATION  *****
@@ -1337,76 +1339,6 @@ class ReactionDynamics:
 
 
 
-    def examine_increment_array_OBSOLETE(self, rxn_index: int,
-                                         delta_conc_array: np.array,
-                                         fast_threshold_fraction,
-                                         baseline_conc_array=None,
-                                         use_baseline=False
-                                         ) -> None:
-        """
-        TODO: unclear if there's any use for this anymore.       TODO: obsolete
-
-        Examine the requested concentration changes given by delta_conc_array
-        (typically, as computed by an ODE solver),
-        relative to their baseline (pre-reaction) values baseline_conc_array,
-        for the given SINGLE reaction,
-        across all the chemicals affected by it.
-
-        If the concentration change is large, relative to its baseline value,
-        for ANY of the  chemicals involved in the reaction,
-        then mark the given reaction as "Fast" (in its data structure);
-        this will OVER-RIDE any previous annotation about the speed of that reaction.
-
-        Note: if reaction is already marked as "Fast" then no action is taken
-
-        :param rxn_index:               An integer with the (zero-based) index to identify the reaction of interest
-        :param delta_conc_array:        The change in concentrations computed by the ODE solver
-                                            (for ALL the chemicals,
-                                            though only the ones involved in the above reaction are looked at)
-        :param baseline_conc_array:     The initial concentration (for ALL the chemicals),
-                                            before the last simulated reaction step  TODO: phase out
-        :param fast_threshold_fraction: The minimum relative size of the concentration baseline over its change, AS A FRACTION,
-                                            for a reaction to be regarded as "Slow".
-                                            IMPORTANT: this refers to the FULL step size, and will be scaled for time_subdivision
-                                            (e.g. a time_subdivision of 2 signifies 1/2 a time step,
-                                            and will mean that just 1/2 of the change will constitute a threshold)
-        :param use_baseline:            # TODO: gave poor results when formerly used for substeps
-
-        :return:                        None (the equation is marked as "Fast", if appropriate, in its data structure)
-        """
-
-        if self.get_rxn_speed(rxn_index) == "F":
-            # If the reaction was already marked as "Fast" then no action is taken
-            return
-
-
-        # If we get this far, the reaction came tagged as "SLOW"
-
-        # If the reaction was (tentatively) labeled as "Slow", decide whether to flip it to "Fast"
-        #   Note: the status will be used for the current simulation sub-cycle
-
-
-        # Loop over just the chemicals in the given reaction (not over ALL the chemicals!)
-        for i in self.chem_data.get_chemicals_in_reaction(rxn_index):
-
-            delta_conc = delta_conc_array[i]
-            if baseline_conc_array is None:
-                baseline_conc = None
-            else:
-                baseline_conc = baseline_conc_array[i]
-
-            # Determine whether the reaction needs to be classified as "Fast"
-            if self.criterion_fast_reaction(delta_conc=delta_conc, baseline_conc=baseline_conc,
-                                            fast_threshold_fraction=fast_threshold_fraction,
-                                            use_baseline=use_baseline):
-                self.set_rxn_speed(rxn_index, "F")
-                return
-
-        # END for
-        # If we get thus far, the reaction is still regarded as "Slow", and its status is left unchanged
-
-
-
     def compute_all_reaction_deltas(self, delta_time: float, conc_array=None, rxn_list=None) -> dict:
         """
         For an explanation of the "reaction delta", see compute_reaction_delta().
@@ -1445,11 +1377,12 @@ class ReactionDynamics:
 
     def compute_reaction_delta(self, rxn, delta_time: float, conc_array: np.array) -> float:
         """
-        For the SINGLE specified reaction, the given time interval, and the specified concentrations of chemicals,
+        For the SINGLE given reaction, [the specified time interval,] and the specified concentrations of chemicals,
         compute the difference of the reaction's forward and back "conversions",
         a non-standard term we're using here to refer to delta_time * (Forward_Rate − Reverse_Rate)
 
-        TODO: maybe take the multiplication with delta_time to the calling function
+        TODO: take the multiplication with delta_time to the calling function
+        TODO: get rid of conc_array
 
         For background info: https://life123.science/reactions
         What we're computing here, is referred to as:  (Δt)∗delta_forward(n)
@@ -1494,7 +1427,7 @@ class ReactionDynamics:
             #   f"ReactionDynamics.compute_reaction_delta(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
             reverse_rate *= conc ** order     # Raise to power
 
-        return delta_time * (forward_rate - reverse_rate)   # TODO: maybe take the multiplication with delta_time to the calling function
+        return delta_time * (forward_rate - reverse_rate)   # TODO:  take the multiplication with delta_time to the calling function
 
 
 
