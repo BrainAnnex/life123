@@ -51,7 +51,7 @@ chem.set_binding_site_affinity("M2", site_number=1, ligand="C", Kd=5.6)    # "M2
 chem.set_binding_site_affinity("M2", site_number=2, ligand="A", Kd=0.01)
 
 # %%
-chem.show_binding_affinities()        # Review the values we have given for the binding affinities
+chem.show_binding_affinities()        # Review the values we have given for the dissociation constants
 
 # %%
 chem.get_binding_sites("M1")

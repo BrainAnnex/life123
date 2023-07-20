@@ -155,7 +155,10 @@ class Reaction:
         self.delta_S = delta_S
         self.delta_G = delta_G
         self.K = None
-        self.enzyme = None
+        self.enzyme = None          # The index of a chemical that catalyzes this reaction
+                                    #   Note: enzymes are automatically extracted from the reaction formula
+        self.macro_enzyme = None    # The pair (macromolecule name, binding site number)
+                                    #   EXAMPLE: ("M2", 5)          TODO: maybe turn into a data object
 
         assert reactants is not None, "Reaction(): the argument `reactants` is a required one, and can't be None"
         if type(reactants) != list:
@@ -176,7 +179,8 @@ class Reaction:
             f"Reaction(): the reactants and the products can't all be identical! " \
             f"Internal structure: {reactant_list}"
 
-        # Locate any enzymes (catalysts) that might be present
+
+        # Locate any enzymes (catalysts) that might be present - though for now a warning is issued if more than 1
         enzyme_list = []
         for reactant in reactant_list:
             if reactant in product_list:
@@ -195,8 +199,7 @@ class Reaction:
         if number_enzymes >= 1:
             self.enzyme = enzyme_list[0]    # In the irregular scenarios that there appear to be multiple enzymes, only one
                                             #   is considered, and a warning is printed out (the other apparent enzyme
-                                            #   will be treated as any other reagent/produce)
-
+                                            #   will be treated as any other reagent/product)
         if number_enzymes > 1:
             print(f"Reaction(): WARNING - the reaction appears to have multiple enzymes:"
                   f" {[self.chem_data.get_name(e) for e in enzyme_list]}")
@@ -278,6 +281,18 @@ class Reaction:
                     self.delta_H = ThermoDynamics.delta_H_from_gibbs(delta_G=self.delta_G, delta_S=self.delta_S, temp=temp)
                 elif (self.delta_H is not None) and (self.delta_S is None):
                     self.delta_S = ThermoDynamics.delta_S_from_gibbs(delta_G=self.delta_G, delta_H=self.delta_H, temp=temp)
+
+
+
+    def set_macro_enzyme(self, macromolecule: str, site_number: int) -> None:
+        """
+        Register that the given macromolecule catalyzes this reaction at the given site
+
+        :param macromolecule:   Name of macromolecule acting as a catalyst
+        :param site_number:     Integer to identify a binding site on the above macromolecule
+        :return:                None
+        """
+        self.macro_enzyme = (macromolecule, site_number)
 
 
 
@@ -472,11 +487,16 @@ class Reaction:
 
         rxn_description += "  (" + ' / '.join(details) + ")"    # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
 
-        # If an enzyme is involved, show it
+
+        # If an ENZYME is involved, show it
         if self.enzyme is not None:
             rxn_description += f" | Enzyme: {self.chem_data.get_name(self.enzyme)}"
 
-        # Show details about the order of the reaction
+        if self.macro_enzyme is not None:
+            rxn_description += f" | Macromolecule Enzyme: {self.macro_enzyme[0]}, at site # {self.macro_enzyme[1]}"
+
+
+        # Show details about the ORDER of the reaction
         high_order = False      # Is there any term whose order is greater than 1 ?
         for r in reactants:
             if r[2] > 1:

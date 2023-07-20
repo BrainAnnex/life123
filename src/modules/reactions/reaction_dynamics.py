@@ -415,7 +415,7 @@ class ReactionDynamics:
                 print(f"  Species {species_index}{name}. Conc: {self.system[species_index]}")
 
         if self.macro_system != {}:
-            print("Macro-molecules present, with their counts: ", self.macro_system)
+            print("Macro-molecules, with their counts: ", self.macro_system)
 
         if self.macro_system_state != {}:
             print("Fractional Occupancy at the various binding sites for each macro-molecule:")
@@ -807,8 +807,8 @@ class ReactionDynamics:
 
 
         # Macro-molecule related part, if applicable
-        if self.macro_system_state != {}:
-            print("In the future, macro-molecule operations will take place here")      # TODO: implement
+        #if self.macro_system_state != {}:
+            #print("In the future, macro-molecule operations will take place here")      # TODO: implement
 
 
         return  (delta_concentrations, delta_time, recommended_next_step)     # TODO: consider returning tentative_updated_system , since we already computed it

@@ -431,8 +431,9 @@ class AllReactions(Diffusion):
         :param delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
         :param delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
         :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
+
         :return:                Object of type "Reaction"
-                                (note: the object variable self.reaction_list gets appended to)
+                                (note: it also gets appended to the object variable self.reaction_list)
         """
 
         rxn = Reaction(self, reactants, products, forward_rate, reverse_rate,
@@ -813,6 +814,7 @@ class ChemData(Macromolecules):
         :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals
                                            If diffusion rates are provided, but no names given, the names will be
                                            auto-assigned as "Chemical 1", "Chemical 2", ...
+        TODO: allow a way to optionally pass macromolecules as well
         """
         super().__init__()       # Invoke the constructor of its parent class
 
