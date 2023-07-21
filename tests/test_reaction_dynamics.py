@@ -521,40 +521,53 @@ def test_compute_all_rate_deltas():
 
 
 
-def test_compute_rate_delta():
+def test_compute_reaction_delta_rate():
     chem_data = ChemData(names=["A", "B", "C", "D"])
     dynamics = ReactionDynamics(chem_data)
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
-    rxn = chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=20., reverse_rate=2.)
-    conc_array = np.array([5., 8.])
-    result = dynamics.compute_reaction_delta(rxn=rxn, conc_array=conc_array, delta_time=0.5)
-    assert np.allclose(result, 42.0)
+    rxn = chem_data.add_reaction(reactants="A", products="B", forward_rate=20., reverse_rate=2.)
+    conc_array = np.array([5., 8., 0., 0.])
+    result = dynamics.compute_reaction_delta_rate(rxn=rxn, conc_array=conc_array)
+    assert np.allclose(result, 20. * 5. - 2. * 8.)
+
+    # Reaction 5A <-> 2B , with 1st-order kinetics in both directions.
+    # Same as before, but different stoichiometry (which does NOT influence the result)
+    rxn = chem_data.add_reaction(reactants=[(5, "A")], products=[(2, "B")], forward_rate=20., reverse_rate=2.)
+    conc_array = np.array([5., 8., 0., 0.])
+    result = dynamics.compute_reaction_delta_rate(rxn=rxn, conc_array=conc_array)
+    assert np.allclose(result, 20. * 5. - 2. * 8.)
+
+    # Reaction C <-> D , with 1st-order kinetics in both directions
+    rxn = chem_data.add_reaction(reactants="C", products="D", forward_rate=20., reverse_rate=2.)
+    conc_array = np.array([0., 0., 5., 8.])
+    result = dynamics.compute_reaction_delta_rate(rxn=rxn, conc_array=conc_array)
+    assert np.allclose(result, 20. * 5. - 2. * 8.)
 
     # Reaction 2B <-> 3C , with 1st-order kinetics in both directions
     rxn = chem_data.add_reaction(reactants=[(2, "B")], products=[(3, "C")], forward_rate=10., reverse_rate=25.)
-    conc_array = np.array([0., 8., 15.])
-    result = dynamics.compute_reaction_delta(rxn=rxn, conc_array=conc_array, delta_time=1.5)
-    assert np.allclose(result, -442.5)
+    conc_array = np.array([0., 8., 15., 0.])
+    result = dynamics.compute_reaction_delta_rate(rxn=rxn, conc_array=conc_array)
+    assert np.allclose(result,  10. * 8. - 25. * 15.)
 
     # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
     rxn = chem_data.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
-                    forward_rate=5., reverse_rate=2.)
+                                 forward_rate=5., reverse_rate=2.)
     conc_array = np.array([3.5, 9., 11., 7.])
-    result = dynamics.compute_reaction_delta(rxn=rxn, conc_array=conc_array, delta_time=0.5)
-    assert np.allclose(result, 1.75)
+    result = dynamics.compute_reaction_delta_rate(rxn=rxn, conc_array=conc_array)
+    assert np.allclose(result,  5. * 3.5 * 9. - 2. * 11. * 7.)
 
-    # Reaction  2A <-> B , with 2nd-order kinetics in the forward direction
+    # Reaction  2A <-> B , with 2nd-ORDER kinetics in the forward direction
     rxn = chem_data.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
-    conc_array = np.array([4.5, 6.])
-    result = dynamics.compute_reaction_delta(rxn=rxn, conc_array=conc_array, delta_time=2.0)
-    assert np.allclose(result, 178.5)
+    conc_array = np.array([4.5, 6., 0., 0.])
+    result = dynamics.compute_reaction_delta_rate(rxn=rxn, conc_array=conc_array)
+    assert np.allclose(result, 5. * 4.5 **2 - 2. * 6.)
 
-    # Reaction  B <-> 2C , with 2nd-order kinetics in the reverse direction
+    # Reaction  B <-> 2C , with 2nd-ORDER kinetics in the reverse direction
     rxn = chem_data.add_reaction(reactants=[("B")], products=[(2, "C", 2)], forward_rate=4., reverse_rate=2.)
-    conc_array = np.array([0., 5., 4.])
-    result = dynamics.compute_reaction_delta(rxn=rxn, conc_array=conc_array, delta_time=0.5)
-    assert np.allclose(result, -6.0)
+    conc_array = np.array([0., 5., 4, 0.])
+    result = dynamics.compute_reaction_delta_rate(rxn=rxn, conc_array=conc_array)
+    assert np.allclose(result, 4. * 5. - 2. * 4. **2)
 
 
 

@@ -1368,44 +1368,32 @@ class ReactionDynamics:
         # Process the requested reactions
         for i in rxn_list:      # Consider each reaction in turn
             rxn = self.chem_data.get_reaction(i)
-            delta = self.compute_reaction_delta(rxn=rxn, conc_array=conc_array, delta_time=delta_time)
+            #delta = self.compute_reaction_delta(rxn=rxn, conc_array=conc_array, delta_time=delta_time)
+            delta = delta_time * self.compute_reaction_delta_rate(rxn=rxn, conc_array=conc_array)
             delta_dict[i] = delta
 
         return delta_dict
 
 
 
-    def compute_reaction_delta(self, rxn, delta_time: float, conc_array: np.array) -> float:
+    def compute_reaction_delta_rate(self, rxn, conc_array: np.array) -> float:
         """
-        For the SINGLE given reaction, [the specified time interval,] and the specified concentrations of chemicals,
-        compute the difference of the reaction's forward and back "conversions",
-        a non-standard term we're using here to refer to delta_time * (Forward_Rate − Reverse_Rate)
+        For the SINGLE given reaction, and the specified concentrations of chemicals,
+        compute the reaction's "forward rate" minus its "reverse rate",
+        as defined in https://life123.science/reactions
 
-        TODO: take the multiplication with delta_time to the calling function
         TODO: get rid of conc_array
-
-        For background info: https://life123.science/reactions
-        What we're computing here, is referred to as:  (Δt)∗delta_forward(n)
 
         :param rxn:         An object of type "Reaction"
         :param conc_array:  ALL initial concentrations at the start of the reaction step,
                                 as a Numpy array for ALL the chemical species, in their index order
                                 (regardless of their involvement in the reaction of interest);
                                 this can be thought of as the "SYSTEM STATE"
-        :param delta_time:  The time duration of the reaction step - assumed to be small enough that the
-                            concentration won't vary significantly during this span
 
-        :return:            The differences between the reaction's forward and reverse "conversions",
-                                a non-standard term we're using here to refer to delta_time * (Forward_Rate − Reverse_Rate),
-                                for the given reaction during the specified time span
+        :return:            The differences between the reaction's forward and reverse rates
         """
 
-        # TODO: maybe turn into a more efficient single step, as as:
-        #(reactants, products, fwd_rate_constant, rev_rate_constant) = cls.all_reactions.unpack_reaction(i)
-        reactants = rxn.extract_reactants()
-        products = rxn.extract_products()
-        fwd_rate_constant = rxn.extract_forward_rate()
-        rev_rate_constant = rxn.extract_reverse_rate()
+        reactants, products, fwd_rate_constant, rev_rate_constant = rxn.unpack_for_dynamics()
 
         forward_rate = fwd_rate_constant
         for r in reactants:
@@ -1414,20 +1402,20 @@ class ReactionDynamics:
             order = rxn.extract_rxn_order(r)
             conc = conc_array[species_index]
             #assert conc is not None, \
-            #   f"ReactionDynamics.compute_reaction_delta(): lacking the value for the concentration of the chemical species `{self.reaction_data.get_name(species_index)}`"
+            #   f"ReactionDynamics.compute_reaction_delta_rate(): lacking the value for the concentration of the chemical species `{self.reaction_data.get_name(species_index)}`"
             forward_rate *= conc ** order      # Raise to power
 
         reverse_rate = rev_rate_constant
         for p in products:
-            #stoichiometry, species_index, order = p     # Unpack the data of the reaction product p
+            # Unpack data from the reaction product p
             species_index = rxn.extract_species_index(p)
             order = rxn.extract_rxn_order(p)
             conc = conc_array[species_index]
             #assert conc is not None, \
-            #   f"ReactionDynamics.compute_reaction_delta(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
+            #   f"ReactionDynamics.compute_reaction_delta_rate(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
             reverse_rate *= conc ** order     # Raise to power
 
-        return delta_time * (forward_rate - reverse_rate)   # TODO:  take the multiplication with delta_time to the calling function
+        return forward_rate - reverse_rate
 
 
 

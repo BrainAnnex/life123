@@ -366,6 +366,17 @@ class Reaction:
 
 
 
+    def unpack_for_dynamics(self) -> tuple:
+        """
+        A convenient unpacking meant for dynamics simulations
+        that need the reactants, the products, and the forward and reverse rate constants
+
+        :return:    A 4-element tuple
+        """
+        return (self.reactants, self.products, self.kF, self.kR)
+
+
+
     def extract_stoichiometry(self, term: (int, int, int)) -> int:
         """
         Return the stoichiometry coefficient, from a reaction term
