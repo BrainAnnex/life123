@@ -25,7 +25,6 @@ def test_reaction_step_1():
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
 
-    #rxn = ReactionDynamics(chem_data)
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
