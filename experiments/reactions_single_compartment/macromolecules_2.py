@@ -75,6 +75,8 @@ dynamics1.single_compartment_react(initial_step=0.02, reaction_duration=4.0,
 dynamics1.plot_curves(colors=['darkorange', 'green'], show_intervals=True, title_prefix="WITHOUT catalysis")
 
 # %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium(tolerance=5)
 
 # %%
 
@@ -150,7 +152,7 @@ dynamics.single_compartment_react(initial_step=0.02, reaction_duration=4.0,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %%
-#dynamics.explain_time_advance()
+dynamics.explain_time_advance()
 
 # %%
 dynamics.plot_curves(colors=['darkorange', 'green', 'darkblue'], show_intervals=True, title_prefix="WITHOUT catalysis")

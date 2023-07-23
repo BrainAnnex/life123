@@ -765,7 +765,7 @@ class ReactionDynamics:
             print(f"             delta_time={delta_time}, system={self.system}, ")
 
 
-        recommended_next_step = delta_time     # Baseline; no reason yet to suggest a change in step size
+        recommended_next_step = delta_time     # Baseline value; no reason yet to suggest a change in step size
 
 
         delta_concentrations = None
@@ -779,7 +779,7 @@ class ReactionDynamics:
                     #   that lead to negative concentrations or violation of user-set thresholds ("HARD" or "SOFT" aborts)
 
                 (delta_concentrations, recommended_next_step) = \
-                        self._attempt_reaction_step(recommended_next_step, delta_time, variable_steps, explain_variable_steps, step_counter)
+                        self._attempt_reaction_step(delta_time, variable_steps, explain_variable_steps, step_counter)
                 normal_exit = True
 
                 break       # IMPORTANT: this is needed because, in the absence of errors, we need to go thru the WHILE loop only once!
@@ -825,13 +825,12 @@ class ReactionDynamics:
 
 
 
-    def _attempt_reaction_step(self, recommended_next_step, delta_time, variable_steps, explain_variable_steps, step_counter) -> (np.array, float):
+    def _attempt_reaction_step(self, delta_time, variable_steps, explain_variable_steps, step_counter) -> (np.array, float):
         """
         Attempt to perform the core reaction step, and then raise an Exception if it needs to be aborted,
         based on various criteria.
-        If variable_steps is True, determine a new value for recommended_next_step
+        If variable_steps is True, determine a new value for the "recommended next step"
 
-        :param recommended_next_step:   TODO: zap
         :param delta_time:              The requested time duration of the reaction step
         :param variable_steps:          If True, the step sizes will get automatically adjusted with an adaptive algorithm
         :param explain_variable_steps:  If True, a brief explanation is printed about how the variable step sizes were chosen;
@@ -841,10 +840,6 @@ class ReactionDynamics:
 
         :return:                The pair (delta_concentrations, recommended_next_step)
         """
-        assert np.allclose(recommended_next_step, delta_time),\
-            "_attempt_reaction_step(): failed validation"           # TODO: experimental; a step towards eliminating arg recommended_next_step
-        recommended_next_step = None
-
 
         # *****  CORE OPERATION  *****
         delta_concentrations = self._reaction_elemental_step(delta_time=delta_time, rxn_list=None)
@@ -853,6 +848,8 @@ class ReactionDynamics:
         if self.diagnostics:
             diagnostic_data_snapshot = self._delta_conc_dict(delta_concentrations)      # A dict
 
+
+        recommended_next_step = delta_time       # Baseline value; no reason yet to suggest a change in step size
 
         if variable_steps:
             decision_data = self.adjust_speed(delta_conc=delta_concentrations, baseline_conc=self.system)
@@ -867,8 +864,8 @@ class ReactionDynamics:
                 print("    Deltas:   ", delta_concentrations)
 
                 if len(self.chem_data.active_chemicals) < self.chem_data.number_of_chemicals():
-                    print(f"    Restricting ourselves to {len(self.chem_data.active_chemicals)} "
-                    f"chemicals only: {self.chem_data.names_of_active_chemicals()} (index values: {self.chem_data.active_chemicals})")
+                    print(f"    Restricting adaptive time step analysis to {len(self.chem_data.active_chemicals)} "
+                    f"chemicals only: {self.chem_data.names_of_active_chemicals()} , with indexes: {self.chem_data.active_chemicals}")
 
                 #with np.errstate(divide='ignore'):  # Suppress warning about divisions by zero,
                                                     # which are expected, and no issue here
@@ -1052,7 +1049,7 @@ class ReactionDynamics:
         if len(self.chem_data.active_chemicals) < n_chems:
             n_chems = len(self.chem_data.active_chemicals)
             delta_conc = delta_conc[list(self.chem_data.active_chemicals)]
-            #print(f"\nadjust_speed(): restricting ourselves to {n_chems} chemicals only; their delta_conc is {delta_conc}")
+            #print(f"\nadjust_speed(): restricting adaptive time step analysis to {n_chems} chemicals only; their delta_conc is {delta_conc}")
             if baseline_conc is not None:
                 baseline_conc = baseline_conc[list(self.chem_data.active_chemicals)]
                 #print(f"    and their baseline_conc is {baseline_conc}")
