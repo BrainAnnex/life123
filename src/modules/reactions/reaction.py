@@ -106,10 +106,11 @@ class Reaction:
             "Delta_G" (change in Gibbs Free Energy)
                         Note - at constant temperature T :  Delta_G = Delta_H - T * Delta_S
                         Equilibrium constant = exp(-Delta_G / RT)
-            "enzymes" (list of the indices of the chemical species that appear as catalysts in the reaction)
+            "enzyme" (the index of a chemical that catalyzes this reaction)
+            "macro_enzyme" (The pair (macromolecule name, binding site number))
 
         Each Reactant and each Product is a triplet of the form: (stoichiometry, species index, reaction order).
-        The "reaction order" refers to the forward reaction for reactants, and the reverse reaction for products.
+        The "reaction order" in that triplet refers to the forward reaction for reactants, and the reverse reaction for products.
     """
 
 

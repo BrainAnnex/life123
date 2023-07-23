@@ -726,11 +726,12 @@ class ReactionDynamics:
         TODO: no longer pass conc_array .  Use the object variable self.system instead
 
         NOTES:  * the actual system concentrations are NOT changed
-                * this method doesn't decide on step sizes - except in case of aborts
-                    followed by repeats with smaller step - but makes suggestions
-                    to the calling module about the next step to best take
+                * this method doesn't decide on step sizes - except in case of ("hard" or "soft") aborts, which are
+                    followed by repeats with a smaller step.  Also, it makes suggestions
+                    to the calling module about the next step to best take (whether as a result of an abort,
+                    or for other considerations)
 
-        :param delta_time:      The requested time duration of the overall reaction step
+        :param delta_time:      The requested time duration of the reaction step
         :param conc_array:      [OPTIONAL]All initial concentrations at the start of the reaction step,
                                     as a Numpy array for ALL the chemical species, in their index order.
                                     If not provided, self.system is used instead
@@ -745,7 +746,8 @@ class ReactionDynamics:
                                             array([7. , -21.])  TODO: is this really necessary?  Maybe update self.system here?
                                     2) time step size actually taken - which might be smaller than the requested one
                                         because of reducing the step to avoid negative-concentration errors
-                                    3) recommended_next_step
+                                    3) recommended_next_step : a suggestions to the calling module
+                                       about the next step to best take
         """
 
         if conc_array is not None:
@@ -791,17 +793,19 @@ class ReactionDynamics:
                 print(ex)
                 delta_time *= self.error_abort_step_factor       # Reduce the excessive time step by a pre-set factor
                 recommended_next_step = delta_time
+                # At this point, the loop will generally try the simulation again, with a smaller step (a revised delta_time)
 
 
             # CATCH any 'ExcessiveTimeStepSoft' exception raised in the loop  (i.e. a SOFT ABORT)
             except ExcessiveTimeStepSoft as ex:
                 # Single reactions steps can fail with this error condition if the attempted time step was too large,
-                #   under the following scenario:
+                # under the following scenario:
                 #       3. excessive norm(s) measures in the overall step - caught in this function (currently only checked in case of the variable-steps option)
                 #print("*** CAUGHT a soft ABORT")
                 print(ex)
                 delta_time *= self.step_factors["abort"]       # Reduce the excessive time step by a pre-set factor
                 recommended_next_step = delta_time
+                # At this point, the loop will generally try the simulation again, with a smaller step (a revised delta_time)
 
         # END while
 
@@ -814,11 +818,6 @@ class ReactionDynamics:
         # If we get thus far, it's the normal exit of the reaction step
 
 
-        # Macro-molecule related part, if applicable
-        #if self.macro_system_state != {}:
-            #print("In the future, macro-molecule operations will take place here")      # TODO: implement
-
-
         return  (delta_concentrations, delta_time, recommended_next_step)     # TODO: consider returning tentative_updated_system , since we already computed it
 
 
@@ -826,17 +825,24 @@ class ReactionDynamics:
 
     def _attempt_reaction_step(self, recommended_next_step, delta_time, variable_steps, explain_variable_steps, step_counter) -> (np.array, float):
         """
-        Perform the core reaction step, and then raise an Exception if it needs to be aborted.
+        Attempt to perform the core reaction step, and then raise an Exception if it needs to be aborted,
+        based on various criteria.
         If variable_steps is True, determine a new value for recommended_next_step
 
-        :param recommended_next_step:
-        :param delta_time:
-        :param variable_steps:  If True, the step sizes will get automatically adjusted with an adaptive algorithm
-        :param explain_variable_steps:
-        :param step_counter:
+        :param recommended_next_step:   TODO: zap
+        :param delta_time:              The requested time duration of the reaction step
+        :param variable_steps:          If True, the step sizes will get automatically adjusted with an adaptive algorithm
+        :param explain_variable_steps:  If True, a brief explanation is printed about how the variable step sizes were chosen;
+                                            only applicable if variable_steps is True
+        :param step_counter:            A number to show in the explanations about the variable step sizes;
+                                            only applicable if explain_variable_steps is True
 
         :return:                The pair (delta_concentrations, recommended_next_step)
         """
+        assert np.allclose(recommended_next_step, delta_time),\
+            "_attempt_reaction_step(): failed validation"           # TODO: experimental; a step towards eliminating arg recommended_next_step
+        recommended_next_step = None
+
 
         # *****  CORE OPERATION  *****
         delta_concentrations = self._reaction_elemental_step(delta_time=delta_time, rxn_list=None)
@@ -893,7 +899,9 @@ class ReactionDynamics:
                 raise ExcessiveTimeStepSoft(msg)    # ABORT THE CURRENT STEP
 
 
+            # Put together a recommendation to the higher-level functions, about the next best step size
             recommended_next_step = delta_time * step_factor
+
 
             if self.diagnostics:
                 # Expand the dict diagnostic_data_snapshot
@@ -918,13 +926,15 @@ class ReactionDynamics:
 
                 msg += f"\n        [The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time:.5g}]"
                 print("NOTICE:", msg)
+        # END if variable_steps
 
 
         if self.diagnostics:
             self.save_diagnostic_decisions_data(data=diagnostic_data_snapshot)
 
 
-        # Check whether the COMBINED delta_concentrations will make any conc negative
+        # Check whether the COMBINED delta_concentrations will make any conc negative;
+        # if so, raised an "ExcessiveTimeStepHard" exception (a custom exception)
         tentative_updated_system = self.system + delta_concentrations
         if min(tentative_updated_system) < 0:
             print(f"*** CAUTION: negative concentration resulting from the combined effect of all reactions, "
@@ -1091,7 +1101,7 @@ class ReactionDynamics:
 
     def _reaction_elemental_step(self, delta_time: float, rxn_list=None) -> np.array:
         """
-        Using the given concentration data of ALL the chemical species,
+        Using the system concentration data of ALL the chemical species,
         do the specified SINGLE TIME STEP for ONLY the requested reactions (by default all).
 
         All computations are based on the INITIAL concentrations (prior to this reaction step),
@@ -1187,6 +1197,13 @@ class ReactionDynamics:
                                         rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
                 increment_vector_single_rxn[species_index] += delta_conc
+
+            # Macro-molecule related part, if applicable    TODO: implement
+            if (self.macro_system_state != {}) and (rxn.macro_enzyme is not None):
+                print(f"Making adjustments for macro-molecule catalysis for reaction # {rxn_index}")
+                print(f"    Macromolecule: {rxn.macro_enzyme[0]}, at site # {rxn.macro_enzyme[1]}")
+                print(f"    Site occupancy at the beginning of the time step:")
+                print(f"    Macromolecule count:")
 
 
             increment_vector += increment_vector_single_rxn     # Accumulate the increment vector across ALL reactions
