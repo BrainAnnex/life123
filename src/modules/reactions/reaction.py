@@ -111,6 +111,7 @@ class Reaction:
 
         Each Reactant and each Product is a triplet of the form: (stoichiometry, species index, reaction order).
         The "reaction order" in that triplet refers to the forward reaction for reactants, and the reverse reaction for products.
+        Note that reactants and products might be catalysts
     """
 
 
@@ -436,12 +437,13 @@ class Reaction:
 
 
 
-    def extract_chemicals_in_reaction(self) -> {int}:
+    def extract_chemicals_in_reaction(self, exclude_enzyme=False) -> {int}:
         """
         Return a SET of indices (being a set, it's NOT in any particular order)
-        of all the chemicals in the specified reaction
+        of all the chemicals in this reaction
 
-        :return:            A SET of indices of the chemicals involved in the above reaction
+        :param exclude_enzyme:  If True, any enzyme, if present, won't be included  TODO - test
+        :return:                A SET of indices of the chemicals involved in this reaction
                                 Note: being a set, it's NOT in any particular order
         """
         chem_set = set()    # Running set being built
@@ -456,6 +458,9 @@ class Reaction:
         for p in products:
             species_index = self.extract_species_index(p)
             chem_set.add(species_index)
+
+        if exclude_enzyme:
+            chem_set = chem_set - {self.enzyme}     # Difference between sets
 
         return chem_set
 

@@ -424,7 +424,7 @@ def test_single_compartment_correct_neg_conc_1():
 
 
 def test_norm_A():
-    chem_data = ChemData(names=["A", "B"])
+    chem_data = ChemData()
     rxn = ReactionDynamics(chem_data)
 
     delta_conc = np.array([1, 4])
@@ -436,12 +436,12 @@ def test_norm_A():
     assert np.allclose(result, 1.0625)
 
     delta_conc = np.array([.5, 2, 1])
-    with pytest.raises(Exception):
-        rxn.norm_A(delta_conc)      # Too many entries in array
+    result = rxn.norm_A(delta_conc)
+    assert np.allclose(result, 0.5833333333)
 
 
 def test_norm_B():
-    chem_data = ChemData(names=["A", "B"])
+    chem_data = ChemData()
     rxn = ReactionDynamics(chem_data)
 
     base = np.array([10, 2])

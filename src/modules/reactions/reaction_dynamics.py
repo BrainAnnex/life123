@@ -424,6 +424,8 @@ class ReactionDynamics:
                 state_str = " | ".join(state_list)                                      # EXAMPLE: "3: 0.1 (A) | "8: 0.6 (B)"
                 print(f"     {mm} || {state_str}")
 
+        print(f"Set of chemicals involved in reactions (not counting enzymes): {self.chem_data.names_of_active_chemicals()}")
+
 
 
 
@@ -860,12 +862,17 @@ class ReactionDynamics:
 
             if explain_variable_steps:
                 print(f"\n(STEP {step_counter}) ANALYSIS: Examining Conc. Changes from System Time {self.system_time:.5g} "
-                      f"due to tentative single step of {delta_time:.5g}:")
+                      f"due to tentative step of {delta_time:.5g}:")
                 print("    Baseline: ", self.system)
                 print("    Deltas:   ", delta_concentrations)
-                with np.errstate(divide='ignore'):  # Suppress warning about divisions by zero,
+
+                if len(self.chem_data.active_chemicals) < self.chem_data.number_of_chemicals():
+                    print(f"    Restricting ourselves to {len(self.chem_data.active_chemicals)} "
+                    f"chemicals only: {self.chem_data.names_of_active_chemicals()} (index values: {self.chem_data.active_chemicals})")
+
+                #with np.errstate(divide='ignore'):  # Suppress warning about divisions by zero,
                                                     # which are expected, and no issue here
-                    print("    Relative Deltas:   ", delta_concentrations / self.system)
+                    #print("    Relative Deltas:   ", delta_concentrations / self.system)
                 print("    Norms:    ", all_norms)
 
                 print("    Thresholds:    ")
@@ -873,7 +880,7 @@ class ReactionDynamics:
                     print(self.display_thresholds(rule, all_norms.get(rule['norm'])))
 
                 print("    Step Factors:    ", self.step_factors)
-                print(f"    => Action:    {action}  (with step size factor of {step_factor})")
+                print(f"    => Action: '{action.upper()}'  (with step size factor of {step_factor})")
 
 
             # Abort the current step if the rate of change is deemed excessive.
@@ -967,19 +974,14 @@ class ReactionDynamics:
 
     def norm_A(self, delta_conc: np.array) -> float:
         """
-        Return "version A" of a measure of change, based on the average concentration changes
+        Return "version A" of a measure of system change, based on the average concentration changes
         of ALL chemicals across a time step, adjusted for the number of chemicals
 
         :param delta_conc:  A Numpy array with the concentration changes
-                                of all the chemicals across a time step
-        :return:            A measure of change in the concentrations across a simulation step
+                                of the chemicals of interest across a time step
+        :return:            A measure of change in the concentrations across the simulation step
         """
-        n_chems = self.chem_data.number_of_chemicals()
-
-        assert n_chems == len(delta_conc), \
-            f"norm_A(): the number of entries in the passed array ({len(delta_conc)}) " \
-            f"does not match the number of registered chemicals ({n_chems})"
-
+        arr_size = len(delta_conc)
 
         # The following are normalized by the number of chemicals
         #L2_rate = np.linalg.norm(delta_concentrations) / n_chems
@@ -987,31 +989,25 @@ class ReactionDynamics:
         #print("    L_inf norm:   ", np.linalg.norm(delta_concentrations, ord=np.inf) / delta_time)
         #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
 
-        adjusted_L2_rate = np.sum(delta_conc * delta_conc) / (n_chems * n_chems)   # The square of the rate above
+        adjusted_L2_rate = np.sum(delta_conc * delta_conc) / (arr_size * arr_size)   # The square of the rate above
         return adjusted_L2_rate
+
 
 
     def norm_B(self, baseline_conc: np.array, delta_conc: np.array) -> float:
         """
-        Return "version B" of a measure of change, based on the max absolute relative concentration
+        Return "version B" of a measure of system change, based on the max absolute relative concentration
         change of all the chemicals across a time step (based on an L infinity norm - but disregarding
         any baseline concentration that is very close to zero)
 
-        :param baseline_conc:   A Numpy array with the concentration of all the chemicals
+        :param baseline_conc:   A Numpy array with the concentration of the chemicals of interest
                                     at the start of a simulation time step
         :param delta_conc:      A Numpy array with the concentration changes
-                                    of all the chemicals across a time step
-        :return:                A measure of change in the concentrations across a simulation step
+                                    of the chemicals of interest across a time step
+        :return:                A measure of change in the concentrations across the simulation step
         """
-        n_chems = self.chem_data.number_of_chemicals()
-
-        assert n_chems == len(baseline_conc), \
-            f"norm_B(): the number of entries in the array passed in the arg `baseline_conc` ({len(baseline_conc)}) " \
-            f"does not match the number of registered chemicals ({n_chems})"
-
-        assert n_chems == len(delta_conc), \
-            f"norm_B(): the number of entries in the array passed in the arg `delta_conc` ({len(delta_conc)}) " \
-            f"does not match the number of registered chemicals ({n_chems})"
+        arr_size = len(baseline_conc)
+        assert len(delta_conc) == arr_size, "norm_B(): mismatch in the sizes of the 2 passed array arguments"
 
         largest = 0.
         for i in range(len(baseline_conc)):
@@ -1026,7 +1022,7 @@ class ReactionDynamics:
 
 
 
-    def adjust_speed(self, delta_conc: np.array, baseline_conc=None) -> (str, Union[float, int], dict):
+    def adjust_speed(self, delta_conc: np.array, baseline_conc=None) -> (str, Union[float, int], dict):     #TODO: test
         """
 
         :param delta_conc:
@@ -1038,6 +1034,30 @@ class ReactionDynamics:
                                     3) A dict of all the computed norms (any of the last ones, except the first one, may be missing),
                                        indexed by their names
         """
+        n_chems = self.chem_data.number_of_chemicals()
+
+        if baseline_conc is not None:
+            assert len(baseline_conc) == len(delta_conc), \
+                f"adjust_speed(): the number of entries in the passed array `delta_conc` ({len(delta_conc)}) " \
+                f"does not match the number of entries in the passed array `baseline_conc` ({len(baseline_conc)})"
+
+        assert n_chems == len(delta_conc), \
+            f"adjust_speed(): the number of entries in the passed array `delta_conc` ({len(delta_conc)}) " \
+            f"does not match the number of registered chemicals ({n_chems})"
+
+
+        # If some chemicals are not dynamically involved in the reactions
+        # (i.e. if they don't occur in any reaction, or occur as enzyme),
+        # restrict our consideration to only the dynamically involved ones
+        if len(self.chem_data.active_chemicals) < n_chems:
+            n_chems = len(self.chem_data.active_chemicals)
+            delta_conc = delta_conc[list(self.chem_data.active_chemicals)]
+            #print(f"\nadjust_speed(): restricting ourselves to {n_chems} chemicals only; their delta_conc is {delta_conc}")
+            if baseline_conc is not None:
+                baseline_conc = baseline_conc[list(self.chem_data.active_chemicals)]
+                #print(f"    and their baseline_conc is {baseline_conc}")
+
+
         all_norms = {}
 
         all_small = True

@@ -13,15 +13,17 @@ class ChemCore():
     def __init__(self):
 
         self.chemical_data = [] # Basic data for all chemicals, *except* water and macro-molecules
-        # EXAMPLE: [{"name": "A"} ,
-        #           {"name": "B", "note": "some note"}]
-        # The position in the list is referred to as the "index" of that chemical
-        # TODO: maybe use a Pandas dataframe
+                                # EXAMPLE: [{"name": "A"} ,
+                                #           {"name": "B", "note": "some note"}]
+                                # The position in the list is referred to as the "index" of that chemical
+                                # TODO: maybe use a Pandas dataframe
 
         self.name_dict = {}     # To map assigned names to their positional index (in the ordered list of chemicals);
         # this is automatically set and maintained
         # EXAMPLE: {"A": 0, "B": 1, "C": 2}
 
+        self.active_chemicals = set()   # TODO: experimental
+                                        # Set of chemicals involved in reactions, not counting catalysts
 
 
     def number_of_chemicals(self) -> int:
@@ -441,6 +443,10 @@ class AllReactions(Diffusion):
 
         self.reaction_list.append(rxn)
 
+        involved_chemicals = rxn.extract_chemicals_in_reaction(exclude_enzyme=True)
+
+        self.active_chemicals = self.active_chemicals.union(involved_chemicals)     # Union of sets
+
         return rxn
 
 
@@ -481,6 +487,20 @@ class AllReactions(Diffusion):
         print(f"Number of reactions: {self.number_of_reactions()} (at temp. {self.temp - 273.15:,.4g} C)")
         for description in self.multiple_reactions_describe(concise=concise):
             print(description)
+
+        print(f"Set of chemicals involved in the above reactions (not counting enzymes): {self.names_of_active_chemicals()}")
+
+
+
+    def names_of_active_chemicals(self):
+        """
+        Return a set of the names of all the chemicals involved in reactions, not counting catalysts
+        """
+        name_set = set()
+        for ac_index in self.active_chemicals:
+            name_set.add(self.get_name(ac_index))
+
+        return name_set
 
 
 

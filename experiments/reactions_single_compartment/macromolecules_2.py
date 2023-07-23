@@ -18,7 +18,7 @@
 #
 # ### Reaction `A <-> B` catalyzed when ligand `L` binds to `site 1` of macromolecule `M1`
 #
-# LAST REVISED: July 19, 2023
+# LAST REVISED: July 22, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -31,6 +31,57 @@ from src.modules.reactions.reaction_dynamics import ReactionDynamics
 #import numpy as np
 
 import plotly.express as px
+
+# %% [markdown]
+# # PART 1 - Consider just the un-catalyzed reaction `A <-> B` by itself
+
+# %%
+# Initialize the system
+chem1 = ChemData(names=["A", "B"])
+
+# Reaction A <-> B , without catalysis (slow forward rate)
+chem1.add_reaction(reactants="A", products="B",
+                  forward_rate=1. , delta_G= -5000)
+
+chem1.describe_reactions()
+
+
+# %%
+# Set the initial concentrations of all the chemicals
+dynamics1 = ReactionDynamics(chem_data=chem1)
+
+dynamics1.set_conc(conc={"A": 100., "B": 20.},
+                  snapshot=True)
+
+dynamics1.describe_state()
+
+# %%
+# Take the system to equilibrium
+dynamics1.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+# All of these settings are currently close to the default values... but subject to change; set for repeatability
+dynamics1.set_thresholds(norm="norm_A", low=0.6, high=1.0, abort=1.44)
+dynamics1.set_thresholds(norm="norm_B", low=0.04, high=0.6, abort=1.5)
+dynamics1.set_step_factors(upshift=1.2, downshift=0.7, abort=0.4)
+dynamics1.set_error_step_factor(0.3)
+
+dynamics1.single_compartment_react(initial_step=0.02, reaction_duration=4.0,
+                                  variable_steps=True, explain_variable_steps=False)
+
+# %%
+#dynamics1.explain_time_advance()
+
+# %%
+dynamics1.plot_curves(colors=['darkorange', 'green'], show_intervals=True, title_prefix="WITHOUT catalysis")
+
+# %%
+
+# %%
+
+# %%
+
+# %% [markdown]
+# # PART 2
 
 # %%
 # Initialize the system
@@ -90,16 +141,16 @@ dynamics.describe_state()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # All of these settings are currently close to the default values... but subject to change; set for repeatability
-dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
-dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-dynamics.set_step_factors(upshift=1.3, downshift=0.5, abort=0.4)
+dynamics.set_thresholds(norm="norm_A", low=0.6, high=1.0, abort=1.44)
+dynamics.set_thresholds(norm="norm_B", low=0.04, high=0.6, abort=1.5)
+dynamics.set_step_factors(upshift=1.2, downshift=0.7, abort=0.4)
 dynamics.set_error_step_factor(0.3)
 
 dynamics.single_compartment_react(initial_step=0.02, reaction_duration=4.0,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.explain_time_advance()
+#dynamics.explain_time_advance()
 
 # %%
 dynamics.plot_curves(colors=['darkorange', 'green', 'darkblue'], show_intervals=True, title_prefix="WITHOUT catalysis")
