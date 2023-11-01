@@ -189,11 +189,12 @@ class ReactionDynamics:
 
 
     def set_chem_conc(self, conc, species_index=None, species_name=None, snapshot=True) -> None:
-        # TODO Maybe rename set_single_conc()
-        #      [OR call it set_conc(), and also handle dict's]
         """
         Set the concentrations of 1 chemical
         Note: if both species_index and species_name are provided, species_name is used     TODO: pytest this part
+
+        TODO Maybe rename set_single_conc()
+            [OR call it set_conc(), and also handle dict's]
 
         :param conc:            A non-negative number with the desired concentration value for the above value.
                                     (Any previous value will get over-written)
@@ -868,7 +869,7 @@ class ReactionDynamics:
                     f"chemicals only: {self.chem_data.names_of_active_chemicals()} , with indexes: {self.chem_data.active_chemicals}")
 
                 #with np.errstate(divide='ignore'):  # Suppress warning about divisions by zero,
-                                                    # which are expected, and no issue here
+                                                     # which are expected, and no issue here
                     #print("    Relative Deltas:   ", delta_concentrations / self.system)
                 print("    Norms:    ", all_norms)
 
@@ -2105,8 +2106,7 @@ class ReactionDynamics:
 
 
 
-    def explain_time_advance(self, return_times=False, silent=False, use_history=False) \
-                                                                    -> Union[None, tuple]:
+    def explain_time_advance(self, return_times=False, silent=False, use_history=False) -> Union[None, tuple]:
         """
         Use the saved-up diagnostic data, to print out details of the timescales of the reaction run
 

@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from src.modules.reactions.reaction import ThermoDynamics
+from src.modules.reactions.thermodynamics import ThermoDynamics
 
 
 
