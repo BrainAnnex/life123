@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-#from src.modules.chemicals.experimental_3 import ChemData
 from src.modules.chemicals.chem_data import ChemData
 
 
@@ -16,7 +15,7 @@ def test_initialize():
     assert chem_data.diffusion_rates == {}
 
     with pytest.raises(Exception):
-        ChemData(names='this is not a list')   # Not a list/tuple
+        ChemData(names=123)   # Not a list/tuple/str
 
     with pytest.raises(Exception):
         ChemData(names=[1, 2])   # The names aren't strings
@@ -61,10 +60,20 @@ def test_number_of_chemicals():
 
 
 def test_assert_valid_species_index():
-    pass    # TODO
+    chem_data = ChemData(names=['A', 'B', 'C'])
+    chem_data.assert_valid_species_index(0)
+    chem_data.assert_valid_species_index(1)
+    chem_data.assert_valid_species_index(2)
 
-def test_assert_valid_diffusion():
-    pass    # TODO
+    with pytest.raises(Exception):
+        chem_data.assert_valid_species_index(3)     # Too large
+
+    with pytest.raises(Exception):
+        chem_data.assert_valid_species_index(-1)    # Too small
+
+    with pytest.raises(Exception):
+        chem_data.assert_valid_species_index("2")   # Not an int
+
 
 
 
@@ -98,14 +107,35 @@ def test_get_name():
 def test_get_all_names():
     pass    # TODO
 
-def test_get_diffusion_rate():
-    pass    # TODO
 
-def test_get_all_diffusion_rates():
-    pass    # TODO
 
-def test_missing_diffusion_rate():
-    pass    # TODO
+def test_add_chemical_species():
+    chem_data = ChemData()
+    assert chem_data.number_of_chemicals() == 0
+    assert chem_data.chemical_data == []
+
+    chem_data.add_chemical_species("A")
+    assert chem_data.number_of_chemicals() == 1
+    assert chem_data.chemical_data == [{"name": "A"}]
+    assert chem_data.name_dict == {"A": 0}
+
+    chem_data.add_chemical_species("B", note="some note")
+    assert chem_data.number_of_chemicals() == 2
+    assert chem_data.chemical_data == [{"name": "A"}, {"name": "B", "note": "some note"}]
+    assert chem_data.name_dict == {"A": 0, "B": 1}
+
+    chem_data.add_chemical_species("C")
+    assert chem_data.number_of_chemicals() == 3
+    assert chem_data.chemical_data == [{"name": "A"}, {"name": "B", "note": "some note"}, {"name": "C"}]
+    assert chem_data.name_dict == {"A": 0, "B": 1, "C": 2}
+
+
+    # Re-start
+    chem_data = ChemData(names="X")
+    chem_data.add_chemical_species("Y", note="test")
+    assert chem_data.number_of_chemicals() == 2
+    assert chem_data.chemical_data == [{"name": "X"}, {"name": "Y", "note": "test"}]
+    assert chem_data.name_dict == {"X": 0, "Y": 1}
 
 
 
@@ -192,7 +222,7 @@ def test_init_chemical_data():
 
     with pytest.raises(Exception):
         chem_data = ChemData()
-        chem_data.init_chemical_data(names="Do I look like a list??")
+        chem_data.init_chemical_data(names=123) # Not a list/tuple/str
 
     with pytest.raises(Exception):
         chem_data = ChemData(names=['A', 'B', 'C'])

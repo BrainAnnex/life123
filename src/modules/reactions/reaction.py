@@ -417,6 +417,7 @@ class Reaction:
         return " + ".join(formula_list)
 
 
+
     def _parse_reaction_term(self, term: Union[int, str, tuple, list], name="term") -> (int, int, int):
         """
         Accept various ways to specify a reaction term, and return a standardized tuple form of it.

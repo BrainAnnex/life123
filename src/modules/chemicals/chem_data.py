@@ -7,7 +7,7 @@ class ChemCore():
     """
     Core data about the chemical species, such as their names and indexes (position in their listing)
 
-    End users will generally utilize the class ChemData, which extends this one
+    Note: end users will generally utilize the class ChemData, which extends this one
     """
 
     def __init__(self):
@@ -19,8 +19,8 @@ class ChemCore():
                                 # TODO: maybe use a Pandas dataframe
 
         self.name_dict = {}     # To map assigned names to their positional index (in the ordered list of chemicals);
-        # this is automatically set and maintained
-        # EXAMPLE: {"A": 0, "B": 1, "C": 2}
+                                # this is automatically set and maintained
+                                # EXAMPLE: {"A": 0, "B": 1, "C": 2}
 
         self.active_chemicals = set()   # TODO: experimental
                                         # Set of chemicals involved in reactions, not counting catalysts
@@ -44,8 +44,12 @@ class ChemCore():
         :return:                None
         """
         n_species = self.number_of_chemicals()
-        assert (type(species_index) == int) and (0 <= species_index < n_species), \
-            f"The requested species index ({species_index}) is not the expected integer the range [0 - {n_species - 1}], inclusive"
+        assert type(species_index) == int,  f"The requested species index ({species_index}) is not an integer: " \
+                                            f"it has type {type(species_index)}"
+
+        assert 0 <= species_index < n_species, \
+            f"The requested species index ({species_index}) is not the expected integer the range [0 - {n_species - 1}], inclusive.  " \
+            f"There is no chemical species assigned to index {species_index}"
 
 
 
@@ -93,12 +97,12 @@ class ChemCore():
 
 
 
-    def add_chemical_species(self, name, note=None) -> int:     # TODO: test
+    def add_chemical_species(self, name, note=None) -> int:
         """
 
-        :param name:
+        :param name:    Name of the new chemical species to register
         :param note:    Optional string to attach to the given chemical
-        :return:
+        :return:        The integer index assigned to the newly-added chemical
         """
         index = len(self.chemical_data)     # The next available index number (list position)
         self.name_dict[name] = index
@@ -826,11 +830,11 @@ class ChemData(Macromolecules):
         """
         If chemical names and their diffusion rates are both provided, they must have the same count,
         and appear in the same order.
-        It's ok not to pass any data, and later add it.
+        It's ok to avoid passing any data at instantiation, and later add it.
         Reactions, if applicable, need to be added later by means of calls to add_reaction()
         Macro-molecules, if applicable, need to be added later
 
-        :param names:           [OPTIONAL] A list with the names of the chemicals
+        :param names:           [OPTIONAL] A single name, or list or tuple of names, of the chemicals
         :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals
                                            If diffusion rates are provided, but no names given, the names will be
                                            auto-assigned as "Chemical 1", "Chemical 2", ...
@@ -838,7 +842,7 @@ class ChemData(Macromolecules):
         """
         super().__init__()       # Invoke the constructor of its parent class
 
-        # Initialize
+        # Initialize with the passed data, if provided
         if (names is not None) or (diffusion_rates is not None):
             self.init_chemical_data(names, diffusion_rates)
 
@@ -854,21 +858,27 @@ class ChemData(Macromolecules):
         IMPORTANT: this function can be invoked only once, before any chemical data is set.
                    To add new chemicals later, use add_chemical()
 
-        :param names:           [OPTIONAL] List or tuple of the names of the chemical species
+        :param names:           [OPTIONAL] A single name, or list or tuple of names, of the chemicals
         :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals,
                                            in the same order as the names
         :return:                None
         """
-        # Validate
-        assert self.number_of_chemicals() == 0, \
-            f"ChemData.init_chemical_data(): function can be invoked only once, before any chemical data is set"
-
         n_species = self.number_of_chemicals()
+
+        # Validate
+        assert n_species == 0, \
+            f"ChemData.init_chemical_data(): this function can be invoked only once, before any chemical data is set"
+
 
         if names:
             arg_type = type(names)
-            assert arg_type == list or arg_type == tuple, \
-                f"ChemData.init_chemical_data(): the `names` argument must be a list or tuple.  What was passed was of type {arg_type}"
+            if arg_type == str:
+                names = [names]     # Turn a single name into a list
+            else:
+                assert arg_type == list or arg_type == tuple, \
+                    f"ChemData.init_chemical_data(): the `names` argument must be a list or tuple, or a string for a single name.  " \
+                    f"What was passed was of type {arg_type}"
+
             if n_species != 0:
                 assert len(names) == n_species, \
                     f"ChemData.init_chemical_data(): the passed number of names ({len(names)}) " \
