@@ -97,20 +97,37 @@ class ChemCore():
 
 
 
-    def add_chemical_species(self, name, note=None) -> int:
+    def add_chemical(self, name :str, note=None, **kwargs) -> int:
         """
+        Register a new chemical species, with a name
+        and (optionally) :
+            - a note
+            - any other named argument(s) that the user wishes to store (i.e. arbitrary named arguments)
+
+        EXAMPLE:  add_chemical("P1", note = "my note about P1", full_name = "protein P1")
+
+        Note: if also wanting to set the diffusion rate, must use ChemData.add_chemical_with_diffusion() instead
 
         :param name:    Name of the new chemical species to register
-        :param note:    Optional string to attach to the given chemical
+        :param note:    (OPTIONAL) string to attach to the given chemical
+        :param kwargs:  (OPTIONAL) dictionary of named arguments
         :return:        The integer index assigned to the newly-added chemical
         """
+        assert type(name) == str, \
+            f"add_chemical_species(): a chemical's name must be provided, as a string value.  " \
+            f"What was passed ({name}) was of type {type(name)}"
+
         index = len(self.chemical_data)     # The next available index number (list position)
         self.name_dict[name] = index
 
         if note is None:
-            self.chemical_data.append({"name": name})
+            d = {"name": name}
         else:
-            self.chemical_data.append({"name": name, "note": note})
+            d = {"name": name, "note": note}
+
+        d.update(kwargs)        # Merge dictionary kwargs into d
+
+        self.chemical_data.append(d)
 
         return index
 
@@ -132,7 +149,8 @@ class Diffusion(ChemCore):
 
         super().__init__()          # Invoke the constructor of its parent class
 
-        self.diffusion_rates = {}   # EXAMPLE: {"A": 6.4, "B": 12.0}
+        self.diffusion_rates = {}   # Values for the diffusion rates, indexed by chemical name
+                                    # EXAMPLE: {"A": 6.4, "B": 12.0}
 
 
 
@@ -202,7 +220,7 @@ class Diffusion(ChemCore):
 
 
 
-    def set_diffusion_rate(self, name: str, diff_rate) -> None:
+    def set_diffusion_rate(self, name :str, diff_rate) -> None:
         """
         Set the diffusion rate of the given chemical species (identified by its name)
 
@@ -374,24 +392,30 @@ class AllReactions(Diffusion):
 
 
 
-    def add_chemical(self, name: str, diffusion_rate=None, note=None) -> None:
+    def add_chemical_with_diffusion(self, name :str, diffusion_rate, note=None, **kwargs) -> int:
         """
-        Register a new chemical species, with a name and (optionally) a diffusion rate.
+        Register a new chemical species, with a name, a diffusion rate (in water),
+        and (optionally) :
+            - a note
+            - any other named argument(s) that the user wishes to store (i.e. arbitrary named arguments)
+
+        EXAMPLE:  add_chemical("P1", diffusion_rate = 0.1, note = "my note about P1", full_name = "protein P1")
+
+        Note: if no diffusion is to be set, the alternate method add_chemical() might be used instead
 
         :param name:            Name of the chemical species to add
-        :param diffusion_rate:  [OPTIONAL] Floating-point number with the diffusion rate (in water) of this chemical
+        :param diffusion_rate:  Floating-point number with the diffusion rate (in water) of this chemical
         :param note:            [OPTIONAL] Note to attach to the chemical
-        :return:                None
+        :return:                The integer index assigned to the newly-added chemical
         """
-        assert type(name) == str, \
-            f"ChemData.add_chemical(): a chemical's name must be provided, as a string value.  " \
-            f"What was passed was of type {type(name)}"
+        # Validate the diffusion_rate, if present; other arguments get validated by add_chemical()
+        self.assert_valid_diffusion(diffusion_rate)
 
-        if diffusion_rate:
-            self.assert_valid_diffusion(diffusion_rate)
-            self.set_diffusion_rate(name=name, diff_rate=diffusion_rate)
+        index = self.add_chemical(name=name, note=note, **kwargs)
 
-        self.add_chemical_species(name=name, note=note)
+        self.set_diffusion_rate(name=name, diff_rate=diffusion_rate)
+
+        return index
 
 
 
@@ -824,7 +848,7 @@ class ChemData(Macromolecules):
 
             - we're using a "daisy chain" of classes extending the previous one, starting from ChemCore
               and ending in this user-facing class:
-              ChemCore <- Diffusion <- AllReactions <- Macromolecules <- ChemData
+                    ChemCore <- Diffusion <- AllReactions <- Macromolecules <- ChemData
     """
     def __init__(self, names=None, diffusion_rates=None):
         """
@@ -904,12 +928,12 @@ class ChemData(Macromolecules):
             if diffusion_rates is None:   # The strings "Chemical 1", "Chemical 2", ..., will be used as names
                 for i in range(n_species):
                     assigned_name = f"Chemical {i+1}"
-                    self.add_chemical_species(assigned_name)
+                    self.add_chemical(assigned_name)
             else:
                 for i, diff in enumerate(diffusion_rates):
                     assigned_name = f"Chemical {i+1}"
                     self.assert_valid_diffusion(diff)
-                    self.add_chemical_species(assigned_name)
+                    self.add_chemical(assigned_name)
                     self.set_diffusion_rate(name=assigned_name, diff_rate=diff)
 
         else:   # names is not None
@@ -917,11 +941,11 @@ class ChemData(Macromolecules):
                 assert type(chem_name) == str, \
                     f"ChemData.init_chemical_data(): all the names must be strings.  The passed value ({chem_name}) is of type {type(chem_name)}"
                 if diffusion_rates is None:
-                    self.add_chemical_species(chem_name)
+                    self.add_chemical(chem_name)
                 else:
                     diff = diffusion_rates[i]
                     self.assert_valid_diffusion(diff)
-                    self.add_chemical_species(chem_name)
+                    self.add_chemical(chem_name)
                     self.set_diffusion_rate(name=chem_name, diff_rate=diff)
 
 

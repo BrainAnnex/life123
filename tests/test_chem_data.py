@@ -109,22 +109,25 @@ def test_get_all_names():
 
 
 
-def test_add_chemical_species():
+def test_add_chemical():
     chem_data = ChemData()
     assert chem_data.number_of_chemicals() == 0
     assert chem_data.chemical_data == []
 
-    chem_data.add_chemical_species("A")
+    result = chem_data.add_chemical("A")
+    assert result == 0
     assert chem_data.number_of_chemicals() == 1
     assert chem_data.chemical_data == [{"name": "A"}]
     assert chem_data.name_dict == {"A": 0}
 
-    chem_data.add_chemical_species("B", note="some note")
+    result = chem_data.add_chemical("B", note="some note")
+    assert result == 1
     assert chem_data.number_of_chemicals() == 2
     assert chem_data.chemical_data == [{"name": "A"}, {"name": "B", "note": "some note"}]
     assert chem_data.name_dict == {"A": 0, "B": 1}
 
-    chem_data.add_chemical_species("C")
+    result = chem_data.add_chemical("C")
+    assert result == 2
     assert chem_data.number_of_chemicals() == 3
     assert chem_data.chemical_data == [{"name": "A"}, {"name": "B", "note": "some note"}, {"name": "C"}]
     assert chem_data.name_dict == {"A": 0, "B": 1, "C": 2}
@@ -132,10 +135,21 @@ def test_add_chemical_species():
 
     # Re-start
     chem_data = ChemData(names="X")
-    chem_data.add_chemical_species("Y", note="test")
+
+    result = chem_data.add_chemical("Y", note="test")
+    assert result == 1
     assert chem_data.number_of_chemicals() == 2
     assert chem_data.chemical_data == [{"name": "X"}, {"name": "Y", "note": "test"}]
     assert chem_data.name_dict == {"X": 0, "Y": 1}
+
+    result = chem_data.add_chemical("Z", formula="CH3OH")
+    assert result == 2
+    assert chem_data.number_of_chemicals() == 3
+    assert chem_data.chemical_data == [{"name": "X"}, {"name": "Y", "note": "test"}, {"name": "Z", "formula": "CH3OH"}]
+    assert chem_data.name_dict == {"X": 0, "Y": 1, "Z": 2}
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name=123)    # Name is not a string
 
 
 
@@ -243,32 +257,37 @@ def test_init_chemical_data():
 
 
 
-def test_add_chemical():
+def test_add_chemical_with_diffusion():
     chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2, 3.14])
     assert chem_data.number_of_chemicals() == 3
     assert chem_data.get_all_names() == ['A', 'B', 'C']
     assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14])
 
-    chem_data.add_chemical(name="D", diffusion_rate=8)
+    chem_data.add_chemical_with_diffusion(name="D", diffusion_rate=8)
     assert chem_data.number_of_chemicals() == 4
     assert chem_data.get_all_names() == ['A', 'B', 'C', 'D']
     assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14, 8])
-    with pytest.raises(Exception):
-        chem_data.add_chemical(name="E", diffusion_rate="I'm not a number")
+    assert chem_data.chemical_data == [ {'name': 'A'}, {'name': 'B'}, {'name': 'C'}, {'name': 'D'}]
 
     with pytest.raises(Exception):
-        chem_data.add_chemical(name="E", diffusion_rate=-666.)
+        chem_data.add_chemical_with_diffusion(name="E", diffusion_rate="I'm not a number")
 
     with pytest.raises(Exception):
-        chem_data.add_chemical(name=666, diffusion_rate=25.)    # Wrong type for name
+        chem_data.add_chemical_with_diffusion(name="E", diffusion_rate=-666.)
 
-    chem_data.add_chemical(name="E", diffusion_rate=25.)
+    with pytest.raises(Exception):
+        chem_data.add_chemical_with_diffusion(name=666, diffusion_rate=25.)    # Wrong type for name
+
+    chem_data.add_chemical_with_diffusion(name="E", diffusion_rate=25., note="my note", some_field="some value")
     assert chem_data.number_of_chemicals() == 5
     assert chem_data.get_all_names() == ['A', 'B', 'C', 'D', 'E']
     assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14, 8, 25])
+    assert chem_data.chemical_data == [ {'name': 'A'}, {'name': 'B'}, {'name': 'C'}, {'name': 'D'},
+                                        {'name': 'E', 'note': 'my note', 'some_field': 'some value'}]
+
 
 
 
