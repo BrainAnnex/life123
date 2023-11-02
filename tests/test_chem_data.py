@@ -540,8 +540,8 @@ def test_add_reaction():
     rxn_info = chem.multiple_reactions_describe()
     assert rxn_info[0] == '0: A <-> B  (kF = 3 / kR = 2 / K = 1.5) | 1st order in all reactants & products'
     assert rxn_info[1] == '1: 2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.28571) | 1st order in all reactants & products'
-    assert rxn_info[2] == '2: 2 D <-> C  (kF = 11 / kR = 13 / Delta_G = 277.793 / K = 0.846154) | 3-th order in reactant D | 2-th order in product C'
-    assert rxn_info[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / Delta_G = -2,676.32 / K = 5) | 2-th order in product C'
+    assert rxn_info[2] == '2: 2 D <-> C  (kF = 11 / kR = 13 / delta_G = 277.793 / K = 0.846154) | 3-th order in reactant D | 2-th order in product C'
+    assert rxn_info[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2,676.32 / K = 5) | 2-th order in product C'
 
 
     # Add another reaction (reaction index 4), this time with thermodynamic data;
@@ -590,7 +590,7 @@ def test_create_graph_network_data():
     chem.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
     network_data = chem.create_graph_network_data()
     #print(network_data)
-    expected = [{'id': 2, 'label': 'Reaction', 'name': 'RXN', 'kF': '3', 'kR': '2', 'Delta_G': '-1,005.13','K': '1.5'},
+    expected = [{'id': 2, 'label': 'Reaction', 'name': 'RXN', 'kF': '3', 'kR': '2', 'delta_G': '-1,005.13','K': '1.5'},
                 {'id': 1, 'label': 'Chemical', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
                 {'id': 3, 'name': 'produces', 'source': 2, 'target': 1},
                 {'id': 0, 'label': 'Chemical', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},

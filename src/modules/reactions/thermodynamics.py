@@ -8,6 +8,15 @@ class ThermoDynamics:
     they relate to equilibrium constant, at a given temperature.
 
     This class does NOT get instantiated
+
+            "K"     (equilibrium constant - from either kinetic or thermodynamic data; if both present, they must match up!)
+            "delta_H" (change in Enthalpy: Enthalpy of Products - Enthalpy of Reactants)
+            "delta_S" (change in Entropy)
+            "delta_G" (change in Gibbs Free Energy)
+
+            Note - at constant temperature T :
+                Delta_G = Delta_H - T * Delta_S
+                Equilibrium constant = exp(-Delta_G / RT)
     """
 
     # Class Attribute

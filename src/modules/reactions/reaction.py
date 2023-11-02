@@ -1,6 +1,6 @@
 from typing import Union
 import numpy as np
-from thermodynamics import ThermoDynamics
+from src.modules.reactions.thermodynamics import ThermoDynamics
 
 
 class Reaction:
@@ -20,14 +20,10 @@ class Reaction:
             "products"
             "kF"    (forward reaction rate constant)
             "kR"    (reverse reaction rate constant)
-            "K"     (equilibrium constant - from either kinetic or thermodynamic data; if both present, they must match up!)
-            "Delta_H" (change in Enthalpy: Enthalpy of Products - Enthalpy of Reactants)
-            "Delta_S" (change in Entropy)
-            "Delta_G" (change in Gibbs Free Energy)
-                        Note - at constant temperature T :  Delta_G = Delta_H - T * Delta_S
-                        Equilibrium constant = exp(-Delta_G / RT)
             "enzyme" (the index of a chemical that catalyzes this reaction)
             "macro_enzyme" (The pair (macromolecule name, binding site number))
+            plus thermodynamic data: delta_H, delta_S, delta_G, K (equilibrium constant) -
+                                     for details see class "ThermoDynamics"
 
         Each Reactant and each Product is a triplet of the form: (stoichiometry, species index, reaction order).
         The "reaction order" in that triplet refers to the forward reaction for reactants, and the reverse reaction for products.
@@ -82,12 +78,12 @@ class Reaction:
         self.macro_enzyme = None    # The pair (macromolecule name, binding site number)
                                     #   EXAMPLE: ("M2", 5)          TODO: maybe turn into a data object
 
-        assert reactants is not None, "Reaction(): the argument `reactants` is a required one, and can't be None"
+        assert reactants is not None, "Reaction(): the argument `reactants` is a required one; it can't be None"
         if type(reactants) != list:
             reactants = [reactants]
 
 
-        assert products is not None, "Reaction(): the argument `products` is a required one, and can't be None"
+        assert products is not None, "Reaction(): the argument `products` is a required one; it can't be None"
         if type(products) != list:
             products = [products]
 
@@ -95,11 +91,10 @@ class Reaction:
         reactant_list = [self._parse_reaction_term(r, "reactant") for r in reactants]   # A list of triples of integers
         product_list = [self._parse_reaction_term(r, "product") for r in products]      # A list of triples of integers
 
-        # TODO: use a more sophisticated approach to catch identical reaction sides even if
-        #       terms are reshuffled
-        assert reactant_list != product_list, \
-            f"Reaction(): the reactants and the products can't all be identical! " \
-            f"Internal structure: {reactant_list}"
+        # Catch identical reaction sides, even if terms are reshuffled
+        assert set(reactant_list) != set(product_list), \
+            f"Reaction(): the two sides of the reaction can't be identical! " \
+            f"Same reactants and products: {self._standard_form_chem_eqn(reactant_list)}"
 
 
         # Locate any enzymes (catalysts) that might be present - though for now a warning is issued if more than 1
@@ -133,82 +128,10 @@ class Reaction:
 
 
 
-
-    def _set_kinetic_and_thermodynamic(self, forward_rate, reverse_rate,
-                                       delta_H, delta_S, delta_G, temp) -> None:
-        """
-        Set all the kinetic and thermodynamic data derivable - directly or indirectly - from the passed arguments,
-        storing it in object attributes.
-        Raise an Exception if any inconsistency is detected.
-
-        :return:    None
-        """
-        self.kF = forward_rate
-        self.kR = reverse_rate
-        self.delta_H = delta_H
-        self.delta_S = delta_S
-        self.delta_G = delta_G
-
-
-        # Process kinetic data, if available
-        #       (extracting thermodynamic data when feasible)
-        if (self.kF is not None) and (self.kR is not None):
-            # If all the kinetic data is available...
-            self.K = self.kF / self.kR    # ...compute the equilibrium constant (from kinetic data)
-
-            if temp:
-                # If the temperature is set, compute the change in Gibbs Free Energy
-                delta_G_kinetic = ThermoDynamics.delta_G_from_K(K = self.K, temp = temp)
-                if self.delta_G is None:
-                    self.delta_G = delta_G_kinetic
-                else:   # If already present (passed as argument), make sure that the two match!
-                    assert np.allclose(delta_G_kinetic, self.delta_G), \
-                        f"_set_kinetic_and_thermodynamic(): Kinetic data (leading to Delta_G={delta_G_kinetic}) " \
-                        f"is inconsistent with the passed value of Delta_G={self.delta_G})"
-
-
-        if (self.delta_H is not None) and (self.delta_S is not None) and (temp is not None):
-            # If all the thermodynamic data (possibly except delta_G) is available...
-
-            # Compute the change in Gibbs Free Energy from delta_H and delta_S, at the current temperature
-            delta_G_thermo = ThermoDynamics.delta_G_from_enthalpy(delta_H = self.delta_H, delta_S = self.delta_S, temp = temp)
-
-            if self.delta_G is None:
-                self.delta_G = delta_G_thermo
-            else:  # If already present (passed as argument or was set from kinetic data), make sure that the two match!
-                if not np.allclose(delta_G_thermo, self.delta_G):
-                    if delta_G is not None:
-                        raise Exception(f"_set_kinetic_and_thermodynamic(): thermodynamic data (leading to Delta_G={delta_G_thermo}) "
-                                        f"is inconsistent with the passed value of delta_G={delta_G})")
-                    else:
-                        raise Exception(f"_set_kinetic_and_thermodynamic(): thermodynamic data (leading to Delta_G={delta_G_thermo}) "
-                                        f"is inconsistent with kinetic data (leading to Delta_G={self.delta_G})")
-
-
-        if self.delta_G is not None:
-            if (self.K is None) and (temp is not None):
-                # If the temperature is known, compute the equilibrium constant (from the thermodynamic data)
-                # Note: no need to do it if self.K is present, because we ALREADY handled that case
-                self.K = ThermoDynamics.K_from_delta_G(delta_G = self.delta_G, temp = temp)
-
-                # If only one of the Forward or Reverse rates was provided, compute the other one
-                if (self.kF is None) and (self.kR is not None):
-                    self.kF = self.K * self.kR
-                if (self.kR is None) and (self.kF is not None):
-                    self.kR = self.kF / self.K
-
-            if temp is not None:
-                # If either Enthalpy or Entropy is missing, but the other one is known, compute the missing one
-                if (self.delta_H is None) and (self.delta_S is not None):
-                    self.delta_H = ThermoDynamics.delta_H_from_gibbs(delta_G=self.delta_G, delta_S=self.delta_S, temp=temp)
-                elif (self.delta_H is not None) and (self.delta_S is None):
-                    self.delta_S = ThermoDynamics.delta_S_from_gibbs(delta_G=self.delta_G, delta_H=self.delta_H, temp=temp)
-
-
-
     def set_macro_enzyme(self, macromolecule: str, site_number: int) -> None:
         """
-        Register that the given macromolecule catalyzes this reaction at the given site
+        Register that the given macromolecule, at the given site on it,
+        catalyzes this reaction
 
         :param macromolecule:   Name of macromolecule acting as a catalyst
         :param site_number:     Integer to identify a binding site on the above macromolecule
@@ -274,7 +197,7 @@ class Reaction:
     def extract_forward_rate(self) -> float:
         """
 
-        :return:    The value of the forward rate constant for the above reaction
+        :return:    The value of the forward rate constant for this reaction
         """
         return self.kF
 
@@ -282,7 +205,7 @@ class Reaction:
     def extract_reverse_rate(self) -> float:
         """
 
-        :return:    The value of the reverse (back) rate constant for the above reaction
+        :return:    The value of the reverse (back) rate constant for this reaction
         """
         return self.kR
 
@@ -293,7 +216,8 @@ class Reaction:
         A convenient unpacking meant for dynamics simulations
         that need the reactants, the products, and the forward and reverse rate constants
 
-        :return:    A 4-element tuple
+        :return:    A 4-element tuple, containing:
+                        (reactants , products , forward rate constant , reverse rate constant)
         """
         return (self.reactants, self.products, self.kF, self.kR)
 
@@ -303,8 +227,8 @@ class Reaction:
         """
         Return the stoichiometry coefficient, from a reaction term
 
-        :param term:
-        :return:
+        :param term:    A triplet of integers representing a reaction term
+        :return:        An integer with the stoichiometry coefficient
         """
         return term[0]
 
@@ -312,8 +236,8 @@ class Reaction:
         """
         Return the index of the chemical species, from a reaction term
 
-        :param term:
-        :return:
+        :param term:    A triplet of integers representing a reaction term
+        :return:        An integer with the index of the chemical species in the term
         """
         return term[1]
 
@@ -321,8 +245,8 @@ class Reaction:
         """
         Return the reaction order, from a reaction term
 
-        :param term:
-        :return:
+        :param term:    A triplet of integers representing a reaction term
+        :return:        An integer with the reaction order for this term
         """
         return term[2]
 
@@ -332,9 +256,10 @@ class Reaction:
         """
         Create a dictionary with the numerical properties of the given reaction
         (skipping any lists or None values)
-        For example, reaction rates, Delta G, equilibrium constant
+        Possible values include:
+            forward and reverse reaction rates, ΔH, ΔS, ΔG, K (equilibrium constant)
 
-        :return:    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'Delta_G': -1005.1305052750387, 'K': 1.5}
+        :return:    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': -1005.1305052750387, 'K': 1.5}
         """
         properties = {}
 
@@ -344,11 +269,14 @@ class Reaction:
         if self.kR is not None:
             properties['kR'] = self.kR
 
-        if self.delta_G is not None:
-            properties['Delta_G'] = self.delta_G
+        if self.delta_H is not None:
+            properties['delta_H'] = self.delta_H
+
+        if self.delta_S is not None:
+            properties['delta_S'] = self.delta_S
 
         if self.delta_G is not None:
-            properties['Delta_G'] = self.delta_G
+            properties['delta_G'] = self.delta_G
 
         if self.K is not None:
             properties['K'] = self.K
@@ -538,3 +466,75 @@ class Reaction:
         else:   # Length is 3
             reaction_order = term[2]
             return (stoichiometry, species, reaction_order)
+
+
+
+    def _set_kinetic_and_thermodynamic(self, forward_rate, reverse_rate,
+                                       delta_H, delta_S, delta_G, temp) -> None:
+        """
+        Set all the kinetic and thermodynamic data derivable - directly or indirectly - from the passed arguments,
+        storing it in object attributes.
+        Raise an Exception if any inconsistency is detected.
+
+        :return:    None
+        """
+        self.kF = forward_rate
+        self.kR = reverse_rate
+        self.delta_H = delta_H
+        self.delta_S = delta_S
+        self.delta_G = delta_G
+
+
+        # Process kinetic data, if available
+        #       (extracting thermodynamic data when feasible)
+        if (self.kF is not None) and (self.kR is not None):
+            # If all the kinetic data is available...
+            self.K = self.kF / self.kR    # ...compute the equilibrium constant (from kinetic data)
+
+            if temp:
+                # If the temperature is set, compute the change in Gibbs Free Energy
+                delta_G_kinetic = ThermoDynamics.delta_G_from_K(K = self.K, temp = temp)
+                if self.delta_G is None:
+                    self.delta_G = delta_G_kinetic
+                else:   # If already present (passed as argument), make sure that the two match!
+                    assert np.allclose(delta_G_kinetic, self.delta_G), \
+                        f"_set_kinetic_and_thermodynamic(): Kinetic data (leading to Delta_G={delta_G_kinetic}) " \
+                        f"is inconsistent with the passed value of Delta_G={self.delta_G})"
+
+
+        if (self.delta_H is not None) and (self.delta_S is not None) and (temp is not None):
+            # If all the thermodynamic data (possibly except delta_G) is available...
+
+            # Compute the change in Gibbs Free Energy from delta_H and delta_S, at the current temperature
+            delta_G_thermo = ThermoDynamics.delta_G_from_enthalpy(delta_H = self.delta_H, delta_S = self.delta_S, temp = temp)
+
+            if self.delta_G is None:
+                self.delta_G = delta_G_thermo
+            else:  # If already present (passed as argument or was set from kinetic data), make sure that the two match!
+                if not np.allclose(delta_G_thermo, self.delta_G):
+                    if delta_G is not None:
+                        raise Exception(f"_set_kinetic_and_thermodynamic(): thermodynamic data (leading to Delta_G={delta_G_thermo}) "
+                                        f"is inconsistent with the passed value of delta_G={delta_G})")
+                    else:
+                        raise Exception(f"_set_kinetic_and_thermodynamic(): thermodynamic data (leading to Delta_G={delta_G_thermo}) "
+                                        f"is inconsistent with kinetic data (leading to Delta_G={self.delta_G})")
+
+
+        if self.delta_G is not None:
+            if (self.K is None) and (temp is not None):
+                # If the temperature is known, compute the equilibrium constant (from the thermodynamic data)
+                # Note: no need to do it if self.K is present, because we ALREADY handled that case
+                self.K = ThermoDynamics.K_from_delta_G(delta_G = self.delta_G, temp = temp)
+
+                # If only one of the Forward or Reverse rates was provided, compute the other one
+                if (self.kF is None) and (self.kR is not None):
+                    self.kF = self.K * self.kR
+                if (self.kR is None) and (self.kF is not None):
+                    self.kR = self.kF / self.K
+
+            if temp is not None:
+                # If either Enthalpy or Entropy is missing, but the other one is known, compute the missing one
+                if (self.delta_H is None) and (self.delta_S is not None):
+                    self.delta_H = ThermoDynamics.delta_H_from_gibbs(delta_G=self.delta_G, delta_S=self.delta_S, temp=temp)
+                elif (self.delta_H is not None) and (self.delta_S is None):
+                    self.delta_S = ThermoDynamics.delta_S_from_gibbs(delta_G=self.delta_G, delta_H=self.delta_H, temp=temp)
