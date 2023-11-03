@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+import pandas as pd
 from src.modules.chemicals.chem_data import ChemData
 
 
@@ -118,6 +119,19 @@ def test_get_all_names():
 
     with pytest.raises(Exception):
         chem_data.get_all_names()   # The former name 'B' is now missing
+
+
+
+def test_all_chemicals():
+    chem_data = ChemData(names=['A', 'B'])
+    chem_data.add_chemical("C", note="this is C", formula="CH4", cost="200")
+    chem_data.add_chemical_with_diffusion("D", diffusion_rate=10, note="this is D")
+
+    result = chem_data.all_chemicals()
+    expected_recordset = [{'name': 'A'}, {'name': 'B'}, {'name': 'C', 'note': 'this is C', 'formula': 'CH4', 'cost': '200'}, {'name': 'D', 'note': 'this is D'}]
+    expected_df = pd.DataFrame(expected_recordset)
+
+    assert expected_df.equals(result)
 
 
 

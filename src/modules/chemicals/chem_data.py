@@ -1,5 +1,6 @@
-from typing import Union, List, NamedTuple
+from typing import Union, List, NamedTuple, Set
 from src.modules.reactions.reaction import Reaction
+import pandas as pd
 
 
 
@@ -100,6 +101,18 @@ class ChemCore():
             all_names.append(name)
 
         return all_names
+
+
+
+    def all_chemicals(self) -> pd.DataFrame:
+        """
+        Returns a Pandas dataframe with all the known information
+        about all the registered chemicals (not counting macro-molecules),
+        in their index order
+
+        :return:    A Pandas dataframe
+        """
+        return pd.DataFrame(self.chemical_data)
 
 
 
@@ -528,18 +541,6 @@ class AllReactions(Diffusion):
 
 
 
-    def names_of_active_chemicals(self):
-        """
-        Return a set of the names of all the chemicals involved in reactions, not counting catalysts
-        """
-        name_set = set()
-        for ac_index in self.active_chemicals:
-            name_set.add(self.get_name(ac_index))
-
-        return name_set
-
-
-
     def multiple_reactions_describe(self, rxn_list=None, concise=False) -> [str]:
         """
         The counterpart of single_reaction_describe() for many reactions
@@ -577,6 +578,18 @@ class AllReactions(Diffusion):
 
         return rxn.describe(concise)
 
+
+
+    def names_of_active_chemicals(self) -> Set[str]:
+        """
+        Return a set of the names of all the chemicals involved in reactions,
+        NOT counting catalysts
+        """
+        name_set = set()
+        for ac_index in self.active_chemicals:
+            name_set.add(self.get_name(ac_index))
+
+        return name_set
 
 
 
