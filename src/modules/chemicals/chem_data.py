@@ -85,15 +85,21 @@ class ChemCore():
 
 
 
-    def get_all_names(self) -> [Union[str, None]]:
+    def get_all_names(self) -> [str]:
         """
         Return a list with the names of all the chemical species, in their index order.
-        If any is missing, None is used     TODO: raise an Exception instead
+        If any is missing or blank, an Exception instead
 
-        :return:    A list of strings
+        :return:    A list of strings with the chemical names,
+                        in their registered index order
         """
-        return [c.get("name", None)
-                for c in self.chemical_data]
+        all_names = []
+        for i, c in enumerate(self.chemical_data):
+            name = c.get("name", None)
+            assert name, f"get_all_names(): missing or blank chemical name in index position {i}"
+            all_names.append(name)
+
+        return all_names
 
 
 
@@ -116,6 +122,8 @@ class ChemCore():
         assert type(name) == str, \
             f"add_chemical_species(): a chemical's name must be provided, as a string value.  " \
             f"What was passed ({name}) was of type {type(name)}"
+
+        assert name != "", f"add_chemical_species(): the chemical's name cannot be a blank string"
 
         index = len(self.chemical_data)     # The next available index number (list position)
         self.name_dict[name] = index
@@ -401,7 +409,7 @@ class AllReactions(Diffusion):
 
         EXAMPLE:  add_chemical("P1", diffusion_rate = 0.1, note = "my note about P1", full_name = "protein P1")
 
-        Note: if no diffusion is to be set, the alternate method add_chemical() might be used instead
+        Note: if no diffusion is to be set, use the method add_chemical()
 
         :param name:            Name of the chemical species to add
         :param diffusion_rate:  Floating-point number with the diffusion rate (in water) of this chemical

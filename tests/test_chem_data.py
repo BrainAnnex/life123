@@ -105,7 +105,19 @@ def test_get_name():
 
 
 def test_get_all_names():
-    pass    # TODO
+    chem_data = ChemData(names=['A', 'B', 'C'])
+    assert chem_data.get_all_names() == ['A', 'B', 'C']
+
+    # Reach into the internal data structure, to mess up some names
+    chem_data.chemical_data = [{'name': 'A'}, {'name': ''}, {'name': 'C'}]
+
+    with pytest.raises(Exception):
+        chem_data.get_all_names()   # The former name 'B' is now a blank
+
+    chem_data.chemical_data = [{'name': 'A'}, {'name': 'B'}, {}]
+
+    with pytest.raises(Exception):
+        chem_data.get_all_names()   # The former name 'B' is now missing
 
 
 
@@ -150,6 +162,9 @@ def test_add_chemical():
 
     with pytest.raises(Exception):
         chem_data.add_chemical(name=123)    # Name is not a string
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name="")
 
 
 
@@ -287,6 +302,9 @@ def test_add_chemical_with_diffusion():
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14, 8, 25])
     assert chem_data.chemical_data == [ {'name': 'A'}, {'name': 'B'}, {'name': 'C'}, {'name': 'D'},
                                         {'name': 'E', 'note': 'my note', 'some_field': 'some value'}]
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical_with_diffusion(name="", diffusion_rate=25.)
 
 
 
