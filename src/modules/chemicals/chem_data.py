@@ -530,8 +530,9 @@ class AllReactions(Diffusion):
 
         EXAMPLE (not concise):
             Number of reactions: 2 (at temp. 25 C)
-            (0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
-            (1) A + B <-> C  (kF = 5.0 / kR = 1.0 / Delta_G =  / K = 5.0) | 1st order in all reactants & products"
+            (0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products
+            (1) A + B <-> C  (kF = 5.0 / kR = 1.0 / Delta_G =  / K = 5.0) | 1st order in all reactants & products
+            Set of chemicals involved in the above reactions: {'CH4', 'O2', 'H2O', 'A', 'B', 'C'}
 
         :param concise:     If True, less detail is shown
         :return:            None
@@ -540,9 +541,14 @@ class AllReactions(Diffusion):
         for description in self.multiple_reactions_describe(concise=concise):
             print(description)
 
-        print(f"Set of chemicals involved in the above reactions (not counting enzymes): "
-              f"{self.names_of_active_chemicals()}")
-        # TODO: also, separately, print out any enzyme present
+        if self.active_enzymes == set():    # If no enzymes were involved in any reaction
+            print(f"Set of chemicals involved in the above reactions: "
+                  f"{self.names_of_active_chemicals()}")
+        else:
+            print(f"Set of chemicals involved in the above reactions (not counting enzymes): "
+                  f"{self.names_of_active_chemicals()}")
+            print(f"Set of enzymes involved in the above reactions: "
+                  f"{self.names_of_enzymes()}")
 
 
 
@@ -587,12 +593,24 @@ class AllReactions(Diffusion):
 
     def names_of_active_chemicals(self) -> Set[str]:
         """
-        Return a set of the names of all the chemicals involved in reactions,
+        Return a set of the names of all the chemicals involved in ANY of reactions,
         NOT counting catalysts
         """
         name_set = set()
         for ac_index in self.active_chemicals:
             name_set.add(self.get_name(ac_index))
+
+        return name_set
+
+
+
+    def names_of_enzymes(self) -> Set[str]:
+        """
+        Return a set of the names of all the enzymes involved in ANY of reactions
+        """
+        name_set = set()
+        for e_index in self.active_enzymes:
+            name_set.add(self.get_name(e_index))
 
         return name_set
 

@@ -14,9 +14,9 @@
 # ---
 
 # %% [markdown]
-# ## Comparing the reaction `A <-> B` with and without an enzyme
+# ## Comparing the reaction `A <-> B` , with and without an enzyme
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Nov. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -102,7 +102,7 @@ chem_data.add_reaction(reactants=["A", "E"], products=["B", "E"],
 chem_data.describe_reactions()  # Notice how the enzyme `E` is noted in the printout below
 
 # %% [markdown]
-# ### Notice how, while the ratio kF/kR is the same as it was without the enzyme (since it's dictated by the energy difference), the individual values of kF and kR are now each 10 times bigger than before
+# ### Notice how, while the ratio kF/kR is the same as it was without the enzyme (since it's dictated by the energy difference), the individual values of kF and kR now are each 10 times bigger than before
 
 # %% [markdown]
 # ### Set the initial concentrations of all the chemicals (to what they originally were)
