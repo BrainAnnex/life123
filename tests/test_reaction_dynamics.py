@@ -945,7 +945,7 @@ def test_update_occupancy():
 
 
     # Vary the concentration of ligand C, starting with zero
-    rxn.set_chem_conc(conc=0, species_name="C")     # No ligand C
+    rxn.set_single_conc(conc=0, species_name="C")     # No ligand C
     rxn.update_occupancy()
 
     assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=1) , 0.5)  # Unaffected (different ligand)
@@ -958,7 +958,7 @@ def test_update_occupancy():
 
 
     # Very low concentration of ligand C
-    rxn.set_chem_conc(conc=0.3, species_name="C")
+    rxn.set_single_conc(conc=0.3, species_name="C")
     rxn.update_occupancy()
 
     assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=1) , 0.5)      # Unaffected (different ligand)
@@ -971,7 +971,7 @@ def test_update_occupancy():
 
 
     # Low concentration of ligand C
-    rxn.set_chem_conc(conc=3, species_name="C")
+    rxn.set_single_conc(conc=3, species_name="C")
     rxn.update_occupancy()
 
     assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=3) , 0.1)      # Ligand conc is 1/10 binding affinity
@@ -982,7 +982,7 @@ def test_update_occupancy():
 
 
     # Mid concentration of ligand C
-    rxn.set_chem_conc(conc=30, species_name="C")
+    rxn.set_single_conc(conc=30, species_name="C")
     rxn.update_occupancy()
 
     assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=3) , 0.5)  # Ligand conc = binding affinity
@@ -993,7 +993,7 @@ def test_update_occupancy():
 
 
     # High concentration of ligand C
-    rxn.set_chem_conc(conc=300, species_name="C")
+    rxn.set_single_conc(conc=300, species_name="C")
     rxn.update_occupancy()
 
     assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=3) , 0.9)       # Ligand conc is 10x binding affinity
@@ -1004,7 +1004,7 @@ def test_update_occupancy():
 
 
     # Very High concentration of ligand C
-    rxn.set_chem_conc(conc=3000, species_name="C")
+    rxn.set_single_conc(conc=3000, species_name="C")
     rxn.update_occupancy()
 
     assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=3) , 0.9878049)    # Ligand conc is 100x binding affinity

@@ -16,7 +16,7 @@
 # %% [markdown]
 # ## Macromolecules : Binding Affinity and Fractional Occupancy
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Nov. 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -135,7 +135,7 @@ dynamics.chem_data.show_binding_affinities()        # Review the values we had g
 # ### Adjust the concentration of one ligand, [A], and update all the fractional occupancies accordingly
 
 # %%
-dynamics.set_chem_conc(conc=1000., species_name="A", snapshot=False)
+dynamics.set_single_conc(conc=1000., species_name="A", snapshot=False)
 
 # %%
 dynamics.update_occupancy()
@@ -171,7 +171,7 @@ print(log_values)
 # %%
 # Set [A] to each of the above values in turn, and determine/store the applicable fractional occupancies (for the sites where A binds)
 for A_conc in log_values:
-    dynamics.set_chem_conc(conc=A_conc, species_name="A", snapshot=False)
+    dynamics.set_single_conc(conc=A_conc, species_name="A", snapshot=False)
     dynamics.update_occupancy()
     history.store(A_conc, {"M1 site 3": dynamics.get_occupancy(macromolecule="M1", site_number=3), 
                            "M1 site 15": dynamics.get_occupancy(macromolecule="M1", site_number=15), 

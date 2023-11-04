@@ -350,7 +350,7 @@ class Reaction:
         details = []
         rxn_properties = self.extract_rxn_properties()
         for k,v in rxn_properties.items():
-            details.append(f"{k} = {v:,.6g}")          # EXAMPLE: "kF = 3"
+            details.append(f"{k} = {v:,.5g}")          # EXAMPLE: "kF = 3"
 
         rxn_description += "  (" + ' / '.join(details) + ")"    # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
 

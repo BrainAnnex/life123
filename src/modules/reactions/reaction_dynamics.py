@@ -136,10 +136,9 @@ class ReactionDynamics:
     #####################################################################################################
 
 
-    def set_conc(self, conc: Union[list, tuple, dict], snapshot=True) -> None:     # TODO: maybe rename set_all_conc()
+    def set_conc(self, conc: Union[list, tuple, dict], snapshot=True) -> None:
         """
         Set the concentrations of ALL the chemicals at once
-        TODO: maybe a dict indicates a selection of chemicals, while a list, etc means "ALL"
 
         :param conc:        A list or tuple of concentration values for ALL the chemicals, in their index order;
                                 alternatively, a dict indexed by the chemical names, again for ALL the chemicals
@@ -147,15 +146,16 @@ class ReactionDynamics:
                                                         (assuming that "A", "B", "C" are ALL the chemicals)
 
                                 Note: any previous values will get over-written)
-                                TODO: [maybe the dict version should be the responsibility of set_chem_conc() instead;] OR
-                                      allow the dict to be a subset of all chemicals
-                                TODO: also allow a Numpy array; make sure to do a copy() to it!
-                                TODO: pytest for the dict option
+
         :param snapshot:    (OPTIONAL) boolean: if True, add to the history
                                 a snapshot of this state being set.  Default: True
         :return:            None
         """
         # TODO: more validations, incl. of individual values being wrong data type
+        # TODO:  a dict indicates a selection of chemicals, while a list, etc means "ALL"
+        # TODO: allow the dict to be a subset of all chemicals
+        # TODO: also allow a Numpy array; make sure to do a copy() to it!
+        # TODO: pytest for the dict option
 
         assert len(conc) == self.chem_data.number_of_chemicals(), \
             f"ReactionDynamics.set_conc(): the number of concentration values passed in the argument 'conc' ({len(conc)}) " \
@@ -181,49 +181,41 @@ class ReactionDynamics:
 
         self.system = np.array(conc, dtype='d')      # float64      TODO: allow users to specify the type
 
-        #self.set_rxn_speed_all_fast()   # Reset all the reaction speeds to "Fast"    TODO: obsolete
-
         if snapshot:
             self.add_snapshot(caption="Initial state")
 
 
 
-    def set_chem_conc(self, conc, species_index=None, species_name=None, snapshot=True) -> None:
+    def set_single_conc(self, conc, species_index=None, species_name=None, snapshot=True) -> None:
         """
         Set the concentrations of 1 chemical
         Note: if both species_index and species_name are provided, species_name is used     TODO: pytest this part
 
-        TODO Maybe rename set_single_conc()
-            [OR call it set_conc(), and also handle dict's]
-
-        :param conc:            A non-negative number with the desired concentration value for the above value.
-                                    (Any previous value will get over-written)
+        :param conc:            A non-negative number with the desired concentration value
+                                    of the chemical specified below.  (Any previous value will get over-written)
         :param species_index:   (OPTIONAL) An integer that indexes the chemical of interest (numbering starts at 0)
         :param species_name:    (OPTIONAL) A name for the chemical of interest.
                                     If both species_index and species_name are provided, species_name is used
+                                    At least one of "species_index" and "species_name" must be specified
         :param snapshot:        (OPTIONAL) boolean: if True, add to the history
                                     a snapshot of this state being set.  Default: True
         :return:                None
         """
         # Validate the arguments
         assert conc >= 0, \
-            f"ReactionDynamics.set_chem_conc(): chemical concentrations cannot be negative (value passed: {conc})"
+            f"ReactionDynamics.set_single_conc(): chemical concentrations cannot be negative (value passed: {conc})"
 
         if species_name is not None:
             species_index = self.chem_data.get_index(species_name)
         elif species_index is not None:
             self.chem_data.assert_valid_species_index(species_index)
         else:
-            raise Exception("ReactionDynamics.set_chem_conc(): at least one "
+            raise Exception("ReactionDynamics.set_single_conc(): at least one "
                             "of the arguments `species_index` or `species_name` must be provided")
 
 
         # TODO: if setting concentrations of a newly-added chemical, needs to first expand self.system
         self.system[species_index] = conc
-
-        #self.set_rxn_speed_all_fast()  # Reset all the reaction speeds to "Fast"      TODO: obsolete
-                                        # TODO: this is overkill; ought to only reset the affected reactions -
-                                        #       as returned by get_reactions_participating_in()
 
         if snapshot:
             self.add_snapshot(caption=f"Set concentration of `{self.chem_data.get_name(species_index)}`")
@@ -425,7 +417,11 @@ class ReactionDynamics:
                 state_str = " | ".join(state_list)                                      # EXAMPLE: "3: 0.1 (A) | "8: 0.6 (B)"
                 print(f"     {mm} || {state_str}")
 
-        print(f"Set of chemicals involved in reactions (not counting enzymes): {self.chem_data.names_of_active_chemicals()}")
+        if self.chem_data.active_enzymes == set():    # If no enzymes were involved in any reaction
+            print(f"Set of chemicals involved in reactions: {self.chem_data.names_of_active_chemicals()}")
+        else:
+            print(f"Set of chemicals involved in reactions (not counting enzymes): {self.chem_data.names_of_active_chemicals()}")
+            print(f"Set of enzymes involved in reactions: {self.chem_data.names_of_enzymes()}")
 
 
 
@@ -2328,7 +2324,7 @@ class ReactionDynamics:
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
         if title_prefix is not None:
-            title = f"{title_prefix}.  {title}"
+            title = f"{title_prefix}.  <br>{title}"
 
         if show_intervals:
             vertical_lines = df["SYSTEM TIME"]
