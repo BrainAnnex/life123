@@ -16,10 +16,10 @@ def test_initialize():
     assert chem_data.diffusion_rates == {}
 
     with pytest.raises(Exception):
-        ChemData(names=123)   # Not a list/tuple/str
+        ChemData(names=123)     # Not a list/tuple/str
 
     with pytest.raises(Exception):
-        ChemData(names=[1, 2])   # The names aren't strings
+        ChemData(names=[1, 2])  # The names aren't strings
 
     chem_data = ChemData(diffusion_rates=[0.15, 1.2])
     assert chem_data.number_of_chemicals() == 2
@@ -323,7 +323,7 @@ def test_add_chemical_with_diffusion():
 
 
 
-####  MACRO-MOLECULES  ####
+##########  MACRO-MOLECULES  ##########
 
 def test_add_macromolecules():
     chem_data = ChemData()
@@ -559,6 +559,9 @@ def test_add_reaction():
     assert np.allclose(chem.get_forward_rate(0), 3.)
     assert np.allclose(chem.get_reverse_rate(0),  2.)
 
+    assert chem.active_chemicals == {0, 1}
+    assert chem.active_enzymes == set()
+
 
     # Another reaction (reaction 1)
     chem.add_reaction(reactants=[(2, "B")], products=[(5, "C")], forward_rate=9., reverse_rate=7.)
@@ -585,6 +588,9 @@ def test_add_reaction():
     assert r.delta_S is None
     assert r.delta_G is None
 
+    assert chem.active_chemicals == {0, 1, 2}
+    assert chem.active_enzymes == set()
+
 
     # Add another reaction (reaction index 2).  This time, first set the temperature
     chem.temp = 200
@@ -602,6 +608,9 @@ def test_add_reaction():
     assert r.delta_S is None
     assert np.allclose(r.delta_G, 277.7928942715384)   # - RT log(K)
 
+    assert chem.active_chemicals == {0, 1, 2, 3}
+    assert chem.active_enzymes == set()
+
 
     # Add a multi-term reaction (reaction index 3)
     chem.add_reaction(reactants=["A", (2, "B")], products=[(3, "C", 2), "D"], forward_rate=5., reverse_rate=1.)
@@ -616,6 +625,10 @@ def test_add_reaction():
     assert r.delta_H is None
     assert r.delta_S is None
     assert np.allclose(r.delta_G, -2676.321364705849)   # - RT log(K)
+
+    assert chem.active_chemicals == {0, 1, 2, 3}
+    assert chem.active_enzymes == set()
+
 
     # Check the descriptions we has so far
     rxn_info = chem.multiple_reactions_describe()
@@ -640,6 +653,30 @@ def test_add_reaction():
     assert np.allclose(r.K , 1.0461347154679432)  # exp(75/(8.3144598 * 200))
     assert np.allclose(r.kF , 10.)
     assert np.allclose(r.kR , 9.558998331803693) # 10. / 1.0461347154679432
+
+    assert chem.active_chemicals == {0, 1, 2, 3}
+    assert chem.active_enzymes == set()
+
+
+    # Add another reaction (reaction index 5), this time involving a catalytic term
+    chem.add_reaction(reactants=[(3, "A"), "D"], products=["D", (2, "B")])
+    assert chem.number_of_reactions() == 6
+    assert chem.active_chemicals == {0, 1, 2, 3}
+    assert chem.active_enzymes == {3}       # Notice that chemical index 3 ("D) is an enzyme in this reaction,
+                                            # but an active participant in others
+
+    # Add another reaction (reaction index 6), again involving a catalytic term
+    chem.add_reaction(reactants=["F", (2, "C"), (3, "A")], products=["D", "F", (2, "D")])
+    assert chem.number_of_reactions() == 7
+    assert chem.active_chemicals == {0, 1, 2, 3}
+    assert chem.active_enzymes == {3, 5}
+
+    # Add another reaction (reaction index 7), where "F" (reaction index 5) is NOT a catalyst
+    chem.add_reaction(reactants=[(2, "B"), "F"], products=[(3, "A")])
+    assert chem.number_of_reactions() == 8
+    assert chem.active_chemicals == {0, 1, 2, 3, 5}
+    assert chem.active_enzymes == {3, 5}
+
 
 
 def test_clear_reactions_data():

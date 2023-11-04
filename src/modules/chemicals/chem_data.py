@@ -23,8 +23,11 @@ class ChemCore():
                                 # this is automatically set and maintained
                                 # EXAMPLE: {"A": 0, "B": 1, "C": 2}
 
-        self.active_chemicals = set()   # TODO: experimental
-                                        # Set of chemicals involved in reactions, not counting catalysts
+        self.active_chemicals = set()   # Set of INDEXES of chemicals - not counting catalysts - involved
+                                        # in any of the reactions
+
+        self.active_enzymes = set()     # Set of INDEXES of enzymes (catalysts) involved in any of the reactions
+
 
 
     def number_of_chemicals(self) -> int:
@@ -486,15 +489,15 @@ class AllReactions(Diffusion):
         :return:                Object of type "Reaction"
                                 (note: it also gets appended to the object variable self.reaction_list)
         """
-
         rxn = Reaction(self, reactants, products, forward_rate, reverse_rate,
                        delta_H, delta_S, delta_G)
-
         self.reaction_list.append(rxn)
 
         involved_chemicals = rxn.extract_chemicals_in_reaction(exclude_enzyme=True)
 
         self.active_chemicals = self.active_chemicals.union(involved_chemicals)     # Union of sets
+        if rxn.enzyme is not None:
+            self.active_enzymes.add(rxn.enzyme)       # Add the new entry to a set
 
         return rxn
 
@@ -522,7 +525,7 @@ class AllReactions(Diffusion):
 
     def describe_reactions(self, concise=False) -> None:
         """
-        Print out a user-friendly plain-text form of all the reactions.
+        Print out a user-friendly plain-text form of ALL the reactions.
         If wanting to describe just 1 reaction, use single_reaction_describe()
 
         EXAMPLE (not concise):
@@ -537,7 +540,9 @@ class AllReactions(Diffusion):
         for description in self.multiple_reactions_describe(concise=concise):
             print(description)
 
-        print(f"Set of chemicals involved in the above reactions (not counting enzymes): {self.names_of_active_chemicals()}")
+        print(f"Set of chemicals involved in the above reactions (not counting enzymes): "
+              f"{self.names_of_active_chemicals()}")
+        # TODO: also, separately, print out any enzyme present
 
 
 
@@ -619,18 +624,22 @@ class Macromolecules(AllReactions):
 
 
         self.macromolecules = []    # List of names.  EXAMPLE: ["M1", "M2"]
-                                    # The position in the list is referred to as the "index" of that macro-molecule
+                                    # The position in the list is referred to as the
+                                    #   "index" of that macro-molecule
                                     # Names are enforced to be unique
 
         self.binding_sites = {}     # A dict whose keys are macromolecule names.
                                     # The values are in turn dicts, indexed by binding-site number.
         # EXAMPLE:
         #       {"M1": {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)},
-        #        "M2": {1: ChemicalAffinity("C", 9.1), 2: ChemicalAffinity("B", 0.3), 3: ChemicalAffinity("A", 1.8), 4: ChemicalAffinity("C", 2.3)}
+        #        "M2": {1: ChemicalAffinity("C", 9.1), 2: ChemicalAffinity("B", 0.3),
+        #               3: ChemicalAffinity("A", 1.8), 4: ChemicalAffinity("C", 2.3)}
         #        }
-        #       where "M1", "M2" are macro-molecules, and "A", "B", "C" are bulk chemicals (such as transcription factors),
+        #       where "M1", "M2" are macro-molecules,
+        #           and "A", "B", "C" are bulk chemicals (such as transcription factors),
         #           all previously-declared;
-        #           the various ChemicalAffinity's are NamedTuples (objects) storing a ligand name and its dissociation constant at that site.
+        #           the various ChemicalAffinity's are NamedTuples (objects)
+        #           storing a ligand name and its dissociation constant at that site.
 
         # Info on Binding Site Affinities : https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6787930/
 

@@ -210,6 +210,25 @@ def test_extract_rxn_properties():
 
 
 
+def test_extract_chemicals_in_reaction():
+    chem = ChemData(names=["A", "B"])
+
+    rxn = Reaction(chem, reactants="A", products="B")
+    assert rxn.extract_chemicals_in_reaction() == {0, 1}
+
+    chem = ChemData(names=["A", "B", "C"])
+    rxn = Reaction(chem, reactants=["A", "B"], products=["B", "C"]) # B (1) acts as enzyme
+    assert rxn.extract_chemicals_in_reaction(exclude_enzyme=False) == {0, 1, 2}
+    assert rxn.extract_chemicals_in_reaction(exclude_enzyme=True) == {0, 2}
+
+    chem = ChemData(names=["A", "B", "C", "D", "E"])
+    rxn = Reaction(chem, reactants=[(2, "D"), "C"], products=["C", (3, "E")]) # C (2) acts as enzyme
+    assert rxn.extract_chemicals_in_reaction(exclude_enzyme=False) == {2, 3, 4}
+    assert rxn.extract_chemicals_in_reaction(exclude_enzyme=True) == {3, 4}
+
+
+
+
 #######  For PRIVATE methods  #######
 
 def test__standard_form_chem_eqn():

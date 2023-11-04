@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Set
 import numpy as np
 from src.modules.reactions.thermodynamics import ThermoDynamics
 
@@ -73,7 +73,7 @@ class Reaction:
         self.delta_S = delta_S
         self.delta_G = delta_G
         self.K = None
-        self.enzyme = None          # The index of a chemical that catalyzes this reaction
+        self.enzyme = None          # The INDEX of a chemical that catalyzes this reaction, if applicable
                                     #   Note: enzymes are automatically extracted from the reaction formula
         self.macro_enzyme = None    # The pair (macromolecule name, binding site number)
                                     #   EXAMPLE: ("M2", 5)          TODO: maybe turn into a data object
@@ -285,12 +285,14 @@ class Reaction:
 
 
 
-    def extract_chemicals_in_reaction(self, exclude_enzyme=False) -> {int}:
+    def extract_chemicals_in_reaction(self, exclude_enzyme=False) -> Set[int]:
         """
         Return a SET of indices (being a set, it's NOT in any particular order)
-        of all the chemicals in this reaction
+        identifying all the chemicals appearing in this reaction.
+        Optionally, exclude any that participate in a catalytic role
+        (appearing identically on both sides of the reaction)
 
-        :param exclude_enzyme:  If True, any enzyme, if present, won't be included  TODO - test
+        :param exclude_enzyme:  If True, any enzyme, if present, won't be included
         :return:                A SET of indices of the chemicals involved in this reaction
                                 Note: being a set, it's NOT in any particular order
         """

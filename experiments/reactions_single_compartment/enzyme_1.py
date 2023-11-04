@@ -33,7 +33,8 @@ from src.modules.reactions.reaction_dynamics import ReactionDynamics
 # Initialize the system
 chem_data = ChemData(names=["A", "B"])
 
-# Reaction A <-> B , with 1st-order kinetics, and a forward rate that is slower than it would be with the enzyme of part 2
+# Reaction A <-> B , with 1st-order kinetics, favorable thermodynamics in the forward direction, 
+# and a forward rate that is much slower than it would be with the enzyme - as seen in part 2, below
 chem_data.add_reaction(reactants="A", products="B",
                        forward_rate=1., delta_G=-3989.73)
 
@@ -70,7 +71,7 @@ dynamics.single_compartment_react(initial_step=0.1, reaction_duration=3.0,
 dynamics.plot_curves(colors=['darkorange', 'green'], show_intervals=True, title_prefix="WITHOUT enzyme")
 
 # %% [markdown]
-# #### Note how the time steps get automatically adjusted, as needed by the amount of change - include a complete step abort/redo at time=0
+# #### Note how the time steps get automatically adjusted, as needed by the amount of change - including a complete step abort/redo at time=0
 
 # %%
 dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
@@ -86,7 +87,7 @@ dynamics.is_in_equilibrium(tolerance=3)
 # ### `A` + `E` <-> `B` + `E`
 
 # %% [markdown]
-# ### Note: for the sake of the demo, we'll completely ignore the concomitant reaction A <-> B
+# ### Note: for the sake of the demo, we'll completely ignore the concomitant (much slower) direct reaction A <-> B
 # This in an approximation that we'll drop in later experiments
 
 # %%
@@ -101,10 +102,10 @@ chem_data.add_reaction(reactants=["A", "E"], products=["B", "E"],
 chem_data.describe_reactions()  # Notice how the enzyme `E` is noted in the printout below
 
 # %% [markdown]
-# ### Notice how, while the ratio kF/kR is the same as it was without the enzyme (since it's dictated by the energy difference), the individual values of kF and kR are now each 10 times bigger
+# ### Notice how, while the ratio kF/kR is the same as it was without the enzyme (since it's dictated by the energy difference), the individual values of kF and kR are now each 10 times bigger than before
 
 # %% [markdown]
-# ### Set the initial concentrations of all the chemicals
+# ### Set the initial concentrations of all the chemicals (to what they originally were)
 
 # %%
 dynamics = ReactionDynamics(chem_data=chem_data)
