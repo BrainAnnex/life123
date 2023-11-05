@@ -1,4 +1,4 @@
-### BETA 29 (v0.29.0) IN_PROGRESS
+### BETA 29 (v0.29.0)
 
 
 

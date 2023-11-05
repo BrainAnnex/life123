@@ -2529,7 +2529,7 @@ class ReactionDynamics:
             conc=self.get_conc_dict()   # Use the current System concentrations
 
         failures_dict = {False: []}     # 1-element dict whose value is
-        # a list of reactions that fail to meet the criterion for equilibrium
+                                        # a list of reactions that fail to meet the criterion for equilibrium
 
         if rxn_index is not None:
             # Check the 1 given reaction
@@ -2543,7 +2543,7 @@ class ReactionDynamics:
 
         else:
             # Check all the reactions
-            status = True   # Overall status
+            status = True       # Overall status
             description_list = self.chem_data.multiple_reactions_describe(concise=True)
             for i in range(self.chem_data.number_of_reactions()):
                 # For each reaction
