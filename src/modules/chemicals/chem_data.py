@@ -1,5 +1,6 @@
-from typing import Union, List, NamedTuple
+from typing import Union, List, NamedTuple, Set
 from src.modules.reactions.reaction import Reaction
+import pandas as pd
 
 
 
@@ -7,20 +8,25 @@ class ChemCore():
     """
     Core data about the chemical species, such as their names and indexes (position in their listing)
 
-    End users will generally utilize the class ChemData, which extends this one
+    Note: end users will generally utilize the class ChemData, which extends this one
     """
 
     def __init__(self):
 
         self.chemical_data = [] # Basic data for all chemicals, *except* water and macro-molecules
-        # EXAMPLE: [{"name": "A"} ,
-        #           {"name": "B", "note": "some note"}]
-        # The position in the list is referred to as the "index" of that chemical
-        # TODO: maybe use a Pandas dataframe
+                                # EXAMPLE: [{"name": "A"} ,
+                                #           {"name": "B", "note": "some note"}]
+                                # The position in the list is referred to as the "index" of that chemical
+                                # TODO: maybe use a Pandas dataframe
 
         self.name_dict = {}     # To map assigned names to their positional index (in the ordered list of chemicals);
-        # this is automatically set and maintained
-        # EXAMPLE: {"A": 0, "B": 1, "C": 2}
+                                # this is automatically set and maintained
+                                # EXAMPLE: {"A": 0, "B": 1, "C": 2}
+
+        self.active_chemicals = set()   # Set of INDEXES of chemicals - not counting catalysts - involved
+                                        # in any of the reactions
+
+        self.active_enzymes = set()     # Set of INDEXES of enzymes (catalysts) involved in any of the reactions
 
 
 
@@ -42,8 +48,12 @@ class ChemCore():
         :return:                None
         """
         n_species = self.number_of_chemicals()
-        assert (type(species_index) == int) and (0 <= species_index < n_species), \
-            f"The requested species index ({species_index}) is not the expected integer the range [0 - {n_species - 1}], inclusive"
+        assert type(species_index) == int,  f"The requested species index ({species_index}) is not an integer: " \
+                                            f"it has type {type(species_index)}"
+
+        assert 0 <= species_index < n_species, \
+            f"The requested species index ({species_index}) is not the expected integer the range [0 - {n_species - 1}], inclusive.  " \
+            f"There is no chemical species assigned to index {species_index}"
 
 
 
@@ -79,32 +89,69 @@ class ChemCore():
 
 
 
-    def get_all_names(self) -> [Union[str, None]]:
+    def get_all_names(self) -> [str]:
         """
         Return a list with the names of all the chemical species, in their index order.
-        If any is missing, None is used     TODO: raise an Exception instead
+        If any is missing or blank, an Exception instead
 
-        :return:    A list of strings
+        :return:    A list of strings with the chemical names,
+                        in their registered index order
         """
-        return [c.get("name", None)
-                for c in self.chemical_data]
+        all_names = []
+        for i, c in enumerate(self.chemical_data):
+            name = c.get("name", None)
+            assert name, f"get_all_names(): missing or blank chemical name in index position {i}"
+            all_names.append(name)
+
+        return all_names
 
 
 
-    def add_chemical_species(self, name, note=None) -> int:     # TODO: test
+    def all_chemicals(self) -> pd.DataFrame:
         """
+        Returns a Pandas dataframe with all the known information
+        about all the registered chemicals (not counting macro-molecules),
+        in their index order
 
-        :param name:
-        :param note:    Optional string to attach to the given chemical
-        :return:
+        :return:    A Pandas dataframe
         """
+        return pd.DataFrame(self.chemical_data)
+
+
+
+    def add_chemical(self, name :str, note=None, **kwargs) -> int:
+        """
+        Register a new chemical species, with a name
+        and (optionally) :
+            - a note
+            - any other named argument(s) that the user wishes to store (i.e. arbitrary named arguments)
+
+        EXAMPLE:  add_chemical("P1", note = "my note about P1", full_name = "protein P1")
+
+        Note: if also wanting to set the diffusion rate, must use ChemData.add_chemical_with_diffusion() instead
+
+        :param name:    Name of the new chemical species to register
+        :param note:    (OPTIONAL) string to attach to the given chemical
+        :param kwargs:  (OPTIONAL) dictionary of named arguments
+        :return:        The integer index assigned to the newly-added chemical
+        """
+        assert type(name) == str, \
+            f"add_chemical_species(): a chemical's name must be provided, as a string value.  " \
+            f"What was passed ({name}) was of type {type(name)}"
+
+        assert name != "", f"add_chemical_species(): the chemical's name cannot be a blank string"
+
         index = len(self.chemical_data)     # The next available index number (list position)
         self.name_dict[name] = index
 
         if note is None:
-            self.chemical_data.append({"name": name})
+            d = {"name": name}
         else:
-            self.chemical_data.append({"name": name, "note": note})
+            d = {"name": name, "note": note}
+
+        d.update(kwargs)        # Merge dictionary kwargs into d
+
+        self.chemical_data.append(d)
 
         return index
 
@@ -126,7 +173,8 @@ class Diffusion(ChemCore):
 
         super().__init__()          # Invoke the constructor of its parent class
 
-        self.diffusion_rates = {}   # EXAMPLE: {"A": 6.4, "B": 12.0}
+        self.diffusion_rates = {}   # Values for the diffusion rates, indexed by chemical name
+                                    # EXAMPLE: {"A": 6.4, "B": 12.0}
 
 
 
@@ -196,7 +244,7 @@ class Diffusion(ChemCore):
 
 
 
-    def set_diffusion_rate(self, name: str, diff_rate) -> None:
+    def set_diffusion_rate(self, name :str, diff_rate) -> None:
         """
         Set the diffusion rate of the given chemical species (identified by its name)
 
@@ -368,24 +416,30 @@ class AllReactions(Diffusion):
 
 
 
-    def add_chemical(self, name: str, diffusion_rate=None, note=None) -> None:
+    def add_chemical_with_diffusion(self, name :str, diffusion_rate, note=None, **kwargs) -> int:
         """
-        Register a new chemical species, with a name and (optionally) a diffusion rate.
+        Register a new chemical species, with a name, a diffusion rate (in water),
+        and (optionally) :
+            - a note
+            - any other named argument(s) that the user wishes to store (i.e. arbitrary named arguments)
+
+        EXAMPLE:  add_chemical("P1", diffusion_rate = 0.1, note = "my note about P1", full_name = "protein P1")
+
+        Note: if no diffusion is to be set, use the method add_chemical()
 
         :param name:            Name of the chemical species to add
-        :param diffusion_rate:  [OPTIONAL] Floating-point number with the diffusion rate (in water) of this chemical
+        :param diffusion_rate:  Floating-point number with the diffusion rate (in water) of this chemical
         :param note:            [OPTIONAL] Note to attach to the chemical
-        :return:                None
+        :return:                The integer index assigned to the newly-added chemical
         """
-        assert type(name) == str, \
-            f"ChemData.add_chemical(): a chemical's name must be provided, as a string value.  " \
-            f"What was passed was of type {type(name)}"
+        # Validate the diffusion_rate, if present; other arguments get validated by add_chemical()
+        self.assert_valid_diffusion(diffusion_rate)
 
-        if diffusion_rate:
-            self.assert_valid_diffusion(diffusion_rate)
-            self.set_diffusion_rate(name=name, diff_rate=diffusion_rate)
+        index = self.add_chemical(name=name, note=note, **kwargs)
 
-        self.add_chemical_species(name=name, note=note)
+        self.set_diffusion_rate(name=name, diff_rate=diffusion_rate)
+
+        return index
 
 
 
@@ -431,14 +485,19 @@ class AllReactions(Diffusion):
         :param delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
         :param delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
         :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
-        :return:                Object of type "Reaction"
-                                (note: the object variable self.reaction_list gets appended to)
-        """
 
+        :return:                Object of type "Reaction"
+                                (note: it also gets appended to the object variable self.reaction_list)
+        """
         rxn = Reaction(self, reactants, products, forward_rate, reverse_rate,
                        delta_H, delta_S, delta_G)
-
         self.reaction_list.append(rxn)
+
+        involved_chemicals = rxn.extract_chemicals_in_reaction(exclude_enzyme=True)
+
+        self.active_chemicals = self.active_chemicals.union(involved_chemicals)     # Union of sets
+        if rxn.enzyme is not None:
+            self.active_enzymes.add(rxn.enzyme)       # Add the new entry to a set
 
         return rxn
 
@@ -466,13 +525,14 @@ class AllReactions(Diffusion):
 
     def describe_reactions(self, concise=False) -> None:
         """
-        Print out a user-friendly plain-text form of all the reactions.
+        Print out a user-friendly plain-text form of ALL the reactions.
         If wanting to describe just 1 reaction, use single_reaction_describe()
 
         EXAMPLE (not concise):
             Number of reactions: 2 (at temp. 25 C)
-            (0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
-            (1) A + B <-> C  (kF = 5.0 / kR = 1.0 / Delta_G =  / K = 5.0) | 1st order in all reactants & products"
+            (0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products
+            (1) A + B <-> C  (kF = 5.0 / kR = 1.0 / Delta_G =  / K = 5.0) | 1st order in all reactants & products
+            Set of chemicals involved in the above reactions: {'CH4', 'O2', 'H2O', 'A', 'B', 'C'}
 
         :param concise:     If True, less detail is shown
         :return:            None
@@ -480,6 +540,15 @@ class AllReactions(Diffusion):
         print(f"Number of reactions: {self.number_of_reactions()} (at temp. {self.temp - 273.15:,.4g} C)")
         for description in self.multiple_reactions_describe(concise=concise):
             print(description)
+
+        if self.active_enzymes == set():    # If no enzymes were involved in any reaction
+            print(f"Set of chemicals involved in the above reactions: "
+                  f"{self.names_of_active_chemicals()}")
+        else:
+            print(f"Set of chemicals involved in the above reactions (not counting enzymes): "
+                  f"{self.names_of_active_chemicals()}")
+            print(f"Set of enzymes involved in the above reactions: "
+                  f"{self.names_of_enzymes()}")
 
 
 
@@ -522,6 +591,30 @@ class AllReactions(Diffusion):
 
 
 
+    def names_of_active_chemicals(self) -> Set[str]:
+        """
+        Return a set of the names of all the chemicals involved in ANY of reactions,
+        NOT counting catalysts
+        """
+        name_set = set()
+        for ac_index in self.active_chemicals:
+            name_set.add(self.get_name(ac_index))
+
+        return name_set
+
+
+
+    def names_of_enzymes(self) -> Set[str]:
+        """
+        Return a set of the names of all the enzymes involved in ANY of reactions
+        """
+        name_set = set()
+        for e_index in self.active_enzymes:
+            name_set.add(self.get_name(e_index))
+
+        return name_set
+
+
 
 
 ###############################################################################################################
@@ -549,18 +642,22 @@ class Macromolecules(AllReactions):
 
 
         self.macromolecules = []    # List of names.  EXAMPLE: ["M1", "M2"]
-                                    # The position in the list is referred to as the "index" of that macro-molecule
+                                    # The position in the list is referred to as the
+                                    #   "index" of that macro-molecule
                                     # Names are enforced to be unique
 
         self.binding_sites = {}     # A dict whose keys are macromolecule names.
                                     # The values are in turn dicts, indexed by binding-site number.
         # EXAMPLE:
         #       {"M1": {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)},
-        #        "M2": {1: ChemicalAffinity("C", 9.1), 2: ChemicalAffinity("B", 0.3), 3: ChemicalAffinity("A", 1.8), 4: ChemicalAffinity("C", 2.3)}
+        #        "M2": {1: ChemicalAffinity("C", 9.1), 2: ChemicalAffinity("B", 0.3),
+        #               3: ChemicalAffinity("A", 1.8), 4: ChemicalAffinity("C", 2.3)}
         #        }
-        #       where "M1", "M2" are macro-molecules, and "A", "B", "C" are bulk chemicals (such as transcription factors),
+        #       where "M1", "M2" are macro-molecules,
+        #           and "A", "B", "C" are bulk chemicals (such as transcription factors),
         #           all previously-declared;
-        #           the various ChemicalAffinity's are NamedTuples (objects) storing a ligand name and its dissociation constant at that site.
+        #           the various ChemicalAffinity's are NamedTuples (objects)
+        #           storing a ligand name and its dissociation constant at that site.
 
         # Info on Binding Site Affinities : https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6787930/
 
@@ -799,24 +896,25 @@ class ChemData(Macromolecules):
 
             - we're using a "daisy chain" of classes extending the previous one, starting from ChemCore
               and ending in this user-facing class:
-              ChemCore <- Diffusion <- AllReactions <- Macromolecules <- ChemData
+                    ChemCore <- Diffusion <- AllReactions <- Macromolecules <- ChemData
     """
     def __init__(self, names=None, diffusion_rates=None):
         """
         If chemical names and their diffusion rates are both provided, they must have the same count,
         and appear in the same order.
-        It's ok not to pass any data, and later add it.
+        It's ok to avoid passing any data at instantiation, and later add it.
         Reactions, if applicable, need to be added later by means of calls to add_reaction()
         Macro-molecules, if applicable, need to be added later
 
-        :param names:           [OPTIONAL] A list with the names of the chemicals
+        :param names:           [OPTIONAL] A single name, or list or tuple of names, of the chemicals
         :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals
                                            If diffusion rates are provided, but no names given, the names will be
                                            auto-assigned as "Chemical 1", "Chemical 2", ...
+        TODO: allow a way to optionally pass macromolecules as well
         """
         super().__init__()       # Invoke the constructor of its parent class
 
-        # Initialize
+        # Initialize with the passed data, if provided
         if (names is not None) or (diffusion_rates is not None):
             self.init_chemical_data(names, diffusion_rates)
 
@@ -832,21 +930,27 @@ class ChemData(Macromolecules):
         IMPORTANT: this function can be invoked only once, before any chemical data is set.
                    To add new chemicals later, use add_chemical()
 
-        :param names:           [OPTIONAL] List or tuple of the names of the chemical species
+        :param names:           [OPTIONAL] A single name, or list or tuple of names, of the chemicals
         :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals,
                                            in the same order as the names
         :return:                None
         """
-        # Validate
-        assert self.number_of_chemicals() == 0, \
-            f"ChemData.init_chemical_data(): function can be invoked only once, before any chemical data is set"
-
         n_species = self.number_of_chemicals()
+
+        # Validate
+        assert n_species == 0, \
+            f"ChemData.init_chemical_data(): this function can be invoked only once, before any chemical data is set"
+
 
         if names:
             arg_type = type(names)
-            assert arg_type == list or arg_type == tuple, \
-                f"ChemData.init_chemical_data(): the `names` argument must be a list or tuple.  What was passed was of type {arg_type}"
+            if arg_type == str:
+                names = [names]     # Turn a single name into a list
+            else:
+                assert arg_type == list or arg_type == tuple, \
+                    f"ChemData.init_chemical_data(): the `names` argument must be a list or tuple, or a string for a single name.  " \
+                    f"What was passed was of type {arg_type}"
+
             if n_species != 0:
                 assert len(names) == n_species, \
                     f"ChemData.init_chemical_data(): the passed number of names ({len(names)}) " \
@@ -872,12 +976,12 @@ class ChemData(Macromolecules):
             if diffusion_rates is None:   # The strings "Chemical 1", "Chemical 2", ..., will be used as names
                 for i in range(n_species):
                     assigned_name = f"Chemical {i+1}"
-                    self.add_chemical_species(assigned_name)
+                    self.add_chemical(assigned_name)
             else:
                 for i, diff in enumerate(diffusion_rates):
                     assigned_name = f"Chemical {i+1}"
                     self.assert_valid_diffusion(diff)
-                    self.add_chemical_species(assigned_name)
+                    self.add_chemical(assigned_name)
                     self.set_diffusion_rate(name=assigned_name, diff_rate=diff)
 
         else:   # names is not None
@@ -885,11 +989,11 @@ class ChemData(Macromolecules):
                 assert type(chem_name) == str, \
                     f"ChemData.init_chemical_data(): all the names must be strings.  The passed value ({chem_name}) is of type {type(chem_name)}"
                 if diffusion_rates is None:
-                    self.add_chemical_species(chem_name)
+                    self.add_chemical(chem_name)
                 else:
                     diff = diffusion_rates[i]
                     self.assert_valid_diffusion(diff)
-                    self.add_chemical_species(chem_name)
+                    self.add_chemical(chem_name)
                     self.set_diffusion_rate(name=chem_name, diff_rate=diff)
 
 
@@ -951,7 +1055,7 @@ class ChemData(Macromolecules):
             rxn_properties = rxn.extract_rxn_properties()
             for k,v in rxn_properties.items():
                 node_data[k] = f"{v:,.6g}"
-                #'kF': self.extract_forward_rate(rxn), 'kR': self.extract_back_rate(rxn)})
+                #'kF': self.extract_forward_rate(rxn), 'kR': self.extract_reverse_rate(rxn)})
 
             graph_data.append(node_data)
 

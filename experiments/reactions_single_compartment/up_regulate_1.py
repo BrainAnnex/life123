@@ -21,7 +21,7 @@
 #
 # See also the experiment "1D/reactions/up_regulation_1"
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Nov. 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -110,7 +110,7 @@ dynamics.is_in_equilibrium()
 # # Now, let's suddenly increase [A]
 
 # %%
-dynamics.set_chem_conc(species_name="A", conc=50., snapshot=True)
+dynamics.set_single_conc(species_name="A", conc=50., snapshot=True)
 dynamics.describe_state()
 
 # %%
@@ -145,7 +145,7 @@ dynamics.is_in_equilibrium()
 # # Let's again suddenly increase [A]
 
 # %%
-dynamics.set_chem_conc(species_name="A", conc=30., snapshot=True)
+dynamics.set_single_conc(species_name="A", conc=30., snapshot=True)
 dynamics.describe_state()
 
 # %%

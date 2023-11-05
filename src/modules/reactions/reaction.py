@@ -1,6 +1,6 @@
-from typing import Union
-import math
+from typing import Union, Set
 import numpy as np
+from src.modules.reactions.thermodynamics import ThermoDynamics
 
 
 class Reaction:
@@ -13,34 +13,29 @@ class Reaction:
         - list of involved enzymes
 
 
-    (Note: this will eventually be stored in a Neo4j graph database)
+    (Note: this data will eventually be stored in a Neo4j graph database)
 
     Each reaction contains:
             "reactants"
             "products"
             "kF"    (forward reaction rate constant)
             "kR"    (reverse reaction rate constant)
-            "K"     (equilibrium constant - from either kinetic or thermodynamic data; if both present, they must match up!)
-            "Delta_H" (change in Enthalpy: Enthalpy of Products - Enthalpy of Reactants)
-            "Delta_S" (change in Entropy)
-            "Delta_G" (change in Gibbs Free Energy)
-                        Note - at constant temperature T :  Delta_G = Delta_H - T * Delta_S
-                        Equilibrium constant = exp(-Delta_G / RT)
-            "enzymes" (list of the indices of the chemical species that appear as catalysts in the reaction)
+            "enzyme" (the index of a chemical that catalyzes this reaction)
+            "macro_enzyme" (The pair (macromolecule name, binding site number))
+            plus thermodynamic data: delta_H, delta_S, delta_G, K (equilibrium constant) -
+                                     for details see class "ThermoDynamics"
 
         Each Reactant and each Product is a triplet of the form: (stoichiometry, species index, reaction order).
-        The "reaction order" refers to the forward reaction for reactants, and the reverse reaction for products.
+        The "reaction order" in that triplet refers to the forward reaction for reactants, and the reverse reaction for products.
+        Note that reactants and products might be catalysts
     """
-
-    # Class Attribute
-    R = 8.314462           # Ideal gas constant, in units of Joules / (Kelvin * Mole)
 
 
     def __init__(self, chem_data, reactants: Union[int, str, list], products: Union[int, str, list],
                  forward_rate=None, reverse_rate=None,
                  delta_H=None, delta_S=None, delta_G=None):
         """
-       Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
+        Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
         The involved chemicals must be already registered - use add_chemical() if needed.
 
         NOTE: in the reactants and products, if the stoichiometry and/or reaction order aren't specified,
@@ -55,10 +50,10 @@ class Reaction:
                     It's equally acceptable to use LISTS in lieu of tuples
 
         :param chem_data:       Object of type "ReactionData"
-        :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
+        :param reactants:       A list of triplets (stoichiometry, species name, reaction order),
                                     or simplified terms in various formats; for details, see above.
                                     If not a list, it will get turned into one
-        :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction),
+        :param products:        A list of triplets (stoichiometry, species name, reaction order of REVERSE reaction),
                                     or simplified terms in various formats; for details, see above.
                                     If not a list, it will get turned into one
         :param forward_rate:    [OPTIONAL] Forward reaction rate constant
@@ -72,20 +67,23 @@ class Reaction:
         
         self.reactants = None
         self.products = None
-        self.kF = None
-        self.kR = None
-        self.Delta_H = None
-        self.Delta_S = None
-        self.Delta_G = None
+        self.kF = forward_rate
+        self.kR = reverse_rate
+        self.delta_H = delta_H
+        self.delta_S = delta_S
+        self.delta_G = delta_G
         self.K = None
-        self.enzyme = None
+        self.enzyme = None          # The INDEX of a chemical that catalyzes this reaction, if applicable
+                                    #   Note: enzymes are automatically extracted from the reaction formula
+        self.macro_enzyme = None    # The pair (macromolecule name, binding site number)
+                                    #   EXAMPLE: ("M2", 5)          TODO: maybe turn into a data object
 
-        assert reactants is not None, "Reaction(): the argument `reactants` is a required one, and can't be None"
+        assert reactants is not None, "Reaction(): the argument `reactants` is a required one; it can't be None"
         if type(reactants) != list:
             reactants = [reactants]
 
 
-        assert products is not None, "Reaction(): the argument `products` is a required one, and can't be None"
+        assert products is not None, "Reaction(): the argument `products` is a required one; it can't be None"
         if type(products) != list:
             products = [products]
 
@@ -93,13 +91,13 @@ class Reaction:
         reactant_list = [self._parse_reaction_term(r, "reactant") for r in reactants]   # A list of triples of integers
         product_list = [self._parse_reaction_term(r, "product") for r in products]      # A list of triples of integers
 
-        # TODO: use a more sophisticated approach to catch identical reaction sides even if
-        #       terms are reshuffled
-        assert reactant_list != product_list, \
-            f"Reaction(): the reactants and the products can't all be identical! " \
-            f"Internal structure: {reactant_list}"
+        # Catch identical reaction sides, even if terms are reshuffled
+        assert set(reactant_list) != set(product_list), \
+            f"Reaction(): the two sides of the reaction can't be identical! " \
+            f"Same reactants and products: {self._standard_form_chem_eqn(reactant_list)}"
 
-        # Locate any enzymes (catalysts) that might be present
+
+        # Locate any enzymes (catalysts) that might be present - though for now a warning is issued if more than 1
         enzyme_list = []
         for reactant in reactant_list:
             if reactant in product_list:
@@ -118,64 +116,28 @@ class Reaction:
         if number_enzymes >= 1:
             self.enzyme = enzyme_list[0]    # In the irregular scenarios that there appear to be multiple enzymes, only one
                                             #   is considered, and a warning is printed out (the other apparent enzyme
-                                            #   will be treated as any other reagent/produce)
-
+                                            #   will be treated as any other reagent/product)
         if number_enzymes > 1:
             print(f"Reaction(): WARNING - the reaction appears to have multiple enzymes:"
                   f" {[self.chem_data.get_name(e) for e in enzyme_list]}")
 
 
-        # Process kinetic data, if available
-        if forward_rate:
-            self.kF = forward_rate
-
-        if reverse_rate:
-            self.kR = reverse_rate
-            if forward_rate:
-                # If all the kinetic data is available...
-                equil_const = forward_rate / reverse_rate    # ...compute the equilibrium constant (from kinetic data)
-                self.K = equil_const
-                if self.chem_data.temp:
-                    self.Delta_G = - self.R * self.chem_data.temp * math.log(equil_const)   # the change in Gibbs Free Energy
+        # Process the kinetic and thermodynamic data, and update various object attributes accordingly
+        self._set_kinetic_and_thermodynamic(forward_rate=forward_rate, reverse_rate=reverse_rate,
+                                            delta_H=delta_H, delta_S=delta_S, delta_G=delta_G, temp=self.chem_data.temp)
 
 
-        # Process thermodynamic data, if available
-        if delta_H is not None:
-            self.Delta_H = delta_H
 
-        if delta_S is not None:
-            self.Delta_S = delta_S
-            if (self.chem_data.temp is not None) and (delta_H is not None):
-                # If all the thermodynamic data is available...
-                delta_G = delta_H - self.chem_data.temp * delta_S                  # ...compute the change in Gibbs Free Energy
+    def set_macro_enzyme(self, macromolecule: str, site_number: int) -> None:
+        """
+        Register that the given macromolecule, at the given site on it,
+        catalyzes this reaction
 
-                if self.Delta_G is not None:      # If already set from kinetic data, make sure that the two match!
-                    assert np.allclose(delta_G, self.Delta_G), \
-                        f"define_reaction(): Kinetic data (leading to Delta_G {self.Delta_G}) " \
-                        f"is inconsistent with thermodynamic data (leading to Delta_G {delta_G})"
-                else:
-                    # The kinetic data was incomplete; fill in the missing parts from the thermodynamic data
-                    self.Delta_G = delta_G
-                    equil_const = math.exp(- delta_G / (self.R * self.chem_data.temp))    # Compute the equilibrium constant (from the thermodynamic data)
-                    self.K = equil_const
-                    # If only one of the Forward or Reverse rates was provided, compute the other one
-                    if (self.kF is None) and (self.kR is not None):
-                        self.kF = equil_const * self.kR
-                    if (self.kR is None) and (self.kF is not None):
-                        self.kR = self.kF / equil_const
-
-        # TODO: add more combinations of arguments supplied
-        elif (delta_G is not None) and (self.chem_data.temp is not None):
-            # The kinetic data was incomplete; fill in the missing parts from the thermodynamic data
-            self.Delta_G = delta_G
-            equil_const = math.exp(- delta_G / (self.R * self.chem_data.temp))    # Compute the equilibrium constant (from the thermodynamic data)
-            self.K = equil_const
-            # If only one of the Forward or Reverse rates was provided, compute the other one
-            if (self.kF is None) and (self.kR is not None):
-                self.kF = equil_const * self.kR
-            if (self.kR is None) and (self.kF is not None):
-                self.kR = self.kF / equil_const
-
+        :param macromolecule:   Name of macromolecule acting as a catalyst
+        :param site_number:     Integer to identify a binding site on the above macromolecule
+        :return:                None
+        """
+        self.macro_enzyme = (macromolecule, site_number)
 
 
 
@@ -235,7 +197,7 @@ class Reaction:
     def extract_forward_rate(self) -> float:
         """
 
-        :return:    The value of the forward rate constant for the above reaction
+        :return:    The value of the forward rate constant for this reaction
         """
         return self.kF
 
@@ -243,9 +205,21 @@ class Reaction:
     def extract_reverse_rate(self) -> float:
         """
 
-        :return:    The value of the reverse (back) rate constant for the above reaction
+        :return:    The value of the reverse (back) rate constant for this reaction
         """
         return self.kR
+
+
+
+    def unpack_for_dynamics(self) -> tuple:
+        """
+        A convenient unpacking meant for dynamics simulations
+        that need the reactants, the products, and the forward and reverse rate constants
+
+        :return:    A 4-element tuple, containing:
+                        (reactants , products , forward rate constant , reverse rate constant)
+        """
+        return (self.reactants, self.products, self.kF, self.kR)
 
 
 
@@ -253,8 +227,8 @@ class Reaction:
         """
         Return the stoichiometry coefficient, from a reaction term
 
-        :param term:
-        :return:
+        :param term:    A triplet of integers representing a reaction term
+        :return:        An integer with the stoichiometry coefficient
         """
         return term[0]
 
@@ -262,8 +236,8 @@ class Reaction:
         """
         Return the index of the chemical species, from a reaction term
 
-        :param term:
-        :return:
+        :param term:    A triplet of integers representing a reaction term
+        :return:        An integer with the index of the chemical species in the term
         """
         return term[1]
 
@@ -271,8 +245,8 @@ class Reaction:
         """
         Return the reaction order, from a reaction term
 
-        :param term:
-        :return:
+        :param term:    A triplet of integers representing a reaction term
+        :return:        An integer with the reaction order for this term
         """
         return term[2]
 
@@ -282,9 +256,10 @@ class Reaction:
         """
         Create a dictionary with the numerical properties of the given reaction
         (skipping any lists or None values)
-        For example, reaction rates, Delta G, equilibrium constant
+        Possible values include:
+            forward and reverse reaction rates, ΔH, ΔS, ΔG, K (equilibrium constant)
 
-        :return:    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'Delta_G': -1005.1305052750387, 'K': 1.5}
+        :return:    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': -1005.1305052750387, 'K': 1.5}
         """
         properties = {}
 
@@ -294,11 +269,14 @@ class Reaction:
         if self.kR is not None:
             properties['kR'] = self.kR
 
-        if self.Delta_G is not None:
-            properties['Delta_G'] = self.Delta_G
+        if self.delta_H is not None:
+            properties['delta_H'] = self.delta_H
 
-        if self.Delta_G is not None:
-            properties['Delta_G'] = self.Delta_G
+        if self.delta_S is not None:
+            properties['delta_S'] = self.delta_S
+
+        if self.delta_G is not None:
+            properties['delta_G'] = self.delta_G
 
         if self.K is not None:
             properties['K'] = self.K
@@ -307,12 +285,15 @@ class Reaction:
 
 
 
-    def extract_chemicals_in_reaction(self) -> {int}:
+    def extract_chemicals_in_reaction(self, exclude_enzyme=False) -> Set[int]:
         """
         Return a SET of indices (being a set, it's NOT in any particular order)
-        of all the chemicals in the specified reaction
+        identifying all the chemicals appearing in this reaction.
+        Optionally, exclude any that participate in a catalytic role
+        (appearing identically on both sides of the reaction)
 
-        :return:            A SET of indices of the chemicals involved in the above reaction
+        :param exclude_enzyme:  If True, any enzyme, if present, won't be included
+        :return:                A SET of indices of the chemicals involved in this reaction
                                 Note: being a set, it's NOT in any particular order
         """
         chem_set = set()    # Running set being built
@@ -327,6 +308,9 @@ class Reaction:
         for p in products:
             species_index = self.extract_species_index(p)
             chem_set.add(species_index)
+
+        if exclude_enzyme:
+            chem_set = chem_set - {self.enzyme}     # Difference between sets
 
         return chem_set
 
@@ -366,15 +350,20 @@ class Reaction:
         details = []
         rxn_properties = self.extract_rxn_properties()
         for k,v in rxn_properties.items():
-            details.append(f"{k} = {v:,.6g}")          # EXAMPLE: "kF = 3"
+            details.append(f"{k} = {v:,.5g}")          # EXAMPLE: "kF = 3"
 
         rxn_description += "  (" + ' / '.join(details) + ")"    # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
 
-        # If an enzyme is involved, show it
+
+        # If an ENZYME is involved, show it
         if self.enzyme is not None:
             rxn_description += f" | Enzyme: {self.chem_data.get_name(self.enzyme)}"
 
-        # Show details about the order of the reaction
+        if self.macro_enzyme is not None:
+            rxn_description += f" | Macromolecule Enzyme: {self.macro_enzyme[0]}, at site # {self.macro_enzyme[1]}"
+
+
+        # Show details about the ORDER of the reaction
         high_order = False      # Is there any term whose order is greater than 1 ?
         for r in reactants:
             if r[2] > 1:
@@ -430,6 +419,7 @@ class Reaction:
         return " + ".join(formula_list)
 
 
+
     def _parse_reaction_term(self, term: Union[int, str, tuple, list], name="term") -> (int, int, int):
         """
         Accept various ways to specify a reaction term, and return a standardized tuple form of it.
@@ -453,8 +443,8 @@ class Reaction:
                             where all terms are integers
         """
         if type(term) == str:
-            return  (1, self.chem_data.get_index(term), 1)    # Accept simply the chemical name as a shortcut
-                                                    # for when the stoichiometry coefficient and reaction order are both 1
+            return  (1, self.chem_data.get_index(term), 1)  # Accept simply the chemical name as a shortcut
+                                                            # for when the stoichiometry coefficient and reaction order are both 1
         elif type(term) != tuple and type(term) != list:
             raise Exception(f"_parse_reaction_term(): {name} item must be either a string (a chemical name), "
                             f"or a pair (stoichiometry coeff, name) or a triplet (stoichiometry coeff, name, reaction order). "
@@ -465,6 +455,9 @@ class Reaction:
             raise Exception(f"_parse_reaction_term(): Unexpected length for {name} tuple/list: it should be 2 or 3. Instead, it is {len(term)}")
 
         stoichiometry = term[0]
+        assert type(stoichiometry) == int, \
+            f"_parse_reaction_term(): The stoichiometry coefficient, if provided, must be an integer. Instead, it is {stoichiometry}"
+
         species = term[1]
         if type(species) == str:
             species = self.chem_data.get_index(species)
@@ -476,3 +469,75 @@ class Reaction:
         else:   # Length is 3
             reaction_order = term[2]
             return (stoichiometry, species, reaction_order)
+
+
+
+    def _set_kinetic_and_thermodynamic(self, forward_rate, reverse_rate,
+                                       delta_H, delta_S, delta_G, temp) -> None:
+        """
+        Set all the kinetic and thermodynamic data derivable - directly or indirectly - from the passed arguments,
+        storing it in object attributes.
+        Raise an Exception if any inconsistency is detected.
+
+        :return:    None
+        """
+        self.kF = forward_rate
+        self.kR = reverse_rate
+        self.delta_H = delta_H
+        self.delta_S = delta_S
+        self.delta_G = delta_G
+
+
+        # Process kinetic data, if available
+        #       (extracting thermodynamic data when feasible)
+        if (self.kF is not None) and (self.kR is not None):
+            # If all the kinetic data is available...
+            self.K = self.kF / self.kR    # ...compute the equilibrium constant (from kinetic data)
+
+            if temp:
+                # If the temperature is set, compute the change in Gibbs Free Energy
+                delta_G_kinetic = ThermoDynamics.delta_G_from_K(K = self.K, temp = temp)
+                if self.delta_G is None:
+                    self.delta_G = delta_G_kinetic
+                else:   # If already present (passed as argument), make sure that the two match!
+                    assert np.allclose(delta_G_kinetic, self.delta_G), \
+                        f"_set_kinetic_and_thermodynamic(): Kinetic data (leading to Delta_G={delta_G_kinetic}) " \
+                        f"is inconsistent with the passed value of Delta_G={self.delta_G})"
+
+
+        if (self.delta_H is not None) and (self.delta_S is not None) and (temp is not None):
+            # If all the thermodynamic data (possibly except delta_G) is available...
+
+            # Compute the change in Gibbs Free Energy from delta_H and delta_S, at the current temperature
+            delta_G_thermo = ThermoDynamics.delta_G_from_enthalpy(delta_H = self.delta_H, delta_S = self.delta_S, temp = temp)
+
+            if self.delta_G is None:
+                self.delta_G = delta_G_thermo
+            else:  # If already present (passed as argument or was set from kinetic data), make sure that the two match!
+                if not np.allclose(delta_G_thermo, self.delta_G):
+                    if delta_G is not None:
+                        raise Exception(f"_set_kinetic_and_thermodynamic(): thermodynamic data (leading to Delta_G={delta_G_thermo}) "
+                                        f"is inconsistent with the passed value of delta_G={delta_G})")
+                    else:
+                        raise Exception(f"_set_kinetic_and_thermodynamic(): thermodynamic data (leading to Delta_G={delta_G_thermo}) "
+                                        f"is inconsistent with kinetic data (leading to Delta_G={self.delta_G})")
+
+
+        if self.delta_G is not None:
+            if (self.K is None) and (temp is not None):
+                # If the temperature is known, compute the equilibrium constant (from the thermodynamic data)
+                # Note: no need to do it if self.K is present, because we ALREADY handled that case
+                self.K = ThermoDynamics.K_from_delta_G(delta_G = self.delta_G, temp = temp)
+
+                # If only one of the Forward or Reverse rates was provided, compute the other one
+                if (self.kF is None) and (self.kR is not None):
+                    self.kF = self.K * self.kR
+                if (self.kR is None) and (self.kF is not None):
+                    self.kR = self.kF / self.K
+
+            if temp is not None:
+                # If either Enthalpy or Entropy is missing, but the other one is known, compute the missing one
+                if (self.delta_H is None) and (self.delta_S is not None):
+                    self.delta_H = ThermoDynamics.delta_H_from_gibbs(delta_G=self.delta_G, delta_S=self.delta_S, temp=temp)
+                elif (self.delta_H is not None) and (self.delta_S is None):
+                    self.delta_S = ThermoDynamics.delta_S_from_gibbs(delta_G=self.delta_G, delta_H=self.delta_H, temp=temp)

@@ -26,7 +26,7 @@
 #
 # Note: numerical errors in the same reactions (with the same initial conditions) is explored in the experiment "large_time_steps_2"
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Nov. 4, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -127,7 +127,7 @@ dynamics.is_in_equilibrium()
 dynamics.describe_state()
 
 # %%
-dynamics.set_chem_conc(species_name="U", conc=100.)
+dynamics.set_single_conc(species_name="U", conc=100.)
 dynamics.describe_state()
 
 # %%
@@ -165,7 +165,7 @@ dynamics.is_in_equilibrium()
 dynamics.describe_state()
 
 # %%
-dynamics.set_chem_conc(species_name="U", conc=150.)
+dynamics.set_single_conc(species_name="U", conc=150.)
 dynamics.describe_state()
 
 # %%
@@ -201,7 +201,7 @@ dynamics.is_in_equilibrium(explain=False)
 dynamics.describe_state()
 
 # %%
-dynamics.set_chem_conc(species_name="U", conc=80.)
+dynamics.set_single_conc(species_name="U", conc=80.)
 dynamics.describe_state()
 
 # %%

@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-#from src.modules.chemicals.experimental_3 import ChemData
+import pandas as pd
 from src.modules.chemicals.chem_data import ChemData
 
 
@@ -16,10 +16,10 @@ def test_initialize():
     assert chem_data.diffusion_rates == {}
 
     with pytest.raises(Exception):
-        ChemData(names='this is not a list')   # Not a list/tuple
+        ChemData(names=123)     # Not a list/tuple/str
 
     with pytest.raises(Exception):
-        ChemData(names=[1, 2])   # The names aren't strings
+        ChemData(names=[1, 2])  # The names aren't strings
 
     chem_data = ChemData(diffusion_rates=[0.15, 1.2])
     assert chem_data.number_of_chemicals() == 2
@@ -61,10 +61,20 @@ def test_number_of_chemicals():
 
 
 def test_assert_valid_species_index():
-    pass    # TODO
+    chem_data = ChemData(names=['A', 'B', 'C'])
+    chem_data.assert_valid_species_index(0)
+    chem_data.assert_valid_species_index(1)
+    chem_data.assert_valid_species_index(2)
 
-def test_assert_valid_diffusion():
-    pass    # TODO
+    with pytest.raises(Exception):
+        chem_data.assert_valid_species_index(3)     # Too large
+
+    with pytest.raises(Exception):
+        chem_data.assert_valid_species_index(-1)    # Too small
+
+    with pytest.raises(Exception):
+        chem_data.assert_valid_species_index("2")   # Not an int
+
 
 
 
@@ -96,16 +106,79 @@ def test_get_name():
 
 
 def test_get_all_names():
-    pass    # TODO
+    chem_data = ChemData(names=['A', 'B', 'C'])
+    assert chem_data.get_all_names() == ['A', 'B', 'C']
 
-def test_get_diffusion_rate():
-    pass    # TODO
+    # Reach into the internal data structure, to mess up some names
+    chem_data.chemical_data = [{'name': 'A'}, {'name': ''}, {'name': 'C'}]
 
-def test_get_all_diffusion_rates():
-    pass    # TODO
+    with pytest.raises(Exception):
+        chem_data.get_all_names()   # The former name 'B' is now a blank
 
-def test_missing_diffusion_rate():
-    pass    # TODO
+    chem_data.chemical_data = [{'name': 'A'}, {'name': 'B'}, {}]
+
+    with pytest.raises(Exception):
+        chem_data.get_all_names()   # The former name 'B' is now missing
+
+
+
+def test_all_chemicals():
+    chem_data = ChemData(names=['A', 'B'])
+    chem_data.add_chemical("C", note="this is C", formula="CH4", cost="200")
+    chem_data.add_chemical_with_diffusion("D", diffusion_rate=10, note="this is D")
+
+    result = chem_data.all_chemicals()
+    expected_recordset = [{'name': 'A'}, {'name': 'B'}, {'name': 'C', 'note': 'this is C', 'formula': 'CH4', 'cost': '200'}, {'name': 'D', 'note': 'this is D'}]
+    expected_df = pd.DataFrame(expected_recordset)
+
+    assert expected_df.equals(result)
+
+
+
+def test_add_chemical():
+    chem_data = ChemData()
+    assert chem_data.number_of_chemicals() == 0
+    assert chem_data.chemical_data == []
+
+    result = chem_data.add_chemical("A")
+    assert result == 0
+    assert chem_data.number_of_chemicals() == 1
+    assert chem_data.chemical_data == [{"name": "A"}]
+    assert chem_data.name_dict == {"A": 0}
+
+    result = chem_data.add_chemical("B", note="some note")
+    assert result == 1
+    assert chem_data.number_of_chemicals() == 2
+    assert chem_data.chemical_data == [{"name": "A"}, {"name": "B", "note": "some note"}]
+    assert chem_data.name_dict == {"A": 0, "B": 1}
+
+    result = chem_data.add_chemical("C")
+    assert result == 2
+    assert chem_data.number_of_chemicals() == 3
+    assert chem_data.chemical_data == [{"name": "A"}, {"name": "B", "note": "some note"}, {"name": "C"}]
+    assert chem_data.name_dict == {"A": 0, "B": 1, "C": 2}
+
+
+    # Re-start
+    chem_data = ChemData(names="X")
+
+    result = chem_data.add_chemical("Y", note="test")
+    assert result == 1
+    assert chem_data.number_of_chemicals() == 2
+    assert chem_data.chemical_data == [{"name": "X"}, {"name": "Y", "note": "test"}]
+    assert chem_data.name_dict == {"X": 0, "Y": 1}
+
+    result = chem_data.add_chemical("Z", formula="CH3OH")
+    assert result == 2
+    assert chem_data.number_of_chemicals() == 3
+    assert chem_data.chemical_data == [{"name": "X"}, {"name": "Y", "note": "test"}, {"name": "Z", "formula": "CH3OH"}]
+    assert chem_data.name_dict == {"X": 0, "Y": 1, "Z": 2}
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name=123)    # Name is not a string
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name="")
 
 
 
@@ -192,7 +265,7 @@ def test_init_chemical_data():
 
     with pytest.raises(Exception):
         chem_data = ChemData()
-        chem_data.init_chemical_data(names="Do I look like a list??")
+        chem_data.init_chemical_data(names=123) # Not a list/tuple/str
 
     with pytest.raises(Exception):
         chem_data = ChemData(names=['A', 'B', 'C'])
@@ -213,36 +286,44 @@ def test_init_chemical_data():
 
 
 
-def test_add_chemical():
+def test_add_chemical_with_diffusion():
     chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2, 3.14])
     assert chem_data.number_of_chemicals() == 3
     assert chem_data.get_all_names() == ['A', 'B', 'C']
     assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14])
 
-    chem_data.add_chemical(name="D", diffusion_rate=8)
+    chem_data.add_chemical_with_diffusion(name="D", diffusion_rate=8)
     assert chem_data.number_of_chemicals() == 4
     assert chem_data.get_all_names() == ['A', 'B', 'C', 'D']
     assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14, 8])
-    with pytest.raises(Exception):
-        chem_data.add_chemical(name="E", diffusion_rate="I'm not a number")
+    assert chem_data.chemical_data == [ {'name': 'A'}, {'name': 'B'}, {'name': 'C'}, {'name': 'D'}]
 
     with pytest.raises(Exception):
-        chem_data.add_chemical(name="E", diffusion_rate=-666.)
+        chem_data.add_chemical_with_diffusion(name="E", diffusion_rate="I'm not a number")
 
     with pytest.raises(Exception):
-        chem_data.add_chemical(name=666, diffusion_rate=25.)    # Wrong type for name
+        chem_data.add_chemical_with_diffusion(name="E", diffusion_rate=-666.)
 
-    chem_data.add_chemical(name="E", diffusion_rate=25.)
+    with pytest.raises(Exception):
+        chem_data.add_chemical_with_diffusion(name=666, diffusion_rate=25.)    # Wrong type for name
+
+    chem_data.add_chemical_with_diffusion(name="E", diffusion_rate=25., note="my note", some_field="some value")
     assert chem_data.number_of_chemicals() == 5
     assert chem_data.get_all_names() == ['A', 'B', 'C', 'D', 'E']
     assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14, 8, 25])
+    assert chem_data.chemical_data == [ {'name': 'A'}, {'name': 'B'}, {'name': 'C'}, {'name': 'D'},
+                                        {'name': 'E', 'note': 'my note', 'some_field': 'some value'}]
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical_with_diffusion(name="", diffusion_rate=25.)
 
 
 
-####  MACRO-MOLECULES  ####
+
+##########  MACRO-MOLECULES  ##########
 
 def test_add_macromolecules():
     chem_data = ChemData()
@@ -465,9 +546,9 @@ def test_add_reaction():
     assert np.allclose(r.K , 3./2.)
     assert r.reactants == [(1, 0, 1)]
     assert r.products == [(1, 1, 1)]
-    assert r.Delta_H is None
-    assert r.Delta_S is None
-    assert r.Delta_G is None
+    assert r.delta_H is None
+    assert r.delta_S is None
+    assert r.delta_G is None
 
     assert chem.get_reactants(0) == [(1, 0, 1)]
     assert chem.get_reactants_formula(0) == "A"
@@ -477,6 +558,9 @@ def test_add_reaction():
 
     assert np.allclose(chem.get_forward_rate(0), 3.)
     assert np.allclose(chem.get_reverse_rate(0),  2.)
+
+    assert chem.active_chemicals == {0, 1}
+    assert chem.active_enzymes == set()
 
 
     # Another reaction (reaction 1)
@@ -490,9 +574,9 @@ def test_add_reaction():
     assert np.allclose(r.K , 3./2.)
     assert r.reactants == [(1, 0, 1)]
     assert r.products == [(1, 1, 1)]
-    assert r.Delta_H is None
-    assert r.Delta_S is None
-    assert r.Delta_G is None
+    assert r.delta_H is None
+    assert r.delta_S is None
+    assert r.delta_G is None
 
     r = chem.get_reaction(1)
     assert np.allclose(r.kF , 9.)
@@ -500,9 +584,12 @@ def test_add_reaction():
     assert np.allclose(r.K , 9./7.)
     assert r.reactants == [(2, 1, 1)]
     assert r.products == [(5, 2, 1)]
-    assert r.Delta_H is None
-    assert r.Delta_S is None
-    assert r.Delta_G is None
+    assert r.delta_H is None
+    assert r.delta_S is None
+    assert r.delta_G is None
+
+    assert chem.active_chemicals == {0, 1, 2}
+    assert chem.active_enzymes == set()
 
 
     # Add another reaction (reaction index 2).  This time, first set the temperature
@@ -517,9 +604,12 @@ def test_add_reaction():
     assert np.allclose(r.K , 11./13.)
     assert r.reactants == [(2, 3, 3)]
     assert r.products == [(1, 2, 2)]
-    assert r.Delta_H is None
-    assert r.Delta_S is None
-    assert np.allclose(r.Delta_G , 277.7928942715384)   # - RT log(K)
+    assert r.delta_H is None
+    assert r.delta_S is None
+    assert np.allclose(r.delta_G, 277.7928942715384)   # - RT log(K)
+
+    assert chem.active_chemicals == {0, 1, 2, 3}
+    assert chem.active_enzymes == set()
 
 
     # Add a multi-term reaction (reaction index 3)
@@ -532,16 +622,20 @@ def test_add_reaction():
     assert np.allclose(r.K , 5./1.)
     assert r.reactants == [(1, 0, 1), (2, 1, 1)]
     assert r.products == [(3, 2, 2), (1, 3, 1)]
-    assert r.Delta_H is None
-    assert r.Delta_S is None
-    assert np.allclose(r.Delta_G , -2676.321364705849)   # - RT log(K)
+    assert r.delta_H is None
+    assert r.delta_S is None
+    assert np.allclose(r.delta_G, -2676.321364705849)   # - RT log(K)
+
+    assert chem.active_chemicals == {0, 1, 2, 3}
+    assert chem.active_enzymes == set()
+
 
     # Check the descriptions we has so far
     rxn_info = chem.multiple_reactions_describe()
     assert rxn_info[0] == '0: A <-> B  (kF = 3 / kR = 2 / K = 1.5) | 1st order in all reactants & products'
-    assert rxn_info[1] == '1: 2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.28571) | 1st order in all reactants & products'
-    assert rxn_info[2] == '2: 2 D <-> C  (kF = 11 / kR = 13 / Delta_G = 277.793 / K = 0.846154) | 3-th order in reactant D | 2-th order in product C'
-    assert rxn_info[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / Delta_G = -2,676.32 / K = 5) | 2-th order in product C'
+    assert rxn_info[1] == '1: 2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.2857) | 1st order in all reactants & products'
+    assert rxn_info[2] == '2: 2 D <-> C  (kF = 11 / kR = 13 / delta_G = 277.79 / K = 0.84615) | 3-th order in reactant D | 2-th order in product C'
+    assert rxn_info[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2,676.3 / K = 5) | 2-th order in product C'
 
 
     # Add another reaction (reaction index 4), this time with thermodynamic data;
@@ -553,12 +647,36 @@ def test_add_reaction():
     r = chem.get_reaction(4)
     assert r.reactants == [(1, 0, 1)]
     assert r.products == [(2, 1, 1)]
-    assert r.Delta_H == 5.
-    assert r.Delta_S == 0.4
-    assert np.allclose(r.Delta_G , -75.0)         # 5 - 200 * 0.4
+    assert r.delta_H == 5.
+    assert r.delta_S == 0.4
+    assert np.allclose(r.delta_G, -75.0)         # 5 - 200 * 0.4
     assert np.allclose(r.K , 1.0461347154679432)  # exp(75/(8.3144598 * 200))
     assert np.allclose(r.kF , 10.)
     assert np.allclose(r.kR , 9.558998331803693) # 10. / 1.0461347154679432
+
+    assert chem.active_chemicals == {0, 1, 2, 3}
+    assert chem.active_enzymes == set()
+
+
+    # Add another reaction (reaction index 5), this time involving a catalytic term
+    chem.add_reaction(reactants=[(3, "A"), "D"], products=["D", (2, "B")])
+    assert chem.number_of_reactions() == 6
+    assert chem.active_chemicals == {0, 1, 2, 3}
+    assert chem.active_enzymes == {3}       # Notice that chemical index 3 ("D) is an enzyme in this reaction,
+                                            # but an active participant in others
+
+    # Add another reaction (reaction index 6), again involving a catalytic term
+    chem.add_reaction(reactants=["F", (2, "C"), (3, "A")], products=["D", "F", (2, "D")])
+    assert chem.number_of_reactions() == 7
+    assert chem.active_chemicals == {0, 1, 2, 3}
+    assert chem.active_enzymes == {3, 5}
+
+    # Add another reaction (reaction index 7), where "F" (reaction index 5) is NOT a catalyst
+    chem.add_reaction(reactants=[(2, "B"), "F"], products=[(3, "A")])
+    assert chem.number_of_reactions() == 8
+    assert chem.active_chemicals == {0, 1, 2, 3, 5}
+    assert chem.active_enzymes == {3, 5}
+
 
 
 def test_clear_reactions_data():
@@ -590,7 +708,7 @@ def test_create_graph_network_data():
     chem.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
     network_data = chem.create_graph_network_data()
     #print(network_data)
-    expected = [{'id': 2, 'label': 'Reaction', 'name': 'RXN', 'kF': '3', 'kR': '2', 'Delta_G': '-1,005.13','K': '1.5'},
+    expected = [{'id': 2, 'label': 'Reaction', 'name': 'RXN', 'kF': '3', 'kR': '2', 'delta_G': '-1,005.13','K': '1.5'},
                 {'id': 1, 'label': 'Chemical', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
                 {'id': 3, 'name': 'produces', 'source': 2, 'target': 1},
                 {'id': 0, 'label': 'Chemical', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},

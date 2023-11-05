@@ -14,7 +14,7 @@
 # ---
 
 # %% [markdown]
-# ## Exploration of variable time steps in the simulation of the coupled reactions:
+# ## Exploration of variable time steps in the simulation of the 2 coupled reactions:
 # ### `2 S <-> U` and `S <-> X`   
 # Both mostly forward.  1st-order kinetics throughout.   
 #
@@ -22,7 +22,7 @@
 #
 # This experiment gets repeated, with very fine _fixed_ steps (as a proxy for the "exact value"), in `variable_steps_2`
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: July 23, 2023
 
 # %% [markdown]
 # ![Adaptive time steps](../../docs/variable_steps.png)
@@ -119,7 +119,7 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'], vertical_lines=transiti
                      title="Critical values of time-step changes for reactions `2 S <-> U` and `S <-> X`")
 
 # %% [markdown]
-# ## Note: the dashed lines in the plots immediatly above and below are NOT the steps; they are the "critical values", i.e. times when the step size changes.   
+# ## Note: the dashed lines in the plots immediatly above are NOT the steps; they are the "critical values", i.e. times when the step size changes.   
 # The time steps were shown in an earlier plots
 
 # %%

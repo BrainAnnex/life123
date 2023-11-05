@@ -25,7 +25,6 @@ def test_reaction_step_1():
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
 
-    #rxn = ReactionDynamics(chem_data)
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
@@ -52,7 +51,7 @@ def test_reaction_step_1b():
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
     assert chem_data.number_of_reactions() == 1
-    assert chem_data.multiple_reactions_describe() == ["0: A <-> B  (kF = 3 / kR = 2 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"]
+    assert chem_data.multiple_reactions_describe() == ["0: A <-> B  (kF = 3 / kR = 2 / delta_G = -1,005.1 / K = 1.5) | 1st order in all reactants & products"]
     assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
 
     # First step
