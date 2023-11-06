@@ -1,0 +1,317 @@
+# ---
+# jupyter:
+#   jupytext:
+#     formats: ipynb,py:percent
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.14.1
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
+# %% [markdown]
+# ## Coupled pair of reactions: `A <-> B` , and  `A` + `E` <-> `B` + `E`
+# A direct reaction and the same reaction, catalyzed
+# ### Re-run from same initial conditions of [A] and [B] for various concentations of enzyme `E`: from zero to very abundant
+#
+# LAST REVISED: Nov. 6, 2023
+
+# %%
+import set_path      # Importing this module will add the project's home directory to sys.path
+
+# %% tags=[]
+from src.modules.chemicals.chem_data import ChemData
+from src.modules.reactions.reaction_dynamics import ReactionDynamics
+
+# %%
+# Initialize the system
+chem_data = ChemData(names=["A", "B", "E"])
+
+# Reaction A <-> B , with 1st-order kinetics, favorable thermodynamics in the forward direction, 
+# and a forward rate that is much slower than it would be with the enzyme - as seen in the next reaction, below
+chem_data.add_reaction(reactants="A", products="B",
+                       forward_rate=1., delta_G=-3989.73)
+
+# Reaction A + E <-> B + E , with 1st-order kinetics, and a forward rate that is faster than it was without the enzyme
+# Thermodynamically, there's no change from the reaction without the enzyme
+chem_data.add_reaction(reactants=["A", "E"], products=["B", "E"],
+                       forward_rate=10., delta_G=-3989.73)
+
+chem_data.describe_reactions()     # Notice how the enzyme `E` is noted in the printout below
+
+# %%
+
+# %% [markdown]
+# # 1. Set the initial concentrations of all the chemicals - starting with no enzyme
+
+# %%
+dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics.set_conc(conc={"A": 20., "B": 0., "E": 0.},
+                  snapshot=True)      # Initially, no enzyme `E`
+dynamics.describe_state()
+
+# %% [markdown] tags=[]
+# ### Advance the reactions (for now without enzyme) to equilibrium
+
+# %%
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+# All of these settings are currently close to the default values... but subject to change; set for repeatability
+dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
+dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
+dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4)
+dynamics.set_error_step_factor(0.25)
+
+# Perform the reactions
+dynamics.single_compartment_react(reaction_duration=3.5,
+                                  initial_step=0.1, variable_steps=True, explain_variable_steps=False)
+
+# %%
+#dynamics.explain_time_advance()
+
+# %%
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="with ZERO enzyme")
+
+# %% [markdown]
+# ### The reactions, lacking enzyme, are proceeding slowly towards equilibrium, just like the reaction that was discussed in part 1 of the experiment "enzyme_1"
+
+# %%
+dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
+
+# %%
+# Verify that the reaction has reached equilibrium
+#dynamics.is_in_equilibrium(tolerance=3)    # TODO: fix
+
+# %%
+
+# %% [markdown]
+# # 2. Re-start all the reactions from the same initial concentrations - except for now having a little enzyme
+
+# %%
+dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
+
+# %%
+dynamics.set_conc(conc={"A": 20., "B": 0., "E": 0.2},
+                  snapshot=True)      # A tiny bit of enzyme `E`
+
+# %%
+dynamics.describe_state()
+
+# %% [markdown] tags=[]
+# ### Re-take the new system (now with a tiny amount of enzyme) to equilibrium
+
+# %%
+dynamics.single_compartment_react(reaction_duration=1.5, 
+                                  initial_step=0.05, variable_steps=True, explain_variable_steps=False)
+
+# %%
+#dynamics.explain_time_advance()
+
+# %%
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="with a tiny amount of enzyme")
+
+# %%
+dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
+
+# %% [markdown]
+# ## Notice how even a puny amount of enzyme (1/10 of the initial [A])  makes a pronounced difference!
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium()
+
+# %%
+
+# %% [markdown]
+# # 3. Re-start all the reactions from the same initial concentrations - except for now having a more substantial amount of enzyme
+
+# %%
+dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
+
+# %%
+dynamics.set_conc(conc={"A": 20., "B": 0., "E": 1.},
+                  snapshot=True)      # A more substantial amount of enzyme `E`
+
+# %%
+dynamics.describe_state()
+
+# %% [markdown] tags=[]
+# ### Re-take the new system (now with a more substantial amount of enzyme) to equilibrium
+
+# %%
+dynamics.single_compartment_react(reaction_duration=0.5, 
+                                  initial_step=0.02, variable_steps=True, explain_variable_steps=False)
+
+# %%
+#dynamics.explain_time_advance()
+
+# %%
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="with a more substantial amount of enzyme")
+
+# %%
+dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
+
+# %% [markdown]
+# ## Notice the continued - and substantial - speedup of the reaction, over the earlier runs
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium(explain=False)
+
+# %%
+
+# %% [markdown]
+# # 4. Re-start all the reactions from the same initial concentrations - except for now having a good amount of enzyme
+
+# %%
+dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
+
+# %%
+dynamics.set_conc(conc={"A": 20., "B": 0., "E": 5.},
+                  snapshot=True)      # A good amount of enzyme `E`
+
+# %%
+dynamics.describe_state()
+
+# %% [markdown] tags=[]
+# ### Re-take the new system (now with a more substantial amount of enzyme) to equilibrium
+
+# %%
+dynamics.single_compartment_react(reaction_duration=0.2, 
+                                  initial_step=0.01, variable_steps=True, explain_variable_steps=False)
+
+# %%
+#dynamics.explain_time_advance()
+
+# %%
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="with a good amount of enzyme")
+
+# %%
+dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
+
+# %% [markdown]
+# ## Notice the continued - and substantial - speedup of the reaction, over the earlier runs
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium(explain=False)
+
+# %%
+
+# %% [markdown]
+# # 5. Re-start all the reactions from the same initial concentrations - except for now having a lot of enzyme (same as the initial [A])
+
+# %%
+dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
+
+# %%
+dynamics.set_conc(conc={"A": 20., "B": 0., "E": 20.},
+                  snapshot=True)      # A lot of enzyme `E`
+
+# %%
+dynamics.describe_state()
+
+# %% [markdown] tags=[]
+# ### Re-take the new system (now with a lot of enzyme) to equilibrium
+
+# %%
+dynamics.single_compartment_react(reaction_duration=0.05, 
+                                  initial_step=0.005, variable_steps=True, explain_variable_steps=False)
+
+# %%
+#dynamics.explain_time_advance()
+
+# %%
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="with a lot of enzyme")
+
+# %%
+dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
+
+# %% [markdown]
+# ## Notice the continued - and substantial - speedup of the reaction, over the earlier runs
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium(explain=False)
+
+# %%
+
+# %% [markdown]
+# # 6. Re-start all the reactions from the same initial concentrations - except for now having a very large amount of enzyme (more than the initial [A])
+
+# %%
+dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
+
+# %%
+dynamics.set_conc(conc={"A": 20., "B": 0., "E": 30.},
+                  snapshot=True)      # A very large amount of enzyme `E`
+
+# %%
+dynamics.describe_state()
+
+# %% [markdown] tags=[]
+# ### Re-take the new system (now with a lot of enzyme) to equilibrium
+
+# %%
+dynamics.single_compartment_react(reaction_duration=0.02, 
+                                  initial_step=0.001, variable_steps=True, explain_variable_steps=False)
+
+# %%
+#dynamics.explain_time_advance()
+
+# %%
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="with a very large amount of enzyme")
+
+# %%
+dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
+
+# %% [markdown]
+# ## Notice the more modest speedup of the reaction, over the previous run
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium(explain=False)
+
+# %%
+
+# %% [markdown]
+# # 7. Finally, re-start all the reactions from the same initial concentrations - except for now having a LAVISH amount of enzyme (far more than the initial [A])
+
+# %%
+dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
+
+# %%
+dynamics.set_conc(conc={"A": 20., "B": 0., "E": 100.},
+                  snapshot=True)      # A lavish amount of enzyme `E`
+
+# %%
+dynamics.describe_state()
+
+# %% [markdown] tags=[]
+# ### Re-take the new system (now with a lavish amount of enzyme) to equilibrium
+
+# %%
+dynamics.single_compartment_react(reaction_duration=0.02, 
+                                  initial_step=0.0005, variable_steps=True, explain_variable_steps=False)
+
+# %%
+#dynamics.explain_time_advance()
+
+# %%
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="with a LAVISH amount of enzyme")
+
+# %%
+dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
+
+# %% [markdown]
+# ## Notice, once again, the more modest speedup of the reaction, over the previous run : reaching the point of "diminishing returns"
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium(explain=False)
+
+# %%

@@ -72,16 +72,16 @@ class ReactionDynamics:
 
 
         # ***  FOR AUTOMATED ADAPTIVE STEP SIZES  ***
-        # Note: the "aborts" below are "elective" aborts - not aborts from hard errors (further below)
+        # Note: The "aborts" below are "elective" aborts - i.e. not aborts from hard errors (further below)
+        #       The default values below were empirically found to be "conservative" but not excessively so
         self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
                            {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
-        self.step_factors = {"upshift": 1.5, "downshift": 0.5, "abort": 0.5}
-                            # TODO: consider more conservative defaults upshift=1.2, downshift=0.5, abort=0.4
+        self.step_factors = {"upshift": 1.2, "downshift": 0.5, "abort": 0.4}
 
-        self.error_abort_step_factor = 0.5      # MUST BE < 1.  Factor by which to multiply the time step
+
+        self.error_abort_step_factor = 0.25     # MUST BE < 1.  Factor by which to multiply the time step
                                                 #   in case of negative-concentration error from excessive step size
                                                 #   NOTE: this is from ERROR aborts, not to be confused with high-threshold aborts
-        # TODO: consider the more conservative default 0.25
 
 
         self.reaction_speeds = {}       # TODO: not in active use; possibly obsolete
@@ -179,6 +179,7 @@ class ReactionDynamics:
             f"(such as the passed value {min(conc)})"
 
 
+        # TODO: the next step isn't necessary, if self.system already exists, and is of the right size
         self.system = np.array(conc, dtype='d')      # float64      TODO: allow users to specify the type
 
         if snapshot:
@@ -213,6 +214,9 @@ class ReactionDynamics:
             raise Exception("ReactionDynamics.set_single_conc(): at least one "
                             "of the arguments `species_index` or `species_name` must be provided")
 
+
+        if not self.system:
+            self.system = np.zeros(self.chem_data.number_of_chemicals(), dtype='d')      # float64      TODO: allow users to specify the type
 
         # TODO: if setting concentrations of a newly-added chemical, needs to first expand self.system
         self.system[species_index] = conc

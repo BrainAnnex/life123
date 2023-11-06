@@ -15,7 +15,7 @@
 
 # %% [markdown]
 # ## Coupled pair of reactions: `A <-> B` , and  `A` + `E` <-> `B` + `E`
-# A direct reaction and same reaction, catalyzed
+# A direct reaction and the same reaction, catalyzed
 # ### Enzyme `E` initially zero, and then suddenly added mid-reaction
 #
 # LAST REVISED: Nov. 4, 2023
@@ -75,7 +75,7 @@ dynamics.single_compartment_react(reaction_duration=0.25,
 dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="WITH zero enzyme")
 
 # %% [markdown]
-# ### The reactions, lacking enzyme, are proceeding slowly towards equilibrium, like reaction that was discussed in part 1 of the experiment "enzyme_1"
+# ### The reactions, lacking enzyme, are proceeding slowly towards equilibrium, just like the reaction that was discussed in part 1 of the experiment "enzyme_1"
 
 # %% [markdown]
 # # Now suddently add a lot of enzyme
