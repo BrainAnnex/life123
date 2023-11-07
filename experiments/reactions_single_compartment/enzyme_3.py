@@ -67,14 +67,14 @@ dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4)
 dynamics.set_error_step_factor(0.25)
 
 # Perform the reactions
-dynamics.single_compartment_react(reaction_duration=3.5,
+dynamics.single_compartment_react(reaction_duration=4.0,
                                   initial_step=0.1, variable_steps=True, explain_variable_steps=False)
 
 # %%
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="with ZERO enzyme")
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With ZERO enzyme")
 
 # %% [markdown]
 # ### The reactions, lacking enzyme, are proceeding slowly towards equilibrium, just like the reaction that was discussed in part 1 of the experiment "enzyme_1"
@@ -84,7 +84,7 @@ dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
 
 # %%
 # Verify that the reaction has reached equilibrium
-#dynamics.is_in_equilibrium(tolerance=3)    # TODO: fix
+dynamics.is_in_equilibrium(tolerance=2)
 
 # %%
 
@@ -112,7 +112,7 @@ dynamics.single_compartment_react(reaction_duration=1.5,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="with a tiny amount of enzyme")
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a tiny amount of enzyme")
 
 # %%
 dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
@@ -150,7 +150,7 @@ dynamics.single_compartment_react(reaction_duration=0.5,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="with a more substantial amount of enzyme")
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a more substantial amount of enzyme")
 
 # %%
 dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
@@ -188,7 +188,7 @@ dynamics.single_compartment_react(reaction_duration=0.2,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="with a good amount of enzyme")
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a good amount of enzyme")
 
 # %%
 dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
@@ -226,7 +226,7 @@ dynamics.single_compartment_react(reaction_duration=0.05,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="with a lot of enzyme")
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a lot of enzyme")
 
 # %%
 dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
@@ -264,7 +264,7 @@ dynamics.single_compartment_react(reaction_duration=0.02,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="with a very large amount of enzyme")
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a very large amount of enzyme")
 
 # %%
 dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
@@ -302,7 +302,7 @@ dynamics.single_compartment_react(reaction_duration=0.02,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="with a LAVISH amount of enzyme")
+dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a LAVISH amount of enzyme")
 
 # %%
 dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)

@@ -117,6 +117,12 @@ def test_single_compartment_react():
     dynamics.set_conc(conc=initial_conc, snapshot=False)
 
     dynamics.set_diagnostics()
+
+    dynamics.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
+                       {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
+    dynamics.step_factors = {"upshift": 1.5, "downshift": 0.5, "abort": 0.5}
+    dynamics.error_abort_step_factor = 0.5
+
     dynamics.single_compartment_react(initial_step=0.0010, target_end_time=0.0035)
 
     run1 = dynamics.get_system_conc()
@@ -384,6 +390,11 @@ def test_single_compartment_correct_neg_conc_1():
     dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
     dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+    dynamics.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
+                           {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
+    dynamics.step_factors = {"upshift": 1.5, "downshift": 0.5, "abort": 0.5}
+    dynamics.error_abort_step_factor = 0.5
 
     dynamics.single_compartment_react(initial_step=0.1, target_end_time=0.8, variable_steps=False)
     # Note: negative concentrations that would arise from the given step size, get automatically intercepted - and
@@ -661,7 +672,23 @@ def test_reaction_in_equilibrium():
     # Reaction 1:  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction
     chem_data.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
     c = {'A': 1.51554944, 'B': 5.74222528}
-    assert rxn.reaction_in_equilibrium(rxn_index = 1, conc=c, explain=False, tolerance=1)
+    assert rxn.reaction_in_equilibrium(rxn_index = 1, conc=c, tolerance=1, explain=False)
+
+    # Reaction 2:  A + B <-> C + D
+    chem_data.add_reaction(reactants=["A", "B"], products=["C", "D"], forward_rate=5., reverse_rate=2.)
+
+    # with zero concentrations of a reactant, it won't be an equilibrium...
+    c = {'A': 15.2, 'B': 0, 'C': 21.3, 'D': 4.1}
+    assert not rxn.reaction_in_equilibrium(rxn_index = 2, conc=c, tolerance=10, explain=False)
+
+    # likewise with zero concentrations of a reaction product, it won't be an equilibrium...
+    c = {'A': 15.2, 'B': 21.3, 'C': 0 , 'D': 4.1}
+    assert not rxn.reaction_in_equilibrium(rxn_index = 2, conc=c, tolerance=10, explain=False)
+
+    # but with zero concentrations of both a reactant and a reaction product, the reaction is stuck in place -
+    # so, in equilibrium
+    c = {'A': 15.2, 'B': 0, 'C': 0 , 'D': 4.1}
+    assert rxn.reaction_in_equilibrium(rxn_index = 2, conc=c, tolerance=1, explain=False)
 
 
 

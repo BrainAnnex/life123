@@ -215,7 +215,7 @@ class ReactionDynamics:
                             "of the arguments `species_index` or `species_name` must be provided")
 
 
-        if not self.system:
+        if self.system is None:
             self.system = np.zeros(self.chem_data.number_of_chemicals(), dtype='d')      # float64      TODO: allow users to specify the type
 
         # TODO: if setting concentrations of a newly-added chemical, needs to first expand self.system
@@ -2530,7 +2530,7 @@ class ReactionDynamics:
                                 (EXAMPLE:  {False:  [3, 6:]})
         """
         if conc is None:
-            conc=self.get_conc_dict()   # Use the current System concentrations
+            conc=self.get_conc_dict()   # Use the current System concentrations, as a dict.  EXAMPLE: {'A': 23.9, 'B': 36.1}
 
         failures_dict = {False: []}     # 1-element dict whose value is
                                         # a list of reactions that fail to meet the criterion for equilibrium
@@ -2592,11 +2592,13 @@ class ReactionDynamics:
 
         rate_ratio = kF / kR                    # Ratio of forward/reverse reaction rates
 
-        conc_ratio = 1.
-        numerator = ""
-        denominator = ""
-        all_concs = []      # List of strings
+        conc_ratio = 1.     # The product of all the concentrations of the reaction products (adjusted for order)
+                            #   over the product of all the concentrations of the reactants (also adjusted for order)
+        numerator = ""      # First part of the the textual explanation about whether in equilibrium
+        denominator = ""    # Second part of the the textual explanation about whether in equilibrium
 
+
+        zero_numerator = False
         for p in products:
             # Loop over the reaction products
             species_index =  rxn.extract_species_index(p)
@@ -2606,18 +2608,24 @@ class ReactionDynamics:
             species_conc = conc.get(species_name)
             assert species_conc is not None, f"reaction_in_equilibrium(): unable to proceed because the " \
                                              f"concentration of `{species_name}` was not provided"
+            if species_conc == 0:
+                zero_numerator = True
+                break
+
             conc_ratio *= (species_conc ** rxn_order)
             if explain:
-                all_concs.append(f"[{species_name}] = {species_conc:,.4g}")
                 numerator += f"[{species_name}]"
                 if rxn_order > 1:
                     numerator += f"^{rxn_order} "
 
+
         if explain and len(products) > 1:
             numerator = f"({numerator})"
 
+
+        zero_denominator = False
         for r in reactants:
-            # Loop over the return
+            # Loop over the reactants
             species_index =  rxn.extract_species_index(r)
             rxn_order =  rxn.extract_rxn_order(r)
 
@@ -2625,21 +2633,50 @@ class ReactionDynamics:
             species_conc = conc.get(species_name)
             assert species_conc is not None, f"reaction_in_equilibrium(): unable to proceed because the " \
                                              f"concentration of `{species_name}` was not provided"
+            #print(f"species_name: {species_name} | conc_ratio: {conc_ratio} | species_conc: {species_conc} | rxn_order: {rxn_order}")
+            if species_conc == 0:
+                zero_denominator = True
+                break
+
             conc_ratio /= (species_conc ** rxn_order)
             if explain:
-                all_concs.append(f"[{species_name}] = {species_conc:,.4g}")
                 denominator += f"[{species_name}]"
                 if rxn_order > 1:
                     denominator += f"^{rxn_order} "
 
 
+        all_applicable_concs = []
+        for species_index in rxn.extract_chemicals_in_reaction(exclude_enzyme=False):
+            species_name = self.chem_data.get_name(species_index)
+            s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
+            all_applicable_concs.append(s)
+
+        all_applicable_concs_str = " ; ".join(all_applicable_concs)     # EXAMPLE: "[A] = 20.3 ; [B] = 0.3"
+
+
+        # Handle the special case of zero concentration in some of the reactants AND in some of the products
+        if zero_numerator and zero_denominator:
+            if explain:
+                print(f"Final concentrations: {all_applicable_concs_str}")
+                print("Reaction IS in equilibrium because it can't proceed in either direction "
+                      "due to zero concentrations in both reactants and products!\n")
+            return True
+
+        if zero_numerator or zero_denominator:      # If only one is 0 (we already covered when they both are)
+            if explain:
+                print(f"Final concentrations: {all_applicable_concs_str}")
+                print("Reaction is NOT in equilibrium because either the reactants or the products contain a zero concentration\n")
+            return False
+
+
+        # Normal case
         status = np.allclose(conc_ratio, rate_ratio, rtol=tolerance/100., atol=0)
 
         if explain:
             if len(reactants) > 1:
                 denominator = f"({denominator})"
 
-            print(f"Final concentrations: ", " ; ".join(all_concs))
+            print(f"Final concentrations: {all_applicable_concs_str}")
             print(f"1. Ratio of reactant/product concentrations, adjusted for reaction orders: {conc_ratio:,.6g}")
             print(f"    Formula used:  {numerator} / {denominator}")
             print(f"2. Ratio of forward/reverse reaction rates: {rate_ratio}")
