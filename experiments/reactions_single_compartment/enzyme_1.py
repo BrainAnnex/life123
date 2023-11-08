@@ -145,7 +145,7 @@ dynamics.curve_intersection("A", "B", t_start=0, t_end=0.02)
 dynamics.is_in_equilibrium()
 
 # %% [markdown]
-# ## Thanks to the (abundant) enzyme, the reaction reaches equilibrium roughtly around t=0.02, far sooner than the roughly t=3.5 without enzyme
+# ## Thanks to the (abundant) enzyme, the reaction reaches equilibrium roughly around t=0.02, far sooner than the roughly t=3.5 without enzyme
 # The concentrations of `A` and `B` now become equal (cross-over) at t=0.00246 , rather than t=0.740
 
 # %%

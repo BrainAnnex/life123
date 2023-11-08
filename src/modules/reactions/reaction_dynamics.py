@@ -2571,6 +2571,8 @@ class ReactionDynamics:
         """
         Ascertain whether the given concentrations are in equilibrium for the specified SINGLE reaction;
         return True or False, accordingly.
+        Pathological case: if at least one of the reactants and at least one of the products have zero
+        concentration, then the reaction is "stuck" - and thus regarded in "equilibrium"
 
         :param rxn_index:   The index (0-based integer) to identify the reaction of interest
         :param conc:        Dict with the concentrations of the species involved in the reaction.
@@ -2659,7 +2661,7 @@ class ReactionDynamics:
             if explain:
                 print(f"Final concentrations: {all_applicable_concs_str}")
                 print("Reaction IS in equilibrium because it can't proceed in either direction "
-                      "due to zero concentrations in both reactants and products!\n")
+                      "due to zero concentrations in both some reactants and products!\n")
             return True
 
         if zero_numerator or zero_denominator:      # If only one is 0 (we already covered when they both are)
