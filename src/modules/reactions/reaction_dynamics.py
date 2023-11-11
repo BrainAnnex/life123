@@ -2229,8 +2229,8 @@ class ReactionDynamics:
     def plot_curves(self, chemicals=None, colors=None, title=None, title_prefix=None, range_x=None,
                     vertical_lines=None, show_intervals=False, suppress=False) -> Union[None, go.Figure]:
         """
-        Using plotly, draw the plots of concentration values over time, based on the saved history data.
-        TODO: allow alternate labels for x-axis
+        Using plotly, draw the plots of concentration values over time, based on history data that gets
+        automatically saved when running reactions.
 
         EXAMPLE - to combine plots:
 
@@ -2254,7 +2254,9 @@ class ReactionDynamics:
                                     whether the title is specified by the user or automatically generated
         :param range_x:         (OPTIONAL) list with of the form [t_start, t_end], to only show a part of the timeline
         :param vertical_lines:  (OPTIONAL) List or tuple or Numpy array or Pandas series
-                                    of x-coordinates at which to draw thin vertical dotted gray lines
+                                    of x-coordinates at which to draw thin vertical dotted gray lines.
+                                    If the number of vertical line is so large as to overwhelm the plot,
+                                    only a sample of them is shown
         :param show_intervals:  (OPTIONAL) If True, it over-rides any value in vertical_lines, and draws
                                     thin vertical dotted gray lines at all the x-coords of the data points in the saved history data;
                                     also, it adds a comment to the title
@@ -2263,10 +2265,13 @@ class ReactionDynamics:
 
         :return:            None or a plotly "Figure" object, depending on the "suppress" flag
         """
+        # TODO: allow alternate labels for x-axis
+
         default_colors = ['blue', 'green', 'brown', 'red', 'gray',
                           'orange', 'purple', 'cyan', 'darkorange', 'navy',
                           'darkred', 'black', 'mediumspringgreen']
         '''
+        # Available color names:
                 aliceblue, antiquewhite, aqua, aquamarine, azure,
                 beige, bisque, black, blanchedalmond, blue,
                 blueviolet, brown, burlywood, cadetblue,
@@ -2303,8 +2308,14 @@ class ReactionDynamics:
                 violet, wheat, white, whitesmoke, yellow,
                 yellowgreen
         '''
+        MAX_NUMBER_VERTICAL_LINES = 150     # Used to avoid extreme clutter in the plot, in case
+                                            # a very large number of vertical lines is requested;
+                                            # if this value is exceeded, then the vertical lines are sampled
+                                            # infrequently enough to bring the total number below this value
 
-        df = self.get_history()     # The expected columns are "SYSTEM TIME", followed by the various chemicals
+        df = self.get_history()     # The expected columns are "SYSTEM TIME",
+                                    # followed by concentrations for the various chemicals,
+                                    # and a final "caption" colum
 
         if chemicals is None:
             chemicals = self.chem_data.get_all_names()      # List of the chemical names.  EXAMPLE: ["A", "B", "H"]
@@ -2331,7 +2342,7 @@ class ReactionDynamics:
             title = f"{title_prefix}.  <br>{title}"
 
         if show_intervals:
-            vertical_lines = df["SYSTEM TIME"]
+            vertical_lines = df["SYSTEM TIME"]  # Make use of the simulation times
             title += " (time steps shown in dashed lines)"
 
         # Create the main plot
@@ -2346,8 +2357,31 @@ class ReactionDynamics:
                 or (type(vertical_lines) == np.ndarray) or (type(vertical_lines) == pd.core.series.Series), \
                     "plot_curves(): the argument `vertical_lines`, " \
                     "if not None, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
-            for xi in vertical_lines:
-                fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
+
+            vline_list = []
+            step = 1 + len(vertical_lines) // MAX_NUMBER_VERTICAL_LINES
+            if step > 1:
+                print(f"plot_curves() WARNING: Excessive number of vertical lines ({len(vertical_lines)}) - only showing 1 every {step} lines")
+
+            for xi in vertical_lines[::step] :  # Notice that if step > 1 then we're sampling a subset of the elements
+                # The following is the internal data structure used by Plotly Express,
+                # for each of the vertical lines
+                vline = {  'line': {'color': 'gray', 'dash': 'dot', 'width': 1},
+                           'type': 'line',
+                           'x0': xi,
+                           'x1': xi,
+                           'xref': 'x',
+                           'y0': 0,
+                           'y1': 1,
+                           'yref': 'y domain'
+                        }
+                vline_list.append(vline)
+                # Strangely, a direct call to fig.add_vline(), as done below, dramatically slows things down in case
+                # of a large number of vertical lines; so, we'll be directly modifying the data structure of the "fig" dictionary
+                #fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
+            # END for
+            fig['layout']['shapes'] = vline_list    # The vertical lines are regarded by Plotly Express as "shapes"
+                                                    # that are stored in the figure's "layout"
 
 
         if not suppress:

@@ -6,7 +6,8 @@ import numpy as np
 
 class MovieTabular:
     """
-    A "tabular movie" is a list of snapshots of data that comes as a list or one-dimensional array,
+    A "tabular movie" is a list of snapshots of data that comes as a python dictionary
+    (representing a list of values and their corresponding names),
     such as something based on the state of the system or of parts thereof,
     either taken at different times,
     or resulting from varying some parameter(s)
@@ -23,7 +24,7 @@ class MovieTabular:
         :param parameter_name:  A label explaining what the snapshot parameter is.
                                 Typically it's "SYSTEM TIME" (default), but could be anything
                                 Used as the Pandas column name for the
-                                    parameter value attached to the snapshot captures
+                                parameter value attached to the various snapshot captures
         """
         self.parameter_name = parameter_name
 

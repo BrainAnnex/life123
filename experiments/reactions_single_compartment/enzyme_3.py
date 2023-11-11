@@ -18,7 +18,7 @@
 # A direct reaction and the same reaction, catalyzed
 # ### Re-run from same initial concentrations of S ("Substrate") and P ("Product") for various concentations of the enzyme `E`: from zero to hugely abundant
 #
-# LAST REVISED: Nov. 7, 2023
+# LAST REVISED: Nov. 9, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -26,6 +26,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from src.modules.chemicals.chem_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.movies.movies import MovieTabular
 
 import pandas as pd
 import plotly.express as px
@@ -83,9 +84,13 @@ dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=Tr
 # ### The reactions, lacking enzyme, are proceeding slowly towards equilibrium, just like the reaction that was discussed in part 1 of the experiment "enzyme_1"
 
 # %%
-crossover_points = []       # We'll be saving all the crossover points, together with their corresponding enzyme concentration
+# To save up snapshots of crossover times at various Enzyme concentrations
+crossover_points = MovieTabular(parameter_name="Enzyme concentration")
+
+# %%
 new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=1.0)
-crossover_points.append([new_crossover[0], dynamics.get_chem_conc("E")])
+crossover_points.store(par=dynamics.get_chem_conc("E"), 
+                       data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
 
 # %%
@@ -122,7 +127,8 @@ dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=Tr
 
 # %%
 new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
-crossover_points.append([new_crossover[0], dynamics.get_chem_conc("E")])
+crossover_points.store(par=dynamics.get_chem_conc("E"), 
+                       data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
 
 # %% [markdown]
@@ -162,7 +168,8 @@ dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=Tr
 
 # %%
 new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
-crossover_points.append([new_crossover[0], dynamics.get_chem_conc("E")])
+crossover_points.store(par=dynamics.get_chem_conc("E"), 
+                       data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
 
 # %% [markdown]
@@ -202,7 +209,8 @@ dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=Tr
 
 # %%
 new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
-crossover_points.append([new_crossover[0], dynamics.get_chem_conc("E")])
+crossover_points.store(par=dynamics.get_chem_conc("E"), 
+                       data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
 
 # %% [markdown]
@@ -242,7 +250,8 @@ dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=Tr
 
 # %%
 new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
-crossover_points.append([new_crossover[0], dynamics.get_chem_conc("E")])
+crossover_points.store(par=dynamics.get_chem_conc("E"), 
+                       data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
 
 # %% [markdown]
@@ -282,7 +291,8 @@ dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=Tr
 
 # %%
 new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
-crossover_points.append([new_crossover[0], dynamics.get_chem_conc("E")])
+crossover_points.store(par=dynamics.get_chem_conc("E"), 
+                       data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
 
 # %% [markdown]
@@ -322,7 +332,8 @@ dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=Tr
 
 # %%
 new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
-crossover_points.append([new_crossover[0], dynamics.get_chem_conc("E")])
+crossover_points.store(par=dynamics.get_chem_conc("E"), 
+                       data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
 
 # %% [markdown]
@@ -366,7 +377,8 @@ dynamics.plot_curves(chemicals=['S', 'P'],
 
 # %%
 new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
-crossover_points.append([new_crossover[0], dynamics.get_chem_conc("E")])
+crossover_points.store(par=dynamics.get_chem_conc("E"), 
+                       data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
 
 # %% [markdown]
@@ -382,20 +394,16 @@ dynamics.is_in_equilibrium()
 # ## Now, let's look at the time of the crossover points (for the [S] and [P] curves to intersect), as a function of the Enzyme concentration
 
 # %%
-crossover_points
+df = crossover_points.get_dataframe()
+df
 
 # %% [markdown]
 # #### As we previously observed, as the Enzyme concentration is increased over repeated runs, the crossover happens earlier and earlier
 
 # %%
-# Same data, as a Pandas dataframe
-df = pd.DataFrame(crossover_points, columns = ['crossover time', 'E'])
-df
-
-# %%
 # Let's plot just the first 6 data points, to avoid squishing the curve
 px.line(data_frame=df.loc[0:5],
-              x="E", y=["crossover time"],
+              x="Enzyme concentration", y=["crossover time"],
               title="Time of crossover of [S] and [P] , as a function of Enzyme concentration (first 6 points)",
               labels={"value":"Crossover time"},
               line_shape="spline")
@@ -404,7 +412,7 @@ px.line(data_frame=df.loc[0:5],
 # Same plot, but with log scales on both axes (all data points used this time, 
 # but the value E = 0 is automatically dropped by the graphic function because of the log scale)
 px.line(data_frame=df,
-              x="E", y=["crossover time"],
+              x="Enzyme concentration", y=["crossover time"],
               log_x=True, log_y=True,
               title="Time of crossover of [S] and [P] , as a function of Enzyme conc (log scales on both axes)",
               labels={"value":"Crossover time"},

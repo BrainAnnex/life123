@@ -15,12 +15,13 @@
 # %% [markdown]
 # ## 2 COUPLED reactions of different speeds, forming a "cascade":  
 # ### `A <-> B` (fast) and `B <-> C` (slow)
-# All 1st order. Taken to equilibrium. Both reactions are mostly forward.
-# The concentration of the intermediate product B manifests 1 oscillation (transient "overshoot")
+# Taken to equilibrium. Both reactions are mostly forward. All 1st order.  
+# **The concentration of the intermediate product B manifests 1 oscillation (transient "overshoot")**
 #
-# (Adaptive variable time resolution is used, with extensive diagnostics.)
+# Adaptive variable time resolution is used, with extensive diagnostics, 
+# and finally compared to a new run using fixed time intervals, with the same initial data
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Nov. 9, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -31,7 +32,7 @@
 # INTUITION: B, unable to quickly drain into C while at the same time being blasted by a hefty inflow from A,  
 # will experience a transient surge, in excess of its final equilibrium level.
 #
-# * [Compare with the final reaction plot (the red line is B)](#cascade_1_plot)
+# * **[Compare with the final reaction plot (the red line is B)](#cascade_1_plot)**
 
 # %% [markdown]
 # ![2 Coupled Reactions](../../docs/2_coupled_reactions.png)
@@ -119,11 +120,12 @@ dynamics.single_compartment_react(initial_step=0.02, reaction_duration=0.4,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %% [markdown]
-# ### <a name="cascade_1_plot"></a> Plots of changes of concentration with time
+# ### <a name="cascade_1_plot"> Plots of changes of concentration with time</a>
+# Notice the variable time steps (vertical dashed lines)
 
 # %%
 dynamics.plot_curves(title="Coupled reactions A <-> B and B <-> C",
-                     colors=['blue', 'red', 'green'])
+                     colors=['blue', 'red', 'green'], show_intervals=True)
 
 # %%
 dynamics.curve_intersection("A", "B", t_start=0, t_end=0.05)
@@ -171,16 +173,11 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 
-# %% [markdown]
-# ### Provide a detailed explanation of all the steps/substeps of the reactions, from the saved diagnostic data
-
-# %%
-
 # %% [markdown] tags=[]
-# # Re-run with very small constanst steps
+# # Re-run with very small constant steps
 
 # %% [markdown]
-# We'll use constant steps of size 0.0005, which is 1/4 of the smallest steps (the "substep" size) previously used in the variable-step run
+# We'll use **constant steps of size 0.0005** , which is 1/4 of the smallest steps (the "substep" size) previously used in the variable-step run
 
 # %%
 dynamics2 = ReactionDynamics(chem_data=chem_data)
@@ -195,11 +192,11 @@ dynamics2.single_compartment_react(initial_step=0.0005, reaction_duration=0.4,
                                   )      
 
 # %%
-fig = px.line(data_frame=dynamics2.get_history(), x="SYSTEM TIME", y=["A", "B", "C"], 
-              title="Coupled reactions A <-> B and B <-> C (run with constant steps)",
-              color_discrete_sequence = ['blue', 'red', 'green'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics2.plot_curves(title="Coupled reactions A <-> B and B <-> C , re-run with CONSTANT STEPS",
+                      colors=['blue', 'red', 'green'], show_intervals=True)
+
+# %% [markdown]
+# _(Notice that the vertical steps are now equally spaced - and that there are so many of them that we're only showing some)_
 
 # %%
 dynamics2.curve_intersection(t_start=0, t_end=0.05, chem1="A", chem2="B")
@@ -218,10 +215,10 @@ df2
 # ## Notice that we now did 801 steps - vs. the 56 of the earlier variable-resolution run!
 
 # %% [markdown]
-# ### Let's compare some entries with the coarser previous variable-time run
+# ## Let's compare some entries with the coarser previous variable-time run
 
 # %% [markdown]
-# ## Let's compare the plots of [B] from the earlier (variable-step) run, and the latest (high-precision, fixed-step) one:
+# #### Let's compare the plots of [B] from the earlier (variable-step) run, and the latest (high-precision, fixed-step) one:
 
 # %%
 # Earlier run (using variable time steps)
@@ -241,9 +238,12 @@ fig2.show()
 import plotly.graph_objects as go
 
 all_fig = go.Figure(data=fig1.data + fig2.data)    # Note that the + is concatenating lists
-all_fig.update_layout(title="The 2 runs contrasted")
+all_fig.update_layout(title="The 2 runs, contrasted together")
 all_fig['data'][0]['name']="B (variable steps)"
 all_fig['data'][1]['name']="B (fixed high precision)"
 all_fig.show()
+
+# %% [markdown]
+# They overlap fairly well!
 
 # %%
