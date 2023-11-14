@@ -1,6 +1,6 @@
 # General numerical methods
 
-from typing import Union
+from typing import Union, List, Tuple
 import numpy as np
 import pandas as pd
 
@@ -310,9 +310,9 @@ class Numerical:
 
 
     @classmethod
-    def gradient_order4_1d(cls, arr, dx=1.0, dtype='float') -> np.array:
+    def gradient_order4_1d(cls, arr :Union[np.array, List, Tuple], dx=1.0, dtype='float') -> np.array:
         """
-        Compute the gradient, from the values in the given array,
+        Compute the gradient, from UNIT-SPACED x-values and y-values in the given 1-dimensional array,
         using the 5-point Central Difference, which produces an accuracy of order 4.
 
         At the boundary, or close to it, different 5-point stencils are used,
@@ -321,11 +321,13 @@ class Numerical:
 
         Returns the same size as the input array.
 
-        For multi-dimensional cases, use gradient_order4()
-        For a simpler, but less accurate (order 2) approach, simply use Numpy gradient()
+        Note:
+            * For multi-dimensional cases, use gradient_order4()
+            * For a simpler, but less accurate (order 2) approach, use Numpy gradient(),
+              which is also usable in case of uneven grids of x values
 
         :param arr:     One-dimensional Numpy array (or list, or tuple) of numbers,
-                        with at least 5 elements
+                            with at least 5 elements
         :param dx:      Delta_x (assumed constant)
         :param dtype:   Data type to use for the elements of the returned array
 
@@ -333,9 +335,12 @@ class Numerical:
         """
         arr_size = len(arr)
 
-        assert arr_size >= 5, "gradient_order4_1d(): input numpy array must have at least 5 elements"
+        assert arr_size >= 5, "gradient_order4_1d(): argument `arr` must have at least 5 elements"
 
-        result = np.zeros(arr_size, dtype=dtype)
+        result = np.zeros(arr_size, dtype=dtype)    # The result is the same size as the input array
+
+
+        # First, start with the 2 leftmost boundary points
 
         # For the leftmost boundary point, use the 5-point forward difference
         i = 0
@@ -346,7 +351,7 @@ class Numerical:
         result[i] = (-3*arr[i-1] -10*arr[i] +18*arr[i+1] -6*arr[i+2] +arr[i+3])/12
 
 
-        # Now process the interior points
+        # Now, process the interior points
 
         # Coefficients for the 2nd order central finite differences for the first derivative
         C2 = -1/12
@@ -358,6 +363,8 @@ class Numerical:
                         +C1 * arr[i+1] \
                         +C2 * arr[i+2]
 
+
+        # Finally, conclude with the 2 rightmost boundary points
 
         # For the 2nd rightmost boundary point, use the skewed 5-point central differences
         i = arr_size-2
@@ -377,8 +384,10 @@ class Numerical:
         Compute the gradient, from the values in the given (possibly multidimensional) array,
         using the 5-point Central Difference, which produces an accuracy of order 4.
 
+        All points need to be equally-spaced along each dimension.
+
         At the boundary, and at the points immediately adjacent to the boundary,
-        simple 2-point forward or backward differences are used (accuracy order 1.)
+        the gradient is computed by the very simple 2-point forward or backward differences (accuracy order 1.)
 
         It returns a list of ndarrays (or a single ndarray if there is only 1 dimension).
         Each list element has the same shape as the original array,
@@ -386,8 +395,9 @@ class Numerical:
 
         For 1-dimensional cases, can also use gradient_order4_1d(), which produces accuracy order 4 at ALL points.
 
-        (ADAPTED FROM https://gist.github.com/deeplycloudy/1b9fa46d5290314d9be02a5156b48741 , which is
-        based on 2nd order version from http://projects.scipy.org/scipy/numpy/browser/trunk/numpy/lib/function_base.py
+        (ADAPTED FROM https://gist.github.com/deeplycloudy/1b9fa46d5290314d9be02a5156b48741 ,
+        which is based on 2nd order version from
+        http://projects.scipy.org/scipy/numpy/browser/trunk/numpy/lib/function_base.py
 
         :param f:       An N-dimensional array giving samples of a scalar function
         :param varargs: 0, 1, or N scalars giving the sample distances in each direction
@@ -472,6 +482,57 @@ class Numerical:
             return out_vals[0]
         else:
             return out_vals
+
+
+
+    @classmethod
+    def weights(cls, z, x, m) -> np.array:
+        """
+        Based on B. Fornberg, "Calculation of Weights in Finite Difference Formulas", 1998
+        (https://epubs.siam.org/doi/abs/10.1137/S0036144596322507)
+
+        :param z:   location where approximations are to be accurate
+        :param x:   grid point locations, x0 thru xn : (n+1) of them
+        :param m:   highest derivative for which weights are sought
+
+        :return:    (n+1) x (m+1) Numpy array:
+                        c(0:n, 0:m) stores the weights at grid locations x(0:n) for derivatives
+                        of order 0:m
+        """
+        n = len(x) - 1      # One less than total number of grid points
+
+        c = np.zeros((n+1, m+1), dtype=np.float64)
+
+        c1 = 1.0
+        c4 = x[0] - z
+
+        c[0, 0] = 1.0
+
+        for i in range(1, n+1):
+            mn = min(i, m)
+            c2 = 1.0
+            c5 = c4
+            c4 = x[i] - z
+
+            for j in range(i):
+                c3 = x[i] - x[j]
+                c2 *= c3
+
+                if j == i - 1:
+                    for k in range(mn, 0, -1):
+                        c[i, k] = c1 * (k * c[i-1, k-1] - c5 * c[i-1, k]) / c2
+
+                    c[i, 0] = -c1 * c5 * c[i-1, 0] / c2
+
+                for k in range(mn, 0, -1):
+                    c[j, k] = (c4 * c[j, k] - k * c[j, k-1]) / c3
+
+                c[j, 0] = c4 * c[j, 0] / c3
+            # END for j in range(i)
+
+            c1 = c2
+
+        return c
 
 
 

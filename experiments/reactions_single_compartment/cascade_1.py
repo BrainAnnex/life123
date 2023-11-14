@@ -21,7 +21,7 @@
 # Adaptive variable time resolution is used, with extensive diagnostics, 
 # and finally compared to a new run using fixed time intervals, with the same initial data
 #
-# LAST REVISED: Nov. 9, 2023
+# LAST REVISED: Nov. 11, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:

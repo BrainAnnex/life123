@@ -295,11 +295,18 @@ def manual_test_compare_states():     # MANUAL TEST
 
 
 def test_gradient_order4_1d():
-    result = num.gradient_order4_1d([10, 20, 30, 40, 50, 60], 1)
+    result = num.gradient_order4_1d([10, 20, 30, 40, 50, 60], dx=1)
     assert np.allclose(result, np.full(6, 10., dtype=float))
 
     result = num.gradient_order4_1d([10, 80, 30, 50, 10, 90], dx=2)
     #print(result)
+    assert np.allclose(result, [136.66666667, -24.16666667, -10. , -7.08333333, -17.91666667, 138.75])
+
+    # Same, but using tuples or Numpy arrays, instead of lists
+    result = num.gradient_order4_1d((10, 80, 30, 50, 10, 90), dx=2)
+    assert np.allclose(result, [136.66666667, -24.16666667, -10. , -7.08333333, -17.91666667, 138.75])
+
+    result = num.gradient_order4_1d(np.array([10, 80, 30, 50, 10, 90]), dx=2)
     assert np.allclose(result, [136.66666667, -24.16666667, -10. , -7.08333333, -17.91666667, 138.75])
 
 
@@ -311,7 +318,7 @@ def test_gradient_order4():
     dx = 2.
     arr = np.array([10, 80, 30, 50, 10, 90])
     result = num.gradient_order4(arr, dx)
-    print(result)
+    #print(result)
     assert np.allclose(result, [35., -25., -10. , -7.08333333, -20., 40.])  # Note how the edges and next-to-edge values
                                                                             # differ from those checked in test_gradient_order4_1d
 
@@ -332,7 +339,133 @@ def test_gradient_order4():
 
 
 
-def test_expand_matrix():
+def test_weights():
+    x_values = np.array([1.0, 3.0, 4.0, 7.0, 11.0])   # Very uneven-spaced grid
+    size = len(x_values)
+
+    # Test the first (0th) column of the c matrix returned by num.weights();
+    # this column is for interpolations.
+    # Interpolations at one of the given x_values will give a vector with a 1 in its index position,
+    # and 0's elsewhere
+
+    for m in range(3):
+        # It doesn't matter if we increase m, since here we're
+        # just evaluating the first column (meant for interpolations,
+        # and not affected by computations of higher derivatives)
+        for i, z in enumerate(x_values):
+            c = num.weights(z=z, x=x_values, m=m)
+            #print(c)
+            assert c.shape == (size, m+1)
+            col = c[:, 0]       # Extract first column (k = 0, to be used for interpolations)
+            #print(col)
+            assert np.allclose(col, np.eye(1 , size, i))
+
+
+
+def test_weights_2():
+    x_values = np.array([1.0, 3.0, 4.0, 7.0, 11.0])   # Very uneven-spaced grid
+    y_values = x_values**2     # A quadratic curve defined at the above points: y = x**2
+    size = len(x_values)
+
+    m = 1   # First derivative
+    # We'll be exploring first derivatives at x equal to any of the grid points,
+    # as well at some extra values
+    extra_values = [-2.5, 0, 2.0, 8., 14.]
+    for z in np.concatenate([x_values, extra_values]):
+        c = num.weights(z=z, x=x_values, m=m)   # A matrix containing weights to estimate
+                                                # the first derivative of y at x = z
+        assert c.shape == (size, m+1)
+        col = c[:, m]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
+        numeric_1st_deriv = np.dot(col, y_values)
+        assert np.allclose(numeric_1st_deriv, 2 * z)    # Comparing numeric values
+                                                        # with the known derivative formula y' = 2x
+
+    m = 2   # Second derivative
+    # We'll be exploring first derivatives at x equal to any of the grid points,
+    # as well at some extra values
+    for z in np.concatenate([x_values, extra_values]):
+        c = num.weights(z=z, x=x_values, m=m)   # A matrix containing weights to estimate
+                                                # the first derivative of y at x = z
+        assert c.shape == (size, m+1)
+        col = c[:, m]       # Extract 2nd column (k = 1, to be used for 2nd derivatives)
+        numeric_1st_deriv = np.dot(col, y_values)
+        assert np.allclose(numeric_1st_deriv, 2. )  # Comparing numeric values
+                                                    # with the known derivative formula y'' = 2
+
+
+def test_weights_3():
+    # Same as test_weights_2() for first derivative, but using a more complex polynomial
+    x_values = np.array([1.0, 3.0, 4.0, 7.0, 11.0])   # Very uneven-spaced grid
+    y_values = 4 * x_values**3 - 8 * x_values**2 + 3 * x_values - 12.  # y = 4 * x**3 - 8 * x**2 + 3 * x - 12
+
+    m = 1   # First derivative
+    # We'll be exploring first derivatives at x equal to any of the grid points,
+    # as well at some extra values
+    extra_values = [-2.5, 0, 2.0, 8., 14.]
+    for z in np.concatenate([x_values, extra_values]):
+        c = num.weights(z=z, x=x_values, m=m)   # A matrix containing weights to estimate
+                                                # the first derivative of y at x = z
+        col = c[:, m]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
+        numeric_1st_deriv = np.dot(col, y_values)
+        assert np.allclose(numeric_1st_deriv, 12 * z**2 - 16 * z + 3)   # Comparing numeric values
+                                                                        # with the known derivative formula:
+                                                                        #  y' = 12 x**2 - 16 * x + 3
+
+
+def test_weights_4():
+    # Same as test_weights_3() , but using a non-polynomial function over a more dense grid
+    x_values = np.array([0., 1.0, 3.0, 3.5, 3.7, 4.0, 4.2, 6., 7.0, 11.0])   # Very uneven-spaced grid
+    y_values = np.exp(x_values)     # y = exp(x)
+
+    m = 1   # First derivative
+    # We'll be exploring first derivatives at x taking some values near the middle of our range
+    for z in [3.6, 4.0, 4.1]:
+        c = num.weights(z=z, x=x_values, m=m)   # A matrix containing weights to estimate
+                                                # the first derivative of y at x = z
+        col = c[:, m]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
+        numeric_1st_deriv = np.dot(col, y_values)
+        assert np.allclose(numeric_1st_deriv, np.exp(z))    # Comparing numeric values
+                                                            # with the known derivative formula:
+                                                            # y' = exp(x)
+
+
+def test_weights_5():
+    # Similar to test_weights_4() , but using a more complex function over a more dense grid
+    x_values = np.array([3.0, 3.2, 3.7, 3.8, 4.0, 4.1, 4.3, 4.9, 5.2]) # Very uneven-spaced grid
+    y_values = 3. * np.exp(2. * x_values)            # y = 3 exp(2x)
+
+    m = 1   # First derivative
+    # We'll be exploring first derivatives at x taking some values near the middle of our range
+    for z in [3.75, 4.0, 4.2]:
+        c = num.weights(z=z, x=x_values, m=m)   # A matrix containing weights to estimate
+                                                # the first derivative of y at x = z
+        col = c[:, m]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
+        numeric_1st_deriv = np.dot(col, y_values)
+        assert np.allclose(numeric_1st_deriv, 6. * np.exp(2. * z))  # Comparing numeric values
+                                                                    # with the known derivative formula:
+                                                                    # y' = 6 exp(2x)
+
+
+def test_weights_6():
+    # Similar to test_weights_5() , but using a square-root function
+    x_values = np.array([1.0, 3.0, 3.3, 3.5, 4.0, 4.3, 4.9, 7.0, 8.1])     # Very uneven-spaced grid
+    y_values = np.sqrt(x_values)                        # y = sqrt(x)
+
+    m = 1   # First derivative
+    # We'll be exploring first derivatives at x equal to some points near the middle of our range
+    for z in [3.8, 4.0, 4.1]:
+        c = num.weights(z=z, x=x_values, m=m)   # A matrix containing weights to estimate
+                                                # the first derivative of y at x = z
+        col = c[:, m]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
+        numeric_1st_deriv = np.dot(col, y_values)
+        expected = 0.5 / np.sqrt(z)     # Known derivative formula: 1/(2 * sqrt(x))
+        #print(numeric_1st_deriv, expected)
+        assert np.allclose(numeric_1st_deriv, expected)
+
+
+
+
+def test_expand_matrix_boundary():
     m = np.array([[1, 2],
                   [3, 4]])
     result = num.expand_matrix_boundary(m)

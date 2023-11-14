@@ -2484,10 +2484,10 @@ class ReactionDynamics:
 
 
 
-    def get_history(self, t_start=None, t_end=None, head=None, tail=None, t=None) -> pd.DataFrame:
+    def get_history(self, t_start=None, t_end=None, head=None, tail=None, t=None, columns=None) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
-        using add_snapshot()
+        using add_snapshot().
         Optionally, restrict the result with a start and/or end times,
         or by limiting to a specified numbers of rows at the end
 
@@ -2501,10 +2501,20 @@ class ReactionDynamics:
                                    If this parameter is specified, an extra column - called "search_value" -
                                    is inserted at the beginning of the dataframe.
                                    If either the "head" or the "tail" arguments are passed, this argument will get ignored
+        :param columns: (OPTIONAL) List of columns to return; if not specified, all are returned
+
         :return:        A Pandas dataframe
         """
+        # TODO: also allow to select specific columns.  Could just retir
+
+        # Note self.history is an object of class MovieTabular
         df = self.history.get_dataframe(head=head, tail=tail, search_val=t,
                                         search_col="SYSTEM TIME", val_start=t_start, val_end=t_end)
+
+        if columns:
+            assert type(columns) == list, \
+                "get_history(): the argument `columns`, if specified, must be a list"
+            return df[columns]
 
         return df
 
