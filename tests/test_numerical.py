@@ -339,6 +339,14 @@ def test_gradient_order4():
 
 
 
+def test_gradient_uneven_grid():
+    x_values = np.array([1.0, 3.0, 4.0, 7.0, 11.0, 18., 22.4])   # Very uneven-spaced grid
+    f = x_values
+    print()
+    num.gradient_uneven_grid(x_values=x_values, f=f, stencil=5)
+
+
+
 def test_weights():
     x_values = np.array([1.0, 3.0, 4.0, 7.0, 11.0])   # Very uneven-spaced grid
     size = len(x_values)

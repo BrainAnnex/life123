@@ -3,6 +3,7 @@
 from typing import Union, List, Tuple
 import numpy as np
 import pandas as pd
+import math
 
 
 class Numerical:
@@ -482,6 +483,72 @@ class Numerical:
             return out_vals[0]
         else:
             return out_vals
+
+
+    @classmethod
+    def gradient_uneven_grid(cls, x_values :np.array, f :np.array, stencil :int):
+        """
+
+        :param x_values:
+        :param f:
+        :param stencil:
+        :return:
+        """
+        assert stencil >= 2, "value for stencil must be an integer >= 2"
+
+        assert np.ndim(x_values) == 1, "x_values must be a 1-dimensional Numpy array"
+        assert np.ndim(f) == 1, "f must be a 1-dimensional Numpy array"
+
+        size = len(x_values)
+
+        assert size == len(f), "x_values and f must have the same dimension"
+
+
+
+        assert stencil <= size, \
+            f"gradient_uneven_grid(): value for stencil ({stencil}) cannot exceed the number of grid points ({size})"
+
+        '''
+        for i in range(size):
+            z = x_values[i]
+            j_start = max(0, i - stencil // 2)
+            for j in range(j_start, )
+        '''
+        gradient_points = []
+
+        grid_index = 0      # Point on the grid we're about to process
+        # Advance (by steps of 1) a sliding window of size stencil across the array x_values
+        # The initial position of the sliding window is window_start_pos
+        for window_start_pos in range(size - stencil + 1):
+            window_arr = x_values[window_start_pos : window_start_pos+stencil]  # Array of size equal to stencil value
+            assert len(window_arr) == stencil
+            print("window: ", window_arr)
+            # The last grid point to include in the current window is half into it
+            # grid_stop_index is one past the max index to consider within the current sliding window
+            # EXAMPLE - odd stencil 5 : the stop index is window_start_pos+3
+            # EXAMPLE - odd stencil 4 : the stop index is window_start_pos+2
+            grid_stop_index = window_start_pos + math.ceil(stencil / 2)    # Ceiling of division
+            for i in range(grid_index, grid_stop_index):    # This loop stops at grid_stop_index-1
+                z = x_values[i]
+                print(f"i : {i} | z : {z}")
+                assert i >= window_start_pos
+                assert i < window_start_pos+stencil
+                '''
+                c = cls.weights(z=z, x=window, m=1)
+                col = c[:, 1]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
+                numeric_1st_deriv = np.dot(col, f)
+                gradient_points.append(numeric_1st_deriv)
+                '''
+                grid_index += 1
+
+        # Process the last remaining grid points, using the last stencil
+        # (which is at the end of the x_values array)
+        for i in range(grid_index, size):   # This loop stops at index size-1
+            z = x_values[i]
+            print(f"i : {i} | z : {z}")
+
+        # assert len(gradient_points) == size
+        return gradient_points
 
 
 
