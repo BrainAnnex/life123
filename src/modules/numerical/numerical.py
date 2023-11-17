@@ -68,7 +68,7 @@ class Numerical:
         prev_val2 = prev_row[var2]
 
         if np.allclose(val1, val2):     # The intersection occurs at the given middle point
-            print("val1 is very close to, or equal to, val2")
+            #print("val1 is very close to, or equal to, val2")
             if np.allclose(next_val1, next_val2) or np.allclose(prev_val1, prev_val2):
                 raise Exception("the intersection isn't well-defined because there's extended overlap")
             else:
@@ -485,82 +485,126 @@ class Numerical:
             return out_vals
 
 
+
     @classmethod
-    def gradient_uneven_grid(cls, x_values :np.array, f :np.array, stencil :int):
+    def gradient_uneven_grid(cls, x_values :np.array, f :np.array, stencil :int) -> np.ndarray:
         """
+        Compute and return the gradient of a 1-D function f(x) at the given grid points,
+        which may be uneven.  An arbitrary stencil ("sliding window") size may be used.
 
-        :param x_values:
-        :param f:
-        :param stencil:
-        :return:
+        For gradients (first derivatives), the accuracy will be dependent on the size of
+        the stencil - though overly large stencils might lead to oscillations.
+
+        Based on B. Fornberg, "Calculation of Weights in Finite Difference Formulas", 1998
+        (https://epubs.siam.org/doi/abs/10.1137/S0036144596322507)
+
+        :param x_values:    A Numpy array of x values (independent variable) that
+                                may be unevenly-spaced
+        :param f:           A Numpy array of the values of the function at the above grid point
+        :param stencil:     An integer between 2 and the number of grid points.
+        :return:            A Numpy array
         """
-        assert stencil >= 2, "value for stencil must be an integer >= 2"
+        # TODO: allow the gradients to also be computed at x values not on the grid
+        assert type(stencil) == int, \
+            "gradient_uneven_grid(): value for stencil must be an integer"
 
-        assert np.ndim(x_values) == 1, "x_values must be a 1-dimensional Numpy array"
-        assert np.ndim(f) == 1, "f must be a 1-dimensional Numpy array"
+        assert stencil >= 2, \
+            "gradient_uneven_grid(): value for stencil must be an integer >= 2"
+
+        assert type(x_values) == np.ndarray, \
+            f"gradient_uneven_grid(): argument `x_values` must be a Numpy array; instead, it is {type(x_values)}"
+        assert type(f) == np.ndarray, \
+            f"gradient_uneven_grid(): argument `f` must be a Numpy array; instead, it is {type(f)}"
+
+        assert np.ndim(x_values) == 1, \
+            "gradient_uneven_grid(): x_values must be a 1-dimensional Numpy array"
+        assert np.ndim(f) == 1, \
+            "gradient_uneven_grid(): f must be a 1-dimensional Numpy array"
 
         size = len(x_values)
 
-        assert size == len(f), "x_values and f must have the same dimension"
-
-
+        assert size == len(f), \
+            "gradient_uneven_grid(): x_values and f must have the same dimension"
 
         assert stencil <= size, \
             f"gradient_uneven_grid(): value for stencil ({stencil}) cannot exceed the number of grid points ({size})"
 
-        '''
-        for i in range(size):
-            z = x_values[i]
-            j_start = max(0, i - stencil // 2)
-            for j in range(j_start, )
-        '''
-        gradient_points = []
 
-        grid_index = 0      # Point on the grid we're about to process
-        # Advance (by steps of 1) a sliding window of size stencil across the array x_values
-        # The initial position of the sliding window is window_start_pos
-        for window_start_pos in range(size - stencil + 1):
-            window_arr = x_values[window_start_pos : window_start_pos+stencil]  # Array of size equal to stencil value
-            assert len(window_arr) == stencil
-            print("window: ", window_arr)
-            # The last grid point to include in the current window is half into it
-            # grid_stop_index is one past the max index to consider within the current sliding window
-            # EXAMPLE - odd stencil 5 : the stop index is window_start_pos+3
-            # EXAMPLE - odd stencil 4 : the stop index is window_start_pos+2
-            grid_stop_index = window_start_pos + math.ceil(stencil / 2)    # Ceiling of division
-            for i in range(grid_index, grid_stop_index):    # This loop stops at grid_stop_index-1
-                z = x_values[i]
-                print(f"i : {i} | z : {z}")
-                assert i >= window_start_pos
-                assert i < window_start_pos+stencil
-                '''
-                c = cls.weights(z=z, x=window, m=1)
-                col = c[:, 1]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
-                numeric_1st_deriv = np.dot(col, f)
-                gradient_points.append(numeric_1st_deriv)
-                '''
-                grid_index += 1
+        gradient_values = np.zeros(size, dtype=np.float64)
+
+        # Start with the leftmost sliding window, of size stencil, across the array x_values
+        # Extract the gradients at point in the left half of that window (rounded up if odd-sized)
+        window_x_arr = x_values[ : stencil]   # Array of size equal to stencil value
+        assert len(window_x_arr) == stencil
+        window_f_arr = f[ : stencil]
+        #print("- WINDOW: ", window_x_arr)
+        grid_index = 0
+        for grid_index in range(math.ceil(stencil / 2)):    # Ceiling of division)
+            z = x_values[grid_index]
+            #print(f"i : {grid_index} | z : {z}")
+            numeric_1st_deriv = cls._compute_gradient(z, window_x_arr, window_f_arr)
+            #gradient_values.append(numeric_1st_deriv)
+            gradient_values[grid_index] = numeric_1st_deriv
+
+
+        # Advance (by steps of 1) the sliding window across the array x_values, as far as it can go
+        for window_start_pos in range(1, size - stencil + 1):
+            window_x_arr = x_values[window_start_pos : window_start_pos+stencil]  # Array of size equal to stencil value
+            window_f_arr = f[window_start_pos : window_start_pos+stencil]
+            assert len(window_x_arr) == stencil
+            #print("- WINDOW: ", window_x_arr)
+            # Also advance by 1 the grid point at which we compute the gradient
+            grid_index += 1
+            z = x_values[grid_index]
+            #print(f"i : {grid_index} | z : {z}")
+            numeric_1st_deriv = cls._compute_gradient(z, window_x_arr, window_f_arr)
+            gradient_values[grid_index] = numeric_1st_deriv
+
 
         # Process the last remaining grid points, using the last stencil
         # (which is at the end of the x_values array)
-        for i in range(grid_index, size):   # This loop stops at index size-1
-            z = x_values[i]
-            print(f"i : {i} | z : {z}")
+        grid_index += 1
+        while grid_index < size:    # This loop stops at index size-1
+            z = x_values[grid_index]
+            #print(f"i : {grid_index} | z : {z}")
+            numeric_1st_deriv = cls._compute_gradient(z, window_x_arr, window_f_arr)
+            gradient_values[grid_index] = numeric_1st_deriv
+            grid_index += 1
 
-        # assert len(gradient_points) == size
-        return gradient_points
+        return gradient_values
 
 
 
     @classmethod
-    def weights(cls, z, x, m) -> np.array:
+    def _compute_gradient(cls, z, window_x_arr, window_f_arr) -> np.float64:
+        """
+        Compute and return the gradient of a 1-D function f(x) at the  point x=z.
+        The entire grid of values is used as a stencil.
+
+        :param z:               x value (in grid or not) at which to compute the gradient of f
+        :param window_x_arr:    Grid point locations
+        :param window_f_arr:    Values of the function at the above grid points
+        :return:                A floating-point value
+        """
+        c = cls._weights(z=z, x=window_x_arr, m=1)
+        col = c[:, 1]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
+        #print("col: ", col)
+        #print("window_f_arr: ", window_f_arr)
+        numeric_1st_deriv = np.dot(col, window_f_arr)
+        return numeric_1st_deriv
+
+
+
+    @classmethod
+    def _weights(cls, z, x, m) -> np.ndarray:
         """
         Based on B. Fornberg, "Calculation of Weights in Finite Difference Formulas", 1998
         (https://epubs.siam.org/doi/abs/10.1137/S0036144596322507)
 
-        :param z:   location where approximations are to be accurate
-        :param x:   grid point locations, x0 thru xn : (n+1) of them
-        :param m:   highest derivative for which weights are sought
+        :param z:   x value (in grid or not) where approximations are to be accurate
+        :param x:   Grid point locations, x0 thru xn : (n+1) of them
+        :param m:   Highest derivative for which weights are sought.
+                        EXAMPLE : m=1 to compute up to 1st derivative (gradient)
 
         :return:    (n+1) x (m+1) Numpy array:
                         c(0:n, 0:m) stores the weights at grid locations x(0:n) for derivatives
@@ -604,7 +648,7 @@ class Numerical:
 
 
     @classmethod
-    def expand_matrix_boundary(cls, m) -> np.array:
+    def expand_matrix_boundary(cls, m) -> np.ndarray:
         """
         Add a row at the top and at the bottom, and also add a column to the left and to the right,
         repeating the edge values of the matrix
