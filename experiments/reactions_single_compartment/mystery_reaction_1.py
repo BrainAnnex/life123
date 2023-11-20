@@ -17,7 +17,7 @@
 #
 # Assume the reaction is known to be 1st order (won't verify that.)  
 #
-# LAST REVISED: Nov. 18, 2023
+# LAST REVISED: Nov. 19, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -27,10 +27,9 @@ from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.visualization.plotly_helper import PlotlyHelper
 
 import numpy as np
-import plotly.express as px
-from src.modules.visualization.graphic_log import GraphicLog
 
 # %% [markdown]
 # # PART 1 - We'll generate the time evolution of [A] and [B] by simulation a reaction of known rate constants...
@@ -139,17 +138,8 @@ Deriv_A + Deriv_B
 # %%
 
 # %%
-fig = px.line(x=t_arr, y=[Deriv_A , Deriv_B], color_discrete_sequence = ['aqua', 'greenyellow'])
-
-fig.data[0].name = "A'(t)"
-fig.data[0].hovertemplate = "A'(t)"
-fig.data[1].name = "B'(t)"
-fig.data[1].hovertemplate = "B'(t)"
-
-fig.update_layout(title='d/dt A(t) and d/dt B(t) as a function of time',
-                  xaxis_title='t',
-                  yaxis_title='Time derivatives', 
-                  legend={"title": "Derivative"})
+PlotlyHelper.plot_curves(x=t_arr, y=[Deriv_A , Deriv_B], title="d/dt A(t) and d/dt B(t) as a function of time", 
+                         xaxis="t", yaxis="Time derivatives", curve_labels=["A'(t)", "B'(t)"], legend_title="Derivative", colors=['aqua', 'greenyellow'])
 
 # %% [markdown]
 # ### Now, let's determine what kF and kR rate constants for `A <-> B` will yield the above data
@@ -172,11 +162,8 @@ fig.update_layout(title='d/dt A(t) and d/dt B(t) as a function of time',
 # Let's verify that they indeed have a linear relationship:
 
 # %%
-fig = px.line(x=B_conc, y=Deriv_B, color_discrete_sequence = ['green'])
-
-fig.update_layout(title='d/dt B(t) as a function of B(t)',
-                  xaxis_title='B(t)',
-                  yaxis_title='B\'(t)')
+PlotlyHelper.plot_curves(x=B_conc, y=Deriv_B, title="d/dt B(t) as a function of B(t)", 
+                         xaxis="B(t)", yaxis="B'(t)", colors="green")
 
 # %% [markdown]
 # As expected, it appears to be a straight line, and the rate of change is highest when [B] is small, which happens early in the reaction.  
@@ -209,17 +196,8 @@ a, b
 # #### Visually verify the least-square fit
 
 # %%
-fig = px.line(x=B_conc, y=[Deriv_B , a + b*B_conc], color_discrete_sequence = ['green', 'red'])
-
-fig.data[0].name = "B'(t)"
-fig.data[0].hovertemplate = "B'(t)"
-fig.data[1].name = "Linear Fit"
-fig.data[1].hovertemplate = "Linear Fit"
-
-fig.update_layout(title='d/dt B(t) as a function of B(t), alongside its least-square fit',
-                  xaxis_title='B(t)',
-                  yaxis_title='B\'(t)',
-                  legend={"title": "Curve vs Fit:"})
+PlotlyHelper.plot_curves(x=B_conc, y=[Deriv_B , a + b*B_conc], title="d/dt B(t) as a function of B(t), alongside its least-square fit", 
+                         xaxis="B(t)", yaxis="B'(t)", curve_labels=["B'(t)", "Linear Fit"], legend_title="Curve vs Fit:", colors=['green', 'red'])
 
 # %% [markdown]
 # _Virtually indistinguishable lines!_

@@ -115,7 +115,7 @@ class PlotlyHelper:
             if curve_labels is not None:
                 label = curve_labels[index]
                 fig.data[index]["name"] = label
-                fig.data[index]["hovertemplate"] = f"variable : {label}<br>{hovertemplate}"
+                fig.data[index]["hovertemplate"] = f"{label}<br>{hovertemplate}"    # variable :
             else:
                 fig.data[index]["hovertemplate"] = hovertemplate
         '''
