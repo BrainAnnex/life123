@@ -392,7 +392,7 @@ def test_gradient_uneven_grid():
     x_values = np.array([2.5, 3.0, 3.3, 3.5, 4.2, 4.3, 4.9, 6.0])   # Closer-spaced, still very uneven
     f = np.exp(x_values)                # f(x) = exp(x)
     result = num.gradient_uneven_grid(x_values=x_values, f=f, stencil=6)
-    expected =  np.exp(x_values)         # Known derivative formula:  exp(x)
+    expected =  np.exp(x_values)        # Known derivative formula:  exp(x)
     assert np.allclose(result, expected, rtol=1e-02, atol=1e-05)    # Even more tolerant of deviation
 
     x_values = np.array([2.8, 3.0, 3.3, 3.5, 3.9, 4.2, 4.3, 4.8])   # Closer-spaced, still very uneven

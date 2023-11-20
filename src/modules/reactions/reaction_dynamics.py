@@ -1634,20 +1634,38 @@ class ReactionDynamics:
 
         :param rxn_index:       Integer to identify the reaction of interest
         :param conc_arr_before: Numpy array with the concentrations of ALL the chemicals (whether involved
-                                    in the reaction or not), in their index order, before the reaction
+                                    in the reaction or not), in their index order, BEFORE the reaction step
         :param conc_arr_after:  Same as above, but after the reaction
-        :param suppress_warning:
+                                TODO: maybe also accept a Panda's dataframe row
+        :param suppress_warning:NO LONGER IN USE.  TODO: obsolete
         :return:                True if the change in reactant/product concentrations is consistent with the
                                     reaction's stoichiometry, or False otherwise
         """
-        return self.stoichiometry_checker_from_deltas(rxn_index = rxn_index,
-                                                      delta_arr = conc_arr_after-conc_arr_before,
-                                                      suppress_warning = suppress_warning)
+        assert self.chem_data.number_of_reactions() == 1, \
+            f"stoichiometry_checker() currently only works for 1-reaction simulations, but " \
+            f"{self.chem_data.number_of_reactions()} reactions are present."
+
+        assert len(conc_arr_before) == self.chem_data.number_of_chemicals(), \
+            f"stoichiometry_checker() : the argument `conc_arr_before` must be a Numpy array " \
+            f"with as many elements as the number of registered chemicals ({self.chem_data.number_of_chemicals()}); " \
+            f"instead, it has {len(conc_arr_before)}"
+
+        assert len(conc_arr_after) == self.chem_data.number_of_chemicals(), \
+            f"stoichiometry_checker() : the argument `conc_arr_after` must be a Numpy array " \
+            f"with as many elements as the number of registered chemicals ({self.chem_data.number_of_chemicals()}); " \
+            f"instead, it has {len(conc_arr_after)}"
+
+        self.chem_data.assert_valid_rxn_index(rxn_index)
+
+        return self._stoichiometry_checker_from_deltas(rxn_index = rxn_index,
+                                                       delta_arr = conc_arr_after-conc_arr_before)
 
 
 
-    def stoichiometry_checker_from_deltas(self, rxn_index: int, delta_arr: np.array, suppress_warning=False) -> bool:
+    def _stoichiometry_checker_from_deltas(self, rxn_index: int, delta_arr: np.array) -> bool:
         """
+        Helper function.
+
         For the indicated reaction, investigate the change in the concentration of the involved chemicals,
         to ascertain whether the change is consistent with the reaction's stoichiometry.
         See https://life123.science/reactions
@@ -1660,19 +1678,13 @@ class ReactionDynamics:
         :param delta_arr:   Numpy array of numbers, with the concentrations changes of ALL the chemicals (whether involved
                                 in the reaction or not), in their index order,
                                 as a result of JUST the reaction of interest
-                            TODO: maybe also accept a Panda's data frame row
-        :param suppress_warning:
         :return:            True if the change in reactant/product concentrations is consistent with the
                                 reaction's stoichiometry, or False otherwise
                                 Note: if any of the elements of the passed Numpy array is NaN, then True is returned
                                       (because NaN values are indicative of aborted steps; can't invalidate the stoichiometry
                                       check because of that)
         """
-        if (not suppress_warning) and (self.chem_data.number_of_reactions() > 1):
-            print(f"*** WARNING: {self.chem_data.number_of_reactions()} reactions are present.  "
-                  f"stoichiometry_checker() currently only works for 1-reaction simulations")
-
-        self.chem_data.assert_valid_rxn_index(rxn_index)
+        #print("delta_arr: ", delta_arr)
 
         if np.isnan(delta_arr).any():
             return True         # The presence of a NaN, anywhere in delta_arr, is indicative of an aborted step
@@ -1687,14 +1699,14 @@ class ReactionDynamics:
         baseline_species = rxn.extract_species_index(baseline_term)
         baseline_stoichiometry = rxn.extract_stoichiometry(baseline_term)
         baseline_ratio =  (delta_arr[baseline_species]) / baseline_stoichiometry
-        #print("baseline_ratio: ", baseline_ratio)
+        #print("\nbaseline_ratio: ", baseline_ratio)
 
         for i, term in enumerate(reactants):
             if i != 0:
                 species = rxn.extract_species_index(term)
                 stoichiometry = rxn.extract_stoichiometry(term)
                 ratio =  (delta_arr[species]) / stoichiometry
-                #print(f"ratio for `{self.reaction_data.get_name(species)}`: {ratio}")
+                #print(f"ratio for `{self.chem_data.get_name(species)}`: {ratio}")
                 if not np.allclose(ratio, baseline_ratio):
                     return False
 
@@ -1702,7 +1714,7 @@ class ReactionDynamics:
             species = rxn.extract_species_index(term)
             stoichiometry = rxn.extract_stoichiometry(term)
             ratio =  - (delta_arr[species]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn
-            #print(f"ratio for `{self.reaction_data.get_name(species)}`: {ratio}")
+            #print(f"ratio for `{self.chem_data.get_name(species)}`: {ratio}")
             if not np.allclose(ratio, baseline_ratio):
                 return False
 
@@ -1712,7 +1724,7 @@ class ReactionDynamics:
 
     def stoichiometry_checker_entire_run(self) -> bool:
         """
-        Verify that the stoichiometry is satisfied in all the reaction (sub)steps,
+        Verify that the stoichiometry is satisfied in all the reaction steps,
         using the diagnostic data from an earlier run
 
         IMPORTANT: this function is currently meant for simulations involving only 1 reaction (TODO: generalize)
@@ -1735,7 +1747,7 @@ class ReactionDynamics:
                 df_row = diagnostic_data.loc[row_index]     # Row in the Panda's data frame of diagnostic data
                 chemical_delta_list = self._delta_names()           # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
                 delta = df_row[chemical_delta_list].to_numpy(dtype='float32')      # Extract select columns from the data frame row, and turn into Numpy array
-                status = self.stoichiometry_checker_from_deltas(rxn_index=rxn_index, delta_arr=delta, suppress_warning=True)
+                status = self._stoichiometry_checker_from_deltas(rxn_index=rxn_index, delta_arr=delta)
                 if not status:
                     print(f"Stoichiometry NOT satisfied by reaction # {rxn_index}: "
                           f"see row # {row_index} in the diagnostic data for that reaction, from get_diagnostic_rxn_data()")

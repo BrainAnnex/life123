@@ -542,8 +542,7 @@ class Numerical:
         for grid_index in range(math.ceil(stencil / 2)):    # Ceiling of division)
             z = x_values[grid_index]
             #print(f"i : {grid_index} | z : {z}")
-            numeric_1st_deriv = cls._compute_gradient(z, window_x_arr, window_f_arr)
-            #gradient_values.append(numeric_1st_deriv)
+            numeric_1st_deriv = cls._compute_derivative(z, window_x_arr, window_f_arr)
             gradient_values[grid_index] = numeric_1st_deriv
 
 
@@ -557,7 +556,7 @@ class Numerical:
             grid_index += 1
             z = x_values[grid_index]
             #print(f"i : {grid_index} | z : {z}")
-            numeric_1st_deriv = cls._compute_gradient(z, window_x_arr, window_f_arr)
+            numeric_1st_deriv = cls._compute_derivative(z, window_x_arr, window_f_arr)
             gradient_values[grid_index] = numeric_1st_deriv
 
 
@@ -567,7 +566,7 @@ class Numerical:
         while grid_index < size:    # This loop stops at index size-1
             z = x_values[grid_index]
             #print(f"i : {grid_index} | z : {z}")
-            numeric_1st_deriv = cls._compute_gradient(z, window_x_arr, window_f_arr)
+            numeric_1st_deriv = cls._compute_derivative(z, window_x_arr, window_f_arr)
             gradient_values[grid_index] = numeric_1st_deriv
             grid_index += 1
 
@@ -576,17 +575,19 @@ class Numerical:
 
 
     @classmethod
-    def _compute_gradient(cls, z, window_x_arr, window_f_arr) -> np.float64:
+    def _compute_derivative(cls, z, window_x_arr, window_f_arr, order=1) -> np.float64:
         """
-        Compute and return the gradient of a 1-D function f(x) at the  point x=z.
+        Compute and return the specified derivative order (by default the gradient)
+        of a 1-D function f(x) at the  point x=z.
         The entire grid of values is used as a stencil.
 
         :param z:               x value (in grid or not) at which to compute the gradient of f
         :param window_x_arr:    Grid point locations
         :param window_f_arr:    Values of the function at the above grid points
+        :param order:           Order of the derivative (by default 1st derivative, i.e. gradient)
         :return:                A floating-point value
         """
-        c = cls._weights(z=z, x=window_x_arr, m=1)
+        c = cls._weights(z=z, x=window_x_arr, m=order)
         col = c[:, 1]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
         #print("col: ", col)
         #print("window_f_arr: ", window_f_arr)
@@ -607,8 +608,8 @@ class Numerical:
                         EXAMPLE : m=1 to compute up to 1st derivative (gradient)
 
         :return:    (n+1) x (m+1) Numpy array:
-                        c(0:n, 0:m) stores the weights at grid locations x(0:n) for derivatives
-                        of order 0:m
+                        c(i, j) stores the weights at grid locations x(i) for derivatives of order j,
+                        with 0 <= i <= n , and 0 <= j < m, and n being one less than total number of grid points
         """
         n = len(x) - 1      # One less than total number of grid points
 

@@ -17,9 +17,11 @@
 # ### `A <-> B` (fast) and `B <-> C` (slow)
 # Taken to equilibrium. Both reactions are mostly forward. All 1st order.  
 #
+# Simple vs. Compound reactions.
+#
 # CONTINUATION of experiment "cascade_1"; please refer to it for background information
 #
-# LAST REVISED: Nov. 11, 2023
+# LAST REVISED: Nov. 17, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -30,6 +32,7 @@ from experiments.get_notebook_info import get_notebook_basename
 from src.modules.chemicals.chem_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
+import numpy as np
 import plotly.express as px
 from src.modules.visualization.graphic_log import GraphicLog
 
@@ -106,8 +109,10 @@ dynamics.single_compartment_react(initial_step=0.01, reaction_duration=0.5,
 dynamics.plot_curves(title="Coupled reactions A <-> B and B <-> C",
                      colors=['blue', 'red', 'green'], show_intervals=True)
 
+# %%
+
 # %% [markdown]
-# # Now, let's consider the scenario that we don't know anything about the intermediate state (B), and we only see the overall reaction `A <-> C'
+# # PART 2 - Now, let's consider the scenario that we don't know anything about the intermediate state (B), and we only see the overall ("compound") reaction `A <-> C`
 
 # %% [markdown]
 # Let's look at just the plots of the varying concentrations with time of `A` and `C` :
@@ -144,8 +149,99 @@ chem_data.describe_reactions()
 
 # %%
 
+# %% [markdown]
+# ### Let's look at the saved run data, and extract individal columns
+
 # %%
-dynamics.get_history(columns = ["SYSTEM TIME", "A", "C"])
+df = dynamics.get_history(columns = ["SYSTEM TIME", "A", "C"])
+df
+
+# %%
+t = df["SYSTEM TIME"].to_numpy()   # The independent variable : Time
+
+# %%
+A_conc = df["A"].to_numpy()
+
+# %%
+C_conc = df["C"].to_numpy()
+
+# %% [markdown]
+# ### Now, let's investigate the rates of change of [C]
+
+# %%
+# The rate of change of [C] with time
+Deriv_C = np.gradient(C_conc, t, edge_order=2)
+
+# %%
+fig = px.line(y=Deriv_C, x=t, title="", color_discrete_sequence = ['green'])
+
+fig.update_layout(title='d/dt C(t) as a function of t',
+                  xaxis_title='t',
+                  yaxis_title='d/dt C(t)')
+
+# %%
+fig = px.line(y=Deriv_C, x=C_conc, title="", color_discrete_sequence = ['mediumspringgreen'])
+
+fig.update_layout(title='d/dt C(t) as a function of C(t)',
+                  xaxis_title='C(t)',
+                  yaxis_title='d/dt C(t)')
+
+# %% [markdown]
+# #### Now, the same for the rates of change of [A]
+
+# %%
+# The rate of change of [C] with time
+Deriv_A = np.gradient(A_conc, t, edge_order=2)
+
+# %%
+fig = px.line(y=Deriv_A, x=t, title="", color_discrete_sequence = ['blue'])
+
+fig.update_layout(title='d/dt A(t) as a function of t',
+                  xaxis_title='t',
+                  yaxis_title='d/dt A(t)')
+
+# %%
+fig = px.line(x=A_conc, y=Deriv_A, color_discrete_sequence = ['aqua'])
+
+fig.update_layout(title='d/dt A(t) as a function of A(t)',
+                  xaxis_title='A(t)',
+                  yaxis_title='d/dt A(t)')
+
+# %% [markdown]
+# #### Let's do a least-squares fit for this last curve, above : d/dt A(t) as a function of A(t)'
+
+# %%
+X = A_conc
+Y = Deriv_A
+
+# %% [markdown]
+# #### We want to fit: Y = a + b X , for some a, b
+
+# %%
+M = np.vstack([np.ones(len(Y)), X]).T
+# N is an nx2 matrix , where n is the number of data points.  The 2nd column are the values of X
+M[:10, :]   # Show the first 10 rows
+
+# %%
+fig = px.line(x=A_conc, y=Deriv_A, color_discrete_sequence = ['aqua'])
+
+fig.update_layout(title='d/dt A(t) as a function of A(t), and its least-square fit',
+                  xaxis_title='A(t)',
+                  yaxis_title='d/dt A(t)')
+
+# %%
+a, b = np.linalg.lstsq(M, Y, rcond=None)[0]  # Carry out the least-square fit
+a, b
+
+# %% [markdown]
+# #### Visually verify the least-square fit
+
+# %%
+fig = px.line(x=A_conc, y=[Deriv_A , a + b*A_conc], color_discrete_sequence = ['aqua', 'red'])
+
+fig.update_layout(title='d/dt A(t) as a function of A(t), and its least-square fit',
+                  xaxis_title='A(t)',
+                  yaxis_title='d/dt A(t)')
 
 # %%
 
