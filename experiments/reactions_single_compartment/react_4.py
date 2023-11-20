@@ -103,8 +103,8 @@ dynamics.single_compartment_react(initial_step=0.002, reaction_duration=0.04,
 dynamics.get_history()
 
 # %%
-dynamics.plot_curves(colors=['red', 'green'],
-                     title="Reaction 2A <-> C  (2nd order in A).  Changes in concentrations with time")
+dynamics.plot_history(colors=['red', 'green'],
+                      title="Reaction 2A <-> C  (2nd order in A).  Changes in concentrations with time")
 
 # %% [markdown]
 # ## Note: "A" (now largely depleted) is the limiting reagent
@@ -164,8 +164,8 @@ dynamics.stoichiometry_checker_entire_run()
 # ## Display the variable time steps
 
 # %%
-dynamics.plot_curves(colors=['red', 'green'], show_intervals=True,
-                     title="Reaction 2A <-> C  (2nd order in A).  Changes in concentrations with time")
+dynamics.plot_history(colors=['red', 'green'], show_intervals=True,
+                      title="Reaction 2A <-> C  (2nd order in A).  Changes in concentrations with time")
 
 # %% [markdown]
 # ### The intersection of the two lines may be found as follows:

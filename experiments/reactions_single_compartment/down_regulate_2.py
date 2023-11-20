@@ -87,8 +87,8 @@ dynamics.single_compartment_react(initial_step=0.0005, reaction_duration=0.015,
 # When A is low, B is also low.
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
-                     title="Changes in concentrations (reaction A + 2 B <-> Y)")
+dynamics.plot_history(colors=['red', 'darkorange', 'green'],
+                      title="Changes in concentrations (reaction A + 2 B <-> Y)")
 
 # %%
 dynamics.get_history()
@@ -123,8 +123,8 @@ dynamics.single_compartment_react(initial_step=0.0005, target_end_time=0.055,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
-                     title="Changes in concentrations (reaction A + 2 B <-> Y)")
+dynamics.plot_history(colors=['red', 'darkorange', 'green'],
+                      title="Changes in concentrations (reaction A + 2 B <-> Y)")
 
 # %% [markdown]
 # **A**, still the limiting reagent, is again stopping the reaction.  
@@ -157,8 +157,8 @@ dynamics.single_compartment_react(initial_step=0.001, target_end_time=0.09,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
-                     title="Changes in concentrations (reaction A + 2 B <-> Y)")
+dynamics.plot_history(colors=['red', 'darkorange', 'green'],
+                      title="Changes in concentrations (reaction A + 2 B <-> Y)")
 
 # %%
 dynamics.get_history()
@@ -187,8 +187,8 @@ dynamics.single_compartment_react(initial_step=0.001, target_end_time=0.16,
 
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
-                     title="Changes in concentrations (reaction A + 2 B <-> Y)")
+dynamics.plot_history(colors=['red', 'darkorange', 'green'],
+                      title="Changes in concentrations (reaction A + 2 B <-> Y)")
 
 # %%
 dynamics.get_history()

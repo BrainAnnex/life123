@@ -68,7 +68,7 @@ dynamics.single_compartment_react(reaction_duration=3.0,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green'], show_intervals=True, title_prefix="WITHOUT enzyme")
+dynamics.plot_history(colors=['darkorange', 'green'], show_intervals=True, title_prefix="WITHOUT enzyme")
 
 # %% [markdown]
 # #### Note how the time steps get automatically adjusted, as needed by the amount of change - including a complete step abort/redo at time=0
@@ -135,7 +135,7 @@ dynamics.single_compartment_react(reaction_duration=0.1,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="WITH enzyme")
+dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="WITH enzyme")
 
 # %%
 dynamics.curve_intersection("A", "B", t_start=0, t_end=0.02)

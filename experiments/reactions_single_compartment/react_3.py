@@ -114,7 +114,7 @@ dynamics.plot_step_sizes(show_intervals=True)
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['red', 'violet', 'green'], show_intervals=True)
+dynamics.plot_history(colors=['red', 'violet', 'green'], show_intervals=True)
 
 # %% [markdown]
 # ### Check the final equilibrium

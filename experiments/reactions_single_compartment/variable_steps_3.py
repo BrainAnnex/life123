@@ -99,7 +99,7 @@ np.array(transition_times)    # Note: there will be one more transition time (th
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['lightgray', 'green', 'lightgray', 'orange', 'blue', 'lightgray'])
+dynamics.plot_history(colors=['lightgray', 'green', 'lightgray', 'orange', 'blue', 'lightgray'])
 
 # %%
 dynamics.curve_intersection("U", "X", t_start=0.3, t_end=0.35)
@@ -164,7 +164,7 @@ np.array(transition_times)    # Note: there will be one more transition time (th
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue', 'gray'])
+dynamics.plot_history(colors=['green', 'orange', 'blue', 'gray'])
 
 # %%
 dynamics.curve_intersection("U", "X", t_start=0.3, t_end=0.35)

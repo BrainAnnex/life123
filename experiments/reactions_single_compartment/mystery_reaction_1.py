@@ -76,8 +76,8 @@ dynamics.single_compartment_react(initial_step=0.01, reaction_duration=0.5,
 # Notice the variable time steps (vertical dashed lines)
 
 # %%
-dynamics.plot_curves(title="Reaction A <-> B",
-                     colors=['blue', 'green'], show_intervals=True)
+dynamics.plot_history(title="Reaction A <-> B",
+                      colors=['blue', 'green'], show_intervals=True)
 
 # %%
 
@@ -267,7 +267,7 @@ np.gradient(t_arr)
 # Best seen in the plot repeated from PART 1:
 
 # %%
-dynamics.plot_curves(title="Reaction A <-> B",
-                     colors=['blue', 'green'], show_intervals=True)
+dynamics.plot_history(title="Reaction A <-> B",
+                      colors=['blue', 'green'], show_intervals=True)
 
 # %%

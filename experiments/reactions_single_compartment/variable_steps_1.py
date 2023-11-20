@@ -105,18 +105,18 @@ np.array(transition_times)    # Note: there will be one more transition time (th
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %%
 dynamics.curve_intersection("U", "X", t_start=0.3, t_end=0.35)  # Compare with the value from experiment "variable_steps_2"
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'], show_intervals=True)
+dynamics.plot_history(colors=['green', 'orange', 'blue'], show_intervals=True)
 
 # %%
 # Show the "critical values", i.e. times when the step size changes
-dynamics.plot_curves(colors=['green', 'orange', 'blue'], vertical_lines=transition_times, 
-                     title="Critical values of time-step changes for reactions `2 S <-> U` and `S <-> X`")
+dynamics.plot_history(colors=['green', 'orange', 'blue'], vertical_lines=transition_times,
+                      title="Critical values of time-step changes for reactions `2 S <-> U` and `S <-> X`")
 
 # %% [markdown]
 # ## Note: the dashed lines in the plots immediatly above are NOT the steps; they are the "critical values", i.e. times when the step size changes.   

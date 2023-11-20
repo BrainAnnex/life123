@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from typing import Union
 from src.modules.movies.movies import MovieTabular
 from src.modules.numerical.numerical import Numerical as num
+from src.modules.visualization.plotly_helper import PlotlyHelper
 
 
 
@@ -2238,8 +2239,8 @@ class ReactionDynamics:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def plot_curves(self, chemicals=None, colors=None, title=None, title_prefix=None, range_x=None,
-                    vertical_lines=None, show_intervals=False, suppress=False) -> Union[None, go.Figure]:
+    def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None, range_x=None,
+                     vertical_lines=None, show_intervals=False, suppress=False) -> Union[None, go.Figure]:
         """
         Using plotly, draw the plots of concentration values over time, based on history data that gets
         automatically saved when running reactions.
@@ -2273,53 +2274,12 @@ class ReactionDynamics:
                                     thin vertical dotted gray lines at all the x-coords of the data points in the saved history data;
                                     also, it adds a comment to the title
         :param suppress:    If True, nothing gets shown - and a plotly "Figure" object gets returned instead;
-                                this is useful to combine multiple plots (see example above)
+                                this is useful to make additional tweaks, or combine multiple plots (see example above)
 
         :return:            None or a plotly "Figure" object, depending on the "suppress" flag
         """
         # TODO: allow alternate labels for x-axis
 
-        default_colors = ['blue', 'green', 'brown', 'red', 'gray',
-                          'orange', 'purple', 'cyan', 'darkorange', 'navy',
-                          'darkred', 'black', 'mediumspringgreen']
-        '''
-        # Available color names:
-                aliceblue, antiquewhite, aqua, aquamarine, azure,
-                beige, bisque, black, blanchedalmond, blue,
-                blueviolet, brown, burlywood, cadetblue,
-                chartreuse, chocolate, coral, cornflowerblue,
-                cornsilk, crimson, cyan, darkblue, darkcyan,
-                darkgoldenrod, darkgray, darkgrey, darkgreen,
-                darkkhaki, darkmagenta, darkolivegreen, darkorange,
-                darkorchid, darkred, darksalmon, darkseagreen,
-                darkslateblue, darkslategray, darkslategrey,
-                darkturquoise, darkviolet, deeppink, deepskyblue,
-                dimgray, dimgrey, dodgerblue, firebrick,
-                floralwhite, forestgreen, fuchsia, gainsboro,
-                ghostwhite, gold, goldenrod, gray, grey, green,
-                greenyellow, honeydew, hotpink, indianred, indigo,
-                ivory, khaki, lavender, lavenderblush, lawngreen,
-                lemonchiffon, lightblue, lightcoral, lightcyan,
-                lightgoldenrodyellow, lightgray, lightgrey,
-                lightgreen, lightpink, lightsalmon, lightseagreen,
-                lightskyblue, lightslategray, lightslategrey,
-                lightsteelblue, lightyellow, lime, limegreen,
-                linen, magenta, maroon, mediumaquamarine,
-                mediumblue, mediumorchid, mediumpurple,
-                mediumseagreen, mediumslateblue, mediumspringgreen,
-                mediumturquoise, mediumvioletred, midnightblue,
-                mintcream, mistyrose, moccasin, navajowhite, navy,
-                oldlace, olive, olivedrab, orange, orangered,
-                orchid, palegoldenrod, palegreen, paleturquoise,
-                palevioletred, papayawhip, peachpuff, peru, pink,
-                plum, powderblue, purple, red, rosybrown,
-                royalblue, saddlebrown, salmon, sandybrown,
-                seagreen, seashell, sienna, silver, skyblue,
-                slateblue, slategray, slategrey, snow, springgreen,
-                steelblue, tan, teal, thistle, tomato, turquoise,
-                violet, wheat, white, whitesmoke, yellow,
-                yellowgreen
-        '''
         MAX_NUMBER_VERTICAL_LINES = 150     # Used to avoid extreme clutter in the plot, in case
                                             # a very large number of vertical lines is requested;
                                             # if this value is exceeded, then the vertical lines are sampled
@@ -2327,7 +2287,7 @@ class ReactionDynamics:
 
         df = self.get_history()     # The expected columns are "SYSTEM TIME",
                                     # followed by concentrations for the various chemicals,
-                                    # and a final "caption" colum
+                                    # and a final "caption" column
 
         if chemicals is None:
             chemicals = self.chem_data.get_all_names()      # List of the chemical names.  EXAMPLE: ["A", "B", "H"]
@@ -2335,7 +2295,7 @@ class ReactionDynamics:
         number_of_curves = len(chemicals)
 
         if colors is None:
-            colors = default_colors[:number_of_curves]      # Pick the first default colors; TODO: rotate if needing more
+            colors = PlotlyHelper.get_default_colors(number_of_curves)
 
 
         if title is None:   # If no title was specified, create one based on how many reactions are present
@@ -2395,11 +2355,10 @@ class ReactionDynamics:
             fig['layout']['shapes'] = vline_list    # The vertical lines are regarded by Plotly Express as "shapes"
                                                     # that are stored in the figure's "layout"
 
-
-        if not suppress:
-            fig.show()      # Actually display the plot
-        else:
+        if suppress:
             return fig      # Return the plot data (without actually displaying the plot)
+        else:
+            fig.show()      # Actually display the plot
 
 
 
@@ -2437,8 +2396,6 @@ class ReactionDynamics:
 
         # Note: the step size at the final end time isn't a defined quantity - so, we'll just repeat
         #       the last value, to maintain the full x-axis size
-        #fig = px.line(x=transition_times, y=step_sizes+[step_sizes[-1]])
-
         fig = px.line(x=new_x, y=new_y)
 
         if show_intervals:
@@ -2449,11 +2406,7 @@ class ReactionDynamics:
         fig.update_layout(title='Simulation step sizes',
                           xaxis_title='SYSTEM TIME',
                           yaxis_title='Step size')
-        '''
-        if show_intervals:
-            for xi in transition_times:
-                fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
-        '''
+
         fig.show()
 
 

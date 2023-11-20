@@ -126,10 +126,10 @@ dynamics.explain_time_advance()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_curves(chemicals=["A", "B", "C"])
+dynamics.plot_history(chemicals=["A", "B", "C"])
 
 # %% [markdown]
 # ### The plots has 4 distinctive intersections; locate them and save them for later comparisons across repeated runs:
@@ -196,10 +196,10 @@ dynamics.single_compartment_react(initial_step=0.0001, target_end_time=8.0,
 # dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_curves(chemicals=["A", "B", "C"])
+dynamics.plot_history(chemicals=["A", "B", "C"])
 
 # %% [markdown]
 # ### The plots has 4 distinctive intersections; locate and save them:
@@ -261,10 +261,10 @@ dynamics.explain_time_advance()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_curves(chemicals=["A", "B", "C"])
+dynamics.plot_history(chemicals=["A", "B", "C"])
 
 # %% [markdown]
 # ### The plots has 4 distinctive intersections; locate and save them:

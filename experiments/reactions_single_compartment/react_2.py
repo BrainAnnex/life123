@@ -189,13 +189,13 @@ dynamics.is_in_equilibrium()
 # # Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['blue', 'orange'])
+dynamics.plot_history(colors=['blue', 'orange'])
 
 # %% [markdown]
 # ## Note how the left-hand side of this plot is much smoother than it was in experiment `react_1`, where no adaptive time steps were used!
 
 # %%
-dynamics.plot_curves(colors=['blue', 'orange'], show_intervals=True)
+dynamics.plot_history(colors=['blue', 'orange'], show_intervals=True)
 
 # %% [markdown]
 # #### Compare the above with the fixed step sizes (always 0.1) of experiment `react_1`

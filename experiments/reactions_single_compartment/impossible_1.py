@@ -106,7 +106,7 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0,
 
 
 # %%
-dynamics.plot_curves()
+dynamics.plot_history()
 
 # %%
 # dynamics.explain_time_advance()
@@ -184,7 +184,7 @@ dynamics.single_compartment_react(initial_step=0.005, target_end_time=4.0,
 #dynamics.get_history()
 
 # %%
-fig0 = dynamics.plot_curves(suppress=True)   # Prepare, but don't show, the main plot
+fig0 = dynamics.plot_history(suppress=True)   # Prepare, but don't show, the main plot
 
 # %%
 # Add a second plot, with a vertical gray line at t=2

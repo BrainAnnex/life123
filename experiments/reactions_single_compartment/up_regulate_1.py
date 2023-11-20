@@ -85,7 +85,7 @@ dynamics.single_compartment_react(initial_step=0.0005, reaction_duration=0.015,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
+dynamics.plot_history(colors=['red', 'darkorange', 'green'])
 
 # %% [markdown]
 # **A, as the scarse limiting reagent, stops the reaction.  
@@ -124,7 +124,7 @@ dynamics.single_compartment_react(initial_step=0.0005, target_end_time=0.035,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
+dynamics.plot_history(colors=['red', 'darkorange', 'green'])
 
 # %% [markdown]
 # **A**, still the limiting reagent, is again stopping the reaction.  
@@ -159,7 +159,7 @@ dynamics.single_compartment_react(initial_step=0.0005, target_end_time=0.070,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
+dynamics.plot_history(colors=['red', 'darkorange', 'green'])
 
 # %% [markdown]
 # `A`, again the scarce limiting reagent, stops the reaction yet again.  

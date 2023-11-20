@@ -80,7 +80,7 @@ df
 dynamics.is_in_equilibrium()
 
 # %%
-dynamics.plot_curves(colors=['navy', 'orange'])
+dynamics.plot_history(colors=['navy', 'orange'])
 
 # %%
 

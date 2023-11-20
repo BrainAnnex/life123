@@ -106,7 +106,7 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=1.5,
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # ### Note that [S] is initially 0, and that it builds up thru _reverse_ reactions
@@ -147,7 +147,7 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=3.0,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # ### The (transiently) high value of [U] led to an increase in [X]
@@ -183,7 +183,7 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=4.5,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # ### The (transiently) high value of [U] again led to an increase in [X]
@@ -219,7 +219,7 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=6.,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # ### The (transiently) LOW value of [U] led to an DECREASE in [X]

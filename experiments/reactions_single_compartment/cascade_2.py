@@ -106,8 +106,8 @@ dynamics.single_compartment_react(initial_step=0.01, reaction_duration=0.5,
 # Notice the variable time steps (vertical dashed lines)
 
 # %%
-dynamics.plot_curves(title="Coupled reactions A <-> B and B <-> C",
-                     colors=['blue', 'red', 'green'], show_intervals=True)
+dynamics.plot_history(title="Coupled reactions A <-> B and B <-> C",
+                      colors=['blue', 'red', 'green'], show_intervals=True)
 
 # %%
 
@@ -118,8 +118,8 @@ dynamics.plot_curves(title="Coupled reactions A <-> B and B <-> C",
 # Let's look at just the plots of the varying concentrations with time of `A` and `C` :
 
 # %%
-dynamics.plot_curves(chemicals=['A', 'C'], title="Overall reactions A <-> C",
-                     colors=['blue', 'green'], show_intervals=False)
+dynamics.plot_history(chemicals=['A', 'C'], title="Overall reactions A <-> C",
+                      colors=['blue', 'green'], show_intervals=False)
 
 # %%
 dynamics.curve_intersection("A", "C", t_start=0, t_end=0.05)

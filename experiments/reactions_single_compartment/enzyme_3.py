@@ -78,7 +78,7 @@ dynamics.single_compartment_react(reaction_duration=4.0,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With ZERO enzyme")
+dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With ZERO enzyme")
 
 # %% [markdown]
 # ### The reactions, lacking enzyme, are proceeding slowly towards equilibrium, just like the reaction that was discussed in part 1 of the experiment "enzyme_1"
@@ -123,7 +123,7 @@ dynamics.single_compartment_react(reaction_duration=1.5,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a tiny amount of enzyme")
+dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a tiny amount of enzyme")
 
 # %%
 new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
@@ -164,7 +164,7 @@ dynamics.single_compartment_react(reaction_duration=0.5,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a more substantial amount of enzyme")
+dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a more substantial amount of enzyme")
 
 # %%
 new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
@@ -205,7 +205,7 @@ dynamics.single_compartment_react(reaction_duration=0.2,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a good amount of enzyme")
+dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a good amount of enzyme")
 
 # %%
 new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
@@ -246,7 +246,7 @@ dynamics.single_compartment_react(reaction_duration=0.05,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a lot of enzyme")
+dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a lot of enzyme")
 
 # %%
 new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
@@ -287,7 +287,7 @@ dynamics.single_compartment_react(reaction_duration=0.02,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a very large amount of enzyme")
+dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a very large amount of enzyme")
 
 # %%
 new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
@@ -328,7 +328,7 @@ dynamics.single_compartment_react(reaction_duration=0.02,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a huge amount of enzyme")
+dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a huge amount of enzyme")
 
 # %%
 new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
@@ -369,8 +369,8 @@ dynamics.single_compartment_react(reaction_duration=0.0015,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(chemicals=['S', 'P'],
-                     colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a LAVISH amount of enzyme (NOT shown)")
+dynamics.plot_history(chemicals=['S', 'P'],
+                      colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a LAVISH amount of enzyme (NOT shown)")
 
 # %% [markdown]
 # _Note: NOT showing the enzyme (concentration 2,000) in the graph, to avoid squishing down the other curves!_

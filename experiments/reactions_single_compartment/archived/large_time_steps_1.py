@@ -163,10 +163,10 @@ dynamics.explain_time_advance()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_curves(chemicals=["A", "B", "C"])
+dynamics.plot_history(chemicals=["A", "B", "C"])
 
 # %% [markdown]
 # # The negative concentrations were automatically avoided, but nonetheless the plots are ragged... and the solutions display instabilities
@@ -231,10 +231,10 @@ dynamics.explain_time_advance()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_curves(chemicals=["A", "B", "C"])
+dynamics.plot_history(chemicals=["A", "B", "C"])
 
 # %% [markdown]
 # # The raggedness, and instability in the solutions, is now gone :)

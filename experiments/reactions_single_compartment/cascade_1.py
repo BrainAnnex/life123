@@ -124,8 +124,8 @@ dynamics.single_compartment_react(initial_step=0.02, reaction_duration=0.4,
 # Notice the variable time steps (vertical dashed lines)
 
 # %%
-dynamics.plot_curves(title="Coupled reactions A <-> B and B <-> C",
-                     colors=['blue', 'red', 'green'], show_intervals=True)
+dynamics.plot_history(title="Coupled reactions A <-> B and B <-> C",
+                      colors=['blue', 'red', 'green'], show_intervals=True)
 
 # %%
 dynamics.curve_intersection("A", "B", t_start=0, t_end=0.05)
@@ -192,8 +192,8 @@ dynamics2.single_compartment_react(initial_step=0.0005, reaction_duration=0.4,
                                   )      
 
 # %%
-dynamics2.plot_curves(title="Coupled reactions A <-> B and B <-> C , re-run with CONSTANT STEPS",
-                      colors=['blue', 'red', 'green'], show_intervals=True)
+dynamics2.plot_history(title="Coupled reactions A <-> B and B <-> C , re-run with CONSTANT STEPS",
+                       colors=['blue', 'red', 'green'], show_intervals=True)
 
 # %% [markdown]
 # _(Notice that the vertical steps are now equally spaced - and that there are so many of them that we're only showing some)_

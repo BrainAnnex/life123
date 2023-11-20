@@ -127,7 +127,7 @@ dynamics.is_in_equilibrium()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['blue', 'orange'])
+dynamics.plot_history(colors=['blue', 'orange'])
 
 # %% [markdown]
 # ### Note the raggedness of the left-side (early times) of the curves.  
@@ -135,7 +135,7 @@ dynamics.plot_curves(colors=['blue', 'orange'])
 # ### By contrast, here we used FIXED steps (see below), which is generally a bad approach
 
 # %%
-dynamics.plot_curves(colors=['blue', 'orange'], show_intervals=True)
+dynamics.plot_history(colors=['blue', 'orange'], show_intervals=True)
 
 # %%
 df = dynamics.get_history()

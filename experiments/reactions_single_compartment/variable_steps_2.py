@@ -95,7 +95,7 @@ df.iloc[1850]
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %%
 dynamics.curve_intersection("U", "X", t_start=0.3, t_end=0.35)

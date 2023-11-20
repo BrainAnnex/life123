@@ -99,7 +99,7 @@ dynamics.explain_time_advance()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['red', 'green', 'gray'])
+dynamics.plot_history(colors=['red', 'green', 'gray'])
 
 # %% [markdown]
 # ### <a name="sec_equilibrium"></a>Equilibrium
@@ -132,7 +132,7 @@ dynamics.single_compartment_react(initial_step=0.03, target_end_time=1,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['red', 'green', 'gray'])
+dynamics.plot_history(colors=['red', 'green', 'gray'])
 
 # %% [markdown]
 # ### The (transiently) high value of [U] led to an increase in [X]
@@ -165,7 +165,7 @@ dynamics.single_compartment_react(initial_step=0.03, target_end_time=1.6,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['red', 'green', 'gray'])
+dynamics.plot_history(colors=['red', 'green', 'gray'])
 
 # %% [markdown]
 # ### The (transiently) high value of [U] again led to an increase in [X]
@@ -198,7 +198,7 @@ dynamics.single_compartment_react(initial_step=0.03, target_end_time=2.3,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['red', 'green', 'gray'])
+dynamics.plot_history(colors=['red', 'green', 'gray'])
 
 # %% [markdown]
 # ### The (transiently) LOW value of [U] led to an DECREASE in [X]

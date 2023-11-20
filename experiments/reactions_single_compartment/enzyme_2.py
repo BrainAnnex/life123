@@ -72,7 +72,7 @@ dynamics.single_compartment_react(reaction_duration=0.25,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="WITH zero enzyme")
+dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="WITH zero enzyme")
 
 # %% [markdown]
 # ### The reactions, lacking enzyme, are proceeding slowly towards equilibrium, just like the reaction that was discussed in part 1 of the experiment "enzyme_1"
@@ -100,7 +100,7 @@ dynamics.single_compartment_react(reaction_duration=0.04,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="WITH enzyme added mid-reaction")
+dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="WITH enzyme added mid-reaction")
 
 # %% [markdown]
 # ## Notice the dramatic acceleration of the reaction as soon as the enzyme `E` is added at t = 0.275!

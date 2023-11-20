@@ -115,7 +115,7 @@ df
 # ## Notice how all concentrations dips into negative values various times!
 
 # %%
-fig0 = dynamics.plot_curves(colors=['green', 'orange', 'blue'], suppress=True)   # Prepare, but don't show, the main plot
+fig0 = dynamics.plot_history(colors=['green', 'orange', 'blue'], suppress=True)   # Prepare, but don't show, the main plot
 
 # Add a second plot, with a horizontal red line at concentration = 0
 fig1 = px.line(x=[0,0.9], y=[0,0], color_discrete_sequence = ['red'])
@@ -226,7 +226,7 @@ df
 # But all the multitude of other negative dips we had in Run #1 are now gone :)
 
 # %%
-fig0 = dynamics.plot_curves(colors=['green', 'orange', 'blue'], suppress=True)   # Prepare, but don't show, the main plot
+fig0 = dynamics.plot_history(colors=['green', 'orange', 'blue'], suppress=True)   # Prepare, but don't show, the main plot
 
 # Add a second plot, with a horizontal red line at concentration = 0
 fig1 = px.line(x=[0,0.9], y=[0,0], color_discrete_sequence = ['red'])
@@ -299,7 +299,7 @@ df
 # ## Notice how negative concentrations are no longer seen anywhere :)
 
 # %%
-fig0 = dynamics.plot_curves(colors=['green', 'orange', 'blue'], suppress=True)   # Prepare, but don't show, the main plot
+fig0 = dynamics.plot_history(colors=['green', 'orange', 'blue'], suppress=True)   # Prepare, but don't show, the main plot
 
 # Add a second plot, with a horizontal red line at concentration = 0
 fig1 = px.line(x=[0,0.9], y=[0,0], color_discrete_sequence = ['red'])
@@ -350,7 +350,7 @@ df = dynamics.get_history()
 df
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # ## The resolution is still coarse, especially up to t=0.1, but all the instability is gone :)
