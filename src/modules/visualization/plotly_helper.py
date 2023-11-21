@@ -72,6 +72,7 @@ class PlotlyHelper:
     def plot_curves(cls, x, y, title="", xlabel="", ylabel="", curve_labels=None, legend_title=None, colors=None, show=False) \
                             -> pgo.Figure:
         """
+        Plot one or more curves
 
         :param x:           A Numpy array
         :param y:           Either a Numpy array, or a list/tuple of them
@@ -118,7 +119,7 @@ class PlotlyHelper:
             if curve_labels is not None:
                 label = curve_labels[index]
                 fig.data[index]["name"] = label
-                fig.data[index]["hovertemplate"] = f"{label}<br>{hovertemplate}"    # variable :
+                fig.data[index]["hovertemplate"] = f"{label} :<br>{hovertemplate}"    # variable :
             else:
                 fig.data[index]["hovertemplate"] = hovertemplate
         '''

@@ -21,7 +21,7 @@
 #
 # CONTINUATION of experiment "cascade_1"; please refer to it for background information
 #
-# LAST REVISED: Nov. 17, 2023
+# LAST REVISED: Nov. 21, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -34,6 +34,7 @@ from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
 import plotly.express as px
+from src.modules.visualization.plotly_helper import PlotlyHelper
 from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
@@ -173,18 +174,10 @@ C_conc = df["C"].to_numpy()
 Deriv_C = np.gradient(C_conc, t, edge_order=2)
 
 # %%
-fig = px.line(y=Deriv_C, x=t, title="", color_discrete_sequence = ['green'])
-
-fig.update_layout(title='d/dt C(t) as a function of t',
-                  xaxis_title='t',
-                  yaxis_title='d/dt C(t)')
+PlotlyHelper.plot_curves(x=t, y=Deriv_C, title="d/dt C(t) as a function of t", xlabel="t", ylabel="d/dt C(t)", colors='green')
 
 # %%
-fig = px.line(y=Deriv_C, x=C_conc, title="", color_discrete_sequence = ['mediumspringgreen'])
-
-fig.update_layout(title='d/dt C(t) as a function of C(t)',
-                  xaxis_title='C(t)',
-                  yaxis_title='d/dt C(t)')
+PlotlyHelper.plot_curves(x=C_conc, y=Deriv_C, title="d/dt C(t) as a function of C(t)", xlabel="C(t)", ylabel="d/dt C(t)", colors='mediumspringgreen')
 
 # %% [markdown]
 # #### Now, the same for the rates of change of [A]
@@ -194,18 +187,10 @@ fig.update_layout(title='d/dt C(t) as a function of C(t)',
 Deriv_A = np.gradient(A_conc, t, edge_order=2)
 
 # %%
-fig = px.line(y=Deriv_A, x=t, title="", color_discrete_sequence = ['blue'])
-
-fig.update_layout(title='d/dt A(t) as a function of t',
-                  xaxis_title='t',
-                  yaxis_title='d/dt A(t)')
+PlotlyHelper.plot_curves(x=t, y=Deriv_A, title="d/dt A(t) as a function of t", xlabel="t", ylabel="d/dt A(t)", colors='blue')
 
 # %%
-fig = px.line(x=A_conc, y=Deriv_A, color_discrete_sequence = ['aqua'])
-
-fig.update_layout(title='d/dt A(t) as a function of A(t)',
-                  xaxis_title='A(t)',
-                  yaxis_title='d/dt A(t)')
+PlotlyHelper.plot_curves(x=A_conc, y=Deriv_A, title="d/dt A(t) as a function of A(t)", xlabel="A(t)", ylabel="d/dt A(t)", colors='aqua')
 
 # %% [markdown]
 # #### Let's do a least-squares fit for this last curve, above : d/dt A(t) as a function of A(t)'
@@ -223,26 +208,15 @@ M = np.vstack([np.ones(len(Y)), X]).T
 M[:10, :]   # Show the first 10 rows
 
 # %%
-fig = px.line(x=A_conc, y=Deriv_A, color_discrete_sequence = ['aqua'])
-
-fig.update_layout(title='d/dt A(t) as a function of A(t), and its least-square fit',
-                  xaxis_title='A(t)',
-                  yaxis_title='d/dt A(t)')
-
-# %%
 a, b = np.linalg.lstsq(M, Y, rcond=None)[0]  # Carry out the least-square fit
 a, b
 
 # %% [markdown]
-# #### Visually verify the least-square fit
+# ### Visually verify the least-square fit
 
 # %%
-fig = px.line(x=A_conc, y=[Deriv_A , a + b*A_conc], color_discrete_sequence = ['aqua', 'red'])
-
-fig.update_layout(title='d/dt A(t) as a function of A(t), and its least-square fit',
-                  xaxis_title='A(t)',
-                  yaxis_title='d/dt A(t)')
-
-# %%
+PlotlyHelper.plot_curves(x=A_conc, y=[Deriv_A , a + b*A_conc], title="d/dt A(t) as a function of A(t), and its least-square fit", 
+                         xlabel="A(t)", ylabel="d/dt A(t)", curve_labels=["Given data", "Least square fit"], legend_title="Comparison with LSF",
+                         colors=['aqua', 'red'])
 
 # %%

@@ -17,7 +17,7 @@
 #
 # Assume the reaction is known to be 1st order (won't verify that.)  
 #
-# LAST REVISED: Nov. 19, 2023
+# LAST REVISED: Nov. 20, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -139,7 +139,8 @@ Deriv_A + Deriv_B
 
 # %%
 PlotlyHelper.plot_curves(x=t_arr, y=[Deriv_A , Deriv_B], title="d/dt A(t) and d/dt B(t) as a function of time",
-                         xlabel="t", ylabel="Time derivatives", curve_labels=["A'(t)", "B'(t)"], legend_title="Derivative", colors=['aqua', 'greenyellow'])
+                         xlabel="t", ylabel="Time derivatives", curve_labels=["A'(t)", "B'(t)"], 
+                         legend_title="Derivative", colors=['aqua', 'greenyellow'])
 
 # %% [markdown]
 # ### Now, let's determine what kF and kR rate constants for `A <-> B` will yield the above data
@@ -196,8 +197,10 @@ a, b
 # #### Visually verify the least-square fit
 
 # %%
-PlotlyHelper.plot_curves(x=B_conc, y=[Deriv_B , a + b*B_conc], title="d/dt B(t) as a function of B(t), alongside its least-square fit",
-                         xlabel="B(t)", ylabel="B'(t)", curve_labels=["B'(t)", "Linear Fit"], legend_title="Curve vs Fit:", colors=['green', 'red'])
+PlotlyHelper.plot_curves(x=B_conc, y=[Deriv_B , a + b*B_conc], 
+                         title="d/dt B(t) as a function of B(t), alongside its least-square fit",
+                         xlabel="B(t)", ylabel="B'(t)", 
+                         curve_labels=["B'(t)", "Linear Fit"], legend_title="Curve vs Fit:", colors=['green', 'red'])
 
 # %% [markdown]
 # _Virtually indistinguishable lines!_
