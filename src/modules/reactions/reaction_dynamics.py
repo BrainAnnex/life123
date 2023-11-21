@@ -2240,7 +2240,7 @@ class ReactionDynamics:
     #####################################################################################################
 
     def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None, range_x=None,
-                     vertical_lines=None, show_intervals=False, suppress=False) -> Union[None, go.Figure]:
+                     vertical_lines=None, show_intervals=False, suppress=False, show=False) -> go.Figure:
         """
         Using plotly, draw the plots of concentration values over time, based on history data that gets
         automatically saved when running reactions.
@@ -2256,8 +2256,8 @@ class ReactionDynamics:
 
         :param chemicals:   (OPTIONAL) List of the names of the chemicals to plot;
                                 if None, then display all
-        :param colors:      (OPTIONAL) List of the colors names to use;
-                                if None, then use the hardwired defaults
+        :param colors:      (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
+                                or list of names to use, in order; if None, then use the hardwired defaults
         :param title:       (OPTIONAL) Title for the plot;
                                 if None, use default titles that will vary based on the # of reactions; EXAMPLES:
                                     "Changes in concentrations for 5 reactions"
@@ -2273,10 +2273,14 @@ class ReactionDynamics:
         :param show_intervals:  (OPTIONAL) If True, it over-rides any value in vertical_lines, and draws
                                     thin vertical dotted gray lines at all the x-coords of the data points in the saved history data;
                                     also, it adds a comment to the title
-        :param suppress:    If True, nothing gets shown - and a plotly "Figure" object gets returned instead;
+        :param show:        If True, the plot will be shown
+                                Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
+                                      leads to it being automatically shown
+        :param suppress:    (OBSOLETE) TODO: REMOVE
+                                If True, nothing gets shown - and a plotly "Figure" object gets returned instead;
                                 this is useful to make additional tweaks, or combine multiple plots (see example above)
 
-        :return:            None or a plotly "Figure" object, depending on the "suppress" flag
+        :return:            A plotly "Figure" object
         """
         # TODO: allow alternate labels for x-axis
 
@@ -2296,6 +2300,8 @@ class ReactionDynamics:
 
         if colors is None:
             colors = PlotlyHelper.get_default_colors(number_of_curves)
+        elif type(colors) == str:
+            colors = [colors]
 
 
         if title is None:   # If no title was specified, create one based on how many reactions are present
@@ -2354,11 +2360,17 @@ class ReactionDynamics:
             # END for
             fig['layout']['shapes'] = vline_list    # The vertical lines are regarded by Plotly Express as "shapes"
                                                     # that are stored in the figure's "layout"
+        if show:
+            fig.show()  # Actually display the plot
 
+        return fig
+
+        '''
         if suppress:
             return fig      # Return the plot data (without actually displaying the plot)
         else:
             fig.show()      # Actually display the plot
+        '''
 
 
 

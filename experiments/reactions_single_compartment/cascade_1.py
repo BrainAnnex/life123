@@ -19,9 +19,11 @@
 # **The concentration of the intermediate product B manifests 1 oscillation (transient "overshoot")**
 #
 # Adaptive variable time resolution is used, with extensive diagnostics, 
-# and finally compared to a new run using fixed time intervals, with the same initial data
+# and finally compared to a new run using fixed time intervals, with the same initial data.
 #
-# LAST REVISED: Nov. 11, 2023
+# In part2, some diagnotic insight is explored - and the 2 identical runs ("adaptive variable steps" and "fixed small steps") are compared. 
+#
+# LAST REVISED: Nov. 20, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -45,6 +47,7 @@ from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.visualization.plotly_helper import PlotlyHelper
 
 import plotly.express as px
 from src.modules.visualization.graphic_log import GraphicLog
@@ -151,8 +154,10 @@ dynamics.is_in_equilibrium()
 
 # %%
 
+# %%
+
 # %% [markdown]
-# # EVERYTHING BELOW IS FOR DIAGNOSTIC INSIGHT
+# # PART 2 - EVERYTHING BELOW IS FOR DIAGNOSTIC INSIGHT
 #
 # ### Perform some verification
 
@@ -222,26 +227,17 @@ df2
 
 # %%
 # Earlier run (using variable time steps)
-fig1 = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["B"], 
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Variable-step run"})
-fig1.show()
+fig1 = dynamics.plot_history(chemicals='B', colors='red', title="Adaptive variable-step run", 
+                             show=True)
 
 # %%
 # Latest run (high-precision result from fine fixed-resolution run)
-fig2 = px.line(data_frame=dynamics2.get_history(), x="SYSTEM TIME", y=["B"], 
-              color_discrete_sequence = ['orange'],
-              labels={"value":"concentration", "variable":"Fine fixed-step run"})
-fig2.show()
+fig2 = dynamics2.plot_history(chemicals='B', colors=['orange'], title="Fine fixed-step run", 
+                              show=True)
 
 # %%
-import plotly.graph_objects as go
-
-all_fig = go.Figure(data=fig1.data + fig2.data)    # Note that the + is concatenating lists
-all_fig.update_layout(title="The 2 runs, contrasted together")
-all_fig['data'][0]['name']="B (variable steps)"
-all_fig['data'][1]['name']="B (fixed high precision)"
-all_fig.show()
+PlotlyHelper.combine_plots(fig_list=[fig1, fig2], title="The 2 runs, contrasted together", 
+                           curve_labels=["B (adaptive variable steps)", "B (fixed small steps)"])
 
 # %% [markdown]
 # They overlap fairly well!

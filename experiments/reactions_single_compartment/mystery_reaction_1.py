@@ -138,8 +138,8 @@ Deriv_A + Deriv_B
 # %%
 
 # %%
-PlotlyHelper.plot_curves(x=t_arr, y=[Deriv_A , Deriv_B], title="d/dt A(t) and d/dt B(t) as a function of time", 
-                         xaxis="t", yaxis="Time derivatives", curve_labels=["A'(t)", "B'(t)"], legend_title="Derivative", colors=['aqua', 'greenyellow'])
+PlotlyHelper.plot_curves(x=t_arr, y=[Deriv_A , Deriv_B], title="d/dt A(t) and d/dt B(t) as a function of time",
+                         xlabel="t", ylabel="Time derivatives", curve_labels=["A'(t)", "B'(t)"], legend_title="Derivative", colors=['aqua', 'greenyellow'])
 
 # %% [markdown]
 # ### Now, let's determine what kF and kR rate constants for `A <-> B` will yield the above data
@@ -162,8 +162,8 @@ PlotlyHelper.plot_curves(x=t_arr, y=[Deriv_A , Deriv_B], title="d/dt A(t) and d/
 # Let's verify that they indeed have a linear relationship:
 
 # %%
-PlotlyHelper.plot_curves(x=B_conc, y=Deriv_B, title="d/dt B(t) as a function of B(t)", 
-                         xaxis="B(t)", yaxis="B'(t)", colors="green")
+PlotlyHelper.plot_curves(x=B_conc, y=Deriv_B, title="d/dt B(t) as a function of B(t)",
+                         xlabel="B(t)", ylabel="B'(t)", colors="green")
 
 # %% [markdown]
 # As expected, it appears to be a straight line, and the rate of change is highest when [B] is small, which happens early in the reaction.  
@@ -196,8 +196,8 @@ a, b
 # #### Visually verify the least-square fit
 
 # %%
-PlotlyHelper.plot_curves(x=B_conc, y=[Deriv_B , a + b*B_conc], title="d/dt B(t) as a function of B(t), alongside its least-square fit", 
-                         xaxis="B(t)", yaxis="B'(t)", curve_labels=["B'(t)", "Linear Fit"], legend_title="Curve vs Fit:", colors=['green', 'red'])
+PlotlyHelper.plot_curves(x=B_conc, y=[Deriv_B , a + b*B_conc], title="d/dt B(t) as a function of B(t), alongside its least-square fit",
+                         xlabel="B(t)", ylabel="B'(t)", curve_labels=["B'(t)", "Linear Fit"], legend_title="Curve vs Fit:", colors=['green', 'red'])
 
 # %% [markdown]
 # _Virtually indistinguishable lines!_
