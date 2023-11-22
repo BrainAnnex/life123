@@ -2756,3 +2756,58 @@ class ReactionDynamics:
 
         return num.curve_intersect_interpolate(df, row_index,
                                                x="SYSTEM TIME", var1=chem1, var2=chem2)
+
+
+
+    def estimate_rate_constants(self, t :np.array, reactant_conc :np.array, product_conc :np.array, product_name="Product"):
+        """
+        IMPORTANT : Currently restricted to reactions with a 1:1 stoichiometry between the given reactant and product
+
+        :param t:
+        :param reactant_conc:
+        :param product_conc:
+        :param product_name:
+        :return:
+        """
+        total_conc_arr = reactant_conc + product_conc
+        total_conc = np.median(total_conc_arr)    # TODO: give warning or abort if there's too much variance
+        sd = np.std(total_conc_arr)
+
+        print(f"Total REACTANT + PRODUCT has a median of {total_conc:,.4g}, "
+              f"\n    with standard deviation {sd:,.4g} (expected: zero)")
+
+
+        # The rate of change of [reactant] with time
+        deriv_reactant_conc = np.gradient(reactant_conc, t, edge_order=2)
+        # The rate of change of [product] with time
+        deriv_product_conc = np.gradient(product_conc, t, edge_order=2)
+
+
+        median_sum_derivs = np.median(deriv_reactant_conc + deriv_product_conc)
+        print(f"The sum of the derivatives has a median of {median_sum_derivs:,.4g} (expected: zero)")
+
+
+        # Do a least-square fit of the time-gradient of the product, as a function of the product's concentration
+        Y = deriv_product_conc   # The dependent variable
+        X = product_conc    # The independent variable
+
+        M = np.vstack([np.ones(len(Y)), X]).T
+        # M is an nx2 matrix , where n is the number of data points.  The 2nd column contains the values of X
+
+        a, b = np.linalg.lstsq(M, Y, rcond=None)[0]  # Carry out the least-square fit as: Y = a + b X
+        print(f"Least square fit: Y = {a:,.4g} + {b:,.4g} X"
+              f"\n    where X is the array [{product_name}] and Y is its gradient")
+
+        fig = PlotlyHelper.plot_curves(x=X, y=[Y , a + b*X],
+                                       title=f"d/dt {product_name}(t) as a function of {product_name}(t), alongside its least-square fit",
+                                       xlabel=f"{product_name}(t)", ylabel=f"{product_name}'(t)",
+                                       curve_labels=[f"{product_name}'(t)", "Linear Fit"], legend_title="Curve vs Fit:",
+                                       colors=['green', 'red'])
+
+        kF = a / total_conc
+
+        kR = -(a / total_conc) - b
+
+        print(f"\n-> ESTIMATED RATE CONSTANTS: kF = {kF:,.4g}, kR = {kR:,.4g}")
+
+        return fig

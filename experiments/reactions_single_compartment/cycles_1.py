@@ -22,7 +22,7 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Nov. 21, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -202,16 +202,16 @@ dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 dynamics.plot_history(chemicals=["A", "B", "C"])
 
 # %% [markdown]
-# ### The plots has 4 distinctive intersections; locate and save them:
+# ### The two plots have 4 distinctive intersections among them; locate and save them:
 
 # %%
 run2 = []
 
 # %%
-run2.append(dynamics.curve_intersection(t_start=1., t_end=2., chem1="E_high", chem2="E_low"))
+run2.append(dynamics.curve_intersection(t_start=1., t_end=2., chem1="E_high", chem2="E_low"))  # This can be seen in the 1st plot
 
 # %%
-run2.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, chem1="A", chem2="B"))
+run2.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, chem1="A", chem2="B"))       # This, and later, can be seen in the 2nd plot
 
 # %%
 run2.append(dynamics.curve_intersection(t_start=3., t_end=4., chem1="A", chem2="C"))
@@ -267,7 +267,7 @@ dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 dynamics.plot_history(chemicals=["A", "B", "C"])
 
 # %% [markdown]
-# ### The plots has 4 distinctive intersections; locate and save them:
+# ### Again, the two plots have 4 distinctive intersections among them; locate and save them:
 
 # %%
 run3 = []

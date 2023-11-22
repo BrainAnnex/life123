@@ -13,11 +13,16 @@
 # ---
 
 # %% [markdown]
-# ## A simple `A <-> B` reaction whose rate constants are to estimated from the time evolution of [A] and [B] (values given on a variable time grid.)
+# ## A simple `A <-> B` reaction whose rate constants are to be estimated 
+# ## from a given time evolution of [A] and [B] (values on a variable-time grid.)
 #
 # Assume the reaction is known to be 1st order (won't verify that.)  
 #
-# LAST REVISED: Nov. 20, 2023
+# In PART 1, a time evolution of [A] and [B] is obtained by simulation  
+# In PART 2, the time functions generated in Part 1 are taken as a _starting point,_ to estimate the rate constants of `A <-> B`
+# In PART 3, we'll repeat what we did in Part 2, but this time showing the full details of how the answer is arrived at
+#
+# LAST REVISED: Nov. 21, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -82,13 +87,13 @@ dynamics.plot_history(title="Reaction A <-> B",
 
 # %% [markdown]
 # # PART 2 - This is the starting point of fitting the data from part 1.  
-# ## We're given the data of the above curves, and we want to estimate the rate constants (forward and reverse) of the reaction `A <-> B`
+# ### We're given the data of the above curves - i.e. the system history, and we want to estimate the rate constants (forward and reverse) of the reaction `A <-> B`
 
 # %% [markdown]
 # Let's start by taking stock of the actual data (saved during the simulation of part 1):
 
 # %%
-df = dynamics.get_history()
+df = dynamics.get_history(head=10)  # Only show a handful of entries
 df
 
 # %% [markdown]
@@ -104,7 +109,55 @@ A_conc = df["A"].to_numpy()
 B_conc = df["B"].to_numpy()
 
 # %% [markdown]
-# #### Let's verify that the stoichiometry is satified.  From `A <-> B` we can infer that any drop in [A] corresponds to an equal increase in [B].   Their sum will remain constants:
+# #### Here, we take the easy way, using a specialized Life123 function!
+# (in Part 3, we'll do a step-by-step derivation)
+
+# %%
+dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=B_conc, product_name="B")
+
+# %% [markdown]
+# ### The least-square fit is good...  and the values estimated from the data for kF and kR are in good agreement with the values we used in the simulation to get that data, respectively 12 and 2 (see PART 1, above)  
+# Note that our data set is quite skimpy in the number of points:
+
+# %%
+len(B_conc)
+
+# %% [markdown]
+# and that it uses a _variable_ grid, with more points where there's more change, such as in the early times:
+
+# %%
+t_arr  # Time points in our data set
+
+# %%
+np.gradient(t_arr)
+
+# %% [markdown]
+# #### The variable grid, and the skimpy number of data points, are best seen in the plot repeated from PART 1:
+
+# %%
+dynamics.plot_history(title="Reaction A <-> B",
+                      colors=['blue', 'green'], show_intervals=True)
+
+# %%
+
+# %% [markdown]
+# # PART 3 - investigate how the `estimate_rate_constants()` function used in part 2 works  
+# #### Again, the starting point are the time evolutions of [A] and [B] , that is the system history that was given to us
+
+# %% [markdown]
+# Let's revisit the Numpy arrays that we had set up at the beginning of Part 2
+
+# %%
+t_arr    # The independent variable : Time
+
+# %%
+A_conc
+
+# %%
+B_conc
+
+# %% [markdown]
+# #### Let's verify that the stoichiometry is satified.  From the reaction `A <-> B` we can infer that any drop in [A] corresponds to an equal increase in [B].   Their sum will remain constants:
 
 # %%
 A_conc + B_conc
@@ -116,7 +169,8 @@ A_conc + B_conc
 TOT_conc = 50.
 
 # %%
-# Incidentally, there's a function to verify that the stoichiometry of a single reaction holds true across the entire simulation run (overkill in this case!)
+# Incidentally, there's a function to verify that the stoichiometry of a single reaction holds true across the entire simulation run 
+# (overkill in this case!)
 dynamics.stoichiometry_checker_entire_run() 
 
 # %%
@@ -134,8 +188,6 @@ Deriv_B = np.gradient(B_conc, t_arr, edge_order=2)
 # %%
 # As expected from the stoichiometry, the two derivatives are opposites: when [A] increases by a certain amount, [B] decreases by that same amount
 Deriv_A + Deriv_B
-
-# %%
 
 # %%
 PlotlyHelper.plot_curves(x=t_arr, y=[Deriv_A , Deriv_B], title="d/dt A(t) and d/dt B(t) as a function of time",
@@ -186,7 +238,7 @@ X
 
 # %%
 M = np.vstack([np.ones(len(Y)), X]).T
-# N is an nx2 matrix , where n is the number of data points.  The 2nd column are the values of X
+# M is an nx2 matrix , where n is the number of data points.  The 2nd column contains the values of X
 M[:10, :]   # Show the first 10 rows
 
 # %%
@@ -229,26 +281,6 @@ kR = -(a / TOT_conc) - b
 kR
 
 # %% [markdown]
-# ### The values we estimated for kF and kR from the data, are in good agreement with the values we used in the simulation to get that data, respectively 12 and 2 (see PART 1, above)  
-# Note that our data set is quite skimpy in the number of points:
-
-# %%
-len(B_conc)
-
-# %% [markdown]
-# and that it uses a `variable` grid, with more points where there's more change, such as in the early times:
-
-# %%
-t_arr  # Time points in our data set
-
-# %%
-np.gradient(t_arr)
-
-# %% [markdown]
-# Best seen in the plot repeated from PART 1:
-
-# %%
-dynamics.plot_history(title="Reaction A <-> B",
-                      colors=['blue', 'green'], show_intervals=True)
+# #### We just obtained the same values of the estimated kF and kR as were computed by a call to estimate_rate_constants() in Part 2
 
 # %%

@@ -22,7 +22,7 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Nov. 21, 2023
 
 # %% [markdown]
 # ![Temporarily suspending the Laws of Physics](../../docs/impossible_1.png)
@@ -184,7 +184,7 @@ dynamics.single_compartment_react(initial_step=0.005, target_end_time=4.0,
 #dynamics.get_history()
 
 # %%
-fig0 = dynamics.plot_history(suppress=True)   # Prepare, but don't show, the main plot
+fig0 = dynamics.plot_history()   # Prepare, but don't show, the main plot
 
 # %%
 # Add a second plot, with a vertical gray line at t=2
