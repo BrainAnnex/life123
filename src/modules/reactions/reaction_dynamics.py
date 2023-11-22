@@ -2240,7 +2240,8 @@ class ReactionDynamics:
     #####################################################################################################
 
     def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None, range_x=None,
-                     vertical_lines=None, show_intervals=False, suppress=False, show=False) -> go.Figure:
+                     ylabel="concentration",
+                     vertical_lines=None, show_intervals=False, show=False) -> go.Figure:
         """
         Using plotly, draw the plots of concentration values over time, based on history data that gets
         automatically saved when running reactions.
@@ -2266,6 +2267,7 @@ class ReactionDynamics:
         :param title_prefix: (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
                                     whether the title is specified by the user or automatically generated
         :param range_x:         (OPTIONAL) list with of the form [t_start, t_end], to only show a part of the timeline
+        :param ylabel:          (OPTIONAL) Caption to use for the y-axis.  By default, "concentration"
         :param vertical_lines:  (OPTIONAL) List or tuple or Numpy array or Pandas series
                                     of x-coordinates at which to draw thin vertical dotted gray lines.
                                     If the number of vertical line is so large as to overwhelm the plot,
@@ -2276,9 +2278,6 @@ class ReactionDynamics:
         :param show:        If True, the plot will be shown
                                 Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
                                       leads to it being automatically shown
-        :param suppress:    (OBSOLETE) TODO: REMOVE
-                                If True, nothing gets shown - and a plotly "Figure" object gets returned instead;
-                                this is useful to make additional tweaks, or combine multiple plots (see example above)
 
         :return:            A plotly "Figure" object
         """
@@ -2323,11 +2322,12 @@ class ReactionDynamics:
             vertical_lines = df["SYSTEM TIME"]  # Make use of the simulation times
             title += " (time steps shown in dashed lines)"
 
+
         # Create the main plot
         fig = px.line(data_frame=df, x="SYSTEM TIME", y=chemicals,
                       title=title, range_x=range_x,
                       color_discrete_sequence = colors,
-                      labels={"value":"concentration", "variable":"Chemical"})
+                      labels={"value": ylabel, "variable": "Chemical"})
 
 
         if vertical_lines is not None:
@@ -2364,13 +2364,6 @@ class ReactionDynamics:
             fig.show()  # Actually display the plot
 
         return fig
-
-        '''
-        if suppress:
-            return fig      # Return the plot data (without actually displaying the plot)
-        else:
-            fig.show()      # Actually display the plot
-        '''
 
 
 

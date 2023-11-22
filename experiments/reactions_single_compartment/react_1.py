@@ -13,12 +13,13 @@
 # ---
 
 # %% [markdown]
-# ## A simple `A <-> B` reaction between 2 species
-# with 1st-order kinetics in both directions, taken to equilibrium
+# ## An `A <-> B` reaction between 2 species
+# with 1st-order kinetics in both directions, taken to equilibrium,
+# using a simple, coarse fixed-timestep simulation.
 #
-# See also the experiment _"1D/reactions/reaction_1"_ ; this is the "single-compartment" version of it.
+# See also the experiment _"1D/reactions/reaction_1"_ for a multi-compartment version.
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Nov. 22, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -31,6 +32,7 @@ from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
 import plotly.express as px
+from src.modules.visualization.plotly_helper import PlotlyHelper
 from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
@@ -97,7 +99,8 @@ dynamics.single_compartment_react(initial_step=0.1, n_steps=10,
                                              "final_caption": "last reaction step"})
 
 # %% [markdown]
-# #### NOTE: for demonstration purposes, we're using FIXED time steps...  Typically, one would use the option for automated variable time steps (see experiment `react 2`)
+# ## NOTE: for demonstration purposes, we're using FIXED time steps...  
+# ## Typically, one would use the option for adaptive variable time steps (see experiment `react 2`)
 
 # %%
 dynamics.get_history()
@@ -109,7 +112,7 @@ dynamics.get_history()
 dynamics.get_system_conc()
 
 # %% [markdown]
-# NOTE: Consistent with the 3/2 ratio of forward/reverse rates (and the 1:1 stoichiometry, and the 1st order reactions), the systems settles in the following equilibrium:
+# NOTE: Consistent with the 3/2 ratio of forward/reverse rates (and the 1st order of the reactions), the systems settles in the following equilibrium:
 #
 # [A] = 23.99316406
 #  
@@ -121,7 +124,7 @@ dynamics.get_system_conc()
 dynamics.is_in_equilibrium()
 
 # %% [markdown]
-# ### Note that, because of the high initial concentration of B relative to A, the overall reaction has proceeded **in reverse**
+# ### Note that, because of the high initial concentration of B relative to A, the overall reaction has proceeded IN REVERSE
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time
@@ -132,15 +135,13 @@ dynamics.plot_history(colors=['blue', 'orange'])
 # %% [markdown]
 # ### Note the raggedness of the left-side (early times) of the curves.  
 # ### In experiment `react_2` this simulation gets repeated with an adaptive variable time resolution that takes smaller steps at the beginning, when the reaction is proceeding faster   
-# ### By contrast, here we used FIXED steps (see below), which is generally a bad approach
+# ### By contrast, here we used FIXED steps (shown below), which is generally a bad approach
 
 # %%
 dynamics.plot_history(colors=['blue', 'orange'], show_intervals=True)
 
 # %%
 df = dynamics.get_history()
-
-# %%
 df
 
 # %% [markdown]
@@ -162,22 +163,24 @@ A_dot = np.gradient(A, 0.1)      # 0.1 is the constant step size
 A_dot
 
 # %%
-df['A_dot'] = A_dot     # Add a column to the dataframe
+df['A_dot'] = A_dot     # Add a column to the Pandas dataframe
 
 # %%
 df
 
 # %%
-fig = px.line(data_frame=dynamics.get_history(), x="SYSTEM TIME", y=["A", "A_dot"], 
-              title="Changes in concentration of A with time (blue) , and changes in its rate of change (brown)",
-              color_discrete_sequence = ['navy', 'brown'],
-              labels={"value":"concentration (blue) /<br> concentration change per unit time (brown)", "variable":"Chemical"})
-fig.show()
+dynamics.plot_history(chemicals=["A", "A_dot"], colors=['navy', 'brown'], 
+                      ylabel="concentration (blue) /<br> concentration change per unit time (brown)",
+                      title="Changes in concentration of A with time (blue) , and changes in its rate of change (brown)")
 
 # %% [markdown]
-# ### At t=0, [A]=10 and [A] has a high rate of change (70);  
-# ### as the system approaches equilibrium, [A] approaches a value of 24, and its rate of change decays to zero.
-#
-# The curves are jagged because of limitations of numerically estimating derivatives, as well as the large time steps taken (especially in the early times, when there's a lot of change.)
+# ### At t=0 :  
+# [A]=10 and [A] has a high rate of change (70)
+# ### As the system approaches equilibrium :  
+# [A] approaches a value of 24, and its rate of change decays to zero.
+
+# %% [markdown]
+# **Note:** The curves are jagged because of limitations of numerically estimating derivatives, as well as the large time steps taken (especially in the early times, when there's a lot of change.)  
+# In experiment "react_2", we revisit the same reaction using a better simulator that employs _adaptive variable time steps_
 
 # %%

@@ -88,7 +88,7 @@ class PlotlyHelper:
                                 Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
                                       leads to it being automatically shown
 
-        :return:            A plotly "Figure" object, depending on the "suppress" flag
+        :return:            A plotly "Figure" object
         """
         if type(y) == list or type(y) == tuple:
             number_of_curves = len(y)
@@ -122,8 +122,8 @@ class PlotlyHelper:
                 fig.data[index]["hovertemplate"] = f"{label} :<br>{hovertemplate}"    # variable :
             else:
                 fig.data[index]["hovertemplate"] = hovertemplate
-        '''
-        
+
+        '''        
         if (number_of_curves > 1) and (curve_labels is not None):
             for index, l in enumerate(curve_labels):
                 fig.data[index]["name"] = l
