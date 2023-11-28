@@ -72,7 +72,7 @@ class ReactionDynamics:
                                         #   whenever requested by the user.
 
 
-        # ***  FOR AUTOMATED ADAPTIVE STEP SIZES  ***
+        # ***  FOR AUTOMATED ADAPTIVE TIME STEP SIZES  ***
         # Note: The "aborts" below are "elective" aborts - i.e. not aborts from hard errors (further below)
         #       The default values below were empirically found to be "conservative" but not excessively so
         self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
@@ -82,7 +82,8 @@ class ReactionDynamics:
 
         self.error_abort_step_factor = 0.25     # MUST BE < 1.  Factor by which to multiply the time step
                                                 #   in case of negative-concentration error from excessive step size
-                                                #   NOTE: this is from ERROR aborts, not to be confused with high-threshold aborts
+                                                #   NOTE: this is from ERROR aborts,
+                                                #   not to be confused with general aborts based on reaching high threshold
 
 
         self.reaction_speeds = {}       # TODO: not in active use; possibly obsolete
@@ -433,39 +434,11 @@ class ReactionDynamics:
 
     #####################################################################################################
 
-    '''                            ~  TO PERFORM THE REACTIONS  ~                                     '''
+    '''                            ~  PARAMETERS FOR ADAPTIVE STEPS  ~                                '''
 
-    def ________TO_PERFORM_THE_REACTIONS________(DIVIDER):
+    def ________PARAMETERS_FOR_ADAPTIVE_STEPS________(DIVIDER):
         pass         # Used to get a better structure view in IDEs such asPycharm
     #####################################################################################################
-
-
-    def specify_steps(self, total_duration=None, time_step=None, n_steps=None) -> (float, int):
-        """
-        If either the time_step or n_steps is not provided (but at least 1 of them must be present),
-        determine the other one from total_duration
-
-        Their desired relationship is: total_duration = time_step * n_steps
-
-        :param total_duration:  Float with the overall time advance (i.e. time_step * n_steps)
-        :param time_step:       Float with the size of each time step
-        :param n_steps:         Integer with the desired number of steps
-        :return:                The pair (time_step, n_steps)
-        """
-        assert (not total_duration or not time_step or not n_steps), \
-            "ReactionDynamics.specify_steps(): cannot specify all 3 arguments: `total_duration`, `time_step`, `n_steps` (specify only any 2 of them)"
-
-        assert (total_duration and time_step) or (total_duration and n_steps) or (time_step and n_steps), \
-            "ReactionDynamics.specify_steps(): must provide exactly 2 arguments from:  `total_duration`, `time_step`, `n_steps`"
-
-        if not time_step:
-            time_step = total_duration / n_steps
-
-        if not n_steps:
-            n_steps = math.ceil(total_duration / time_step)
-
-        return (time_step, n_steps)     # Note: could opt to also return total_duration if there's a need for it
-
 
 
     def set_thresholds(self, norm="norm_A", low=None, high=None, abort=None) -> None:
@@ -550,6 +523,83 @@ class ReactionDynamics:
 
 
 
+    def show_adaptive_parameters(self) -> None:
+        """
+
+        :return:    None
+        """
+        print("Parameters used for the automated adaptive time step sizes -")
+        print("    THRESHOLDS: ", self.thresholds)
+        print("    STEP FACTORS: ", self.step_factors)
+        print("    STEP FACTOR in case of 'ERROR ABORTS': ", self.error_abort_step_factor)
+
+
+
+    def set_adaptive_parameters(self, preset :str) -> None:
+        """
+        Lets the user choose a preset to use from then on, unless explicitly changed,
+        for use in all reaction simulations involving adaptive time steps
+
+        :param preset:  String with one of the available preset names
+        :return:        None
+        """
+        if preset == "mid":     # A "middle-of-the road" heuristic: somewhat "conservative" but not overly so
+            self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
+                               {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
+            self.step_factors = {"upshift": 1.2, "downshift": 0.5, "abort": 0.4}
+            self.error_abort_step_factor = 0.25
+
+        elif preset == "fast":   # EXPERIMENTAL preset subject to change!
+            self.thresholds = [{"norm": "norm_A", "low": 0.8, "high": 1.2, "abort": 1.7},
+                               {"norm": "norm_B", "low": 0.15, "high": 0.8, "abort": 1.8}]
+            self.step_factors = {"upshift": 1.5, "downshift": 0.8, "abort": 0.6}
+            self.error_abort_step_factor = 0.5
+
+        elif preset == "slow":   # EXPERIMENTAL preset subject to change!
+            self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
+                               {"norm": "norm_B", "low": 0.05, "high": 0.4, "abort": 1.3}]
+            self.step_factors = {"upshift": 1.1, "downshift": 0.3, "abort": 0.2}
+            self.error_abort_step_factor = 0.1
+
+
+
+
+    #####################################################################################################
+
+    '''                            ~  TO PERFORM THE REACTIONS  ~                                     '''
+
+    def ________TO_PERFORM_THE_REACTIONS________(DIVIDER):
+        pass         # Used to get a better structure view in IDEs such asPycharm
+    #####################################################################################################
+
+
+    def specify_steps(self, total_duration=None, time_step=None, n_steps=None) -> (float, int):
+        """
+        If either the time_step or n_steps is not provided (but at least 1 of them must be present),
+        determine the other one from total_duration
+
+        Their desired relationship is: total_duration = time_step * n_steps
+
+        :param total_duration:  Float with the overall time advance (i.e. time_step * n_steps)
+        :param time_step:       Float with the size of each time step
+        :param n_steps:         Integer with the desired number of steps
+        :return:                The pair (time_step, n_steps)
+        """
+        assert (not total_duration or not time_step or not n_steps), \
+            "ReactionDynamics.specify_steps(): cannot specify all 3 arguments: `total_duration`, `time_step`, `n_steps` (specify only any 2 of them)"
+
+        assert (total_duration and time_step) or (total_duration and n_steps) or (time_step and n_steps), \
+            "ReactionDynamics.specify_steps(): must provide exactly 2 arguments from:  `total_duration`, `time_step`, `n_steps`"
+
+        if not time_step:
+            time_step = total_duration / n_steps
+
+        if not n_steps:
+            n_steps = math.ceil(total_duration / time_step)
+
+        return (time_step, n_steps)     # Note: could opt to also return total_duration if there's a need for it
+
+
 
     def single_compartment_react(self, reaction_duration=None, target_end_time=None,
                                  initial_step=None, n_steps=None,
@@ -568,7 +618,7 @@ class ReactionDynamics:
                                     If both target_end_time and reaction_duration are specified, an error will result
 
         :param initial_step:    The suggested size of the first step (it might be reduced automatically,
-                                    in case of "hard" errors from large steps)
+                                    in case of "hard" errors resulting from overly-large steps)
 
         :param n_steps:         The desired number of steps
 
@@ -1023,11 +1073,16 @@ class ReactionDynamics:
 
     def adjust_speed(self, delta_conc: np.array, baseline_conc=None) -> (str, Union[float, int], dict):     #TODO: test
         """
+        Computes some measures of the size of delta_concentrations, from the last step, in the context of the
+        baseline initial concentrations of that same step.
+        Propose a course of action about what to do for the next step.
 
-        :param delta_conc:
-        :param baseline_conc:
+        :param delta_conc:      A numpy array of changes in concentrations for the chemicals of interest,
+                                    across a simulation time step
+        :param baseline_conc:   A numpy array of baseline concentration values for those same chemicals,
+                                    prior to the above change, at the start of a simulation time step
         :return:                A triplet:
-                                    1) String with the name of the action to take: either "low", "stay", "high" or "abort"
+                                    1) String with the name of detected state: either "low", "stay", "high" or "abort"
                                     2) A factor by which to multiple the time step at the next iteration round;
                                        if no change is deemed necessary, 1 is returned
                                     3) A dict of all the computed norms (any of the last ones, except the first one, may be missing),
@@ -1049,7 +1104,7 @@ class ReactionDynamics:
         # (i.e. if they don't occur in any reaction, or occur as enzyme),
         # restrict our consideration to only the dynamically involved ones
         if len(self.chem_data.active_chemicals) < n_chems:
-            n_chems = len(self.chem_data.active_chemicals)
+            #n_chems = len(self.chem_data.active_chemicals)
             delta_conc = delta_conc[list(self.chem_data.active_chemicals)]
             #print(f"\nadjust_speed(): restricting adaptive time step analysis to {n_chems} chemicals only; their delta_conc is {delta_conc}")
             if baseline_conc is not None:
@@ -1090,10 +1145,10 @@ class ReactionDynamics:
 
 
 
-    def display_thresholds(self, rule, value):
+    def display_thresholds(self, rule :str, value) -> str:
         """
 
-        :param rule:
+        :param rule:    A string that can be either 'low', 'high', or 'abort'
         :param value:
         :return:
         """
@@ -1448,6 +1503,25 @@ class ReactionDynamics:
             reverse_rate *= conc ** order     # Raise to power
 
         return forward_rate - reverse_rate
+
+
+
+    def exact_solution(self, kF, kR, A0, TOT, t_arr):
+        """
+        For details, see "Exact Solution of the 1st Order Reaction A <=> B"
+        at https://life123.science/reactions
+
+        :param kF:
+        :param kR:
+        :param A0:
+        :param TOT:
+        :param t_arr:
+        :return:        A pair of Numpy Arrays
+        """
+        # (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
+        A_arr = (A0 - (kR * TOT) / (kF + kR)) * np.exp(-(kF + kR) * t_arr) + kR * TOT / (kF + kR)
+        B_arr = TOT - A_arr
+        return (A_arr, B_arr)
 
 
 
@@ -2461,11 +2535,11 @@ class ReactionDynamics:
         Optionally, restrict the result with a start and/or end times,
         or by limiting to a specified numbers of rows at the end
 
-        :param t_start: (OPTIONAL) Start time in the "SYSTEM TIME" column
-        :param t_end:   (OPTIONAL) End time
+        :param t_start: (OPTIONAL) Start time in the "SYSTEM TIME" column.  Watch out for roundoff errors!
+        :param t_end:   (OPTIONAL) End time.  Watch out for roundoff errors!
         :param head:    (OPTIONAL) Number of records to return,
-                                   from the start of the diagnostic dataframe.
-        :param tail:    (OPTIONAL) Number of records to consider, from the end of the dataframe
+                                   from the start of the history dataframe.
+        :param tail:    (OPTIONAL) Number of records to consider, from the end of the history dataframe
         :param t:       (OPTIONAL) Individual time to pluck out from the dataframe;
                                    the row with closest time will be returned.
                                    If this parameter is specified, an extra column - called "search_value" -
@@ -2475,8 +2549,6 @@ class ReactionDynamics:
 
         :return:        A Pandas dataframe
         """
-        # TODO: also allow to select specific columns.  Could just retir
-
         # Note self.history is an object of class MovieTabular
         df = self.history.get_dataframe(head=head, tail=tail, search_val=t,
                                         search_col="SYSTEM TIME", val_start=t_start, val_end=t_end)
@@ -2490,22 +2562,38 @@ class ReactionDynamics:
 
 
 
-    def get_historical_concentrations(self, row: int, df=None) -> np.array:
+    def get_historical_concentrations(self, row=None, t=None, df=None) -> np.array:
         """
-        Return a Numpy array with ALL the chemical concentrations (in their index order)
-        from the specified row number of given Pandas data frame (by default, the system history)
+        Typically used to retrieve a system snapshot from its history.
 
-        :param row: Integer with the zero-based row number of the system history (which is a Pandas data frame)
+        Return a Numpy array with ALL the chemical concentrations (in their index order)
+        from one row in the given Pandas data frame (by default, the system history);
+        the row can be identified either by it row number, or by the system time.
+
+        :param row: (OPTIONAL) Integer with the zero-based row number of the system history
+                        (which is a Pandas data frame)
+        :param t:   (OPTIONAL) Individual time to pluck out from the dataframe;
+                        the row with closest time will be returned.
+                        Exactly one of "t" and "row" must be specified
         :param df:  (OPTIONAL) A Pandas data frame with concentration information in columns that have
                         the names of the chemicals (if None, the system history is used)
         :return:    A Numpy array of floats.  EXAMPLE: array([200., 40.5])
         """
+        assert row is None or t is None, "Cannot specify both arguments `row` and `t`"
+        assert row is not None or t is not None, "Must specify either argument `row` and `t`"
+
         if df is None:
-            df = self.get_history()
+            if t:
+                df = self.get_history(t=t)
+            else:
+                df = self.get_history()
 
         chem_list = self.chem_data.get_all_names()  # List of all the chemicals' names
-        arr = df.loc[row][chem_list].to_numpy(dtype='float32')
-        return arr
+
+        if row:
+            return df.loc[row][chem_list].to_numpy(dtype='float32')
+        else:
+            return df.iloc[0][chem_list].to_numpy(dtype='float32')
 
 
 
@@ -2706,25 +2794,6 @@ class ReactionDynamics:
 
 
 
-    def extract_delta_concentrations(self, df, row_from: int, row_to: int, chem_list: [str]) -> np.array:
-        """
-        Extract the concentration changes of the specified chemical species from a Pandas dataframe
-        of concentration values
-
-        EXAMPLE:  extract_delta_concentrations(my_dataframe, 7, 8, ['A', 'B'])
-
-        :param df:
-        :param row_from:
-        :param row_to:
-        :param chem_list:
-        :return:            A Numpy array of floats
-        """
-        from_values = df.loc[row_from][chem_list]
-        to_values = df.loc[row_to][chem_list]
-        return (to_values - from_values).astype(float).to_numpy(dtype='float32')
-
-
-
     def curve_intersection(self, chem1, chem2, t_start, t_end) -> (float, float):
         """
         Find and return the intersection of the 2 curves in the columns var1 and var2,
@@ -2749,6 +2818,28 @@ class ReactionDynamics:
 
         return num.curve_intersect_interpolate(df, row_index,
                                                x="SYSTEM TIME", var1=chem1, var2=chem2)
+
+
+
+    def extract_delta_concentrations(self, df, row_from :int, row_to :int, chem_list: [str]) -> np.array:
+        """
+        Extract the concentration changes of the specified chemical species from a Pandas dataframe
+        of concentration values
+
+        EXAMPLE:  extract_delta_concentrations(my_dataframe, 7, 8, ['A', 'B'])
+
+        :param df:          A Pandas dataframe of concentration values (it MUST contain columns
+                                with the names given in chem_list
+        :param row_from:    Row number of the first row of data we're interested in
+        :param row_to:      Row number of the last row of data we're interested in
+        :param chem_list:   A list of names of chemicals
+
+        :return:            A Numpy array of floats
+        """
+        # TODO: add validations
+        from_values = df.loc[row_from][chem_list]
+        to_values = df.loc[row_to][chem_list]
+        return (to_values - from_values).astype(float).to_numpy(dtype='float32')
 
 
 
