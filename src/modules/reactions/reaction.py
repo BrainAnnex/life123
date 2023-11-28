@@ -166,7 +166,7 @@ class Reaction:
         Return a string with a user-friendly form of the left (reactants) side of the reaction formula
         EXAMPLE: "CH4 + 2 O2"
 
-        :return:
+        :return:    A string with one side of a chemical reaction
         """
         reactants = self.extract_reactants()
         return self._standard_form_chem_eqn(reactants)
@@ -187,7 +187,7 @@ class Reaction:
         """
         Return a string with a user-friendly form of the right (products) side of the reaction formula
 
-        :return:
+        :return:    A string with one side of a chemical reaction
         """
         products = self.extract_products()
         return self._standard_form_chem_eqn(products)

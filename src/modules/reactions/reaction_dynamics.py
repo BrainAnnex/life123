@@ -299,72 +299,6 @@ class ReactionDynamics:
     Management of reactions
     '''
 
-    def slow_rxns(self) -> [int]:     # TODO: obsolete
-        """
-        Return a list of all the reactions that are marked as "slow"
-        :return:
-        """
-        return [k  for k, v in self.reaction_speeds.items()  if v == "S"]
-        # Alternate approach:
-        # return list(filter(lambda k:self.reaction_speeds[k] == "S", d ))
-
-
-    def fast_rxns(self) -> [int]:     # TODO: obsolete
-        """
-        Return a list of all the reactions that are marked as "fast"
-        :return:
-        """
-        return [i for i in range(self.chem_data.number_of_reactions())
-                if i not in self.slow_rxns()]
-        # Alternate way:
-        # return list(set(range(self.reaction_data.number_of_reactions()).difference(self.slow_rxns()))
-
-
-
-    def are_all_slow_rxns(self) -> bool:     # TODO: obsolete
-        """
-        Return True iff all the reactions are marked as "slow"
-        :return:
-        """
-        return len(self.slow_rxns()) == self.chem_data.number_of_reactions()
-
-
-
-    def get_rxn_speed(self, rxn_index: int) -> str:     # TODO: obsolete
-        """
-        For the requested reaction, get the string code that it was marked with
-        to classify its speed.
-        If the reaction has not been previously classified, regard it as "F" (Fast)
-
-        :param rxn_index:   The index (0-based) to identify the reaction of interest
-        :return:            A 1-letter string with the code "F" (for Fast) or "S" (Slow)
-        """
-        return self.reaction_speeds.get(rxn_index, "F")     # Any missing entry is regarded to be "F" (Fast)
-
-
-    def set_rxn_speed(self, rxn_index: int, speed: str) -> None:     # TODO: obsolete
-        """
-        Set a code value that classifies the reaction speed to tag the given reaction to
-
-        :param rxn_index:   The index (0-based) to identify the reaction of interest
-        :param speed:       A 1-letter string with the code "F" (for Fast) or "S" (Slow)
-        :return:            None
-        """
-        assert speed in ["S", "F"], "set_rxn_speed(): `speed` argument must be either 'S' or 'F'"
-        self.chem_data.assert_valid_rxn_index(rxn_index)
-        self.reaction_speeds[rxn_index] = speed
-
-
-    def set_rxn_speed_all_fast(self) -> None:     # TODO: obsolete
-        """
-        Reset all the reaction speeds to "Fast"
-
-        :return:    None
-        """
-        self.reaction_speeds = {}   # Now they'll all be assumed to be "Fast"
-                                    #   (which is the default for missing values)
-
-
 
     def clear_reactions(self) -> None:
         """
@@ -377,7 +311,7 @@ class ReactionDynamics:
         :return:    None
         """
         self.chem_data.clear_reactions_data()
-        self.set_rxn_speed_all_fast()   # Reset all the reaction speeds to "Fast".      TODO: obsolete
+        #self.set_rxn_speed_all_fast()   # Reset all the reaction speeds to "Fast"
 
 
 
@@ -1293,12 +1227,12 @@ class ReactionDynamics:
 
 
     def _reaction_elemental_step_SINGLE_REACTION(self, delta_time: float, increment_vector,
-                                                 rxn_index: int,
+                                                 rxn_index :int,
                                                  delta_dict):     # TODO: EXPERIMENTAL; not yet in use
         """
         :param delta_time:
         :param increment_vector:
-        :param rxn_index:
+        :param rxn_index:       The integer index (0-based) to identify the reaction of interest
         :param delta_dict:
         :return:
         """
@@ -1392,7 +1326,7 @@ class ReactionDynamics:
 
 
     def validate_increment(self,  delta_conc, baseline_conc: float,
-                           rxn_index: int, species_index: int, delta_time) -> None:
+                           rxn_index :int, species_index: int, delta_time) -> None:
         """
         Examine the requested concentration change given by delta_conc
         (typically, as computed by an ODE solver),
@@ -1506,17 +1440,57 @@ class ReactionDynamics:
 
 
 
-    def exact_solution(self, kF, kR, A0, TOT, t_arr):
+    def solve_exactly(self, rxn_index :int, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
         """
-        For details, see "Exact Solution of the 1st Order Reaction A <=> B"
-        at https://life123.science/reactions
+        Return the exact solution of the reaction with the requested index,
+        PROVIDED that it is a 1st Order Reaction of the type A <=> B.
+
+        Use the given initial conditions,
+        and return the solutions sampled at the specified times.
+
+        For details, see https://life123.science/reactions
+
+        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
+        :param A0:
+        :param B0:
+        :param t_arr:       A Numpy array with the desired times at which the solutions are desired
+        :return:            A pair of Numpy arrays
+        """
+        rxn = self.chem_data.get_reaction(rxn_index)
+        reactants, products, kF, kR = rxn.unpack_for_dynamics()
+
+        assert len(reactants) == 1, "Currently only works for `A <-> B` reactions"
+        assert len(products) == 1, "Currently only works for `A <-> B` reactions"
+        assert rxn.extract_stoichiometry(reactants[0]) == 1, \
+            "Currently only works for `A <-> B` reactions"
+        assert rxn.extract_stoichiometry(products[0]) == 1, \
+            "Currently only works for `A <-> B` reactions"
+        # TODO: should also verify the reaction orders to be 1
+
+        #A = rxn.extract_species_index(reactants[0])     # The index of the "A" chemical in the expected reaction
+        #B = rxn.extract_species_index(products[0])      # The index of the "B" chemical in the expected reaction
+
+        TOT = A0 + B0
+        #print(kF, kR, A0, TOT)
+
+        return self._exact_solution(kF, kR, A0, TOT, t_arr)
+
+
+        
+    def _exact_solution(self, kF, kR, A0, TOT, t_arr) -> (np.array, np.array):
+        """
+        Return the exact solution of the 1st Order Reaction A <=> B,
+        with the specified parameters, 
+        sampled at the given times.
+        
+        For details, see https://life123.science/reactions
 
         :param kF:
         :param kR:
         :param A0:
         :param TOT:
-        :param t_arr:
-        :return:        A pair of Numpy Arrays
+        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
+        :return:        A pair of Numpy arrays
         """
         # (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
         A_arr = (A0 - (kR * TOT) / (kF + kR)) * np.exp(-(kF + kR) * t_arr) + kR * TOT / (kF + kR)
@@ -1696,7 +1670,7 @@ class ReactionDynamics:
     #####################################################################################################
 
 
-    def stoichiometry_checker(self, rxn_index: int, conc_arr_before: np.array, conc_arr_after: np.array,
+    def stoichiometry_checker(self, rxn_index :int, conc_arr_before: np.array, conc_arr_after: np.array,
                               suppress_warning=False) -> bool:
         """
         For the indicated reaction, investigate the change in the concentration of the involved chemicals,
@@ -1707,7 +1681,7 @@ class ReactionDynamics:
 
         NOTE: the concentration changes in chemicals not involved in the specified reaction are ignored
 
-        :param rxn_index:       Integer to identify the reaction of interest
+        :param rxn_index:       The integer index (0-based) to identify the reaction of interest
         :param conc_arr_before: Numpy array with the concentrations of ALL the chemicals (whether involved
                                     in the reaction or not), in their index order, BEFORE the reaction step
         :param conc_arr_after:  Same as above, but after the reaction
@@ -1737,7 +1711,7 @@ class ReactionDynamics:
 
 
 
-    def _stoichiometry_checker_from_deltas(self, rxn_index: int, delta_arr: np.array) -> bool:
+    def _stoichiometry_checker_from_deltas(self, rxn_index :int, delta_arr: np.array) -> bool:
         """
         Helper function.
 
@@ -1749,7 +1723,7 @@ class ReactionDynamics:
 
         NOTE: the concentration changes in chemicals not involved in the specified reaction are ignored
 
-        :param rxn_index:   Integer to identify the reaction of interest
+        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
         :param delta_arr:   Numpy array of numbers, with the concentrations changes of ALL the chemicals (whether involved
                                 in the reaction or not), in their index order,
                                 as a result of JUST the reaction of interest
@@ -1884,7 +1858,7 @@ class ReactionDynamics:
     #####  1. diagnostic_rxn_data  #####
 
     def save_diagnostic_rxn_data(self, time_step, increment_vector_single_rxn: Union[np.array, None],
-                                 rxn_index: int, caption="") -> None:
+                                 rxn_index :int, caption="") -> None:
         """
         Save up diagnostic data for 1 reaction, for a simulation step
         (by convention, regardless of whether the step is completed or aborted)
@@ -1893,7 +1867,7 @@ class ReactionDynamics:
         :param increment_vector_single_rxn: A Numpy array of size equal to the total number of chemical species,
                                                 containing the "delta concentrations" for
                                                 ALL the chemicals (whether involved in the reaction or not)
-        :param rxn_index:                   An integer that indexes the reaction of interest (numbering starts at 0)
+        :param rxn_index:                   The integer index (0-based) to identify the reaction of interest
         :param caption:                     OPTIONAL string to describe the snapshot
         :return:                            None
         """
@@ -1937,7 +1911,7 @@ class ReactionDynamics:
 
 
 
-    def get_diagnostic_rxn_data(self, rxn_index: int, head=None, tail=None,
+    def get_diagnostic_rxn_data(self, rxn_index :int, head=None, tail=None,
                                 t=None, print_reaction=True) -> pd.DataFrame:
         """
         Return a Pandas dataframe with the diagnostic run data of the requested SINGLE reaction,
@@ -1957,7 +1931,7 @@ class ReactionDynamics:
         (the row with the CLOSEST time to the requested one, which will appear in an extra column
         called "search_value")
 
-        :param rxn_index:       An integer that indexes the reaction of interest (numbering starts at 0)
+        :param rxn_index:       The integer index (0-based) to identify the reaction of interest
                                 TODO: if not specified, show all reactions in turn
 
         :param head:            (OPTIONAL) Number of records to return,
@@ -2313,7 +2287,7 @@ class ReactionDynamics:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None, range_x=None,
+    def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None, xrange=None,
                      ylabel="concentration",
                      vertical_lines=None, show_intervals=False, show=False) -> go.Figure:
         """
@@ -2340,7 +2314,8 @@ class ReactionDynamics:
                                     "Changes in concentration for `2 S <-> U` and `S <-> X`"
         :param title_prefix: (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
                                     whether the title is specified by the user or automatically generated
-        :param range_x:         (OPTIONAL) list with of the form [t_start, t_end], to only show a part of the timeline
+        :param xrange:          (OPTIONAL) list of the form [t_start, t_end], to initially only show a part of the timeline.
+                                    Note: it's still possible to zoom out, and see the excluded portion
         :param ylabel:          (OPTIONAL) Caption to use for the y-axis.  By default, "concentration"
         :param vertical_lines:  (OPTIONAL) List or tuple or Numpy array or Pandas series
                                     of x-coordinates at which to draw thin vertical dotted gray lines.
@@ -2399,7 +2374,7 @@ class ReactionDynamics:
 
         # Create the main plot
         fig = px.line(data_frame=df, x="SYSTEM TIME", y=chemicals,
-                      title=title, range_x=range_x,
+                      title=title, range_x=xrange,
                       color_discrete_sequence = colors,
                       labels={"value": ylabel, "variable": "Chemical"})
 
@@ -2613,7 +2588,7 @@ class ReactionDynamics:
         (by default, for all reactions)
         TODO: optionally display last lines in diagnostic data
 
-        :param rxn_index:   The index (0-based integer) to identify the reaction of interest;
+        :param rxn_index:   The integer index (0-based) to identify the reaction of interest;
                                 if None, then check all the reactions
         :param conc:        Dict with the concentrations of the species involved in the reaction(s).
                             The keys are the chemical names
@@ -2676,7 +2651,7 @@ class ReactionDynamics:
         Pathological case: if at least one of the reactants and at least one of the products have zero
         concentration, then the reaction is "stuck" - and thus regarded in "equilibrium"
 
-        :param rxn_index:   The index (0-based integer) to identify the reaction of interest
+        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
         :param conc:        Dict with the concentrations of the species involved in the reaction.
                             The keys are the chemical names
                                 EXAMPLE: {'A': 23.9, 'B': 36.1}
@@ -2794,55 +2769,6 @@ class ReactionDynamics:
 
 
 
-    def curve_intersection(self, chem1, chem2, t_start, t_end) -> (float, float):
-        """
-        Find and return the intersection of the 2 curves in the columns var1 and var2,
-        in the time interval [t_start, t_end]
-        If there's more than one intersection, only one - in an unpredictable choice - is returned
-        TODO: the current implementation fails in cases where the 2 curves stay within some distance of each other,
-              and then one curve jumps on the opposite side of the other curve, at at BIGGER distance.
-              See the missed intersection at the end of experiment "reactions_single_compartment/up_regulate_1"
-
-        :param chem1:   The name of the 1st chemical of interest
-        :param chem2:   The name of the 2nd chemical of interest
-        :param t_start: The start of the time interval being considered
-        :param t_end:   The end of the time interval being considered
-        :return:        The pair (time of intersection, common value)
-        """
-        df = self.get_history(t_start=t_start, t_end=t_end) # A Pandas dataframe
-
-        row_index = abs(df[chem1] - df[chem2]).idxmin()     # The index of the Pandas dataframe row
-                                                            #   with the smallest absolute value
-                                                            #   of difference in concentrations
-        print(f"Min abs distance found at data row: {row_index}")
-
-        return num.curve_intersect_interpolate(df, row_index,
-                                               x="SYSTEM TIME", var1=chem1, var2=chem2)
-
-
-
-    def extract_delta_concentrations(self, df, row_from :int, row_to :int, chem_list: [str]) -> np.array:
-        """
-        Extract the concentration changes of the specified chemical species from a Pandas dataframe
-        of concentration values
-
-        EXAMPLE:  extract_delta_concentrations(my_dataframe, 7, 8, ['A', 'B'])
-
-        :param df:          A Pandas dataframe of concentration values (it MUST contain columns
-                                with the names given in chem_list
-        :param row_from:    Row number of the first row of data we're interested in
-        :param row_to:      Row number of the last row of data we're interested in
-        :param chem_list:   A list of names of chemicals
-
-        :return:            A Numpy array of floats
-        """
-        # TODO: add validations
-        from_values = df.loc[row_from][chem_list]
-        to_values = df.loc[row_to][chem_list]
-        return (to_values - from_values).astype(float).to_numpy(dtype='float32')
-
-
-
     def estimate_rate_constants(self, t :np.array, reactant_conc :np.array, product_conc :np.array, product_name="Product"):
         """
         IMPORTANT : Currently restricted to reactions with a 1:1 stoichiometry between the given reactant and product
@@ -2895,3 +2821,52 @@ class ReactionDynamics:
         print(f"\n-> ESTIMATED RATE CONSTANTS: kF = {kF:,.4g}, kR = {kR:,.4g}")
 
         return fig
+
+
+
+    def curve_intersection(self, chem1, chem2, t_start, t_end) -> (float, float):
+        """
+        Find and return the intersection of the 2 curves in the columns var1 and var2,
+        in the time interval [t_start, t_end]
+        If there's more than one intersection, only one - in an unpredictable choice - is returned
+        TODO: the current implementation fails in cases where the 2 curves stay within some distance of each other,
+              and then one curve jumps on the opposite side of the other curve, at at BIGGER distance.
+              See the missed intersection at the end of experiment "reactions_single_compartment/up_regulate_1"
+
+        :param chem1:   The name of the 1st chemical of interest
+        :param chem2:   The name of the 2nd chemical of interest
+        :param t_start: The start of the time interval being considered
+        :param t_end:   The end of the time interval being considered
+        :return:        The pair (time of intersection, common value)
+        """
+        df = self.get_history(t_start=t_start, t_end=t_end) # A Pandas dataframe
+
+        row_index = abs(df[chem1] - df[chem2]).idxmin()     # The index of the Pandas dataframe row
+                                                            #   with the smallest absolute value
+                                                            #   of difference in concentrations
+        print(f"Min abs distance found at data row: {row_index}")
+
+        return num.curve_intersect_interpolate(df, row_index,
+                                               x="SYSTEM TIME", var1=chem1, var2=chem2)
+
+
+
+    def extract_delta_concentrations(self, df, row_from :int, row_to :int, chem_list: [str]) -> np.array:
+        """
+        Extract the concentration changes of the specified chemical species from a Pandas dataframe
+        of concentration values
+
+        EXAMPLE:  extract_delta_concentrations(my_dataframe, 7, 8, ['A', 'B'])
+
+        :param df:          A Pandas dataframe of concentration values (it MUST contain columns
+                                with the names given in chem_list
+        :param row_from:    Row number of the first row of data we're interested in
+        :param row_to:      Row number of the last row of data we're interested in
+        :param chem_list:   A list of names of chemicals
+
+        :return:            A Numpy array of floats
+        """
+        # TODO: add validations
+        from_values = df.loc[row_from][chem_list]
+        to_values = df.loc[row_to][chem_list]
+        return (to_values - from_values).astype(float).to_numpy(dtype='float32')

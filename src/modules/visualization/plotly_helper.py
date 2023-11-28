@@ -69,7 +69,7 @@ class PlotlyHelper:
 
 
     @classmethod
-    def plot_curves(cls, x, y, title="", xlabel="", ylabel="", curve_labels=None, legend_title=None, colors=None, show=False) \
+    def plot_curves(cls, x, y, title="", xrange=None, xlabel="", ylabel="", curve_labels=None, legend_title=None, colors=None, show=False) \
                             -> pgo.Figure:
         """
         Plot one or more curves
@@ -77,11 +77,16 @@ class PlotlyHelper:
         :param x:           A Numpy array
         :param y:           Either a Numpy array, or a list/tuple of them
         :param title:       (OPTIONAL) Title to use for the overall plot
+        :param xrange:      (OPTIONAL) list of the form [t_start, t_end], to initially only show a part of the timeline.
+                                Note: it's still possible to zoom out, and see the excluded portion
         :param xlabel:      (OPTIONAL) Caption to use for the x-axis
         :param ylabel:      (OPTIONAL) Caption to use for the y-axis
-        :param curve_labels:(OPTIONAL) Ignored if just 1 curve.  List of labels to use for the various curves in the legend
-                                and in the hover boxes
-        :param legend_title:(OPTIONAL) Ignored if just 1 curve.  String to show at the top of the legend.
+        :param curve_labels:(OPTIONAL) String, or list of strings.
+                                Label(s) to use for the various curves in the legend and in the hover boxes.
+                                If missing, and there's only 1 curve, the legend box won't be shown
+        :param legend_title:(OPTIONAL) String to show at the top of the legend box.
+                                Ignored if curve_labels wasn't set.
+                                If not provided, and the legend box is shown, it will appear as "variable"
         :param colors:      (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
                                 or list of names to use, in order; if None, then use the hardwired defaults
         :param show:        If True, the plot will be shown
@@ -94,6 +99,10 @@ class PlotlyHelper:
             number_of_curves = len(y)
         else:
             number_of_curves = 1
+            if curve_labels:
+                y = [y]     # This will trigger the legend to be shown
+                if type(curve_labels) == str:
+                    curve_labels = [curve_labels]
 
         if colors is None:
             colors = cls.get_default_colors(number_of_curves)
@@ -123,23 +132,17 @@ class PlotlyHelper:
             else:
                 fig.data[index]["hovertemplate"] = hovertemplate
 
-        '''        
-        if (number_of_curves > 1) and (curve_labels is not None):
-            for index, l in enumerate(curve_labels):
-                fig.data[index]["name"] = l
-                fig.data[index]["hovertemplate"] = f"variable : {l}<br>{xaxis}=%{{x}}<br>value=%{{y}}<extra></extra>"
-                # The "<extra></extra>" appears to suppress a redundant name showing in the hoverbox
-        '''
+
+        fig.update_layout(title=title,
+                          xaxis_title=xlabel,
+                          yaxis_title=ylabel)
 
         if legend_title:
-            fig.update_layout(title=title,
-                              xaxis_title=xlabel,
-                              yaxis_title=ylabel,
-                              legend={"title": legend_title})
-        else:
-            fig.update_layout(title=title,
-                              xaxis_title=xlabel,
-                              yaxis_title=ylabel)
+            fig.update_layout(legend={"title": legend_title})
+
+        if xrange:
+            fig.update_layout(xaxis={"range": xrange})
+
 
         if show:
             fig.show()  # Actually display the plot
@@ -149,16 +152,20 @@ class PlotlyHelper:
 
 
     @classmethod
-    def combine_plots(cls, fig_list :Union[list, tuple], title="", curve_labels=None, xlabel=None, ylabel=None, show=False) -> pgo.Figure:
+    def combine_plots(cls, fig_list :Union[list, tuple], title="", xlabel=None, ylabel=None,
+                      xrange=None, curve_labels=None, legend_title=None, show=False) -> pgo.Figure:
         """
         Combine together several existing plots
 
         :param fig_list:    List or tuple of plotly "Figure" objects (as returned by several functions)
         :param title:       (OPTIONAL) The title to use for the overall plot
-        :param curve_labels:(OPTIONAL) List of labels to use for the various curves in the legend
-                                and in the hover boxes; if not specified, use the titles of the individual plots
         :param xlabel:      (OPTIONAL) Caption to use for the x-axis; if not specified, use that of the 1st plot
         :param ylabel:      (OPTIONAL) Caption to use for the y-axis; if not specified, use that of the 1st plot
+        :param xrange:     (OPTIONAL) list of the form [t_start, t_end], to initially only show a part of the timeline.
+                                Note: it's still possible to zoom out, and see the excluded portion
+        :param curve_labels:(OPTIONAL) List of labels to use for the various curves in the legend
+                                and in the hover boxes; if not specified, use the titles of the individual plots
+        :param legend_title:(OPTIONAL) String to show at the top of the legend box
         :param show:        If True, the plot will be shown
                                 Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
                                       leads to it being automatically shown
@@ -186,6 +193,12 @@ class PlotlyHelper:
         all_fig.update_layout(title=title,
                               xaxis_title=xlabel,
                               yaxis_title=ylabel)
+
+        if legend_title:
+            all_fig.update_layout(legend={"title": legend_title})
+
+        if xrange:
+            all_fig.update_layout(xaxis={"range": xrange})
 
 
         for i, fig in enumerate(fig_list):

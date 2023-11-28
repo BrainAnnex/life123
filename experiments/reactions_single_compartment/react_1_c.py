@@ -19,7 +19,7 @@
 #
 # This is a continuation of the experiments _"react_1_a"_ (fixed time steps) and  _"react_1_b"_ (adaptive variable time steps)
 #
-# LAST REVISED: Nov. 26, 2023
+# LAST REVISED: Nov. 27, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -30,7 +30,9 @@ from experiments.get_notebook_info import get_notebook_basename
 from src.modules.chemicals.chem_data import ChemData as chem
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
+import numpy as np
 import plotly.graph_objects as go
+from src.modules.visualization.plotly_helper import PlotlyHelper
 
 # %%
 
@@ -53,7 +55,7 @@ chem_data.describe_reactions()
 # # PART 1 - FIXED TIME STEPS
 
 # %% [markdown]
-# ### This is a re-do of the simulation of `react_1_a` but with a smaller time step
+# #### This is a re-do of the simulation of `react_1_a` but with a smaller time step
 # The fixed time step is chosen to attain the same total number of data points as the variable time steps of part 2
 
 # %%
@@ -75,8 +77,7 @@ dynamics_fixed.single_compartment_react(initial_step=0.06, target_end_time=1.2,
                                                    "final_caption": "last reaction step"})
 
 # %%
-history_fixed = dynamics_fixed.get_history()   # The system's history, saved during the run of single_compartment_react()
-history_fixed
+dynamics_fixed.get_history()   # The system's history, saved during the run of single_compartment_react()
 
 # %%
 dynamics_fixed.plot_history(colors=['blue', 'orange'], show_intervals=True)
@@ -113,8 +114,7 @@ dynamics_variable.single_compartment_react(initial_step=0.1, target_end_time=1.2
 # #### The flag _variable_steps_ automatically adjusts up or down the time step,  whenever the changes of concentrations are, respectively, "slow" or "fast" (as determined using the specified _thresholds_ )
 
 # %%
-history_variable = dynamics_variable.get_history()   # The system's history, saved during the run of single_compartment_react()
-history_variable
+dynamics_variable.get_history()   # The system's history, saved during the run of single_compartment_react()
 
 # %%
 dynamics_variable.plot_history(colors=['blue', 'orange'], show_intervals=True)
@@ -129,41 +129,39 @@ dynamics_variable.plot_history(colors=['blue', 'orange'], show_intervals=True)
 # # PART 3 - Comparing Fixed Steps, Variable Steps and Exact Solution
 
 # %%
-A_fixed = history_fixed["A"].to_numpy()
-A_fixed
-
-# %%
-A_variable = history_variable["A"].to_numpy()
-A_variable
-
-# %%
-len(A_fixed)
-
-# %%
-len(A_variable)
-
-# %%
-fig_fixed = dynamics_fixed.plot_history(colors=['blue', 'orange'], title="FIXED time steps")
+fig_fixed = dynamics_fixed.plot_history(chemicals=['A'], colors='blue', title="FIXED time steps", range_x=[0, 0.4])
 fig_fixed
 
 # %%
-fig_variable = dynamics_variable.plot_history(colors=['navy', 'brown'], title="VARIABLE time steps")
+fig_variable = dynamics_variable.plot_history(chemicals=['A'], colors='aqua', title="VARIABLE time steps", range_x=[0, 0.4])
 fig_variable
 
 # %%
-all_fig = go.Figure(data=fig_fixed.data + fig_variable.data, 
-                    layout = fig_fixed.layout)    # Note that the + is concatenating lists
-all_fig.update_layout(title="Fixed vs. Variable time steps, for reaction `A<->B`")
+fig_2 = PlotlyHelper.combine_plots(fig_list=[fig_fixed, fig_variable],
+                           xrange=[0, 0.4], ylabel="concentration [A]",
+                           title="Fixed vs. Variable time steps, for reaction `A<->B`",
+                           legend_title="Simulation run", show=True)
 
-# Set the names to show in the legend
-all_fig['data'][0]['name']='A (fixed)'
-all_fig['data'][1]['name']='B (fixed)' 
-all_fig['data'][2]['name']='A (variable)' 
-all_fig['data'][3]['name']='B (variable)' 
+# %%
+t_arr = np.linspace(0., 1.0, 41)   # A uniform grid across our time range
+t_arr
 
-all_fig.show()
+# %%
+A_exact, B_exact = dynamics_variable.solve_exactly(rxn_index=0, A0=10., B0=50., t_arr=t_arr)
 
-# %% [raw]
-#
+# %%
+fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=A_exact, title="EXACT solution", xlabel="SYSTEM TIME", ylabel="concentration", 
+                                     curve_labels="A (EXACT)", legend_title="Chemical",
+                                     colors="red", show=True)
+
+# %%
+PlotlyHelper.combine_plots(fig_list=[fig_fixed, fig_variable, fig_exact],
+                           xrange=[0, 0.4], ylabel="concentration [A]",
+                           title="Fixed vs. Variable time steps vs. Exact soln, for [A] in reaction `A<->B`",
+                           legend_title="Simulation run")
+
+# %% [markdown]
+# Not surprisingly, the adaptive variable time steps outperform the fixed ones (for an equal total number of grid points), at times when there's pronounced change.  
+# If you zoom out on the plot (hover and use the controls on the right, above), you can see all 3 curves essentially converging as the reaction approaches equilibrium.
 
 # %%
