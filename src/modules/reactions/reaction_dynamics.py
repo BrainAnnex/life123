@@ -495,6 +495,10 @@ class ReactionDynamics:
             self.step_factors = {"upshift": 1.1, "downshift": 0.3, "abort": 0.2}
             self.error_abort_step_factor = 0.1
 
+        else:
+            raise Exception(f"set_adaptive_parameters(): unknown value for the `preset` argument ({preset}); "
+                            f"allowed values are 'slow', 'mid', 'fast'")
+
 
 
 
@@ -2294,14 +2298,7 @@ class ReactionDynamics:
         Using plotly, draw the plots of concentration values over time, based on history data that gets
         automatically saved when running reactions.
 
-        EXAMPLE - to combine plots:
-
-            import plotly.graph_objects as go
-            fig0 = plot_curves(chemicals=["A", "B", "C"], suppress=True)
-            fig1 = px.line(x=[2,2], y=[0,100], color_discrete_sequence = ['gray'])
-            all_fig = go.Figure(data=fig0.data + fig1.data, layout = fig0.layout)    # Note that the + is concatenating lists
-            all_fig.update_layout(title="My title")
-            all_fig.show()
+        Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
 
         :param chemicals:   (OPTIONAL) List of the names of the chemicals to plot;
                                 if None, then display all
@@ -2320,7 +2317,9 @@ class ReactionDynamics:
         :param vertical_lines:  (OPTIONAL) List or tuple or Numpy array or Pandas series
                                     of x-coordinates at which to draw thin vertical dotted gray lines.
                                     If the number of vertical line is so large as to overwhelm the plot,
-                                    only a sample of them is shown
+                                    only a sample of them is shown.
+                                    Note that vertical lines, if requested, go into the plot's "layout";
+                                    as a result they might not appear if this plot is later combined with another one
         :param show_intervals:  (OPTIONAL) If True, it over-rides any value in vertical_lines, and draws
                                     thin vertical dotted gray lines at all the x-coords of the data points in the saved history data;
                                     also, it adds a comment to the title

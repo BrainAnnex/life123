@@ -96,7 +96,7 @@ dynamics.single_compartment_react(initial_step=0.1, target_end_time=1.2,
                                   )
 
 # %% [markdown]
-# ## The flag _variable_steps_ automatically adjusts up or down the time step,  whenever the changes of concentrations are, respectively, "slow" or "fast" (as determined using the specified _thresholds_ )
+# ## The flag _variable_steps_ automatically adjusts up or down the time step
 
 # %%
 history = dynamics.get_history()   # The system's history, saved during the run of single_compartment_react()

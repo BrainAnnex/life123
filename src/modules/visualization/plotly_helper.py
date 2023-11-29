@@ -69,13 +69,13 @@ class PlotlyHelper:
 
 
     @classmethod
-    def plot_curves(cls, x, y, title="", xrange=None, xlabel="", ylabel="", curve_labels=None, legend_title=None, colors=None, show=False) \
-                            -> pgo.Figure:
+    def plot_curves(cls, x, y, title="", xrange=None, xlabel="", ylabel="", curve_labels=None, legend_title=None,
+                    colors=None, show=False) -> pgo.Figure:
         """
-        Plot one or more curves
+        Plot one or more 2D curves
 
-        :param x:           A Numpy array
-        :param y:           Either a Numpy array, or a list/tuple of them
+        :param x:           A Numpy array, with the (common) x-axis values
+        :param y:           Either a Numpy array, or a list/tuple of them, with the y-axis values of the curve(s)
         :param title:       (OPTIONAL) Title to use for the overall plot
         :param xrange:      (OPTIONAL) list of the form [t_start, t_end], to initially only show a part of the timeline.
                                 Note: it's still possible to zoom out, and see the excluded portion
@@ -90,8 +90,8 @@ class PlotlyHelper:
         :param colors:      (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
                                 or list of names to use, in order; if None, then use the hardwired defaults
         :param show:        If True, the plot will be shown
-                                Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
-                                      leads to it being automatically shown
+                                Note: in JupyterLab, simply returning a plot object (without assigning it to a variable)
+                                leads to it being automatically shown
 
         :return:            A plotly "Figure" object
         """
