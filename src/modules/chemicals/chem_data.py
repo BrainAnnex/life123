@@ -467,11 +467,11 @@ class AllReactions(Diffusion):
               they're assumed to be 1.
               Their full structure is the triplet (stoichiometry coefficient, name, reaction order)
 
-        EXAMPLES of formats for each item of the reactants and products
+        EXAMPLES of formats for each item in the lists of the reactants and products
         (*assuming* that the chemical species with index 5 is called "F"):
                     "F"         gets turned into:   (1, 5, 1)
-                    (3, "F")                        (3, 5, 1)
-                    (3, "F", 2)                     (3, 5, 2)
+                    (2, "F")                        (2, 5, 1)
+                    (2, "F", 2)                     (2, 5, 2)
                     It's equally acceptable to use LISTS in lieu of tuples
 
         :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
@@ -489,6 +489,7 @@ class AllReactions(Diffusion):
         :return:                Object of type "Reaction"
                                 (note: it also gets appended to the object variable self.reaction_list)
         """
+        # TODO: maybe default the reaction rate to be equal to the stoichiometry coefficient by default
         rxn = Reaction(self, reactants, products, forward_rate, reverse_rate,
                        delta_H, delta_S, delta_G)
         self.reaction_list.append(rxn)

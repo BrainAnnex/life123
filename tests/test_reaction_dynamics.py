@@ -692,6 +692,123 @@ def test_reaction_in_equilibrium():
 
 
 
+def test_reaction_quotient():
+    chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
+    rxn = ReactionDynamics(chem_data)
+
+    # Reaction 0 : A <-> B
+    chem_data.add_reaction(reactants="A", products="B", forward_rate=3., reverse_rate=2.)
+    c = {'A': 24., 'B': 36.}
+    assert np.allclose(1.5, rxn.reaction_quotient(rxn_index=0, conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(rxn_index=0, conc=c, explain=True)
+    assert np.allclose(1.5, quotient)
+    assert formula == '[B] / [A]'
+
+
+    # Reaction 1 : A <-> F
+    chem_data.add_reaction(reactants="A", products="F", forward_rate=20, reverse_rate=2.)
+    c = {'A': 3., 'F': 33.}
+    assert np.allclose(11., rxn.reaction_quotient(rxn_index=1, conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(rxn_index=1, conc=c, explain=True)
+    assert np.allclose(11., quotient)
+    assert formula == '[F] / [A]'
+
+
+    # Reaction 2 : A <-> 3B
+    chem_data.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)   # 1st order
+    c = {'A': 3., 'B': 12.}
+    assert np.allclose(4., rxn.reaction_quotient(rxn_index=2, conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(rxn_index=2, conc=c, explain=True)
+    assert np.allclose(4., quotient)
+    assert formula == '[B] / [A]'
+
+
+    # Reaction 3:  2A <-> 3B
+    chem_data.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)   # 1st order
+    c = {'A': 3., 'B': 12.}
+    assert np.allclose(4., rxn.reaction_quotient(rxn_index=3, conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(rxn_index=3, conc=c, explain=True)
+    assert np.allclose(4., quotient)
+    assert formula == '[B] / [A]'
+
+
+    # Reaction 4:  A + B <-> C , with 1st-order kinetics for each species
+    chem_data.add_reaction(reactants=[("A") , ("B")], products=[("C")],
+                           forward_rate=5., reverse_rate=2.)
+    c = {'A': 3., 'B': 4., 'C': 12.}
+    assert np.allclose(1., rxn.reaction_quotient(rxn_index=4, conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(rxn_index=4, conc=c, explain=True)
+    assert np.allclose(1., quotient)
+    assert formula == '[C] / ([A][B])'
+
+
+    # Reaction 5:  A <-> 2C + D , with 1st-order kinetics for each species
+    chem_data.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
+                           forward_rate=5., reverse_rate=2.)
+    c = {'A': 2., 'C': 4., 'D': 8.}
+    assert np.allclose(16., rxn.reaction_quotient(rxn_index=5, conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(rxn_index=5, conc=c, explain=True)
+    assert np.allclose(16., quotient)
+    assert formula == '([C][D]) / [A]'
+
+
+    # Reaction 6:  2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
+    chem_data.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
+                           forward_rate=5., reverse_rate=2.)
+    c = {'A': 2., 'B': 1., 'C': 4., 'D': 8.}
+    assert np.allclose(16., rxn.reaction_quotient(rxn_index=6, conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(rxn_index=6, conc=c, explain=True)
+    assert np.allclose(16., quotient)
+    assert formula == '([C][D]) / ([A][B])'
+
+
+
+    rxn.clear_reactions()   # This will RESET the reaction count to 0
+
+    # Reaction 0:  2A <-> B , with 1st-order kinetics in both directions
+    chem_data.add_reaction(reactants=[(2, "A")], products=["B"], forward_rate=5., reverse_rate=2.)
+    c = {'A': 4., 'B': 20.}
+    assert np.allclose(5., rxn.reaction_quotient(rxn_index=0, conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(rxn_index=0, conc=c, explain=True)
+    assert np.allclose(5., quotient)
+    assert formula == '[B] / [A]'
+
+
+    # Reaction 1:  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction
+    chem_data.add_reaction(reactants=[(2, "A", 2)], products="B", forward_rate=5., reverse_rate=2.)
+    c = {'A': 4., 'B': 20.}
+    assert np.allclose(1.25, rxn.reaction_quotient(rxn_index=1, conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(rxn_index=1, conc=c, explain=True)
+    assert np.allclose(1.25, quotient)
+    assert formula == '[B] / [A]^2 '
+
+
+    # Reaction 2:  A <-> 2B , with 2nd-order kinetics in the reverse direction
+    chem_data.add_reaction(reactants="A", products=[(2, "B", 2)], forward_rate=5., reverse_rate=2.)
+    c = {'A': 4., 'B': 20.}
+    assert np.allclose(100., rxn.reaction_quotient(rxn_index=2, conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(rxn_index=2, conc=c, explain=True)
+    assert np.allclose(100., quotient)
+    assert formula == '[B]^2  / [A]'
+
+
+    # Reaction 3:  A + B <-> C + D
+    chem_data.add_reaction(reactants=["A", "B"], products=["C", "D"], forward_rate=5., reverse_rate=2.)
+
+    # with zero concentrations of a reaction product (and non-zero reactants), the reaction quotient will be zero
+    c = {'A': 15.2, 'B': 21.3, 'C': 0 , 'D': 4.1}
+    assert np.allclose(0., rxn.reaction_quotient(rxn_index=3, conc=c, explain=False))
+
+    # with zero concentrations of a reactants (and non-zero products), it will be infinite
+    c = {'A': 15.2, 'B': 0, 'C': 21.3 , 'D': 4.1}
+    assert np.isinf(rxn.reaction_quotient(rxn_index=3, conc=c, explain=False))
+
+    # with zero concentrations of both a reactant and a reaction product, it will be undefined (nan)
+    c = {'A': 15.2, 'B': 0, 'C': 0 , 'D': 4.1}
+    assert np.isnan(rxn.reaction_quotient(rxn_index=3, conc=c, explain=False))
+
+
+
 def test_validate_increment():
     chem_data = ChemData(names=["A", "B", "C"])
     rxn = ReactionDynamics(chem_data)

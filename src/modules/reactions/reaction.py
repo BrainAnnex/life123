@@ -42,7 +42,7 @@ class Reaction:
               they're assumed to be 1.
               Their full structure is the triplet (stoichiometry coefficient, name, reaction order)
 
-        EXAMPLES of formats for each item of the reactants and products
+        EXAMPLES of formats for each item in the lists of the reactants and products
         (*assuming* that the chemical species with index 5 is called "F"):
                     "F"         gets turned into:   (1, 5, 1)
                     (3, "F")                        (3, 5, 1)
@@ -218,6 +218,7 @@ class Reaction:
 
         :return:    A 4-element tuple, containing:
                         (reactants , products , forward rate constant , reverse rate constant)
+                        Note: both reactants products are lists of triplets
         """
         return (self.reactants, self.products, self.kF, self.kR)
 
