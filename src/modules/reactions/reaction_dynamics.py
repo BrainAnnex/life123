@@ -2329,7 +2329,7 @@ class ReactionDynamics:
 
         :return:            A plotly "Figure" object
         """
-        # TODO: allow alternate labels for x-axis
+        # TODO: allow alternate label for x-axis
 
         MAX_NUMBER_VERTICAL_LINES = 150     # Used to avoid extreme clutter in the plot, in case
                                             # a very large number of vertical lines is requested;
@@ -2647,7 +2647,7 @@ class ReactionDynamics:
         """
         Ascertain whether the given concentrations are in equilibrium for the specified SINGLE reaction;
         return True or False, accordingly.
-        Pathological case: if at least one of the reactants and at least one of the products have zero
+        Pathological case: if at least one of the reactants AND at least one of the products have zero
         concentration, then the reaction is "stuck" - and thus regarded in "equilibrium"
 
         :param rxn_index:   The integer index (0-based) to identify the reaction of interest

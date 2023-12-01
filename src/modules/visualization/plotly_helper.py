@@ -155,13 +155,13 @@ class PlotlyHelper:
     def combine_plots(cls, fig_list :Union[list, tuple], title="", xlabel=None, ylabel=None,
                       xrange=None, curve_labels=None, legend_title=None, show=False) -> pgo.Figure:
         """
-        Combine together several existing plots
+        Combine together several existing plotly plots
 
         :param fig_list:    List or tuple of plotly "Figure" objects (as returned by several functions)
         :param title:       (OPTIONAL) The title to use for the overall plot
         :param xlabel:      (OPTIONAL) Caption to use for the x-axis; if not specified, use that of the 1st plot
         :param ylabel:      (OPTIONAL) Caption to use for the y-axis; if not specified, use that of the 1st plot
-        :param xrange:     (OPTIONAL) list of the form [t_start, t_end], to initially only show a part of the timeline.
+        :param xrange:      (OPTIONAL) list of the form [t_start, t_end], to initially only show a part of the timeline.
                                 Note: it's still possible to zoom out, and see the excluded portion
         :param curve_labels:(OPTIONAL) List of labels to use for the various curves in the legend
                                 and in the hover boxes; if not specified, use the titles of the individual plots

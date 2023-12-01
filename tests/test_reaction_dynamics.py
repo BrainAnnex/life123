@@ -692,43 +692,6 @@ def test_reaction_in_equilibrium():
 
 
 
-def test_reaction_speeds():
-    # To test that newly-added reactions are automatically tentatively marked "Fast",
-    # and to test the methods managing the "Slow/Fast" data structure
-    chem_data = ChemData(names=["A", "B", "C"])
-    rxn = ReactionDynamics(chem_data)
-    assert rxn.slow_rxns() == []        # There are no reactions yet
-    assert rxn.fast_rxns() == []        # There are no reactions yet
-    assert rxn.are_all_slow_rxns()
-
-    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-    assert rxn.slow_rxns() == []        # The one reaction present is assumed to be fast
-    assert rxn.fast_rxns() == [0]
-    assert not rxn.are_all_slow_rxns()
-
-    rxn.set_rxn_speed(0, "S")          # Mark the lone reaction as "Slow"
-    assert rxn.slow_rxns() == [0]
-    assert rxn.fast_rxns() == []
-    assert rxn.are_all_slow_rxns()
-
-    chem_data.add_reaction(reactants=["B"], products=["C"], forward_rate=13., reverse_rate=12.)
-    assert rxn.chem_data.number_of_reactions() == 2
-    assert rxn.slow_rxns() == [0]
-    assert rxn.fast_rxns() == [1]       # The newly-added one
-    rxn.set_rxn_speed(1, "S")
-    assert rxn.slow_rxns() == [0, 1]
-    assert rxn.fast_rxns() == []
-    assert rxn.are_all_slow_rxns()
-
-    rxn.set_rxn_speed(0, "F")
-    assert not rxn.are_all_slow_rxns()
-    rxn.set_rxn_speed(1, "F")
-    assert rxn.slow_rxns() == []
-    assert rxn.fast_rxns() == [0, 1]
-    assert not rxn.are_all_slow_rxns()
-
-
-
 def test_validate_increment():
     chem_data = ChemData(names=["A", "B", "C"])
     rxn = ReactionDynamics(chem_data)

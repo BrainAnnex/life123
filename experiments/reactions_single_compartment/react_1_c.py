@@ -13,13 +13,13 @@
 # ---
 
 # %% [markdown]
-# ### Comparison of adaptive variable time steps, fixed time steps, and exact solution 
+# ### Comparison of 1) adaptive variable time steps, 2) fixed time steps, and 3) exact solution 
 # ### for the reaction `A <-> B`,
 # with 1st-order kinetics in both directions, taken to equilibrium
 #
 # This is a continuation of the experiments _"react_1_a"_ (fixed time steps) and  _"react_1_b"_ (adaptive variable time steps)
 #
-# LAST REVISED: Nov. 28, 2023
+# LAST REVISED: Nov. 30, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -60,14 +60,14 @@ chem_data.describe_reactions()
 dynamics_variable = ReactionDynamics(chem_data=chem_data)
 
 # %%
-# Initial concentrations of all the chemicals, in index order
+# Initial concentrations of all the chemicals, in their index order
 dynamics_variable.set_conc([10., 50.])
 
 dynamics_variable.describe_state()
 
 # %%
 # We specify a particular group of preset parameters applicable to the adaptive time steps
-# A "middle-of-the road" heuristic: somewhat "conservative" but not overly so
+# Here, we're using a "middle-of-the road" heuristic: somewhat "conservative" but not overly so
 dynamics_variable.set_adaptive_parameters(preset="mid")   
 
 # %% [markdown] tags=[]
@@ -81,7 +81,7 @@ dynamics_variable.single_compartment_react(initial_step=0.1, target_end_time=1.2
                                   )
 
 # %% [markdown]
-# #### The flag _variable_steps_ automatically adjusts up or down the time step
+# #### The flag _variable_steps_ automatically adjusts up or down the time steps
 # In part 2, we'll remember that it took 19 steps
 
 # %%
@@ -101,13 +101,13 @@ dynamics_variable.plot_history(colors=['blue', 'orange'], show_intervals=True)
 
 # %% [markdown]
 # #### This is a re-do of the above simulation simulation, but with a fixed time step
-# The fixed time step is chosen to attain the same total number of data points as the variable time steps of part 1
+# The fixed time step is chosen to attain the same total number of data points as obtained with the variable time steps of part 1
 
 # %%
 dynamics_fixed = ReactionDynamics(chem_data=chem_data)
 
 # %%
-# Initial concentrations of all the chemicals, in index order
+# Initial concentrations of all the chemicals, in their index order
 dynamics_fixed.set_conc([10., 50.])
 
 dynamics_fixed.describe_state()
@@ -129,7 +129,7 @@ dynamics_fixed.get_history()   # The system's history, saved during the run of s
 dynamics_fixed.plot_history(colors=['blue', 'orange'], show_intervals=True)
 
 # %% [markdown]
-# Notice how grid points are being "wasted" on the tail part of the simulation, where little is happening - grid points that would be best used in the early part, exactly as the variable-step simulation of Part 1 did 
+# Notice how grid points are being "wasted" on the tail part of the simulation, where little is happening - grid points that would be best used in the early part, as was done by the variable-step simulation of Part 1
 
 # %%
 
@@ -137,10 +137,11 @@ dynamics_fixed.plot_history(colors=['blue', 'orange'], show_intervals=True)
 # # PART 3 - Exact Solution
 
 # %%
-t_arr = np.linspace(0., 1.2, 41)   # A uniform grid across our time range
+t_arr = np.linspace(0., 1.2, 41)   # A relatively dense uniform grid across our time range
 t_arr
 
 # %%
+# The exact solution is available for a simple scenario like the one we're simulating here
 A_exact, B_exact = dynamics_variable.solve_exactly(rxn_index=0, A0=10., B0=50., t_arr=t_arr)
 
 # %%
@@ -155,25 +156,25 @@ fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=[A_exact, B_exact], title="EXACT
 # #### To avoid clutter, we'll just plot [A]
 
 # %%
-fig_variable = dynamics_variable.plot_history(chemicals=['A'], colors='aqua', title="VARIABLE time steps", show=True)
+fig_variable = dynamics_variable.plot_history(chemicals=['A'], colors='aqua', title="VARIABLE time steps", show=True)     # Repeat a portion of the diagram seen in Part 1
 
 # %%
-fig_fixed = dynamics_fixed.plot_history(chemicals=['A'], colors='blue', title="FIXED time steps", show=True)
+fig_fixed = dynamics_fixed.plot_history(chemicals=['A'], colors='blue', title="FIXED time steps", show=True)         # Repeat a portion of the diagram seen in Part 2
 
 # %%
 fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=A_exact, title="EXACT solution", xlabel="SYSTEM TIME", ylabel="concentration", 
                                      curve_labels="A (EXACT)", legend_title="Chemical",
-                                     colors="red", show=True)
+                                     colors="red", show=True)  # Repeat a portion of the diagram seen in Part 3
 
 # %%
 PlotlyHelper.combine_plots(fig_list=[fig_fixed, fig_variable, fig_exact],
                            xrange=[0, 0.4], ylabel="concentration [A]",
                            title="Variable time steps vs. Fixed vs. Exact soln, for [A] in reaction `A<->B`",
-                           legend_title="Simulation run")
+                           legend_title="Simulation run")    # All the 3 plots put together: show only the initial part (but it's all there; you can zoom out!)
 
 # %% [markdown]
-# Not surprisingly, the adaptive variable time steps outperform the fixed ones (even though the fixed grid has slightly more points), at times when there's pronounced change.  
-# If you zoom out on the plot (hover and use the controls on the right, above), you can see all 3 curves essentially converging as the reaction approaches equilibrium.
+# #### Not surprisingly, the adaptive variable time steps outperform the fixed ones (for the same total number of points in the time grid), at times when there's pronounced change.  
+# If you zoom out on the plot (hover and use the Plotly controls on the right, above), you can see all 3 curves essentially converging as the reaction approaches equilibrium.
 
 # %%
 
@@ -189,7 +190,7 @@ dynamics_variable.set_conc([10., 50.])
 
 # %%
 # We specify a particular group of preset parameters applicable to the adaptive time steps
-# A "fast" heuristic: proceed boldy, without too much caution
+# This time, we're using a "fast" heuristic: proceed boldy, without too much caution
 dynamics_variable.set_adaptive_parameters(preset="fast")   
 
 # %%
@@ -213,7 +214,7 @@ dynamics_fixed = ReactionDynamics(chem_data=chem_data)
 dynamics_fixed.set_conc([10., 50.])
 
 # %%
-# Matching the total number of steps to the earlier, variable-step simulation
+# Matching the NEW total number of steps
 dynamics_fixed.single_compartment_react(n_steps=14, target_end_time=1.2,
                                         variable_steps=False,
                                         snapshots={"initial_caption": "1st reaction step",
@@ -235,6 +236,6 @@ PlotlyHelper.combine_plots(fig_list=[fig_fixed, fig_variable, fig_exact],
 
 # %% [markdown]
 # ### With fewer grid points, the advantage of adaptive variable timesteps is more pronounced  
-# If you zoom out the plot, and scroll to later times, you can see that the advantage later disappears
+# If you zoom out the plot, and scroll to later times, you can see that the advantage later disappears when there's "less happening", closer to equilibrium
 
 # %%
