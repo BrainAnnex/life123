@@ -1,4 +1,4 @@
-from typing import Union, Set
+from typing import Union, Set, Tuple
 import numpy as np
 from src.modules.reactions.thermodynamics import ThermoDynamics
 
@@ -326,6 +326,7 @@ class Reaction:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
+
     def describe(self, concise=False) -> str:
         """
         Return as a string, a user-friendly plain-text form of the reaction
@@ -379,6 +380,91 @@ class Reaction:
             rxn_description += " | 1st order in all reactants & products"
 
         return rxn_description
+
+
+
+
+    #####################################################################################################
+
+    '''                                     ~   ANALYSIS  ~                                           '''
+
+    def ________ANALYSIS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def reaction_quotient(self, conc, explain=False) -> Union[np.double, Tuple[np.double, str]]:
+        """
+        Compute the "Reaction Quotient" (aka "Mass–action Ratio"),
+        given the concentrations of chemicals involved in this reaction
+
+        :param conc:        Dictionary with the concentrations of the species involved in the reaction.
+                            The keys are the chemical names
+                                EXAMPLE: {'A': 23.9, 'B': 36.1}
+        :param explain:     If True, it also returns the math formula being used for the computation
+                                EXAMPLES:   "([C][D]) / ([A][B])"
+                                            "[B] / [A]^2"
+
+        :return:            If explain is False, return value for the "Reaction Quotient" (aka "Mass–action Ratio");
+                                if True, return a pair with that quotient and a string with the math formula that was used.
+                                Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
+        """
+        numerator = np.double(1)    # The product of all the concentrations of the reaction products (adjusted for reaction order)
+        denominator = np.double(1)  # The product of all the concentrations of the reactants (also adjusted for reaction order)
+
+        numerator_text = ""      # First part of the the textual explanation
+        denominator_text = ""    # Second part of the the textual explanation
+
+
+        # Computer the numerator of the "Reaction Quotient"
+        for p in self.products:
+            # Loop over the reaction products
+            species_index =  self.extract_species_index(p)
+            rxn_order =  self.extract_rxn_order(p)
+
+            species_name =  self.chem_data.get_name(species_index)
+            species_conc = conc.get(species_name)
+            assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
+                                             f"concentration of `{species_name}` was not provided"
+
+            numerator *= (species_conc ** rxn_order)
+            if explain:
+                numerator_text += f"[{species_name}]"
+                if rxn_order > 1:
+                    numerator_text += f"^{rxn_order} "
+
+        if explain and len(self.products) > 1:
+            numerator_text = f"({numerator_text})"  # In case of multiple terms, enclose them in parenthesis
+
+
+        # Computer the denominator of the "Reaction Quotient"
+        for r in self.reactants:
+            # Loop over the reactants
+            species_index =  self.extract_species_index(r)
+            rxn_order =  self.extract_rxn_order(r)
+
+            species_name = self.chem_data.get_name(species_index)
+            species_conc = conc.get(species_name)
+            assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
+                                             f"concentration of `{species_name}` was not provided"
+
+            denominator *= (species_conc ** rxn_order)
+            if explain:
+                denominator_text += f"[{species_name}]"
+                if rxn_order > 1:
+                    denominator_text += f"^{rxn_order} "
+
+        if explain and len(self.reactants) > 1:
+            denominator_text = f"({denominator_text})"  # In case of multiple terms, enclose them in parenthesis
+
+
+        quotient = numerator / denominator      # It might be np.inf or np.nan
+
+        if explain:
+            formula = f"{numerator_text} / {denominator_text}"
+            return (quotient, formula)
+
+        return quotient
+
 
 
 

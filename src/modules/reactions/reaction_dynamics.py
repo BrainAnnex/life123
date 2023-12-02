@@ -2667,61 +2667,15 @@ class ReactionDynamics:
         """
         rxn = self.chem_data.get_reaction(rxn_index)    # Look up the requested reaction
 
-        reactants, products, kF, kR = rxn.unpack_for_dynamics()
+        rate_ratio = rxn.extract_forward_rate() / rxn.extract_reverse_rate()  # Ratio of forward/reverse reaction rates
 
-        rate_ratio = kF / kR                    # Ratio of forward/reverse reaction rates
+        result = rxn.reaction_quotient(conc=conc, explain=explain)
 
-        conc_ratio = 1.     # The product of all the concentrations of the reaction products (adjusted for reaction order)
-                            #   over the product of all the concentrations of the reactants (also adjusted for order)
-        numerator = ""      # First part of the the textual explanation about whether in equilibrium
-        denominator = ""    # Second part of the the textual explanation about whether in equilibrium
-
-
-        zero_numerator = False
-        for p in products:
-            # Loop over the reaction products
-            species_index =  rxn.extract_species_index(p)
-            rxn_order =  rxn.extract_rxn_order(p)
-
-            species_name =  self.chem_data.get_name(species_index)
-            species_conc = conc.get(species_name)
-            assert species_conc is not None, f"reaction_in_equilibrium(): unable to proceed because the " \
-                                             f"concentration of `{species_name}` was not provided"
-            if species_conc == 0:
-                zero_numerator = True
-                break
-
-            conc_ratio *= (species_conc ** rxn_order)
-            if explain:
-                numerator += f"[{species_name}]"
-                if rxn_order > 1:
-                    numerator += f"^{rxn_order} "
-
-
-        if explain and len(products) > 1:
-            numerator = f"({numerator})"
-
-
-        zero_denominator = False
-        for r in reactants:
-            # Loop over the reactants
-            species_index =  rxn.extract_species_index(r)
-            rxn_order =  rxn.extract_rxn_order(r)
-
-            species_name = self.chem_data.get_name(species_index)
-            species_conc = conc.get(species_name)
-            assert species_conc is not None, f"reaction_in_equilibrium(): unable to proceed because the " \
-                                             f"concentration of `{species_name}` was not provided"
-            #print(f"species_name: {species_name} | conc_ratio: {conc_ratio} | species_conc: {species_conc} | rxn_order: {rxn_order}")
-            if species_conc == 0:
-                zero_denominator = True
-                break
-
-            conc_ratio /= (species_conc ** rxn_order)
-            if explain:
-                denominator += f"[{species_name}]"
-                if rxn_order > 1:
-                    denominator += f"^{rxn_order} "
+        # Unpack the result
+        if explain:
+            rxn_quotient, formula = result
+        else:
+            rxn_quotient = result
 
         if explain:
             # Prepare a concise listing from the given concentration,
@@ -2736,118 +2690,35 @@ class ReactionDynamics:
 
 
         # Handle the special case of zero concentration in some of the reactants AND in some of the products
-        if zero_numerator and zero_denominator:
+        if np.isnan(rxn_quotient):
             if explain:
                 print(f"Final concentrations: {all_applicable_concs_str}")
                 print("Reaction IS in equilibrium because it can't proceed in either direction "
                       "due to zero concentrations in both some reactants and products!\n")
             return True
 
-        if zero_numerator or zero_denominator:      # If only one is 0 (we already covered when they both are)
+        if np.isinf(rxn_quotient):      # If only the denominator is 0
             if explain:
                 print(f"Final concentrations: {all_applicable_concs_str}")
-                print("Reaction is NOT in equilibrium because either the reactants or the products contain a zero concentration\n")
+                print("Reaction is NOT in equilibrium because either the products contain a zero concentration\n")
             return False
 
 
         # Normal case
-        status = np.allclose(conc_ratio, rate_ratio, rtol=tolerance/100., atol=0)
+        status = np.allclose(rxn_quotient, rate_ratio, rtol=tolerance/100., atol=0)
 
         if explain:
-            if len(reactants) > 1:
-                denominator = f"({denominator})"
-
             print(f"Final concentrations: {all_applicable_concs_str}")
-            print(f"1. Ratio of reactant/product concentrations, adjusted for reaction orders: {conc_ratio:,.6g}")
-            print(f"    Formula used:  {numerator} / {denominator}")
+            print(f"1. Ratio of reactant/product concentrations, adjusted for reaction orders: {rxn_quotient:,.6g}")
+            print(f"    Formula used:  {formula}")
             print(f"2. Ratio of forward/reverse reaction rates: {rate_ratio}")
-            print(f"Discrepancy between the two values: {100 * abs(conc_ratio - rate_ratio)/rate_ratio :,.4g} %")
+            print(f"Discrepancy between the two values: {100 * abs(rxn_quotient - rate_ratio)/rate_ratio :,.4g} %")
             if status:
                 print(f"Reaction IS in equilibrium (within {tolerance:.2g}% tolerance)\n")
             else:
                 print(f"Reaction is NOT in equilibrium (not within {tolerance:.2g}% tolerance)\n")
 
         return status
-
-
-
-    def reaction_quotient(self, rxn_index, conc, explain=False) -> Union[np.double, (np.double, str)]:
-        """
-        Compute the "Reaction Quotient" (aka "Mass–action Ratio") for the specified reaction
-        and for the given concentrations of chemicals involved in that reaction
-
-        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
-        :param conc:        Dictionary with the concentrations of the species involved in the reaction.
-                            The keys are the chemical names
-                                EXAMPLE: {'A': 23.9, 'B': 36.1}
-        :param explain:     If True, it also returns the math formula being used for the computation
-                                EXAMPLES:   "([C][D]) / ([A][B])"
-                                            "[B] / [A]^2"
-
-        :return:            If explain is False, return value for the "Reaction Quotient" (aka "Mass–action Ratio");
-                                if True, return a pair with that quotient and a string with the math formula that was used.
-                                Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
-        """
-        rxn = self.chem_data.get_reaction(rxn_index)    # Look up the requested reaction
-
-        reactants, products, kF, kR = rxn.unpack_for_dynamics()
-
-        numerator = np.double(1)    # The product of all the concentrations of the reaction products (adjusted for reaction order)
-        denominator = np.double(1)  # The product of all the concentrations of the reactants (also adjusted for reaction order)
-
-        numerator_text = ""      # First part of the the textual explanation
-        denominator_text = ""    # Second part of the the textual explanation
-
-
-        # Computer the numerator of the "Reaction Quotient"
-        for p in products:
-            # Loop over the reaction products
-            species_index =  rxn.extract_species_index(p)
-            rxn_order =  rxn.extract_rxn_order(p)
-
-            species_name =  self.chem_data.get_name(species_index)
-            species_conc = conc.get(species_name)
-            assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
-                                             f"concentration of `{species_name}` was not provided"
-
-            numerator *= (species_conc ** rxn_order)
-            if explain:
-                numerator_text += f"[{species_name}]"
-                if rxn_order > 1:
-                    numerator_text += f"^{rxn_order} "
-
-        if explain and len(products) > 1:
-            numerator_text = f"({numerator_text})"  # In case of multiple terms, enclose them in parenthesis
-
-
-        # Computer the denominator of the "Reaction Quotient"
-        for r in reactants:
-            # Loop over the reactants
-            species_index =  rxn.extract_species_index(r)
-            rxn_order =  rxn.extract_rxn_order(r)
-
-            species_name = self.chem_data.get_name(species_index)
-            species_conc = conc.get(species_name)
-            assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
-                                             f"concentration of `{species_name}` was not provided"
-
-            denominator *= (species_conc ** rxn_order)
-            if explain:
-                denominator_text += f"[{species_name}]"
-                if rxn_order > 1:
-                    denominator_text += f"^{rxn_order} "
-
-        if explain and len(reactants) > 1:
-            denominator_text = f"({denominator_text})"  # In case of multiple terms, enclose them in parenthesis
-
-
-        quotient = numerator / denominator      # It might be np.inf or np.nan
-
-        if explain:
-            formula = f"{numerator_text} / {denominator_text}"
-            return (quotient, formula)
-
-        return quotient
 
 
 
