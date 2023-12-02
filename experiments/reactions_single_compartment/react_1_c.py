@@ -190,7 +190,7 @@ dynamics_variable.set_conc([10., 50.])
 
 # %%
 # We specify a particular group of preset parameters applicable to the adaptive time steps
-# This time, we're using a "fast" heuristic: proceed boldy, without too much caution
+# This time, we're using a "fast" heuristic: advance quickly thru time
 dynamics_variable.set_adaptive_parameters(preset="fast")   
 
 # %%

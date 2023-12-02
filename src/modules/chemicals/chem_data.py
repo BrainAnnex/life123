@@ -430,6 +430,7 @@ class AllReactions(Diffusion):
         :param name:            Name of the chemical species to add
         :param diffusion_rate:  Floating-point number with the diffusion rate (in water) of this chemical
         :param note:            [OPTIONAL] Note to attach to the chemical
+        :param kwargs:          [OPTIONAL] Any arbitrary named arguments
         :return:                The integer index assigned to the newly-added chemical
         """
         # Validate the diffusion_rate, if present; other arguments get validated by add_chemical()
@@ -458,7 +459,7 @@ class AllReactions(Diffusion):
 
     def add_reaction(self, reactants: Union[int, str, list], products: Union[int, str, list],
                      forward_rate=None, reverse_rate=None,
-                     delta_H=None, delta_S=None, delta_G=None) -> Reaction:
+                     delta_H=None, delta_S=None, delta_G=None) -> int:
         """
         Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
         The involved chemicals must be already registered - use add_chemical() if needed.
@@ -486,8 +487,8 @@ class AllReactions(Diffusion):
         :param delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
         :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
 
-        :return:                Object of type "Reaction"
-                                (note: it also gets appended to the object variable self.reaction_list)
+        :return:                Integer index of the newly-added reaction
+                                (in the object variable self.reaction_list)
         """
         # TODO: maybe default the reaction rate to be equal to the stoichiometry coefficient by default
         rxn = Reaction(self, reactants, products, forward_rate, reverse_rate,
@@ -500,7 +501,7 @@ class AllReactions(Diffusion):
         if rxn.enzyme is not None:
             self.active_enzymes.add(rxn.enzyme)       # Add the new entry to a set
 
-        return rxn
+        return len(self.reaction_list) - 1
 
 
 

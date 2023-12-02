@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from typing import Union
+from src.modules.chemicals.chem_data import ChemData
 from src.modules.movies.movies import MovieTabular
 from src.modules.numerical.numerical import Numerical as num
 from src.modules.visualization.plotly_helper import PlotlyHelper
@@ -34,15 +35,13 @@ class ReactionDynamics:
     In the context of Life123, this may be thought of as a "zero-dimensional system"
     """
 
-    def __init__(self, chem_data):
+    def __init__(self, chem_data=None, names=None):
         """
         :param chem_data:   Object of type "ChemData" (with data about the chemicals and their reactions)
-                                    It's acceptable to pass None,
-                                    and take care of it later (though probably a bad idea!)
-                                    TODO: maybe offer an option to let the constructor instantiate that object?
+        :param names:       [OPTIONAL] A single name, or list or tuple of names, of the chemicals
         """
         self.chem_data = chem_data  # Object of type "ChemData" (with data about the chemicals and their reactions,
-                                    #       incl. macromolecules)
+                                    #                            incl. macromolecules)
 
         self.system_time = 0.       # Global time of the system, from initialization on
 
@@ -127,11 +126,20 @@ class ReactionDynamics:
                                         #
                                         #   Note: entries are always added, even if an interval run is aborted
 
+        if names:
+            if chem_data:
+                raise Exception("ReactionDynamics instantiation: Cannot pass both `chem_data` and `names` arguments. "
+                                "If you already have a `chem_data` object, and want to add names to it, use "
+                                "its method add_chemical()")
+            else:
+                self.chem_data = ChemData(names=names)
+
+
 
 
     #####################################################################################################
 
-    '''                             ~   TO SET/READ DATA   ~                                          '''
+    '''                             ~   TO SET/READ SYSTEM DATA   ~                                          '''
 
     def ________TO_SET_AND_READ_DATA________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
@@ -459,6 +467,7 @@ class ReactionDynamics:
 
     def show_adaptive_parameters(self) -> None:
         """
+        Print out the current values for the adaptive time-step parameters
 
         :return:    None
         """
@@ -469,7 +478,11 @@ class ReactionDynamics:
 
 
 
-    def set_adaptive_parameters(self, preset :str) -> None:
+    def use_adaptive_preset(self, preset :str) -> None:
+        self.set_adaptive_parameters(preset)
+
+
+    def set_adaptive_parameters(self, preset :str) -> None:     # TODO? Phase out in favor of use_adaptive_preset()
         """
         Lets the user choose a preset to use from then on, unless explicitly changed,
         for use in all reaction simulations involving adaptive time steps
@@ -498,6 +511,56 @@ class ReactionDynamics:
         else:
             raise Exception(f"set_adaptive_parameters(): unknown value for the `preset` argument ({preset}); "
                             f"allowed values are 'slow', 'mid', 'fast'")
+
+
+
+
+    #####################################################################################################
+
+    '''                          ~  TO SET/DESCRIBE THE REACTIONS  ~                                  '''
+
+    def ________TO_SET_AND_DESCRIBE_REACTIONS________(DIVIDER):
+        pass         # Used to get a better structure view in IDEs such asPycharm
+    #####################################################################################################
+
+
+    def add_reaction(self, **kwargs) -> int:
+        """
+        Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
+        The involved chemicals must be already registered - use add_chemical() if needed.
+        For details, see ChemData.add_reaction()
+
+        :param kwargs:  Any arbitrary named arguments
+        :return:        Integer index of the newly-added reaction
+        """
+        assert self.chem_data, \
+            "add_reaction(): must first specify the names of the chemicals.  You may use add_chemical()"
+
+        return self.chem_data.add_reaction(**kwargs)
+
+
+
+    def describe_reactions(self, **kwargs) -> None:
+        """
+        Print out a user-friendly plain-text form of ALL the reactions.
+        For details, see ChemData.describe_reactions()
+
+        :param kwargs:  Any arbitrary named arguments
+        :return:        None
+        """
+        return self.chem_data.describe_reactions()
+
+
+
+    def prepare_graph_network(self, **kwargs) -> dict:
+        """
+
+        For details, see ChemData.prepare_graph_network()
+
+        :param kwargs:  Any arbitrary named arguments
+        :return:        A dictionary with 2 keys: 'graph' and 'color_mapping'
+        """
+        return self.chem_data.prepare_graph_network()
 
 
 
