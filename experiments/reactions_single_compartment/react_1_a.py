@@ -24,7 +24,7 @@
 # This experiment gets continued in _"react_1_b"_ , with a more sophisticated approach, 
 # involving adaptive variable time steps.
 #
-# LAST REVISED: Nov. 25, 2023
+# LAST REVISED: Dec. 1, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -32,7 +32,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.chemicals.chem_data import ChemData as chem
+from src.modules.chemicals.chem_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
@@ -48,12 +48,14 @@ GraphicLog.config(filename=log_file,
                   components=["vue_cytoscape_1"],
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
+# %%
+
 # %% [markdown]
 # # Initialize the System
 
 # %% tags=[]
 # Initialize the reaction
-chem_data = chem(names=["A", "B"])
+chem_data = ChemData(names=["A", "B"])
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 chem_data.add_reaction(reactants=["A"], products=["B"], 
@@ -69,11 +71,9 @@ chem_data.describe_reactions()
 graph_data = chem_data.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
-# %% [markdown]
-# # Start the simulation
-
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+# Now initialize the dynamical parts
+dynamics = ReactionDynamics(chem_data)
 
 # %%
 # Initial concentrations of all the chemicals, in index order
@@ -84,6 +84,20 @@ dynamics.describe_state()
 
 # %%
 dynamics.get_history()
+
+# %% [markdown]
+# #### Test your intuition: given that this reaction operates mostly in the forward direction (kF = 3 , kR = 2 , K = 1.5), 
+# #### do you think that A will be consumed and B will be produced??
+# We can take a sneak preview at the final equilibrium concentrations without actually running the simulation:
+
+# %%
+dynamics.find_equilibrium_concentrations(rxn_index=0)
+
+# %% [markdown]
+# #### The reaction will actually proceed IN REVERSE, because of the large initial concentration of B (which we had set to 50), relative to the small initial concentration of A (10)
+# Now, let's see the reaction in action!
+
+# %%
 
 # %% [markdown] tags=[]
 # ### Run the reaction
@@ -96,6 +110,9 @@ dynamics.single_compartment_react(initial_step=0.1, n_steps=1,
 # %%
 dynamics.get_history()
 
+# %% [markdown]
+# We can already see the reaction proceeding in reverse...
+
 # %%
 # Numerous more fixed steps
 dynamics.single_compartment_react(initial_step=0.1, n_steps=10,
@@ -107,7 +124,7 @@ dynamics.get_history()
 
 # %% [markdown]
 # ## NOTE: for demonstration purposes, we're using FIXED time steps...  
-# ## Typically, one would use the option for adaptive variable time steps (see experiment `react 2`)
+# ## Typically, one would use the option for adaptive variable time steps (see experiment `react_1_b`)
 
 # %% [markdown]
 # ### Check the final equilibrium
@@ -128,7 +145,7 @@ dynamics.get_system_conc()   # The current concentrations, in the order the chem
 dynamics.is_in_equilibrium()
 
 # %% [markdown]
-# ### Note that, because of the high initial concentration of B relative to A, the overall reaction has proceeded IN REVERSE
+# ### As noted earlier, because of the high initial concentration of B relative to A, the overall reaction has proceeded IN REVERSE
 
 # %% [markdown] tags=[]
 # ## Plots of changes of concentration with time
@@ -138,8 +155,8 @@ dynamics.plot_history(colors=['blue', 'orange'])
 
 # %% [markdown]
 # ### Note the raggedness of the left-side (early times) of the curves.  
-# ### In experiment `react_1_b` this simulation gets repeated with an adaptive variable time resolution that takes smaller steps at the beginning, when the reaction is proceeding faster   
-# ### By contrast, here we used FIXED time steps (shown below), which generally gives poor results, unless taking a very large number of very small steps!
+# ### In experiment `react_1_b` this simulation gets repeated with an _adaptive variable time resolution_ that takes smaller steps at the beginning, when the reaction is proceeding faster   
+# ### By contrast, here we used _FIXED_ time steps (shown below), which generally gives poor results, unless taking a very large number of very small steps!
 
 # %%
 dynamics.plot_history(colors=['blue', 'orange'], show_intervals=True)

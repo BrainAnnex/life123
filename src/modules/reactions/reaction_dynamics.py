@@ -2722,6 +2722,72 @@ class ReactionDynamics:
 
 
 
+    def find_equilibrium_concentrations(self, rxn_index :int) -> dict:
+        """
+        Determine the equilibrium concentrations that would be reached by the chemicals
+        participating in the specified reaction, given their current concentrations,
+        IN THE ABSENCE of any other reaction.
+
+        IMPORTANT: currently limited to just A <-> B reactions
+
+        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
+        :return:            A dictionary of the equilibrium concentrations of the
+                                chemicals involved in the specified reaction
+                            EXAMPLE:  {'A': 24.0, 'B': 36.0}
+        """
+        #TODO: generalize to more general reactions
+
+        rxn = self.chem_data.get_reaction(rxn_index)    # Look up the requested reaction
+
+        reactants, products, kF, kR = rxn.unpack_for_dynamics()
+
+        K = rxn.K       # Equilibrium constant
+
+        assert len(reactants) == 1, "Currently only implemented for reactions with just 1 reactant and 1 product"
+        assert len(products) == 1, "Currently only implemented for reactions with just 1 reactant and 1 product"
+
+        # Look at the numerator of the "Reaction Quotient"
+        for p in products:
+            # Loop over the reaction products
+            species_index =  rxn.extract_species_index(p)
+            rxn_order =  rxn.extract_rxn_order(p)
+            coefficient = rxn.extract_stoichiometry(p)
+
+            assert rxn_order == 1, "Currently only implemented for 1st order reactions"
+            assert coefficient == 1, "Currently only implemented for A<->B reactions"
+
+            species_name =  self.chem_data.get_name(species_index)
+            B0 = self.get_chem_conc(species_name)
+            assert B0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
+                                   f"concentration of `{species_name}` was not provided"
+
+
+        # Look at the denominator of the "Reaction Quotient"
+        for r in reactants:
+            # Loop over the reactants
+            species_index =  rxn.extract_species_index(r)
+            rxn_order =  rxn.extract_rxn_order(r)
+            coefficient = rxn.extract_stoichiometry(r)
+
+            assert rxn_order == 1, "Currently only implemented for 1st order reactions"
+            assert coefficient == 1, "Currently only implemented for A<->B reactions"
+
+            species_name = self.chem_data.get_name(species_index)
+            A0 = self.get_chem_conc(species_name)
+            assert A0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
+                                   f"concentration of `{species_name}` was not provided"
+
+
+        # m in the number of "moles of forward reaction", from the starting point
+        # to the equilibrium point
+        m = (K * A0 - B0) / (1 + K)
+
+        #print(m)
+
+        return {"A" : A0 - m, "B" : B0 + m}
+
+
+
     def estimate_rate_constants(self, t :np.array, reactant_conc :np.array, product_conc :np.array, product_name="Product"):
         """
         IMPORTANT : Currently restricted to reactions with a 1:1 stoichiometry between the given reactant and product

@@ -72,7 +72,7 @@ class Reaction:
         self.delta_H = delta_H
         self.delta_S = delta_S
         self.delta_G = delta_G
-        self.K = None
+        self.K = None               # Equilibrium constant
         self.enzyme = None          # The INDEX of a chemical that catalyzes this reaction, if applicable
                                     #   Note: enzymes are automatically extracted from the reaction formula
         self.macro_enzyme = None    # The pair (macromolecule name, binding site number)
@@ -224,7 +224,7 @@ class Reaction:
 
 
 
-    def extract_stoichiometry(self, term: (int, int, int)) -> int:
+    def extract_stoichiometry(self, term :(int, int, int)) -> int:
         """
         Return the stoichiometry coefficient, from a reaction term
 
@@ -233,7 +233,7 @@ class Reaction:
         """
         return term[0]
 
-    def extract_species_index(self, term: (int, int, int)) -> int:
+    def extract_species_index(self, term :(int, int, int)) -> int:
         """
         Return the index of the chemical species, from a reaction term
 
@@ -242,7 +242,7 @@ class Reaction:
         """
         return term[1]
 
-    def extract_rxn_order(self, term: (int, int, int)) -> int:
+    def extract_rxn_order(self, term :(int, int, int)) -> int:
         """
         Return the reaction order, from a reaction term
 
@@ -415,7 +415,7 @@ class Reaction:
         denominator_text = ""    # Second part of the the textual explanation
 
 
-        # Computer the numerator of the "Reaction Quotient"
+        # Compute the numerator of the "Reaction Quotient"
         for p in self.products:
             # Loop over the reaction products
             species_index =  self.extract_species_index(p)
@@ -436,7 +436,7 @@ class Reaction:
             numerator_text = f"({numerator_text})"  # In case of multiple terms, enclose them in parenthesis
 
 
-        # Computer the denominator of the "Reaction Quotient"
+        # Compute the denominator of the "Reaction Quotient"
         for r in self.reactants:
             # Loop over the reactants
             species_index =  self.extract_species_index(r)
