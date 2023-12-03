@@ -86,12 +86,13 @@ dynamics.describe_state()
 dynamics.get_history()
 
 # %% [markdown]
-# #### Test your intuition: given that this reaction operates mostly in the forward direction (kF = 3 , kR = 2 , K = 1.5), 
+# ### Test your intuition: 
+# #### given that this reaction operates mostly in the forward direction (kF = 3 , kR = 2 , K = 1.5), 
 # #### do you think that A will be consumed and B will be produced??
 # We can take a sneak preview at the final equilibrium concentrations without actually running the simulation:
 
 # %%
-dynamics.find_equilibrium_concentrations(rxn_index=0)
+dynamics.find_equilibrium_concentrations(rxn_index=0)    # This is an EXACT solution
 
 # %% [markdown]
 # #### The reaction will actually proceed IN REVERSE, because of the large initial concentration of B (which we had set to 50), relative to the small initial concentration of A (10)

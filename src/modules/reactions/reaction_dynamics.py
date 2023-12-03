@@ -482,7 +482,7 @@ class ReactionDynamics:
         self.set_adaptive_parameters(preset)
 
 
-    def set_adaptive_parameters(self, preset :str) -> None:     # TODO? Phase out in favor of use_adaptive_preset()
+    def set_adaptive_parameters(self, preset :str) -> None:     # TODO: Phase out in favor of use_adaptive_preset()
         """
         Lets the user choose a preset to use from then on, unless explicitly changed,
         for use in all reaction simulations involving adaptive time steps
@@ -2786,6 +2786,165 @@ class ReactionDynamics:
 
 
     def find_equilibrium_concentrations(self, rxn_index :int) -> dict:
+        """
+        Determine the equilibrium concentrations that would be reached by the chemicals
+        participating in the specified reaction, given their current concentrations,
+        IN THE ABSENCE of any other reaction.
+
+        IMPORTANT: currently limited to just aA + bB <-> cC + dD reactions, first-order in all chemicals,
+                   (some of terms may be missing)
+                   An Exception will be raised in all other cases
+
+        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
+        :return:            A dictionary of the equilibrium concentrations of the
+                                chemicals involved in the specified reaction
+                            EXAMPLE:  {'A': 24.0, 'B': 36.0}
+        """
+        #TODO: generalize to more reaction with more terms and higher order
+
+        rxn = self.chem_data.get_reaction(rxn_index)    # Look up the requested reaction
+
+        reactants, products, kF, kR = rxn.unpack_for_dynamics()
+
+        K = rxn.K       # Equilibrium constant
+
+        assert len(reactants) <= 2, \
+                "find_equilibrium_concentrations(): Currently only implemented for reactions with at most 2 reactants and 2 products"
+        assert len(products) <= 2, \
+                "find_equilibrium_concentrations(): Currently only implemented for reactions with at most 2 reactants and 2 products"
+
+        '''
+        For reactions of the form aA + bB <-> cC + dD  that are first-order in all chemicals,
+        the equilibrium equation is:  
+                [(C0 + c*m) (D0 + d*m)] / [(A0 - a*m) (B0 - b*m)]  =  K
+            
+        where K is the Equilibrium constant,
+        and the unknown m (to be solved for) is the number of "moles of forward reaction", 
+        from the starting point to the equilibrium point
+        
+        For reaction terms that aren't present (for example the "D" part in the reaction A + B <-> C),
+        we'll use 0 for the "stoichiometry coefficient" and 1 for the "initial concentration";
+        that's a hack to make the multiplicative terms of the form X0 + x*m  (where the X's are the A,B,C,D and the x's are the a,b,c,d)
+        to be identical equal to 1, and thus have no effect on the solution of the above equation
+        '''
+        a = 0
+        b = 0
+        c = 0
+        d = 0
+        A0 = 1
+        B0 = 1
+        C0 = 1
+        D0 = 1
+
+
+        name_map = {}   # To transform the A, B, C, D into the actual names
+
+        # Look at the denominator of the "Reaction Quotient"
+        for i, r in enumerate(reactants):
+            # Loop over the reactants
+            species_index =  rxn.extract_species_index(r)
+            rxn_order =  rxn.extract_rxn_order(r)
+            coefficient = rxn.extract_stoichiometry(r)
+
+            assert rxn_order == 1, \
+                "find_equilibrium_concentrations(): Currently only implemented for 1st order reactions"
+
+            species_name = self.chem_data.get_name(species_index)
+
+            if i == 0:
+                name_map["A"] = species_name
+                a = coefficient
+                A0 = self.get_chem_conc(species_name)
+                assert A0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
+                                       f"concentration of `{species_name}` was not provided"
+            else:
+                name_map["B"] = species_name
+                b = coefficient
+                B0 = self.get_chem_conc(species_name)
+                assert B0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
+                                       f"concentration of `{species_name}` was not provided"
+
+
+        # Look at the numerator of the "Reaction Quotient"
+        for i, p in enumerate(products):
+            # Loop over the reaction products
+            species_index =  rxn.extract_species_index(p)
+            rxn_order =  rxn.extract_rxn_order(p)
+            coefficient = rxn.extract_stoichiometry(p)
+
+            assert rxn_order == 1, "find_equilibrium_concentrations(): Currently only implemented for 1st order reactions"
+
+            species_name =  self.chem_data.get_name(species_index)
+
+            if i == 0:
+                name_map["C"] = species_name
+                c = coefficient
+                C0 = self.get_chem_conc(species_name)
+                assert C0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
+                                       f"concentration of `{species_name}` was not provided"
+            else:
+                name_map["D"] = species_name
+                d = coefficient
+                D0 = self.get_chem_conc(species_name)
+                assert D0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
+                                       f"concentration of `{species_name}` was not provided"
+
+
+        #print("Initial values: ", A0, B0, C0, D0)
+        #print("Stoichiometry coefficients: ", a, b, c, d)
+
+        '''
+        The equation we saw earlier,
+                [(C0 + c*m) (D0 + d*m)] / [(A0 - a*m) (B0 - b*m)]  =  K
+                
+        can be expanded into a standard quadratic form for the unknown m :
+        
+                alpha * m**2 + beta * m + gamma = 0
+                
+        and then solved for m    
+        '''
+        alpha = (c * d - K * a * b)
+        beta = d * C0 + c * D0 + K * (A0 * b + B0 * a)
+        gamma = C0 * D0 - K * A0 * B0
+
+        #print(name_map)
+        #print("alpha, beta, gamma : ", alpha, beta, gamma)
+
+        if alpha == 0:
+            # The quadratic reduces to the linear equation:  beta * m + gamma = 0
+            m = -gamma / beta
+        else:
+            sqrt_discriminant = math.sqrt(beta**2 - 4 * alpha * gamma)
+            m1 = (-beta + sqrt_discriminant) / (2 * alpha)
+            m2 = (-beta - sqrt_discriminant) / (2 * alpha)
+            #print("m1, m2 : ", m1, m2)
+            m = m1  # Let's start with one of the 2 possible solutions of the quadratic equation
+
+
+        # After m "moles of forward reaction", the concentration of the reactant "A"
+        # in aA + bB <-> cC + dD gets reduced by a*m . Likewise for the other terms.
+        # Reaction products get increased.  Values for missing terms will be meaningless
+        std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "C" : C0 + c*m, "D" : D0 + d*m}
+
+        if min(std_result.values()) < 0:    # If there's any negative value in the concentrations...
+            # ...then repeat the computation using the other solution to the quadratic
+            m = m2
+            std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "C" : C0 + c*m, "D" : D0 + d*m}
+
+
+        # Let's translate our standard names A, B, C, D into the actual names,
+        # and also drop any missing term
+        result = {}
+        for k, v in std_result.items():
+            actual_name = name_map.get(k)
+            if actual_name:     # Missing terms will get dropped out
+                result[actual_name] = v
+
+        return result
+
+
+
+    def find_equilibrium_concentrations_OBSOLETE(self, rxn_index :int) -> dict: # Replaced by find_equilibrium_concentrations()
         """
         Determine the equilibrium concentrations that would be reached by the chemicals
         participating in the specified reaction, given their current concentrations,

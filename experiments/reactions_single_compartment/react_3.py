@@ -58,14 +58,12 @@ dynamics.add_reaction(reactants=["A" , "B"], products="C",
 dynamics.describe_reactions()
 
 # %%
-
-# %%
 # Send a plot of the network of reactions to the HTML log file
 graph_data = dynamics.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %%
-# Initial concentrations of all the chemicals, in their index order
+# Set the initial concentrations of all the chemicals, in their index order
 dynamics.set_conc([10., 50., 20.], snapshot=True)
 
 # %%
@@ -73,6 +71,18 @@ dynamics.describe_state()
 
 # %%
 dynamics.get_history()
+
+# %%
+
+# %% [markdown]
+# ### Sneak preview of eventual equilibrum:
+# we can preview the final equilibrium concentrations without actually running the simulation
+
+# %%
+dynamics.find_equilibrium_concentrations(rxn_index=0)    # This is an EXACT solution
+
+# %% [markdown]
+# The reaction will proceed forward, with `A` and `B` being consumed, and `C` being produced
 
 # %%
 
@@ -121,19 +131,35 @@ dynamics.plot_history(colors=['red', 'violet', 'green'], show_intervals=True)
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium()
 
+# %% [markdown]
+# Compare with the values we saw earlier for the exact solution of the equilibrium values:   
+# {'A': 0.2948774087575341, 'B': 40.294877408757536, 'C': 29.705122591242464}  
+#
+# It's instructive to compare the exact values with the last few points from the simulation:  
+
+# %%
+dynamics.get_history(tail=3)
+
+# %% [markdown]
+# The 2nd-to-last simulation point, rather than the last one, is actually closer to the exact equilibrium values.  
+# That's because by that time the variable steps are getting so large that they introduce some error.  
+# If we were to run the simulation longer (not shown), we'd see the variable steps continuing to grow, and then suddenly being reduced;  
+# then continued cycles of growth and reduction ("hitting the brakes whenever getting too fast")
+
 # %%
 
 # %% [markdown]
 # # Everthing below is just for diagnostic insight 
-# ## into the adaptive variable time steps
+# ## into the adaptive variable time steps  
+# This information is available because we made a call to `dynamics.set_diagnostics()` prior to running the simulation
 
 # %%
-dynamics.get_diagnostic_decisions_data()
+dynamics.get_diagnostic_decisions_data()   # diagnostic data about concentration changes at every step - EVEN aborted ones
 
 # %%
-dynamics.get_diagnostic_rxn_data(rxn_index=0)
+dynamics.get_diagnostic_rxn_data(rxn_index=0)   # diagnostic run data of the requested SINGLE reaction
 
 # %%
-dynamics.get_diagnostic_conc_data()
+dynamics.get_diagnostic_conc_data()   # diagnostic concentration data saved during the run, regardless of how much history we requested to save
 
 # %%
