@@ -479,10 +479,6 @@ class ReactionDynamics:
 
 
     def use_adaptive_preset(self, preset :str) -> None:
-        self.set_adaptive_parameters(preset)
-
-
-    def set_adaptive_parameters(self, preset :str) -> None:     # TODO: Phase out in favor of use_adaptive_preset()
         """
         Lets the user choose a preset to use from then on, unless explicitly changed,
         for use in all reaction simulations involving adaptive time steps
@@ -552,6 +548,16 @@ class ReactionDynamics:
 
 
 
+    def number_of_reactions(self) -> int:
+        """
+        Return the number of registered chemical reactions
+
+        :return:    the number of registered chemical reactions
+        """
+        return self.chem_data.number_of_reactions()
+
+
+
     def prepare_graph_network(self, **kwargs) -> dict:
         """
 
@@ -605,7 +611,7 @@ class ReactionDynamics:
     def single_compartment_react(self, reaction_duration=None, target_end_time=None,
                                  initial_step=None, n_steps=None,
                                  snapshots=None, silent=False,
-                                 variable_steps=False, explain_variable_steps=False) -> None:
+                                 variable_steps=True, explain_variable_steps=False) -> None:
         """
         Perform ALL the reactions in the single compartment -
         based on the INITIAL concentrations,
@@ -636,7 +642,7 @@ class ReactionDynamics:
         :param silent:              If True, less output is generated
 
         :param variable_steps:      If True, the steps sizes will get automatically adjusted, based on thresholds
-        :param explain_variable_steps:
+        :param explain_variable_steps:  If True, a description of the steps taken gets printed out
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
@@ -2785,33 +2791,36 @@ class ReactionDynamics:
 
 
 
-    def find_equilibrium_concentrations(self, rxn_index :int) -> dict:
+    def find_equilibrium_conc(self, rxn_index :int) -> dict:
         """
         Determine the equilibrium concentrations that would be reached by the chemicals
         participating in the specified reaction, given their current concentrations,
         IN THE ABSENCE of any other reaction.
 
         IMPORTANT: currently limited to just aA + bB <-> cC + dD reactions, first-order in all chemicals,
-                   (some of terms may be missing)
+                   (some of terms can be missing)
                    An Exception will be raised in all other cases
 
         :param rxn_index:   The integer index (0-based) to identify the reaction of interest
         :return:            A dictionary of the equilibrium concentrations of the
                                 chemicals involved in the specified reaction
-                            EXAMPLE:  {'A': 24.0, 'B': 36.0}
+                            EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8}
         """
-        #TODO: generalize to more reaction with more terms and higher order
+        #TODO: generalize to reactions with more terms and higher order
 
         rxn = self.chem_data.get_reaction(rxn_index)    # Look up the requested reaction
 
-        reactants, products, kF, kR = rxn.unpack_for_dynamics()
+        reactants = rxn.extract_reactants()
+        products = rxn.extract_products()
+        K = rxn.extract_equilibrium_constant()
 
-        K = rxn.K       # Equilibrium constant
 
         assert len(reactants) <= 2, \
-                "find_equilibrium_concentrations(): Currently only implemented for reactions with at most 2 reactants and 2 products"
+                "find_equilibrium_conc(): Currently only implemented " \
+                "for reactions with at most 2 reactants and 2 products"
         assert len(products) <= 2, \
-                "find_equilibrium_concentrations(): Currently only implemented for reactions with at most 2 reactants and 2 products"
+                "find_equilibrium_conc(): Currently only implemented " \
+                "for reactions with at most 2 reactants and 2 products"
 
         '''
         For reactions of the form aA + bB <-> cC + dD  that are first-order in all chemicals,
@@ -2847,7 +2856,7 @@ class ReactionDynamics:
             coefficient = rxn.extract_stoichiometry(r)
 
             assert rxn_order == 1, \
-                "find_equilibrium_concentrations(): Currently only implemented for 1st order reactions"
+                "find_equilibrium_conc(): Currently only implemented for 1st order reactions"
 
             species_name = self.chem_data.get_name(species_index)
 
@@ -2872,7 +2881,7 @@ class ReactionDynamics:
             rxn_order =  rxn.extract_rxn_order(p)
             coefficient = rxn.extract_stoichiometry(p)
 
-            assert rxn_order == 1, "find_equilibrium_concentrations(): Currently only implemented for 1st order reactions"
+            assert rxn_order == 1, "find_equilibrium_conc(): Currently only implemented for 1st order reactions"
 
             species_name =  self.chem_data.get_name(species_index)
 
@@ -2941,72 +2950,6 @@ class ReactionDynamics:
                 result[actual_name] = v
 
         return result
-
-
-
-    def find_equilibrium_concentrations_OBSOLETE(self, rxn_index :int) -> dict: # Replaced by find_equilibrium_concentrations()
-        """
-        Determine the equilibrium concentrations that would be reached by the chemicals
-        participating in the specified reaction, given their current concentrations,
-        IN THE ABSENCE of any other reaction.
-
-        IMPORTANT: currently limited to just A <-> B reactions
-
-        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
-        :return:            A dictionary of the equilibrium concentrations of the
-                                chemicals involved in the specified reaction
-                            EXAMPLE:  {'A': 24.0, 'B': 36.0}
-        """
-        #TODO: generalize to more general reactions
-
-        rxn = self.chem_data.get_reaction(rxn_index)    # Look up the requested reaction
-
-        reactants, products, kF, kR = rxn.unpack_for_dynamics()
-
-        K = rxn.K       # Equilibrium constant
-
-        assert len(reactants) == 1, "Currently only implemented for reactions with just 1 reactant and 1 product"
-        assert len(products) == 1, "Currently only implemented for reactions with just 1 reactant and 1 product"
-
-        # Look at the numerator of the "Reaction Quotient"
-        for p in products:
-            # Loop over the reaction products
-            species_index =  rxn.extract_species_index(p)
-            rxn_order =  rxn.extract_rxn_order(p)
-            coefficient = rxn.extract_stoichiometry(p)
-
-            assert rxn_order == 1, "Currently only implemented for 1st order reactions"
-            assert coefficient == 1, "Currently only implemented for A<->B reactions"
-
-            species_name =  self.chem_data.get_name(species_index)
-            B0 = self.get_chem_conc(species_name)
-            assert B0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
-                                   f"concentration of `{species_name}` was not provided"
-
-
-        # Look at the denominator of the "Reaction Quotient"
-        for r in reactants:
-            # Loop over the reactants
-            species_index =  rxn.extract_species_index(r)
-            rxn_order =  rxn.extract_rxn_order(r)
-            coefficient = rxn.extract_stoichiometry(r)
-
-            assert rxn_order == 1, "Currently only implemented for 1st order reactions"
-            assert coefficient == 1, "Currently only implemented for A<->B reactions"
-
-            species_name = self.chem_data.get_name(species_index)
-            A0 = self.get_chem_conc(species_name)
-            assert A0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
-                                   f"concentration of `{species_name}` was not provided"
-
-
-        # m in the number of "moles of forward reaction", from the starting point
-        # to the equilibrium point
-        m = (K * A0 - B0) / (1 + K)
-
-        #print(m)
-
-        return {"A" : A0 - m, "B" : B0 + m}
 
 
 

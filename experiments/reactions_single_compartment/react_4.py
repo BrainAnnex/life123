@@ -21,7 +21,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -29,9 +29,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.chemicals.chem_data import ChemData as chem
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
-
 from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
@@ -48,26 +46,23 @@ GraphicLog.config(filename=log_file,
 # Specify the chemicals and the reactions
 
 # %% tags=[]
-# Specify the chemicals
-chem_data = chem(names=["A", "C"])
+# Instantiate the simulator and specify the chemicals
+dynamics = ReactionDynamics(names=["A", "C"])
 
 # Reaction 2A <-> C , with 2nd-order kinetics for A, and 1st-order kinetics for C
-chem_data.add_reaction(reactants=[(2, "A", 2)], products=["C"],
-                       forward_rate=3., reverse_rate=2.)   
+dynamics.add_reaction(reactants=[(2, "A", 2)], products="C",
+                      forward_rate=3., reverse_rate=2.)   
 # Note: the first 2 in (2, "A", 2) is the stoichiometry coefficient, while the other one is the order
 
-chem_data.describe_reactions()
+dynamics.describe_reactions()
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
-graph_data = chem_data.prepare_graph_network()
+graph_data = dynamics.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown]
 # # Start the simulation
-
-# %%
-dynamics = ReactionDynamics(chem_data=chem_data)
 
 # %%
 # Initial concentrations of all the chemicals, in index order
@@ -85,11 +80,10 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are currently close to the default values... but subject to change; set for repeatability
-dynamics.set_thresholds(norm="norm_A", low=1.0, high=2.0, abort=3.5)
-dynamics.set_thresholds(norm="norm_B", low=0.1, high=0.5, abort=3.0)
-dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5)
-dynamics.set_error_step_factor(0.5)
+# For repeatibility, we avoid the defaults, and instead specify a particular group of preset parameters 
+# applicable to the adaptive time steps.
+# Here we use a "fast" heuristic: advance quickly thru time
+dynamics.use_adaptive_preset(preset="fast")
 
 dynamics.single_compartment_react(initial_step=0.002, reaction_duration=0.04,
                                   snapshots={"initial_caption": "1st reaction step",

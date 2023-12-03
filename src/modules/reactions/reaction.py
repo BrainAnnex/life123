@@ -210,6 +210,14 @@ class Reaction:
         return self.kR
 
 
+    def extract_equilibrium_constant(self) -> float:
+        """
+
+        :return:    The value of the equilibrium constant for this reaction
+        """
+        return self.K
+
+
 
     def unpack_for_dynamics(self) -> tuple:
         """

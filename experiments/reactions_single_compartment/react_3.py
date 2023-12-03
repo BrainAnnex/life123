@@ -20,7 +20,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_4"_  
 #
-# LAST REVISED: Dec. 2, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -79,7 +79,7 @@ dynamics.get_history()
 # we can preview the final equilibrium concentrations without actually running the simulation
 
 # %%
-dynamics.find_equilibrium_concentrations(rxn_index=0)    # This is an EXACT solution
+dynamics.find_equilibrium_conc(rxn_index=0)    # This is an EXACT solution
 
 # %% [markdown]
 # The reaction will proceed forward, with `A` and `B` being consumed, and `C` being produced
