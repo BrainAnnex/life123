@@ -22,7 +22,7 @@
 # Invoking [Le Chatelier's principle](https://www.chemguide.co.uk/physical/equilibria/lechatelier.html), it can be seen that, starting from equilibrium, when [U] goes up, so does [D]; and when [D] goes up, so does [X].   
 # Conversely, when [U] goes down, so does [D]; and when [D] goes down, so does [X].     
 #
-# LAST REVISED: Nov. 4, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -52,7 +52,7 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["U", "X", "D"])
 
 # Reaction U <-> 2D , with 1st-order kinetics for all species
-chem_data.add_reaction(reactants="U", products=[(2, "D")],
+chem_data.add_reaction(reactants="U", products=[(2, "D", 1)],
                        forward_rate=8., reverse_rate=2.)
 
 # Reaction X <-> D , with 1st-order kinetics for all species

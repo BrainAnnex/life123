@@ -515,55 +515,65 @@ class Reaction:
 
 
 
-    def _parse_reaction_term(self, term: Union[int, str, tuple, list], name="term") -> (int, int, int):
+    def _parse_reaction_term(self, term: Union[str, tuple, list], name="term") -> (int, int, int):
         """
-        Accept various ways to specify a reaction term, and return a standardized tuple form of it.
-        In the tuples or lists:
-            - optional 1st entry is the stoichiometry
-            - required entry is the chemical name
-            - optional 3rd one is the reaction order
+        Accept various ways to specify a reaction term, and return a standardized triplet form for it.
+
+        NOTE:   A) if the stoichiometry coefficient isn't specified, it defaults to 1
+                B) if the reaction order isn't specified, it defaults to the stoichiometry coefficient
+
+        In the passed tuples or lists:
+            - required 1st entry is the stoichiometry
+            - required 2nd entry is the chemical name
+            - optional 3rd one is the reaction order.  If unspecified, it defaults to the stoichiometry
+
+        If just a string is being passed, it is taken to be the chemical name,
+        with stoichiometry and reaction order both 1
 
         EXAMPLES (*assuming* that the chemical species with index 5 is called "F"):
-            "F"          gets turned into:  (1, 5, 1)
-            (3, "F")                        (3, 5, 1)
-            (3, "F", 2)                     (3, 5, 2)
+            "F"          gets turned into:  (1, 5, 1)   - defaults used for stoichiometry and reaction order
+            (2, "F")                        (2, 5, 2)   - default used for reaction order
+            (2, "F", 1)                     (2, 5, 1)   - no defaults invoked
             It's equally acceptable to use LISTS in lieu of tuples
 
         :param term:    A string (a chemical name)
                             OR  a pair (stoichiometry coeff, name)
                             OR  a triplet (stoichiometry coeff, name, reaction order)
-        :param name:    An optional nickname to refer to this term in error messages, if applicable
+        :param name:    An optional nickname, handy to refer to this term in error messages if needed
                             (for example, "reactant" or "product")
-        :return:        A standardized tuple form, of the form (stoichiometry, species index, reaction_order),
+        :return:        A standardized triplet of the form (stoichiometry, species index, reaction_order),
                             where all terms are integers
         """
         if type(term) == str:
             return  (1, self.chem_data.get_index(term), 1)  # Accept simply the chemical name as a shortcut
                                                             # for when the stoichiometry coefficient and reaction order are both 1
-        elif type(term) != tuple and type(term) != list:
-            raise Exception(f"_parse_reaction_term(): {name} item must be either a string (a chemical name), "
+
+        if type(term) != tuple and type(term) != list:
+            raise Exception(f"_parse_reaction_term(): {name} must be either a string (a chemical name), "
                             f"or a pair (stoichiometry coeff, name) or a triplet (stoichiometry coeff, name, reaction order). "
                             f"Instead, it is `{term}` (of type {type(term)})")
 
         # If we get thus far, term is either a tuple or a list
-        if len(term) != 3 and len(term) != 2:
-            raise Exception(f"_parse_reaction_term(): Unexpected length for {name} tuple/list: it should be 2 or 3. Instead, it is {len(term)}")
+        assert len(term) in [2, 3],  \
+            f"_parse_reaction_term(): Unexpected length for {name} tuple/list: it should be either 2 or 3. " \
+            f"Instead, it is {len(term)}"
 
         stoichiometry = term[0]
         assert type(stoichiometry) == int, \
-            f"_parse_reaction_term(): The stoichiometry coefficient, if provided, must be an integer. Instead, it is {stoichiometry}"
+            f"_parse_reaction_term(): The stoichiometry coefficient must be an integer. Instead, it is {stoichiometry}"
 
         species = term[1]
         if type(species) == str:
-            species = self.chem_data.get_index(species)
+            species_index = self.chem_data.get_index(species)
         else:
-            raise Exception(f"_parse_reaction_term(): The chemical name must be a string. Instead, it is {species} (of type {type(species)})")
+            raise Exception(f"_parse_reaction_term(): The chemical name must be a string. "
+                            f"Instead, it is {species} (of type {type(species)})")
 
         if len(term) == 2:
-            return (stoichiometry, species, 1)
+            return (stoichiometry, species_index, stoichiometry)
         else:   # Length is 3
             reaction_order = term[2]
-            return (stoichiometry, species, reaction_order)
+            return (stoichiometry, species_index, reaction_order)
 
 
 

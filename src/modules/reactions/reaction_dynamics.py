@@ -2652,8 +2652,8 @@ class ReactionDynamics:
 
     def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True) -> Union[bool, dict]:
         """
-        Ascertain whether the given concentrations are in equilibrium for the specified reactions
-        (by default, for all reactions)
+        Ascertain whether the given concentrations (by default the current System concentrations)
+        are in equilibrium for the specified reactions (by default, for all reactions)
 
         :param rxn_index:   The integer index (0-based) to identify the reaction of interest;
                                 if None, then check all the reactions
@@ -2953,15 +2953,16 @@ class ReactionDynamics:
 
 
 
-    def estimate_rate_constants(self, t :np.array, reactant_conc :np.array, product_conc :np.array, product_name="Product"):
+    def estimate_rate_constants(self, t :np.array, reactant_conc :np.array, product_conc :np.array,
+                                product_name="Product"):
         """
         IMPORTANT : Currently restricted to reactions with a 1:1 stoichiometry between the given reactant and product
 
-        :param t:
+        :param t:               A numpy array of time grid points where the other functions are specified
         :param reactant_conc:
         :param product_conc:
         :param product_name:
-        :return:
+        :return:                A plotly "Figure" object
         """
         total_conc_arr = reactant_conc + product_conc
         total_conc = np.median(total_conc_arr)    # TODO: give warning or abort if there's too much variance
@@ -2982,8 +2983,8 @@ class ReactionDynamics:
 
 
         # Do a least-square fit of the time-gradient of the product, as a function of the product's concentration
-        Y = deriv_product_conc   # The dependent variable
-        X = product_conc    # The independent variable
+        Y = deriv_product_conc  # The dependent variable
+        X = product_conc        # The independent variable
 
         M = np.vstack([np.ones(len(Y)), X]).T
         # M is an nx2 matrix , where n is the number of data points.  The 2nd column contains the values of X

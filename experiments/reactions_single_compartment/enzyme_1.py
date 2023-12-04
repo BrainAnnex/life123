@@ -16,7 +16,7 @@
 # %% [markdown]
 # ## Comparing the reaction `A <-> B` , with and without an enzyme
 #
-# LAST REVISED: Nov. 3, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

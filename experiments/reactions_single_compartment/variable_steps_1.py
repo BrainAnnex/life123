@@ -22,7 +22,7 @@
 #
 # This experiment gets repeated, with very fine _fixed_ steps (as a proxy for the "exact value"), in `variable_steps_2`
 #
-# LAST REVISED: July 23, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %% [markdown]
 # ![Adaptive time steps](../../docs/variable_steps.png)
@@ -56,7 +56,7 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["U", "X", "S"])
 
 # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
-chem_data.add_reaction(reactants=[(2, "S")], products="U",
+chem_data.add_reaction(reactants=[(2, "S", 1)], products="U",
                        forward_rate=8., reverse_rate=2.)
 
 # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)

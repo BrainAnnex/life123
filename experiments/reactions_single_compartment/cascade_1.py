@@ -23,7 +23,7 @@
 #
 # In part2, some diagnotic insight is explored - and the 2 identical runs ("adaptive variable steps" and "fixed small steps") are compared. 
 #
-# LAST REVISED: Nov. 20, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:

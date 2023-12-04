@@ -14,15 +14,15 @@
 
 # %% [markdown]
 # ## A simple `A <-> B` reaction whose rate constants are to be estimated 
-# ## from a given time evolution of [A] and [B] (values on a variable-time grid.)
+# ## from a given time evolution of [A] and [B] (values on a *variable-time* grid.)
 #
 # Assume the reaction is known to be 1st order (won't verify that.)  
 #
 # In PART 1, a time evolution of [A] and [B] is obtained by simulation  
-# In PART 2, the time functions generated in Part 1 are taken as a _starting point,_ to estimate the rate constants of `A <-> B`
+# In PART 2, the time functions generated in Part 1 are taken as a _starting point,_ to estimate the rate constants of `A <-> B`  
 # In PART 3, we'll repeat what we did in Part 2, but this time showing the full details of how the answer is arrived at
 #
-# LAST REVISED: Nov. 21, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -30,31 +30,29 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.chemicals.chem_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 from src.modules.visualization.plotly_helper import PlotlyHelper
 
 import numpy as np
 
+# %%
+
 # %% [markdown]
-# # PART 1 - We'll generate the time evolution of [A] and [B] by simulation a reaction of known rate constants...
-# ## but pretend you don't see this section!
+# # PART 1 - We'll generate the time evolution of [A] and [B] by simulating a reaction of KNOWN rate constants...
+# ## but pretend you don't see this section! (because we later want to estimate those rate constants)
 
 # %% tags=[]
-# Specify the chemicals
-chem_data = ChemData(names=["A", "B"])
+# Instantiate the simulator and specify the chemicals
+dynamics = ReactionDynamics(names=["A", "B"])
 
 # Reaction A <-> B
-chem_data.add_reaction(reactants=["A"], products=["B"],
-                       forward_rate=12., reverse_rate=2.) 
+dynamics.add_reaction(reactants="A", products="B",
+                      forward_rate=12., reverse_rate=2.) 
  
-chem_data.describe_reactions()
+dynamics.describe_reactions()
 
 # %% [markdown]
 # ### Run the simulation
-
-# %%
-dynamics = ReactionDynamics(chem_data=chem_data)
 
 # %%
 dynamics.set_conc([40., 10.], snapshot=True)  # Set the initial concentrations of all the chemicals, in their index order
@@ -64,11 +62,8 @@ dynamics.describe_state()
 dynamics.set_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
 
 # These settings can be tweaked to make the time resolution finer or coarser.  
-# The values are the current defaults, but setting them here for repeatability
-dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
-dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4)
-dynamics.set_error_step_factor(0.25)
+# Here we use a "mid" heuristic: neither too fast nor too prudent
+dynamics.use_adaptive_preset(preset="mid")
 
 dynamics.single_compartment_react(initial_step=0.01, reaction_duration=0.5,
                                   snapshots={"initial_caption": "1st reaction step",
@@ -109,8 +104,8 @@ A_conc = df["A"].to_numpy()
 B_conc = df["B"].to_numpy()
 
 # %% [markdown]
-# #### Here, we take the easy way, using a specialized Life123 function!
-# (in Part 3, we'll do a step-by-step derivation)
+# ### Here, we take the easy way out, using a specialized Life123 function!
+# (in Part 3, we'll do a step-by-step derivation, to see how it works)
 
 # %%
 dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=B_conc, product_name="B")
@@ -132,7 +127,7 @@ t_arr  # Time points in our data set
 np.gradient(t_arr)
 
 # %% [markdown]
-# #### The variable grid, and the skimpy number of data points, are best seen in the plot repeated from PART 1:
+# #### The variable grid, and the skimpy number of data points, are best seen in the plot, here repeated, from PART 1:
 
 # %%
 dynamics.plot_history(title="Reaction A <-> B",
@@ -199,8 +194,8 @@ PlotlyHelper.plot_curves(x=t_arr, y=[Deriv_A , Deriv_B], title="d/dt A(t) and d/
 
 # %% [markdown]
 # Assuming that A <-> B is an elementary chemical reaction (i.e. occuring in a single step)  
-# OR THAT IT CAN BE APPROXIMATED BY ONE, 
-# then he rate of change of the reaction product [B] is the difference of the forward rate (producing `B`) and the reverse rate (consuming it):  
+# OR THAT IT CAN BE APPROXIMATED AS ONE, 
+# then the rate of change of the reaction product [B] is the difference of the forward rate (producing `B`) and the reverse rate (consuming it):  
 #
 # `B'(t) = kF * A(t) - kR * B(t)`   &nbsp; &nbsp; &nbsp;  **(Eqn. 1)**  
 #   
@@ -303,110 +298,5 @@ kF
 
 # %% [markdown]
 # #### We just obtained the same values of the estimated kF and kR as were computed by a call to `estimate_rate_constants()` in Part 2
-
-# %%
-
-# %%
-
-# %%
-
-# %%
-
-# %%
-
-# %%
-
-# %%
-
-# %%
-
-# %%
-
-# %%
-
-# %% [markdown]
-# The rate of change of [B] is the difference of the forward rate (producing `B`) and reverse rate (consuming it):  
-# B'(t) = kF * A(t) - kR * B(t)   &nbsp; &nbsp; &nbsp;  **(Eqn. 1)**  
-#   
-# We also know that A(t) + B(t) = TOT_conc ,  
-# i.e.  A(t) = TOT_conc - B(t)  
-#
-# Replacing A(t) in Eqn. 1:  
-# B'(t) = kF * {TOT_conc - B(t)} - kR * B(t) = kF * TOT_conc - kF * B(t) - kR * B(t)  
-#
-# in conclusion:   B'(t) = {kF * TOT_conc} + {-kF -kR} * B(t)     &nbsp; &nbsp; &nbsp;  **(Eqn. 2)**  
-
-# %% [markdown]
-# We already have, from our data, B'(t) as the Numpy array `Deriv_B` , and we also have B(t) as the Numpy array `B_conc`  
-# Let's verify that they indeed have a linear relationship:
-
-# %%
-PlotlyHelper.plot_curves(x=B_conc, y=Deriv_B, title="d/dt B(t) as a function of B(t)",
-                         xlabel="B(t)", ylabel="B'(t)", colors="green")
-
-# %% [markdown]
-# As expected, it appears to be a straight line, and the rate of change is highest when [B] is small, which happens early in the reaction.  
-#
-# If we fit a linear model (least-square fit straight line), we can estimate  B'(t) = a + b * B(t) , for some numbers a and b.  
-# I.e. **we want to fit: Y = a + b * X , for some numbers a and b**  
-# where Y is `Deriv_B` and X is `B_conc`, the Numpy arrays we computed earlier:
-
-# %%
-Y = Deriv_B    # The dependent variable
-Y
-
-# %%
-X = B_conc    # The independent variable
-X
-
-# %% [markdown]
-# Let's do the least-square fit:
-
-# %%
-M = np.vstack([np.ones(len(Y)), X]).T
-# M is an nx2 matrix , where n is the number of data points.  The 2nd column contains the values of X
-M[:10, :]   # Show the first 10 rows
-
-# %%
-a, b = np.linalg.lstsq(M, Y, rcond=None)[0]  # Carry out the least-square fit
-a, b
-
-# %% [markdown]
-# #### Visually verify the least-square fit
-
-# %%
-PlotlyHelper.plot_curves(x=B_conc, y=[Deriv_B , a + b*B_conc], 
-                         title="d/dt B(t) as a function of B(t), alongside its least-square fit",
-                         xlabel="B(t)", ylabel="B'(t)", 
-                         curve_labels=["B'(t)", "Linear Fit"], legend_title="Curve vs Fit:", colors=['green', 'red'])
-
-# %% [markdown]
-# _Virtually indistinguishable lines!_
-
-# %% [markdown]
-# Replacing the estimates for a and b into Eqn. 2, above, and using the known value TOT_conc = 50.:  
-#
-# ```
-# kF * TOT_conc = a  
-# -kF - kR = b  
-# ```
-# i.e.
-#
-# ```
-# kF = a / TOT_conc
-# kR = -kF - b = -(a / TOT_conc) - b
-# ```
-# using the values: 
-
-# %%
-kF = a / TOT_conc
-kF
-
-# %%
-kR = -(a / TOT_conc) - b
-kR
-
-# %% [markdown]
-# #### We just obtained the same values of the estimated kF and kR as were computed by a call to estimate_rate_constants() in Part 2
 
 # %%

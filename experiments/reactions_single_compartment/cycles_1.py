@@ -22,7 +22,7 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: Nov. 21, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -103,15 +103,15 @@ dynamics.describe_state()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %%
-dynamics.single_compartment_react(initial_step=0.0008, target_end_time=0.03)
+dynamics.single_compartment_react(initial_step=0.0008, target_end_time=0.03, variable_steps=False)
 #dynamics.get_history()
 
 # %%
-dynamics.single_compartment_react(initial_step=0.001, target_end_time=5.)
+dynamics.single_compartment_react(initial_step=0.001, target_end_time=5., variable_steps=False)
 #dynamics.get_history()
 
 # %%
-dynamics.single_compartment_react(initial_step=0.005, target_end_time=8.)
+dynamics.single_compartment_react(initial_step=0.005, target_end_time=8., variable_steps=False)
 
 # %%
 dynamics.get_history()
@@ -240,13 +240,13 @@ dynamics.describe_state()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %% tags=[]
-dynamics.single_compartment_react(initial_step=0.0004, target_end_time=0.03)
+dynamics.single_compartment_react(initial_step=0.0004, target_end_time=0.03, variable_steps=False)
 
 # %%
-dynamics.single_compartment_react(initial_step=0.0005, target_end_time=5.)
+dynamics.single_compartment_react(initial_step=0.0005, target_end_time=5., variable_steps=False)
 
 # %%
-dynamics.single_compartment_react(initial_step=0.0025, target_end_time=8.)
+dynamics.single_compartment_react(initial_step=0.0025, target_end_time=8., variable_steps=False)
 
 # %%
 dynamics.get_history()

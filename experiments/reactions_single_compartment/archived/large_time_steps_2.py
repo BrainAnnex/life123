@@ -23,7 +23,7 @@
 # * for an exploration of instabilities, see the experiment `negative_concentrations_1`
 # * for an accurate longer run of the same reactions (with the same initial conditions), see the experiment "up_regulate_3"
 #
-# LAST REVISED: June 4, 2023  **THIS IS AN ARCHIVED EXPERIMENT**
+# LAST REVISED: Dec. 3, 2023  **THIS IS AN ARCHIVED EXPERIMENT**
 
 # %% [markdown]
 # # IMPORTANT: DO NOT ATTEMPT TO RUN THIS NOTEBOOK!   

@@ -19,9 +19,9 @@
 #
 # Simple vs. Compound reactions.
 #
-# CONTINUATION of experiment "cascade_1"; please refer to it for background information
+# CONTINUATION of experiment `cascade_1`; please refer to it for background information
 #
-# LAST REVISED: Nov. 21, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

@@ -26,7 +26,7 @@
 #
 # Note: numerical errors in the same reactions (with the same initial conditions) is explored in the experiment "large_time_steps_2"
 #
-# LAST REVISED: Nov. 4, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -56,7 +56,7 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["U", "X", "S"])
 
 # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
-chem_data.add_reaction(reactants=[(2, "S")], products="U",
+chem_data.add_reaction(reactants=[(2, "S", 1)], products="U",
                        forward_rate=8., reverse_rate=2.)
 
 # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
@@ -227,6 +227,8 @@ dynamics.plot_history(colors=['green', 'orange', 'blue'])
 # %%
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium(explain=False)
+
+# %%
 
 # %% [markdown]
 # **IDEAS TO EXPLORE**:   

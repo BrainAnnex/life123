@@ -18,7 +18,7 @@
 # A direct reaction and the same reaction, catalyzed
 # ### Re-run from same initial concentrations of S ("Substrate") and P ("Product") for various concentations of the enzyme `E`: from zero to hugely abundant
 #
-# LAST REVISED: Nov. 9, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

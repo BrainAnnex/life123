@@ -525,9 +525,9 @@ def test_add_reaction():
     with pytest.raises(Exception):
         chem.add_reaction(reactants=["A"], products=[(1, "A", 1)])
     with pytest.raises(Exception):
-        chem.add_reaction(reactants=[(2, "B")], products=[(2, "B")])
+        chem.add_reaction(reactants=[(2, "B")], products=[(2, "B", 2)])
     with pytest.raises(Exception):
-        chem.add_reaction(reactants=[(2, "B")], products=[(2, "B", 1)])
+        chem.add_reaction(reactants=[(2, "B")], products=[(2, "B", 2)])
     with pytest.raises(Exception):
         chem.add_reaction(reactants=["A", "B"], products=["A", "B"])
     with pytest.raises(Exception):
@@ -564,7 +564,7 @@ def test_add_reaction():
 
 
     # Another reaction (reaction 1)
-    chem.add_reaction(reactants=[(2, "B")], products=[(5, "C")], forward_rate=9., reverse_rate=7.)
+    chem.add_reaction(reactants=[(2, "B", 1)], products=[(5, "C", 1)], forward_rate=9., reverse_rate=7.)
 
     assert chem.number_of_reactions() == 2
 
@@ -595,7 +595,8 @@ def test_add_reaction():
     # Add another reaction (reaction index 2).  This time, first set the temperature
     chem.temp = 200
 
-    chem.add_reaction(reactants=[(2, "D", 3)], products=[(1, "C", 2)], forward_rate=11., reverse_rate=13.)
+    chem.add_reaction(reactants=[(2, "D", 3)], products=[(1, "C", 2)],
+                      forward_rate=11., reverse_rate=13.)
     assert chem.number_of_reactions() == 3
 
     r = chem.get_reaction(2)
@@ -613,7 +614,8 @@ def test_add_reaction():
 
 
     # Add a multi-term reaction (reaction index 3)
-    chem.add_reaction(reactants=["A", (2, "B")], products=[(3, "C", 2), "D"], forward_rate=5., reverse_rate=1.)
+    chem.add_reaction(reactants=["A", (2, "B", 1)], products=[(3, "C", 2), "D"],
+                      forward_rate=5., reverse_rate=1.)
     assert chem.number_of_reactions() == 4
 
     r = chem.get_reaction(3)
@@ -640,7 +642,7 @@ def test_add_reaction():
 
     # Add another reaction (reaction index 4), this time with thermodynamic data;
     # the reverse reaction rate will get computed from the thermodynamic data
-    chem.add_reaction(reactants=["A"], products=[(2, "B")], forward_rate=10.,
+    chem.add_reaction(reactants=["A"], products=[(2, "B", 1)], forward_rate=10.,
                       delta_H= 5., delta_S= 0.4)
     assert chem.number_of_reactions() == 5
 
@@ -659,20 +661,20 @@ def test_add_reaction():
 
 
     # Add another reaction (reaction index 5), this time involving a catalytic term
-    chem.add_reaction(reactants=[(3, "A"), "D"], products=["D", (2, "B")])
+    chem.add_reaction(reactants=[(3, "A", 1), "D"], products=["D", (2, "B", 1)])
     assert chem.number_of_reactions() == 6
     assert chem.active_chemicals == {0, 1, 2, 3}
     assert chem.active_enzymes == {3}       # Notice that chemical index 3 ("D) is an enzyme in this reaction,
                                             # but an active participant in others
 
     # Add another reaction (reaction index 6), again involving a catalytic term
-    chem.add_reaction(reactants=["F", (2, "C"), (3, "A")], products=["D", "F", (2, "D")])
+    chem.add_reaction(reactants=["F", (2, "C", 1), (3, "A", 1)], products=["D", "F", (2, "D", 1)])
     assert chem.number_of_reactions() == 7
     assert chem.active_chemicals == {0, 1, 2, 3}
     assert chem.active_enzymes == {3, 5}
 
     # Add another reaction (reaction index 7), where "F" (reaction index 5) is NOT a catalyst
-    chem.add_reaction(reactants=[(2, "B"), "F"], products=[(3, "A")])
+    chem.add_reaction(reactants=[(2, "B", 1), "F"], products=[(3, "A", 1)])
     assert chem.number_of_reactions() == 8
     assert chem.active_chemicals == {0, 1, 2, 3, 5}
     assert chem.active_enzymes == {3, 5}

@@ -43,7 +43,7 @@ def test_initialize():
     with pytest.raises(Exception):
         Reaction(chem_data, reactants=[(2, "B")], products=[(2, "B")])
     with pytest.raises(Exception):
-        Reaction(chem_data, reactants=[(2, "B")], products=[(2, "B", 1)])
+        Reaction(chem_data, reactants=[(2, "B")], products=[(2, "B", 2)])
     with pytest.raises(Exception):
         Reaction(chem_data, reactants=["A", "B"], products=["A", "B"])
     with pytest.raises(Exception):
@@ -73,7 +73,7 @@ def test_initialize():
  
 
     # Another reaction
-    rxn = Reaction(chem_data, reactants=[(2, "B")], products=[(5, "C")], forward_rate=9., reverse_rate=7.)
+    rxn = Reaction(chem_data, reactants=[(2, "B", 1)], products=[(5, "C", 1)], forward_rate=9., reverse_rate=7.)
 
     assert np.allclose(rxn.extract_forward_rate() , 9.)
     assert np.allclose(rxn.extract_reverse_rate() , 7.)
@@ -100,7 +100,7 @@ def test_initialize():
 
 
     # Add a multi-term reaction
-    rxn = Reaction(chem_data, reactants=["A", (2, "B")], products=[(3, "C", 2), "D"], forward_rate=5., reverse_rate=1.)
+    rxn = Reaction(chem_data, reactants=["A", (2, "B", 1)], products=[(3, "C", 2), "D"], forward_rate=5., reverse_rate=1.)
 
     assert np.allclose(rxn.extract_forward_rate() , 5.)
     assert np.allclose(rxn.extract_reverse_rate() , 1.)
@@ -114,7 +114,7 @@ def test_initialize():
 
     # Add a reaction with thermodynamic data;
     # the reverse reaction rate will get computed from the thermodynamic data
-    rxn = Reaction(chem_data, reactants=["A"], products=[(2, "B")], forward_rate=10.,
+    rxn = Reaction(chem_data, reactants=["A"], products=[(2, "B", 1)], forward_rate=10.,
                    delta_H= 5., delta_S= 0.4)
 
     assert rxn.extract_reactants() == [(1, 0, 1)]
@@ -140,27 +140,31 @@ def test_set_macro_enzyme():
 
 def test_extract_reactants():
     chem_data = ChemData(names=["CH4", "O2", "CO2", "H2O"])
-    rxn = Reaction(chem_data, reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")])
-    assert rxn.extract_reactants() == [(1, 0, 1), (2, 1, 1)]
+    rxn = Reaction(chem_data, reactants=["CH4", (2, "O2"), [2, "CH4", 1]],
+                              products=["CO2", (2, "H2O")])
+    assert rxn.extract_reactants() == [(1, 0, 1), (2, 1, 2), (2, 0, 1)]
 
 
 def test_extract_reactants_formula():
     chem_data = ChemData(names=["CH4", "O2", "CO2", "H2O"])
-    rxn = Reaction(chem_data, reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")])
-    assert rxn.extract_reactants_formula() == "CH4 + 2 O2"
+    rxn = Reaction(chem_data, reactants=["CH4", (2, "O2"), [2, "CH4", 1]],
+                              products=["CO2", (2, "H2O")])
+    assert rxn.extract_reactants_formula() == "CH4 + 2 O2 + 2 CH4"
 
 
 
 def test_extract_products():
     chem_data = ChemData(names=["CH4", "O2", "CO2", "H2O"])
-    rxn = Reaction(chem_data, reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")])
-    assert rxn.extract_products() == [(1, 2, 1), (2, 3, 1)]
+    rxn = Reaction(chem_data, reactants=["CH4", (2, "O2")],
+                              products=["CO2", (2, "H2O"), [2, "CH4", 1]])
+    assert rxn.extract_products() == [(1, 2, 1), (2, 3, 2), (2, 0, 1)]
 
 
 def test_extract_products_formula():
     chem_data = ChemData(names=["CH4", "O2", "CO2", "H2O"])
-    rxn = Reaction(chem_data, reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")])
-    assert rxn.extract_products_formula() == "CO2 + 2 H2O"
+    rxn = Reaction(chem_data, reactants=["CH4", (2, "O2")],
+                              products=["CO2", (2, "H2O"), [2, "CH4", 1]])
+    assert rxn.extract_products_formula() == "CO2 + 2 H2O + 2 CH4"
 
 
 
@@ -168,7 +172,7 @@ def test_extract_products_formula():
 
 def test_describe():
     chem_data = ChemData(names=["CH4", "O2", "CO2", "H2O"])
-    rxn = Reaction(chem_data, reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")])
+    rxn = Reaction(chem_data, reactants=["CH4", (2, "O2", 1)], products=["CO2", (2, "H2O", 1)])
 
     assert rxn.describe(concise=True) == "CH4 + 2 O2 <-> CO2 + 2 H2O"
     assert rxn.describe(concise=False) == "CH4 + 2 O2 <-> CO2 + 2 H2O  () | 1st order in all reactants & products"   # TODO: eliminate the ()
@@ -182,7 +186,7 @@ def test_describe():
     assert rxn.describe(concise=True) == "A <-> B"
     assert rxn.describe(concise=False) == "A <-> B  (kF = 3 / kR = 2 / K = 1.5) | 1st order in all reactants & products"
 
-    rxn = Reaction(chem_data, reactants=[(2, "B")], products=[(5, "C")], forward_rate=9., reverse_rate=7.)
+    rxn = Reaction(chem_data, reactants=[(2, "B", 1)], products=[(5, "C", 1)], forward_rate=9., reverse_rate=7.)
     assert rxn.describe(concise=True) == "2 B <-> 5 C"
     assert rxn.describe(concise=False) == "2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.2857) | 1st order in all reactants & products"
 
@@ -191,7 +195,7 @@ def test_describe():
     assert rxn.describe(concise=True) == "2 D <-> C"
     assert rxn.describe(concise=False) == "2 D <-> C  (kF = 11 / kR = 13 / delta_G = 277.79 / K = 0.84615) | 3-th order in reactant D | 2-th order in product C"
 
-    rxn = Reaction(chem_data, reactants=["A", (2, "B")], products=[(3, "C", 2), "D"], forward_rate=5., reverse_rate=1.)
+    rxn = Reaction(chem_data, reactants=["A", (2, "B", 1)], products=[(3, "C", 2), "D"], forward_rate=5., reverse_rate=1.)
     assert rxn.describe(concise=True) == "A + 2 B <-> 3 C + D"
     assert rxn.describe(concise=False) == "A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2,676.3 / K = 5) | 2-th order in product C"
 
@@ -254,7 +258,7 @@ def test_reaction_quotient():
 
 
     # Reaction : A <-> 3B
-    rxn = Reaction(chem, reactants=["A"], products=[(3,"B")])   # 1st order
+    rxn = Reaction(chem, reactants=["A"], products=[(3,"B",1)])   # 1st order
     c = {'A': 3., 'B': 12.}
     assert np.allclose(4., rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
@@ -263,7 +267,7 @@ def test_reaction_quotient():
 
 
     # Reaction 3:  2A <-> 3B
-    rxn = Reaction(chem, reactants=[(2,"A")], products=[(3,"B")])   # 1st order
+    rxn = Reaction(chem, reactants=[(2,"A",1)], products=[(3,"B",1)])   # 1st order
     c = {'A': 3., 'B': 12.}
     assert np.allclose(4., rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
@@ -272,7 +276,7 @@ def test_reaction_quotient():
 
 
     # Reaction :  A + B <-> C , with 1st-order kinetics for each species
-    rxn = Reaction(chem, reactants=[("A") , ("B")], products=[("C")])
+    rxn = Reaction(chem, reactants=["A" , "B"], products=["C"])
     c = {'A': 3., 'B': 4., 'C': 12.}
     assert np.allclose(1., rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
@@ -281,7 +285,7 @@ def test_reaction_quotient():
 
 
     # Reaction :  A <-> 2C + D , with 1st-order kinetics for each species
-    rxn = Reaction(chem, reactants=[("A")], products=[(2, "C") , ("D")])
+    rxn = Reaction(chem, reactants=["A"], products=[(2, "C" ,1) , "D"])
     c = {'A': 2., 'C': 4., 'D': 8.}
     assert np.allclose(16., rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
@@ -290,7 +294,7 @@ def test_reaction_quotient():
 
 
     # Reaction 6:  2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
-    rxn = Reaction(chem, reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")])
+    rxn = Reaction(chem, reactants=[(2,"A",1) , (5,"B",1)], products=[(4,"C",1) , (3,"D",1)])
     c = {'A': 2., 'B': 1., 'C': 4., 'D': 8.}
     assert np.allclose(16., rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
@@ -299,7 +303,7 @@ def test_reaction_quotient():
 
 
     # Reaction :  2A <-> B , with 1st-order kinetics in both directions
-    rxn = Reaction(chem, reactants=[(2, "A")], products=["B"])
+    rxn = Reaction(chem, reactants=[(2, "A",1)], products=["B"])
     c = {'A': 4., 'B': 20.}
     assert np.allclose(5., rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
@@ -317,7 +321,7 @@ def test_reaction_quotient():
 
 
     # Reaction :  A <-> 2B , with 2nd-order kinetics in the reverse direction
-    rxn = Reaction(chem, reactants="A", products=[(2, "B", 2)])
+    rxn = Reaction(chem, reactants="A", products=[(2, "B")])
     c = {'A': 4., 'B': 20.}
     assert np.allclose(100., rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
@@ -357,27 +361,27 @@ def test__standard_form_chem_eqn():
 
 def test__parse_reaction_term():
     chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
-    rxn = Reaction(chem_data, reactants="A", products="B")  # Won't actually use reactants/products
+    rxn = Reaction(chem_data, reactants="A", products="B")  # Won't actually use the reactants/products
 
     with pytest.raises(Exception):
-        rxn._parse_reaction_term(5)    # The argument is not a string nor a tuple or list
+        rxn._parse_reaction_term(5)    # The argument is not a string nor a tuple nor a list
 
-    assert rxn._parse_reaction_term("F") == (1, 5, 1)
+    assert rxn._parse_reaction_term("F") == (1, 5, 1)   # 5 is the index of "F"
 
     with pytest.raises(Exception):
         rxn._parse_reaction_term("Not the name of any chemical")
 
     with pytest.raises(Exception):
-        rxn._parse_reaction_term( (3, 5) )   # The last item in the pair is not a string
+        rxn._parse_reaction_term( (2, 5) )   # The last item in the pair is not a string
 
-    assert rxn._parse_reaction_term( (3, "F") ) == (3, 5, 1)
-    assert rxn._parse_reaction_term( [3, "F"] ) == (3, 5, 1)
+    assert rxn._parse_reaction_term( (2, "F") ) == (2, 5, 2)    # order defaults to stoichiometry
+    assert rxn._parse_reaction_term( [2, "F"] ) == (2, 5, 2)
 
     with pytest.raises(Exception):
-        rxn._parse_reaction_term( (3, 5, 2) )   # The mid-item in the triplet is not a string
+        rxn._parse_reaction_term( (2, 5, 1) )   # The mid-item in the triplet is not a string
 
-    assert rxn._parse_reaction_term( (3, "F", 2) ) == (3, 5, 2)
-    assert rxn._parse_reaction_term( [3, "F", 2] ) == (3, 5, 2)
+    assert rxn._parse_reaction_term( (2, "F", 1) ) == (2, 5, 1)
+    assert rxn._parse_reaction_term( [2, "F", 1] ) == (2, 5, 1)
 
     with pytest.raises(Exception):
         rxn._parse_reaction_term( (3, 5, 2, 123) )     # Extra element in tuple

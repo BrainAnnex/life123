@@ -19,7 +19,7 @@
 #
 # Same as `variable_steps_1`, but with substeps.
 #
-# LAST REVISED: June 4, 2023    **THIS IS AN ARCHIVED EXPERIMENT**
+# LAST REVISED: Dec. 3, 2023    **THIS IS AN ARCHIVED EXPERIMENT**
 
 # %% [markdown]
 # # IMPORTANT: DO NOT ATTEMPT TO RUN THIS NOTEBOOK!   

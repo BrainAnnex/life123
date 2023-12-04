@@ -27,7 +27,7 @@
 # The raggedness and instabilities are now eliminated.
 # (Note: the 1/2 substeps are on a per-reaction basis)
 #
-# LAST REVISED: June 4, 2023     **THIS IS AN ARCHIVED EXPERIMENT**
+# LAST REVISED: Dec. 3, 2023     **THIS IS AN ARCHIVED EXPERIMENT**
 
 # %% [markdown]
 # # IMPORTANT: DO NOT ATTEMPT TO RUN THIS NOTEBOOK!   
