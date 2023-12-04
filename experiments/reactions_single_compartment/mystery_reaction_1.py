@@ -108,10 +108,12 @@ B_conc = df["B"].to_numpy()
 # (in Part 3, we'll do a step-by-step derivation, to see how it works)
 
 # %%
-dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=B_conc, product_name="B")
+dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=B_conc, reactant_name="A", product_name="B")
 
 # %% [markdown]
 # ### The least-square fit is good...  and the values estimated from the data for kF and kR are in good agreement with the values we used in the simulation to get that data, respectively 12 and 2 (see PART 1, above)  
+
+# %% [markdown]
 # Note that our data set is quite skimpy in the number of points:
 
 # %%
@@ -127,11 +129,7 @@ t_arr  # Time points in our data set
 np.gradient(t_arr)
 
 # %% [markdown]
-# #### The variable grid, and the skimpy number of data points, are best seen in the plot, here repeated, from PART 1:
-
-# %%
-dynamics.plot_history(title="Reaction A <-> B",
-                      colors=['blue', 'green'], show_intervals=True)
+# #### The variable time grid, and the skimpy number of data points, are best seen in the plot that was shown at the end of PART 1
 
 # %%
 
@@ -248,11 +246,11 @@ PlotlyHelper.plot_curves(x=A_conc, y=Deriv_B, title="d/dt B(t) as a function of 
 # where Y is `Deriv_B` and X is `A_conc`, the Numpy arrays we computed earlier:
 
 # %%
-Y = Deriv_B    # The dependent variable
+Y = Deriv_B    # The dependent variable (the time-gradient of the PRODUCT concentrations)
 Y
 
 # %%
-X = A_conc    # The independent variable
+X = A_conc    # The independent variable (the REACTANT concentrations)
 X
 
 # %% [markdown]
@@ -266,20 +264,22 @@ M = np.vstack([np.ones(len(Y)), X]).T
 M[:10, :]   # Show the first 10 rows
 
 # %%
-a, b = np.linalg.lstsq(M, Y, rcond=None)[0]  # Carry out the least-square fit
+a, b = np.linalg.lstsq(M, Y, rcond=None)[0]  # Carry out the least-square fit  as: Y = a + b X
 a, b
 
 # %% [markdown]
 # #### Visually verify the least-square fit
 
 # %%
+# Plot both Y and its least-square fit, as functions of X
+
 PlotlyHelper.plot_curves(x=A_conc, y=[Deriv_B , a + b*A_conc], 
                          title="d/dt B(t) as a function of A(t), alongside its least-square fit",
                          xlabel="A(t)", ylabel="B'(t)", 
                          curve_labels=["B'(t)", "Linear Fit"], legend_title="Curve vs Fit:", colors=['green', 'red'])
 
 # %% [markdown]
-# _Virtually indistinguishable lines!_
+# _Virtually indistinguishable lines!  And the same plot we saw in Part 2!_
 
 # %% [markdown]
 # Finally, from equations 4, repeated here:

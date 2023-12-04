@@ -2953,7 +2953,73 @@ class ReactionDynamics:
 
 
 
+
     def estimate_rate_constants(self, t :np.array, reactant_conc :np.array, product_conc :np.array,
+                                reactant_name="Reactant", product_name="Product"):
+        """
+        Estimate the rate constants for a 1-st order reaction of the type A <-> B,
+        given time evolution of [A] and [B] on a grid of time points (don't need to be equally spaced)
+
+        IMPORTANT : Currently restricted to reactions with a 1:1 stoichiometry between the given reactant and product
+
+        :param t:               A numpy array of time grid points where the other functions are specified
+        :param reactant_conc:
+        :param product_conc:
+        :param reactant_name:
+        :param product_name:
+        :return:                A plotly "Figure" object.  The estimated rate constants are printed out
+        """
+        total_conc_arr = reactant_conc + product_conc
+        total_conc = np.median(total_conc_arr)    # TODO: give warning or abort if there's too much variance
+        sd = np.std(total_conc_arr)
+
+        print(f"Total REACTANT + PRODUCT has a median of {total_conc:,.4g}, "
+              f"\n    with standard deviation {sd:,.4g} (ideally should be zero)")
+
+
+        # The rate of change of [reactant] with time
+        deriv_reactant_conc = np.gradient(reactant_conc, t, edge_order=2)
+        # The rate of change of [product] with time
+        deriv_product_conc = np.gradient(product_conc, t, edge_order=2)
+
+
+        median_sum_derivs = np.median(deriv_reactant_conc + deriv_product_conc)
+        print(f"The sum of the time derivatives of reactant and product "
+              f"\n    has a median of {median_sum_derivs:,.4g} (ideally should be zero)")
+
+
+        # Do a least-square fit of the time-gradient of the PRODUCT concentration,
+        # as a function of the REACTANT's concentration
+        Y = deriv_product_conc  # The dependent variable:   B'(t)
+        X = reactant_conc       # The independent variable: A(t)
+
+        M = np.vstack([np.ones(len(Y)), X]).T
+        # M is an nx2 matrix , where n is the number of data points.
+        # The 1st column is all 1's, and the 2nd column contains the values of X
+
+        a, b = np.linalg.lstsq(M, Y, rcond=None)[0]  # Carry out the least-square fit as: Y = a + b X
+        print(f"Least square fit: Y = {a:,.4g} + {b:,.4g} X"
+              f"\n    where X is the array [{reactant_name}] and Y is the time gradient of {product_name}")
+
+        # Plot both Y and its least-square fit, as functions of X
+        fig = PlotlyHelper.plot_curves(x=X, y=[Y , a + b*X],
+                                       title=f"d/dt {product_name}(t) as a function of {reactant_name}(t), alongside its least-square fit",
+                                       xlabel=f"{reactant_name}(t)", ylabel=f"{product_name}'(t)",
+                                       curve_labels=[f"{product_name}'(t)", "Linear Fit"], legend_title="Curve vs Fit:",
+                                       colors=['green', 'red'])
+
+        kR = -a / total_conc
+
+        kF = b - kR
+
+        print(f"\n-> ESTIMATED RATE CONSTANTS: kF = {kF:,.4g}, kR = {kR:,.4g}")
+
+        return fig
+
+
+
+
+    def estimate_rate_constants_OLD(self, t :np.array, reactant_conc :np.array, product_conc :np.array,
                                 product_name="Product"):
         """
         IMPORTANT : Currently restricted to reactions with a 1:1 stoichiometry between the given reactant and product

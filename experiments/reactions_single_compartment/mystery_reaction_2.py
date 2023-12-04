@@ -96,7 +96,7 @@ df = dynamics.get_history()
 df
 
 # %% [markdown]
-# ## Column B is not given to us.  For example, `B` might be an intermediary we can't measure.  Only [A] and [C] are given to us, on some variable time grid
+# ## Column B is NOT given to us.  For example, `B` might be an intermediary we can't measure.  Only [A] and [C] are given to us, on some variable time grid
 
 # %% [markdown]
 # #### Let's extract some columns, as Numpy arrays:
@@ -115,195 +115,13 @@ C_conc = df["C"].to_numpy()
 # (in Part 3, we'll do a step-by-step derivation, to see how it works)
 
 # %%
-dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=C_conc, product_name="C")
+dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=C_conc, reactant_name="A", product_name="C")
 
 # %% [markdown]
-# ### The least-square fit is good...  and the values estimated from the data for kF and kR are in good agreement with the values we used in the simulation to get that data, respectively 12 and 2 (see PART 1, above)  
-# Note that our data set is quite skimpy in the number of points:
-
-# %%
-len(B_conc)
+# ### The least-square fit is awful : the complex reaction `A <-> C` doesn't seem to be amenable to being modeled as a simple reaction with some suitable rate constants
+# Probably not too surprising given our "secret" knowledge from Part 1 that the complex reaction originates from 2 elementary reactions where one doesn't dominate the other one in terms of reaction kinetics
 
 # %% [markdown]
-# and that it uses a _variable_ grid, with more points where there's more change, such as in the early times:
-
-# %%
-t_arr  # Time points in our data set
-
-# %%
-np.gradient(t_arr)
-
-# %% [markdown]
-# #### The variable grid, and the skimpy number of data points, are best seen in the plot, here repeated, from PART 1:
-
-# %%
-dynamics.plot_history(title="Reaction A <-> B",
-                      colors=['blue', 'green'], show_intervals=True)
-
-# %%
-
-# %% [markdown]
-# # PART 3 - investigate how the `estimate_rate_constants()` function used in part 2 works  
-# #### Again, the starting point are the time evolutions of [A] and [B] , that is the system history that was given to us
-
-# %% [markdown]
-# Let's revisit the Numpy arrays that we had set up at the beginning of Part 2
-
-# %%
-t_arr    # The independent variable : Time
-
-# %%
-A_conc
-
-# %%
-B_conc
-
-# %% [markdown]
-# #### Let's verify that the stoichiometry is satified.  From the reaction `A <-> B` we can infer that any drop in [A] corresponds to an equal increase in [B].   Their sum will remain constants:
-
-# %%
-A_conc + B_conc
-
-# %% [markdown]
-# ### Just as expected!  We'll call that constant value, "TOT_conc"
-
-# %%
-TOT_conc = 50.
-
-# %%
-# Incidentally, there's a function to verify that the stoichiometry of a single reaction holds true across the entire simulation run 
-# (overkill in this case!)
-dynamics.stoichiometry_checker_entire_run() 
-
-# %%
-
-# %% [markdown]
-# ### Now, let's investigate the rates of change of [A] and [B]
-
-# %%
-# The rate of change of [A] with time
-Deriv_A = np.gradient(A_conc, t_arr, edge_order=2)
-
-# The rate of change of [B] with time
-Deriv_B = np.gradient(B_conc, t_arr, edge_order=2)
-
-# %%
-# As expected from the stoichiometry, the two derivatives are opposites: when [A] increases by a certain amount, [B] decreases by that same amount
-Deriv_A + Deriv_B
-
-# %% tags=[]
-PlotlyHelper.plot_curves(x=t_arr, y=[Deriv_A , Deriv_B], title="d/dt A(t) and d/dt B(t) as a function of time",
-                         xlabel="t", ylabel="Time derivatives", curve_labels=["A'(t)", "B'(t)"], 
-                         legend_title="Derivative", colors=['aqua', 'greenyellow'])
-
-# %% [markdown]
-# ### Now, let's determine what kF and kR rate constants for `A <-> B` will yield the above data
-
-# %% [markdown]
-# Assuming that A <-> B is an elementary chemical reaction (i.e. occuring in a single step)  
-# OR THAT IT CAN BE APPROXIMATED BY ONE, 
-# then he rate of change of the reaction product [B] is the difference of the forward rate (producing `B`) and the reverse rate (consuming it):  
-#
-# `B'(t) = kF * A(t) - kR * B(t)`   &nbsp; &nbsp; &nbsp;  **(Eqn. 1)**  
-#   
-# We also know that A(t) + B(t) = TOT_conc (a CONSTANT),  i.e.  
-# `B(t) = TOT_conc - A(t)`    &nbsp; &nbsp; &nbsp;  **(Eqn. 2)**  
-#
-# Replacing B(t) from Eqn. 2 into Eqn. 1:
-#
-# `B'(t) = kF * A(t) -  kR * [TOT_conc - A(t)]`
-#
-# Simplifying and rearranging: 
-#
-# `B'(t) = kF * A(t) - kR * TOT_conc + kR * A(t)`
-#
-# `B'(t) = - kR * TOT_conc + kF * A(t)  + kR * A(t)`
-#
-# `B'(t) = [- kR * TOT_conc] + [kF + kR] * A(t)`     &nbsp; &nbsp; &nbsp;  **(Eqn. 3)** 
-#
-# `TOT_conc` is a known constant; `kF` and `kR` are the rate constants that we are trying to estimate.  
-#
-# **If we can do a satisfactory Least Square Fit to express `B'(t)` as a linear function of `A(t)`**, as:
-#
-# `B'(t) = a + b * A(t)` , for some constants a, b
-#
-# then, comparing with Eqn. 3, we get the following system of equations:
-#
-# * `- kR * TOT_conc = a`  
-#
-# * `kF + kR = b`
-#
-# which can be immediately solved as:
-#
-# * `kR = - a / TOT_conc`    &nbsp; &nbsp; &nbsp;  **(Eqn. 4)**
-#
-# * `kF = b - kR` 
-
-# %% [markdown]
-# Let's carry it out!  First, let's verify that `B'(t)` is indeed a linear function of `A(t)`.  
-# We already have, from our data, B'(t) as the Numpy array `Deriv_B` , and we also have A(t) as the Numpy array `A_conc`  
-
-# %%
-PlotlyHelper.plot_curves(x=A_conc, y=Deriv_B, title="d/dt B(t) as a function of A(t)",
-                         xlabel="A(t)", ylabel="B'(t)", colors="green")
-
-# %% [markdown]
-# As expected, it appears to be a straight line, and the rate of change in the product B is higher when the concentration of the reactant A is larger.  
-#
-# If we fit a linear model (least-square fit straight line), we can estimate  B'(t) = a + b * A(t) , for some numbers a and b.  
-# I.e. **we want to fit: Y = a + b * X , for some numbers a and b**  
-# where Y is `Deriv_B` and X is `A_conc`, the Numpy arrays we computed earlier:
-
-# %%
-Y = Deriv_B    # The dependent variable
-Y
-
-# %%
-X = A_conc    # The independent variable
-X
-
-# %% [markdown]
-# #### Let's do the least-square fit:
-
-# %%
-M = np.vstack([np.ones(len(Y)), X]).T
-# M is an nx2 matrix , where n is the number of data points.  
-# The 2nd column contains the values of X
-
-M[:10, :]   # Show the first 10 rows
-
-# %%
-a, b = np.linalg.lstsq(M, Y, rcond=None)[0]  # Carry out the least-square fit
-a, b
-
-# %% [markdown]
-# #### Visually verify the least-square fit
-
-# %%
-PlotlyHelper.plot_curves(x=A_conc, y=[Deriv_B , a + b*A_conc], 
-                         title="d/dt B(t) as a function of A(t), alongside its least-square fit",
-                         xlabel="A(t)", ylabel="B'(t)", 
-                         curve_labels=["B'(t)", "Linear Fit"], legend_title="Curve vs Fit:", colors=['green', 'red'])
-
-# %% [markdown]
-# _Virtually indistinguishable lines!_
-
-# %% [markdown]
-# Finally, from equations 4, repeated here:
-#
-# * `kR = - a / TOT_conc`
-#
-# * `kF = b - kR` 
-
-# %%
-kR = - a / TOT_conc
-kR
-
-# %%
-kF = b - kR
-kF
-
-# %% [markdown]
-# #### We just obtained the same values of the estimated kF and kR as were computed by a call to `estimate_rate_constants()` in Part 2
+# ### A glance at the above diagram reveals much-better linear fits, if split into 2 portions, one where A(t) ranges from 0 to about 25, and one from about 25 to 50
 
 # %%
