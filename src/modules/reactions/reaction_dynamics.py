@@ -2380,18 +2380,20 @@ class ReactionDynamics:
                                     "Changes in concentration for `2 S <-> U` and `S <-> X`"
         :param title_prefix: (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
                                     whether the title is specified by the user or automatically generated
-        :param xrange:          (OPTIONAL) list of the form [t_start, t_end], to initially only show a part of the timeline.
+        :param xrange:          (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
         :param ylabel:          (OPTIONAL) Caption to use for the y-axis.  By default, "concentration"
-        :param vertical_lines:  (OPTIONAL) List or tuple or Numpy array or Pandas series
+        :param vertical_lines:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
+                                    List or tuple or Numpy array or Pandas series
                                     of x-coordinates at which to draw thin vertical dotted gray lines.
                                     If the number of vertical line is so large as to overwhelm the plot,
                                     only a sample of them is shown.
                                     Note that vertical lines, if requested, go into the plot's "layout";
-                                    as a result they might not appear if this plot is later combined with another one
-        :param show_intervals:  (OPTIONAL) If True, it over-rides any value in vertical_lines, and draws
-                                    thin vertical dotted gray lines at all the x-coords of the data points in the saved history data;
-                                    also, it adds a comment to the title
+                                    as a result they might not appear if this plot is later combined with another one.
+        :param show_intervals:  (OPTIONAL) If True, it over-rides any value passed to the `vertical_lines` argument,
+                                    and draws thin vertical dotted gray lines at all the x-coords
+                                    of the data points in the saved history data;
+                                    also, it adds a comment to the title.
         :param show:        If True, the plot will be shown
                                 Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
                                       leads to it being automatically shown
