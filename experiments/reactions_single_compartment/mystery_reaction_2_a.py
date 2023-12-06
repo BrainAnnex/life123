@@ -13,13 +13,13 @@
 # ---
 
 # %% [markdown]
-# ## A complex reaction `A <-> C` derived from 2 elementary reactions `A <-> B` and `B <-> C`  
+# ## A complex (composite) reaction `A <-> C` derived from 2 elementary reactions `A <-> B` and `B <-> C`  
 # We are given the time evolution of the complex reaction,  
 # and want to determine whether it can be modeled as an elementary reaction.
 # Assume the elementary reactions are known to be 1st order.
 #
-# In PART 1, a time evolution of [A] and [B] is obtained by simulation  
-# In PART 2, the time functions generated in Part 1 are taken as a _starting point,_ to estimate the rate constants of `A <-> B`  
+# In PART 1, a time evolution of [A], [B] and [C] is obtained by simulation  
+# In PART 2, the time functions generated in Part 1 are taken as a _starting point,_ to explore how to model the composite reaction `A <-> C`  
 #
 # LAST REVISED: Dec. 4, 2023
 
@@ -35,8 +35,8 @@ from src.modules.visualization.plotly_helper import PlotlyHelper
 # %%
 
 # %% [markdown]
-# # PART 1 - We'll generate the time evolution of [A] and [C] by simulating reactions of KNOWN rate constants...
-# ## but pretend you don't see this section! (because we later want to estimate those rate constants)
+# # PART 1 - We'll generate the time evolution of [A] and [C] by simulating coupled elementary reactions of KNOWN rate constants...
+# ## but pretend you don't see this section! (because we later assume that those time evolutions are just GIVEN to us)
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
@@ -85,11 +85,12 @@ dynamics.is_in_equilibrium(tolerance=15)
 # Let's start by taking stock of the actual data (saved during the simulation of part 1):
 
 # %%
-df = dynamics.get_history() 
+df = dynamics.get_history(columns=["SYSTEM TIME", "A", "C", "caption"]) 
 df
 
 # %% [markdown]
-# ## Column B is NOT given to us.  For example, `B` might be an intermediary we can't measure.  Only [A] and [C] are given to us, on some variable time grid
+# ## Column B is NOT given to us.  For example, `B` might be an intermediary we can't measure.  
+# #### Only [A] and [C] are given to us, on some variably-spaced time grid
 
 # %% [markdown]
 # #### Let's extract some columns, as Numpy arrays:
@@ -104,8 +105,8 @@ A_conc = df["A"].to_numpy()
 C_conc = df["C"].to_numpy()
 
 # %% [markdown]
-# ### Here, we take the easy way out, using a specialized Life123 function!
-# (in Part 3, we'll do a step-by-step derivation, to see how it works)
+# #### If the composite reaction `A <-> C` could be modeled as an elementary reaction, we'd expect the rate of change of [C] to be proportional to [A]  
+# Let's see what happens if we try to do such a linear fit!
 
 # %%
 dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=C_conc, reactant_name="A", product_name="C")
@@ -181,9 +182,10 @@ dynamics.estimate_rate_constants(t=t_arr_late, reactant_conc=A_conc_late, produc
                                  reactant_name="A", product_name="C")
 
 # %% [markdown]
-# This time we have an adequate linear fit AND meaningful rate constants : kF of about 8 and kR of about 0.  Do those numbers sound familiar?  A definite resemblance to the kF=8, kR=2 of the slower elementary reaction `A <-> B`!  
+# This time we have an adequate linear fit AND meaningful rate constants : kF of about 8 and kR of about 0.  Do those numbers sound familiar?  A definite resemblance to the kF=8, kR=2 of the SLOWER elementary reaction `A <-> B`!  
 #
-# The slower `A <-> B` reaction dominates the kinetics from about t=0.1  
+# #### The slower `A <-> B` reaction dominates the kinetics from about t=0.1  
+#
 # Let's see the graph again:
 
 # %%

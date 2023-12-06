@@ -2401,6 +2401,7 @@ class ReactionDynamics:
         :return:            A plotly "Figure" object
         """
         # TODO: allow alternate label for x-axis
+        # TODO: allow specifying a yrange
 
         MAX_NUMBER_VERTICAL_LINES = 150     # Used to avoid extreme clutter in the plot, in case
                                             # a very large number of vertical lines is requested;
@@ -2594,6 +2595,8 @@ class ReactionDynamics:
 
         :return:        A Pandas dataframe
         """
+        #TODO: allow searches also for columns other than "SYSTEM TIME"
+
         # Note self.history is an object of class MovieTabular
         df = self.history.get_dataframe(head=head, tail=tail, search_val=t,
                                         search_col="SYSTEM TIME", val_start=t_start, val_end=t_end)
@@ -3014,7 +3017,7 @@ class ReactionDynamics:
 
         kF = b - kR
 
-        print(f"\n-> ESTIMATED RATE CONSTANTS: kF = {kF:,.4g}, kR = {kR:,.4g}")
+        print(f"\n-> ESTIMATED RATE CONSTANTS: kF = {kF:,.4g} , kR = {kR:,.4g}")
 
         return fig
 
