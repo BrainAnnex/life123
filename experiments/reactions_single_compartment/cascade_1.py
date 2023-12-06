@@ -21,9 +21,10 @@
 # Adaptive variable time resolution is used, with extensive diagnostics, 
 # and finally compared to a new run using fixed time intervals, with the same initial data.
 #
-# In part2, some diagnotic insight is explored - and the 2 identical runs ("adaptive variable steps" and "fixed small steps") are compared. 
+# In part2, some diagnotic insight is explored.   
+# In part3, two identical runs ("adaptive variable steps" and "fixed small steps") are compared. 
 #
-# LAST REVISED: Dec. 3, 2023
+# LAST REVISED: Dec. 6, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -34,7 +35,7 @@
 # INTUITION: B, unable to quickly drain into C while at the same time being blasted by a hefty inflow from A,  
 # will experience a transient surge, in excess of its final equilibrium level.
 #
-# * **[Compare with the final reaction plot (the red line is B)](#cascade_1_plot)**
+# * **[Compare with the final reaction plot (the orange line is B)](#cascade_1_plot)**
 
 # %% [markdown]
 # ![2 Coupled Reactions](../../docs/2_coupled_reactions.png)
@@ -49,7 +50,6 @@ from src.modules.chemicals.chem_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 from src.modules.visualization.plotly_helper import PlotlyHelper
 
-import plotly.express as px
 from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
@@ -66,40 +66,32 @@ GraphicLog.config(filename=log_file,
 # Specify the chemicals and the reactions
 
 # %% tags=[]
-# Specify the chemicals
-chem_data = ChemData(names=["A", "B", "C"])
+# Instantiate the simulator and specify the chemicals
+dynamics = ReactionDynamics(names=["A", "B", "C"])
 
 # Reaction A <-> B (fast)
-chem_data.add_reaction(reactants=["A"], products=["B"],
+dynamics.add_reaction(reactants=["A"], products=["B"],
                        forward_rate=64., reverse_rate=8.) 
 
 # Reaction B <-> C (slow)
-chem_data.add_reaction(reactants=["B"], products=["C"],
+dynamics.add_reaction(reactants=["B"], products=["C"],
                        forward_rate=12., reverse_rate=2.) 
 
-print("Number of reactions: ", chem_data.number_of_reactions())
+print("Number of reactions: ", dynamics.number_of_reactions())
 
 # %%
-chem_data.describe_reactions()
+dynamics.describe_reactions()
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
-graph_data = chem_data.prepare_graph_network()
+graph_data = dynamics.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
 # %% [markdown]
-# # Start the simulation
+# ## Run the simulation
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
-
-# %% [markdown]
-# ### Set the initial concentrations of all the chemicals, in their index order
-
-# %%
-dynamics.set_conc([50., 0, 0.], snapshot=True)
-
-# %%
+dynamics.set_conc([50., 0, 0.], snapshot=True) # Set the initial concentrations of all the chemicals, in their index order
 dynamics.describe_state()
 
 # %%
@@ -111,11 +103,9 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
 
-# These settings can be tweaked to make the time resolution finer or coarser
-dynamics.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.44)
-dynamics.set_thresholds(norm="norm_B", low=0.2, high=0.5, abort=1.5)
-dynamics.set_step_factors(upshift=1.4, downshift=0.5, abort=0.5)
-dynamics.set_error_step_factor(0.333)
+# These settings can be tweaked to make the time resolution finer or coarser.  
+# Here we use a "fast" heuristic: less conservative about taking larger steps
+dynamics.use_adaptive_preset(preset="fast")
 
 dynamics.single_compartment_react(initial_step=0.02, reaction_duration=0.4,
                                   snapshots={"initial_caption": "1st reaction step",
@@ -128,7 +118,7 @@ dynamics.single_compartment_react(initial_step=0.02, reaction_duration=0.4,
 
 # %%
 dynamics.plot_history(title="Coupled reactions A <-> B and B <-> C",
-                      colors=['blue', 'red', 'green'], show_intervals=True)
+                      colors=['blue', 'orange', 'green'], show_intervals=True)
 
 # %%
 dynamics.curve_intersection("A", "B", t_start=0, t_end=0.05)
@@ -152,14 +142,34 @@ dynamics.explain_time_advance()
 # Verify that all the reactions have reached equilibrium
 dynamics.is_in_equilibrium()
 
+# %% [markdown]
+# ### Let's look at the final concentrations of `A` and `C` (i.e., the reactant and product of the composite reaction)
+
+# %%
+A_final = dynamics.get_chem_conc("A")
+A_final
+
+# %%
+C_final = dynamics.get_chem_conc("C")
+C_final
+
+# %% [markdown]
+# #### Their ratio:
+
+# %%
+C_final / A_final
+
+# %% [markdown]
+# ### As expected the equilibrium constant for the overall reaction `A <-> C` (approx. 48) is indeed the product of the equilibrium constants of the two elementary reactions (K = 8 and K = 6, respectively) that we saw earlier.
+
 # %%
 
 # %%
 
 # %% [markdown]
-# # PART 2 - EVERYTHING BELOW IS FOR DIAGNOSTIC INSIGHT
+# # PART 2 - DIAGNOSTIC INSIGHT
 #
-# ### Perform some verification
+# Perform some verification
 
 # %% [markdown]
 # ### Take a peek at the diagnostic data saved during the earlier reaction simulation
@@ -178,22 +188,25 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 
+# %%
+
 # %% [markdown] tags=[]
-# # Re-run with very small constant steps
+# # PART 3 : Re-run with very small constant steps, and compare with original run
 
 # %% [markdown]
 # We'll use **constant steps of size 0.0005** , which is 1/4 of the smallest steps (the "substep" size) previously used in the variable-step run
 
 # %%
-dynamics2 = ReactionDynamics(chem_data=chem_data)
+dynamics2 = ReactionDynamics(chem_data=dynamics.chem_data)  # Re-using the same chemicals and reactions
 
 # %% tags=[]
 dynamics2.set_conc([50., 0, 0.], snapshot=True)
 
 # %%
 dynamics2.single_compartment_react(initial_step=0.0005, reaction_duration=0.4,
-                                  snapshots={"initial_caption": "1st reaction step",
-                                             "final_caption": "last reaction step"},
+                                   variable_steps=False,
+                                   snapshots={"initial_caption": "1st reaction step",
+                                              "final_caption": "last reaction step"},
                                   )      
 
 # %%
@@ -217,7 +230,7 @@ df2 = dynamics2.get_history()
 df2
 
 # %% [markdown]
-# ## Notice that we now did 801 steps - vs. the 56 of the earlier variable-resolution run!
+# ## Notice that we now did 800 steps - vs. the 48 of the earlier variable-resolution run!
 
 # %% [markdown]
 # ## Let's compare some entries with the coarser previous variable-time run
@@ -227,12 +240,12 @@ df2
 
 # %%
 # Earlier run (using variable time steps)
-fig1 = dynamics.plot_history(chemicals='B', colors='red', title="Adaptive variable-step run", 
+fig1 = dynamics.plot_history(chemicals='B', colors='orange', title="Adaptive variable-step run", 
                              show=True)
 
 # %%
 # Latest run (high-precision result from fine fixed-resolution run)
-fig2 = dynamics2.plot_history(chemicals='B', colors=['orange'], title="Fine fixed-step run", 
+fig2 = dynamics2.plot_history(chemicals='B', colors=['violet'], title="Fine fixed-step run", 
                               show=True)
 
 # %%
@@ -240,6 +253,6 @@ PlotlyHelper.combine_plots(fig_list=[fig1, fig2], title="The 2 runs, contrasted 
                            curve_labels=["B (adaptive variable steps)", "B (fixed small steps)"])
 
 # %% [markdown]
-# They overlap fairly well!
+# #### They overlap fairly well!  The 800 fixed-timestep points vs. the 48 adaptable variable-timestep ones
 
 # %%
