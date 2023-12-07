@@ -26,7 +26,7 @@
 #
 # All reactions 1st order, mostly forward.  Taken to equilibrium.
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -110,8 +110,8 @@ dynamics.get_history()
 dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=["blue", "green"], title="Single reaction A <-> B (no downregulation)", 
-                     show_intervals=True)
+dynamics.plot_history(colors=["blue", "green"], title="Single reaction A <-> B (no downregulation)",
+                      show_intervals=True)
 
 # %% [markdown]
 # #### Notice the intersection at the exact midpoint of the 2 initial concentrations (50 and 0):
@@ -173,9 +173,9 @@ dynamics.single_compartment_react(initial_step=0.001, reaction_duration=0.3,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.plot_curves(colors=["blue", "green", "red"], 
-                     title="Coupled reactions A <-> B and A <-> S (fast but disadvantaged energetically)",
-                     show_intervals=True)
+dynamics.plot_history(colors=["blue", "green", "red"],
+                      title="Coupled reactions A <-> B and A <-> S (fast but disadvantaged energetically)",
+                      show_intervals=True)
 
 # %% [markdown]
 # ### Notice how the "alternate (shunt) path" of the reaction, i.e. S (red)   
@@ -241,7 +241,7 @@ dynamics.single_compartment_react(initial_step=0.005, reaction_duration=7.0,
                                    variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.plot_curves(colors=["blue", "green", "red"], 
+dynamics.plot_history(colors=["blue", "green", "red"],
                       title="Coupled reactions A <-> B and A <-> S (slow but with energetic advantage)")
 
 # %% [markdown]

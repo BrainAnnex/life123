@@ -20,7 +20,7 @@
 #
 # See also the experiment _"reactions_single_compartment/react_4"_ 
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Dec. 6, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -54,7 +54,7 @@ chem_data = chem(names=["A", "B"])     # NOTE: Diffusion not applicable (just 1 
 
 
 # Reaction  2A <-> B , FOR NOW with 1st-order kinetics in both directions
-chem_data.add_reaction(reactants=[(2, "A")], products=["B"], forward_rate=5., reverse_rate=2.)
+chem_data.add_reaction(reactants=[(2, "A", 1)], products=["B"], forward_rate=5., reverse_rate=2.)
 
 bio = BioSim1D(n_bins=1, chem_data=chem_data)
 

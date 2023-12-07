@@ -22,7 +22,7 @@
 #
 # This experiment gets repeated, with very fine _fixed_ steps (as a proxy for the "exact value"), in `variable_steps_2`
 #
-# LAST REVISED: July 23, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %% [markdown]
 # ![Adaptive time steps](../../docs/variable_steps.png)
@@ -56,7 +56,7 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["U", "X", "S"])
 
 # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
-chem_data.add_reaction(reactants=[(2, "S")], products="U",
+chem_data.add_reaction(reactants=[(2, "S", 1)], products="U",
                        forward_rate=8., reverse_rate=2.)
 
 # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
@@ -105,18 +105,18 @@ np.array(transition_times)    # Note: there will be one more transition time (th
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %%
 dynamics.curve_intersection("U", "X", t_start=0.3, t_end=0.35)  # Compare with the value from experiment "variable_steps_2"
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'], show_intervals=True)
+dynamics.plot_history(colors=['green', 'orange', 'blue'], show_intervals=True)
 
 # %%
 # Show the "critical values", i.e. times when the step size changes
-dynamics.plot_curves(colors=['green', 'orange', 'blue'], vertical_lines=transition_times, 
-                     title="Critical values of time-step changes for reactions `2 S <-> U` and `S <-> X`")
+dynamics.plot_history(colors=['green', 'orange', 'blue'], vertical_lines=transition_times,
+                      title="Critical values of time-step changes for reactions `2 S <-> U` and `S <-> X`")
 
 # %% [markdown]
 # ## Note: the dashed lines in the plots immediatly above are NOT the steps; they are the "critical values", i.e. times when the step size changes.   

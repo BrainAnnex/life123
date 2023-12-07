@@ -1,4 +1,4 @@
-from typing import Union, Set
+from typing import Union, Set, Tuple
 import numpy as np
 from src.modules.reactions.thermodynamics import ThermoDynamics
 
@@ -42,7 +42,7 @@ class Reaction:
               they're assumed to be 1.
               Their full structure is the triplet (stoichiometry coefficient, name, reaction order)
 
-        EXAMPLES of formats for each item of the reactants and products
+        EXAMPLES of formats for each item in the lists of the reactants and products
         (*assuming* that the chemical species with index 5 is called "F"):
                     "F"         gets turned into:   (1, 5, 1)
                     (3, "F")                        (3, 5, 1)
@@ -72,7 +72,7 @@ class Reaction:
         self.delta_H = delta_H
         self.delta_S = delta_S
         self.delta_G = delta_G
-        self.K = None
+        self.K = None               # Equilibrium constant
         self.enzyme = None          # The INDEX of a chemical that catalyzes this reaction, if applicable
                                     #   Note: enzymes are automatically extracted from the reaction formula
         self.macro_enzyme = None    # The pair (macromolecule name, binding site number)
@@ -166,7 +166,7 @@ class Reaction:
         Return a string with a user-friendly form of the left (reactants) side of the reaction formula
         EXAMPLE: "CH4 + 2 O2"
 
-        :return:
+        :return:    A string with one side of a chemical reaction
         """
         reactants = self.extract_reactants()
         return self._standard_form_chem_eqn(reactants)
@@ -187,7 +187,7 @@ class Reaction:
         """
         Return a string with a user-friendly form of the right (products) side of the reaction formula
 
-        :return:
+        :return:    A string with one side of a chemical reaction
         """
         products = self.extract_products()
         return self._standard_form_chem_eqn(products)
@@ -210,6 +210,14 @@ class Reaction:
         return self.kR
 
 
+    def extract_equilibrium_constant(self) -> float:
+        """
+
+        :return:    The value of the equilibrium constant for this reaction
+        """
+        return self.K
+
+
 
     def unpack_for_dynamics(self) -> tuple:
         """
@@ -218,12 +226,13 @@ class Reaction:
 
         :return:    A 4-element tuple, containing:
                         (reactants , products , forward rate constant , reverse rate constant)
+                        Note: both reactants products are lists of triplets
         """
         return (self.reactants, self.products, self.kF, self.kR)
 
 
 
-    def extract_stoichiometry(self, term: (int, int, int)) -> int:
+    def extract_stoichiometry(self, term :(int, int, int)) -> int:
         """
         Return the stoichiometry coefficient, from a reaction term
 
@@ -232,7 +241,7 @@ class Reaction:
         """
         return term[0]
 
-    def extract_species_index(self, term: (int, int, int)) -> int:
+    def extract_species_index(self, term :(int, int, int)) -> int:
         """
         Return the index of the chemical species, from a reaction term
 
@@ -241,7 +250,7 @@ class Reaction:
         """
         return term[1]
 
-    def extract_rxn_order(self, term: (int, int, int)) -> int:
+    def extract_rxn_order(self, term :(int, int, int)) -> int:
         """
         Return the reaction order, from a reaction term
 
@@ -325,6 +334,7 @@ class Reaction:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
+
     def describe(self, concise=False) -> str:
         """
         Return as a string, a user-friendly plain-text form of the reaction
@@ -381,6 +391,91 @@ class Reaction:
 
 
 
+
+    #####################################################################################################
+
+    '''                                     ~   ANALYSIS  ~                                           '''
+
+    def ________ANALYSIS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def reaction_quotient(self, conc, explain=False) -> Union[np.double, Tuple[np.double, str]]:
+        """
+        Compute the "Reaction Quotient" (aka "Mass–action Ratio"),
+        given the concentrations of chemicals involved in this reaction
+
+        :param conc:        Dictionary with the concentrations of the species involved in the reaction.
+                            The keys are the chemical names
+                                EXAMPLE: {'A': 23.9, 'B': 36.1}
+        :param explain:     If True, it also returns the math formula being used for the computation
+                                EXAMPLES:   "([C][D]) / ([A][B])"
+                                            "[B] / [A]^2"
+
+        :return:            If explain is False, return value for the "Reaction Quotient" (aka "Mass–action Ratio");
+                                if True, return a pair with that quotient and a string with the math formula that was used.
+                                Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
+        """
+        numerator = np.double(1)    # The product of all the concentrations of the reaction products (adjusted for reaction order)
+        denominator = np.double(1)  # The product of all the concentrations of the reactants (also adjusted for reaction order)
+
+        numerator_text = ""      # First part of the the textual explanation
+        denominator_text = ""    # Second part of the the textual explanation
+
+
+        # Compute the numerator of the "Reaction Quotient"
+        for p in self.products:
+            # Loop over the reaction products
+            species_index =  self.extract_species_index(p)
+            rxn_order =  self.extract_rxn_order(p)
+
+            species_name =  self.chem_data.get_name(species_index)
+            species_conc = conc.get(species_name)
+            assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
+                                             f"concentration of `{species_name}` was not provided"
+
+            numerator *= (species_conc ** rxn_order)
+            if explain:
+                numerator_text += f"[{species_name}]"
+                if rxn_order > 1:
+                    numerator_text += f"^{rxn_order} "
+
+        if explain and len(self.products) > 1:
+            numerator_text = f"({numerator_text})"  # In case of multiple terms, enclose them in parenthesis
+
+
+        # Compute the denominator of the "Reaction Quotient"
+        for r in self.reactants:
+            # Loop over the reactants
+            species_index =  self.extract_species_index(r)
+            rxn_order =  self.extract_rxn_order(r)
+
+            species_name = self.chem_data.get_name(species_index)
+            species_conc = conc.get(species_name)
+            assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
+                                             f"concentration of `{species_name}` was not provided"
+
+            denominator *= (species_conc ** rxn_order)
+            if explain:
+                denominator_text += f"[{species_name}]"
+                if rxn_order > 1:
+                    denominator_text += f"^{rxn_order} "
+
+        if explain and len(self.reactants) > 1:
+            denominator_text = f"({denominator_text})"  # In case of multiple terms, enclose them in parenthesis
+
+
+        quotient = numerator / denominator      # It might be np.inf or np.nan
+
+        if explain:
+            formula = f"{numerator_text} / {denominator_text}"
+            return (quotient, formula)
+
+        return quotient
+
+
+
+
     #####################################################################################################
 
     '''                                    ~   PRIVATE  ~                                             '''
@@ -420,55 +515,65 @@ class Reaction:
 
 
 
-    def _parse_reaction_term(self, term: Union[int, str, tuple, list], name="term") -> (int, int, int):
+    def _parse_reaction_term(self, term: Union[str, tuple, list], name="term") -> (int, int, int):
         """
-        Accept various ways to specify a reaction term, and return a standardized tuple form of it.
-        In the tuples or lists:
-            - optional 1st entry is the stoichiometry
-            - required entry is the chemical name
-            - optional 3rd one is the reaction order
+        Accept various ways to specify a reaction term, and return a standardized triplet form for it.
+
+        NOTE:   A) if the stoichiometry coefficient isn't specified, it defaults to 1
+                B) if the reaction order isn't specified, it defaults to the stoichiometry coefficient
+
+        In the passed tuples or lists:
+            - required 1st entry is the stoichiometry
+            - required 2nd entry is the chemical name
+            - optional 3rd one is the reaction order.  If unspecified, it defaults to the stoichiometry
+
+        If just a string is being passed, it is taken to be the chemical name,
+        with stoichiometry and reaction order both 1
 
         EXAMPLES (*assuming* that the chemical species with index 5 is called "F"):
-            "F"          gets turned into:  (1, 5, 1)
-            (3, "F")                        (3, 5, 1)
-            (3, "F", 2)                     (3, 5, 2)
+            "F"          gets turned into:  (1, 5, 1)   - defaults used for stoichiometry and reaction order
+            (2, "F")                        (2, 5, 2)   - default used for reaction order
+            (2, "F", 1)                     (2, 5, 1)   - no defaults invoked
             It's equally acceptable to use LISTS in lieu of tuples
 
         :param term:    A string (a chemical name)
                             OR  a pair (stoichiometry coeff, name)
                             OR  a triplet (stoichiometry coeff, name, reaction order)
-        :param name:    An optional nickname to refer to this term in error messages, if applicable
+        :param name:    An optional nickname, handy to refer to this term in error messages if needed
                             (for example, "reactant" or "product")
-        :return:        A standardized tuple form, of the form (stoichiometry, species index, reaction_order),
+        :return:        A standardized triplet of the form (stoichiometry, species index, reaction_order),
                             where all terms are integers
         """
         if type(term) == str:
             return  (1, self.chem_data.get_index(term), 1)  # Accept simply the chemical name as a shortcut
                                                             # for when the stoichiometry coefficient and reaction order are both 1
-        elif type(term) != tuple and type(term) != list:
-            raise Exception(f"_parse_reaction_term(): {name} item must be either a string (a chemical name), "
+
+        if type(term) != tuple and type(term) != list:
+            raise Exception(f"_parse_reaction_term(): {name} must be either a string (a chemical name), "
                             f"or a pair (stoichiometry coeff, name) or a triplet (stoichiometry coeff, name, reaction order). "
                             f"Instead, it is `{term}` (of type {type(term)})")
 
         # If we get thus far, term is either a tuple or a list
-        if len(term) != 3 and len(term) != 2:
-            raise Exception(f"_parse_reaction_term(): Unexpected length for {name} tuple/list: it should be 2 or 3. Instead, it is {len(term)}")
+        assert len(term) in [2, 3],  \
+            f"_parse_reaction_term(): Unexpected length for {name} tuple/list: it should be either 2 or 3. " \
+            f"Instead, it is {len(term)}"
 
         stoichiometry = term[0]
         assert type(stoichiometry) == int, \
-            f"_parse_reaction_term(): The stoichiometry coefficient, if provided, must be an integer. Instead, it is {stoichiometry}"
+            f"_parse_reaction_term(): The stoichiometry coefficient must be an integer. Instead, it is {stoichiometry}"
 
         species = term[1]
         if type(species) == str:
-            species = self.chem_data.get_index(species)
+            species_index = self.chem_data.get_index(species)
         else:
-            raise Exception(f"_parse_reaction_term(): The chemical name must be a string. Instead, it is {species} (of type {type(species)})")
+            raise Exception(f"_parse_reaction_term(): The chemical name must be a string. "
+                            f"Instead, it is {species} (of type {type(species)})")
 
         if len(term) == 2:
-            return (stoichiometry, species, 1)
+            return (stoichiometry, species_index, stoichiometry)
         else:   # Length is 3
             reaction_order = term[2]
-            return (stoichiometry, species, reaction_order)
+            return (stoichiometry, species_index, reaction_order)
 
 
 

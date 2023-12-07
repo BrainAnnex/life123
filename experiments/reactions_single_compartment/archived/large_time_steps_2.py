@@ -23,7 +23,7 @@
 # * for an exploration of instabilities, see the experiment `negative_concentrations_1`
 # * for an accurate longer run of the same reactions (with the same initial conditions), see the experiment "up_regulate_3"
 #
-# LAST REVISED: June 4, 2023  **THIS IS AN ARCHIVED EXPERIMENT**
+# LAST REVISED: Dec. 3, 2023  **THIS IS AN ARCHIVED EXPERIMENT**
 
 # %% [markdown]
 # # IMPORTANT: DO NOT ATTEMPT TO RUN THIS NOTEBOOK!   
@@ -99,7 +99,7 @@ df = dynamics.get_history()
 dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # # Run 2 : very small time steps, with dynamic substeps
@@ -119,7 +119,7 @@ df = dynamics.get_history()
 dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # # Run 3 : small-ish time steps, with dynamic substeps
@@ -139,7 +139,7 @@ df = dynamics.get_history()
 dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # # Run 4 : same as previous run, but fewer dynamic substeps
@@ -159,7 +159,7 @@ df = dynamics.get_history()
 dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # # Run 5 : same as previous run, but slightly larger primary step
@@ -179,7 +179,7 @@ df = dynamics.get_history()
 dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # ### Note: the above run is identical to the last run in the experiment `negative_concentrations_1`
@@ -204,7 +204,7 @@ dynamics.explain_time_advance()
 # ### Notice the automated detection - and correction - of negative concentrations arising from the excessively-large time steps
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # ### Note: for an exploration of instabilities, see the experiment `negative_concentrations_1`

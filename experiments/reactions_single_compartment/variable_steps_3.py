@@ -25,7 +25,7 @@
 #
 # In either case, the extra chemicals and the enzyme don't vary in concentration - and thus **get automatically excluded from considerations about the adaptive variable step sizes** , which remain exactly as they were in experiment `variable_steps_1`
 #
-# LAST REVISED: July 23, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -50,7 +50,7 @@ from src.modules.visualization.graphic_log import GraphicLog
 chem_data = chem(names=["EXTRA 1", "U", "EXTRA 2", "X", "S", "EXTRA 3"])
 
 # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
-chem_data.add_reaction(reactants=[(2, "S")], products="U",
+chem_data.add_reaction(reactants=[(2, "S", 1)], products="U",
                        forward_rate=8., reverse_rate=2.)
 
 # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
@@ -99,7 +99,7 @@ np.array(transition_times)    # Note: there will be one more transition time (th
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['lightgray', 'green', 'lightgray', 'orange', 'blue', 'lightgray'])
+dynamics.plot_history(colors=['lightgray', 'green', 'lightgray', 'orange', 'blue', 'lightgray'])
 
 # %%
 dynamics.curve_intersection("U", "X", t_start=0.3, t_end=0.35)
@@ -115,7 +115,7 @@ dynamics.curve_intersection("U", "X", t_start=0.3, t_end=0.35)
 chem_data = chem(names=["U", "X", "S", "E"])
 
 # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
-chem_data.add_reaction(reactants=[(2, "S"), "E"], products=["U", "E"],
+chem_data.add_reaction(reactants=[(2, "S", 1), "E"], products=["U", "E"],
                        forward_rate=8., reverse_rate=2.)
 
 # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
@@ -164,7 +164,7 @@ np.array(transition_times)    # Note: there will be one more transition time (th
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue', 'gray'])
+dynamics.plot_history(colors=['green', 'orange', 'blue', 'gray'])
 
 # %%
 dynamics.curve_intersection("U", "X", t_start=0.3, t_end=0.35)

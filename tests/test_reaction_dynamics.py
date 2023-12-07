@@ -117,7 +117,11 @@ def test_single_compartment_react():
     dynamics.set_conc(conc=initial_conc, snapshot=False)
 
     dynamics.set_diagnostics()
-    dynamics.single_compartment_react(initial_step=0.0010, target_end_time=0.0035)
+
+    dynamics.error_abort_step_factor = 0.5  # Will be used by an excessive first step
+                                            # leading to a hard abort
+
+    dynamics.single_compartment_react(initial_step=0.0010, target_end_time=0.0035, variable_steps=False)
 
     run1 = dynamics.get_system_conc()
 
@@ -134,9 +138,9 @@ def test_single_compartment_react():
     dynamics2.set_conc(conc=initial_conc, snapshot=False)
 
     dynamics2.set_diagnostics()
-    dynamics2.single_compartment_react(initial_step=0.0010, n_steps=2)
-    dynamics2.single_compartment_react(initial_step=0.0005, n_steps=1)
-    dynamics2.single_compartment_react(initial_step=0.0010, n_steps=1)
+    dynamics2.single_compartment_react(initial_step=0.0010, n_steps=2, variable_steps=False)
+    dynamics2.single_compartment_react(initial_step=0.0005, n_steps=1, variable_steps=False)
+    dynamics2.single_compartment_react(initial_step=0.0010, n_steps=1, variable_steps=False)
     run2 = dynamics.get_system_conc()
     assert np.allclose(run2, run1)      # Same result as before
     assert np.allclose(dynamics2.system_time, 0.0035)
@@ -166,7 +170,7 @@ def test_single_reaction_fixed_step():
     rxn.clear_reactions()       # Re-start with a blank slate of reactions
     # Reaction A <-> 3B , with 1st-order kinetics in both directions.
     # Based on experiment "1D/reactions/reaction2"
-    chem_data.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
+    chem_data.add_reaction(reactants="A", products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
 
     result = rxn._reaction_elemental_step(delta_time=0.1)
     assert np.allclose(result, [5. , -15.])
@@ -176,7 +180,7 @@ def test_single_reaction_fixed_step():
     rxn.clear_reactions()       # Re-start with a blank slate of reactions
     # Reaction 2A <-> 3B , with 1st-order kinetics in both directions.
     # Based on experiment "1D/reactions/reaction3"
-    chem_data.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
+    chem_data.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
 
     result = rxn._reaction_elemental_step(delta_time=0.1)
     assert np.allclose(result, [10., -15.])
@@ -202,7 +206,7 @@ def test_single_reaction_variable_step_1():
     rxn.clear_reactions()   # Re-start with a blank slate of reactions
     # Reaction A <-> 3B , with 1st-order kinetics in both directions.
     # Based on experiment "1D/reactions/reaction2"
-    chem_data.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
+    chem_data.add_reaction(reactants=["A"], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
 
     result = rxn._reaction_elemental_step(delta_time=0.1)
     assert np.allclose(result, [5. , -15.])
@@ -212,7 +216,7 @@ def test_single_reaction_variable_step_1():
     rxn.clear_reactions()   # Re-start with a blank slate of reactions
     # Reaction 2A <-> 3B , with 1st-order kinetics in both directions.
     # Based on experiment "1D/reactions/reaction3"
-    chem_data.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
+    chem_data.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
 
     result = rxn._reaction_elemental_step(delta_time=0.1)
     assert np.allclose(result, [10., -15.])
@@ -256,7 +260,7 @@ def test_single_reaction_step_3():
 
     # Reaction A <-> 2C + D , with 1st-order kinetics for each species.
     # Based on experiment "1D/reactions/reaction5"
-    chem_data.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
+    chem_data.add_reaction(reactants=[("A")], products=[(2, "C", 1) , ("D")],
                      forward_rate=5., reverse_rate=2.)
 
     result = rxn._reaction_elemental_step(delta_time=0.05)
@@ -274,7 +278,7 @@ def test_single_reaction_step_4():
 
     # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species.
     # Based on experiment "1D/reactions/reaction6"
-    chem_data.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
+    chem_data.add_reaction(reactants=[(2,"A",1) , (5,"B",1)], products=[(4,"C",1) , (3,"D",1)],
                      forward_rate=5., reverse_rate=2.)
 
     result = rxn._reaction_elemental_step(delta_time=0.001)
@@ -329,7 +333,7 @@ def test_single_compartment_react_variable_steps_1():
     chem_data = ChemData(names=["U", "X", "S"])
 
     # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
-    chem_data.add_reaction(reactants=[(2, "S")], products="U",
+    chem_data.add_reaction(reactants=[(2, "S", 1)], products="U",
                            forward_rate=8., reverse_rate=2.)
 
     # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
@@ -373,7 +377,7 @@ def test_single_compartment_correct_neg_conc_1():
     chem_data = ChemData(names=["U", "X", "S"])
 
     # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
-    chem_data.add_reaction(reactants=[(2, "S")], products="U",
+    chem_data.add_reaction(reactants=[(2, "S", 1)], products="U",
                            forward_rate=8., reverse_rate=2.)
 
     # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
@@ -384,6 +388,11 @@ def test_single_compartment_correct_neg_conc_1():
     dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
     dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+    dynamics.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
+                           {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
+    dynamics.step_factors = {"upshift": 1.5, "downshift": 0.5, "abort": 0.5}
+    dynamics.error_abort_step_factor = 0.5
 
     dynamics.single_compartment_react(initial_step=0.1, target_end_time=0.8, variable_steps=False)
     # Note: negative concentrations that would arise from the given step size, get automatically intercepted - and
@@ -474,7 +483,8 @@ def test_compute_all_rate_deltas():
     assert np.allclose(result[0], 42.0)
 
     # Add reaction 2B <-> 3C , with 1st-order kinetics in both directions
-    chem_data.add_reaction(reactants=[(2, "B")], products=[(3, "C")], forward_rate=10., reverse_rate=25.)   # Rxn 1
+    chem_data.add_reaction(reactants=[(2, "B", 1)], products=[(3, "C", 1)],
+                           forward_rate=10., reverse_rate=25.)   # Rxn 1
     rxn.set_conc(conc=[5., 8., 15., 0], snapshot=False)
     result = rxn.compute_all_reaction_deltas(delta_time=0.5) # {0: 42.0, 1: -147.5}
     assert len(result) == 2
@@ -482,7 +492,7 @@ def test_compute_all_rate_deltas():
     assert np.allclose(result[1], -147.5)
 
     # Add reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
-    chem_data.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
+    chem_data.add_reaction(reactants=[(2,"A",1) , (5,"B",1)], products=[(4,"C",1) , (3,"D",1)],
                      forward_rate=5., reverse_rate=2.)          # Rxn 2
     rxn.set_conc(conc=[5., 8., 15.,  7.], snapshot=False)
     result = rxn.compute_all_reaction_deltas(delta_time=0.5)    # {0: 42.0, 1: -147.5, 2: -5.0}
@@ -526,45 +536,47 @@ def test_compute_reaction_delta_rate():
     dynamics.set_conc(conc=[5., 8., 0, 0], snapshot=False)
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
-    rxn = chem_data.add_reaction(reactants="A", products="B", forward_rate=20., reverse_rate=2.)
-    result = dynamics.compute_reaction_delta_rate(rxn=rxn)
+    rxn_index = chem_data.add_reaction(reactants="A", products="B", forward_rate=20., reverse_rate=2.)
+    result = dynamics.compute_reaction_delta_rate(rxn=chem_data.get_reaction(rxn_index))
     assert np.allclose(result, 20. * 5. - 2. * 8.)
 
     # Reaction 5A <-> 2B , with 1st-order kinetics in both directions.
     # Same as before, but different stoichiometry (which does NOT influence the result)
-    rxn = chem_data.add_reaction(reactants=[(5, "A")], products=[(2, "B")], forward_rate=20., reverse_rate=2.)
-    result = dynamics.compute_reaction_delta_rate(rxn=rxn)
+    rxn_index = chem_data.add_reaction(reactants=[(5, "A", 1)], products=[(2, "B", 1)],
+                                       forward_rate=20., reverse_rate=2.)
+    result = dynamics.compute_reaction_delta_rate(rxn=chem_data.get_reaction(rxn_index))
     assert np.allclose(result, 20. * 5. - 2. * 8.)
 
     # Reaction C <-> D , with 1st-order kinetics in both directions
-    rxn = chem_data.add_reaction(reactants="C", products="D", forward_rate=20., reverse_rate=2.)
+    rxn_index = chem_data.add_reaction(reactants="C", products="D", forward_rate=20., reverse_rate=2.)
     dynamics.set_conc(conc=[0., 0., 5., 8.], snapshot=False)
-    result = dynamics.compute_reaction_delta_rate(rxn=rxn)
+    result = dynamics.compute_reaction_delta_rate(rxn=chem_data.get_reaction(rxn_index))
     assert np.allclose(result, 20. * 5. - 2. * 8.)
 
     # Reaction 2B <-> 3C , with 1st-order kinetics in both directions
-    rxn = chem_data.add_reaction(reactants=[(2, "B")], products=[(3, "C")], forward_rate=10., reverse_rate=25.)
+    rxn_index = chem_data.add_reaction(reactants=[(2, "B", 1)], products=[(3, "C", 1)],
+                                       forward_rate=10., reverse_rate=25.)
     dynamics.set_conc(conc=[0., 8., 15., 0.], snapshot=False)
-    result = dynamics.compute_reaction_delta_rate(rxn=rxn)
+    result = dynamics.compute_reaction_delta_rate(rxn=chem_data.get_reaction(rxn_index))
     assert np.allclose(result,  10. * 8. - 25. * 15.)
 
     # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
-    rxn = chem_data.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
+    rxn_index = chem_data.add_reaction(reactants=[(2,"A",1) , (5,"B",1)], products=[(4,"C",1) , (3,"D",1)],
                                  forward_rate=5., reverse_rate=2.)
     dynamics.set_conc(conc=[3.5, 9., 11., 7.], snapshot=False)
-    result = dynamics.compute_reaction_delta_rate(rxn=rxn)
+    result = dynamics.compute_reaction_delta_rate(rxn=chem_data.get_reaction(rxn_index))
     assert np.allclose(result,  5. * 3.5 * 9. - 2. * 11. * 7.)
 
     # Reaction  2A <-> B , with 2nd-ORDER kinetics in the forward direction
-    rxn = chem_data.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
+    rxn_index = chem_data.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
     dynamics.set_conc(conc=[4.5, 6., 0., 0.], snapshot=False)
-    result = dynamics.compute_reaction_delta_rate(rxn=rxn)
+    result = dynamics.compute_reaction_delta_rate(rxn=chem_data.get_reaction(rxn_index))
     assert np.allclose(result, 5. * 4.5 **2 - 2. * 6.)
 
     # Reaction  B <-> 2C , with 2nd-ORDER kinetics in the reverse direction
-    rxn = chem_data.add_reaction(reactants=[("B")], products=[(2, "C", 2)], forward_rate=4., reverse_rate=2.)
+    rxn_index = chem_data.add_reaction(reactants=[("B")], products=[(2, "C", 2)], forward_rate=4., reverse_rate=2.)
     dynamics.set_conc(conc=[0., 5., 4, 0.], snapshot=False)
-    result = dynamics.compute_reaction_delta_rate(rxn=rxn)
+    result = dynamics.compute_reaction_delta_rate(rxn=chem_data.get_reaction(rxn_index))
     assert np.allclose(result, 4. * 5. - 2. * 4. **2)
 
 
@@ -623,29 +635,29 @@ def test_reaction_in_equilibrium():
     assert not rxn.reaction_in_equilibrium(rxn_index = 1, conc=c, explain=False, tolerance=10)  # Just above the 10% tolerance
 
     # Reaction 2 : A <-> 3B
-    chem_data.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
+    chem_data.add_reaction(reactants=["A"], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
     c = {'A': 14.54545455, 'B': 36.36363636}
     assert rxn.reaction_in_equilibrium(rxn_index = 2, conc=c, explain=False, tolerance=1)
 
     # Reaction 3:  2A <-> 3B
-    chem_data.add_reaction(reactants=[(2,"A")], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
+    chem_data.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
     c = {'A': 16.25, 'B': 40.625}
     assert rxn.reaction_in_equilibrium(rxn_index = 3, conc=c, explain=False, tolerance=1)
 
     # Reaction 4:  A + B <-> C , with 1st-order kinetics for each species
-    chem_data.add_reaction(reactants=[("A") , ("B")], products=[("C")],
+    chem_data.add_reaction(reactants=["A" , "B"], products=[("C")],
                      forward_rate=5., reverse_rate=2.)
     c = {'A': 0.29487741, 'B': 40.29487741, 'C': 29.70512259}
     assert rxn.reaction_in_equilibrium(rxn_index = 4, conc=c, explain=False, tolerance=1)
 
     # Reaction 5:  A <-> 2C + D , with 1st-order kinetics for each species
-    chem_data.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
+    chem_data.add_reaction(reactants=["A"], products=[(2, "C", 1) , ("D")],
                      forward_rate=5., reverse_rate=2.)
     c = {'A': 4.31058733, 'C': 6.37882534, 'D': 1.68941267}
     assert rxn.reaction_in_equilibrium(rxn_index = 5, conc=c, explain=False, tolerance=1)
 
     # Reaction 6:  2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
-    chem_data.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
+    chem_data.add_reaction(reactants=[(2,"A",1) , (5,"B",1)], products=[(4,"C",1) , (3,"D",1)],
                      forward_rate=5., reverse_rate=2.)
     c = {'A': 2.80284552, 'B': 4.00711381, 'C': 7.39430896, 'D': 3.79573172}
     assert rxn.reaction_in_equilibrium(rxn_index = 6, conc=c, explain=False, tolerance=1)
@@ -654,51 +666,30 @@ def test_reaction_in_equilibrium():
     rxn.clear_reactions()   # This will reset the reaction count to 0
 
     # Reaction 0:  2A <-> B , with 1st-order kinetics in both directions
-    chem_data.add_reaction(reactants=[(2, "A")], products=["B"], forward_rate=5., reverse_rate=2.)
+    chem_data.add_reaction(reactants=[(2, "A", 1)], products=["B"], forward_rate=5., reverse_rate=2.)
     c = {'A': 2.16928427, 'B': 5.41535786}
     assert rxn.reaction_in_equilibrium(rxn_index = 0, conc=c, explain=False, tolerance=1)
 
     # Reaction 1:  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction
     chem_data.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
     c = {'A': 1.51554944, 'B': 5.74222528}
-    assert rxn.reaction_in_equilibrium(rxn_index = 1, conc=c, explain=False, tolerance=1)
+    assert rxn.reaction_in_equilibrium(rxn_index = 1, conc=c, tolerance=1, explain=False)
 
+    # Reaction 2:  A + B <-> C + D
+    chem_data.add_reaction(reactants=["A", "B"], products=["C", "D"], forward_rate=5., reverse_rate=2.)
 
+    # with zero concentrations of a reactant, it won't be an equilibrium...
+    c = {'A': 15.2, 'B': 0, 'C': 21.3, 'D': 4.1}
+    assert not rxn.reaction_in_equilibrium(rxn_index = 2, conc=c, tolerance=10, explain=False)
 
-def test_reaction_speeds():
-    # To test that newly-added reactions are automatically tentatively marked "Fast",
-    # and to test the methods managing the "Slow/Fast" data structure
-    chem_data = ChemData(names=["A", "B", "C"])
-    rxn = ReactionDynamics(chem_data)
-    assert rxn.slow_rxns() == []        # There are no reactions yet
-    assert rxn.fast_rxns() == []        # There are no reactions yet
-    assert rxn.are_all_slow_rxns()
+    # likewise with zero concentrations of a reaction product, it won't be an equilibrium...
+    c = {'A': 15.2, 'B': 21.3, 'C': 0 , 'D': 4.1}
+    assert not rxn.reaction_in_equilibrium(rxn_index = 2, conc=c, tolerance=10, explain=False)
 
-    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-    assert rxn.slow_rxns() == []        # The one reaction present is assumed to be fast
-    assert rxn.fast_rxns() == [0]
-    assert not rxn.are_all_slow_rxns()
-
-    rxn.set_rxn_speed(0, "S")          # Mark the lone reaction as "Slow"
-    assert rxn.slow_rxns() == [0]
-    assert rxn.fast_rxns() == []
-    assert rxn.are_all_slow_rxns()
-
-    chem_data.add_reaction(reactants=["B"], products=["C"], forward_rate=13., reverse_rate=12.)
-    assert rxn.chem_data.number_of_reactions() == 2
-    assert rxn.slow_rxns() == [0]
-    assert rxn.fast_rxns() == [1]       # The newly-added one
-    rxn.set_rxn_speed(1, "S")
-    assert rxn.slow_rxns() == [0, 1]
-    assert rxn.fast_rxns() == []
-    assert rxn.are_all_slow_rxns()
-
-    rxn.set_rxn_speed(0, "F")
-    assert not rxn.are_all_slow_rxns()
-    rxn.set_rxn_speed(1, "F")
-    assert rxn.slow_rxns() == []
-    assert rxn.fast_rxns() == [0, 1]
-    assert not rxn.are_all_slow_rxns()
+    # but with zero concentrations of both a reactant and a reaction product, the reaction is stuck in place -
+    # so, in equilibrium
+    c = {'A': 15.2, 'B': 0, 'C': 0 , 'D': 4.1}
+    assert rxn.reaction_in_equilibrium(rxn_index = 2, conc=c, tolerance=1, explain=False)
 
 
 
@@ -728,41 +719,46 @@ def test_stoichiometry_checker():
     assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([90, 10, 0, 0]))
 
 
-    chem.add_reaction(reactants=[(2, "A")], products=["B"])     # Reaction 1:   2A <--> B
+    chem.clear_reactions_data()
+    chem.add_reaction(reactants=[(2, "A")], products=["B"])         # Reaction 0:   2A <--> B
 
-    assert rxn.stoichiometry_checker(rxn_index=1, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
-    assert rxn.stoichiometry_checker(rxn_index=1, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([80, 10, 0, 0]))
-    assert not rxn.stoichiometry_checker(rxn_index=1, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([80, 10.1, 0, 0]))
-    assert rxn.stoichiometry_checker(rxn_index=1, conc_arr_before=np.array([0, 50, 0, 0]), conc_arr_after=np.array([10, 45, 0, 0]))
-
-
-    chem.add_reaction(reactants=["A", "B"], products=["C"])     # Reaction 2:   A + B <--> C
-
-    assert rxn.stoichiometry_checker(rxn_index=2, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
-    assert rxn.stoichiometry_checker(rxn_index=2, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 40, 10, 0]))
-    assert not rxn.stoichiometry_checker(rxn_index=2, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 40, 9.9, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([80, 10, 0, 0]))
+    assert not rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([80, 10.1, 0, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 50, 0, 0]), conc_arr_after=np.array([10, 45, 0, 0]))
 
 
-    chem.add_reaction(reactants=["A", (3, "B")], products=["C"])     # Reaction 3:   A + 3B <--> C
+    chem.clear_reactions_data()
+    chem.add_reaction(reactants=["A", "B"], products=["C"])         # Reaction 0:   A + B <--> C
 
-    assert rxn.stoichiometry_checker(rxn_index=3, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
-    assert rxn.stoichiometry_checker(rxn_index=3, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 10, 0]))
-    assert not rxn.stoichiometry_checker(rxn_index=3, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 9.9, 0]))
-
-
-    chem.add_reaction(reactants=["A", (3, "B")], products=[(4, "C")])                   # Reaction 4:   A + 3B <--> 4C
-
-    assert rxn.stoichiometry_checker(rxn_index=4, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
-    assert rxn.stoichiometry_checker(rxn_index=4, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 40, 0]))
-    assert not rxn.stoichiometry_checker(rxn_index=4, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 39.9, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 40, 10, 0]))
+    assert not rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 40, 9.9, 0]))
 
 
-    chem.add_reaction(reactants=[(2, "A"), (3, "B")], products=[(4, "C"), (5, "D")])     # Reaction 5:   2A + 3B <--> 4C + 5D
-    assert rxn.stoichiometry_checker(rxn_index=5, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
-    assert rxn.stoichiometry_checker(rxn_index=5, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([120, 130, 60, 50]))
-    assert not rxn.stoichiometry_checker(rxn_index=5, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([120.1, 130, 60, 50]))
-    assert rxn.stoichiometry_checker(rxn_index=5, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([80, 70, 140, 150]))
-    assert not rxn.stoichiometry_checker(rxn_index=5, conc_arr_before=np.array([100, 100, 100, 100.1]), conc_arr_after=np.array([80, 70, 140, 150]))
+    chem.clear_reactions_data()
+    chem.add_reaction(reactants=["A", (3, "B")], products=["C"])     # Reaction 0:   A + 3B <--> C
+
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 10, 0]))
+    assert not rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 9.9, 0]))
+
+
+    chem.clear_reactions_data()
+    chem.add_reaction(reactants=["A", (3, "B")], products=[(4, "C")])                   # Reaction 0:   A + 3B <--> 4C
+
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 40, 0]))
+    assert not rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 39.9, 0]))
+
+
+    chem.clear_reactions_data()
+    chem.add_reaction(reactants=[(2, "A"), (3, "B")], products=[(4, "C"), (5, "D")])     # Reaction 0:   2A + 3B <--> 4C + 5D
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([120, 130, 60, 50]))
+    assert not rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([120.1, 130, 60, 50]))
+    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([80, 70, 140, 150]))
+    assert not rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 100, 100, 100.1]), conc_arr_after=np.array([80, 70, 140, 150]))
 
 
 

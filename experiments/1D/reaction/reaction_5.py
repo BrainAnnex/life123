@@ -17,7 +17,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Dec. 6, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -47,7 +47,7 @@ chem_data = chem(names=["A", "C", "D"])     # NOTE: Diffusion not applicable (ju
 
 
 # Reaction A <-> 2C + D , with 1st-order kinetics for each species
-chem_data.add_reaction(reactants=[("A")], products=[(2, "C") , ("D")],
+chem_data.add_reaction(reactants=[("A")], products=[(2, "C", 1) , ("D")],
                  forward_rate=5., reverse_rate=2.)
 
 bio = BioSim1D(n_bins=1, chem_data=chem_data)

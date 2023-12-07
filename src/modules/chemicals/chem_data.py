@@ -430,6 +430,7 @@ class AllReactions(Diffusion):
         :param name:            Name of the chemical species to add
         :param diffusion_rate:  Floating-point number with the diffusion rate (in water) of this chemical
         :param note:            [OPTIONAL] Note to attach to the chemical
+        :param kwargs:          [OPTIONAL] Any arbitrary named arguments
         :return:                The integer index assigned to the newly-added chemical
         """
         # Validate the diffusion_rate, if present; other arguments get validated by add_chemical()
@@ -458,7 +459,7 @@ class AllReactions(Diffusion):
 
     def add_reaction(self, reactants: Union[int, str, list], products: Union[int, str, list],
                      forward_rate=None, reverse_rate=None,
-                     delta_H=None, delta_S=None, delta_G=None) -> Reaction:
+                     delta_H=None, delta_S=None, delta_G=None) -> int:
         """
         Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
         The involved chemicals must be already registered - use add_chemical() if needed.
@@ -467,11 +468,11 @@ class AllReactions(Diffusion):
               they're assumed to be 1.
               Their full structure is the triplet (stoichiometry coefficient, name, reaction order)
 
-        EXAMPLES of formats for each item of the reactants and products
+        EXAMPLES of formats for each item in the lists of the reactants and products
         (*assuming* that the chemical species with index 5 is called "F"):
                     "F"         gets turned into:   (1, 5, 1)
-                    (3, "F")                        (3, 5, 1)
-                    (3, "F", 2)                     (3, 5, 2)
+                    (2, "F")                        (2, 5, 1)
+                    (2, "F", 2)                     (2, 5, 2)
                     It's equally acceptable to use LISTS in lieu of tuples
 
         :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
@@ -486,9 +487,10 @@ class AllReactions(Diffusion):
         :param delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
         :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
 
-        :return:                Object of type "Reaction"
-                                (note: it also gets appended to the object variable self.reaction_list)
+        :return:                Integer index of the newly-added reaction
+                                (in the object variable self.reaction_list)
         """
+        # TODO: maybe default the reaction rate to be equal to the stoichiometry coefficient by default
         rxn = Reaction(self, reactants, products, forward_rate, reverse_rate,
                        delta_H, delta_S, delta_G)
         self.reaction_list.append(rxn)
@@ -499,7 +501,7 @@ class AllReactions(Diffusion):
         if rxn.enzyme is not None:
             self.active_enzymes.add(rxn.enzyme)       # Add the new entry to a set
 
-        return rxn
+        return len(self.reaction_list) - 1
 
 
 

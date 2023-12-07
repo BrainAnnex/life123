@@ -18,9 +18,9 @@
 #
 # 1st-order kinetics in both directions
 #
-# Based on experiment "1D/reaction/reaction_2"
+# See also the experiment "1D/reaction/reaction_2"
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -50,7 +50,7 @@ chem_data = ChemData(names=["A", "B"])
 
 
 # Reaction A <-> 3B , with 1st-order kinetics in both directions
-chem_data.add_reaction(reactants="A", products=[(3,"B")], forward_rate=5., reverse_rate=2.)
+chem_data.add_reaction(reactants="A", products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
 
 chem_data.describe_reactions()
 
@@ -80,7 +80,7 @@ df
 dynamics.is_in_equilibrium()
 
 # %%
-dynamics.plot_curves(colors=['navy', 'orange'])
+dynamics.plot_history(colors=['navy', 'orange'])
 
 # %%
 

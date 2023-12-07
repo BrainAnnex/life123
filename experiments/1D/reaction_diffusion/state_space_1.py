@@ -16,13 +16,13 @@
 # ### One-bin A <-> 3B reaction, with 1st-order kinetics in both directions, taken to equilibrium
 # ### Examine State Space trajectory, using [A] and [B] as state variables
 #
-# Based on experiment "1D/reaction/reaction_2"
+# Based on experiment `1D/reaction/reaction_2`
 #
 # Diffusion not applicable (just 1 bin).
 #
 # This is the 1D version of the single-compartment reaction by the same name
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Dec. 6, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -53,7 +53,7 @@ chem_data = ChemData(names=["A", "B"])     # NOTE: Diffusion not applicable (jus
 
 
 # Reaction A <-> 3B , with 1st-order kinetics in both directions
-chem_data.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
+chem_data.add_reaction(reactants=["A"], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
 
 bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
@@ -81,6 +81,8 @@ GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 # %%
 # Using smaller steps that in experiment reaction_2, to avoid the initial overshooting
 bio.react(time_step=0.05, n_steps=10, snapshots={"frequency": 1, "sample_bin": 0})
+
+# %%
 bio.describe_state()
 
 # %%

@@ -16,7 +16,7 @@
 # %% [markdown]
 # ## Comparing the reaction `A <-> B` , with and without an enzyme
 #
-# LAST REVISED: Nov. 3, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -68,7 +68,7 @@ dynamics.single_compartment_react(reaction_duration=3.0,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green'], show_intervals=True, title_prefix="WITHOUT enzyme")
+dynamics.plot_history(colors=['darkorange', 'green'], show_intervals=True, title_prefix="WITHOUT enzyme")
 
 # %% [markdown]
 # #### Note how the time steps get automatically adjusted, as needed by the amount of change - including a complete step abort/redo at time=0
@@ -135,7 +135,7 @@ dynamics.single_compartment_react(reaction_duration=0.1,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="WITH enzyme")
+dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="WITH enzyme")
 
 # %%
 dynamics.curve_intersection("A", "B", t_start=0, t_end=0.02)
@@ -145,7 +145,7 @@ dynamics.curve_intersection("A", "B", t_start=0, t_end=0.02)
 dynamics.is_in_equilibrium()
 
 # %% [markdown]
-# ## Thanks to the (abundant) enzyme, the reaction reaches equilibrium roughtly around t=0.02, far sooner than the roughly t=3.5 without enzyme
+# ## Thanks to the (abundant) enzyme, the reaction reaches equilibrium roughly around t=0.02, far sooner than the roughly t=3.5 without enzyme
 # The concentrations of `A` and `B` now become equal (cross-over) at t=0.00246 , rather than t=0.740
 
 # %%

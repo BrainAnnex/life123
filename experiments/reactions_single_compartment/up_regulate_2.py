@@ -22,7 +22,7 @@
 # Invoking [Le Chatelier's principle](https://www.chemguide.co.uk/physical/equilibria/lechatelier.html), it can be seen that, starting from equilibrium, when [U] goes up, so does [D]; and when [D] goes up, so does [X].   
 # Conversely, when [U] goes down, so does [D]; and when [D] goes down, so does [X].     
 #
-# LAST REVISED: Nov. 4, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -52,7 +52,7 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["U", "X", "D"])
 
 # Reaction U <-> 2D , with 1st-order kinetics for all species
-chem_data.add_reaction(reactants="U", products=[(2, "D")],
+chem_data.add_reaction(reactants="U", products=[(2, "D", 1)],
                        forward_rate=8., reverse_rate=2.)
 
 # Reaction X <-> D , with 1st-order kinetics for all species
@@ -99,7 +99,7 @@ dynamics.explain_time_advance()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['red', 'green', 'gray'])
+dynamics.plot_history(colors=['red', 'green', 'gray'])
 
 # %% [markdown]
 # ### <a name="sec_equilibrium"></a>Equilibrium
@@ -132,7 +132,7 @@ dynamics.single_compartment_react(initial_step=0.03, target_end_time=1,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['red', 'green', 'gray'])
+dynamics.plot_history(colors=['red', 'green', 'gray'])
 
 # %% [markdown]
 # ### The (transiently) high value of [U] led to an increase in [X]
@@ -165,7 +165,7 @@ dynamics.single_compartment_react(initial_step=0.03, target_end_time=1.6,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['red', 'green', 'gray'])
+dynamics.plot_history(colors=['red', 'green', 'gray'])
 
 # %% [markdown]
 # ### The (transiently) high value of [U] again led to an increase in [X]
@@ -198,7 +198,7 @@ dynamics.single_compartment_react(initial_step=0.03, target_end_time=2.3,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['red', 'green', 'gray'])
+dynamics.plot_history(colors=['red', 'green', 'gray'])
 
 # %% [markdown]
 # ### The (transiently) LOW value of [U] led to an DECREASE in [X]

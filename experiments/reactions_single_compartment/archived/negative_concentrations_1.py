@@ -19,7 +19,9 @@
 #
 # 1st-order kinetics throughout.   
 #
-# LAST REVISED: June 4, 2023   **THIS IS AN ARCHIVED EXPERIMENT**
+# LAST REVISED: Nov. 21, 2023   **THIS IS AN ARCHIVED EXPERIMENT**  
+# (Note: streamlined graphic functions and other improvements were added in later versions of Life123; but this is an ARCHIVED experiment that depends on an old version,
+# as well as depending on special code changes for illustrative purpose.  So, this experiment is NOT meant to be run - and for the most part it's not reflecting later changes in the software libraries, though some of the function calls got updated.)
 #
 # * [RUN 1 : negative concentrations are detected but otherwise ignored](#negative_concentrations_1_run_1)  
 # (_"DEMONIC"_ in figure below)
@@ -115,12 +117,14 @@ df
 # ## Notice how all concentrations dips into negative values various times!
 
 # %%
-fig0 = dynamics.plot_curves(colors=['green', 'orange', 'blue'], suppress=True)   # Prepare, but don't show, the main plot
+fig0 = dynamics.plot_history(colors=['green', 'orange', 'blue'])   # Prepare, but don't show, the main plot
 
 # Add a second plot, with a horizontal red line at concentration = 0
 fig1 = px.line(x=[0,0.9], y=[0,0], color_discrete_sequence = ['red'])
 
-# Combine the plots, and display them
+# Combine the plots, and display them   
+# (NOTE: streamlined graphic functions were added in later versions, to simplify this kind of plotting; but this is an ARCHIVED experiment -
+#        and it's not reflecting those improvements)
 all_fig = go.Figure(data=fig0.data + fig1.data, layout = fig0.layout)    # Note that the + is concatenating lists
 all_fig.update_layout(title="Changes in concentrations; notice the several dips into negative concentrations (red line)")
 all_fig.show()
@@ -226,7 +230,7 @@ df
 # But all the multitude of other negative dips we had in Run #1 are now gone :)
 
 # %%
-fig0 = dynamics.plot_curves(colors=['green', 'orange', 'blue'], suppress=True)   # Prepare, but don't show, the main plot
+fig0 = dynamics.plot_history(colors=['green', 'orange', 'blue'])   # Prepare, but don't show, the main plot
 
 # Add a second plot, with a horizontal red line at concentration = 0
 fig1 = px.line(x=[0,0.9], y=[0,0], color_discrete_sequence = ['red'])
@@ -299,7 +303,7 @@ df
 # ## Notice how negative concentrations are no longer seen anywhere :)
 
 # %%
-fig0 = dynamics.plot_curves(colors=['green', 'orange', 'blue'], suppress=True)   # Prepare, but don't show, the main plot
+fig0 = dynamics.plot_history(colors=['green', 'orange', 'blue'])   # Prepare, but don't show, the main plot
 
 # Add a second plot, with a horizontal red line at concentration = 0
 fig1 = px.line(x=[0,0.9], y=[0,0], color_discrete_sequence = ['red'])
@@ -350,7 +354,7 @@ df = dynamics.get_history()
 df
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # ## The resolution is still coarse, especially up to t=0.1, but all the instability is gone :)

@@ -22,7 +22,7 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -103,15 +103,15 @@ dynamics.describe_state()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %%
-dynamics.single_compartment_react(initial_step=0.0008, target_end_time=0.03)
+dynamics.single_compartment_react(initial_step=0.0008, target_end_time=0.03, variable_steps=False)
 #dynamics.get_history()
 
 # %%
-dynamics.single_compartment_react(initial_step=0.001, target_end_time=5.)
+dynamics.single_compartment_react(initial_step=0.001, target_end_time=5., variable_steps=False)
 #dynamics.get_history()
 
 # %%
-dynamics.single_compartment_react(initial_step=0.005, target_end_time=8.)
+dynamics.single_compartment_react(initial_step=0.005, target_end_time=8., variable_steps=False)
 
 # %%
 dynamics.get_history()
@@ -126,10 +126,10 @@ dynamics.explain_time_advance()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_curves(chemicals=["A", "B", "C"])
+dynamics.plot_history(chemicals=["A", "B", "C"])
 
 # %% [markdown]
 # ### The plots has 4 distinctive intersections; locate them and save them for later comparisons across repeated runs:
@@ -196,22 +196,22 @@ dynamics.single_compartment_react(initial_step=0.0001, target_end_time=8.0,
 # dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_curves(chemicals=["A", "B", "C"])
+dynamics.plot_history(chemicals=["A", "B", "C"])
 
 # %% [markdown]
-# ### The plots has 4 distinctive intersections; locate and save them:
+# ### The two plots have 4 distinctive intersections among them; locate and save them:
 
 # %%
 run2 = []
 
 # %%
-run2.append(dynamics.curve_intersection(t_start=1., t_end=2., chem1="E_high", chem2="E_low"))
+run2.append(dynamics.curve_intersection(t_start=1., t_end=2., chem1="E_high", chem2="E_low"))  # This can be seen in the 1st plot
 
 # %%
-run2.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, chem1="A", chem2="B"))
+run2.append(dynamics.curve_intersection(t_start=2.31, t_end=2.33, chem1="A", chem2="B"))       # This, and later, can be seen in the 2nd plot
 
 # %%
 run2.append(dynamics.curve_intersection(t_start=3., t_end=4., chem1="A", chem2="C"))
@@ -240,13 +240,13 @@ dynamics.describe_state()
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %% tags=[]
-dynamics.single_compartment_react(initial_step=0.0004, target_end_time=0.03)
+dynamics.single_compartment_react(initial_step=0.0004, target_end_time=0.03, variable_steps=False)
 
 # %%
-dynamics.single_compartment_react(initial_step=0.0005, target_end_time=5.)
+dynamics.single_compartment_react(initial_step=0.0005, target_end_time=5., variable_steps=False)
 
 # %%
-dynamics.single_compartment_react(initial_step=0.0025, target_end_time=8.)
+dynamics.single_compartment_react(initial_step=0.0025, target_end_time=8., variable_steps=False)
 
 # %%
 dynamics.get_history()
@@ -261,13 +261,13 @@ dynamics.explain_time_advance()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_curves(chemicals=["A", "B", "C"])
+dynamics.plot_history(chemicals=["A", "B", "C"])
 
 # %% [markdown]
-# ### The plots has 4 distinctive intersections; locate and save them:
+# ### Again, the two plots have 4 distinctive intersections among them; locate and save them:
 
 # %%
 run3 = []

@@ -20,9 +20,9 @@
 #
 # Single-bin reaction
 #
-# Based on experiment "reactions_single_compartment/down_regulate_2"
+# Based on experiment `reactions_single_compartment/down_regulate_2`
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Dec. 6, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -50,7 +50,7 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["A", "B", "Y"])     # NOTE: Diffusion not applicable (just 1 bin)
 
 # Reaction A + 2 B <-> Y , with 1st-order kinetics for all species
-chem_data.add_reaction(reactants=[("A") , (2, "B")], products=[("Y")],
+chem_data.add_reaction(reactants=[("A") , (2, "B", 1)], products=[("Y")],
                        forward_rate=8., reverse_rate=2.)
 
 chem_data.describe_reactions()

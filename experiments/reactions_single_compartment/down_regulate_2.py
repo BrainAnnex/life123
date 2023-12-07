@@ -21,7 +21,7 @@
 #
 # See also 1D/reactions/down_regulation_1
 #
-# LAST REVISED: Nov. 4, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -51,7 +51,7 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["A", "B", "Y"])
 
 # Reaction A + 2 B <-> Y , with 1st-order kinetics for all species
-chem_data.add_reaction(reactants=[("A") , (2, "B")], products=[("Y")],
+chem_data.add_reaction(reactants=["A" , (2, "B", 1)], products="Y",
                        forward_rate=8., reverse_rate=2.)
 
 chem_data.describe_reactions()
@@ -68,6 +68,8 @@ dynamics = ReactionDynamics(chem_data=chem_data)
 dynamics.set_conc(conc={"A": 5., "B": 100., "Y": 0.},
                   snapshot=True)      # A is scarce, B is plentiful, Y is absent
 dynamics.describe_state()
+
+# %%
 
 # %% [markdown] tags=[]
 # # 1. Take the initial system to equilibrium
@@ -87,8 +89,8 @@ dynamics.single_compartment_react(initial_step=0.0005, reaction_duration=0.015,
 # When A is low, B is also low.
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
-                     title="Changes in concentrations (reaction A + 2 B <-> Y)")
+dynamics.plot_history(colors=['red', 'darkorange', 'green'],
+                      title="Changes in concentrations (reaction A + 2 B <-> Y)")
 
 # %%
 dynamics.get_history()
@@ -123,8 +125,8 @@ dynamics.single_compartment_react(initial_step=0.0005, target_end_time=0.055,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
-                     title="Changes in concentrations (reaction A + 2 B <-> Y)")
+dynamics.plot_history(colors=['red', 'darkorange', 'green'],
+                      title="Changes in concentrations (reaction A + 2 B <-> Y)")
 
 # %% [markdown]
 # **A**, still the limiting reagent, is again stopping the reaction.  
@@ -157,8 +159,8 @@ dynamics.single_compartment_react(initial_step=0.001, target_end_time=0.09,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
-                     title="Changes in concentrations (reaction A + 2 B <-> Y)")
+dynamics.plot_history(colors=['red', 'darkorange', 'green'],
+                      title="Changes in concentrations (reaction A + 2 B <-> Y)")
 
 # %%
 dynamics.get_history()
@@ -187,8 +189,8 @@ dynamics.single_compartment_react(initial_step=0.001, target_end_time=0.16,
 
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'],
-                     title="Changes in concentrations (reaction A + 2 B <-> Y)")
+dynamics.plot_history(colors=['red', 'darkorange', 'green'],
+                      title="Changes in concentrations (reaction A + 2 B <-> Y)")
 
 # %%
 dynamics.get_history()

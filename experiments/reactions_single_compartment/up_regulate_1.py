@@ -21,7 +21,7 @@
 #
 # See also the experiment "1D/reactions/up_regulation_1"
 #
-# LAST REVISED: Nov. 4, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -51,7 +51,7 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["A", "X", "B"])
 
 # Reaction A + X <-> 2B , with 1st-order kinetics for all species
-chem_data.add_reaction(reactants=[("A") , ("X")], products=[(2, "B")],
+chem_data.add_reaction(reactants=["A" , "X"], products=[(2, "B", 1)],
                  forward_rate=8., reverse_rate=2.)
 
 chem_data.describe_reactions()
@@ -85,7 +85,7 @@ dynamics.single_compartment_react(initial_step=0.0005, reaction_duration=0.015,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
+dynamics.plot_history(colors=['red', 'darkorange', 'green'])
 
 # %% [markdown]
 # **A, as the scarse limiting reagent, stops the reaction.  
@@ -124,7 +124,7 @@ dynamics.single_compartment_react(initial_step=0.0005, target_end_time=0.035,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
+dynamics.plot_history(colors=['red', 'darkorange', 'green'])
 
 # %% [markdown]
 # **A**, still the limiting reagent, is again stopping the reaction.  
@@ -159,7 +159,7 @@ dynamics.single_compartment_react(initial_step=0.0005, target_end_time=0.070,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.plot_curves(colors=['red', 'darkorange', 'green'])
+dynamics.plot_history(colors=['red', 'darkorange', 'green'])
 
 # %% [markdown]
 # `A`, again the scarce limiting reagent, stops the reaction yet again.  

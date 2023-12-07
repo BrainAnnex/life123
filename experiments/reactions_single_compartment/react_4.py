@@ -21,7 +21,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -29,9 +29,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.chemicals.chem_data import ChemData as chem
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
-
 from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
@@ -43,31 +41,31 @@ GraphicLog.config(filename=log_file,
                   components=["vue_cytoscape_1"],
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
+# %%
+
+# %% [markdown]
+# # PART 1 - The Simulation
+
 # %% [markdown]
 # # Initialize the System
-# Specify the chemicals and the reactions
+# Specify the chemicals, the reactions, and the initial state
 
 # %% tags=[]
-# Specify the chemicals
-chem_data = chem(names=["A", "C"])
+# Instantiate the simulator and specify the chemicals
+dynamics = ReactionDynamics(names=["A", "C"])
 
 # Reaction 2A <-> C , with 2nd-order kinetics for A, and 1st-order kinetics for C
-chem_data.add_reaction(reactants=[(2, "A", 2)], products=["C"],
-                       forward_rate=3., reverse_rate=2.)   
-# Note: the first 2 in (2, "A", 2) is the stoichiometry coefficient, while the other one is the order
+dynamics.add_reaction(reactants=[(2, "A")], products="C",
+                      forward_rate=3., reverse_rate=2.)   
+# Note: the reaction order for a chemical defaults to its stoichiometry coefficient; 
+#       to specify it explicitly, pass it as 3rd term in tuple:  (2, "A", 2)
 
-chem_data.describe_reactions()
+dynamics.describe_reactions()
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
-graph_data = chem_data.prepare_graph_network()
+graph_data = dynamics.prepare_graph_network()
 GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
-
-# %% [markdown]
-# # Start the simulation
-
-# %%
-dynamics = ReactionDynamics(chem_data=chem_data)
 
 # %%
 # Initial concentrations of all the chemicals, in index order
@@ -85,13 +83,12 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are currently close to the default values... but subject to change; set for repeatability
-dynamics.set_thresholds(norm="norm_A", low=1.0, high=2.0, abort=3.5)
-dynamics.set_thresholds(norm="norm_B", low=0.1, high=0.5, abort=3.0)
-dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5)
-dynamics.set_error_step_factor(0.5)
+# For repeatibility, we avoid the defaults, and instead specify a particular group of preset parameters 
+# applicable to the adaptive time steps.
+# Here we use a "fast" heuristic: advance quickly thru time
+dynamics.use_adaptive_preset(preset="fast")
 
-dynamics.single_compartment_react(initial_step=0.002, reaction_duration=0.04,
+dynamics.single_compartment_react(initial_step=0.002, reaction_duration=0.03,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   variable_steps=True, explain_variable_steps=False)
@@ -103,11 +100,16 @@ dynamics.single_compartment_react(initial_step=0.002, reaction_duration=0.04,
 dynamics.get_history()
 
 # %%
-dynamics.plot_curves(colors=['red', 'green'],
-                     title="Reaction 2A <-> C  (2nd order in A).  Changes in concentrations with time")
+dynamics.plot_history(colors=['red', 'green'],
+                      title="Reaction 2A <-> C  (2nd order in A).  Changes in concentrations with time")
 
 # %% [markdown]
-# ## Note: "A" (now largely depleted) is the limiting reagent
+# ### Note: "A" (now largely depleted) is the limiting reagent
+
+# %%
+
+# %% [markdown]
+# # PART 2 - Analysis and Validation
 
 # %% [markdown]
 # #### Let's take a look at time t=0.002, which in our simulation run had proposed as the first step:
@@ -117,11 +119,11 @@ dynamics.plot_curves(colors=['red', 'green'],
 dynamics.get_history(t=0.002)
 
 # %% [markdown]
-# ### Because of the very large changes happening between t=0 and 0.002, the simulation automatically slowed down and opted to actually take 74 steps in lieu of the 1 step we had proposed.
-# The number of variable steps actually taken can be modulated by changing the "norm thresholds" and "step factors" that we can optionally specify
+# ### Because of the very large changes happening between t=0 and 0.002, the simulation automatically slowed down and opted to actually take 80 steps in lieu of the 1 step we had (optimistically!) proposed  
+# The number of variable steps actually taken can be modulated by changing the preset passed to our earlier call to `use_adaptive_preset()`.  For finer control, advanced users may tweak internal parameters such as "norm thresholds" and "step factors"
 
 # %% [markdown]
-# ### Notice how, later in the simulation, the step sizes get BIGGER than the 0.002 we had originally proposed:
+# ### Notice how, late in the simulation, the step sizes get BIGGER than the 0.002 we had originally proposed:
 
 # %%
 dynamics.explain_time_advance()
@@ -132,7 +134,7 @@ dynamics.explain_time_advance()
 # %%
 # Let's look at the first two arrays of concentrations, from the run's history
 arr0 = dynamics.get_historical_concentrations(0)   # The initial concentrations
-arr1 = dynamics.get_historical_concentrations(1)   # After the first actual step
+arr1 = dynamics.get_historical_concentrations(1)   # After the first actual simulation step
 arr0, arr1
 
 # %%
@@ -142,13 +144,17 @@ dynamics.stoichiometry_checker(rxn_index=0,
                                conc_arr_after = arr1)
 
 # %% [markdown]
-# #### Indeed, it can be easy checked that the drop in [A] is twice the increase in [C], as dictated by the stoichiometry
+# #### Indeed, it can be easy checked that the drop in [A] is twice the increase in [C], as dictated by the stoichiometry.
+# The diagnostic data, enabled by our earlier call to `set_diagnostics()`, makes it convenient to check
 
 # %%
-dynamics.get_diagnostic_rxn_data(rxn_index=0, head=15)    # Easily seen in the diagnostic data
+dynamics.get_diagnostic_rxn_data(rxn_index=0, head=15)
 
 # %% [markdown]
-# ### From the diagnostic data, it can be seen that the first step had several false starts - and was automatically repeatedly shrunk - but finally happened.  `Delta A` indeed equals - 2 * `Delta C`, satisfying the stoichiometry
+# ### From the diagnostic data, it can be seen that the first step had several false starts - and the time was automatically repeatedly shrunk - but finally happened.  `Delta A` indeed equals - 2 * `Delta C`, satisfying the stoichiometry
+
+# %%
+dynamics.stoichiometry_checker_entire_run()
 
 # %% [markdown]
 # ### Check the final equilibrium
@@ -157,15 +163,12 @@ dynamics.get_diagnostic_rxn_data(rxn_index=0, head=15)    # Easily seen in the d
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium()
 
-# %%
-dynamics.stoichiometry_checker_entire_run()
-
 # %% [markdown] tags=[]
 # ## Display the variable time steps
 
 # %%
-dynamics.plot_curves(colors=['red', 'green'], show_intervals=True,
-                     title="Reaction 2A <-> C  (2nd order in A).  Changes in concentrations with time")
+dynamics.plot_history(colors=['red', 'green'], show_intervals=True,
+                      title="Reaction 2A <-> C  (2nd order in A).  Concentrations changes")
 
 # %% [markdown]
 # ### The intersection of the two lines may be found as follows:
@@ -176,13 +179,10 @@ dynamics.curve_intersection('A', 'C', t_start=0, t_end=0.01)
 # %%
 
 # %% [markdown]
-# #### For diagnostic insight, uncomment the following lines:
+# #### For additional diagnostic insight:
+# `norm_A` and `norm_B` are computed quantities that are used to guide the adaptive time steps
 
 # %%
-#dynamics.get_diagnostic_decisions_data()
-
-#dynamics.get_diagnostic_rxn_data(rxn_index=0)
-
-#dynamics.get_diagnostic_conc_data()
+dynamics.get_diagnostic_decisions_data()
 
 # %%

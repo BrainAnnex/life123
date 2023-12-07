@@ -26,7 +26,7 @@
 #
 # Note: numerical errors in the same reactions (with the same initial conditions) is explored in the experiment "large_time_steps_2"
 #
-# LAST REVISED: Nov. 4, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -56,7 +56,7 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["U", "X", "S"])
 
 # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
-chem_data.add_reaction(reactants=[(2, "S")], products="U",
+chem_data.add_reaction(reactants=[(2, "S", 1)], products="U",
                        forward_rate=8., reverse_rate=2.)
 
 # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
@@ -106,7 +106,7 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=1.5,
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # ### Note that [S] is initially 0, and that it builds up thru _reverse_ reactions
@@ -147,7 +147,7 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=3.0,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # ### The (transiently) high value of [U] led to an increase in [X]
@@ -183,7 +183,7 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=4.5,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # ### The (transiently) high value of [U] again led to an increase in [X]
@@ -219,7 +219,7 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=6.,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %% [markdown]
 # ### The (transiently) LOW value of [U] led to an DECREASE in [X]
@@ -227,6 +227,8 @@ dynamics.plot_curves(colors=['green', 'orange', 'blue'])
 # %%
 # Verify that the reaction has reached equilibrium
 dynamics.is_in_equilibrium(explain=False)
+
+# %%
 
 # %% [markdown]
 # **IDEAS TO EXPLORE**:   

@@ -19,7 +19,7 @@
 #
 # Same as `variable_steps_1`, but with fixed steps: a lot of tiny steps - as a proxy for the "exact value"
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Dec. 3, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -49,7 +49,7 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["U", "X", "S"])
 
 # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
-chem_data.add_reaction(reactants=[(2, "S")], products="U",
+chem_data.add_reaction(reactants=[(2, "S", 1)], products="U",
                        forward_rate=8., reverse_rate=2.)
 
 # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
@@ -95,7 +95,7 @@ df.iloc[1850]
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_curves(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %%
 dynamics.curve_intersection("U", "X", t_start=0.3, t_end=0.35)
