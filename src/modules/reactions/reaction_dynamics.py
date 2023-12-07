@@ -35,11 +35,29 @@ class ReactionDynamics:
     In the context of Life123, this may be thought of as a "zero-dimensional system"
     """
 
-    def __init__(self, chem_data=None, names=None):
+    def __init__(self, chem_data=None, names=None, shared=None):
         """
-        :param chem_data:   Object of type "ChemData" (with data about the chemicals and their reactions)
+        Note: at most one of the following arguments can be passed
+        :param chem_data:   [OPTIONAL] Object of type "ChemData" (with data about the chemicals and their reactions)
         :param names:       [OPTIONAL] A single name, or list or tuple of names, of the chemicals
+        :param shared:      [OPTIONAL] Object of type "ReactionDynamics", with which to share the "ChemData" info,
+                                       i.e. the data about the chemicals and their reactions.
+                                       Typically meant for re-using the same chemicals and reactions of a previous simulation
+                                       CAUTION: the shared "ChemData" info is NOT cloned; so, if modified within one
+                                       ReactionDynamics object, the modification will be seen everywhere
         """
+        number_args = 0
+        if chem_data:
+            number_args += 1
+        if names:
+            number_args += 1
+        if shared:
+            number_args += 1
+
+        assert number_args <= 1, \
+            f"ReactionDynamics instantiation: Can only pass at most one of the arguments " \
+            f"`chem_data`, `names` and `share` ({number_args} were passed)"
+
         self.chem_data = chem_data  # Object of type "ChemData" (with data about the chemicals and their reactions,
                                     #                            incl. macromolecules)
 
@@ -85,13 +103,6 @@ class ReactionDynamics:
                                                 #   not to be confused with general aborts based on reaching high threshold
 
 
-        self.reaction_speeds = {}       # TODO: not in active use; possibly obsolete
-                                        # A dictionary, where the keys are reaction indices,
-                                        #   and the values are either "S" (Slow) or "F" (Fast)
-                                        #   EXAMPLE : { 1: "F", 4: "S", 5: "F" , 8: "S" }
-                                        #   Any reaction with a missing entry is regarded as "F" (Fast)
-
-
         # ***  FOR DIAGNOSTICS  ***     TODO: maybe turn all diagnostic data/methods into a separate object
 
         self.verbose_list = []          # A list of integers or strings with the codes of the desired verbose checkpoints
@@ -127,19 +138,17 @@ class ReactionDynamics:
                                         #   Note: entries are always added, even if an interval run is aborted
 
         if names:
-            if chem_data:
-                raise Exception("ReactionDynamics instantiation: Cannot pass both `chem_data` and `names` arguments. "
-                                "If you already have a `chem_data` object, and want to add names to it, use "
-                                "its method add_chemical()")
-            else:
-                self.chem_data = ChemData(names=names)
+            self.chem_data = ChemData(names=names)
+        elif shared:
+            self.chem_data = shared.chem_data
+
 
 
 
 
     #####################################################################################################
 
-    '''                             ~   TO SET/READ SYSTEM DATA   ~                                          '''
+    '''                             ~   TO SET/READ SYSTEM DATA   ~                                   '''
 
     def ________TO_SET_AND_READ_DATA________(DIVIDER):
         pass        # Used to get a better structure view in IDEs

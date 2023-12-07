@@ -21,9 +21,9 @@
 #
 # **Single-bin reaction**
 #
-# Based on experiment "reactions_single_compartment/up_regulate_1"
+# Based on experiment `reactions_single_compartment/up_regulate_1`
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Dec. 6, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -51,7 +51,7 @@ GraphicLog.config(filename=log_file,
 chem_data = ChemData(names=["A", "X", "B"])     # NOTE: Diffusion not applicable (just 1 bin)
 
 # Reaction A + X <-> 2B , with 1st-order kinetics for all species
-chem_data.add_reaction(reactants=[("A") , ("X")], products=[(2, "B")],
+chem_data.add_reaction(reactants=[("A") , ("X")], products=[(2, "B", 1)],
                  forward_rate=8., reverse_rate=2.)
 
 chem_data.describe_reactions()
@@ -198,6 +198,6 @@ fig.show()
 # `X` will soon need to be replenished, if `A` is to continue being the limiting reagent.
 
 # %% [markdown]
-# # For additional exploration, see the experiment "reactions_single_compartment/up_regulate_1"
+# # For additional exploration, see the experiment `reactions_single_compartment/up_regulate_1`
 
 # %%

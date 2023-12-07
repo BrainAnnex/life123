@@ -46,7 +46,6 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.chemicals.chem_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 from src.modules.visualization.plotly_helper import PlotlyHelper
 
@@ -197,7 +196,7 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 # We'll use **constant steps of size 0.0005** , which is 1/4 of the smallest steps (the "substep" size) previously used in the variable-step run
 
 # %%
-dynamics2 = ReactionDynamics(chem_data=dynamics.chem_data)  # Re-using the same chemicals and reactions
+dynamics2 = ReactionDynamics(shared=dynamics)  # Re-use the same chemicals and reactions of the previous simulation
 
 # %% tags=[]
 dynamics2.set_conc([50., 0, 0.], snapshot=True)
@@ -211,7 +210,7 @@ dynamics2.single_compartment_react(initial_step=0.0005, reaction_duration=0.4,
 
 # %%
 dynamics2.plot_history(title="Coupled reactions A <-> B and B <-> C , re-run with CONSTANT STEPS",
-                       colors=['blue', 'red', 'green'], show_intervals=True)
+                       colors=['blue', 'orange', 'green'], show_intervals=True)
 
 # %% [markdown]
 # _(Notice that the vertical steps are now equally spaced - and that there are so many of them that we're only showing some)_

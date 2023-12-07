@@ -13,9 +13,9 @@
 # ---
 
 # %% [markdown]
-# ## A complex (composite) reaction `A <-> C` derived from 2 coupled elementary reactions:  
+# ## A complex (multistep) reaction `A <-> C` derived from 2 coupled elementary reactions:  
 # ## `A <-> B` (fast) and `B <-> C` (slow)  
-# A repeat of experiment `mystery_reaction_2_b`, but with the fast/slow elementary reactions in reverse order.
+# A repeat of experiment `cascade_2_b`, but with the fast/slow elementary reactions in reverse order.
 #
 # In PART 1, a time evolution of [A], [B] and [C] is obtained by simulation  
 # In PART 2, the time functions generated in Part 1 are taken as a _starting point,_ to explore how to model the composite reaction `A <-> C`   
@@ -45,11 +45,11 @@ dynamics = ReactionDynamics(names=["A", "B", "C"])
 
 # Reaction A <-> B (much faster, and with a much larger K)
 dynamics.add_reaction(reactants="A", products="B",
-                       forward_rate=80., reverse_rate=0.1)   # <===== SPEEDS of 2 reactions ARE REVERSED, relative to experiment `mystery_reaction_2_b`
+                       forward_rate=80., reverse_rate=0.1)   # <===== SPEEDS of 2 reactions ARE REVERSED, relative to experiment `cascade_2_b`
 
 # Reaction B <-> C (much slower, and with a much smaller K)
 dynamics.add_reaction(reactants="B", products="C",                     
-                      forward_rate=8., reverse_rate=2.)      # <===== SPEEDS of 2 reactions ARE REVERSED, relative to experiment `mystery_reaction_2_b`
+                      forward_rate=8., reverse_rate=2.)      # <===== SPEEDS of 2 reactions ARE REVERSED, relative to experiment `cascade_2_b`
                                    
 dynamics.describe_reactions()
 
@@ -77,7 +77,7 @@ dynamics.plot_history(colors=['blue', 'orange', 'green'], show_intervals=True)
 dynamics.is_in_equilibrium(tolerance=3)
 
 # %% [markdown]
-# #### A profoundly different plot than we got in experiment `mystery_reaction_2_b`
+# #### A profoundly different plot than we got in experiment `cascade_2_b`
 
 # %%
 
@@ -116,27 +116,27 @@ C_conc = df["C"].to_numpy()
 dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=C_conc, reactant_name="A", product_name="C")
 
 # %% [markdown]
-# ### A terrible fit!  But it looks like we'll do much better if split it into 3 portions, one where A(t) ranges from 0 to about 0.05, one from about 0.05 to 5, and one from about 5 to 50   
+# ### A terrible fit!  But it looks like we'll do much better if split it into 3 portions, one where A(t) ranges from 0 to about 0.04, one from about 0.04 to 5, and one from about 5 to 50   
 #
-# This is a larger numer of splits than we did in experiments `mystery_reaction_2_a` and `mystery_reaction_2_b`
+# This is a larger numer of splits than we did in experiments `cascade_2_a` and `cascade_2_b`
 #
-# Let's visually locate at what times those values occur
+# Let's visually locate at what times those [A] values occur:
 
 # %%
-dynamics.plot_history(chemicals='A', colors='blue', xrange=[0, 0.1], 
-                      vertical_lines=[0.028, 0.08])
+dynamics.plot_history(chemicals='A', colors='blue', xrange=[0, 0.15], 
+                      vertical_lines=[0.028, 0.1], title="[A] as a function of time")
 
 # %%
 dynamics.get_history(columns=["SYSTEM TIME", "A"], t_start=0.02, t_end=0.03) 
 
 # %% [markdown]
-# [A] assumes the value 5 around t=0.028
+# [A] assumes the value 5 around **t=0.028**
 
 # %%
 dynamics.get_history(columns=["SYSTEM TIME", "A"], t_start=0.09, t_end=0.11) 
 
 # %% [markdown]
-# [A] assumes the value 0.05 around t=0.096
+# [A] assumes the value 0.05 around **t=0.1**
 
 # %% [markdown]
 # ### Let's split the `A_conc` and `C_conc` arrays we extracted earlier (with the entire time evolution of, respectively, [A] and [C]) into 3 parts:  
@@ -158,18 +158,18 @@ t_arr_mid = t_arr[79:129]
 t_arr_late = t_arr[129:]
 
 # %% [markdown]
-# ### Let's start with the EARLY region, when t < 0.028
+# ### I. Let's start with the EARLY region, when t < 0.028
 
 # %%
 dynamics.estimate_rate_constants(t=t_arr_early, reactant_conc=A_conc_early, product_conc=C_conc_early, 
                                  reactant_name="A", product_name="C")
 
 # %% [markdown]
-# Just as we saw in experiment `mystery_reaction_2_b`, trying to fit an elementary reaction to that region leads to a **negative** reverse rate!  
+# Just as we saw in experiment `cascade_2_b`, trying to fit an elementary reaction to that region leads to a **negative** reverse rate constant!  
 # We won't discuss this part any further.
 
 # %% [markdown]
-# ### Let's now do the MID region (not seen in earlier experiments in this series), when 0.028 < t < 0.096
+# ### II. Let's now consider the MID region (not seen in earlier experiments in this series), when 0.028 < t < 0.1
 
 # %%
 dynamics.estimate_rate_constants(t=t_arr_mid, reactant_conc=A_conc_mid, product_conc=C_conc_mid, 
@@ -180,32 +180,36 @@ dynamics.estimate_rate_constants(t=t_arr_mid, reactant_conc=A_conc_mid, product_
 # We won't discuss this part any further.
 
 # %% [markdown]
-# ### And now let's consider the LATE region, when t > 0.096
+# ### III. And now let's consider the LATE region, when t > 0.1
 
 # %%
 dynamics.estimate_rate_constants(t=t_arr_late, reactant_conc=A_conc_late, product_conc=C_conc_late, 
                                  reactant_name="A", product_name="C")
 
 # %% [markdown]
-# This time we have an adequate linear fit AND meaningful rate constants : kF of about 5.5 and kR of about 1.6.  Do those numbers sound familiar?  A definite resemblance to the kF=8, kR=2 of the SLOWER elementary reaction `B <-> C`!  
+# This time we have an adequate linear fit AND positive rate constants, but a **huge value of kF** relative to that of any of the elementary reactions!  
 #
-# #### The slower `A <-> B` reaction dominates the kinetics from about t=0.096  
-#
-# Let's see the graph again:
+# Let's see the time evolution again, but just for `A` and `C`:
 
 # %%
-dynamics.plot_history(colors=['blue', 'orange', 'green'], xrange=[0, 0.25], 
-                      vertical_lines=[0.028, 0.096], title='A <-> B (fast) and B <-> C (slow)')
+dynamics.plot_history(chemicals=['A', 'C'], colors=['blue',  'green'], xrange=[0, 0.25], 
+                      vertical_lines=[0.028, 0.1], title='A <-> C compound reaction')
 
 # %% [markdown]
-# This is the same general result we got in experiment `mystery_reaction_2_b`, where the slow and the fast elementary reactions were reversed.  
+# For t > 0.1, the product [C] appears to have a lot of response to nearly non-existing changes in [A] !  
+#
+# That doesn't seem like a good fit to an elementary reaction...
 
 # %% [markdown]
-# #### However, this time, the modality of modeling the compound reaction `A <-> C` as an elementary reaction does not apply until much later in time, until `A` has largely turned into `B` from the fast `A <-> B` reaction
+# #### This time, modeling the compound reaction `A <-> C` as an elementary reaction is not a good fit at any time
 
 # %% [markdown]
 # ### EXPANDED conclusion :  
-# #### While it's a well-known Chemistry notion that the slower reaction determines the overall rate, we saw in this experiment and in the previous two in the series, that this is TRUE ONLY AFTER SOME TIME - especially if the 2 elementary reactions are relatively similar, OR if they're dissimilar but first reaction is the fast one.  
-# #### If we were interested in early transients (for example, if diffusion quickly intervened), we could NOT rely on that principle.
+
+# %% [markdown]
+# ### While it's a well-known Chemistry notion that the slower reaction is the rate-determining step in a chain, we saw in this experiment that the complex reaction CANNOT always be modeled, not even roughly, with the rate constants of the slower reaction.  
+
+# %% [markdown]
+# We saw this in a scenario where the slower reaction is the later one.
 
 # %%

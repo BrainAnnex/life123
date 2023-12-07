@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## A complex (composite) reaction `A <-> C` derived from 2 coupled elementary reactions: 
+# ## A complex (multistep) reaction `A <-> C` derived from 2 coupled elementary reactions: 
 # ## `A <-> B` and `B <-> C`  
 # We are given the time evolution of the complex reaction,  
 # and want to determine whether it can be modeled as an elementary reaction.  
@@ -119,8 +119,9 @@ dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=C_c
 
 # %% [markdown]
 # ### A glance at the above diagram reveals much-better linear fits, if split into 2 portions, one where A(t) ranges from 0 to about 24, and one from about 24 to 50   
-# Indeed, revisiting the early portion of the time plot from Part 1, one can see an inflection in the [C] green curve roughly around time t=0.1, which is when [A] is around 24 (blue).  That's shortly after the peak of the mystery intermediate B (red)  
-# We'll pick time t=0.1 as the divider between the 2 domains of the `A <-> C` time evolution that we want to model. 
+# Indeed, revisiting the early portion of the time plot from Part 1, one can see an inflection in the [C] green curve roughly around time t=0.1, which is when [A] is around 24 (blue).  That's shortly after the peak of the mystery intermediate B (orange).    
+#
+# We'll pick time **t=0.1** as the divider between the 2 domains of the `A <-> C` time evolution that we want to model. 
 
 # %%
 dynamics.plot_history(colors=['blue', 'orange', 'green'], xrange=[0, 0.4], 
@@ -157,14 +158,14 @@ t_arr_early = t_arr[:48]
 t_arr_late = t_arr[48:]
 
 # %% [markdown]
-# ### Let's start with the EARLY region, when t < 0.1
+# ### I. Let's start with the EARLY region, when t < 0.1
 
 # %%
 dynamics.estimate_rate_constants(t=t_arr_early, reactant_conc=A_conc_early, product_conc=C_conc_early, 
                                  reactant_name="A", product_name="C")
 
 # %% [markdown]
-# Trying to fit an elementary reaction to that region leads to a **negative** reverse rate!  
+# Trying to fit an elementary reaction to that region leads to a **negative** reverse rate constant!  
 # It's not surprise that an elementary reaction is a good fit, if one observes what happens to the time evolution of the concentrations.  Repeating the earlier plot, but only showing `A` and `C` (i.e. hiding the intermediary `B`):
 
 # %%
@@ -173,11 +174,11 @@ dynamics.plot_history(colors=['blue', 'green'], xrange=[0, 0.4], vertical_lines=
 
 # %% [markdown]
 # In the zone to the left of the vertical dashed line:  
-# when the reactant `A` is plentiful, the rate of change (gradient) product `C` is low - and vice versa.  
+# when the reactant `A` is plentiful, the rate of change (gradient) of the product `C` is low - and vice versa.  
 # Does that look like an elementary reaction in its kinetics?  Nope!
 
 # %% [markdown]
-# ### And now let's consider the LATE region, when t > 0.1
+# ### II. And now let's consider the LATE region, when t > 0.1
 
 # %%
 dynamics.estimate_rate_constants(t=t_arr_late, reactant_conc=A_conc_late, product_conc=C_conc_late, 
@@ -196,5 +197,19 @@ dynamics.plot_history(colors=['blue', 'orange', 'green'], xrange=[0, 0.4],
 
 # %% [markdown]
 # A possible conclusion to draw is that, in this case, the earlier part of the complex (compound) reaction `A <-> C` cannot be modeled by an elementary reaction, while the later part can indeed be modeled by a 1st order elementary reaction, with kinetics similar to the slower `A <-> B` reaction
+
+# %% [markdown]
+# **The intuition:** imagine `A <-> B <-> C` as a supply line.  
+# `A <-> B` is slow, but the moment something arrives in B, it's very quickly moved to C.  
+# The slow link (`A <-> B`) largely determines the kinetics of the supply line.
+
+# %% [markdown]
+# ### While it's a well-known Chemistry notion that the slower reaction is the rate-determining step in a chain, we saw in this experiment  that the complex reaction could be roughly modeled with the rate constants of the slower reaction only after some time.  
+
+# %% [markdown]
+# If we were interested in early transients (for example, if diffusion quickly intervened), we couldn't use that model.
+
+# %% [markdown]
+# #### In the continuation experiment, `cascade_2_b`, we explore the scenario where the 2 elementary reactions are much more different from each other
 
 # %%

@@ -13,9 +13,9 @@
 # ---
 
 # %% [markdown]
-# ## A complex (composite) reaction `A <-> C` derived from 2 coupled elementary reactions:   
+# ## A complex (multistep) reaction `A <-> C` derived from 2 coupled elementary reactions:   
 # ## `A <-> B` (slow) and `B <-> C` (fast)  
-# A repeat of experiment `mystery_reaction_2_a`, with more DISSIMILAR elementary reactions.
+# A repeat of experiment `cascade_2_a`, with more DISSIMILAR elementary reactions.
 #
 # In PART 1, a time evolution of [A], [B] and [C] is obtained by simulation   
 # In PART 2, the time functions generated in Part 1 are taken as a _starting point,_ to explore how to model the composite reaction `A <-> C`   
@@ -49,7 +49,7 @@ dynamics.add_reaction(reactants="A", products="B",
 
 # Reaction B <-> C (much faster, and with a much larger K)
 dynamics.add_reaction(reactants="B", products="C",
-                      forward_rate=80., reverse_rate=0.1)   # <===== THIS IS THE KEY DIFFERENCE FROM THE EARLIER EXPERIMENT `mystery_reaction_2_a`
+                      forward_rate=80., reverse_rate=0.1)   # <===== THIS IS THE KEY DIFFERENCE FROM THE EARLIER EXPERIMENT `cascade_2_a`
                                    
 dynamics.describe_reactions()
 
@@ -116,11 +116,15 @@ C_conc = df["C"].to_numpy()
 dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=C_conc, reactant_name="A", product_name="C")
 
 # %% [markdown]
-# ### A glance at the above diagram reveals much-better linear fits, if split into 2 portions, one where A(t) ranges from 0 to about 40, and one from about 40 to 50   
-# Indeed, revisiting the early portion of the time plot from Part 1, one can see an inflection in the [C] green curve roughly around time t=0.028, which is when [A] is around 40 (blue).  That's shortly after the peak of the mystery intermediate B (red)  
-# We'll pick time t=0.028 as the divider between the 2 domains of the `A <-> C` time evolution that we want to model. 
+# ### The least-square fit is awful : the complex reaction `A <-> C` doesn't seem to be amenable to being modeled as a simple reaction with some suitable rate constants
+
+# %% [markdown]
+# ### But it looks like we'll do much better if splitting into 2 portions, one where A(t) ranges from 0 to about 40, and one from about 40 to 50   
+# Indeed, revisiting the early portion of the time plot from Part 1, one can see an inflection in the [C] green curve roughly around time t=0.028, which is when [A] is around 40 (blue).  That's around the peak of the mystery intermediate B (orange).
 #
-# Note that this is a much smaller time than we saw in experiment `mystery_reaction_2_a`
+# We'll pick time **t=0.028** as the divider between the 2 domains of the `A <-> C` time evolution that we want to model. 
+#
+# Note that this is a much smaller time than we saw in experiment `cascade_2_a`
 
 # %%
 dynamics.plot_history(colors=['blue', 'orange', 'green'], xrange=[0, 0.4], 
@@ -138,8 +142,6 @@ dynamics.get_history(t=0.028)
 # 2) points 19-end
 
 # %%
-
-# %%
 A_conc_early = A_conc[:20]
 A_conc_late = A_conc[20:]
 
@@ -150,18 +152,18 @@ t_arr_early = t_arr[:20]
 t_arr_late = t_arr[20:]
 
 # %% [markdown]
-# ### Let's start with the EARLY region, when t < 0.028
+# ### I. Let's start with the EARLY region, when t < 0.028
 
 # %%
 dynamics.estimate_rate_constants(t=t_arr_early, reactant_conc=A_conc_early, product_conc=C_conc_early, 
                                  reactant_name="A", product_name="C")
 
 # %% [markdown]
-# Just as we saw in experiment `mystery_reaction_2_a`, trying to fit an elementary reaction to that region leads to a **negative** reverse rate!  
+# Just as we saw in experiment `cascade_2_a`, trying to fit an elementary reaction to that region leads to a **negative** reverse rate constant!   
 # This time, we won't discuss this part any further.
 
 # %% [markdown]
-# ### And now let's consider the LATE region, when t > 0.028
+# ### II. And now let's consider the LATE region, when t > 0.028
 
 # %%
 dynamics.estimate_rate_constants(t=t_arr_late, reactant_conc=A_conc_late, product_conc=C_conc_late, 
@@ -170,7 +172,7 @@ dynamics.estimate_rate_constants(t=t_arr_late, reactant_conc=A_conc_late, produc
 # %% [markdown]
 # This time we have an adequate linear fit AND meaningful rate constants : kF of about 8 and kR of about 0.  Do those numbers sound familiar?  A definite resemblance to the kF=8, kR=2 of the SLOWER elementary reaction `A <-> B`!  
 #
-# #### The slower `A <-> B` reaction dominates the kinetics from about t=0.028  
+# #### The slower `A <-> B` reaction dominates the kinetics from about t=0.028 on    
 #
 # Let's see the graph again:
 
@@ -179,14 +181,15 @@ dynamics.plot_history(colors=['blue', 'orange', 'green'], xrange=[0, 0.4],
                       vertical_lines=[0.028])
 
 # %% [markdown]
-# Just as we concluded in experiment `mystery_reaction_2_a`, the earlier part of the complex (compound) reaction `A <-> C` cannot be modeled by an elementary reaction, while the later part can indeed be modeled by a 1st order elementary reaction, with kinetics similar to the `B <-> C` reaction.  This time, with a greater disparity between the two elementary reaction, the transition happens much sooner.
+# Just as we concluded in experiment `cascade_2_a`, the earlier part of the complex (compound) reaction `A <-> C` cannot be modeled by an elementary reaction, while the later part can indeed be modeled by a 1st order elementary reaction, with kinetics similar to the slower `A <-> B` reaction.  This time, with a greater disparity between the two elementary reaction, the transition happens much sooner.
 
 # %% [markdown]
-# **The intuition:** imagine `A <-> B <-> C` as a supply line.  `A <-> B` is slow, but the moment something arrives in B, it's very quickly moved to C.  
-# The `A <-> B` slow link largely determines the kinetic of the supply line.
+# ### While it's a well-known Chemistry notion that the slower reaction is the rate-determining step in a chain, we saw in this experiment, and in the previous one, that the complex reaction could be roughly modeled with the rate constants of the slower reaction only after some time - especially if the 2 elementary reactions are relatively similar (as in the previous experiment).  
 
 # %% [markdown]
-# ### While it's a well-known Chemistry notion that the slower reaction determines the overall rate, we saw in this experiment and in the previous one, that this is true only after some time - especially if the 2 elementary reactions are relatively similar.  
-# #### If we were interested in early transients (for example, if diffusion quickly intervened), we could NOT rely on that principle.
+# If we were interested in early transients (for example, if diffusion quickly intervened), we couldn't use that model.
+
+# %% [markdown]
+# #### In the continuation experiment, `cascade_2_c`, we explore the scenario where the 2 elementary reactions are reversed in their relative speeds
 
 # %%

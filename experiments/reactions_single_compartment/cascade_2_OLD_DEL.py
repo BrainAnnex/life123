@@ -108,7 +108,7 @@ dynamics.single_compartment_react(initial_step=0.01, reaction_duration=0.5,
 
 # %%
 dynamics.plot_history(title="Coupled reactions A <-> B and B <-> C",
-                      colors=['blue', 'red', 'green'], show_intervals=True)
+                      colors=['blue', 'orange', 'green'], show_intervals=True)
 
 # %%
 
@@ -158,7 +158,7 @@ df = dynamics.get_history(columns = ["SYSTEM TIME", "A", "C"])
 df
 
 # %%
-t = df["SYSTEM TIME"].to_numpy()   # The independent variable : Time
+t_arr = df["SYSTEM TIME"].to_numpy()   # The independent variable : Time
 
 # %%
 A_conc = df["A"].to_numpy()
@@ -171,10 +171,10 @@ C_conc = df["C"].to_numpy()
 
 # %%
 # The rate of change of [C] with time
-Deriv_C = np.gradient(C_conc, t, edge_order=2)
+Deriv_C = np.gradient(C_conc, t_arr, edge_order=2)
 
 # %%
-PlotlyHelper.plot_curves(x=t, y=Deriv_C, title="d/dt C(t) as a function of t", xlabel="t", ylabel="d/dt C(t)", colors='green')
+PlotlyHelper.plot_curves(x=t_arr, y=Deriv_C, title="d/dt C(t) as a function of t", xlabel="t", ylabel="d/dt C(t)", colors='green')
 
 # %%
 PlotlyHelper.plot_curves(x=C_conc, y=Deriv_C, title="d/dt C(t) as a function of C(t)", xlabel="C(t)", ylabel="d/dt C(t)", colors='mediumspringgreen')
@@ -184,10 +184,10 @@ PlotlyHelper.plot_curves(x=C_conc, y=Deriv_C, title="d/dt C(t) as a function of 
 
 # %%
 # The rate of change of [C] with time
-Deriv_A = np.gradient(A_conc, t, edge_order=2)
+Deriv_A = np.gradient(A_conc, t_arr, edge_order=2)
 
 # %%
-PlotlyHelper.plot_curves(x=t, y=Deriv_A, title="d/dt A(t) as a function of t", xlabel="t", ylabel="d/dt A(t)", colors='blue')
+PlotlyHelper.plot_curves(x=t_arr, y=Deriv_A, title="d/dt A(t) as a function of t", xlabel="t", ylabel="d/dt A(t)", colors='blue')
 
 # %%
 PlotlyHelper.plot_curves(x=A_conc, y=Deriv_A, title="d/dt A(t) as a function of A(t)", xlabel="A(t)", ylabel="d/dt A(t)", colors='aqua')
@@ -218,5 +218,59 @@ a, b
 PlotlyHelper.plot_curves(x=A_conc, y=[Deriv_A , a + b*A_conc], title="d/dt A(t) as a function of A(t), and its least-square fit", 
                          xlabel="A(t)", ylabel="d/dt A(t)", curve_labels=["Given data", "Least square fit"], legend_title="Comparison with LSF",
                          colors=['aqua', 'red'])
+
+# %%
+
+# %%
+
+# %%
+dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=C_conc, reactant_name="A", product_name="C")
+
+# %%
+df = dynamics.get_history(columns=["SYSTEM TIME", "A", "C", "caption"])    # We're NOT given the intermediary B
+df
+
+# %%
+# A : [0 - 5] , [5 - 13] , [13, 50]
+
+# %%
+dynamics.get_history(columns=["SYSTEM TIME", "A"], t_start=0.02, t_end=0.03) 
+
+# %%
+dynamics.get_history(columns=["SYSTEM TIME", "A"], t_start=0.05, t_end=0.07) 
+
+# %%
+A_conc_early = A_conc[:58]
+A_conc_mid = A_conc[58:80]
+A_conc_late = A_conc[80:]
+
+C_conc_early = C_conc[:58]
+C_conc_mid = C_conc[58:80]
+C_conc_late = C_conc[80:]
+
+t_arr_early = t_arr[:58]
+t_arr_mid = t_arr[58:80]
+t_arr_late = t_arr[80:]
+
+# %%
+dynamics.estimate_rate_constants(t=t_arr_late, reactant_conc=A_conc_late, product_conc=C_conc_late, 
+                                 reactant_name="A", product_name="C")
+
+# %%
+A_conc_early = A_conc[:58]
+A_conc_mid = A_conc[58:80]
+A_conc_late = A_conc[80:]
+
+C_conc_early = C_conc[:58]
+C_conc_mid = C_conc[58:80]
+C_conc_late = C_conc[80:]
+
+t_arr_early = t_arr[:58]
+t_arr_mid = t_arr[58:80]
+t_arr_late = t_arr[80:]
+
+# %%
+dynamics.estimate_rate_constants(t=t_arr_late, reactant_conc=A_conc_late, product_conc=C_conc_late, 
+                                 reactant_name="A", product_name="C")
 
 # %%

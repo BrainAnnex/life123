@@ -17,9 +17,11 @@
 # ### for the reaction `A <-> B`,
 # with 1st-order kinetics in both directions, taken to equilibrium
 #
-# This is a continuation of the experiments _"react_2_a"_ (fixed time steps) and  _"react_2_b"_ (adaptive variable time steps)
+# This is a continuation of the experiments `react_2_a` (fixed time steps) and  `react_2_b` (adaptive variable time steps)
 #
-# LAST REVISED: Dec. 3, 2023
+# **Background**: please see experiments `react_2_a` and `react_2_b`   
+#
+# LAST REVISED: Dec. 6, 2023
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -100,7 +102,7 @@ dynamics_variable.plot_history(colors=['blue', 'orange'], show_intervals=True)
 # The fixed time step is chosen to attain the same total number of data points as obtained with the variable time steps of part 1
 
 # %%
-dynamics_fixed = ReactionDynamics(chem_data=dynamics_variable.chem_data)   # Re-using same chemicals and reactions of part 1
+dynamics_fixed = ReactionDynamics(shared=dynamics_variable)   # Re-use same chemicals and reactions of part 1
 
 # %%
 # Initial concentrations of all the chemicals, in their index order
@@ -180,7 +182,7 @@ PlotlyHelper.combine_plots(fig_list=[fig_fixed, fig_variable, fig_exact],
 
 # %%
 # A coarser version of the variable-step simulation of Part 1
-dynamics_variable_new = ReactionDynamics(chem_data=dynamics_variable.chem_data)   # Re-using same chemicals and reactions of part 1
+dynamics_variable_new = ReactionDynamics(shared=dynamics_variable)   # Re-use same chemicals and reactions of part 2
 
 dynamics_variable_new.set_conc([10., 50.])
 

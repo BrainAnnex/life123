@@ -18,7 +18,7 @@
 #
 # Diffusion not applicable (just 1 bin)
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: Dec. 6, 2023
 #
 # * [First Step](#reaction_2_sec_2_first_step)
 # * [Numerous more steps](#reaction_2_sec_2)
@@ -50,7 +50,7 @@ GraphicLog.config(filename=log_file,
 chem_data = chem(names=["A", "B"])     # NOTE: Diffusion not applicable (just 1 bin)
 
 # Reaction A <-> 3B , with 1st-order kinetics in both directions
-chem_data.add_reaction(reactants=["A"], products=[(3,"B")], forward_rate=5., reverse_rate=2.)
+chem_data.add_reaction(reactants=["A"], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
 
 bio = BioSim1D(n_bins=1, chem_data=chem_data)
 

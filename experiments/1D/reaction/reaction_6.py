@@ -48,7 +48,7 @@ chem_data = chem(names=["A", "B", "C", "D"])     # NOTE: Diffusion not applicabl
 # Specify the reaction
 
 # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
-chem_data.add_reaction(reactants=[(2,"A") , (5,"B")], products=[(4,"C") , (3,"D")],
+chem_data.add_reaction(reactants=[(2,"A",1) , (5,"B",1)], products=[(4,"C",1) , (3,"D",1)],
                        forward_rate=5., reverse_rate=2.)
 
 bio = BioSim1D(n_bins=1, chem_data=chem_data)
