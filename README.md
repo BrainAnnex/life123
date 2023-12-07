@@ -1,4 +1,4 @@
-### BETA 30 (v0.30.0) IN_PROGRESS
+### BETA 30 (v0.30.0)
 
 
 
