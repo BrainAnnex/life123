@@ -14,7 +14,8 @@
 
 # %% [markdown]
 # ## A simple `A <-> B` reaction whose rate constants are to be estimated 
-# ## from a given time evolution of [A] and [B] (values on a *variable-time* grid.)
+# ## from a given time evolution of [A] and [B]  
+# ### (values given on a *variable-time* grid.)
 #
 # Assume the reaction is known to be 1st order (won't verify that.)  
 #

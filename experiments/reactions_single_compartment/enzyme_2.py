@@ -14,7 +14,7 @@
 # ---
 
 # %% [markdown]
-# ## Coupled pair of reactions: `A <-> B` , and  `A` + `E` <-> `B` + `E`
+# ## Coupled pair of reactions: `A <-> B` , and  `A + E <-> B + E`
 # A direct reaction and the same reaction, catalyzed
 # ### Enzyme `E` initially zero, and then suddenly added mid-reaction
 #

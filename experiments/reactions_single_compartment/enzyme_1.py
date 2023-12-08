@@ -14,7 +14,7 @@
 # ---
 
 # %% [markdown]
-# ## Comparing the reaction `A <-> B` , with and without an enzyme
+# ## Comparing the dynamics of the reaction `A <-> B` , with and without an enzyme
 #
 # LAST REVISED: Dec. 3, 2023
 

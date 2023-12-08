@@ -14,9 +14,9 @@
 # ---
 
 # %% [markdown]
-# ## Coupled pair of reactions: `S <-> P` , and  `S` + `E` <-> `P` + `E`
+# ## Coupled pair of reactions: `S <-> P` , and  `S + E <-> P + E`
 # A direct reaction and the same reaction, catalyzed
-# ### Re-run from same initial concentrations of S ("Substrate") and P ("Product") for various concentations of the enzyme `E`: from zero to hugely abundant
+# ### Re-run from same initial concentrations of S ("Substrate") and P ("Product"), for various concentations of the enzyme `E`: from zero to hugely abundant
 #
 # LAST REVISED: Dec. 3, 2023
 
