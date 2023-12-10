@@ -461,19 +461,23 @@ class AllReactions(Diffusion):
                      forward_rate=None, reverse_rate=None,
                      delta_H=None, delta_S=None, delta_G=None) -> int:
         """
-        Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
-        The involved chemicals must be already registered - use add_chemical() if needed.
+        Register a new SINGLE chemical reaction,
+        optionally including its kinetic and/or thermodynamic data.
+        All the involved chemicals must be already registered - use add_chemical() if needed.
 
-        NOTE: in the reactants and products, if the stoichiometry and/or reaction order aren't specified,
+        NOTE: in the reactants and products, if the stoichiometry coefficients aren't specified,
               they're assumed to be 1.
-              Their full structure is the triplet (stoichiometry coefficient, name, reaction order)
+              The reaction orders, if not specified, are assumed to be equal to their corresponding
+              stoichiometry coefficients.
 
-        EXAMPLES of formats for each item in the lists of the reactants and products
-        (*assuming* that the chemical species with index 5 is called "F"):
-                    "F"         gets turned into:   (1, 5, 1)
-                    (2, "F")                        (2, 5, 1)
-                    (2, "F", 2)                     (2, 5, 2)
-                    It's equally acceptable to use LISTS in lieu of tuples
+              The full structure of each term in the list of reactants and of products
+              is the triplet:  (stoichiometry coefficient, name, reaction order)
+
+              EXAMPLES of formats to use for each term in the lists of the reactants and of the products:
+                "F"         is taken to mean (1, "F", 1) - default stoichiometry and reaction order
+                (2, "F")    is taken to mean (2, "F", 2) - stoichiometry coefficient used as default for reaction order
+                (2, "F", 1) means stoichiometry coefficient 2 and reaction order 1 - no defaults invoked
+              It's equally acceptable to use LISTS in lieu of tuples for the pair or triplets
 
         :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
                                     or simplified terms in various formats; for details, see above.
@@ -488,9 +492,8 @@ class AllReactions(Diffusion):
         :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
 
         :return:                Integer index of the newly-added reaction
-                                (in the object variable self.reaction_list)
+                                 (in the object variable self.reaction_list)
         """
-        # TODO: maybe default the reaction rate to be equal to the stoichiometry coefficient by default
         rxn = Reaction(self, reactants, products, forward_rate, reverse_rate,
                        delta_H, delta_S, delta_G)
         self.reaction_list.append(rxn)

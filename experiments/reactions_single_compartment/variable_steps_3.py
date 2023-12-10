@@ -37,7 +37,6 @@ from src.modules.chemicals.chem_data import ChemData as chem
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
-from src.modules.visualization.graphic_log import GraphicLog
 
 # %%
 
@@ -80,8 +79,8 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0,
                                   variable_steps=True, explain_variable_steps=True)
 
 # %% [markdown]
-# ### Compare the above printout with its counterpart from the experiment `variable_steps_1`
-# Notice the extra lines here about _"Restricting adaptive time step analysis to 3 chemicals only"_
+# ## Compare the above printout with its counterpart from the experiment `variable_steps_1`
+# Notice the extra lines we have this time, saying  _"Restricting adaptive time step analysis to 3 chemicals only"_
 
 # %%
 dynamics.get_history()
@@ -145,8 +144,8 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0,
                                   variable_steps=True, explain_variable_steps=True)
 
 # %% [markdown]
-# ### Compare the above printout with its counterpart from the experiment `variable_steps_1`
-# Notice the extra lines here about _"Restricting adaptive time step analysis to 3 chemicals only"_
+# ## Compare the above printout with its counterpart from the experiment `variable_steps_1`
+# Notice the extra lines we have this time, saying  _"Restricting adaptive time step analysis to 3 chemicals only"_
 
 # %%
 dynamics.get_history()

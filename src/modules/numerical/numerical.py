@@ -587,7 +587,7 @@ class Numerical:
         :param order:           Order of the derivative (by default 1st derivative, i.e. gradient)
         :return:                A floating-point value
         """
-        c = cls._weights(z=z, x=window_x_arr, m=order)
+        c = cls._finite_diff_weights(z=z, x=window_x_arr, m=order)
         col = c[:, 1]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
         #print("col: ", col)
         #print("window_f_arr: ", window_f_arr)
@@ -597,7 +597,7 @@ class Numerical:
 
 
     @classmethod
-    def _weights(cls, z, x, m) -> np.ndarray:
+    def _finite_diff_weights(cls, z, x, m) -> np.ndarray:
         """
         Based on B. Fornberg, "Calculation of Weights in Finite Difference Formulas", 1998
         (https://epubs.siam.org/doi/abs/10.1137/S0036144596322507)

@@ -441,7 +441,7 @@ def test_weights():
         # just evaluating the first column (meant for interpolations,
         # and not affected by computations of higher derivatives)
         for i, z in enumerate(x_values):
-            c = num._weights(z=z, x=x_values, m=m)
+            c = num._finite_diff_weights(z=z, x=x_values, m=m)
             #print(c)
             assert c.shape == (size, m+1)
             col = c[:, 0]       # Extract first column (k = 0, to be used for interpolations)
@@ -459,7 +459,7 @@ def test_weights_2():
     # as well at some extra values
     extra_values = [-2.5, 0, 2.0, 8., 14.]
     for z in np.concatenate([x_values, extra_values]):
-        c = num._weights(z=z, x=x_values, m=m)   # A matrix containing weights to estimate
+        c = num._finite_diff_weights(z=z, x=x_values, m=m)   # A matrix containing weights to estimate
                                                 # the first derivative of y at x = z
         assert c.shape == (size, m+1)
         col = c[:, m]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
@@ -471,7 +471,7 @@ def test_weights_2():
     # We'll be exploring first derivatives at x equal to any of the grid points,
     # as well at some extra values
     for z in np.concatenate([x_values, extra_values]):
-        c = num._weights(z=z, x=x_values, m=m)   # A matrix containing weights to estimate
+        c = num._finite_diff_weights(z=z, x=x_values, m=m)   # A matrix containing weights to estimate
                                                 # the first derivative of y at x = z
         assert c.shape == (size, m+1)
         col = c[:, m]       # Extract 2nd column (k = 1, to be used for 2nd derivatives)
@@ -490,7 +490,7 @@ def test_weights_3():
     # as well at some extra values
     extra_values = [-2.5, 0, 2.0, 8., 14.]
     for z in np.concatenate([x_values, extra_values]):
-        c = num._weights(z=z, x=x_values, m=m)   # A matrix containing weights to estimate
+        c = num._finite_diff_weights(z=z, x=x_values, m=m)   # A matrix containing weights to estimate
                                                 # the first derivative of y at x = z
         col = c[:, m]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
         numeric_1st_deriv = np.dot(col, y_values)
@@ -506,7 +506,7 @@ def test_weights_4():
     m = 1   # First derivative
     # We'll be exploring first derivatives at x taking some values near the middle of our range
     for z in [3.6, 4.0, 4.1]:
-        c = num._weights(z=z, x=x_values, m=m)  # A matrix containing weights to estimate
+        c = num._finite_diff_weights(z=z, x=x_values, m=m)  # A matrix containing weights to estimate
                                                 # the first derivative of y at x = z
         col = c[:, m]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
         numeric_1st_deriv = np.dot(col, y_values)
@@ -522,7 +522,7 @@ def test_weights_5():
     m = 1   # First derivative
     # We'll be exploring first derivatives at x taking some values near the middle of our range
     for z in [3.75, 4.0, 4.2]:
-        c = num._weights(z=z, x=x_values, m=m)  # A matrix containing weights to estimate
+        c = num._finite_diff_weights(z=z, x=x_values, m=m)  # A matrix containing weights to estimate
                                                 # the first derivative of y at x = z
         col = c[:, m]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
         numeric_1st_deriv = np.dot(col, y_values)
@@ -538,7 +538,7 @@ def test_weights_6():
     m = 1   # First derivative
     # We'll be exploring first derivatives at x equal to some points near the middle of our range
     for z in [3.8, 4.0, 4.1]:
-        c = num._weights(z=z, x=x_values, m=m)  # A matrix containing weights to estimate
+        c = num._finite_diff_weights(z=z, x=x_values, m=m)  # A matrix containing weights to estimate
                                                 # the first derivative of y at x = z
         col = c[:, m]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
         numeric_1st_deriv = np.dot(col, y_values)

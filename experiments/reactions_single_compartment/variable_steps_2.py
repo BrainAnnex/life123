@@ -17,7 +17,7 @@
 # ## Accurate results in the simulation of the 2 coupled reactions `2 S <-> U` and `S <-> X`   
 # Both mostly forward.  1st-order kinetics throughout.   
 #
-# Same as `variable_steps_1`, but with fixed steps: a lot of tiny steps - as a proxy for the "exact value"
+# Same as `variable_steps_1`, but with fixed time steps: a lot of tiny steps - as a proxy for the "exact value"
 #
 # LAST REVISED: Dec. 3, 2023
 

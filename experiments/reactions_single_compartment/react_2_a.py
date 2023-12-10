@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## An `A <-> B` reaction between 2 species
+# ## An `A <-> B` reaction  
 # with 1st-order kinetics in both directions, taken to equilibrium,
 # using a simple, coarse fixed-timestep simulation.  
 #

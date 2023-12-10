@@ -25,9 +25,9 @@ class Reaction:
             plus thermodynamic data: delta_H, delta_S, delta_G, K (equilibrium constant) -
                                      for details see class "ThermoDynamics"
 
-        Each Reactant and each Product is a triplet of the form: (stoichiometry, species index, reaction order).
-        The "reaction order" in that triplet refers to the forward reaction for reactants, and the reverse reaction for products.
-        Note that reactants and products might be catalysts
+    Internally, each Reactant and each Product is a triplet of the form: (stoichiometry, species index, reaction order).
+    The "reaction order" in that triplet refers to the forward reaction for reactants, and to the reverse reaction for products.
+    Note that any reactant and products might be catalysts
     """
 
 
@@ -35,19 +35,23 @@ class Reaction:
                  forward_rate=None, reverse_rate=None,
                  delta_H=None, delta_S=None, delta_G=None):
         """
-        Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
-        The involved chemicals must be already registered - use add_chemical() if needed.
+        Create the structure for a new SINGLE chemical reaction,
+        optionally including its kinetic and/or thermodynamic data.
+        All the involved chemicals must be already registered - use add_chemical() if needed.
 
-        NOTE: in the reactants and products, if the stoichiometry and/or reaction order aren't specified,
+        NOTE: in the reactants and products, if the stoichiometry coefficients aren't specified,
               they're assumed to be 1.
-              Their full structure is the triplet (stoichiometry coefficient, name, reaction order)
+              The reaction orders, if not specified, are assumed to be equal to their corresponding
+              stoichiometry coefficients.
 
-        EXAMPLES of formats for each item in the lists of the reactants and products
-        (*assuming* that the chemical species with index 5 is called "F"):
-                    "F"         gets turned into:   (1, 5, 1)
-                    (3, "F")                        (3, 5, 1)
-                    (3, "F", 2)                     (3, 5, 2)
-                    It's equally acceptable to use LISTS in lieu of tuples
+              The full structure of each term in the list of reactants and of products
+              is the triplet:  (stoichiometry coefficient, name, reaction order)
+
+              EXAMPLES of formats to use for each term in the lists of the reactants and of the products:
+                "F"         is taken to mean (1, "F", 1) - default stoichiometry and reaction order
+                (2, "F")    is taken to mean (2, "F", 2) - stoichiometry coefficient used as default for reaction order
+                (2, "F", 1) means stoichiometry coefficient 2 and reaction order 1 - no defaults invoked
+              It's equally acceptable to use LISTS in lieu of tuples for the pair or triplets
 
         :param chem_data:       Object of type "ReactionData"
         :param reactants:       A list of triplets (stoichiometry, species name, reaction order),
@@ -61,7 +65,6 @@ class Reaction:
         :param delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
         :param delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
         :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
-
         """
         self.chem_data = chem_data
         

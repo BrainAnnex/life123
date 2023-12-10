@@ -531,15 +531,17 @@ class ReactionDynamics:
 
     def add_reaction(self, **kwargs) -> int:
         """
-        Add the parameters of a SINGLE reaction, optionally including kinetic and/or thermodynamic data.
-        The involved chemicals must be already registered - use add_chemical() if needed.
+        Register a new SINGLE chemical reaction,
+        optionally including its kinetic and/or thermodynamic data.
+        All the involved chemicals must be already registered - use add_chemical() if needed.
+
         For details, see ChemData.add_reaction()
 
         :param kwargs:  Any arbitrary named arguments
         :return:        Integer index of the newly-added reaction
         """
         assert self.chem_data, \
-            "add_reaction(): must first specify the names of the chemicals.  You may use add_chemical()"
+            "add_reaction(): must first register the names of the chemicals.  You may use add_chemical()"
 
         return self.chem_data.add_reaction(**kwargs)
 
@@ -553,7 +555,7 @@ class ReactionDynamics:
         :param kwargs:  Any arbitrary named arguments
         :return:        None
         """
-        return self.chem_data.describe_reactions()
+        self.chem_data.describe_reactions(**kwargs)
 
 
 
@@ -561,7 +563,7 @@ class ReactionDynamics:
         """
         Return the number of registered chemical reactions
 
-        :return:    the number of registered chemical reactions
+        :return:    The number of registered chemical reactions
         """
         return self.chem_data.number_of_reactions()
 
@@ -1752,8 +1754,7 @@ class ReactionDynamics:
     #####################################################################################################
 
 
-    def stoichiometry_checker(self, rxn_index :int, conc_arr_before: np.array, conc_arr_after: np.array,
-                              suppress_warning=False) -> bool:
+    def stoichiometry_checker(self, rxn_index :int, conc_arr_before: np.array, conc_arr_after: np.array) -> bool:
         """
         For the indicated reaction, investigate the change in the concentration of the involved chemicals,
         to ascertain whether the change is consistent with the reaction's stoichiometry.
@@ -1768,7 +1769,7 @@ class ReactionDynamics:
                                     in the reaction or not), in their index order, BEFORE the reaction step
         :param conc_arr_after:  Same as above, but after the reaction
                                 TODO: maybe also accept a Panda's dataframe row
-        :param suppress_warning:NO LONGER IN USE.  TODO: obsolete
+
         :return:                True if the change in reactant/product concentrations is consistent with the
                                     reaction's stoichiometry, or False otherwise
         """
