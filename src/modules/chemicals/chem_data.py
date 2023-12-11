@@ -4,7 +4,7 @@ import pandas as pd
 
 
 
-class ChemCore():
+class ChemCore:
     """
     Core data about the chemical species, such as their names and indexes (position in their listing)
 
@@ -281,7 +281,11 @@ class AllReactions(Diffusion):
 
 
     def number_of_reactions(self) -> int:
-        # Return the number of registered chemical reactions
+        """
+        Return the number of registered chemical reactions
+
+        :return:
+        """
         return len(self.reaction_list)
 
 
@@ -627,7 +631,9 @@ class AllReactions(Diffusion):
 
 
 class ChemicalAffinity(NamedTuple):
-    # Used for binding of ligands to macromolecules (e.g. Transcription Factors to DNA)
+    """
+    Used for binding of ligands to macromolecules (e.g. Transcription Factors to DNA)
+    """
     chemical: str   # Name of ligand
     Kd: float       # Dissociation constant; inversely related to binding affinity
 
@@ -847,11 +853,12 @@ class Macromolecules(AllReactions):
 
     def show_binding_affinities(self) -> None:
         """
+        Print out the Dissociation Constant for each Binding Site in each Macromolecule
 
         :return:    None
         """
         for mm in self.get_macromolecules():
-            binding_sites_and_ligands = self.get_binding_sites_and_ligands(mm)
+            #binding_sites_and_ligands = self.get_binding_sites_and_ligands(mm)
             print(mm, " :")
             for site_number in self.get_binding_sites(mm):
                 aff = self.get_binding_site_affinity(macromolecule=mm, site_number=site_number)
@@ -1100,7 +1107,14 @@ class ChemData(Macromolecules):
 
 
 
-    def assign_color_mapping(self):
+    def assign_color_mapping(self) -> dict:
+        """
+        Return a dict, whose keys are entities such as 'Chemical' and 'Reaction',
+        and whose corresponding values are the standard colors to use for them
+        in the network diagrams.
+
+        :return:    A python dictionary
+        """
         return {
             'Chemical': 'neo4j_green',
             #'Product': 'neo4j_red',

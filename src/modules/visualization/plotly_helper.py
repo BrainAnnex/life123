@@ -16,7 +16,7 @@ class PlotlyHelper:
 
         The choice of default colors is hardwired in this function.
 
-        :param n:   Desire number of default colors
+        :param n:   Desired number of default colors
         :return:
         """
         # TODO: provide multiple, user-selectable, harmonious assortments of default colors

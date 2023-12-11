@@ -9,7 +9,8 @@ class ThermoDynamics:
 
     This class does NOT get instantiated
 
-            "K"     (equilibrium constant - from either kinetic or thermodynamic data; if both present, they must match up!)
+            "K"       (equilibrium constant - from either kinetic or thermodynamic data;
+                       if both present, they must match up!)
             "delta_H" (change in Enthalpy: Enthalpy of Products - Enthalpy of Reactants)
             "delta_S" (change in Entropy)
             "delta_G" (change in Gibbs Free Energy)
