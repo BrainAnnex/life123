@@ -569,12 +569,10 @@ class ReactionDynamics:
 
 
 
-    def prepare_graph_network(self, **kwargs) -> dict:
+    def prepare_graph_network(self) -> dict:
         """
-
         For details, see ChemData.prepare_graph_network()
 
-        :param kwargs:  Any arbitrary named arguments
         :return:        A dictionary with 2 keys: 'graph' and 'color_mapping'
         """
         return self.chem_data.prepare_graph_network()
