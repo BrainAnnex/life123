@@ -8,6 +8,7 @@ from src.modules.chemicals.chem_data import ChemData
 from src.modules.movies.movies import MovieTabular
 from src.modules.numerical.numerical import Numerical as num
 from src.modules.visualization.plotly_helper import PlotlyHelper
+from src.modules.visualization.graphic_log import GraphicLog
 
 
 
@@ -571,11 +572,31 @@ class ReactionDynamics:
 
     def prepare_graph_network(self) -> dict:
         """
-        For details, see ChemData.prepare_graph_network()
+        Typical usage:
+            graph_data = prepare_graph_network()
+            GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
 
-        :return:        A dictionary with 2 keys: 'graph' and 'color_mapping'
+        For more details, see ChemData.prepare_graph_network()
+
+        :return:    A dictionary with 3 keys: 'structure', 'color_mapping' and 'caption_mapping'
         """
+        # TODO: probably phase out
         return self.chem_data.prepare_graph_network()
+
+
+
+    def plot_graph_network_to_log(self, graphic_component :str):
+        """
+
+        :param graphic_component:   The name of a Vue component that accepts the 3 arguments:
+                                        'structure', 'color_mapping' and 'caption_mapping'
+        :return:
+        """
+        graph_data = self.chem_data.prepare_graph_network_NEW()
+        # A dictionary with 3 keys: 'structure', 'color_mapping' and 'caption_mapping'
+
+        GraphicLog.export_plot_SIMPLIFIED(graph_data, graphic_component)
+
 
 
 

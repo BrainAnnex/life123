@@ -106,15 +106,16 @@ class GraphicLog:
     @classmethod
     def export_plot(cls, data: dict, graphic_component: str, print_notification=True) -> None:
         """
-        Send a Vue-based plot to the log file
+        Send to the log file the data to create a Vue-based plot
 
         :param data:                A python dictionary of data to pass to the Vue component
         :param graphic_component:   A string with the name of the existing Vue.js component to use.
-                                        EXAMPLE: "vue_curves_4" (assuming that a js file with such a component exists)
+                                        EXAMPLE: "vue_curves_4" (assuming that a js file with such a Vue component exists)
         :param print_notification:  If True, something is printed to inform of what's happening with the log file
         :return:                    None
         """
-        assert cls.FILES_ROOT is not None, "export_plot(): must first initialize library with call to GraphicLog.config()"
+        assert cls.FILES_ROOT is not None, \
+            "export_plot(): must first initialize library with call to GraphicLog.config()"
 
 
         log.export_plot_Vue(data=data,
@@ -123,3 +124,28 @@ class GraphicLog:
 
         if print_notification:
             print(f"[GRAPHIC ELEMENT SENT TO LOG FILE `{log.log_fullname}`]")
+
+
+
+    @classmethod
+    def export_plot_SIMPLIFIED(cls, graph_data: dict, graphic_component: str, print_notification=True) -> None:
+        """
+        Send to the log file the data to create a Vue-based plot
+
+        :param graph_data:                A python dictionary of data to pass to the Vue component
+        :param graphic_component:   A string with the name of the existing Vue.js component to use.
+                                        EXAMPLE: "vue_curves_4" (assuming that a js file with such a Vue component exists)
+        :param print_notification:  If True, something is printed to inform of what's happening with the log file
+        :return:                    None
+        """
+        assert cls.FILES_ROOT is not None, \
+            "export_plot(): must first initialize library with call to GraphicLog.config()"
+
+
+        log.export_plot_Vue_SIMPLIFIED(graph_data=graph_data,
+                                       component_name = graphic_component,
+                                       component_file = f"{cls.VUE_COMPS_DIR}{graphic_component}.js")
+
+        if print_notification:
+            print(f"[GRAPHIC ELEMENT SENT TO LOG FILE `{log.log_fullname}`]")
+

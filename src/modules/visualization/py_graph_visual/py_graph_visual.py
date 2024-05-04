@@ -13,25 +13,31 @@ class PyGraphVisual:
         self.db = db                    # Object of "NeoAccess" class
 
         self.structure = []             # The data that defines a graph to visualize.
-        #    A list of dicts defining nodes, and possibly edges as well.
-        #   NODES must contain the keys 'id' and 'labels'
-        #   EDGES must contain the keys 'name', 'source', and 'target'
-        #       (and presumably 'id' is required as well?)
-        # EXAMPLE (2 nodes and an edge):
-        #   [{'id': 1, 'labels': ['PERSON'], 'name': 'Julian'},
-        #    {'id': 2, 'labels': ['CAR'], 'color': 'white'},
-        #    {'name': 'OWNS', 'source': 1, 'target': 2, 'id': 'edge-1'}]
+                                        #    A list of dicts defining nodes, and possibly edges as well.
+                                        #   NODES must contain the keys 'id' and 'labels'
+                                        #   EDGES must contain the keys 'name', 'source', and 'target'
+                                        #       (and presumably 'id' is required as well?)
+                                        # EXAMPLE (2 nodes and an edge):
+                                        #   [{'id': 1, 'labels': ['PERSON'], 'name': 'Julian'},
+                                        #    {'id': 2, 'labels': ['CAR'], 'color': 'white'},
+                                        #    {'name': 'OWNS', 'source': 1, 'target': 2, 'id': 'edge-1'}]
 
         self.color_mapping = {}         # Mapping a node label to its interior color (the edge color is an automatic variation)
-        # EXAMPLE:  {'PERSON': 'cyan', 'CAR': 'orange'}
+                                        # EXAMPLE:  {'PERSON': 'cyan', 'CAR': 'orange'}
 
         self.caption_mapping = {}       # Mapping a node label to its caption (field name to use on the graph)
-        # EXAMPLE:  {'PERSON': 'name', 'CAR': 'color'}
+                                        # EXAMPLE:  {'PERSON': 'name', 'CAR': 'color'}
 
-        self.next_available_edge_id = 1 # An auto-increment value
+        self._next_available_edge_id = 1 # An auto-increment value
 
-        self.all_node_ids = []          # List of all the node id's added to the graph so far;
-        #   used for optional prevention of duplicates
+        self._all_node_ids = []         # List of all the node id's added to the graph so far;
+                                        #   used for optional prevention of duplicates
+
+
+    def serialize(self) -> dict:
+        return {"structure": self.structure,
+                "color_mapping": self.color_mapping,
+                "caption_mapping": self.caption_mapping}
 
 
 
@@ -82,7 +88,7 @@ class PyGraphVisual:
             "add_node(): cannot use an empty string for the argument `node_id`"
 
 
-        if node_id in self.all_node_ids:
+        if node_id in self._all_node_ids:
             return      # Silently disregard duplicates
 
         if data is None:
@@ -99,11 +105,12 @@ class PyGraphVisual:
         d["labels"] = labels
 
         self.structure.append(d)
-        self.all_node_ids.append(node_id)
+        self._all_node_ids.append(node_id)
 
 
 
-    def add_edge(self, from_node :Union[str, int], to_node :Union[str, int], name :str, edge_id=None) -> None:
+    def add_edge(self, from_node :Union[str, int], to_node :Union[str, int],
+                 name :str, edge_id=None, data=None) -> None:
         """
         Prepare and store the data for 1 edge, in a format expected by the visualization front-end.
 
@@ -118,6 +125,8 @@ class PyGraphVisual:
         :param edge_id:     (OPTIONAL)  If not provided, strings such as "edge-123" are used,
                                         with auto-generated consecutive integers
                                 TODO: unclear if edge id's are really needed
+        :param data:        A dict with all other node data not already specified in any of the other arguments
+
         :return:            None
         """
         from_id = from_node
@@ -128,21 +137,30 @@ class PyGraphVisual:
         if edge_id is not None:
             d["id"] = edge_id
         else:
-            d["id"] = f"edge-{self.next_available_edge_id}"
-            self.next_available_edge_id += 1        # Maintain an auto-increment value
+            d["id"] = f"edge-{self._next_available_edge_id}"
+            self._next_available_edge_id += 1        # Maintain an auto-increment value
+
+        if data:
+            d.update(data)
 
         self.structure.append(d)
 
 
 
-    def assign_caption(self, label :str, caption :str) -> None:
+    def assign_caption(self, label :str, caption="name") -> None:
         """
         Assign and store a mapping from label name to caption (name of field to use on the display)
 
+        EXAMPLES:   assign_caption(label='PERSON', caption='name')
+                    assign_caption(label='CAR', caption='color')
+
         :param label:   The name of a node label
-        :param caption: The name of the node field to use on the display
+        :param caption: The name of the node field to use on the display (by default, "name")
         :return:        None
         """
+        assert type(label) == str, \
+            "assign_caption(): the argument `label` must be a string"
+
         self.caption_mapping[label] = caption
 
 

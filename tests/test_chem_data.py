@@ -725,18 +725,17 @@ def test_prepare_graph_network_NEW():
     chem = ChemData(names=["A", "B"])
     chem.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
     graph_data = chem.prepare_graph_network_NEW()
-    assert compare_unordered_lists(graph_data.all_node_ids, ['C-0', 'C-1', 'R-0'])
 
-    expected_structure = [{'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1, 'id': 'C-0', 'labels': ['Chemical']},
-                          {'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1, 'id': 'C-1', 'labels': ['Chemical']},
+    expected_structure = [{'name': 'A', 'diff_rate': None, 'id': 'C-0', 'labels': ['Chemical']},
+                          {'name': 'B', 'diff_rate': None, 'id': 'C-1', 'labels': ['Chemical']},
                           {'name': 'RXN', 'kF': '3', 'kR': '2', 'delta_G': '-1,005.13', 'K': '1.5', 'id': 'R-0', 'labels': ['Reaction']},
 
-                          {'name': 'produces', 'source': 'R-0', 'target': 'C-1', 'id': 'edge-1'},
-                          {'name': 'reacts', 'source': 'C-0', 'target': 'R-0', 'id': 'edge-2'}
+                          {'name': 'produces', 'source': 'R-0', 'target': 'C-1', 'id': 'edge-1', 'stoich': 1, 'rxn_order': 1},
+                          {'name': 'reacts', 'source': 'C-0', 'target': 'R-0', 'id': 'edge-2', 'stoich': 1, 'rxn_order': 1}
                           ]
-    assert compare_recordsets(graph_data.structure, expected_structure)
-    assert graph_data.color_mapping == {'Chemical': '#8DCC92', 'Reaction': '#D9C8AD'}
-    assert graph_data.caption_mapping == {}
+    assert compare_recordsets(graph_data["structure"], expected_structure)
+    assert graph_data["color_mapping"] == {'Chemical': '#8DCC92', 'Reaction': '#D9C8AD'}
+    assert graph_data["caption_mapping"] == {}
 
 
 

@@ -376,6 +376,72 @@ class HtmlLog:
 
 
     @classmethod
+    def export_plot_Vue_SIMPLIFIED(cls, graph_data: dict, component_name: str, component_file: str) -> None:
+        """
+        Append to the log the HTML needed to produce a Vue-based plot
+
+        :param graph_data:            A python dictionary of data to pass to the Vue component
+        :param component_name:  A string with the name of the existing Vue.js component to use.
+                                        EXAMPLE: "vue_curves_4" (assuming that a js file with such a component exists)
+        :param component_file:  A string with the name of the .js file containing the needed Vue component above
+
+        :return:        None
+        """
+        if not cls.use_Vue:
+            cls.write("ERROR: In order to utilize Vue, the  use_Vue=True  option must be used in the call to config()", style=cls.red)
+            return
+
+        # Validate args
+        assert type(graph_data) == dict, \
+            f"export_plot_Vue(): the `data` argument must be a dictionary; the value passed was {type(data)}"
+        #TODO: more validation
+
+        graph_data["component_id"] = cls.VUE_COUNT
+
+        vue_id = f"vue-root-{cls.VUE_COUNT}"
+        cls._write_to_file(f'\n\n<div id="{vue_id}">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->\n')
+
+        component_call = f'''
+    <{component_name} v-bind:graph_data="graph_data_json">        
+    </{component_name}>
+    '''
+
+        cls._write_to_file(component_call)
+
+        cls._write_to_file('\n</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->\n')
+
+        html = f'''
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="{component_file}"></script>
+'''
+        cls._write_to_file(html)
+
+        instantiate_vue = f'''
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({{
+    el: '#{vue_id}',
+
+    data: {{
+        graph_data_json: {json.dumps(graph_data)}
+    }}
+
+}});
+</script>
+
+'''
+        cls.VUE_COUNT += 1     # Auto-increment the ID to use for possible multiple Vue apps on the same page
+
+        cls._write_to_file(instantiate_vue, newline=False)
+
+
+
+
+
+    @classmethod
     def export_plot_Vue(cls, data: dict, component_name: str, component_file: str) -> None:
         """
         Append to the log the HTML needed to produce a Vue-based plot
@@ -454,7 +520,7 @@ new Vue({{
         s = ""
         for key in data:
             s +=  f'\n        v-bind:{key}="{key}_json"'
-            #s +=  f'\n        v-bind:{key}="JSON.parse({key}_json)"'   # In some tests, this extra conversion could be avoided
+            #s +=  f'\n        v-bind:{key}="JSON.parse({key}_json)"'   # This extra conversion seems un-necessary
 
         return s
 
