@@ -8,7 +8,6 @@ from src.modules.chemicals.chem_data import ChemData
 from src.modules.movies.movies import MovieTabular
 from src.modules.numerical.numerical import Numerical as num
 from src.modules.visualization.plotly_helper import PlotlyHelper
-from src.modules.visualization.graphic_log import GraphicLog
 
 
 
@@ -38,7 +37,7 @@ class ReactionDynamics:
 
     def __init__(self, chem_data=None, names=None, shared=None):
         """
-        Note: at most one of the following arguments can be passed
+        Note: AT MOST 1 of the following arguments can be passed
         :param chem_data:   [OPTIONAL] Object of type "ChemData" (with data about the chemicals and their reactions)
         :param names:       [OPTIONAL] A single name, or list or tuple of names, of the chemicals
         :param shared:      [OPTIONAL] Object of type "ReactionDynamics", with which to share the "ChemData" info,
@@ -570,32 +569,22 @@ class ReactionDynamics:
 
 
 
-    def prepare_graph_network(self) -> dict:
+    def plot_reaction_network(self, graphic_component :str, unpack=False) -> None:
         """
-        Typical usage:
-            graph_data = prepare_graph_network()
-            GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
+        Send a plot of the network of reactions to the HTML log file,
+        also including a brief summary of all the reactions
 
-        For more details, see ChemData.prepare_graph_network()
+        EXAMPLE of usage:  plot_reaction_network("vue_cytoscape_2")
 
-        :return:    A dictionary with 3 keys: 'structure', 'color_mapping' and 'caption_mapping'
-        """
-        # TODO: probably phase out
-        return self.chem_data.prepare_graph_network()
-
-
-
-    def plot_graph_network_to_log(self, graphic_component :str):
-        """
-
-        :param graphic_component:   The name of a Vue component that accepts the 3 arguments:
+        :param graphic_component:   The name of a Vue component that accepts a "graph_data" argument,
+                                        an object with the following keys
                                         'structure', 'color_mapping' and 'caption_mapping'
-        :return:
+                                        For more details, see ChemData.prepare_graph_network()
+        :param unpack:              Use True for Vue components that require their data unpacked into individual arguments;
+                                        False for that accept a single data argument, named "graph_data"
+        :return:                    None
         """
-        graph_data = self.chem_data.prepare_graph_network_NEW()
-        # A dictionary with 3 keys: 'structure', 'color_mapping' and 'caption_mapping'
-
-        GraphicLog.export_plot_SIMPLIFIED(graph_data, graphic_component)
+        self.chem_data.plot_reaction_network(graphic_component=graphic_component, unpack=False)
 
 
 

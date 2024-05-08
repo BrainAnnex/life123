@@ -10,10 +10,10 @@ class GraphicLog:
     ###  START OF CONFIGURATION  ###
     LOCAL_FILES_ROOT = None     # This needs to be set by config().   EXAMPLE: "../../../"
                                 #   For local files (NOT recommended), it's the relative path from location of *THE LOG FILE* to Life123's home
-                                #   Using local files causes issues in JupyterLab
-    LOCAL_VUE_LIBRARY_FILE = "modules/Vue2_lib/vue2.js"                 # Relative to LOCAL_FILES_ROOT
-    LOCAL_SVG_HELPER_LIBRARY_FILE = "modules/SVG_helper/svg_helper.js"  # Relative to LOCAL_FILES_ROOT
-    LOCAL_VUE_COMPS_DIR = "modules/visualization/vue_components/"       # Relative to LOCAL_FILES_ROOT
+                                #   Using local files causes issues in JupyterLab!
+    LOCAL_VUE_LIBRARY_FILE = "src/modules/Vue2_lib/vue2.js"                 # Relative to LOCAL_FILES_ROOT
+    LOCAL_SVG_HELPER_LIBRARY_FILE = "src/modules/SVG_helper/svg_helper.js"  # Relative to LOCAL_FILES_ROOT
+    LOCAL_VUE_COMPS_DIR = "src/modules/visualization/vue_components/"       # Relative to LOCAL_FILES_ROOT
 
     REMOTE_FILES_ROOT = "https://life123.science/libraries/"
     REMOTE_VUE_LIBRARY_FILE = "https://life123.science/libraries/vue_2.6.12.js"
@@ -42,7 +42,8 @@ class GraphicLog:
 
 
     @classmethod
-    def config(cls, filename, components: Union[str, List[str]], mode='overwrite', extra_js=None, local_files=False, home_rel_path=None) -> None:
+    def config(cls, filename, components: Union[str, List[str]], mode='overwrite', extra_js=None,
+                    local_files=False, home_rel_path=None) -> None:
         """
         Initialize this library
         
@@ -64,13 +65,17 @@ class GraphicLog:
         :return:                None
         """
         if local_files:
-            assert home_rel_path, "config(): if the local_files=True flag is set, then an argument must be passed for `home_rel_path`"
+            assert home_rel_path, \
+                "config(): if the local_files=True flag is set, then an argument must be passed for `home_rel_path`"
 
             cls.FILES_ROOT = home_rel_path
             cls.VUE_LIBRARY_FILE = home_rel_path + "/" + cls.LOCAL_VUE_LIBRARY_FILE
             cls.SVG_HELPER_LIBRARY_FILE = home_rel_path + "/" + cls.LOCAL_SVG_HELPER_LIBRARY_FILE
             cls.VUE_COMPS_DIR = home_rel_path + "/" + cls.LOCAL_VUE_COMPS_DIR
         else:
+            assert not home_rel_path, \
+                "config(): if the local_files=Flase flag is set, then the `home_rel_path` must be None"
+
             cls.FILES_ROOT = cls.REMOTE_FILES_ROOT
             cls.VUE_LIBRARY_FILE = cls.REMOTE_VUE_LIBRARY_FILE
             cls.SVG_HELPER_LIBRARY_FILE = cls.REMOTE_SVG_HELPER_LIBRARY_FILE
@@ -104,47 +109,29 @@ class GraphicLog:
 
 
     @classmethod
-    def export_plot(cls, data: dict, graphic_component: str, print_notification=True) -> None:
+    def export_plot(cls, graph_data: dict, graphic_component: str, print_notification=True, unpack=False) -> None:
         """
         Send to the log file the data to create a Vue-based plot
 
-        :param data:                A python dictionary of data to pass to the Vue component
+        :param graph_data:          A python dictionary of data to pass to the Vue component
         :param graphic_component:   A string with the name of the existing Vue.js component to use.
                                         EXAMPLE: "vue_curves_4" (assuming that a js file with such a Vue component exists)
         :param print_notification:  If True, something is printed to inform of what's happening with the log file
+        :param unpack:              Use True for Vue components that require their data unpacked into individual arguments;
+                                        False for that accept a single data argument, named "graph_data"
         :return:                    None
         """
         assert cls.FILES_ROOT is not None, \
             "export_plot(): must first initialize library with call to GraphicLog.config()"
 
-
-        log.export_plot_Vue(data=data,
-                            component_name = graphic_component,
-                            component_file = f"{cls.VUE_COMPS_DIR}{graphic_component}.js")
-
-        if print_notification:
-            print(f"[GRAPHIC ELEMENT SENT TO LOG FILE `{log.log_fullname}`]")
-
-
-
-    @classmethod
-    def export_plot_SIMPLIFIED(cls, graph_data: dict, graphic_component: str, print_notification=True) -> None:
-        """
-        Send to the log file the data to create a Vue-based plot
-
-        :param graph_data:                A python dictionary of data to pass to the Vue component
-        :param graphic_component:   A string with the name of the existing Vue.js component to use.
-                                        EXAMPLE: "vue_curves_4" (assuming that a js file with such a Vue component exists)
-        :param print_notification:  If True, something is printed to inform of what's happening with the log file
-        :return:                    None
-        """
-        assert cls.FILES_ROOT is not None, \
-            "export_plot(): must first initialize library with call to GraphicLog.config()"
-
-
-        log.export_plot_Vue_SIMPLIFIED(graph_data=graph_data,
-                                       component_name = graphic_component,
-                                       component_file = f"{cls.VUE_COMPS_DIR}{graphic_component}.js")
+        if unpack:
+            log.export_plot_Vue_unpack_args(data=graph_data,
+                                            component_name = graphic_component,
+                                            component_file = f"{cls.VUE_COMPS_DIR}{graphic_component}.js")
+        else:
+            log.export_plot_Vue(graph_data=graph_data,
+                                component_name = graphic_component,
+                                component_file = f"{cls.VUE_COMPS_DIR}{graphic_component}.js")
 
         if print_notification:
             print(f"[GRAPHIC ELEMENT SENT TO LOG FILE `{log.log_fullname}`]")

@@ -4,8 +4,6 @@ from typing import Union
 class PyGraphVisual:
     """
     Facilitate data preparation for graph visualization using the Cytoscape.js library
-
-    GraphicLog.export_plot(PyGraphVisual_object, "vue_cytoscape_1")
     """
 
 
@@ -35,6 +33,11 @@ class PyGraphVisual:
 
 
     def serialize(self) -> dict:
+        """
+        Extract and return a dict of relevent data from this object
+
+        :return:
+        """
         return {"structure": self.structure,
                 "color_mapping": self.color_mapping,
                 "caption_mapping": self.caption_mapping}

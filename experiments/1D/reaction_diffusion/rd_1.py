@@ -13,8 +13,8 @@
 # ---
 
 # %% [markdown]
-# **Reaction  A + B <-> C, mostly forward and with 1st-order kinetics for each species,
-# taken to equilibrium**
+# ### Reaction  A + B <-> C, mostly forward and with 1st-order kinetics for each species,
+# ### taken to equilibrium
 #
 # Initial concentrations of A and B are spacially separated to the opposite ends of the system;
 # as a result, no C is being generated.
@@ -27,7 +27,7 @@
 # A LOT of plots are sent to the log file from this experiment; the reason is to compare two
 # graphic elements, "vue_curves_3" and "vue_curves_4"
 #
-# LAST REVISED: Dec. 6, 2023
+# LAST REVISED: May 6, 2024
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -48,7 +48,7 @@ log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filen
 
 # Set up the use of some specified graphic (Vue) components
 GraphicLog.config(filename=log_file,
-                  components=["vue_heatmap_11", "vue_curves_3", "vue_curves_4", "vue_cytoscape_1"],
+                  components=["vue_heatmap_11", "vue_curves_3", "vue_curves_4", "vue_cytoscape_2"],
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
@@ -71,8 +71,7 @@ chem_data.describe_reactions()
 # Send a header and a plot to the HTML log file
 log.write("Reaction:  A + B <-> C",
           style=log.h2)
-graph_data = chem_data.prepare_graph_network()
-GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
+chem_data.plot_reaction_network("vue_cytoscape_2")
 
 # %%
 # Set the heatmap parameters

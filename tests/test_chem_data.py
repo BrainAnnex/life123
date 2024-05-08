@@ -702,29 +702,10 @@ def test_single_reaction_describe():
 #############  FOR CREATION OF NETWORK DIAGRAMS  #############
 
 def test_prepare_graph_network():
-    pass   # TODO
-
-
-
-def test_create_graph_network_data():
-    chem = ChemData(names=["A", "B"])
-    chem.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-    network_data = chem.create_graph_network_data()
-    #print(network_data)
-    expected = [{'id': 2, 'label': 'Reaction', 'name': 'RXN', 'kF': '3', 'kR': '2', 'delta_G': '-1,005.13','K': '1.5'},
-                {'id': 1, 'label': 'Chemical', 'name': 'B', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
-                {'id': 3, 'name': 'produces', 'source': 2, 'target': 1},
-                {'id': 0, 'label': 'Chemical', 'name': 'A', 'diff_rate': None, 'stoich': 1, 'rxn_order': 1},
-                {'id': 4, 'name': 'reacts', 'source': 0, 'target': 2}
-                ]
-    assert network_data == expected
-
-
-def test_prepare_graph_network_NEW():
     # Set up an A <-> B reaction
     chem = ChemData(names=["A", "B"])
     chem.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-    graph_data = chem.prepare_graph_network_NEW()
+    graph_data = chem.prepare_graph_network()
 
     expected_structure = [{'name': 'A', 'diff_rate': None, 'id': 'C-0', 'labels': ['Chemical']},
                           {'name': 'B', 'diff_rate': None, 'id': 'C-1', 'labels': ['Chemical']},
@@ -735,7 +716,7 @@ def test_prepare_graph_network_NEW():
                           ]
     assert compare_recordsets(graph_data["structure"], expected_structure)
     assert graph_data["color_mapping"] == {'Chemical': '#8DCC92', 'Reaction': '#D9C8AD'}
-    assert graph_data["caption_mapping"] == {}
+    assert graph_data["caption_mapping"] == {'Chemical': 'name', 'Reaction': 'name'}
 
 
 

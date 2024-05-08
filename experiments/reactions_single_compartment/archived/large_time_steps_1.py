@@ -27,7 +27,7 @@
 # The raggedness and instabilities are now eliminated.
 # (Note: the 1/2 substeps are on a per-reaction basis)
 #
-# LAST REVISED: Dec. 3, 2023     **THIS IS AN ARCHIVED EXPERIMENT**
+# LAST REVISED: Dec. 3, 2023     *** THIS IS AN ARCHIVED EXPERIMENT ***  (lightly updated May 6, 2024)
 
 # %% [markdown]
 # # IMPORTANT: DO NOT ATTEMPT TO RUN THIS NOTEBOOK!   
@@ -62,7 +62,7 @@ log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filen
 
 # Set up the use of some specified graphic (Vue) components
 GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_1"],
+                  components=["vue_cytoscape_2"],
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %% [markdown]
@@ -89,8 +89,7 @@ chem_data.add_reaction(reactants=["C" , "E_high"], products=["A", "E_low"],
 chem_data.describe_reactions()
 
 # Send the plot of the reaction network to the HTML log file
-graph_data = chem_data.prepare_graph_network()
-GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
+chem_data.plot_reaction_network("vue_cytoscape_2")
 
 # %% [markdown]
 # ### Set the initial concentrations of all the chemicals

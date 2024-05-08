@@ -33,7 +33,7 @@ Vue.component('vue_curves_4',
                     at the outer level in order of chemical-species index,
                     and at the inner level in bin index order from left to right
                         EXAMPLE:  [[20, 85, 100, 50],     <- 0-th chemical
-                                   [14, 99, 5, 65]       <- 1st chemical
+                                   [14, 99, 5, 65]        <- 1st chemical
                  */
                 required: true
             },

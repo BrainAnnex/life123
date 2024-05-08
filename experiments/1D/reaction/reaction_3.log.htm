@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <title>Log</title>
 
-    <link type="text/css" rel="stylesheet" href="https://life123.science/libraries/vue_components/vue_cytoscape_1.css">
+    <link type="text/css" rel="stylesheet" href="https://life123.science/libraries/vue_components/vue_cytoscape_2.css">
 
     <script src="https://life123.science/libraries/vue_2.6.12.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -14,16 +14,13 @@
 </head>
 
 <body>
+<h3>List of reactions:</h3><span style='padding-left:4ch'>&nbsp;</span>0: 2 A <-> 3 B<br>
 
 
 <div id="vue-root-1">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_cytoscape_1 
-        v-bind:graph="graph_json"
-        v-bind:color_mapping="color_mapping_json"
-        v-bind:component_id="component_id_json"
-    >        
-    </vue_cytoscape_1>
+    <vue_cytoscape_2 v-bind:graph_data="graph_data_json">        
+    </vue_cytoscape_2>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -31,7 +28,7 @@
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="https://life123.science/libraries/vue_components/vue_cytoscape_1.js"></script>
+<script src="https://life123.science/libraries/vue_components/vue_cytoscape_2.js"></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -39,9 +36,7 @@ new Vue({
     el: '#vue-root-1',
 
     data: {
-        graph_json: [{"id": 2, "label": "Reaction", "name": "RXN", "kF": "5", "kR": "2", "delta_G": "-2,271.45", "K": "2.5"}, {"id": 1, "label": "Chemical", "name": "B", "diff_rate": null, "stoich": 3, "rxn_order": 1}, {"id": 3, "source": 2, "target": 1, "name": "produces"}, {"id": 0, "label": "Chemical", "name": "A", "diff_rate": null, "stoich": 2, "rxn_order": 1}, {"id": 4, "source": 0, "target": 2, "name": "reacts"}],
-color_mapping_json: {"Chemical": "neo4j_green", "Reaction": "neo4j_lightbrown"},
-component_id_json: 1
+        graph_data_json: {"structure": [{"name": "RXN", "kF": "5", "kR": "2", "delta_G": "-2,271.45", "K": "2.5", "id": "R-0", "labels": ["Reaction"]}, {"name": "B", "diff_rate": null, "id": "C-1", "labels": ["Chemical"]}, {"name": "produces", "source": "R-0", "target": "C-1", "id": "edge-1", "stoich": 3, "rxn_order": 1}, {"name": "A", "diff_rate": null, "id": "C-0", "labels": ["Chemical"]}, {"name": "reacts", "source": "C-0", "target": "R-0", "id": "edge-2", "stoich": 2, "rxn_order": 1}], "color_mapping": {"Chemical": "#8DCC92", "Reaction": "#D9C8AD"}, "caption_mapping": {"Chemical": "name", "Reaction": "name"}, "component_id": 1}
     }
 
 });
