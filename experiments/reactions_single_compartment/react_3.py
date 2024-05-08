@@ -20,7 +20,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_4"_  
 #
-# LAST REVISED: Dec. 3, 2023
+# LAST REVISED: May 5, 2024
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -37,7 +37,7 @@ log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filen
 
 # Set up the use of some specified graphic (Vue) components
 GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_1"],
+                  components=["vue_cytoscape_2"],
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
@@ -59,8 +59,7 @@ dynamics.describe_reactions()
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
-graph_data = dynamics.prepare_graph_network()
-GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
+dynamics.plot_reaction_network("vue_cytoscape_2")
 
 # %%
 # Set the initial concentrations of all the chemicals, in their index order

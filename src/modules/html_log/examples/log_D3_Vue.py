@@ -17,8 +17,8 @@ log.new_run()
 
 log.write("Time to do a D3 plot with Vue:", style=log.h1, newline=False)
 
-log.export_plot_Vue(data=None,
-                    component_name="vue-interactive-star", component_file="../Vue_example_components/interactive_star.js")
+log.export_plot_Vue_unpack_args(data=None,
+                                component_name="vue-interactive-star", component_file="../Vue_example_components/interactive_star.js")
 
 
 ###################   A repeat of the same D3 Plot with Vue  ###########################
@@ -27,8 +27,8 @@ log.write("A repeat of the same plot:", style=log.h1, newline=False)
 
 my_data = {"outer_radius": 23}
 
-log.export_plot_Vue(data=my_data,
-                    component_name="vue-interactive-star", component_file="../Vue_example_components/interactive_star.js")
+log.export_plot_Vue_unpack_args(data=my_data,
+                                component_name="vue-interactive-star", component_file="../Vue_example_components/interactive_star.js")
 
 
 ########################   Yet another D3 Plot with Vue  ###############################
@@ -51,5 +51,5 @@ all_data = {
                 "margins": {"top": 30, "right": 30, "bottom": 30, "left": 30}
             }
 
-log.export_plot_Vue(data=all_data,
-                    component_name="vue-heatmap-8", component_file="../Vue_example_components/heatmap8.js")
+log.export_plot_Vue_unpack_args(data=all_data,
+                                component_name="vue-heatmap-8", component_file="../Vue_example_components/heatmap8.js")

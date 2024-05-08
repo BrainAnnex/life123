@@ -23,7 +23,7 @@
 #
 # Based on experiment `reactions_single_compartment/up_regulate_1`
 #
-# LAST REVISED: Dec. 6, 2023
+# LAST REVISED: May 6, 2024
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -43,7 +43,7 @@ log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filen
 
 # Set up the use of some specified graphic (Vue) components
 GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_1"],
+                  components=["vue_cytoscape_2"],
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
@@ -57,8 +57,7 @@ chem_data.add_reaction(reactants=[("A") , ("X")], products=[(2, "B", 1)],
 chem_data.describe_reactions()
 
 # Send the plot of the reaction network to the HTML log file
-graph_data = chem_data.prepare_graph_network()
-GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
+chem_data.plot_reaction_network("vue_cytoscape_2")
 
 # %%
 bio = BioSim1D(n_bins=1, chem_data=chem_data)

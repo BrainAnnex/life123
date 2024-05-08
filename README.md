@@ -1,7 +1,3 @@
-### BETA 30.1 (v0.30.1)
-
-
-
 # Life123
 Dynamical Modeling of Biological Systems in 1, 2 and 3D (as well as single-compartment reactions)
 

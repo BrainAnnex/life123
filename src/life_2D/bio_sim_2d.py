@@ -594,8 +594,8 @@ class BioSim2D:
 
 
                 # Obtain the Delta-conc for each species, for the current bin
-                increment_vector, _, _ = self.reaction_dynamics.reaction_step_common(delta_time=delta_time, conc_array=conc_array)
-                                                                                                    #delta_time=delta_time)
+                increment_vector, _, _ = self.reaction_dynamics.reaction_step_common(delta_time=delta_time, conc_array=conc_array,
+                                                                                     variable_steps=False)
 
                 # Replace the appropriate column of the self.delta_reactions matrix
                 # with the contents of the vector increment_vector

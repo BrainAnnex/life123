@@ -15,7 +15,7 @@ LOG_FILENAME = pathlib.Path(__file__).stem + ".log.htm"
 # Note: the relative path is from the location of THE LOG FILE to the project's home
 GraphicLog.config(filename=LOG_FILENAME,
                   components=COMPONENT_NAME,
-                  home_rel_path="../../..")
+                  local_files=True, home_rel_path="../..")
 
 
 log.write(f'Example of Line plots, using the module "{COMPONENT_NAME}":',
@@ -45,4 +45,4 @@ all_data = {         # CHANGE AS NEEDED
 
 
 # Send the plot to the HTML log file
-GraphicLog.export_plot(all_data, COMPONENT_NAME)
+GraphicLog.export_plot(all_data, COMPONENT_NAME, unpack=True)

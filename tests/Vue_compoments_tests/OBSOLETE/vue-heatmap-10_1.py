@@ -35,6 +35,6 @@ all_data = {
     "margins": {"top": 30, "right": 30, "bottom": 30, "left": 50}
 }
 
-log.export_plot_Vue(data=all_data,
-                    component_name="vue-heatmap-10",
-                    component_file="../../../modules/visualization/vue_components/heatmap10.js")
+log.export_plot_Vue_unpack_args(data=all_data,
+                                component_name="vue-heatmap-10",
+                                component_file="../../../modules/visualization/vue_components/heatmap10.js")

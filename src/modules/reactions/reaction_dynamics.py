@@ -37,7 +37,7 @@ class ReactionDynamics:
 
     def __init__(self, chem_data=None, names=None, shared=None):
         """
-        Note: at most one of the following arguments can be passed
+        Note: AT MOST 1 of the following arguments can be passed
         :param chem_data:   [OPTIONAL] Object of type "ChemData" (with data about the chemicals and their reactions)
         :param names:       [OPTIONAL] A single name, or list or tuple of names, of the chemicals
         :param shared:      [OPTIONAL] Object of type "ReactionDynamics", with which to share the "ChemData" info,
@@ -569,15 +569,23 @@ class ReactionDynamics:
 
 
 
-    def prepare_graph_network(self, **kwargs) -> dict:
+    def plot_reaction_network(self, graphic_component :str, unpack=False) -> None:
         """
+        Send a plot of the network of reactions to the HTML log file,
+        also including a brief summary of all the reactions
 
-        For details, see ChemData.prepare_graph_network()
+        EXAMPLE of usage:  plot_reaction_network("vue_cytoscape_2")
 
-        :param kwargs:  Any arbitrary named arguments
-        :return:        A dictionary with 2 keys: 'graph' and 'color_mapping'
+        :param graphic_component:   The name of a Vue component that accepts a "graph_data" argument,
+                                        an object with the following keys
+                                        'structure', 'color_mapping' and 'caption_mapping'
+                                        For more details, see ChemData.prepare_graph_network()
+        :param unpack:              Use True for Vue components that require their data unpacked into individual arguments;
+                                        False for that accept a single data argument, named "graph_data"
+        :return:                    None
         """
-        return self.chem_data.prepare_graph_network()
+        self.chem_data.plot_reaction_network(graphic_component=graphic_component, unpack=False)
+
 
 
 

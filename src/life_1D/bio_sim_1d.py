@@ -1493,8 +1493,9 @@ class BioSim1D:
         }
 
         # Send the plot to the HTML log file.
-        # The version of the heatmap Vue component specified in the call to GraphicLog.config() will be used
-        GraphicLog.export_plot(all_data, graphic_component)
+        # The version of the heatmap Vue component specified
+        # in the call to GraphicLog.config() will be used
+        GraphicLog.export_plot(all_data, graphic_component, unpack=True)
 
 
 
@@ -1544,8 +1545,9 @@ class BioSim1D:
         }
 
         # Send the plot to the HTML log file.
-        # The version of the heatmap Vue component specified in the call to GraphicLog.config() will be used
-        GraphicLog.export_plot(all_data, graphic_component)
+        # The version of the heatmap Vue component specified
+        # in the call to GraphicLog.config() will be used
+        GraphicLog.export_plot(all_data, graphic_component, unpack=True)
 
 
 
@@ -1604,8 +1606,9 @@ class BioSim1D:
 
 
         # Send the plot to the HTML log file.
-        # The version of the heatmap Vue component specified in the call to GraphicLog.config() will be used
-        GraphicLog.export_plot(all_data, graphic_component)
+        # The version of the heatmap Vue component specified
+        # in the call to GraphicLog.config() will be used
+        GraphicLog.export_plot(all_data, graphic_component, unpack=True)
 
 
 

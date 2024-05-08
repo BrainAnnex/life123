@@ -22,7 +22,7 @@
 #
 # This experiment gets repeated, with very fine _fixed_ steps (as a proxy for the "exact value"), in `variable_steps_2`
 #
-# LAST REVISED: Dec. 3, 2023
+# LAST REVISED: May 5, 2024
 
 # %% [markdown]
 # ![Adaptive time steps](../../docs/variable_steps.png)
@@ -45,7 +45,7 @@ log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filen
 
 # Set up the use of some specified graphic (Vue) components
 GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_1"],
+                  components=["vue_cytoscape_2"],
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %% [markdown]
@@ -66,8 +66,7 @@ chem_data.add_reaction(reactants="S", products="X",
 chem_data.describe_reactions()
 
 # Send the plot of the reaction network to the HTML log file
-graph_data = chem_data.prepare_graph_network()
-GraphicLog.export_plot(graph_data, "vue_cytoscape_1")
+chem_data.plot_reaction_network("vue_cytoscape_2")
 
 # %% [markdown]
 # ### Set the initial concentrations of all the chemicals

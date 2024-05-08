@@ -194,21 +194,23 @@ class HtmlLog:
         """
 
         :param msg:             A string (possibly with HTML markup - but NOT recommended),
-                                or object that can be sent as input to the str() function,
-                                to be sent out to the log, and possibly also printed
-                                (newline automatically added by default)
+                                    or object that can be sent as input to the str() function,
+                                    to be sent out to the log, and possibly also printed
+                                    (newline automatically added by default)
 
         ALL THE FOLLOWING ARGUMENTS ARE OPTIONAL
         :param plain:           A plain-text version (possibly blank) of the `msg` argument.
-                                If an empty string, then the value in the `msg` argument is used,
-                                after stripping off any HTML that might be present
+                                    If an empty string, then the value in the `msg` argument is used,
+                                    after stripping off any HTML that might be present
         :param also_print:      Only applicable if `plain` is blank.
                                 Flag indicating whether to also print an HTML-stripped version of msg
 
-        :param indent:          Integer indicating the number of blank spaces (or HTML left indent) to prefix to the message being output
+        :param indent:          Integer indicating the number of blank spaces (or HTML left indent)
+                                    to prefix to the message being output
 
         :param blanks_before:   Number of blank lines to precede the output with
-        :param newline:         Flag indicating whether the output should be terminated by a newline (a <br> in the HTML version)
+        :param newline:         Flag indicating whether the output should be terminated by a newline
+                                    (a <br> in the HTML version)
         :param blanks_after:    Number of blank lines to place after the output
 
         :param style:           Name of a function (or list/tuple of function names) to apply to the message string prior to sending it to HTML logs.
@@ -329,7 +331,6 @@ class HtmlLog:
         :param n_blanks:    Desired number of blank lines
         :return:            None
         """
-
         cls.write("", "", blanks_after = n_blanks)
 
 
@@ -376,9 +377,80 @@ class HtmlLog:
 
 
     @classmethod
-    def export_plot_Vue(cls, data: dict, component_name: str, component_file: str) -> None:
+    def export_plot_Vue(cls, graph_data: dict, component_name: str, component_file: str) -> None:
         """
-        Append to the log the HTML needed to produce a Vue-based plot
+        Append to the log the HTML needed to produce a Vue-based plot.
+        This is meant to work alongside Vue components that expects 2 arguments ("props"):
+                1) graph_data
+                2) component_id
+
+        :param graph_data:      Data to pass to the Vue component
+        :param component_name:  A string with the name of the existing Vue.js component to use.
+                                    EXAMPLE: "vue_curves_4" (assuming that a js file with such a component exists)
+        :param component_file:  A string with the name of the .js file containing the needed Vue component above
+
+        :return:                None
+        """
+        if not cls.use_Vue:
+            cls.write("ERROR: In order to utilize Vue, the  use_Vue=True  option must be used in the call to config()", style=cls.red)
+            return
+
+        # Validate args
+        assert type(graph_data) == dict, \
+            f"export_plot_Vue(): the `data` argument must be a dictionary; the value passed was {type(graph_data)}"
+        #TODO: more validation
+
+
+        # Export into the HTML log file the various Vue-related parts
+
+        vue_id = f"vue-root-{cls.VUE_COUNT}"
+        cls._write_to_file(f'\n\n<div id="{vue_id}">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->\n')
+
+        component_call = f'''
+    <{component_name} v-bind:graph_data="graph_data_json"
+                     v-bind:component_id="{cls.VUE_COUNT}">        
+    </{component_name}>
+    '''
+
+        cls._write_to_file(component_call)
+
+        cls._write_to_file('\n</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->\n')
+
+        html = f'''
+
+<!--
+    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+  -->
+<script src="{component_file}"></script>
+'''
+        cls._write_to_file(html)
+
+        instantiate_vue = f'''
+<script>
+// Instantiation of the Vue ROOT component
+new Vue({{
+    el: '#{vue_id}',
+
+    data: {{
+        graph_data_json: {json.dumps(graph_data)}
+    }}
+
+}});
+</script>
+
+'''
+        cls.VUE_COUNT += 1     # Auto-increment the ID to use for possible multiple Vue apps on the same page
+
+        cls._write_to_file(instantiate_vue, newline=False)
+
+
+
+    @classmethod
+    def export_plot_Vue_unpack_args(cls, data: dict, component_name: str, component_file: str) -> None:
+        """
+        Append to the log the HTML needed to produce a Vue-based plot.
+        This is meant to work alongside Vue components that expects any number of arguments ("props"),
+        unpacked from the key/values of the "data" dict, plus an extra argument "component_id"
 
         :param data:            A python dictionary of data to pass to the Vue component
         :param component_name:  A string with the name of the existing Vue.js component to use.
@@ -387,6 +459,8 @@ class HtmlLog:
 
         :return:        None
         """
+        #TODO:  perhaps obsolete in favor of export_plot_Vue
+        #       Unclear whether it's overall better to use Vue components with individual arguments or a single one
         if not cls.use_Vue:
             cls.write("ERROR: In order to utilize Vue, the  use_Vue=True  option must be used in the call to config()", style=cls.red)
             return
@@ -454,7 +528,7 @@ new Vue({{
         s = ""
         for key in data:
             s +=  f'\n        v-bind:{key}="{key}_json"'
-            #s +=  f'\n        v-bind:{key}="JSON.parse({key}_json)"'   # In some tests, this extra conversion could be avoided
+            #s +=  f'\n        v-bind:{key}="JSON.parse({key}_json)"'   # This extra conversion seems un-necessary
 
         return s
 

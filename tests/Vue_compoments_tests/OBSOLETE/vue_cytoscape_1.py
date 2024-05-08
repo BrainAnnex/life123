@@ -15,7 +15,7 @@ LOG_FILENAME = pathlib.Path(__file__).stem + ".log.htm"
 # Note: the relative path is from the location of *THE LOG FILE* to the project's home
 GraphicLog.config(filename=LOG_FILENAME,
                   components=COMPONENT_NAME,
-                  home_rel_path="../../..",
+                  home_rel_path="../../../..",
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 
@@ -57,4 +57,4 @@ all_data = {
 }
 
 # Send the plot to the HTML log file
-GraphicLog.export_plot(all_data, COMPONENT_NAME)
+GraphicLog.export_plot(all_data, COMPONENT_NAME, unpack=True)

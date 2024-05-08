@@ -22,7 +22,7 @@ Vue.component('vue_cytoscape_1',  <!-- NOTE:  Only lower cases in component name
             <div>  <!-- Outer container, serving as Vue-required template root.  OK to use a <section> instead -->
 
                 <div v-bind:id="'cy_' + component_id" class="cytoscape-container">
-                <!-- CYTOSCAPE.js WILL INSERT THE GRAPH HERE -->
+                    <!-- CYTOSCAPE.js WILL INSERT THE GRAPH HERE -->
                 </div>
 
                 <div class="legend">

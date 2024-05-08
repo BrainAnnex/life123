@@ -5,30 +5,31 @@
     <meta charset="UTF-8">
     <title>Log</title>
 
-    <link type="text/css" rel="stylesheet" href="../../../modules/visualization/vue_components/vue_heatmap_11.css">
+    <link type="text/css" rel="stylesheet" href="../../src/modules/visualization/vue_components/vue_curves_4.css">
 
-    <script src="../../../modules/Vue2_lib/vue2.js"></script>
+    <script src="../../src/modules/Vue2_lib/vue2.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="../../../modules/SVG_helper/svg_helper.js"></script>
+    <script src="../../src/modules/SVG_helper/svg_helper.js"></script>
 </head>
 
 <body>
-<h2>Example of Heatmap, using the module "vue_heatmap_11":</h2><br>
+<h2>Example of Line plots, using the module "vue_curves_4":</h2><br>
 <br>
 
 
 <div id="vue-root-1">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_heatmap_11 
-        v-bind:y_labels="y_labels_json"
-        v-bind:heatmap_data="heatmap_data_json"
+    <vue_curves_4 
+        v-bind:curve_labels="curve_labels_json"
+        v-bind:plot_data="plot_data_json"
         v-bind:range_min="range_min_json"
         v-bind:range_max="range_max_json"
         v-bind:outer_width="outer_width_json"
         v-bind:outer_height="outer_height_json"
         v-bind:margins="margins_json"
+        v-bind:component_id="component_id_json"
     >        
-    </vue_heatmap_11>
+    </vue_curves_4>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
 
@@ -36,7 +37,7 @@
 <!--
     Vue components (and other JS).  This must appear AFTER the Vue-containing elements
   -->
-<script src="../../../modules/visualization/vue_components/vue_heatmap_11.js"></script>
+<script src="../../src/modules/visualization/vue_components/vue_curves_4.js"></script>
 
 <script>
 // Instantiation of the Vue ROOT component
@@ -44,13 +45,14 @@ new Vue({
     el: '#vue-root-1',
 
     data: {
-        y_labels_json: ["Chem 1", "Chem 2"],
-heatmap_data_json: [[0, 85, 100], [100, 20, 0]],
+        curve_labels_json: ["Chem A", "Hydrogen sulfide", "Element X", "Acetone"],
+plot_data_json: [[20, 85, 100, 50], [14, 99, 5, 65], [100, 75, 55, 0], [0, 15, 45, 90]],
 range_min_json: 0,
 range_max_json: 100,
 outer_width_json: 900,
-outer_height_json: 400,
-margins_json: {"top": 30, "right": 30, "bottom": 30, "left": 85}
+outer_height_json: 300,
+margins_json: {"top": 20, "right": 20, "bottom": 20, "left": 30},
+component_id_json: 1
     }
 
 });
