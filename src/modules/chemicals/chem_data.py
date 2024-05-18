@@ -17,19 +17,21 @@ class ChemCore:
     def __init__(self):
 
         self.chemical_data = [] # Basic data for all chemicals, *except* water and macro-molecules
+                                # Each list entry represents 1 chemical,
+                                # and is a dict required to contain the key "name", plus any other keys
                                 # EXAMPLE: [{"name": "A"} ,
                                 #           {"name": "B", "note": "some note"}]
-                                # The position in the list is referred to as the "index" of that chemical
+                                # The position in this list is referred to as the "INDEX" of that chemical
                                 # TODO: maybe use a Pandas dataframe
 
-        self.name_dict = {}     # To map assigned names to their positional index (in the ordered list of chemicals);
+        self.name_dict = {}     # To map assigned names to their positional index (in the ordered list of chemicals, self.chemical_data);
                                 # this is automatically set and maintained
                                 # EXAMPLE: {"A": 0, "B": 1, "C": 2}
 
-        self.active_chemicals = set()   # Set of INDEXES of chemicals - not counting catalysts - involved
-                                        # in any of the reactions
+        self.active_chemicals = set()   # Set of the INDEXES of the chemicals - not counting catalysts - involved
+                                        # in any of the registered reactions
 
-        self.active_enzymes = set()     # Set of INDEXES of enzymes (catalysts) involved in any of the reactions
+        self.active_enzymes = set()     # Set of the INDEXES of the enzymes (catalysts) involved in any of the registered reactions
 
 
 
@@ -37,7 +39,7 @@ class ChemCore:
         """
         Return the number of registered chemicals - exclusive of water and of macro-molecules
 
-        :return:
+        :return:    The number of registered chemicals - exclusive of water and of macro-molecules
         """
         return len(self.chemical_data)
 
@@ -51,12 +53,12 @@ class ChemCore:
         :return:                None
         """
         n_species = self.number_of_chemicals()
-        assert type(species_index) == int,  f"The requested species index ({species_index}) is not an integer: " \
-                                            f"it has type {type(species_index)}"
+        assert type(species_index) == int,  f"The specified species index ({species_index}) must be an integer: " \
+                                            f"instead, it has type {type(species_index)}"
 
         assert 0 <= species_index < n_species, \
-            f"The requested species index ({species_index}) is not the expected integer the range [0 - {n_species - 1}], inclusive.  " \
-            f"There is no chemical species assigned to index {species_index}"
+            f"The specified species index ({species_index}) is not in the expected range [0 - {n_species - 1}], inclusive.  " \
+            f"I.e., there is no chemical species assigned to this index"
 
 
 
@@ -68,7 +70,7 @@ class ChemCore:
         :param name:    Name of the chemical species of interest
         :return:        The index of the species with the given name
         """
-        index =  self.name_dict.get(name)
+        index = self.name_dict.get(name)
         assert index is not None, \
             f"ChemData.get_index(): No chemical species named `{name}` was found"
 
@@ -76,19 +78,23 @@ class ChemCore:
 
 
 
-    def get_name(self, species_index: int) -> Union[str, None]:
+    def get_name(self, species_index: int) -> str:
         """
         Return the name of the species with the given index.
-        If no name was assigned, return None.
 
         :param species_index:   An integer (starting with zero) corresponding to the
                                     original order with which the chemical species were first added
-        :return:                The name of the species with the given index if present,
-                                    or None if not
+        :return:                The name of the species with the given index.
+                                    If missing or blank, an Exception is raised
         """
         self.assert_valid_species_index(species_index)
 
-        return self.chemical_data[species_index].get("name")    # If "name" is not present, None will be returned
+        name = self.chemical_data[species_index].get("name")    # If "name" is not present, None will be returned
+
+        assert name, \
+            f"get_name(): A chemical species with the requested index ({species_index}) is present, but it lacks a name"
+
+        return name
 
 
 
@@ -131,7 +137,8 @@ class ChemCore:
 
         EXAMPLE:  add_chemical("P1", note = "my note about P1", full_name = "protein P1")
 
-        Note: if also wanting to set the diffusion rate, must use ChemData.add_chemical_with_diffusion() instead
+        Note: if also wanting to set the diffusion rate in a single function call,
+              use ChemData.add_chemical_with_diffusion() instead
 
         :param name:    Name of the new chemical species to register
         :param note:    (OPTIONAL) string to attach to the given chemical
@@ -139,10 +146,11 @@ class ChemCore:
         :return:        The integer index assigned to the newly-added chemical
         """
         assert type(name) == str, \
-            f"add_chemical_species(): a chemical's name must be provided, as a string value.  " \
+            f"add_chemical(): a chemical's name must be provided, as a string value.  " \
             f"What was passed ({name}) was of type {type(name)}"
 
-        assert name != "", f"add_chemical_species(): the chemical's name cannot be a blank string"
+        assert name != "", \
+            f"add_chemical(): the chemical's name cannot be a blank string"
 
         index = len(self.chemical_data)     # The next available index number (list position)
         self.name_dict[name] = index
@@ -607,7 +615,7 @@ class AllReactions(Diffusion):
 
     def names_of_active_chemicals(self) -> Set[str]:
         """
-        Return a set of the names of all the chemicals involved in ANY of reactions,
+        Return a set of the names of all the chemicals involved in ANY of the registered reactions,
         NOT counting catalysts
         """
         name_set = set()
