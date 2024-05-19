@@ -335,30 +335,40 @@ class AllReactions(Diffusion):
 
         super().__init__()          # Invoke the constructor of its parent class
 
-        self.reaction_list = []     # List of dicts.  Each item is an object of class "Reaction"
+        self.reaction_list = []     # List of objects of class "Reaction"
 
-        self.temp = 298.15          # Temperature in Kelvins.  (By default, 25 C)
+        self.temp = 298.15          # Temperature in Kelvins.  (By default, the equivalent of 25 C)
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
 
         self.active_chemicals = set()   # Set of the INDEXES of the chemicals - not counting catalysts - involved
                                         # in any of the registered reactions
 
-        self.active_enzymes = set()     # Set of the INDEXES of the enzymes (catalysts) involved in any of the registered reactions
+        self.active_enzymes = set()     # Set of the INDEXES of the enzymes (catalysts) involved
+                                        # in any of the registered reactions
 
 
 
 
-    def number_of_reactions(self) -> int:
+    def number_of_reactions(self, include_inactive=False) -> int:
         """
         Return the number of registered chemical reactions
 
-        :return:
+        :param include_inactive:If True, disabled reactions are also included
+        :return:                The number of registered chemical reactions
         """
-        return len(self.reaction_list)
+        if include_inactive:
+            return len(self.reaction_list)
+
+        count = 0
+        for rxn in self.reaction_list:
+            if rxn.active:
+                count += 1
+
+        return count
 
 
 
-    def assert_valid_rxn_index(self, index) -> None:
+    def assert_valid_rxn_index(self, index :int) -> None:
         """
         Raise an Exception if the specified reaction index isn't valid
 
@@ -410,7 +420,7 @@ class AllReactions(Diffusion):
         Return a string with a user-friendly form of the left (reactants) side of the reaction formula
 
         :param i:   The index (0-based) to identify the reaction of interest
-        :return:
+        :return:    A string with a user-friendly form of the left (reactants) side of the chemical reaction
         """
         rxn = self.get_reaction(i)
         return rxn.extract_reactants_formula()
@@ -433,7 +443,7 @@ class AllReactions(Diffusion):
         Return a string with a user-friendly form of the right (products) side of the reaction formula
 
         :param i:   The index (0-based) to identify the reaction of interest
-        :return:
+        :return:    A string with a user-friendly form of the right (products) side of the chemical reaction
         """
         rxn = self.get_reaction(i)
         return rxn.extract_products_formula()
@@ -442,6 +452,7 @@ class AllReactions(Diffusion):
 
     def get_forward_rate(self, i :int) -> float:
         """
+        Return the value of the forward rate constant of the i-th reaction
 
         :param i:   The integer index (0-based) to identify the reaction of interest
         :return:    The value of the forward rate constant for the above reaction
@@ -452,6 +463,7 @@ class AllReactions(Diffusion):
 
     def get_reverse_rate(self, i :int) -> float:
         """
+        Return the value of the reverse (back) rate constant of the i-th reaction
 
         :param i:   The integer index (0-based) to identify the reaction of interest
         :return:    The value of the reverse (back) rate constant for the above reaction
@@ -463,8 +475,8 @@ class AllReactions(Diffusion):
 
     def get_chemicals_in_reaction(self, rxn_index :int) -> {int}:
         """
-        Return a SET of indices (being a set, it's NOT in any particular order)
-        of all the chemicals in the specified reaction
+        Return a SET of indices (being a set, they're NOT in any particular order)
+        of all the chemicals in the i-th reaction
 
         :param rxn_index:   An integer with the (zero-based) index to identify the reaction of interest
         :return:            A SET of indices of the chemicals involved in the above reaction
@@ -484,11 +496,11 @@ class AllReactions(Diffusion):
         :param species_index:
         :return:                List of "Reaction" objects
         """
-        pass        # TODO: write
+        pass        # TODO: write; also, accept a name
 
 
 
-    def set_temp(self, temp, units="K") -> None:
+    def set_temp(self, temp :Union[float, int], units="K") -> None:
         """
         Specify the temperature of the environment
         (for now assumed uniform everywhere)
@@ -536,7 +548,7 @@ class AllReactions(Diffusion):
         :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
 
         :return:                Integer index of the newly-added reaction
-                                 (in the object variable self.reaction_list)
+                                    (in the object variable self.reaction_list)
         """
         rxn = Reaction(self, reactants, products, forward_rate, reverse_rate,
                        delta_H, delta_S, delta_G)
@@ -554,12 +566,42 @@ class AllReactions(Diffusion):
 
     def clear_reactions_data(self) -> None:
         """
-        Get rid of all reactions; start again with "an empty slate" (but still with reference
-        to the same data object about the chemicals)
+        Get rid of all the reactions; start again with "an empty slate" (but still with reference
+        to the same data object about the chemicals and their properties)
 
         :return:    None
         """
         self.reaction_list = []
+        self.active_chemicals = set()
+        self.active_enzymes = set()
+
+
+
+    def inactivate_reaction(self, i :int) -> None:
+        """
+        Mark the i-th reaction as "inactive/disabled" (essentially, "deleted", but holding its positional
+        index, to avoid a change in index in other reactions)
+
+        TODO: Not yet supported by the dynamical modules; DON'T USE YET in simulations!
+
+        :param i:   Zero-based index of the reaction to disable
+        :return:    None
+        """
+        rxn = self.get_reaction(i)
+        rxn.active = False
+
+        # Re-construct self.active_chemicals and self.active_enzymes
+        self.active_chemicals = set()
+        self.active_enzymes = set()
+
+        for rxn in self.reaction_list:
+            involved_chemicals = rxn.extract_chemicals_in_reaction(exclude_enzyme=True)
+            self.active_chemicals = self.active_chemicals.union(involved_chemicals)     # Union of sets
+            if rxn.enzyme is not None:
+                self.active_enzymes.add(rxn.enzyme)       # Add the new entry to a set
+
+
+
 
 
 

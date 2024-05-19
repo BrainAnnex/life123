@@ -53,7 +53,7 @@ class Reaction:
                 (2, "F", 1) means stoichiometry coefficient 2 and reaction order 1 - no defaults invoked
               It's equally acceptable to use LISTS in lieu of tuples for the pair or triplets
 
-        :param chem_data:       Object of type "ReactionData"
+        :param chem_data:       Object of class "AllReactions"
         :param reactants:       A list of triplets (stoichiometry, species name, reaction order),
                                     or simplified terms in various formats; for details, see above.
                                     If not a list, it will get turned into one
@@ -67,6 +67,8 @@ class Reaction:
         :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
         """
         self.chem_data = chem_data
+
+        self.active = True          # TODO: EXPERIMENTAL!
         
         self.reactants = None
         self.products = None
@@ -429,10 +431,10 @@ class Reaction:
         # Compute the numerator of the "Reaction Quotient"
         for p in self.products:
             # Loop over the reaction products
-            species_index =  self.extract_species_index(p)
-            rxn_order =  self.extract_rxn_order(p)
+            species_index = self.extract_species_index(p)
+            rxn_order = self.extract_rxn_order(p)
 
-            species_name =  self.chem_data.get_name(species_index)
+            species_name = self.chem_data.get_name(species_index)
             species_conc = conc.get(species_name)
             assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
                                              f"concentration of `{species_name}` was not provided"
