@@ -74,6 +74,18 @@ class ChemCore:
 
 
 
+    def name_exists(self, name :str) -> bool:
+        """
+        Return True if the chemical with the given name exists (i.e. was registered),
+        or False otherwise
+
+        :param name:    The name of a chemical
+        :return:        True if it exists, or False otherwise
+        """
+        return name in self.name_dict.keys()
+
+
+
     def get_name(self, species_index: int) -> str:
         """
         Return the name of the species with the given index.
@@ -186,7 +198,8 @@ class Diffusion(ChemCore):
 
         super().__init__()          # Invoke the constructor of its parent class
 
-        self.diffusion_rates = {}   # Values for the diffusion rates, indexed by chemical name
+        self.diffusion_rates = {}   # Values for the diffusion rates, indexed by chemical name.
+                                    # Only chemicals with a given diffusion rate will be present here
                                     # EXAMPLE: {"A": 6.4, "B": 12.0}
 
 
@@ -199,27 +212,33 @@ class Diffusion(ChemCore):
         :return:        None
         """
         assert type(diff) == float or type(diff) == int, \
-            f"Diffusion.assert_valid_diffusion(): The value for the diffusion rate ({diff}) is not a number (float or int)"
+            f"assert_valid_diffusion(): The value for the diffusion rate ({diff}) is not a number"
 
         assert diff >= 0., \
-            f"Diffusion.assert_valid_diffusion(): the diffusion rate ({diff}) cannot be negative"
+            f"assert_valid_diffusion(): the diffusion rate ({diff}) cannot be negative"
 
 
 
-    def get_diffusion_rate(self, species_index: int) -> Union[str, None]:
+    def get_diffusion_rate(self, species_index=None, name=None) -> Union[float, int, None]:
         """
-        Return the diffusion rate of the chemical species with the given index.
-        If no value was assigned, return None.
-        TODO: also accept lookup by name
+        Return the diffusion rate of the specified chemical species.
+        If no value was assigned (but the chemical exists), return None.
 
-        :param species_index:   An integer (starting with zero) corresponding to the
-                                    original order with which the chemical species were first added
+        :param name:            Name of the chemical of interest
+        :param species_index:   Alternate way to specify the chemical, using its zero-based index (order
+                                    in which it was registered);
+                                    `name` and `species_index` cannot be both specified, or an Exception will be raised
         :return:                The value of the diffusion rate for the species with the given index if present,
                                     or None if not
         """
-        self.assert_valid_species_index(species_index)
+        assert (name is None) or (species_index is None), \
+            "get_diffusion_rate(): cannot specify BOTH `name` and `species_index`"
 
-        name = self.get_name(species_index)
+        if name is None:
+            name = self.get_name(species_index)
+        else:
+            assert self.name_exists(name), \
+                f"get_diffusion_rate(): No chemical named `{name}` exists"
 
         return self.diffusion_rates.get(name)      # If not present, None is returned
 
@@ -232,7 +251,7 @@ class Diffusion(ChemCore):
 
         If any value is missing, None is used for it
 
-        :return:    A list of numbers with the diffusion rates
+        :return:    A list of numbers (or None values) with the diffusion rates
         """
         return [self.diffusion_rates.get(name) for name in self.get_all_names()]
         # If any value is not present, None is used for it
@@ -257,7 +276,7 @@ class Diffusion(ChemCore):
 
 
 
-    def set_diffusion_rate(self, name :str, diff_rate) -> None:
+    def set_diffusion_rate(self, name :str, diff_rate :Union[float, int]) -> None:
         """
         Set the diffusion rate of the given chemical species (identified by its name)
 
@@ -267,6 +286,7 @@ class Diffusion(ChemCore):
         """
         self.assert_valid_diffusion(diff_rate)
         self.diffusion_rates[name] = diff_rate
+
 
 
 
@@ -292,7 +312,7 @@ class AllReactions(Diffusion):
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
 
         self.active_chemicals = set()   # Set of the INDEXES of the chemicals - not counting catalysts - involved
-                                         # in any of the registered reactions
+                                        # in any of the registered reactions
 
         self.active_enzymes = set()     # Set of the INDEXES of the enzymes (catalysts) involved in any of the registered reactions
 

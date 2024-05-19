@@ -442,7 +442,7 @@ class BioSim2D:
         if self.n_bins_x and self.n_bins_y == 1:
             return increment_matrix                                 # There's nothing to do in the case of just 1 bin!
 
-        diff = self.chem_data.get_diffusion_rate(species_index)     # The diffusion rate of the specified single species
+        diff = self.chem_data.get_diffusion_rate(species_index=species_index)     # The diffusion rate of the specified single species
 
         #assert not self.is_excessive(time_step, diff, delta_x), \  # TODO: implement
             #f"Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"
