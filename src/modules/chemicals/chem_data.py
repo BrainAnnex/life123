@@ -149,9 +149,9 @@ class ChemCore:
               use ChemData.add_chemical_with_diffusion() instead
 
         :param name:    Name of the new chemical species to register;
-                            an Exception will be raised if the name wa already registered
-        :param note:    (OPTIONAL) string to attach to the given chemical
-        :param kwargs:  (OPTIONAL) dictionary of named arguments
+                            an Exception will be raised if the name was already registered
+        :param note:    [OPTIONAL] String with note to attach to the chemical
+        :param kwargs:  (OPTIONAL) Dictionary of named arguments (with any desired names)
         :return:        The integer index assigned to the newly-added chemical
         """
         # Validate
@@ -201,6 +201,49 @@ class Diffusion(ChemCore):
         self.diffusion_rates = {}   # Values for the diffusion rates, indexed by chemical name.
                                     # Only chemicals with a given diffusion rate will be present here
                                     # EXAMPLE: {"A": 6.4, "B": 12.0}
+
+
+
+    def add_chemical_with_diffusion(self, name :str, diff_rate :Union[float, int], note=None, **kwargs) -> int:
+        """
+        Register a new chemical species, with a name, a diffusion rate (in water),
+        and (optionally) :
+            - a note
+            - any other named argument(s) that the user wishes to store (i.e. arbitrary named arguments)
+
+        EXAMPLE:  add_chemical("P1", diffusion_rate = 0.1,
+                               note = "my note about P1", full_name = "protein P1")
+
+        Note: if no diffusion is to be set, can also simply use ChemData.add_chemical()
+
+        :param name:        Name of the new chemical species to register;
+                                an Exception will be raised if the name was already registered
+        :param diff_rate:   Floating-point number with the diffusion rate (in water) of this chemical
+        :param note:        [OPTIONAL] String with note to attach to the chemical
+        :param kwargs:      [OPTIONAL] Dictionary of named arguments (with any desired names)
+        :return:            The integer index assigned to the newly-added chemical
+        """
+        # Validate the diffusion_rate, if present; other arguments get validated by add_chemical()
+        self.assert_valid_diffusion(diff_rate)
+
+        index = self.add_chemical(name=name, note=note, **kwargs)
+
+        self.set_diffusion_rate(name=name, diff_rate=diff_rate)
+
+        return index
+
+
+
+    def set_diffusion_rate(self, name :str, diff_rate :Union[float, int]) -> None:
+        """
+        Set the diffusion rate of the given chemical species (identified by its name)
+
+        :param name:        Name of a chemical species
+        :param diff_rate:   Diffusion rate (in water) for the above chemical
+        :return:            None
+        """
+        self.assert_valid_diffusion(diff_rate)
+        self.diffusion_rates[name] = diff_rate
 
 
 
@@ -276,20 +319,6 @@ class Diffusion(ChemCore):
 
 
 
-    def set_diffusion_rate(self, name :str, diff_rate :Union[float, int]) -> None:
-        """
-        Set the diffusion rate of the given chemical species (identified by its name)
-
-        :param name:        Name of a chemical species
-        :param diff_rate:   Diffusion rate (in water) for the above chemical
-        :return:            None
-        """
-        self.assert_valid_diffusion(diff_rate)
-        self.diffusion_rates[name] = diff_rate
-
-
-
-
 
 ###############################################################################################################
 ###############################################################################################################
@@ -349,7 +378,7 @@ class AllReactions(Diffusion):
 
 
 
-    def get_reaction(self, i: int) -> Reaction:
+    def get_reaction(self, i :int) -> Reaction:
         """
         Return the data structure of the i-th reaction,
         in the order in which reactions were added (numbering starts at 0)
@@ -364,7 +393,7 @@ class AllReactions(Diffusion):
 
 
 
-    def get_reactants(self, i: int) -> [(int, int, int)]:
+    def get_reactants(self, i :int) -> [(int, int, int)]:
         """
         Return a list of triplets with details of the reactants of the i-th reaction
 
@@ -376,7 +405,7 @@ class AllReactions(Diffusion):
 
 
 
-    def get_reactants_formula(self, i) -> str:
+    def get_reactants_formula(self, i :int) -> str:
         """
         Return a string with a user-friendly form of the left (reactants) side of the reaction formula
 
@@ -388,7 +417,7 @@ class AllReactions(Diffusion):
 
 
 
-    def get_products(self, i: int) -> [(int, int, int)]:
+    def get_products(self, i :int) -> [(int, int, int)]:
         """
         Return a list of triplets with details of the products of the i-th reaction
 
@@ -399,7 +428,7 @@ class AllReactions(Diffusion):
         return rxn.extract_products()
 
 
-    def get_products_formula(self, i) -> str:
+    def get_products_formula(self, i :int) -> str:
         """
         Return a string with a user-friendly form of the right (products) side of the reaction formula
 
@@ -411,7 +440,7 @@ class AllReactions(Diffusion):
 
 
 
-    def get_forward_rate(self, i: int) -> float:
+    def get_forward_rate(self, i :int) -> float:
         """
 
         :param i:   The integer index (0-based) to identify the reaction of interest
@@ -421,7 +450,7 @@ class AllReactions(Diffusion):
         return rxn.extract_forward_rate()
 
 
-    def get_reverse_rate(self, i: int) -> float:
+    def get_reverse_rate(self, i :int) -> float:
         """
 
         :param i:   The integer index (0-based) to identify the reaction of interest
@@ -432,7 +461,7 @@ class AllReactions(Diffusion):
 
 
 
-    def get_chemicals_in_reaction(self, rxn_index: int) -> {int}:
+    def get_chemicals_in_reaction(self, rxn_index :int) -> {int}:
         """
         Return a SET of indices (being a set, it's NOT in any particular order)
         of all the chemicals in the specified reaction
@@ -447,7 +476,7 @@ class AllReactions(Diffusion):
 
 
 
-    def get_reactions_participating_in(self, species_index: int) -> [Reaction]:
+    def get_reactions_participating_in(self, species_index :int) -> [Reaction]:
         """
         Return a list of all the reactions that the given chemical species
         is involved in
@@ -456,34 +485,6 @@ class AllReactions(Diffusion):
         :return:                List of "Reaction" objects
         """
         pass        # TODO: write
-
-
-
-    def add_chemical_with_diffusion(self, name :str, diffusion_rate, note=None, **kwargs) -> int:
-        """
-        Register a new chemical species, with a name, a diffusion rate (in water),
-        and (optionally) :
-            - a note
-            - any other named argument(s) that the user wishes to store (i.e. arbitrary named arguments)
-
-        EXAMPLE:  add_chemical("P1", diffusion_rate = 0.1, note = "my note about P1", full_name = "protein P1")
-
-        Note: if no diffusion is to be set, use the method add_chemical()
-
-        :param name:            Name of the chemical species to add
-        :param diffusion_rate:  Floating-point number with the diffusion rate (in water) of this chemical
-        :param note:            [OPTIONAL] Note to attach to the chemical
-        :param kwargs:          [OPTIONAL] Any arbitrary named arguments
-        :return:                The integer index assigned to the newly-added chemical
-        """
-        # Validate the diffusion_rate, if present; other arguments get validated by add_chemical()
-        self.assert_valid_diffusion(diffusion_rate)
-
-        index = self.add_chemical(name=name, note=note, **kwargs)
-
-        self.set_diffusion_rate(name=name, diff_rate=diffusion_rate)
-
-        return index
 
 
 

@@ -92,7 +92,7 @@ def test_get_all_names():
 def test_all_chemicals():
     chem_data = ChemData(names=['A', 'B'])
     chem_data.add_chemical("C", note="this is C", formula="CH4", cost="200")
-    chem_data.add_chemical_with_diffusion("D", diffusion_rate=10, note="this is D")
+    chem_data.add_chemical_with_diffusion("D", diff_rate=10, note="this is D")
 
     result = chem_data.all_chemicals()
     expected_recordset = [{'name': 'A'}, {'name': 'B'}, {'name': 'C', 'note': 'this is C', 'formula': 'CH4', 'cost': '200'}, {'name': 'D', 'note': 'this is D'}]
@@ -153,8 +153,49 @@ def test_add_chemical():
 
 
 
-
 #############  Diffusion  #############
+
+
+def test_add_chemical_with_diffusion():
+    chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2, 3.14])
+    assert chem_data.number_of_chemicals() == 3
+    assert chem_data.get_all_names() == ['A', 'B', 'C']
+    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
+    assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14])
+
+    chem_data.add_chemical_with_diffusion(name="D", diff_rate=8)
+    assert chem_data.number_of_chemicals() == 4
+    assert chem_data.get_all_names() == ['A', 'B', 'C', 'D']
+    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+    assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14, 8])
+    assert chem_data.chemical_data == [ {'name': 'A'}, {'name': 'B'}, {'name': 'C'}, {'name': 'D'}]
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical_with_diffusion(name="E", diff_rate="I'm not a number")
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical_with_diffusion(name="E", diff_rate=-666.)
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical_with_diffusion(name=666, diff_rate=25.)    # Wrong type for name
+
+    chem_data.add_chemical_with_diffusion(name="E", diff_rate=25., note="my note", some_field="some value")
+    assert chem_data.number_of_chemicals() == 5
+    assert chem_data.get_all_names() == ['A', 'B', 'C', 'D', 'E']
+    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4}
+    assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14, 8, 25])
+    assert chem_data.chemical_data == [ {'name': 'A'}, {'name': 'B'}, {'name': 'C'}, {'name': 'D'},
+                                        {'name': 'E', 'note': 'my note', 'some_field': 'some value'}]
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical_with_diffusion(name="", diff_rate=25.)
+
+
+
+def test_set_diffusion_rate():
+    pass
+
+
 
 def test_assert_valid_diffusion():
     chem_data = ChemData()
@@ -201,8 +242,6 @@ def test_get_all_diffusion_rates():
 def test_missing_diffusion_rate():
     pass
 
-def test_set_diffusion_rate():
-    pass
 
 
 
@@ -210,7 +249,17 @@ def test_set_diffusion_rate():
 #############  AllReactions  #############
 
 def test_number_of_reactions():
-    pass   # TODO
+    chem = ChemData(names=["A", "B", "C"])
+
+    assert chem.number_of_reactions() == 0
+
+    chem.add_reaction(reactants=["A"], products=["B"])
+    assert chem.number_of_reactions() == 1
+
+    chem.add_reaction(reactants=["A", (2, "B")], products=["C"])
+    assert chem.number_of_reactions() == 2
+
+
 
 def test_assert_valid_rxn_index():
     pass   # TODO
@@ -267,8 +316,6 @@ def test_get_chemicals_in_reaction():
     assert chem.get_chemicals_in_reaction(1) == {1, 2}
     assert chem.get_chemicals_in_reaction(2) == {0, 2}
     assert chem.get_chemicals_in_reaction(3) == {0, 1, 3}
-
-
 
 
 def test_set_temp():
@@ -541,42 +588,6 @@ def test_init_chemical_data():
     assert chem_data.name_dict['A'] == 0
     assert chem_data.name_dict['B'] == 1
     assert chem_data.name_dict['C'] == 2
-
-
-
-def test_add_chemical_with_diffusion():
-    chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2, 3.14])
-    assert chem_data.number_of_chemicals() == 3
-    assert chem_data.get_all_names() == ['A', 'B', 'C']
-    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
-    assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14])
-
-    chem_data.add_chemical_with_diffusion(name="D", diffusion_rate=8)
-    assert chem_data.number_of_chemicals() == 4
-    assert chem_data.get_all_names() == ['A', 'B', 'C', 'D']
-    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3}
-    assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14, 8])
-    assert chem_data.chemical_data == [ {'name': 'A'}, {'name': 'B'}, {'name': 'C'}, {'name': 'D'}]
-
-    with pytest.raises(Exception):
-        chem_data.add_chemical_with_diffusion(name="E", diffusion_rate="I'm not a number")
-
-    with pytest.raises(Exception):
-        chem_data.add_chemical_with_diffusion(name="E", diffusion_rate=-666.)
-
-    with pytest.raises(Exception):
-        chem_data.add_chemical_with_diffusion(name=666, diffusion_rate=25.)    # Wrong type for name
-
-    chem_data.add_chemical_with_diffusion(name="E", diffusion_rate=25., note="my note", some_field="some value")
-    assert chem_data.number_of_chemicals() == 5
-    assert chem_data.get_all_names() == ['A', 'B', 'C', 'D', 'E']
-    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4}
-    assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14, 8, 25])
-    assert chem_data.chemical_data == [ {'name': 'A'}, {'name': 'B'}, {'name': 'C'}, {'name': 'D'},
-                                        {'name': 'E', 'note': 'my note', 'some_field': 'some value'}]
-
-    with pytest.raises(Exception):
-        chem_data.add_chemical_with_diffusion(name="", diffusion_rate=25.)
 
 
 
