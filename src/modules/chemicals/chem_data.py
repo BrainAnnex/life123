@@ -22,16 +22,12 @@ class ChemCore:
                                 # EXAMPLE: [{"name": "A"} ,
                                 #           {"name": "B", "note": "some note"}]
                                 # The position in this list is referred to as the "INDEX" of that chemical
+                                # Names must be unique
                                 # TODO: maybe use a Pandas dataframe
 
         self.name_dict = {}     # To map assigned names to their positional index (in the ordered list of chemicals, self.chemical_data);
                                 # this is automatically set and maintained
                                 # EXAMPLE: {"A": 0, "B": 1, "C": 2}
-
-        self.active_chemicals = set()   # Set of the INDEXES of the chemicals - not counting catalysts - involved
-                                        # in any of the registered reactions
-
-        self.active_enzymes = set()     # Set of the INDEXES of the enzymes (catalysts) involved in any of the registered reactions
 
 
 
@@ -132,25 +128,31 @@ class ChemCore:
         """
         Register a new chemical species, with a name
         and (optionally) :
-            - a note
-            - any other named argument(s) that the user wishes to store (i.e. arbitrary named arguments)
+            - a note (will be stored in a "note" column)
+            - any other named argument(s) that the user wishes to store (i.e. arbitrary-named arguments)
 
         EXAMPLE:  add_chemical("P1", note = "my note about P1", full_name = "protein P1")
 
         Note: if also wanting to set the diffusion rate in a single function call,
               use ChemData.add_chemical_with_diffusion() instead
 
-        :param name:    Name of the new chemical species to register
+        :param name:    Name of the new chemical species to register;
+                            an Exception will be raised if the name wa already registered
         :param note:    (OPTIONAL) string to attach to the given chemical
         :param kwargs:  (OPTIONAL) dictionary of named arguments
         :return:        The integer index assigned to the newly-added chemical
         """
+        # Validate
         assert type(name) == str, \
             f"add_chemical(): a chemical's name must be provided, as a string value.  " \
             f"What was passed ({name}) was of type {type(name)}"
 
         assert name != "", \
-            f"add_chemical(): the chemical's name cannot be a blank string"
+            "add_chemical(): the chemical's name cannot be a blank string"
+
+        assert name not in self.name_dict.keys(), \
+            f"add_chemical(): the requested name (`{name}`) is ALREADY registered"
+
 
         index = len(self.chemical_data)     # The next available index number (list position)
         self.name_dict[name] = index
@@ -287,7 +289,13 @@ class AllReactions(Diffusion):
         self.reaction_list = []     # List of dicts.  Each item is an object of class "Reaction"
 
         self.temp = 298.15          # Temperature in Kelvins.  (By default, 25 C)
-        # For now, assumed constant everywhere, and unvarying (or very slowly varying)
+                                    # For now, assumed constant everywhere, and unvarying (or very slowly varying)
+
+        self.active_chemicals = set()   # Set of the INDEXES of the chemicals - not counting catalysts - involved
+                                         # in any of the registered reactions
+
+        self.active_enzymes = set()     # Set of the INDEXES of the enzymes (catalysts) involved in any of the registered reactions
+
 
 
 

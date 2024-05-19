@@ -4,53 +4,7 @@ import pandas as pd
 from src.modules.chemicals.chem_data import ChemData
 from src.modules.utilities.comparisons import *
 
-
-
-def test_initialize():
-    chem_data = ChemData()
-    assert chem_data.number_of_chemicals() == 0
-
-    chem_data = ChemData(names=['A', 'B', 'C'])
-    assert chem_data.number_of_chemicals() == 3
-    assert chem_data.get_all_names() == ['A', 'B', 'C']
-    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
-    assert chem_data.diffusion_rates == {}
-
-    with pytest.raises(Exception):
-        ChemData(names=123)     # Not a list/tuple/str
-
-    with pytest.raises(Exception):
-        ChemData(names=[1, 2])  # The names aren't strings
-
-    chem_data = ChemData(diffusion_rates=[0.15, 1.2])
-    assert chem_data.number_of_chemicals() == 2
-    assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2])
-    assert chem_data.get_all_names() == ['Chemical 1', 'Chemical 2']
-
-    with pytest.raises(Exception):
-        ChemData(diffusion_rates=123.456)   # Not a list/tuple
-
-    with pytest.raises(Exception):
-        ChemData(diffusion_rates=[0.15, 1.2, "I'm not a number"])   # Bad value
-
-    with pytest.raises(Exception):
-        ChemData(diffusion_rates=[-6.66])   # Values cannot be negative
-
-    with pytest.raises(Exception):
-        ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2])  # mismatch in count
-
-    chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2, 3.14])
-    assert chem_data.number_of_chemicals() == 3
-    assert chem_data.get_all_names() == ['A', 'B', 'C']
-    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
-    assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14])
-
-    assert np.allclose(chem_data.temp, 298.15)      # The default temperature
-
-
-
-
-#############  TO READ DATA STRUCTURES of the CHEMICALS (incl. diffusion data)  #############
+#############  ChemCore  #############
 
 def test_number_of_chemicals():
     chem_data = ChemData(names=['A', 'B', 'C'])
@@ -147,6 +101,9 @@ def test_add_chemical():
     assert chem_data.chemical_data == [{"name": "A"}]
     assert chem_data.name_dict == {"A": 0}
 
+    with pytest.raises(Exception):
+        chem_data.add_chemical("A") # Duplicate!
+
     result = chem_data.add_chemical("B", note="some note")
     assert result == 1
     assert chem_data.number_of_chemicals() == 2
@@ -181,6 +138,57 @@ def test_add_chemical():
     with pytest.raises(Exception):
         chem_data.add_chemical(name="")
 
+
+
+
+#############  ChemData  #############
+
+
+def test_initialize():
+    chem_data = ChemData()
+    assert chem_data.number_of_chemicals() == 0
+
+    chem_data = ChemData(names=['A', 'B', 'C'])
+    assert chem_data.number_of_chemicals() == 3
+    assert chem_data.get_all_names() == ['A', 'B', 'C']
+    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
+    assert chem_data.diffusion_rates == {}
+
+    with pytest.raises(Exception):
+        ChemData(names=123)     # Not a list/tuple/str
+
+    with pytest.raises(Exception):
+        ChemData(names=[1, 2])  # The names aren't strings
+
+    chem_data = ChemData(diffusion_rates=[0.15, 1.2])
+    assert chem_data.number_of_chemicals() == 2
+    assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2])
+    assert chem_data.get_all_names() == ['Chemical 1', 'Chemical 2']
+
+    with pytest.raises(Exception):
+        ChemData(diffusion_rates=123.456)   # Not a list/tuple
+
+    with pytest.raises(Exception):
+        ChemData(diffusion_rates=[0.15, 1.2, "I'm not a number"])   # Bad value
+
+    with pytest.raises(Exception):
+        ChemData(diffusion_rates=[-6.66])   # Values cannot be negative
+
+    with pytest.raises(Exception):
+        ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2])  # mismatch in count
+
+    chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2, 3.14])
+    assert chem_data.number_of_chemicals() == 3
+    assert chem_data.get_all_names() == ['A', 'B', 'C']
+    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
+    assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14])
+
+    assert np.allclose(chem_data.temp, 298.15)      # The default temperature
+
+
+
+
+#############  TO READ DATA STRUCTURES of the CHEMICALS (incl. diffusion data)  #############
 
 
 
