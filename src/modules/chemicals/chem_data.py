@@ -368,6 +368,21 @@ class AllReactions(Diffusion):
 
 
 
+    def active_reaction_indices(self) -> [int]:
+        """
+        Return a list of the reaction index numbers of all the active reactions
+
+        :return:
+        """
+        l = []
+        for i, rxn in enumerate(self.reaction_list):
+            if rxn.active:
+                l.append(i)
+
+        return l
+
+
+
     def assert_valid_rxn_index(self, index :int) -> None:
         """
         Raise an Exception if the specified reaction index isn't valid

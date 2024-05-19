@@ -1234,8 +1234,10 @@ class ReactionDynamics:
             print(f"      delta_list: {delta_dict}")
 
 
-        if rxn_list is None:    # Meaning ALL reactions
-            rxn_list = range(self.chem_data.number_of_reactions())  # This will be a list of all the reaction index numbers
+        if rxn_list is None:    # Meaning ALL (active) reactions
+            # A list of the reaction indices of all the active reactions
+            rxn_list = self.chem_data.active_reaction_indices()
+
 
         number_chemicals = self.chem_data.number_of_chemicals()
 
@@ -1251,8 +1253,6 @@ class ReactionDynamics:
             increment_vector_single_rxn = np.zeros(number_chemicals, dtype=float)
 
             rxn = self.chem_data.get_reaction(rxn_index)
-            if not rxn.active:
-                continue
             reactants = rxn.extract_reactants()
             products = rxn.extract_products()
 
