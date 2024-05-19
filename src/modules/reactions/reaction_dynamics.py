@@ -1251,6 +1251,8 @@ class ReactionDynamics:
             increment_vector_single_rxn = np.zeros(number_chemicals, dtype=float)
 
             rxn = self.chem_data.get_reaction(rxn_index)
+            if not rxn.active:
+                continue
             reactants = rxn.extract_reactants()
             products = rxn.extract_products()
 
@@ -1262,8 +1264,9 @@ class ReactionDynamics:
             # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
             for r in reactants:
                 # Unpack data from the reactant r
-                species_index = rxn.extract_species_index(r)
-                if species_index == rxn.enzyme:
+                species_name = rxn.extract_species_name(r)
+                species_index = self.chem_data.get_index(species_name)
+                if species_name == rxn.enzyme:
                     #print(f"*** SKIPPING reactant ENZYME {species_index} in reaction {rxn_index}")
                     continue    # Skip if r is an enzyme for this reaction
 
@@ -1282,8 +1285,9 @@ class ReactionDynamics:
             # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
             for p in products:
                 # Unpack data from the reactant r
-                species_index = rxn.extract_species_index(p)
-                if species_index == rxn.enzyme:
+                species_name = rxn.extract_species_name(p)
+                species_index = self.chem_data.get_index(species_name)
+                if species_name == rxn.enzyme:
                     #print(f"*** SKIPPING product ENZYME {species_index} in reaction {rxn_index}")
                     continue    # Skip if p is an enzyme for this reaction
 
@@ -1511,8 +1515,9 @@ class ReactionDynamics:
         forward_rate = fwd_rate_constant
         for r in reactants:
             # Unpack data from the reactant r
-            species_index = rxn.extract_species_index(r)
+            species_name = rxn.extract_species_name(r)
             order = rxn.extract_rxn_order(r)
+            species_index = self.chem_data.get_index(species_name)
             conc = self.system[species_index]
             #assert conc is not None, \
             #   f"ReactionDynamics.compute_reaction_delta_rate(): lacking the value for the concentration of the chemical species `{self.reaction_data.get_name(species_index)}`"
@@ -1521,8 +1526,9 @@ class ReactionDynamics:
         reverse_rate = rev_rate_constant
         for p in products:
             # Unpack data from the reaction product p
-            species_index = rxn.extract_species_index(p)
+            species_name = rxn.extract_species_name(p)
             order = rxn.extract_rxn_order(p)
+            species_index = self.chem_data.get_index(species_name)
             conc = self.system[species_index]
             #assert conc is not None, \
             #   f"ReactionDynamics.compute_reaction_delta_rate(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
@@ -1836,24 +1842,27 @@ class ReactionDynamics:
         # Pick (arbitrarily) the first reactant,
         # to establish a baseline change in concentration relative to its stoichiometric coefficient
         baseline_term = reactants[0]
-        baseline_species = rxn.extract_species_index(baseline_term)
+        baseline_species_name = rxn.extract_species_name(baseline_term)
+        baseline_species_index = self.chem_data.get_index(baseline_species_name)
         baseline_stoichiometry = rxn.extract_stoichiometry(baseline_term)
-        baseline_ratio =  (delta_arr[baseline_species]) / baseline_stoichiometry
+        baseline_ratio =  (delta_arr[baseline_species_index]) / baseline_stoichiometry
         #print("\nbaseline_ratio: ", baseline_ratio)
 
         for i, term in enumerate(reactants):
             if i != 0:
-                species = rxn.extract_species_index(term)
+                species_name = rxn.extract_species_name(term)
+                species_index = self.chem_data.get_index(species_name)
                 stoichiometry = rxn.extract_stoichiometry(term)
-                ratio =  (delta_arr[species]) / stoichiometry
+                ratio =  (delta_arr[species_index]) / stoichiometry
                 #print(f"ratio for `{self.chem_data.get_name(species)}`: {ratio}")
                 if not np.allclose(ratio, baseline_ratio):
                     return False
 
         for term in products:
-            species = rxn.extract_species_index(term)
+            species_name = rxn.extract_species_name(term)
+            species_index = self.chem_data.get_index(species_name)
             stoichiometry = rxn.extract_stoichiometry(term)
-            ratio =  - (delta_arr[species]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn
+            ratio =  - (delta_arr[species_index]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn
             #print(f"ratio for `{self.chem_data.get_name(species)}`: {ratio}")
             if not np.allclose(ratio, baseline_ratio):
                 return False
@@ -2874,14 +2883,12 @@ class ReactionDynamics:
         # Look at the denominator of the "Reaction Quotient"
         for i, r in enumerate(reactants):
             # Loop over the reactants
-            species_index =  rxn.extract_species_index(r)
+            species_name =  rxn.extract_species_name(r)
             rxn_order =  rxn.extract_rxn_order(r)
             coefficient = rxn.extract_stoichiometry(r)
 
             assert rxn_order == 1, \
                 "find_equilibrium_conc(): Currently only implemented for 1st order reactions"
-
-            species_name = self.chem_data.get_name(species_index)
 
             if i == 0:
                 name_map["A"] = species_name
@@ -2900,13 +2907,11 @@ class ReactionDynamics:
         # Look at the numerator of the "Reaction Quotient"
         for i, p in enumerate(products):
             # Loop over the reaction products
-            species_index =  rxn.extract_species_index(p)
+            species_name =  rxn.extract_species_name(p)
             rxn_order =  rxn.extract_rxn_order(p)
             coefficient = rxn.extract_stoichiometry(p)
 
             assert rxn_order == 1, "find_equilibrium_conc(): Currently only implemented for 1st order reactions"
-
-            species_name =  self.chem_data.get_name(species_index)
 
             if i == 0:
                 name_map["C"] = species_name

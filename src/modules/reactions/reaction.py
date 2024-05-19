@@ -31,9 +31,9 @@ class Reaction:
     """
 
 
-    def __init__(self, chem_data, reactants: Union[int, str, list], products: Union[int, str, list],
+    def __init__(self, reactants: Union[int, str, list], products: Union[int, str, list],
                  forward_rate=None, reverse_rate=None,
-                 delta_H=None, delta_S=None, delta_G=None):
+                 delta_H=None, delta_S=None, delta_G=None, temp=None):
         """
         Create the structure for a new SINGLE chemical reaction,
         optionally including its kinetic and/or thermodynamic data.
@@ -53,7 +53,6 @@ class Reaction:
                 (2, "F", 1) means stoichiometry coefficient 2 and reaction order 1 - no defaults invoked
               It's equally acceptable to use LISTS in lieu of tuples for the pair or triplets
 
-        :param chem_data:       Object of class "AllReactions"
         :param reactants:       A list of triplets (stoichiometry, species name, reaction order),
                                     or simplified terms in various formats; for details, see above.
                                     If not a list, it will get turned into one
@@ -65,9 +64,9 @@ class Reaction:
         :param delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
         :param delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
         :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
+        :param temp:            [OPTIONAL] Temperature in Kelvins.  For now, assumed constant everywhere,
+                                    and unvarying (or very slowly varying)
         """
-        self.chem_data = chem_data
-
         self.active = True          # TODO: EXPERIMENTAL!
         
         self.reactants = None
@@ -106,13 +105,13 @@ class Reaction:
         enzyme_list = []
         for reactant in reactant_list:
             if reactant in product_list:
-                enzyme_list.append(self.extract_species_index(reactant))
+                enzyme_list.append(self.extract_species_name(reactant))
 
         number_enzymes = len(enzyme_list)
 
         if number_enzymes == len(reactant_list) or number_enzymes == len(product_list):
             raise Exception(f"Reaction(): all the terms in the reaction appear to be enzymes!  "
-                            f"Enzymes: {[self.chem_data.get_name(e) for e in enzyme_list]}")
+                            f"Enzymes: {enzyme_list}")
 
 
         self.reactants = reactant_list
@@ -124,12 +123,12 @@ class Reaction:
                                             #   will be treated as any other reagent/product)
         if number_enzymes > 1:
             print(f"Reaction(): WARNING - the reaction appears to have multiple enzymes:"
-                  f" {[self.chem_data.get_name(e) for e in enzyme_list]}")
+                  f" {enzyme_list}")
 
 
         # Process the kinetic and thermodynamic data, and update various object attributes accordingly
         self._set_kinetic_and_thermodynamic(forward_rate=forward_rate, reverse_rate=reverse_rate,
-                                            delta_H=delta_H, delta_S=delta_S, delta_G=delta_G, temp=self.chem_data.temp)
+                                            delta_H=delta_H, delta_S=delta_S, delta_G=delta_G, temp=temp)
 
 
 
@@ -237,7 +236,7 @@ class Reaction:
 
 
 
-    def extract_stoichiometry(self, term :(int, int, int)) -> int:
+    def extract_stoichiometry(self, term :(int, str, int)) -> int:
         """
         Return the stoichiometry coefficient, from a reaction term
 
@@ -246,7 +245,7 @@ class Reaction:
         """
         return term[0]
 
-    def extract_species_index(self, term :(int, int, int)) -> int:
+    def extract_species_name(self, term :(int, str, int)) -> int:
         """
         Return the index of the chemical species, from a reaction term
 
@@ -255,7 +254,7 @@ class Reaction:
         """
         return term[1]
 
-    def extract_rxn_order(self, term :(int, int, int)) -> int:
+    def extract_rxn_order(self, term :(int, str, int)) -> int:
         """
         Return the reaction order, from a reaction term
 
@@ -299,9 +298,9 @@ class Reaction:
 
 
 
-    def extract_chemicals_in_reaction(self, exclude_enzyme=False) -> Set[int]:
+    def extract_chemicals_in_reaction(self, exclude_enzyme=False) -> Set[str]:
         """
-        Return a SET of indices (being a set, it's NOT in any particular order)
+        Return a SET of names (being a set, it's NOT in any particular order)
         identifying all the chemicals appearing in this reaction.
         Optionally, exclude any that participate in a catalytic role
         (appearing identically on both sides of the reaction)
@@ -316,11 +315,11 @@ class Reaction:
         products = self.extract_products()
 
         for r in reactants:
-            species_index = self.extract_species_index(r)
+            species_index = self.extract_species_name(r)
             chem_set.add(species_index)
 
         for p in products:
-            species_index = self.extract_species_index(p)
+            species_index = self.extract_species_name(p)
             chem_set.add(species_index)
 
         if exclude_enzyme:
@@ -367,12 +366,13 @@ class Reaction:
         for k,v in rxn_properties.items():
             details.append(f"{k} = {v:,.5g}")          # EXAMPLE: "kF = 3"
 
-        rxn_description += "  (" + ' / '.join(details) + ")"    # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
+        if details:
+            rxn_description += "  (" + ' / '.join(details) + ")"    # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
 
 
         # If an ENZYME is involved, show it
         if self.enzyme is not None:
-            rxn_description += f" | Enzyme: {self.chem_data.get_name(self.enzyme)}"
+            rxn_description += f" | Enzyme: {self.enzyme}"
 
         if self.macro_enzyme is not None:
             rxn_description += f" | Macromolecule Enzyme: {self.macro_enzyme[0]}, at site # {self.macro_enzyme[1]}"
@@ -382,11 +382,11 @@ class Reaction:
         high_order = False      # Is there any term whose order is greater than 1 ?
         for r in reactants:
             if r[2] > 1:
-                rxn_description += f" | {r[2]}-th order in reactant {self.chem_data.get_name(r[1])}"
+                rxn_description += f" | {self.extract_rxn_order(r)}-th order in reactant {self.extract_species_name(r)}"
                 high_order = True
         for p in products:
             if p[2] > 1:
-                rxn_description += f" | {p[2]}-th order in product {self.chem_data.get_name(p[1])}"
+                rxn_description += f" | {self.extract_rxn_order(p)}-th order in product {self.extract_species_name(p)}"
                 high_order = True
 
         if not high_order:
@@ -431,10 +431,9 @@ class Reaction:
         # Compute the numerator of the "Reaction Quotient"
         for p in self.products:
             # Loop over the reaction products
-            species_index = self.extract_species_index(p)
+            species_name = self.extract_species_name(p)
             rxn_order = self.extract_rxn_order(p)
 
-            species_name = self.chem_data.get_name(species_index)
             species_conc = conc.get(species_name)
             assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
                                              f"concentration of `{species_name}` was not provided"
@@ -452,10 +451,9 @@ class Reaction:
         # Compute the denominator of the "Reaction Quotient"
         for r in self.reactants:
             # Loop over the reactants
-            species_index =  self.extract_species_index(r)
+            species_name =  self.extract_species_name(r)
             rxn_order =  self.extract_rxn_order(r)
 
-            species_name = self.chem_data.get_name(species_index)
             species_conc = conc.get(species_name)
             assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
                                              f"concentration of `{species_name}` was not provided"
@@ -507,12 +505,12 @@ class Reaction:
         formula_list = []
         for t in eqn_side:
             stoichiometry = self.extract_stoichiometry(t)
-            species_index = self.extract_species_index(t)
+            species_name = self.extract_species_name(t)
 
             if stoichiometry == 1:
-                term = f"{self.chem_data.get_name(species_index)}"
+                term = species_name
             else:
-                term = f"{stoichiometry} {self.chem_data.get_name(species_index)}"
+                term = f"{stoichiometry} {species_name}"
 
             formula_list.append(term)
 
@@ -520,7 +518,7 @@ class Reaction:
 
 
 
-    def _parse_reaction_term(self, term: Union[str, tuple, list], name="term") -> (int, int, int):
+    def _parse_reaction_term(self, term: Union[str, tuple, list], name="term") -> (int, str, int):
         """
         Accept various ways to specify a reaction term, and return a standardized triplet form for it.
 
@@ -535,10 +533,10 @@ class Reaction:
         If just a string is being passed, it is taken to be the chemical name,
         with stoichiometry and reaction order both 1
 
-        EXAMPLES (*assuming* that the chemical species with index 5 is called "F"):
-            "F"          gets turned into:  (1, 5, 1)   - defaults used for stoichiometry and reaction order
-            (2, "F")                        (2, 5, 2)   - default used for reaction order
-            (2, "F", 1)                     (2, 5, 1)   - no defaults invoked
+        EXAMPLES:
+            "F"          gets turned into:  (1, "F", 1)   - defaults used for stoichiometry and reaction order
+            (2, "F")                        (2, "F", 2)   - default used for reaction order
+            (2, "F", 1)                     (2, "F", 1)   - no defaults invoked
             It's equally acceptable to use LISTS in lieu of tuples
 
         :param term:    A string (a chemical name)
@@ -546,12 +544,12 @@ class Reaction:
                             OR  a triplet (stoichiometry coeff, name, reaction order)
         :param name:    An optional nickname, handy to refer to this term in error messages if needed
                             (for example, "reactant" or "product")
-        :return:        A standardized triplet of the form (stoichiometry, species index, reaction_order),
-                            where all terms are integers
+        :return:        A standardized triplet of the form (stoichiometry, species_name, reaction_order),
+                            where stoichiometry and reaction_order are integers, while species_name is a string
         """
         if type(term) == str:
-            return  (1, self.chem_data.get_index(term), 1)  # Accept simply the chemical name as a shortcut
-                                                            # for when the stoichiometry coefficient and reaction order are both 1
+            return  (1, term, 1)    # Accept simply the chemical name as a shortcut,
+                                    # for when the stoichiometry coefficient and reaction order are both 1
 
         if type(term) != tuple and type(term) != list:
             raise Exception(f"_parse_reaction_term(): {name} must be either a string (a chemical name), "
@@ -567,18 +565,16 @@ class Reaction:
         assert type(stoichiometry) == int, \
             f"_parse_reaction_term(): The stoichiometry coefficient must be an integer. Instead, it is {stoichiometry}"
 
-        species = term[1]
-        if type(species) == str:
-            species_index = self.chem_data.get_index(species)
-        else:
-            raise Exception(f"_parse_reaction_term(): The chemical name must be a string. "
-                            f"Instead, it is {species} (of type {type(species)})")
+        species_name = term[1]
+        assert type(species_name) == str, \
+                            f"_parse_reaction_term(): The chemical name must be a string. " \
+                            f"Instead, it is `{species_name}` (of type {type(species_name)})"
 
         if len(term) == 2:
-            return (stoichiometry, species_index, stoichiometry)
+            return (stoichiometry, species_name, stoichiometry)
         else:   # Length is 3
             reaction_order = term[2]
-            return (stoichiometry, species_index, reaction_order)
+            return (stoichiometry, species_name, reaction_order)
 
 
 
@@ -589,7 +585,13 @@ class Reaction:
         storing it in object attributes.
         Raise an Exception if any inconsistency is detected.
 
-        :return:    None
+        :param forward_rate:
+        :param reverse_rate:
+        :param delta_H:
+        :param delta_S:
+        :param delta_G:
+        :param temp:
+        :return:                None
         """
         self.kF = forward_rate
         self.kR = reverse_rate

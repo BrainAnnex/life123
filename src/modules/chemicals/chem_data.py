@@ -148,10 +148,10 @@ class ChemCore:
         Note: if also wanting to set the diffusion rate in a single function call,
               use ChemData.add_chemical_with_diffusion() instead
 
-        :param name:    Name of the new chemical species to register;
+        :param name:    Name of the new chemical species to register; names must be unique -
                             an Exception will be raised if the name was already registered
         :param note:    [OPTIONAL] String with note to attach to the chemical
-        :param kwargs:  (OPTIONAL) Dictionary of named arguments (with any desired names)
+        :param kwargs:  [OPTIONAL] Dictionary of named arguments (with any desired names)
         :return:        The integer index assigned to the newly-added chemical
         """
         # Validate
@@ -340,10 +340,10 @@ class AllReactions(Diffusion):
         self.temp = 298.15          # Temperature in Kelvins.  (By default, the equivalent of 25 C)
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
 
-        self.active_chemicals = set()   # Set of the INDEXES of the chemicals - not counting catalysts - involved
+        self.active_chemicals = set()   # Set of the names of the chemicals - not counting pure catalysts - involved
                                         # in any of the registered reactions
 
-        self.active_enzymes = set()     # Set of the INDEXES of the enzymes (catalysts) involved
+        self.active_enzymes = set()     # Set of the names of the enzymes (catalysts) involved
                                         # in any of the registered reactions
 
 
@@ -484,7 +484,11 @@ class AllReactions(Diffusion):
         """
         rxn = self.get_reaction(rxn_index)
 
-        return rxn.extract_chemicals_in_reaction()
+        name_set = rxn.extract_chemicals_in_reaction()
+
+        index_set = {self.get_index(name) for name in name_set}
+
+        return index_set
 
 
 
@@ -535,10 +539,10 @@ class AllReactions(Diffusion):
                 (2, "F", 1) means stoichiometry coefficient 2 and reaction order 1 - no defaults invoked
               It's equally acceptable to use LISTS in lieu of tuples for the pair or triplets
 
-        :param reactants:       A list of triplets (stoichiometry, species name or index, reaction order),
+        :param reactants:       A list of triplets (stoichiometry, species name, reaction order),
                                     or simplified terms in various formats; for details, see above.
                                     If not a list, it will get turned into one
-        :param products:        A list of triplets (stoichiometry, species name or index, reaction order of REVERSE reaction),
+        :param products:        A list of triplets (stoichiometry, species name, reaction order of REVERSE reaction),
                                     or simplified terms in various formats; for details, see above.
                                     If not a list, it will get turned into one
         :param forward_rate:    [OPTIONAL] Forward reaction rate constant
@@ -548,10 +552,11 @@ class AllReactions(Diffusion):
         :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
 
         :return:                Integer index of the newly-added reaction
-                                    (in the object variable self.reaction_list)
+                                    (in the list self.reaction_list, stored as object variable)
         """
-        rxn = Reaction(self, reactants, products, forward_rate, reverse_rate,
-                       delta_H, delta_S, delta_G)
+        # TODO: validate that all chemical names in reactants and products are legit
+        rxn = Reaction(reactants, products, forward_rate, reverse_rate,
+                       delta_H, delta_S, delta_G, temp=self.temp)
         self.reaction_list.append(rxn)
 
         involved_chemicals = rxn.extract_chemicals_in_reaction(exclude_enzyme=True)
@@ -756,12 +761,12 @@ class AllReactions(Diffusion):
             # Process all the PRODUCTS of this reaction
             products = rxn.extract_products()
             for term in products:
-                species_index = term[1]
-                chemical_id = f"C-{species_index}"      # Example: "C-12"
+                species_name = rxn.extract_species_name(term)
+                chemical_id = f"C-{self.get_index(species_name)}"      # Example: "C-12"
                 # Add each product to the graph as a node (if not already present)
                 graph.add_node( node_id=chemical_id, labels="Chemical",
-                                data={'name': self.get_name(species_index),
-                                      'diff_rate': self.get_diffusion_rate(species_index)
+                                data={'name': species_name,
+                                      'diff_rate': self.get_diffusion_rate(name=species_name)
                                       })
 
                 # Append edge from "reaction node" to "product node"
@@ -774,12 +779,12 @@ class AllReactions(Diffusion):
             # Process all the REACTANTS of this reaction
             reactants = rxn.extract_reactants()
             for term in reactants:
-                species_index = term[1]
-                chemical_id = f"C-{species_index}"      # Example: "C-34"
+                species_name = rxn.extract_species_name(term)
+                chemical_id = f"C-{self.get_index(species_name)}"      # Example: "C-34"
                 # Add each reactant to the graph as a node (if not already present)
                 graph.add_node(node_id=chemical_id, labels="Chemical",
-                               data={'name': self.get_name(species_index),
-                                     'diff_rate': self.get_diffusion_rate(species_index)
+                               data={'name': species_name,
+                                     'diff_rate': self.get_diffusion_rate(name=species_name)
                                      })
 
                 # Append edge from "reactant node" to "reaction node"
