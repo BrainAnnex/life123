@@ -627,10 +627,11 @@ class ReactionDynamics:
 
 
 
-    def single_compartment_react(self, reaction_duration=None, target_end_time=None,
-                                 initial_step=None, n_steps=None,
+    def single_compartment_react(self, duration=None, target_end_time=None, stop=None,
+                                 initial_step=None, n_steps=None, max_steps=None,
                                  snapshots=None, silent=False,
-                                 variable_steps=True, explain_variable_steps=False) -> None:
+                                 variable_steps=True, explain_variable_steps=False,
+                                 reaction_duration=None) -> None:
         """
         Perform ALL the reactions in the single compartment -
         based on the INITIAL concentrations,
@@ -639,16 +640,30 @@ class ReactionDynamics:
         Update the system state and the system time accordingly
         (object attributes self.system and self.system_time)
 
-        :param reaction_duration:  The overall time advance for the reactions (it might be exceeded in case of variable steps)
-        :param target_end_time: The final time at which to stop the reaction
-                                    If both target_end_time and reaction_duration are specified, an error will result
+        :param duration:        The overall time advance for the reactions (it may be exceeded in case of variable steps)
+        :param reaction_duration: [OBSOLETE OLD NAME for "duration"; being phased out]
+        :param target_end_time: The final time at which to stop the reaction; it may be exceeded in case of variable steps
+                                    If both `target_end_time` and `duration` are specified, an error will result
 
         :param initial_step:    The suggested size of the first step (it might be reduced automatically,
                                     in case of "hard" errors resulting from overly-large steps)
 
+        :param stop:            Pair of the form (termination_keyword, termination_parameter), to indicate
+                                    the criterion to use to stop the reaction
+                                    EXAMPLES:
+                                        ("conc_below", (chem_name, conc))  Stop when conc first dips below
+                                        ("conc_above", (chem_name, conc))  Stop when conc first rises above
+
+                                        TODO: add more options, such as
+                                        ("before_time", t)                  Stop just before the given target time
+                                        ("after_time", t)                   Stop just after the given target time
+                                        ("equilibrium", tolerance)          Stop when equilibrium reached
+
         :param n_steps:         The desired number of steps
 
-        :param snapshots:       OPTIONAL dict that may contain any the following keys:
+        :param max_steps:       (OPTIONAL) Max numbers of steps; if reached, it'll terminate regardless of any other criteria
+
+        :param snapshots:       (OPTIONAL) Dict that may contain any the following keys:
                                         -"frequency" (default 1)
                                         -"show_intermediates" (default True)
                                         -"species" (default None, meaning all species)
@@ -666,13 +681,20 @@ class ReactionDynamics:
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
 
+        if not duration:
+            duration = reaction_duration    # For backward compatibility.   TODO: phase out
+
         # Validation
         assert self.system is not None, "ReactionDynamics.single_compartment_react(): " \
                                         "the concentration values of the various chemicals must be set first"
 
-        if variable_steps and n_steps is not None:
+        if variable_steps and (n_steps is not None):
             raise Exception("ReactionDynamics.single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
-                            "(because the number of steps will vary); specify `reaction_duration` or `target_end_time` instead")
+                            "(because the number of steps will vary); specify `duration` or `target_end_time` instead")
+
+        if stop is not None:
+            assert type(stop) == tuple and len(stop) == 2, \
+                f"ReactionDynamics.single_compartment_react(): the argument `stop`, if passed, must be a pair of values"
 
 
         """
@@ -680,16 +702,16 @@ class ReactionDynamics:
         """
 
         if target_end_time is not None:
-            if reaction_duration is not None:
-                raise Exception("single_compartment_react(): cannot provide values for BOTH `target_end_time` and `reaction_duration`")
+            if duration is not None:
+                raise Exception("single_compartment_react(): cannot provide values for BOTH `target_end_time` and `duration`")
             else:
                 assert target_end_time > self.system_time, \
                     f"single_compartment_react(): `target_end_time` must be larger than the current System Time ({self.system_time})"
-                reaction_duration = target_end_time - self.system_time
+                duration = target_end_time - self.system_time
 
         # Determine the time step,
         # as well as the required number of such steps
-        time_step, n_steps = self.specify_steps(total_duration=reaction_duration,
+        time_step, n_steps = self.specify_steps(total_duration=duration,
                                                 time_step=initial_step,
                                                 n_steps=n_steps)
         # Note: if variable steps are requested then n_steps stops being particularly meaningful; it becomes a
@@ -697,7 +719,7 @@ class ReactionDynamics:
 
         if target_end_time is None:
             if variable_steps:
-                target_end_time = self.system_time + reaction_duration
+                target_end_time = self.system_time + duration
             else:
                 target_end_time = self.system_time + time_step * n_steps
 
@@ -721,9 +743,28 @@ class ReactionDynamics:
             self.save_diagnostic_conc_data(system_data)
 
 
-        i = 0
-        while self.system_time < target_end_time:   # Proceed until the system time reaches the target endtime
-            if (not variable_steps) and (i == n_steps) and np.allclose(self.system_time, target_end_time):
+        step_count = 0
+        #while self.system_time < target_end_time:
+        while True:
+            # Check various criteria for termination
+            if (max_steps is not None) and (step_count >= max_steps):
+                break       # We have reached the max allowable number of steps
+
+            if (target_end_time is not None) and (self.system_time >= target_end_time):
+                break       # The system time has reached the target endtime
+
+            if (stop is not None):
+                (termination_keyword, termination_parameter) = stop
+                if termination_keyword == "conc_below":
+                    chem_name, conc_threshold = termination_parameter
+                    if self.get_chem_conc(chem_name) < conc_threshold:
+                        break   # The concentration of the specified chemical has dropped the requested threshold
+                elif termination_keyword == "conc_above":
+                    chem_name, conc_threshold = termination_parameter
+                    if self.get_chem_conc(chem_name) > conc_threshold:
+                        break   # The concentration of the specified chemical has risen above the requested threshold
+
+            if (not variable_steps) and (step_count == n_steps) and np.allclose(self.system_time, target_end_time):
                 break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
                             #   the System Time is below the target_end_time because of roundoff error
 
@@ -732,7 +773,7 @@ class ReactionDynamics:
             delta_concentrations, step_actually_taken, recommended_next_step = \
                     self.reaction_step_common(delta_time=time_step,
                                               variable_steps=variable_steps, explain_variable_steps=explain_variable_steps,
-                                              step_counter=i)
+                                              step_counter=step_count)
 
             # Update the System State
             self.system += delta_concentrations
@@ -742,16 +783,16 @@ class ReactionDynamics:
             self.system_time += step_actually_taken
 
             # Preserve some of the data, as requested
-            if snapshots and ((i+1)%frequency == 0):
+            if snapshots and ((step_count+1)%frequency == 0):
                 if first_snapshot and "initial_caption" in snapshots:
                     self.add_snapshot(species=species, caption=snapshots["initial_caption"])
                     first_snapshot = False
                 else:
                     self.add_snapshot(species=species)
 
-            i += 1
+            step_count += 1
 
-            if i > 1000 * n_steps:  # To catch infinite loops
+            if step_count > 1000 * n_steps:  # To catch infinite loops
                 raise Exception("single_compartment_react(): "
                                 "the computation is taking a very large number of steps, probably from automatically trying to correct instability;"
                                 " trying reducing the time_step")   # TODO: is the explanation correctly phrased?
@@ -765,8 +806,9 @@ class ReactionDynamics:
                 time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
         # END while
 
-        # Report as to whether extra steps were automatically added, as well as the total # taken
-        n_steps_taken = i
+
+        # Report whether extra steps were automatically added, as well as the total # taken
+        n_steps_taken = step_count
 
         extra_steps = n_steps_taken - n_steps
         if extra_steps > 0:
