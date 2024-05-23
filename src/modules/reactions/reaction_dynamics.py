@@ -92,15 +92,22 @@ class ReactionDynamics:
         # ***  FOR AUTOMATED ADAPTIVE TIME STEP SIZES  ***
         # Note: The "aborts" below are "elective" aborts - i.e. not aborts from hard errors (further below)
         #       The default values below were empirically found to be "conservative" but not excessively so
-        self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
-                           {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
+        #       Users in need to change these default values will generally use use_adaptive_preset() or,
+        #       for more control, set_thresholds(), set_step_factors() and set_error_step_factor()
+        self.thresholds = [
+                            {"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
+                            {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}
+                          ]     # A list of "rules"
         self.step_factors = {"upshift": 1.2, "downshift": 0.5, "abort": 0.4}
+                            # "upshift" must be > 1 .   "downshift" and "abort" must be < 1
 
 
         self.error_abort_step_factor = 0.25     # MUST BE < 1.  Factor by which to multiply the time step
                                                 #   in case of negative-concentration error from excessive step size
                                                 #   NOTE: this is from ERROR aborts,
                                                 #   not to be confused with general aborts based on reaching high threshold
+                                                #   TODO: maybe change name to "error_step_factor" or "error_correct_step_factor"
+                                                #         to avoid confusion with the "abort" step factor
 
 
         # ***  FOR DIAGNOSTICS  ***     TODO: maybe turn all diagnostic data/methods into a separate object
@@ -1013,7 +1020,7 @@ class ReactionDynamics:
                 print("    Norms:    ", all_norms)
 
                 print("    Thresholds:    ")
-                for rule in  self.thresholds:
+                for rule in self.thresholds:
                     print(self.display_thresholds(rule, all_norms.get(rule['norm'])))
 
                 print("    Step Factors:    ", self.step_factors)
@@ -1236,30 +1243,41 @@ class ReactionDynamics:
 
 
 
-    def display_thresholds(self, rule :str, value) -> str:
+    def display_thresholds(self, rule :dict, value) -> str:
         """
+        Examine how the specified value fits
+        relatively to the 'low', 'high', and 'abort' stored in the given rule
 
-        :param rule:    A string that can be either 'low', 'high', or 'abort'
-        :param value:
-        :return:
+        :param rule:    A dict that must contain the key 'norm',
+                            and may contain the keys: 'low', 'high', and 'abort'
+                            (referring to 3 increasingly-high thresholds)
+        :param value:   Either None, or a number to compare to the thresholds
+        :return:        A string that visually highlights the relative position of the value
+                            relatively to the given thresholds
         """
-        s = f"                   {rule['norm']} : "
+        s = f"                   {rule['norm']} : "     # Name of the norm being used
 
         if value is None:
             return s + " (skipped; not needed)"
 
+        # Extract the 3 thresholds (some might be missing)
         low = rule.get('low')
         high = rule.get('high')
         abort = rule.get('abort')
+
         if low is not None and value < low:
+            # The value is below the `low` threshold
             return f"{s}(VALUE {value:.5g}) | low {low} | high {high} | abort {abort}"
 
         if high is not None and value < high:
+            # The value is between the `low` and `high` thresholds
             return f"{s}low {low} | (VALUE {value:.5g}) | high {high} | abort {abort}"
 
         if abort is not None and value < abort:
+            # The value is above the `high` threshold
             return f"{s}low {low} | high {high} | (VALUE {value:.5g}) | abort {abort}"
 
+        # If we get thus far, the value is above the `abort` threshold
         return f"{s}low {low} | high {high} | abort {abort} | (VALUE {value:.5g})"
 
 
