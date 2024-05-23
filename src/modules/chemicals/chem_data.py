@@ -706,26 +706,36 @@ class AllReactions(Diffusion):
 
     def names_of_active_chemicals(self) -> Set[str]:
         """
-        Return a set of the names of all the chemicals involved in ANY of the registered reactions,
-        NOT counting catalysts
+        Return the set of the names of all the chemicals
+        involved in ANY of the registered reactions,
+        but NOT counting chemicals that always appear in a catalytic role in all the reactions they
+        participate in
+        (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here)
         """
-        name_set = set()
-        for ac_index in self.active_chemicals:
-            name_set.add(self.get_name(ac_index))
+        return self.active_chemicals
 
-        return name_set
+
+
+    def indexes_of_active_chemicals(self) -> [int]:
+        """
+        Return the ordered list (numerically sorted) of the index numbers of all the chemicals
+        involved in ANY of the registered reactions,
+        but NOT counting chemicals that always appear in a catalytic role in all the reactions they
+        participate in
+        (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here)
+        """
+        index_list = list(map(self.get_index, self.active_chemicals))
+        return sorted(index_list)
 
 
 
     def names_of_enzymes(self) -> Set[str]:
         """
-        Return a set of the names of all the enzymes involved in ANY of reactions
+        Return the set of the names of the enzymes (catalysts) involved
+        in any of the registered reactions
+        (regardless of whether they might participate in a non-enzymatic role in other reactions)
         """
-        name_set = set()
-        for e_index in self.active_enzymes:
-            name_set.add(self.get_name(e_index))
-
-        return name_set
+        return self.active_enzymes
 
 
 

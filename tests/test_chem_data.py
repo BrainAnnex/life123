@@ -318,6 +318,12 @@ def test_get_chemicals_in_reaction():
     assert chem.get_chemicals_in_reaction(3) == {0, 1, 3}
 
 
+
+def test_get_reactions_participating_in():
+    pass   # TODO
+
+
+
 def test_set_temp():
     chem_data = ChemData()
     chem_data.set_temp(123)
@@ -509,8 +515,60 @@ def test_multiple_reactions_describe():
 def test_single_reaction_describe():
     pass   # TODO
 
-def test_get_reactions_participating_in():
-    pass   # TODO
+
+
+def test_names_of_active_chemicals():
+    chem = ChemData(names=['A', 'B', 'C', 'X', 'Y'])
+    assert chem.names_of_active_chemicals() == set()    # No reactions yet
+
+    chem.add_reaction(reactants="A", products="B")
+    assert chem.names_of_active_chemicals() == {"A", "B"}
+
+    chem.add_reaction(reactants=["B", "X"], products=["C", "X"])
+    assert chem.names_of_active_chemicals() == {"A", "B", "C"}  # "X" is an enzyme
+
+    chem.add_reaction(reactants="X", products="Y")
+    assert chem.names_of_active_chemicals() == {"A", "B", "C", "X", "Y"}
+    # "X" is now involved in some reactions in a non-enzymatic role
+
+    chem.add_reaction(reactants=["A", "B", "Z"], products=["C", "Z"])
+    assert chem.names_of_active_chemicals() == {"A", "B", "C", "X", "Y"}  # "Z" is an enzyme
+
+
+
+def test_indexes_of_active_chemicals():
+    chem = ChemData(names=['Y', 'X', 'C', 'B', 'A'])
+    assert chem.indexes_of_active_chemicals() == []                 # No reactions yet
+
+    chem.add_reaction(reactants="A", products="B")
+    assert chem.indexes_of_active_chemicals() == [3, 4]             # ["A", "B"]
+
+    chem.add_reaction(reactants=["B", "X"], products=["C", "X"])
+    assert chem.indexes_of_active_chemicals() == [2, 3, 4]          # ["A", "B", "C"]
+
+    chem.add_reaction(reactants="X", products="Y")
+    assert chem.indexes_of_active_chemicals() == [0, 1, 2, 3, 4]    # All
+
+    chem.add_reaction(reactants=["A", "B", "Z"], products=["C", "Z"])
+    assert chem.indexes_of_active_chemicals() == [0, 1, 2, 3, 4]    # All
+
+
+
+def test_names_of_enzymes():
+    chem = ChemData(names=['A', 'B', 'C', 'X', 'Y'])
+    assert chem.names_of_enzymes() == set()    # No enzymes yet
+
+    chem.add_reaction(reactants="A", products="B")
+    assert chem.names_of_enzymes() == set()     # No enzymes yet
+
+    chem.add_reaction(reactants=["B", "X"], products=["C", "X"])
+    assert chem.names_of_enzymes() == {"X"}     # "X" is an enzyme
+
+    chem.add_reaction(reactants="X", products="Y")
+    assert chem.names_of_enzymes() == {"X"}      # "X" is an enzyme in SOME reaction
+
+    chem.add_reaction(reactants=["A", "B", "Z"], products=["C", "Z"])
+    assert chem.names_of_enzymes() == {"X", "Z"}
 
 
 

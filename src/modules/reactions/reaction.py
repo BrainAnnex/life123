@@ -245,7 +245,7 @@ class Reaction:
         """
         return term[0]
 
-    def extract_species_name(self, term :(int, str, int)) -> int:
+    def extract_species_name(self, term :(int, str, int)) -> str:
         """
         Return the index of the chemical species, from a reaction term
 
@@ -315,12 +315,12 @@ class Reaction:
         products = self.extract_products()
 
         for r in reactants:
-            species_index = self.extract_species_name(r)
-            chem_set.add(species_index)
+            species_name = self.extract_species_name(r)
+            chem_set.add(species_name)
 
         for p in products:
-            species_index = self.extract_species_name(p)
-            chem_set.add(species_index)
+            species_name = self.extract_species_name(p)
+            chem_set.add(species_name)
 
         if exclude_enzyme:
             chem_set = chem_set - {self.enzyme}     # Difference between sets
@@ -468,7 +468,9 @@ class Reaction:
             denominator_text = f"({denominator_text})"  # In case of multiple terms, enclose them in parenthesis
 
 
-        quotient = numerator / denominator      # It might be np.inf or np.nan
+        with np.errstate(divide='ignore', invalid='ignore'):
+            # It might be np.inf (if just the denominator is zero) or np.nan (if both are zero)
+            quotient = numerator / denominator
 
         if explain:
             formula = f"{numerator_text} / {denominator_text}"

@@ -467,6 +467,7 @@ class ReactionDynamics:
         :param value:
         :return:        None
         """
+        #TODO: maybe combine with set_step_factors(), and perhaps tweak some names
         assert value < 1, "set_error_step_factor(): the argument must strictly be < 1"
         assert value > 0, "set_error_step_factor(): the argument must be a non-zero positive number"
 
@@ -489,29 +490,48 @@ class ReactionDynamics:
 
     def use_adaptive_preset(self, preset :str) -> None:
         """
-        Lets the user choose a preset to use from then on, unless explicitly changed,
-        for use in all reaction simulations involving adaptive time steps
+        Lets the user choose a preset to use from now on, unless explicitly changed,
+        for use in ALL reaction simulations involving adaptive time steps.
+        The preset will affect how the simulation will be "risk-taker" vs. "risk-averse" about
+        taking larger steps.
 
-        :param preset:  String with one of the available preset names
+        :param preset:  String with one of the available preset names;
+                            allowed values are 'slow', 'mid', 'fast'
         :return:        None
         """
-        if preset == "mid":     # A "middle-of-the road" heuristic: somewhat "conservative" but not overly so
+        '''
+        For example, using the "mid" preset is the same as issuing:
+            dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
+            dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
+            dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4)
+            dynamics.set_error_step_factor(0.25)
+        '''
+
+        if preset == "slower":   # Very conservative about taking larger steps
+            self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
+                               {"norm": "norm_B", "low": 0.03, "high": 0.05, "abort": 0.5}]
+            self.step_factors = {"upshift": 1.01, "downshift": 0.5, "abort": 0.1}
+            self.error_abort_step_factor = 0.1
+
+        elif preset == "slow":   # More conservative about taking larger steps
+            self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
+                               {"norm": "norm_B", "low": 0.05, "high": 0.4, "abort": 1.3}]
+            self.step_factors = {"upshift": 1.1, "downshift": 0.3, "abort": 0.2}
+            self.error_abort_step_factor = 0.1
+
+        elif preset == "mid":     # A "middle-of-the road" heuristic: somewhat "conservative" but not overly so
             self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
                                {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
             self.step_factors = {"upshift": 1.2, "downshift": 0.5, "abort": 0.4}
             self.error_abort_step_factor = 0.25
 
-        elif preset == "fast":   # EXPERIMENTAL preset subject to change!
+        elif preset == "fast":   # Less conservative about taking larger steps
             self.thresholds = [{"norm": "norm_A", "low": 0.8, "high": 1.2, "abort": 1.7},
                                {"norm": "norm_B", "low": 0.15, "high": 0.8, "abort": 1.8}]
             self.step_factors = {"upshift": 1.5, "downshift": 0.8, "abort": 0.6}
             self.error_abort_step_factor = 0.5
 
-        elif preset == "slow":   # EXPERIMENTAL preset subject to change!
-            self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
-                               {"norm": "norm_B", "low": 0.05, "high": 0.4, "abort": 1.3}]
-            self.step_factors = {"upshift": 1.1, "downshift": 0.3, "abort": 0.2}
-            self.error_abort_step_factor = 0.1
+
 
         else:
             raise Exception(f"set_adaptive_parameters(): unknown value for the `preset` argument ({preset}); "
@@ -1171,12 +1191,15 @@ class ReactionDynamics:
         # If some chemicals are not dynamically involved in the reactions
         # (i.e. if they don't occur in any reaction, or occur as enzyme),
         # restrict our consideration to only the dynamically involved ones
-        if len(self.chem_data.active_chemicals) < n_chems:
-            #n_chems = len(self.chem_data.active_chemicals)
-            delta_conc = delta_conc[list(self.chem_data.active_chemicals)]
+        #if len(self.chem_data.active_chemicals) < n_chems:
+        if len(self.chem_data.names_of_enzymes()) > 0:
+            #n_chems = len(self.chem_data.names_of_active_chemicals())
+            #delta_conc = delta_conc[list(self.chem_data.active_chemicals)]
+            delta_conc = delta_conc[self.chem_data.indexes_of_active_chemicals()]
             #print(f"\nadjust_speed(): restricting adaptive time step analysis to {n_chems} chemicals only; their delta_conc is {delta_conc}")
             if baseline_conc is not None:
-                baseline_conc = baseline_conc[list(self.chem_data.active_chemicals)]
+                #baseline_conc = baseline_conc[list(self.chem_data.active_chemicals)]
+                baseline_conc = baseline_conc[self.chem_data.indexes_of_active_chemicals()]
                 #print(f"    and their baseline_conc is {baseline_conc}")
 
 
@@ -2824,8 +2847,7 @@ class ReactionDynamics:
             # Prepare a concise listing from the given concentration,
             # only including those that are applicable to this reaction
             all_applicable_concs = []
-            for species_index in rxn.extract_chemicals_in_reaction(exclude_enzyme=False):
-                species_name = self.chem_data.get_name(species_index)
+            for species_name in rxn.extract_chemicals_in_reaction(exclude_enzyme=False):
                 s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
                 all_applicable_concs.append(s)
 
