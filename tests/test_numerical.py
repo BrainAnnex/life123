@@ -6,85 +6,85 @@ import pandas as pd
 
 def test_curve_intersect_interpolate():
     df = pd.DataFrame({"TIME": [1, 2, 3], "A": [2,4,10], "B": [12,4,0]})
-    result = num.curve_intersect_interpolate(df, row_index=1, x="TIME", var1="A", var2="B")
+    result = num.curve_intersect_interpolate(df, x="TIME", var1="A", var2="B")
     assert np.allclose(result, (2, 4))
 
     df = pd.DataFrame({"SYSTEM TIME": [10, 20, 30], "p": [2,4,10], "q": [12,4,0]})
-    result = num.curve_intersect_interpolate(df, row_index=1, x="SYSTEM TIME", var1="p", var2="q")
+    result = num.curve_intersect_interpolate(df, x="SYSTEM TIME", var1="p", var2="q")
     assert np.allclose(result, (20, 4))
 
     df = pd.DataFrame({"SYSTEM TIME": [10, 20, 30], "p": [2,4,10], "q": [12,5,0]})
-    result = num.curve_intersect_interpolate(df, row_index=1, x="SYSTEM TIME", var1="p", var2="q")
+    result = num.curve_intersect_interpolate(df, x="SYSTEM TIME", var1="p", var2="q")
     assert np.allclose(result, (20.90909090909091, 4.545454545454546))
     alternate_result = num.line_intersect((20, 4), (30, 10), (20, 5), (30, 0))  # Worked out by hand
     assert np.allclose(result, alternate_result)
 
     df = pd.DataFrame({"SYSTEM TIME": [10, 20, 30], "p": [2,4,10], "q": [12,1,0]})
-    result = num.curve_intersect_interpolate(df, row_index=1, x="SYSTEM TIME", var1="p", var2="q")
+    result = num.curve_intersect_interpolate(df, x="SYSTEM TIME", var1="p", var2="q")
     assert np.allclose(result, (17.692307692307693, 3.5384615384615383))
     alternate_result = num.line_intersect((10, 2), (20, 4), (10, 12), (20, 1))
     assert np.allclose(result, alternate_result)
 
     df = pd.DataFrame({"x-coord": [5, 6, 10], "line 1": [-2,-2,-2], "line 2": [2,0,-5]})
-    result = num.curve_intersect_interpolate(df, row_index=1, x="x-coord", var1="line 1", var2="line 2")
+    result = num.curve_intersect_interpolate(df, x="x-coord", var1="line 1", var2="line 2")
     assert np.allclose(result, (7.6, -2.0))
     alternate_result = num.line_intersect((6, -2), (10, -2), (6, 0), (10, -5))
     assert np.allclose(result, alternate_result)
 
     df = pd.DataFrame({"x coord": [5, 7, 15], "L1": [-6,-3,3], "L2": [1,-2,-0]})
-    result = num.curve_intersect_interpolate(df, row_index=1, x="x coord", var1="L1", var2="L2")
+    result = num.curve_intersect_interpolate(df, x="x coord", var1="L1", var2="L2")
     assert np.allclose(result, (9.0, -1.5))
     alternate_result = num.line_intersect((7, -3), (15, 3), (7, -2), (15, 0))
     assert np.allclose(result, alternate_result)
 
-    # Extra row at end of dataframe
-    df = pd.DataFrame({"x coord": [5, 7, 15, 99], "L1": [-6,-3,3,99], "L2": [1,-2,-0,99]})
-    result = num.curve_intersect_interpolate(df, row_index=1, x="x coord", var1="L1", var2="L2")
-    assert np.allclose(result, (9.0, -1.5))
+    # Intersection at end of dataframe
+    df = pd.DataFrame({"x coord": [5, 7, 15, 99], "L1": [-6, -3, 3, 99], "L2": [1, -2, -0, 99]})
+    with pytest.raises(Exception):
+        num.curve_intersect_interpolate(df, x="x coord", var1="L1", var2="L2", print_row=True)
 
     # Extra row at start of dataframe
     df = pd.DataFrame({"x coord": [-123, 5, 7, 15], "L1": [-123,-6,-3,3], "L2": [-123,1,-2,-0]})
-    result = num.curve_intersect_interpolate(df, row_index=2, x="x coord", var1="L1", var2="L2")
-    assert np.allclose(result, (9.0, -1.5))
+    with pytest.raises(Exception):
+        num.curve_intersect_interpolate(df, x="x coord", var1="L1", var2="L2")
 
     # No actual intersection
     df = pd.DataFrame({"x coord": [8, 10, 15], "L1": [-3,-1,-6], "L2": [3,1,30]})
-    result = num.curve_intersect_interpolate(df, row_index=1, x="x coord", var1="L1", var2="L2")
+    result = num.curve_intersect_interpolate(df, x="x coord", var1="L1", var2="L2")
     assert np.allclose(result, (10, 0.))
 
 
     # Error cases
     df = pd.DataFrame({"TIME": [1, 2, 3], "A": [4,4,4], "B": [4,4,4]})
     with pytest.raises(Exception):
-        num.curve_intersect_interpolate(df, row_index=1, x="TIME", var1="A", var2="B")  # Extended overlap on both sides
+        num.curve_intersect_interpolate(df, x="TIME", var1="A", var2="B")  # Extended overlap on both sides
 
     df = pd.DataFrame({"TIME": [1, 2, 3], "A": [10,12,30], "B": [10,12,40]})
     with pytest.raises(Exception):
-        num.curve_intersect_interpolate(df, row_index=1, x="TIME", var1="A", var2="B")  # Extended overlap on left segments
+        num.curve_intersect_interpolate(df, x="TIME", var1="A", var2="B")  # Extended overlap on left segments
 
     df = pd.DataFrame({"TIME": [1, 2, 3], "A": [5,12,30], "B": [-8,12,30]})
     with pytest.raises(Exception):
-        num.curve_intersect_interpolate(df, row_index=1, x="TIME", var1="A", var2="B")  # Extended overlap on right segments
+        num.curve_intersect_interpolate(df, x="TIME", var1="A", var2="B")  # Extended overlap on right segments
 
 
     df = pd.DataFrame({"SYSTEM TIME": [5, 6, 10], "A": [-2,-2,-2], "B": [2,0,-5]})
     # Unknown column names
     with pytest.raises(Exception):
-        num.curve_intersect_interpolate(df, row_index=1, x="unknown", var1="A", var2="B")
+        num.curve_intersect_interpolate(df, x="unknown", var1="A", var2="B")
     with pytest.raises(Exception):
-        num.curve_intersect_interpolate(df, row_index=1, x="SYSTEM TIME", var1="unknown", var2="B")
+        num.curve_intersect_interpolate(df, x="SYSTEM TIME", var1="unknown", var2="B")
     with pytest.raises(Exception):
-        num.curve_intersect_interpolate(df, row_index=1, x="SYSTEM TIME", var1="A", var2="unknown")
+        num.curve_intersect_interpolate(df, x="SYSTEM TIME", var1="A", var2="unknown")
 
     df = pd.DataFrame({"TIME": [1, 2], "A": [10,12], "B": [80,100]})
     with pytest.raises(Exception):
-        num.curve_intersect_interpolate(df, row_index=1, x="TIME", var1="A", var2="B")  # Too few rows
+        num.curve_intersect_interpolate(df, x="TIME", var1="A", var2="B")  # Too few rows
 
 
     df = pd.DataFrame({"x coord": [-2, 0, 5], "L1": [-3,1,-6], "L2": [3,-1,30]})
     # Multiple intersections
     with pytest.raises(Exception):
-        num.curve_intersect_interpolate(df, row_index=1, x="x coord", var1="L1", var2="L2")
+        num.curve_intersect_interpolate(df, x="x coord", var1="L1", var2="L2")
 
 
 

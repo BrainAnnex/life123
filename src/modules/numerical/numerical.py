@@ -13,34 +13,50 @@ class Numerical:
 
 
     @classmethod
-    def curve_intersect_interpolate(cls, df: pd.DataFrame, row_index :int, x, var1, var2) -> (float, float):
+    def curve_intersect_interpolate(cls, df: pd.DataFrame,
+                                    x :str, var1 :str, var2 :str, print_row=False) -> (float, float):
         """
-        Fine-tune the intersection point between 2 Pandas dataframe columns,
+        Determine the intersection point between 2 Pandas dataframe columns,
         using linear interpolation
 
         :param df:          A Pandas dataframe with at least 3 columns
-        :param row_index:   The index of the Pandas dataframe row
-                                with the smallest absolute value of difference in concentrations
         :param x:           The name of the dataframe column with the independent variable
         :param var1:        The name of the dataframe column with the data from the 1st curve
         :param var2:        The name of the dataframe column with the data from the 2nd curve
-        :return:            The pair (time of intersection, common value)
+        :param print_row:   [OPTIONAL] If True, print the number of the row with the smallest abs(difference)
+        :return:            The pair (x-coordinate of intersection, common value)
+
+        :return:            The pair (x-coordinate of intersection, common value)
         """
-        df_size = len(df)
+        '''
+        TODO:   the current implementation fails in cases where the 2 curves stay within some distance of each other,
+                and then one curve jumps on the opposite side of the other curve, at at BIGGER distance.
+                See the missed intersection at the end of experiment "reactions_single_compartment/up_regulate_1"
+        '''
+
+        row_index = abs(df[var1] - df[var2]).idxmin()   # The index of the Pandas dataframe row
+                                                        #   with the smallest absolute value
+                                                        #   of difference between the values
+                                                        #   in the columns var1 and var2
+        if print_row:
+            print(f"curve_intersect_interpolate(): Min abs(distance) found at data row: {row_index}")
+
+
+        df_size = len(df)   # Number of rows in the dataframe
         assert df_size >= 3, \
             f"curve_intersect_interpolate(): the Pandas dataframe must have at least 3 rows (it has {df_size}). Not enough data..."
 
         # The next 2 integers are the indices of the boundaries of the passed dataframe
-        first_index = df.iloc[0].name           # TODO: try df.index[0]
-        last_index = df.iloc[df_size-1].name    # TODO: try df.index[-1]
+        first_index = df.index[0]
+        last_index = df.index[-1]
 
         assert row_index > first_index, \
-            f"curve_intersect_interpolate(): the given row (index {row_index}) in the Pandas dataframe must be past " \
-            f"the first one (whose index is {first_index}). Try using a bigger dataframe with an earlier start point!"
+            f"curve_intersect_interpolate(): the row (index {row_index}) in the Pandas dataframe with the smallest abs(distance) is " \
+            f"the first one (index {first_index}). Try using a bigger dataframe with an earlier start point!"
 
         assert row_index < last_index, \
-            f"curve_intersect_interpolate(): the given row (index {row_index}) in the Pandas dataframe must be before " \
-            f"the last one (whose index is {last_index}). Try using a bigger dataframe with an later end point!"
+            f"curve_intersect_interpolate(): the row (index {row_index}) in the Pandas dataframe with the smallest abs(distance) is " \
+            f"the last one (index {last_index}). Try using a bigger dataframe with an later end point!"
 
         col_names = list(df.columns)
         assert x in col_names, f"the given Pandas dataframe lacks a column named `{x}`"
@@ -67,7 +83,7 @@ class Numerical:
         prev_val1 = prev_row[var1]
         prev_val2 = prev_row[var2]
 
-        if np.allclose(val1, val2):     # The intersection occurs at the given middle point
+        if np.allclose(val1, val2):     # If a (near-)perfect intersection was found
             #print("val1 is very close to, or equal to, val2")
             if np.allclose(next_val1, next_val2) or np.allclose(prev_val1, prev_val2):
                 raise Exception("the intersection isn't well-defined because there's extended overlap")

@@ -491,36 +491,37 @@ class ReactionDynamics:
         print("Parameters used for the automated adaptive time step sizes -")
         print("    THRESHOLDS: ", self.thresholds)
         print("    STEP FACTORS: ", self.step_factors)
-        print("    STEP FACTOR in case of 'ERROR ABORTS': ", self.error_abort_step_factor)
+        print("    STEP FACTOR in case of 'ERROR RE-DOs': ", self.error_abort_step_factor)
 
 
 
     def use_adaptive_preset(self, preset :str) -> None:
         """
-        Lets the user choose a preset to use from now on, unless explicitly changed,
+        Lets the user choose a preset to use from now on, unless later explicitly changed,
         for use in ALL reaction simulations involving adaptive time steps.
-        The preset will affect how the simulation will be "risk-taker" vs. "risk-averse" about
+        The preset will affect the degree to which the simulation will be "risk-taker" vs. "risk-averse" about
         taking larger steps.
 
+        Note:   for more control, use set_thresholds(), set_step_factors() and set_error_step_factor()
+
+                For example, using the "mid" preset is the same as issuing:
+                    dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
+                    dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
+                    dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4)
+                    dynamics.set_error_step_factor(0.25)
+
         :param preset:  String with one of the available preset names;
-                            allowed values are 'slow', 'mid', 'fast'
+                            allowed values are (in generally-increasing speed):
+                            'slower', 'slow', 'mid', 'fast'
         :return:        None
         """
-        '''
-        For example, using the "mid" preset is the same as issuing:
-            dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
-            dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-            dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4)
-            dynamics.set_error_step_factor(0.25)
-        '''
-
         if preset == "slower":   # Very conservative about taking larger steps
             self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
                                {"norm": "norm_B", "low": 0.03, "high": 0.05, "abort": 0.5}]
             self.step_factors = {"upshift": 1.01, "downshift": 0.5, "abort": 0.1}
             self.error_abort_step_factor = 0.1
 
-        elif preset == "slow":   # More conservative about taking larger steps
+        elif preset == "slow":   # Conservative about taking larger steps
             self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
                                {"norm": "norm_B", "low": 0.05, "high": 0.4, "abort": 1.3}]
             self.step_factors = {"upshift": 1.1, "downshift": 0.3, "abort": 0.2}
@@ -532,7 +533,7 @@ class ReactionDynamics:
             self.step_factors = {"upshift": 1.2, "downshift": 0.5, "abort": 0.4}
             self.error_abort_step_factor = 0.25
 
-        elif preset == "fast":   # Less conservative about taking larger steps
+        elif preset == "fast":   # Less conservative (more "risk-taker") about taking larger steps
             self.thresholds = [{"norm": "norm_A", "low": 0.8, "high": 1.2, "abort": 1.7},
                                {"norm": "norm_B", "low": 0.15, "high": 0.8, "abort": 1.8}]
             self.step_factors = {"upshift": 1.5, "downshift": 0.8, "abort": 0.6}
@@ -728,27 +729,36 @@ class ReactionDynamics:
         Determine all the various time parameters that were not explicitly provided
         """
 
-        if target_end_time is not None:
-            if duration is not None:
-                raise Exception("single_compartment_react(): cannot provide values for BOTH `target_end_time` and `duration`")
-            else:
-                assert target_end_time > self.system_time, \
-                    f"single_compartment_react(): `target_end_time` must be larger than the current System Time ({self.system_time})"
-                duration = target_end_time - self.system_time
+        if stop is not None:
+            assert initial_step > 0, \
+                "single_compartment_react(): when using the `stop` argument, an `initial_step` argument must be provided"
+            assert max_steps is not None, \
+                "single_compartment_react(): when using the `stop` argument, a `max_steps` argument must be provided"
+            time_step = initial_step
 
-        # Determine the time step,
-        # as well as the required number of such steps
-        time_step, n_steps = self.specify_steps(total_duration=duration,
-                                                time_step=initial_step,
-                                                n_steps=n_steps)
-        # Note: if variable steps are requested then n_steps stops being particularly meaningful; it becomes a
-        #       hypothetical value, in the (unlikely) event that the step size were never changed
 
-        if target_end_time is None:
-            if variable_steps:
-                target_end_time = self.system_time + duration
-            else:
-                target_end_time = self.system_time + time_step * n_steps
+        else:
+            if target_end_time is not None:
+                if duration is not None:
+                    raise Exception("single_compartment_react(): cannot provide values for BOTH `target_end_time` and `duration`")
+                else:
+                    assert target_end_time > self.system_time, \
+                        f"single_compartment_react(): `target_end_time` must be larger than the current System Time ({self.system_time})"
+                    duration = target_end_time - self.system_time
+
+            # Determine the time step,
+            # as well as the required number of such steps
+            time_step, n_steps = self.specify_steps(total_duration=duration,
+                                                    time_step=initial_step,
+                                                    n_steps=n_steps)
+            # Note: if variable steps are requested then n_steps stops being particularly meaningful; it becomes a
+            #       hypothetical value, in the (unlikely) event that the step size were never changed
+
+            if target_end_time is None:
+                if variable_steps:
+                    target_end_time = self.system_time + duration
+                else:
+                    target_end_time = self.system_time + time_step * n_steps
 
 
         if snapshots:
@@ -791,7 +801,8 @@ class ReactionDynamics:
                     if self.get_chem_conc(chem_name) > conc_threshold:
                         break   # The concentration of the specified chemical has risen above the requested threshold
 
-            if (not variable_steps) and (step_count == n_steps) and np.allclose(self.system_time, target_end_time):
+            if (not variable_steps) and (step_count == n_steps)\
+                    and (target_end_time is not None) and np.allclose(self.system_time, target_end_time):
                 break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
                             #   the System Time is below the target_end_time because of roundoff error
 
@@ -819,7 +830,7 @@ class ReactionDynamics:
 
             step_count += 1
 
-            if step_count > 1000 * n_steps:  # To catch infinite loops
+            if (n_steps is not None) and (step_count > 1000 * n_steps):  # Another approach to catch infinite loops
                 raise Exception("single_compartment_react(): "
                                 "the computation is taking a very large number of steps, probably from automatically trying to correct instability;"
                                 " trying reducing the time_step")   # TODO: is the explanation correctly phrased?
@@ -837,14 +848,15 @@ class ReactionDynamics:
         # Report whether extra steps were automatically added, as well as the total # taken
         n_steps_taken = step_count
 
-        extra_steps = n_steps_taken - n_steps
-        if extra_steps > 0:
-            if variable_steps:
-                print(f"Some steps were backtracked and re-done, "
-                      f"to prevent negative concentrations or excessively large concentration changes")
-            else:
-                print(f"The computation took {extra_steps} extra step(s) - "
-                      f"automatically added to prevent negative concentrations")
+        if n_steps is not None:
+            extra_steps = n_steps_taken - n_steps
+            if extra_steps > 0:
+                if variable_steps:
+                    print(f"Some steps were backtracked and re-done, "
+                          f"to prevent negative concentrations or excessively large concentration changes")
+                else:
+                    print(f"The computation took {extra_steps} extra step(s) - "
+                          f"automatically added to prevent negative concentrations")
 
 
         if not silent:
@@ -2479,7 +2491,7 @@ class ReactionDynamics:
 
         Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
 
-        :param chemicals:   (OPTIONAL) List of the names of the chemicals to plot;
+        :param chemicals:   (OPTIONAL) List of the names of the chemicals whose concentration changes are to be plotted;
                                 if None, then display all
         :param colors:      (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
                                 or list of names to use, in order; if None, then use the hardwired defaults
@@ -2701,7 +2713,8 @@ class ReactionDynamics:
                                    If this parameter is specified, an extra column - called "search_value" -
                                    is inserted at the beginning of the dataframe.
                                    If either the "head" or the "tail" arguments are passed, this argument will get ignored
-        :param columns: (OPTIONAL) List of columns to return; if not specified, all are returned
+        :param columns: (OPTIONAL) List of columns to return; if not specified, all are returned.
+                                   Make sure to include "SYSTEM TIME" in the list, if the time variable needs to be included
 
         :return:        A Pandas dataframe
         """
@@ -3189,10 +3202,8 @@ class ReactionDynamics:
         """
         Find and return the intersection of the 2 curves in the columns var1 and var2,
         in the time interval [t_start, t_end]
-        If there's more than one intersection, only one - in an unpredictable choice - is returned
-        TODO: the current implementation fails in cases where the 2 curves stay within some distance of each other,
-              and then one curve jumps on the opposite side of the other curve, at at BIGGER distance.
-              See the missed intersection at the end of experiment "reactions_single_compartment/up_regulate_1"
+        If there's more than one intersection, only one - in an unpredictable choice - is returned;
+        so, the specified time interval should be narrow enough to avoid that
 
         :param chem1:   The name of the 1st chemical of interest
         :param chem2:   The name of the 2nd chemical of interest
@@ -3200,15 +3211,15 @@ class ReactionDynamics:
         :param t_end:   The end of the time interval being considered
         :return:        The pair (time of intersection, common value)
         """
-        df = self.get_history(t_start=t_start, t_end=t_end) # A Pandas dataframe
+        '''
+        TODO:   the current implementation fails in cases where the 2 curves stay within some distance of each other,
+                and then one curve jumps on the opposite side of the other curve, at at BIGGER distance.
+                See the missed intersection at the end of experiment "reactions_single_compartment/up_regulate_1"
+        '''
+        # Prepare a Pandas dataframe with 3 columns
+        df = self.get_history(t_start=t_start, t_end=t_end, columns=["SYSTEM TIME", chem1, chem2])
 
-        row_index = abs(df[chem1] - df[chem2]).idxmin()     # The index of the Pandas dataframe row
-                                                            #   with the smallest absolute value
-                                                            #   of difference in concentrations
-        print(f"Min abs distance found at data row: {row_index}")
-
-        return num.curve_intersect_interpolate(df, row_index,
-                                               x="SYSTEM TIME", var1=chem1, var2=chem2)
+        return num.curve_intersect_interpolate(df, x="SYSTEM TIME", var1=chem1, var2=chem2)
 
 
 

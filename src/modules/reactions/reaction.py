@@ -63,7 +63,7 @@ class Reaction:
         :param reverse_rate:    [OPTIONAL] Reverse reaction rate constant
         :param delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
         :param delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
-        :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
+        :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products), in Joules
         :param temp:            [OPTIONAL] Temperature in Kelvins.  For now, assumed constant everywhere,
                                     and unvarying (or very slowly varying)
         """

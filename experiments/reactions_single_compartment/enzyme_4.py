@@ -29,7 +29,7 @@
 # 7. [E] = 100  
 # 8. [E] = 2000  
 #
-# LAST REVISED: May 22, 2024
+# LAST REVISED: May 24, 2024
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -55,14 +55,20 @@ chem_data.add_reaction(reactants="S", products="P",
 # Reaction E + S <-> ES* , with 1st-order kinetics, and a forward rate that is much faster than it was without the enzyme
 # Thermodynamically, the forward direction is at a disadvantage (higher energy state) because of the activation barrier in forming the transient state ES*
 chem_data.add_reaction(reactants=["E", "S"], products=["ES*"],
-                       forward_rate=10., delta_G=2000)                           
+                       forward_rate=100., delta_G=2000)                           
                                                       
 # Reaction ES* <-> E + P , with 1st-order kinetics, and a forward rate that is much faster than it was without the enzyme
 # Thermodynamically, the total energy change of this reaction and the previous one adds up to the same value as the reaction without the enzyme (-3989.73)
 chem_data.add_reaction(reactants=["ES*"], products=["E", "P"],
-                       forward_rate=10., delta_G=-5989.73)
+                       forward_rate=200., delta_G=-5989.73)
+
+# NOTE: the forward_rate's of the last 2 reactions (the catalyzed ones) were tweaked, 
+#       to lead to a crossover point [S] = [P] at about the same time as in experiment `enzyme3`, in step 2 (when [E] = 0.2)
 
 chem_data.describe_reactions()
+
+# %% [markdown]
+# Note that `E` is not labeled as an "enzyme" because it doesn't appear as a catalyst in any of the registered reactions; it only becomes an enzyme in the context of the _compound_ reaction from (2) and (3)
 
 # %%
 
@@ -98,18 +104,14 @@ dynamics.plot_history(colors=['darkorange', 'green', 'violet', 'red'], show_inte
 # %% [markdown]
 # ### The reactions, lacking enzyme, are proceeding slowly towards equilibrium, just like the reaction that was discussed in part 1 of the experiment "enzyme_1"
 
-# %%
-# To save up snapshots of crossover times at various Enzyme concentrations
-crossover_points = MovieTabular(parameter_name="Enzyme concentration")
+# %% [markdown]
+# #### Locate the intersection of the curves for [S] and [P]:
 
 # %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=1.0)
-crossover_points.store(par=dynamics.get_chem_conc("E"), 
-                       data_snapshot = {"crossover time": new_crossover[0]})
-new_crossover
+dynamics.curve_intersection("S", "P", t_start=0, t_end=1.0)
 
 # %%
-# Verify that the reaction has reached equilibrium
+# Verify that the reactions have reached equilibrium
 dynamics.is_in_equilibrium(tolerance=2)
 
 # %%
@@ -118,40 +120,14 @@ dynamics.is_in_equilibrium(tolerance=2)
 # # 2. Re-start all the reactions from the same initial concentrations - except for now having a tiny amount of enzyme (two orders of magnitude less than the starting [S])
 
 # %%
-chem_data = ChemData(names=["S", "P", "E", "ES*"])
-                           
-                            
-# Reaction S <-> P , with 1st-order kinetics, favorable thermodynamics in the forward direction, 
-# and a forward rate that is much slower than it would be with the enzyme - as seen in the next reaction, below
-chem_data.add_reaction(reactants="S", products="P",
-                       forward_rate=1., delta_G=-3989.73)
-
-
-     
-# Reaction E + S <-> ES* , with 1st-order kinetics, and a forward rate that is much faster than it was without the enzyme
-# Thermodynamically, the forward direction is at a disadvantage (higher energy state) because of the activation barrier in forming the transient state ES*
-chem_data.add_reaction(reactants=["E", "S"], products=["ES*"],
-                       forward_rate=100., delta_G=2000)                           
-                                                      
-# Reaction ES* <-> E + P , with 1st-order kinetics, and a forward rate that is much faster than it was without the enzyme
-# Thermodynamically, the total energy change of this reaction and the previous one adds up to the same value as the reaction without the enzyme (-3989.73)
-chem_data.add_reaction(reactants=["ES*"], products=["E", "P"],
-                       forward_rate=200., delta_G=-5989.73)
-
-# NOTE: the forward_rate's of the last 2 reactions (the catalyzed ones) were tweaked, 
-#       to lead to a crossover point [S] = [P] at about the same time as in experiment `enzyme3`
-
-chem_data.describe_reactions()
-
-# %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
+dynamics = ReactionDynamics(chem_data=chem_data)      # A brand-new simulation, with the same chemicals and reactions as before 
 
 # %%
 dynamics.set_conc(conc={"S": 20., "P": 0., "E": 0.2, "ES*": 0.},
-                  snapshot=True)      # A tiny bit of enzyme `E`
+                  snapshot=True)      # A tiny bit of enzyme `E`: 1/100 of the initial [S]
+dynamics.describe_state()
 
 # %%
-dynamics.describe_state()
 
 # %% [markdown] tags=[]
 # ### Re-take the new system (now with a tiny amount of enzyme) to equilibrium
@@ -168,308 +144,91 @@ dynamics.single_compartment_react(duration=1.5,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_history(colors=['darkorange', 'green', 'violet', 'red'], show_intervals=True, title_prefix="With a tiny amount of enzyme")
+dynamics.plot_history(colors=['darkorange', 'green', 'violet', 'red'], show_intervals=True, title_prefix="With a tiny amount of enzyme E")
+
+# %% [markdown]
+# #### Locate the intersection of the curves for [S] and [P]:
 
 # %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.8)
-crossover_points.store(par=dynamics.get_chem_conc("E"), 
-                       data_snapshot = {"crossover time": new_crossover[0]})
-new_crossover
+dynamics.curve_intersection("S", "P", t_start=0, t_end=1.0)
+
+# %% [markdown]
+# #### As mentioned earlier, the forward rates of the catalyzed reactions were tweaked, to produce a crossover time (with this initial [E]) close to what we had in the simpler model used in experiment `enzyme_3`
 
 # %% [markdown]
 # ## Notice how even a tiny amount of enzyme (1/100 of the initial [S])  makes a very pronounced difference!
 
 # %%
-# Verify that the reaction has reached equilibrium
+# Verify that the reactions have reached equilibrium
 dynamics.is_in_equilibrium()
 
 # %% [markdown]
-# # STOP
+# Interestingly, most of the inital [E] of 0.2 is now, at equilibrium, stored as [ES*]=0.1194; the energy of the "activation barrier" from E + S to ES* might be unrealistically low (2000 Joules).  Zooming in on the very earl part of the plot:
+
+# %%
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
+                      title_prefix="With a tiny amount of enzyme E", xrange=[0., 0.002])
 
 # %%
 
 # %%
-
-# %%
-
-# %%
-
-# %%
-
-# %% [markdown]
-# # 3. Re-start all the reactions from the same initial concentrations - except for now having a more substantial amount of enzyme
-
-# %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
-
-# %%
-dynamics.set_conc(conc={"S": 20., "P": 0., "E": 1.},
-                  snapshot=True)      # A more substantial amount of enzyme `E`
-
-# %%
-dynamics.describe_state()
 
 # %% [markdown] tags=[]
-# ### Re-take the new system (now with a more substantial amount of enzyme) to equilibrium
-
-# %%
-dynamics.single_compartment_react(duration=0.5, 
-                                  initial_step=0.02, variable_steps=True, explain_variable_steps=False)
-
-# %%
-#dynamics.explain_time_advance()
-
-# %%
-dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a more substantial amount of enzyme")
-
-# %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
-crossover_points.store(par=dynamics.get_chem_conc("E"), 
-                       data_snapshot = {"crossover time": new_crossover[0]})
-new_crossover
+# # 3. Stop when [P] reaches a particular threshold
 
 # %% [markdown]
-# ## Notice the continued - and substantial - speedup of the reaction, over the earlier runs
+# The equilibrium concentrations of P is 16.666 and that of S is 3.333  
+# We'll stop the simulation when [P] first rises above 70% of its equilibrium concentrations
 
 # %%
-# Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(explain=False)
+P_threshold = 16.666 * 0.7
+P_threshold
 
 # %%
-
-# %% [markdown]
-# # 4. Re-start all the reactions from the same initial concentrations - except for now having a good amount of enzyme
+dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation, with the same chemicals and reactions as before 
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
-
-# %%
-dynamics.set_conc(conc={"S": 20., "P": 0., "E": 5.},
-                  snapshot=True)      # A good amount of enzyme `E`
-
-# %%
+dynamics.set_conc(conc={"S": 20., "P": 0., "E": 0.2, "ES*": 0.},
+                  snapshot=True)      # A tiny bit of enzyme `E`.  Same as in the previous run
 dynamics.describe_state()
 
-# %% [markdown] tags=[]
-# ### Re-take the new system to equilibrium
+# %%
+# These settings can be tweaked to make the time resolution finer or coarser.  
+# Here we use a "slower" heuristic: very conservative about taking larger steps
+dynamics.use_adaptive_preset(preset="slower")
+
+# Instead of specifying a desired duration, like done before, we specify a termination criterion
+dynamics.single_compartment_react(stop=("conc_above", ("P", P_threshold)), max_steps=10000, 
+                                  initial_step=0.00005, variable_steps=True, explain_variable_steps=False)
 
 # %%
-dynamics.single_compartment_react(duration=0.2, 
-                                  initial_step=0.01, variable_steps=True, explain_variable_steps=False)
+dynamics.plot_history(colors=['darkorange', 'green', 'violet', 'red'], show_intervals=True, title_prefix="With a tiny amount of enzyme")
 
 # %%
-#dynamics.explain_time_advance()
+dynamics.curve_intersection("S", "P", t_start=0, t_end=1.0)  # This will be the same as in the previous step, as a double-check
 
 # %%
-dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a good amount of enzyme")
-
-# %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
-crossover_points.store(par=dynamics.get_chem_conc("E"), 
-                       data_snapshot = {"crossover time": new_crossover[0]})
-new_crossover
+dynamics.get_history()
 
 # %% [markdown]
-# ## Notice the continued - and substantial - speedup of the reaction, over the earlier runs
-
-# %%
-# Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(explain=False)
+# #### Notice how the simulation got automatically stopped as soon as [P] rose over P_threshold = 11.6662
 
 # %%
 
 # %% [markdown]
-# # 5. Re-start all the reactions from the same initial concentrations - except for now having a lot of enzyme (same as the initial [S])
+# # WIP BELOW
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
-
-# %%
-dynamics.set_conc(conc={"S": 20., "P": 0., "E": 20.},
-                  snapshot=True)      # A lot of enzyme `E`
-
-# %%
-dynamics.describe_state()
-
-# %% [markdown] tags=[]
-# ### Re-take the new system (now with a lot of enzyme) to equilibrium
-
-# %%
-dynamics.single_compartment_react(duration=0.05, 
-                                  initial_step=0.005, variable_steps=True, explain_variable_steps=False)
-
-# %%
-#dynamics.explain_time_advance()
-
-# %%
-dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a lot of enzyme")
-
-# %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
-crossover_points.store(par=dynamics.get_chem_conc("E"), 
-                       data_snapshot = {"crossover time": new_crossover[0]})
-new_crossover
-
-# %% [markdown]
-# ## Notice the continued - and substantial - speedup of the reaction, over the earlier runs
-
-# %%
-# Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(explain=False)
+dynamics.get_history(t_start=0, t_end=1.0, columns=["SYSTEM TIME", "S", "P"])
 
 # %%
 
-# %% [markdown]
-# # 6. Re-start all the reactions from the same initial concentrations - except for now having a very large amount of enzyme (more than the initial substrate concentration [S])
-
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
-
-# %%
-dynamics.set_conc(conc={"S": 20., "P": 0., "E": 30.},
-                  snapshot=True)      # A very large amount of enzyme `E`
-
-# %%
-dynamics.describe_state()
-
-# %% [markdown] tags=[]
-# ### Re-take the new system to equilibrium
-
-# %%
-dynamics.single_compartment_react(duration=0.02, 
-                                  initial_step=0.001, variable_steps=True, explain_variable_steps=False)
-
-# %%
-#dynamics.explain_time_advance()
-
-# %%
-dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a very large amount of enzyme")
-
-# %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
-crossover_points.store(par=dynamics.get_chem_conc("E"), 
-                       data_snapshot = {"crossover time": new_crossover[0]})
-new_crossover
-
-# %% [markdown]
-# ## Yet more speedup of the reaction, over the previous run
-
-# %%
-# Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(explain=False)
 
 # %%
 
-# %% [markdown]
-# # 7. Finally, re-start all the reactions from the same initial concentrations - except for now having a huge amount of enzyme (far more than the initial [S])
-
-# %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
-
-# %%
-dynamics.set_conc(conc={"S": 20., "P": 0., "E": 100.},
-                  snapshot=True)      # A lavish amount of enzyme `E`
-
-# %%
-dynamics.describe_state()
-
-# %% [markdown] tags=[]
-# ### Re-take the new system to equilibrium
-
-# %%
-dynamics.single_compartment_react(duration=0.02, 
-                                  initial_step=0.0005, variable_steps=True, explain_variable_steps=False)
-
-# %%
-#dynamics.explain_time_advance()
-
-# %%
-dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a huge amount of enzyme")
-
-# %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
-crossover_points.store(par=dynamics.get_chem_conc("E"), 
-                       data_snapshot = {"crossover time": new_crossover[0]})
-new_crossover
-
-# %% [markdown]
-# ## Yet more speedup of the reaction, over the previous run
-
-# %%
-# Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(explain=False)
-
 # %%
 
-# %% [markdown]
-# # 8. Finally, re-start all the reactions from the same initial concentrations - except for now having a LAVISH amount of enzyme (two orders of magnitude more than the starting substrate concentration [S])
-
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
-
-# %%
-dynamics.set_conc(conc={"S": 20., "P": 0., "E": 2000.},
-                  snapshot=True)      # A lavish amount of enzyme `E`
-
-# %%
-dynamics.describe_state()
-
-# %% [markdown] tags=[]
-# ### Re-take the new system (now with a lavish amount of enzyme) to equilibrium
-
-# %%
-dynamics.single_compartment_react(duration=0.0015, 
-                                  initial_step=0.000005, variable_steps=True, explain_variable_steps=False)
-
-# %%
-#dynamics.explain_time_advance()
-
-# %%
-dynamics.plot_history(chemicals=['S', 'P'],
-                      colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a LAVISH amount of enzyme (NOT shown)")
-
-# %% [markdown]
-# _Note: NOT showing the enzyme (concentration 2,000) in the graph, to avoid squishing down the other curves!_
-
-# %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
-crossover_points.store(par=dynamics.get_chem_conc("E"), 
-                       data_snapshot = {"crossover time": new_crossover[0]})
-new_crossover
-
-# %% [markdown]
-# ## Yet more speedup of the reaction, over the previous run
-
-# %%
-# Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium()
-
-# %%
-
-# %% [markdown]
-# ## Now, let's look at the time of the crossover points (for the [S] and [P] curves to intersect), as a function of the Enzyme concentration
-
-# %%
-df = crossover_points.get_dataframe()
-df
-
-# %% [markdown]
-# #### As we previously observed, as the Enzyme concentration is increased over repeated runs, the crossover happens earlier and earlier
-
-# %%
-# Let's plot just the first 4 data points, to avoid squishing the graph
-px.line(data_frame=df.loc[0:3],
-              x="Enzyme concentration", y=["crossover time"],
-              title="Time of crossover of [S] and [P] , as a function of Enzyme concentration (first 4 points)",
-              labels={"value":"Crossover time when [S]=[P]"})
-
-# %%
-# Same plot, but with log scales on both axes (all data points used this time, 
-# but the value E = 0 is automatically dropped by the graphic function because of the log scale)
-px.line(data_frame=df,
-              x="Enzyme concentration", y=["crossover time"],
-              log_x=True, log_y=True,
-              title="Time of crossover of [S] and [P] , as a function of Enzyme conc - log scales on both axes<br>([E]=0 value skipped)",
-              labels={"value":"Crossover time when [S]=[P]"})
 
 # %%
