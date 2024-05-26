@@ -87,8 +87,8 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# These settings can be tweaked to make the time resolution finer or coarser.  
-# Here we use a "middle-of-the road" heuristic: somewhat "conservative" but not overly so
+# This setting is a preset that can be adjusted make the time resolution finer or coarser;
+# it will stay in effect from now on, unless explicitly changed later
 dynamics.use_adaptive_preset(preset="mid")
 
 # Perform the reactions

@@ -2506,6 +2506,7 @@ class ReactionDynamics:
                                     Note: it's still possible to zoom out, and see the excluded portion
         :param ylabel:          (OPTIONAL) Caption to use for the y-axis.  By default, "concentration"
         :param vertical_lines:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
+                                    TODO: rename add_vertical_lines
                                     List or tuple or Numpy array or Pandas series
                                     of x-coordinates at which to draw thin vertical dotted gray lines.
                                     If the number of vertical line is so large as to overwhelm the plot,
@@ -3198,8 +3199,36 @@ class ReactionDynamics:
 
 
 
+    def curve_intersect(self, chem1, chem2, t_start, t_end, explain=False) -> (float, float):
+        """
+        Find and return the intersection of the 2 curves in the columns var1 and var2,
+        in the time interval [t_start, t_end]
+        If there's more than one intersection, only one - in an unpredictable choice - is returned;
+        so, the specified time interval should be narrow enough to avoid that
+
+        :param chem1:   The name of the 1st chemical of interest
+        :param chem2:   The name of the 2nd chemical of interest
+        :param t_start: The start of the time interval being considered
+        :param t_end:   The end of the time interval being considered
+        :param explain: [OPTIONAL] If True, print out some details of the computation
+        :return:        The pair (time of intersection, common value) ;
+                            if not found, a message is printed, and None is returned
+        """
+        # Prepare a Pandas dataframe with 3 columns
+        df = self.get_history(t_start=t_start, t_end=t_end, columns=["SYSTEM TIME", chem1, chem2])
+
+        intersection = num.curve_intersect(df, x="SYSTEM TIME", var1=chem1, var2=chem2, explain=explain)
+        if intersection is None:
+            print(f"curve_intersect(): No intersection detected between the concentrations of `{chem1}` and `{chem2}` "
+                  f"in the time interval [{t_start} - {t_end}]")
+
+        return intersection
+
+
+
     def curve_intersection(self, chem1, chem2, t_start, t_end) -> (float, float):
         """
+        TODO: OBSOLETE
         Find and return the intersection of the 2 curves in the columns var1 and var2,
         in the time interval [t_start, t_end]
         If there's more than one intersection, only one - in an unpredictable choice - is returned;
@@ -3211,15 +3240,15 @@ class ReactionDynamics:
         :param t_end:   The end of the time interval being considered
         :return:        The pair (time of intersection, common value)
         """
+        print("\n*** The function curve_intersection() is now OBSOLETE : use curve_intersect() instead\n")
         '''
-        TODO:   the current implementation fails in cases where the 2 curves stay within some distance of each other,
-                and then one curve jumps on the opposite side of the other curve, at at BIGGER distance.
-                See the missed intersection at the end of experiment "reactions_single_compartment/up_regulate_1"
+        This obsolete implementation fails in cases where the 2 curves stay within some distance of each other,
+        and then one curve jumps on the opposite side of the other curve, at at BIGGER distance.
         '''
         # Prepare a Pandas dataframe with 3 columns
         df = self.get_history(t_start=t_start, t_end=t_end, columns=["SYSTEM TIME", chem1, chem2])
 
-        return num.curve_intersect_interpolate(df, x="SYSTEM TIME", var1=chem1, var2=chem2)
+        return num.curve_intersection_OLD(df, x="SYSTEM TIME", var1=chem1, var2=chem2)
 
 
 
