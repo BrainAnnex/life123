@@ -13,15 +13,18 @@
 # ---
 
 # %% [markdown]
-# ### Comparison of 1) adaptive variable time steps, 2) fixed time steps, and 3) exact solution 
+# ### Comparison of:  
+# (1) adaptive variable time steps  
+# (2) fixed time steps   
+# (3) exact solution  
 # ### for the reaction `A <-> B`,
-# with 1st-order kinetics in both directions, taken to equilibrium
+# with 1st-order kinetics in both directions, taken to equilibrium.
 #
 # This is a continuation of the experiments `react_2_a` (fixed time steps) and  `react_2_b` (adaptive variable time steps)
 #
 # **Background**: please see experiments `react_2_a` and `react_2_b`   
 #
-# LAST REVISED: Dec. 6, 2023
+# LAST REVISED: May 27, 2024  (using v. 1.0beta32)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -29,6 +32,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
+from src.modules.chemicals.chem_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 import numpy as np
@@ -42,13 +46,15 @@ from src.modules.visualization.plotly_helper import PlotlyHelper
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics_variable = ReactionDynamics(names=["A", "B"])
+chem = ChemData(names=["A", "B"])
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-dynamics_variable.add_reaction(reactants=["A"], products=["B"], 
+chem.add_reaction(reactants=["A"], products=["B"], 
                        forward_rate=3., reverse_rate=2.)
 
-dynamics_variable.describe_reactions()
+chem.describe_reactions()
+
+# %%
 
 # %%
 
@@ -58,15 +64,12 @@ dynamics_variable.describe_reactions()
 # we'll note that number, and in Part 2 we'll do exactly that same number of fixed steps
 
 # %%
+dynamics_variable = ReactionDynamics(chem_data=chem, preset="mid")
+
 # Initial concentrations of all the chemicals, in their index order
 dynamics_variable.set_conc([10., 50.])
 
 dynamics_variable.describe_state()
-
-# %%
-# We specify a particular group of preset parameters applicable to the adaptive time steps
-# Here, we're using a "middle-of-the road" heuristic: somewhat "conservative" but not overly so
-dynamics_variable.use_adaptive_preset(preset="mid")   
 
 # %% [markdown] tags=[]
 # ### Run the reaction (VARIABLE adaptive time steps)
@@ -94,6 +97,8 @@ dynamics_variable.plot_history(colors=['blue', 'orange'], show_intervals=True)
 
 # %%
 
+# %%
+
 # %% [markdown]
 # # PART 2 - FIXED TIME STEPS
 
@@ -102,7 +107,7 @@ dynamics_variable.plot_history(colors=['blue', 'orange'], show_intervals=True)
 # The fixed time step is chosen to attain the same total number of data points as obtained with the variable time steps of part 1
 
 # %%
-dynamics_fixed = ReactionDynamics(shared=dynamics_variable)   # Re-use same chemicals and reactions of part 1
+dynamics_fixed = ReactionDynamics(chem_data=chem)   # Re-use same chemicals and reactions of part 1
 
 # %%
 # Initial concentrations of all the chemicals, in their index order
@@ -131,6 +136,8 @@ dynamics_fixed.plot_history(colors=['blue', 'orange'], show_intervals=True)
 
 # %%
 
+# %%
+
 # %% [markdown]
 # # PART 3 - Exact Solution
 
@@ -146,6 +153,8 @@ A_exact, B_exact = dynamics_variable.solve_exactly(rxn_index=0, A0=10., B0=50., 
 fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=[A_exact, B_exact], title="EXACT solution", xlabel="SYSTEM TIME", ylabel="concentration", 
                                      legend_title="Chemical", curve_labels=["A (EXACT)", "B (EXACT)"],
                                      colors=["blue", "orange"], show=True)
+
+# %%
 
 # %%
 
@@ -176,20 +185,17 @@ PlotlyHelper.combine_plots(fig_list=[fig_fixed, fig_variable, fig_exact],
 
 # %%
 
+# %%
+
 # %% [markdown] tags=[]
 # # PART 5 - Repeating Part 4 with a coarser grid
 # #### The advantage of adaptive variable step will be even more prominent
 
 # %%
 # A coarser version of the variable-step simulation of Part 1
-dynamics_variable_new = ReactionDynamics(shared=dynamics_variable)   # Re-use same chemicals and reactions of part 2
+dynamics_variable_new = ReactionDynamics(chem_data=chem, preset="fast")   # Re-use same chemicals and reactions of part 2
 
 dynamics_variable_new.set_conc([10., 50.])
-
-# %%
-# We specify a particular group of preset parameters applicable to the adaptive time steps
-# This time, we're using a "fast" heuristic: advance quickly thru time
-dynamics_variable_new.use_adaptive_preset(preset="fast")   
 
 # %%
 dynamics_variable_new.single_compartment_react(initial_step=0.1, target_end_time=1.2,

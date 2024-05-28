@@ -41,10 +41,10 @@ class ReactionDynamics:
         """
         Note: AT MOST 1 of the following 3 arguments can be passed
         :param chem_data:   [OPTIONAL 1] Object of type "ChemData" (with data about the chemicals and their reactions)
-                                       NOTE: this is the recommended argument; the other 2 options might get deprecated
-        :param names:       [OPTIONAL 2] A single name, or list or tuple of names, of the chemicals
+                                       NOTE: This is the recommended argument; the other 2 options are, or might be, deprecated
+        :param names:       [OPTIONAL 2 - MIGHT BE DEPRECATED] A single name, or list or tuple of names, of the chemicals
                                        the reactions can be added later, with calls to add_reaction()
-        :param shared:      [OPTIONAL 3] Object of type "ReactionDynamics", with which to share the "ChemData" info,
+        :param shared:      [OPTIONAL 3 - DEPRECATED] Object of type "ReactionDynamics", with which to share the "ChemData" info,
                                        i.e. the data about the chemicals and their reactions.
                                        Typically meant for re-using the same chemicals and reactions of a previous simulation
                                        CAUTION: the shared "ChemData" info is NOT cloned; so, if modified within one
@@ -59,6 +59,7 @@ class ReactionDynamics:
         if names:
             number_args += 1
         if shared:
+            print("ReactionDynamics instantiation: *** The argument `shared` is DEPRECATED.  Use `chem_data` instead")
             number_args += 1
 
         assert number_args <= 1, \
@@ -2484,7 +2485,7 @@ class ReactionDynamics:
     #####################################################################################################
 
     def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None, xrange=None,
-                     ylabel="concentration",
+                     ylabel=None,
                      vertical_lines=None, show_intervals=False, show=False) -> go.Figure:
         """
         Using plotly, draw the plots of concentration values over time, based on history data that gets
@@ -2492,7 +2493,8 @@ class ReactionDynamics:
 
         Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
 
-        :param chemicals:   (OPTIONAL) List of the names of the chemicals whose concentration changes are to be plotted;
+        :param chemicals:   (OPTIONAL) List of the names of the chemicals whose concentration changes are to be plotted,
+                                or a string with just one name;
                                 if None, then display all
         :param colors:      (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
                                 or list of names to use, in order; if None, then use the hardwired defaults
@@ -2505,7 +2507,9 @@ class ReactionDynamics:
                                     whether the title is specified by the user or automatically generated
         :param xrange:          (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param ylabel:          (OPTIONAL) Caption to use for the y-axis.  By default, "concentration"
+        :param ylabel:          (OPTIONAL) Caption to use for the y-axis.
+                                    By default, the name in `the chemicals` argument, in square brackets, if only 1 chemical,
+                                    or "Concentration" if more than 1 (a legend also shown)
         :param vertical_lines:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
                                     TODO: rename add_vertical_lines
                                     List or tuple or Numpy array or Pandas series
@@ -2571,7 +2575,13 @@ class ReactionDynamics:
         fig = px.line(data_frame=df, x="SYSTEM TIME", y=chemicals,
                       title=title, range_x=xrange,
                       color_discrete_sequence = colors,
-                      labels={"value": ylabel, "variable": "Chemical"})
+                      labels={"value": "Concentration", "variable": "Chemical"})
+
+        if type(chemicals) == str:  # Somehow, the `labels` argument in px.line is ignored when chemicals is just a string
+            if ylabel is None:
+                fig.update_layout(yaxis_title=f"[{chemicals}]")     # EXAMPLE:  "[A]"
+            else:
+                fig.update_layout(yaxis_title=ylabel)
 
 
         if vertical_lines is not None:
