@@ -29,7 +29,7 @@
 # 7. [E] = 100  
 # 8. [E] = 2000  
 #
-# LAST REVISED: May 24, 2024
+# LAST REVISED: May 27, 2024  (using v. 1.0beta32)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -108,7 +108,7 @@ dynamics.plot_history(colors=['darkorange', 'green', 'violet', 'red'], show_inte
 # #### Locate the intersection of the curves for [S] and [P]:
 
 # %%
-dynamics.curve_intersection("S", "P", t_start=0, t_end=1.0)
+dynamics.curve_intersect("S", "P", t_start=0, t_end=1.0)
 
 # %%
 # Verify that the reactions have reached equilibrium
@@ -150,7 +150,7 @@ dynamics.plot_history(colors=['darkorange', 'green', 'violet', 'red'], show_inte
 # #### Locate the intersection of the curves for [S] and [P]:
 
 # %%
-dynamics.curve_intersection("S", "P", t_start=0, t_end=1.0)
+dynamics.curve_intersect("S", "P", t_start=0, t_end=1.0)
 
 # %% [markdown]
 # #### As mentioned earlier, the forward rates of the catalyzed reactions were tweaked, to produce a crossover time (with this initial [E]) close to what we had in the simpler model used in experiment `enzyme_3`
@@ -205,7 +205,9 @@ dynamics.single_compartment_react(stop=("conc_above", ("P", P_threshold)), max_s
 dynamics.plot_history(colors=['darkorange', 'green', 'violet', 'red'], show_intervals=True, title_prefix="With a tiny amount of enzyme")
 
 # %%
-dynamics.curve_intersection("S", "P", t_start=0, t_end=1.0)  # This will be the same as in the previous step, as a double-check
+dynamics.curve_intersect("S", "P", t_start=0, t_end=1.0)  # This will be the same as in the previous step, as a double-check
+
+# %%
 
 # %%
 dynamics.get_history()
@@ -214,21 +216,90 @@ dynamics.get_history()
 # #### Notice how the simulation got automatically stopped as soon as [P] rose over P_threshold = 11.6662
 
 # %%
-
-# %% [markdown]
-# # WIP BELOW
-
-# %%
-dynamics.get_history(t_start=0, t_end=1.0, columns=["SYSTEM TIME", "S", "P"])
+dynamics.reach_threshold(chem="P", threshold=P_threshold)
 
 # %%
 
 # %%
 
+# %% [markdown] tags=[]
+# # 4. Repeat last step with increasingly-larger [E]
+
 # %%
+dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation, with the same chemicals and reactions as before 
+
+# %%
+dynamics.set_conc(conc={"S": 20., "P": 0., "E": 0.4, "ES*": 0.},
+                  snapshot=True)      # A tiny bit of enzyme `E`.  Same as in the previous run
+dynamics.describe_state()
+
+# %%
+# These settings can be tweaked to make the time resolution finer or coarser.  
+dynamics.use_adaptive_preset(preset="slower")
+
+# %%
+# We specify a termination criterion
+dynamics.single_compartment_react(stop=("conc_above", ("P", P_threshold)), max_steps=10000, 
+                                  initial_step=0.000025, variable_steps=True, explain_variable_steps=False)
+
+# %%
+dynamics.plot_history(colors=['darkorange', 'green', 'violet', 'red'], show_intervals=True, title_prefix="[E]=0.4")
+
+# %%
+dynamics.reach_threshold(chem="P", threshold=P_threshold)
 
 # %%
 
 # %%
+E_conc = 0.6
+
+# %%
+dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation, with the same chemicals and reactions as before 
+dynamics.set_conc(conc={"S": 20., "P": 0., "E": E_conc, "ES*": 0.}, snapshot=True)
+
+# %%
+dynamics.describe_state()
+
+# %%
+# These settings can be tweaked to make the time resolution finer or coarser.  
+dynamics.use_adaptive_preset(preset="slower")
+
+# %%
+# We specify a termination criterion
+dynamics.single_compartment_react(stop=("conc_above", ("P", P_threshold)), max_steps=10000, 
+                                  initial_step=0.000025, variable_steps=True, silent=True)
+
+# %%
+dynamics.plot_history(colors=['darkorange', 'green', 'violet', 'red'], show_intervals=True)
+
+# %%
+dynamics.reach_threshold(chem="P", threshold=P_threshold)
+
+# %%
+
+# %%
+
+# %%
+E_conc = 100
+
+# %%
+dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation, with the same chemicals and reactions as before 
+
+dynamics.set_conc(conc={"S": 20., "P": 0., "E": E_conc, "ES*": 0.}, snapshot=True)
+
+# These settings can be tweaked to make the time resolution finer or coarser.  
+dynamics.use_adaptive_preset(preset="slower")
+
+# We specify a termination criterion
+dynamics.single_compartment_react(stop=("conc_above", ("P", P_threshold)), max_steps=10000, 
+                                  initial_step=0.00001, variable_steps=True, silent=False)
+
+dynamics.reach_threshold(chem="P", threshold=P_threshold)
+
+# %%
+dynamics.plot_history(colors=['darkorange', 'green', 'violet', 'red'], show_intervals=True)
+
+# %%
+dynamics.reach_threshold(chem="P", threshold=P_threshold)
 
 # %%

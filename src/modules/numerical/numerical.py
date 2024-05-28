@@ -33,7 +33,7 @@ class Numerical:
         :param y:           The name of the column with the y-values
         :param y_threshold: A number with a y-value being sought in the xy curve
         :return:            The x-value at which the linearly-interpolated curve first reaches
-                                the y-value y_threshold
+                                the y-value y_threshold, or None if not found
         """
 
         # Iterate through the DataFrame rows to find the (first) segment where y0 lies between
@@ -186,7 +186,9 @@ class Numerical:
                         x :str, var1 :str, var2 :str, explain=False) -> (float, float):
         """
         Determine the intersection point between 2 Pandas dataframe columns,
-        using linear interpolation
+        using linear interpolation.
+        If more than one is present, only the first (smallest value of x-coord) one will be returned;
+        so, the specified time interval should be narrow enough to bracket the intersection of interest
 
         :param df:      A Pandas dataframe with at least 3 columns
         :param x:       The name of the dataframe column with the independent variable

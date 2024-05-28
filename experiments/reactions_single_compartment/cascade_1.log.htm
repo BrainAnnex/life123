@@ -20,7 +20,8 @@
 
 <div id="vue-root-1">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_cytoscape_2 v-bind:graph_data="graph_data_json">        
+    <vue_cytoscape_2 v-bind:graph_data="graph_data_json"
+                     v-bind:component_id="1">        
     </vue_cytoscape_2>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
@@ -37,7 +38,7 @@ new Vue({
     el: '#vue-root-1',
 
     data: {
-        graph_data_json: {"structure": [{"name": "RXN", "kF": "64", "kR": "8", "delta_G": "-5,154.85", "K": "8", "id": "R-0", "labels": ["Reaction"]}, {"name": "B", "diff_rate": null, "id": "C-1", "labels": ["Chemical"]}, {"name": "produces", "source": "R-0", "target": "C-1", "id": "edge-1", "stoich": 1, "rxn_order": 1}, {"name": "A", "diff_rate": null, "id": "C-0", "labels": ["Chemical"]}, {"name": "reacts", "source": "C-0", "target": "R-0", "id": "edge-2", "stoich": 1, "rxn_order": 1}, {"name": "RXN", "kF": "12", "kR": "2", "delta_G": "-4,441.69", "K": "6", "id": "R-1", "labels": ["Reaction"]}, {"name": "C", "diff_rate": null, "id": "C-2", "labels": ["Chemical"]}, {"name": "produces", "source": "R-1", "target": "C-2", "id": "edge-3", "stoich": 1, "rxn_order": 1}, {"name": "reacts", "source": "C-1", "target": "R-1", "id": "edge-4", "stoich": 1, "rxn_order": 1}], "color_mapping": {"Chemical": "#8DCC92", "Reaction": "#D9C8AD"}, "caption_mapping": {"Chemical": "name", "Reaction": "name"}, "component_id": 1}
+        graph_data_json: {"structure": [{"name": "RXN", "kF": "64", "kR": "8", "delta_G": "-5,154.85", "K": "8", "id": "R-0", "labels": ["Reaction"]}, {"name": "B", "diff_rate": null, "id": "C-1", "labels": ["Chemical"]}, {"name": "produces", "source": "R-0", "target": "C-1", "id": "edge-1", "stoich": 1, "rxn_order": 1}, {"name": "A", "diff_rate": null, "id": "C-0", "labels": ["Chemical"]}, {"name": "reacts", "source": "C-0", "target": "R-0", "id": "edge-2", "stoich": 1, "rxn_order": 1}, {"name": "RXN", "kF": "12", "kR": "2", "delta_G": "-4,441.69", "K": "6", "id": "R-1", "labels": ["Reaction"]}, {"name": "C", "diff_rate": null, "id": "C-2", "labels": ["Chemical"]}, {"name": "produces", "source": "R-1", "target": "C-2", "id": "edge-3", "stoich": 1, "rxn_order": 1}, {"name": "reacts", "source": "C-1", "target": "R-1", "id": "edge-4", "stoich": 1, "rxn_order": 1}], "color_mapping": {"Chemical": "#8DCC92", "Reaction": "#D9C8AD"}, "caption_mapping": {"Chemical": "name", "Reaction": "name"}}
     }
 
 });
