@@ -26,6 +26,20 @@ def test_set_conc():
     rxn.set_conc(conc=(10., 20., 30.))
     assert np.allclose(rxn.system, [10., 20., 30.])
 
+    rxn.set_conc(conc={"B": 100})
+    assert np.allclose(rxn.system, [10., 100., 30.])
+
+
+    rxn = ReactionDynamics(chem_data)
+    rxn.set_conc(conc={"C": 3})
+    assert np.allclose(rxn.system, [0., 0., 3.])
+
+    rxn.set_conc(conc={"C": 8, "A": 1, "B": 5})
+    assert np.allclose(rxn.system, [1., 5., 8.])
+
+    with pytest.raises(Exception):
+        rxn.set_conc(conc={"A": -0.01})
+
 
 
 def test_get_system_conc():

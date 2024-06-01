@@ -33,18 +33,25 @@ class ReactionDynamics:
     """
     Used to simulate the dynamics of reactions (in a single compartment.)
     In the context of Life123, this may be thought of as a "zero-dimensional system"
+
+    TODO: possibly rename "UniformCompartment" (or "SingleCompartment")
     """
 
-    def __init__(self, chem_data=None, names=None, shared=None):
+    def __init__(self, chem_data=None, names=None, shared=None, preset="mid"):
         """
-        Note: AT MOST 1 of the following arguments can be passed
-        :param chem_data:   [OPTIONAL] Object of type "ChemData" (with data about the chemicals and their reactions)
-        :param names:       [OPTIONAL] A single name, or list or tuple of names, of the chemicals
-        :param shared:      [OPTIONAL] Object of type "ReactionDynamics", with which to share the "ChemData" info,
+        Note: AT MOST 1 of the following 3 arguments can be passed
+        :param chem_data:   [OPTIONAL 1] Object of type "ChemData" (with data about the chemicals and their reactions)
+                                       NOTE: This is the recommended argument; the other 2 options are, or might be, deprecated
+        :param names:       [OPTIONAL 2 - MIGHT BE DEPRECATED] A single name, or list or tuple of names, of the chemicals
+                                       the reactions can be added later, with calls to add_reaction()
+        :param shared:      [OPTIONAL 3 - DEPRECATED] Object of type "ReactionDynamics", with which to share the "ChemData" info,
                                        i.e. the data about the chemicals and their reactions.
                                        Typically meant for re-using the same chemicals and reactions of a previous simulation
                                        CAUTION: the shared "ChemData" info is NOT cloned; so, if modified within one
                                        ReactionDynamics object, the modification will be seen everywhere
+
+        :param preset:  String with code that can be adjusted make the time resolution finer or coarser;
+                        it will stay in effect from now on, unless explicitly changed later
         """
         number_args = 0
         if chem_data:
@@ -52,6 +59,7 @@ class ReactionDynamics:
         if names:
             number_args += 1
         if shared:
+            print("ReactionDynamics instantiation: *** The argument `shared` is DEPRECATED.  Use `chem_data` instead")
             number_args += 1
 
         assert number_args <= 1, \
@@ -63,7 +71,7 @@ class ReactionDynamics:
 
         self.system_time = 0.       # Global time of the system, from initialization on
 
-        # TODO: maybe rename system to system_state, and use system to store a list or dict of the chemicals
+        # TODO: maybe rename "system" to "system_state", and use "system" to store a list or dict of the chemicals
         #       actually involved in this dynamic simulation
         self.system = None  # Concentration data in the single compartment we're simulating, for all the (bulk) chemicals
                             # A Numpy array of the concentrations of all the chemical species, in their index order
@@ -92,15 +100,28 @@ class ReactionDynamics:
         # ***  FOR AUTOMATED ADAPTIVE TIME STEP SIZES  ***
         # Note: The "aborts" below are "elective" aborts - i.e. not aborts from hard errors (further below)
         #       The default values below were empirically found to be "conservative" but not excessively so
-        self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
-                           {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
-        self.step_factors = {"upshift": 1.2, "downshift": 0.5, "abort": 0.4}
+        #       Users in need to change these default values will generally use use_adaptive_preset(), below;
+        #       or, for more control, set_thresholds(), set_step_factors() and set_error_step_factor()
+        self.thresholds = []    # A list of "rules"
+        # EXAMPLE:                  [
+        #                             {"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
+        #                             {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}
+        #                           ]
+        self.step_factors = {}
+                            # EXAMPLE: {"upshift": 1.2, "downshift": 0.5, "abort": 0.4}
+                            # "upshift" must be > 1 .   "downshift" and "abort" must be < 1
 
 
-        self.error_abort_step_factor = 0.25     # MUST BE < 1.  Factor by which to multiply the time step
+        self.error_abort_step_factor = None     # MUST BE < 1.  EXAMPLE: 0.25
+                                                # Factor by which to multiply the time step
                                                 #   in case of negative-concentration error from excessive step size
                                                 #   NOTE: this is from ERROR aborts,
                                                 #   not to be confused with general aborts based on reaching high threshold
+                                                #   TODO: maybe change name to "error_step_factor" or "error_correct_step_factor"
+                                                #         to avoid confusion with the "abort" step factor
+
+        self.use_adaptive_preset(preset)
+
 
 
         # ***  FOR DIAGNOSTICS  ***     TODO: maybe turn all diagnostic data/methods into a separate object
@@ -159,57 +180,46 @@ class ReactionDynamics:
         """
         Set the concentrations of ALL the chemicals at once
 
-        :param conc:        A list or tuple of concentration values for ALL the chemicals, in their index order;
-                                alternatively, a dict indexed by the chemical names, again for ALL the chemicals
+        :param conc:    EITHER
+                            (1) a list or tuple of concentration values for ALL the registered chemicals,
+                                in their index order
+                            OR
+                            (2) a dict indexed by the chemical names, for some or all of the chemicals
                                 EXAMPLE of the latter:  {"A": 12.4, "B": 0.23, "C": 2.6}
-                                                        (assuming that "A", "B", "C" are ALL the chemicals)
 
-                                Note: any previous values will get over-written)
+                        Note: any previous values will get over-written
 
-        :param snapshot:    (OPTIONAL) boolean: if True, add to the history
-                                a snapshot of this state being set.  Default: True
-        :return:            None
+        :param snapshot:[OPTIONAL] If True (default), add to the history
+                            a snapshot of this state being set
+        :return:        None
         """
         # TODO: more validations, incl. of individual values being wrong data type
-        # TODO:  a dict indicates a selection of chemicals, while a list, etc means "ALL"
-        # TODO: allow the dict to be a subset of all chemicals
         # TODO: also allow a Numpy array; make sure to do a copy() to it!
-        # TODO: pytest for the dict option
 
-        assert len(conc) == self.chem_data.number_of_chemicals(), \
-            f"ReactionDynamics.set_conc(): the number of concentration values passed in the argument 'conc' ({len(conc)}) " \
-            f"must match the number of declared chemicals ({self.chem_data.number_of_chemicals()})"
+        if type(conc) == list or type(conc) == tuple:
+            assert len(conc) == self.chem_data.number_of_chemicals(), \
+                f"ReactionDynamics.set_conc(): when a list or tuple is passed as the argument 'conc', " \
+                f"its size must match the number of declared chemicals ({self.chem_data.number_of_chemicals()})"
 
-        if type(conc) == dict:
-            conc_list = []
-            for species_index in range(self.chem_data.number_of_chemicals()):
-                name = self.chem_data.get_name(species_index)
-                if name is None:
-                    raise Exception(f"ReactionDynamics.set_conc(): to use a dictionary for the `conc` arguments, "
-                                    f"all the chemicals must first be given names - to be used as keys for the dictionary "
-                                    f"(Chemical in index position {species_index} lacks a name")
-                conc_list.append(conc[name])
-            # END for
-            conc = conc_list
+            assert min(conc) >= 0, \
+                f"ReactionDynamics.set_conc(): values meant to be chemical concentrations cannot be negative " \
+                f"(such as the passed value {min(conc)})"
 
+            self.system = np.array(conc, dtype='d')      # float64      TODO: allow users to specify the type
 
-        assert min(conc) >= 0, \
-            f"ReactionDynamics.set_conc(): values meant to be chemical concentrations cannot be negative " \
-            f"(such as the passed value {min(conc)})"
-
-
-        # TODO: the next step isn't necessary, if self.system already exists, and is of the right size
-        self.system = np.array(conc, dtype='d')      # float64      TODO: allow users to specify the type
+        elif type(conc) == dict:
+            for name, conc_value in conc.items():
+                self.set_single_conc(conc=conc_value, species_name=name, snapshot=False)
 
         if snapshot:
-            self.add_snapshot(caption="Initial state")
+            self.add_snapshot(caption="Initialized state")
 
 
 
     def set_single_conc(self, conc, species_index=None, species_name=None, snapshot=True) -> None:
         """
         Set the concentrations of 1 chemical
-        Note: if both species_index and species_name are provided, species_name is used     TODO: pytest this part
+        Note: if both species_index and species_name are provided, species_name is used     TODO: generate an error instead; and pytest this part
 
         :param conc:            A non-negative number with the desired concentration value
                                     of the chemical specified below.  (Any previous value will get over-written)
@@ -467,6 +477,7 @@ class ReactionDynamics:
         :param value:
         :return:        None
         """
+        #TODO: maybe combine with set_step_factors(), and perhaps tweak some names
         assert value < 1, "set_error_step_factor(): the argument must strictly be < 1"
         assert value > 0, "set_error_step_factor(): the argument must be a non-zero positive number"
 
@@ -483,39 +494,57 @@ class ReactionDynamics:
         print("Parameters used for the automated adaptive time step sizes -")
         print("    THRESHOLDS: ", self.thresholds)
         print("    STEP FACTORS: ", self.step_factors)
-        print("    STEP FACTOR in case of 'ERROR ABORTS': ", self.error_abort_step_factor)
+        print("    STEP FACTOR in case of 'ERROR RE-DOs': ", self.error_abort_step_factor)
 
 
 
     def use_adaptive_preset(self, preset :str) -> None:
         """
-        Lets the user choose a preset to use from then on, unless explicitly changed,
-        for use in all reaction simulations involving adaptive time steps
+        Lets the user choose a preset to use from now on, unless later explicitly changed,
+        for use in ALL reaction simulations involving adaptive time steps.
+        The preset will affect the degree to which the simulation will be "risk-taker" vs. "risk-averse" about
+        taking larger steps.
 
-        :param preset:  String with one of the available preset names
+        Note:   for more control, use set_thresholds(), set_step_factors() and set_error_step_factor()
+
+                For example, using the "mid" preset is the same as issuing:
+                    dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
+                    dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
+                    dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4)
+                    dynamics.set_error_step_factor(0.25)
+
+        :param preset:  String with one of the available preset names;
+                            allowed values are (in generally-increasing speed):
+                            'slower', 'slow', 'mid', 'fast'
         :return:        None
         """
-        if preset == "mid":     # A "middle-of-the road" heuristic: somewhat "conservative" but not overly so
-            self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
-                               {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
-            self.step_factors = {"upshift": 1.2, "downshift": 0.5, "abort": 0.4}
-            self.error_abort_step_factor = 0.25
+        if preset == "slower":   # Very conservative about taking larger steps
+            self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
+                               {"norm": "norm_B", "low": 0.03, "high": 0.05, "abort": 0.5}]
+            self.step_factors = {"upshift": 1.01, "downshift": 0.5, "abort": 0.1}
+            self.error_abort_step_factor = 0.1
 
-        elif preset == "fast":   # EXPERIMENTAL preset subject to change!
-            self.thresholds = [{"norm": "norm_A", "low": 0.8, "high": 1.2, "abort": 1.7},
-                               {"norm": "norm_B", "low": 0.15, "high": 0.8, "abort": 1.8}]
-            self.step_factors = {"upshift": 1.5, "downshift": 0.8, "abort": 0.6}
-            self.error_abort_step_factor = 0.5
-
-        elif preset == "slow":   # EXPERIMENTAL preset subject to change!
+        elif preset == "slow":   # Conservative about taking larger steps
             self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
                                {"norm": "norm_B", "low": 0.05, "high": 0.4, "abort": 1.3}]
             self.step_factors = {"upshift": 1.1, "downshift": 0.3, "abort": 0.2}
             self.error_abort_step_factor = 0.1
 
+        elif preset == "mid":     # A "middle-of-the road" heuristic: somewhat "conservative" but not overly so
+            self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
+                               {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
+            self.step_factors = {"upshift": 1.2, "downshift": 0.5, "abort": 0.4}
+            self.error_abort_step_factor = 0.25
+
+        elif preset == "fast":   # Less conservative (more "risk-taker") about taking larger steps
+            self.thresholds = [{"norm": "norm_A", "low": 0.8, "high": 1.2, "abort": 1.7},
+                               {"norm": "norm_B", "low": 0.15, "high": 0.8, "abort": 1.8}]
+            self.step_factors = {"upshift": 1.5, "downshift": 0.8, "abort": 0.6}
+            self.error_abort_step_factor = 0.5
+
         else:
             raise Exception(f"set_adaptive_parameters(): unknown value for the `preset` argument ({preset}); "
-                            f"allowed values are 'slow', 'mid', 'fast'")
+                            f"allowed values are 'slower', 'slow', 'mid', 'fast'")
 
 
 
@@ -627,10 +656,11 @@ class ReactionDynamics:
 
 
 
-    def single_compartment_react(self, reaction_duration=None, target_end_time=None,
-                                 initial_step=None, n_steps=None,
+    def single_compartment_react(self, duration=None, target_end_time=None, stop=None,
+                                 initial_step=None, n_steps=None, max_steps=None,
                                  snapshots=None, silent=False,
-                                 variable_steps=True, explain_variable_steps=False) -> None:
+                                 variable_steps=True, explain_variable_steps=False,
+                                 reaction_duration=None) -> None:
         """
         Perform ALL the reactions in the single compartment -
         based on the INITIAL concentrations,
@@ -639,16 +669,30 @@ class ReactionDynamics:
         Update the system state and the system time accordingly
         (object attributes self.system and self.system_time)
 
-        :param reaction_duration:  The overall time advance for the reactions (it might be exceeded in case of variable steps)
-        :param target_end_time: The final time at which to stop the reaction
-                                    If both target_end_time and reaction_duration are specified, an error will result
+        :param duration:        The overall time advance for the reactions (it may be exceeded in case of variable steps)
+        :param reaction_duration: [OBSOLETE OLD NAME for "duration"; being phased out]
+        :param target_end_time: The final time at which to stop the reaction; it may be exceeded in case of variable steps
+                                    If both `target_end_time` and `duration` are specified, an error will result
 
         :param initial_step:    The suggested size of the first step (it might be reduced automatically,
                                     in case of "hard" errors resulting from overly-large steps)
 
+        :param stop:            Pair of the form (termination_keyword, termination_parameter), to indicate
+                                    the criterion to use to stop the reaction
+                                    EXAMPLES:
+                                        ("conc_below", (chem_name, conc))  Stop when conc first dips below
+                                        ("conc_above", (chem_name, conc))  Stop when conc first rises above
+
+                                        TODO: add more options, such as
+                                        ("before_time", t)                  Stop just before the given target time
+                                        ("after_time", t)                   Stop just after the given target time
+                                        ("equilibrium", tolerance)          Stop when equilibrium reached
+
         :param n_steps:         The desired number of steps
 
-        :param snapshots:       OPTIONAL dict that may contain any the following keys:
+        :param max_steps:       (OPTIONAL) Max numbers of steps; if reached, it'll terminate regardless of any other criteria
+
+        :param snapshots:       (OPTIONAL) Dict that may contain any the following keys:
                                         -"frequency" (default 1)
                                         -"show_intermediates" (default True)
                                         -"species" (default None, meaning all species)
@@ -666,40 +710,56 @@ class ReactionDynamics:
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
 
+        if not duration:
+            duration = reaction_duration    # For backward compatibility.   TODO: phase out
+
         # Validation
         assert self.system is not None, "ReactionDynamics.single_compartment_react(): " \
                                         "the concentration values of the various chemicals must be set first"
 
-        if variable_steps and n_steps is not None:
+        if variable_steps and (n_steps is not None):
             raise Exception("ReactionDynamics.single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
-                            "(because the number of steps will vary); specify `reaction_duration` or `target_end_time` instead")
+                            "(because the number of steps will vary); specify `duration` or `target_end_time` instead")
+
+        if stop is not None:
+            assert type(stop) == tuple and len(stop) == 2, \
+                f"ReactionDynamics.single_compartment_react(): the argument `stop`, if passed, must be a pair of values"
 
 
         """
         Determine all the various time parameters that were not explicitly provided
         """
 
-        if target_end_time is not None:
-            if reaction_duration is not None:
-                raise Exception("single_compartment_react(): cannot provide values for BOTH `target_end_time` and `reaction_duration`")
-            else:
-                assert target_end_time > self.system_time, \
-                    f"single_compartment_react(): `target_end_time` must be larger than the current System Time ({self.system_time})"
-                reaction_duration = target_end_time - self.system_time
+        if stop is not None:
+            assert initial_step > 0, \
+                "single_compartment_react(): when using the `stop` argument, an `initial_step` argument must be provided"
+            assert max_steps is not None, \
+                "single_compartment_react(): when using the `stop` argument, a `max_steps` argument must be provided"
+            time_step = initial_step
 
-        # Determine the time step,
-        # as well as the required number of such steps
-        time_step, n_steps = self.specify_steps(total_duration=reaction_duration,
-                                                time_step=initial_step,
-                                                n_steps=n_steps)
-        # Note: if variable steps are requested then n_steps stops being particularly meaningful; it becomes a
-        #       hypothetical value, in the (unlikely) event that the step size were never changed
 
-        if target_end_time is None:
-            if variable_steps:
-                target_end_time = self.system_time + reaction_duration
-            else:
-                target_end_time = self.system_time + time_step * n_steps
+        else:
+            if target_end_time is not None:
+                if duration is not None:
+                    raise Exception("single_compartment_react(): cannot provide values for BOTH `target_end_time` and `duration`")
+                else:
+                    assert target_end_time > self.system_time, \
+                        f"single_compartment_react(): `target_end_time` must be larger than the current System Time ({self.system_time})"
+                    duration = target_end_time - self.system_time
+
+            # Determine the time step,
+            # as well as the required number of such steps
+            time_step, n_steps = self.specify_steps(total_duration=duration,
+                                                    time_step=initial_step,
+                                                    n_steps=n_steps)
+            # Note: if variable steps are requested then n_steps stops being particularly meaningful; it becomes a
+            #       hypothetical value, in the (unlikely) event that the step size were never changed
+
+            if target_end_time is None:
+                if variable_steps:
+                    target_end_time = self.system_time + duration
+                else:
+                    target_end_time = self.system_time + time_step * n_steps
 
 
         if snapshots:
@@ -721,9 +781,30 @@ class ReactionDynamics:
             self.save_diagnostic_conc_data(system_data)
 
 
-        i = 0
-        while self.system_time < target_end_time:   # Proceed until the system time reaches the target endtime
-            if (not variable_steps) and (i == n_steps) and np.allclose(self.system_time, target_end_time):
+        step_count = 0
+        #while self.system_time < target_end_time:
+        while True:
+            # Check various criteria for termination
+            if (max_steps is not None) and (step_count >= max_steps):
+                print(f"single_compartment_react(): computation stopped because max # of steps ({max_steps}) reached")
+                break       # We have reached the max allowable number of steps
+
+            if (target_end_time is not None) and (self.system_time >= target_end_time):
+                break       # The system time has reached the target endtime
+
+            if (stop is not None):
+                (termination_keyword, termination_parameter) = stop
+                if termination_keyword == "conc_below":
+                    chem_name, conc_threshold = termination_parameter
+                    if self.get_chem_conc(chem_name) < conc_threshold:
+                        break   # The concentration of the specified chemical has dropped the requested threshold
+                elif termination_keyword == "conc_above":
+                    chem_name, conc_threshold = termination_parameter
+                    if self.get_chem_conc(chem_name) > conc_threshold:
+                        break   # The concentration of the specified chemical has risen above the requested threshold
+
+            if (not variable_steps) and (step_count == n_steps)\
+                    and (target_end_time is not None) and np.allclose(self.system_time, target_end_time):
                 break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
                             #   the System Time is below the target_end_time because of roundoff error
 
@@ -732,7 +813,7 @@ class ReactionDynamics:
             delta_concentrations, step_actually_taken, recommended_next_step = \
                     self.reaction_step_common(delta_time=time_step,
                                               variable_steps=variable_steps, explain_variable_steps=explain_variable_steps,
-                                              step_counter=i)
+                                              step_counter=step_count)
 
             # Update the System State
             self.system += delta_concentrations
@@ -742,16 +823,16 @@ class ReactionDynamics:
             self.system_time += step_actually_taken
 
             # Preserve some of the data, as requested
-            if snapshots and ((i+1)%frequency == 0):
+            if snapshots and ((step_count+1)%frequency == 0):
                 if first_snapshot and "initial_caption" in snapshots:
                     self.add_snapshot(species=species, caption=snapshots["initial_caption"])
                     first_snapshot = False
                 else:
                     self.add_snapshot(species=species)
 
-            i += 1
+            step_count += 1
 
-            if i > 1000 * n_steps:  # To catch infinite loops
+            if (n_steps is not None) and (step_count > 1000 * n_steps):  # Another approach to catch infinite loops
                 raise Exception("single_compartment_react(): "
                                 "the computation is taking a very large number of steps, probably from automatically trying to correct instability;"
                                 " trying reducing the time_step")   # TODO: is the explanation correctly phrased?
@@ -765,17 +846,19 @@ class ReactionDynamics:
                 time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
         # END while
 
-        # Report as to whether extra steps were automatically added, as well as the total # taken
-        n_steps_taken = i
 
-        extra_steps = n_steps_taken - n_steps
-        if extra_steps > 0:
-            if variable_steps:
-                print(f"Some steps were backtracked and re-done, "
-                      f"to prevent negative concentrations or excessively large concentration changes")
-            else:
-                print(f"The computation took {extra_steps} extra step(s) - "
-                      f"automatically added to prevent negative concentrations")
+        # Report whether extra steps were automatically added, as well as the total # taken
+        n_steps_taken = step_count
+
+        if n_steps is not None:
+            extra_steps = n_steps_taken - n_steps
+            if extra_steps > 0:
+                if variable_steps:
+                    print(f"Some steps were backtracked and re-done, "
+                          f"to prevent negative concentrations or excessively large concentration changes")
+                else:
+                    print(f"The computation took {extra_steps} extra step(s) - "
+                          f"automatically added to prevent negative concentrations")
 
 
         if not silent:
@@ -951,7 +1034,7 @@ class ReactionDynamics:
                 print("    Norms:    ", all_norms)
 
                 print("    Thresholds:    ")
-                for rule in  self.thresholds:
+                for rule in self.thresholds:
                     print(self.display_thresholds(rule, all_norms.get(rule['norm'])))
 
                 print("    Step Factors:    ", self.step_factors)
@@ -1129,12 +1212,15 @@ class ReactionDynamics:
         # If some chemicals are not dynamically involved in the reactions
         # (i.e. if they don't occur in any reaction, or occur as enzyme),
         # restrict our consideration to only the dynamically involved ones
-        if len(self.chem_data.active_chemicals) < n_chems:
-            #n_chems = len(self.chem_data.active_chemicals)
-            delta_conc = delta_conc[list(self.chem_data.active_chemicals)]
+        #if len(self.chem_data.active_chemicals) < n_chems:
+        if len(self.chem_data.names_of_enzymes()) > 0:
+            #n_chems = len(self.chem_data.names_of_active_chemicals())
+            #delta_conc = delta_conc[list(self.chem_data.active_chemicals)]
+            delta_conc = delta_conc[self.chem_data.indexes_of_active_chemicals()]
             #print(f"\nadjust_speed(): restricting adaptive time step analysis to {n_chems} chemicals only; their delta_conc is {delta_conc}")
             if baseline_conc is not None:
-                baseline_conc = baseline_conc[list(self.chem_data.active_chemicals)]
+                #baseline_conc = baseline_conc[list(self.chem_data.active_chemicals)]
+                baseline_conc = baseline_conc[self.chem_data.indexes_of_active_chemicals()]
                 #print(f"    and their baseline_conc is {baseline_conc}")
 
 
@@ -1171,30 +1257,41 @@ class ReactionDynamics:
 
 
 
-    def display_thresholds(self, rule :str, value) -> str:
+    def display_thresholds(self, rule :dict, value) -> str:
         """
+        Examine how the specified value fits
+        relatively to the 'low', 'high', and 'abort' stored in the given rule
 
-        :param rule:    A string that can be either 'low', 'high', or 'abort'
-        :param value:
-        :return:
+        :param rule:    A dict that must contain the key 'norm',
+                            and may contain the keys: 'low', 'high', and 'abort'
+                            (referring to 3 increasingly-high thresholds)
+        :param value:   Either None, or a number to compare to the thresholds
+        :return:        A string that visually highlights the relative position of the value
+                            relatively to the given thresholds
         """
-        s = f"                   {rule['norm']} : "
+        s = f"                   {rule['norm']} : "     # Name of the norm being used
 
         if value is None:
             return s + " (skipped; not needed)"
 
+        # Extract the 3 thresholds (some might be missing)
         low = rule.get('low')
         high = rule.get('high')
         abort = rule.get('abort')
+
         if low is not None and value < low:
+            # The value is below the `low` threshold
             return f"{s}(VALUE {value:.5g}) | low {low} | high {high} | abort {abort}"
 
         if high is not None and value < high:
+            # The value is between the `low` and `high` thresholds
             return f"{s}low {low} | (VALUE {value:.5g}) | high {high} | abort {abort}"
 
         if abort is not None and value < abort:
+            # The value is above the `high` threshold
             return f"{s}low {low} | high {high} | (VALUE {value:.5g}) | abort {abort}"
 
+        # If we get thus far, the value is above the `abort` threshold
         return f"{s}low {low} | high {high} | abort {abort} | (VALUE {value:.5g})"
 
 
@@ -1234,8 +1331,10 @@ class ReactionDynamics:
             print(f"      delta_list: {delta_dict}")
 
 
-        if rxn_list is None:    # Meaning ALL reactions
-            rxn_list = range(self.chem_data.number_of_reactions())  # This will be a list of all the reaction index numbers
+        if rxn_list is None:    # Meaning ALL (active) reactions
+            # A list of the reaction indices of all the active reactions
+            rxn_list = self.chem_data.active_reaction_indices()
+
 
         number_chemicals = self.chem_data.number_of_chemicals()
 
@@ -1262,8 +1361,9 @@ class ReactionDynamics:
             # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
             for r in reactants:
                 # Unpack data from the reactant r
-                species_index = rxn.extract_species_index(r)
-                if species_index == rxn.enzyme:
+                species_name = rxn.extract_species_name(r)
+                species_index = self.chem_data.get_index(species_name)
+                if species_name == rxn.enzyme:
                     #print(f"*** SKIPPING reactant ENZYME {species_index} in reaction {rxn_index}")
                     continue    # Skip if r is an enzyme for this reaction
 
@@ -1282,8 +1382,9 @@ class ReactionDynamics:
             # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
             for p in products:
                 # Unpack data from the reactant r
-                species_index = rxn.extract_species_index(p)
-                if species_index == rxn.enzyme:
+                species_name = rxn.extract_species_name(p)
+                species_index = self.chem_data.get_index(species_name)
+                if species_name == rxn.enzyme:
                     #print(f"*** SKIPPING product ENZYME {species_index} in reaction {rxn_index}")
                     continue    # Skip if p is an enzyme for this reaction
 
@@ -1511,8 +1612,9 @@ class ReactionDynamics:
         forward_rate = fwd_rate_constant
         for r in reactants:
             # Unpack data from the reactant r
-            species_index = rxn.extract_species_index(r)
+            species_name = rxn.extract_species_name(r)
             order = rxn.extract_rxn_order(r)
+            species_index = self.chem_data.get_index(species_name)
             conc = self.system[species_index]
             #assert conc is not None, \
             #   f"ReactionDynamics.compute_reaction_delta_rate(): lacking the value for the concentration of the chemical species `{self.reaction_data.get_name(species_index)}`"
@@ -1521,8 +1623,9 @@ class ReactionDynamics:
         reverse_rate = rev_rate_constant
         for p in products:
             # Unpack data from the reaction product p
-            species_index = rxn.extract_species_index(p)
+            species_name = rxn.extract_species_name(p)
             order = rxn.extract_rxn_order(p)
+            species_index = self.chem_data.get_index(species_name)
             conc = self.system[species_index]
             #assert conc is not None, \
             #   f"ReactionDynamics.compute_reaction_delta_rate(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
@@ -1836,24 +1939,27 @@ class ReactionDynamics:
         # Pick (arbitrarily) the first reactant,
         # to establish a baseline change in concentration relative to its stoichiometric coefficient
         baseline_term = reactants[0]
-        baseline_species = rxn.extract_species_index(baseline_term)
+        baseline_species_name = rxn.extract_species_name(baseline_term)
+        baseline_species_index = self.chem_data.get_index(baseline_species_name)
         baseline_stoichiometry = rxn.extract_stoichiometry(baseline_term)
-        baseline_ratio =  (delta_arr[baseline_species]) / baseline_stoichiometry
+        baseline_ratio =  (delta_arr[baseline_species_index]) / baseline_stoichiometry
         #print("\nbaseline_ratio: ", baseline_ratio)
 
         for i, term in enumerate(reactants):
             if i != 0:
-                species = rxn.extract_species_index(term)
+                species_name = rxn.extract_species_name(term)
+                species_index = self.chem_data.get_index(species_name)
                 stoichiometry = rxn.extract_stoichiometry(term)
-                ratio =  (delta_arr[species]) / stoichiometry
+                ratio =  (delta_arr[species_index]) / stoichiometry
                 #print(f"ratio for `{self.chem_data.get_name(species)}`: {ratio}")
                 if not np.allclose(ratio, baseline_ratio):
                     return False
 
         for term in products:
-            species = rxn.extract_species_index(term)
+            species_name = rxn.extract_species_name(term)
+            species_index = self.chem_data.get_index(species_name)
             stoichiometry = rxn.extract_stoichiometry(term)
-            ratio =  - (delta_arr[species]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn
+            ratio =  - (delta_arr[species_index]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn
             #print(f"ratio for `{self.chem_data.get_name(species)}`: {ratio}")
             if not np.allclose(ratio, baseline_ratio):
                 return False
@@ -2379,7 +2485,7 @@ class ReactionDynamics:
     #####################################################################################################
 
     def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None, xrange=None,
-                     ylabel="concentration",
+                     ylabel=None,
                      vertical_lines=None, show_intervals=False, show=False) -> go.Figure:
         """
         Using plotly, draw the plots of concentration values over time, based on history data that gets
@@ -2387,7 +2493,8 @@ class ReactionDynamics:
 
         Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
 
-        :param chemicals:   (OPTIONAL) List of the names of the chemicals to plot;
+        :param chemicals:   (OPTIONAL) List of the names of the chemicals whose concentration changes are to be plotted,
+                                or a string with just one name;
                                 if None, then display all
         :param colors:      (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
                                 or list of names to use, in order; if None, then use the hardwired defaults
@@ -2400,8 +2507,11 @@ class ReactionDynamics:
                                     whether the title is specified by the user or automatically generated
         :param xrange:          (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param ylabel:          (OPTIONAL) Caption to use for the y-axis.  By default, "concentration"
+        :param ylabel:          (OPTIONAL) Caption to use for the y-axis.
+                                    By default, the name in `the chemicals` argument, in square brackets, if only 1 chemical,
+                                    or "Concentration" if more than 1 (a legend also shown)
         :param vertical_lines:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
+                                    TODO: rename add_vertical_lines
                                     List or tuple or Numpy array or Pandas series
                                     of x-coordinates at which to draw thin vertical dotted gray lines.
                                     If the number of vertical line is so large as to overwhelm the plot,
@@ -2454,7 +2564,7 @@ class ReactionDynamics:
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
         if title_prefix is not None:
-            title = f"{title_prefix}.  <br>{title}"
+            title = f"{title_prefix}  <br>{title}"
 
         if show_intervals:
             vertical_lines = df["SYSTEM TIME"]  # Make use of the simulation times
@@ -2465,7 +2575,13 @@ class ReactionDynamics:
         fig = px.line(data_frame=df, x="SYSTEM TIME", y=chemicals,
                       title=title, range_x=xrange,
                       color_discrete_sequence = colors,
-                      labels={"value": ylabel, "variable": "Chemical"})
+                      labels={"value": "Concentration", "variable": "Chemical"})
+
+        if type(chemicals) == str:  # Somehow, the `labels` argument in px.line is ignored when chemicals is just a string
+            if ylabel is None:
+                fig.update_layout(yaxis_title=f"[{chemicals}]")     # EXAMPLE:  "[A]"
+            else:
+                fig.update_layout(yaxis_title=ylabel)
 
 
         if vertical_lines is not None:
@@ -2609,7 +2725,8 @@ class ReactionDynamics:
                                    If this parameter is specified, an extra column - called "search_value" -
                                    is inserted at the beginning of the dataframe.
                                    If either the "head" or the "tail" arguments are passed, this argument will get ignored
-        :param columns: (OPTIONAL) List of columns to return; if not specified, all are returned
+        :param columns: (OPTIONAL) List of columns to return; if not specified, all are returned.
+                                   Make sure to include "SYSTEM TIME" in the list, if the time variable needs to be included
 
         :return:        A Pandas dataframe
         """
@@ -2673,7 +2790,7 @@ class ReactionDynamics:
     #####################################################################################################
 
 
-    def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True) -> Union[bool, dict]:
+    def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True, verbose=None) -> Union[bool, dict]:
         """
         Ascertain whether the given concentrations (by default the current System concentrations)
         are in equilibrium for the specified reactions (by default, for all reactions)
@@ -2683,13 +2800,14 @@ class ReactionDynamics:
         :param conc:        Dict with the concentrations of the species involved in the reaction(s).
                             The keys are the chemical names
                                 EXAMPLE: {'A': 23.9, 'B': 36.1}
-                            If None, then use the current System concentrations
+                            If None, then use the current System concentrations instead
         :param tolerance:   Allowable relative tolerance, as a PERCENTAGE,
                                 to establish satisfactory match with expected values
         :param explain:     If True, print out details about the analysis,
                                 incl. the formula(s) being used to check the equilibrium
                                 EXAMPLES:   "([C][D]) / ([A][B])"
                                             "[B] / [A]^2"
+        :param verbose:     Alternate name for argument `explain`
 
         :return:            Return True if ALL the reactions are close enough to an equilibrium,
                                 as allowed by the requested tolerance;
@@ -2698,6 +2816,10 @@ class ReactionDynamics:
                                 EXAMPLE:  {False: [3, 6]}
         """
         # TODO: optionally display last lines in diagnostic data, if available
+        # TODO: phase out "explain" in favour of "verbose"
+
+        if verbose is not None:
+            explain = verbose
 
         if conc is None:
             conc=self.get_conc_dict()   # Use the current System concentrations, as a dict.
@@ -2707,7 +2829,7 @@ class ReactionDynamics:
                                         # a list of reactions that fail to meet the criterion for equilibrium
 
         if rxn_index is not None:
-            # Check the 1 reaction that was specified
+            # Check the 1 reaction that was requested
             if explain:
                 description = self.chem_data.single_reaction_describe(rxn_index=rxn_index, concise=True)
                 print(description)
@@ -2717,19 +2839,19 @@ class ReactionDynamics:
                 failures_dict = {False: [rxn_index]}    # Make a note that this reaction failed the equilibrium test
 
         else:
-            # Check all the reactions
+            # Check ALL the reactions
             status = True       # Overall status
             description_list = self.chem_data.multiple_reactions_describe(concise=True)
-            for i in range(self.chem_data.number_of_reactions()):
+            for rxn_index in range(self.chem_data.number_of_reactions()):
                 # For each reaction
                 if explain:
-                    print(description_list[i])
+                    print(description_list[rxn_index])
 
-                single_status = self.reaction_in_equilibrium(rxn_index=i, conc=conc, tolerance=tolerance, explain=explain)
+                single_status = self.reaction_in_equilibrium(rxn_index=rxn_index, conc=conc, tolerance=tolerance, explain=explain)
 
                 if not single_status:
                     status = False
-                    failures_dict[False].append(i)      # Make a note that this reaction failed the equilibrium test
+                    failures_dict[False].append(rxn_index)      # Make a note that this reaction failed the equilibrium test
 
         if status:
             return True
@@ -2738,10 +2860,11 @@ class ReactionDynamics:
 
 
 
-    def reaction_in_equilibrium(self, rxn_index, conc, tolerance, explain :bool) -> bool:
+    def reaction_in_equilibrium(self, rxn_index :int, conc, tolerance, explain :bool) -> bool:
         """
         Ascertain whether the given concentrations are in equilibrium for the specified SINGLE reaction;
         return True or False, accordingly.
+
         Pathological case: if at least one of the reactants AND at least one of the products have zero
         concentration, then the reaction is "stuck" - and thus regarded in "equilibrium"
 
@@ -2751,11 +2874,12 @@ class ReactionDynamics:
                                 EXAMPLE: {'A': 23.9, 'B': 36.1}
         :param tolerance:   Allowable relative tolerance, as a PERCENTAGE,
                                 to establish satisfactory match with expected values
-        :param explain:     If True, print out the formula being used, as well as some other info.
+        :param explain:     If True, print out the formula being used, as well as the concentrations (reactants, then products)
+                                and some other info.
                                 EXAMPLES of formulas:   "([C][D]) / ([A][B])"
                                                         "[B] / [A]^2"
         :return:            True if the given reaction is close enough to an equilibrium,
-                            as allowed by the requested tolerance
+                                as allowed by the requested tolerance
         """
         rxn = self.chem_data.get_reaction(rxn_index)    # Look up the requested reaction
 
@@ -2770,13 +2894,24 @@ class ReactionDynamics:
             rxn_quotient = result
 
         if explain:
-            # Prepare a concise listing from the given concentration,
-            # only including those that are applicable to this reaction
+            # Prepare a concise listing from the given concentrations,
+            # only including the concentrations that are applicable to this reaction
             all_applicable_concs = []
-            for species_index in rxn.extract_chemicals_in_reaction(exclude_enzyme=False):
-                species_name = self.chem_data.get_name(species_index)
+            '''
+            for species_name in rxn.extract_chemicals_in_reaction(exclude_enzyme=False):
                 s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
                 all_applicable_concs.append(s)
+            '''
+            reactants = rxn.extract_reactant_names(exclude_enzyme=False)
+            for species_name in reactants:
+                s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
+                all_applicable_concs.append(s)
+
+            products = rxn.extract_product_names(exclude_enzyme=False)
+            for species_name in products:
+                if species_name not in reactants:           # Don't report the same concentration twice!
+                    s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[B] = 0.3"
+                    all_applicable_concs.append(s)
 
             all_applicable_concs_str = " ; ".join(all_applicable_concs)     # EXAMPLE: "[A] = 20.3 ; [B] = 0.3"
 
@@ -2803,7 +2938,7 @@ class ReactionDynamics:
             print(f"Final concentrations: {all_applicable_concs_str}")
             print(f"1. Ratio of reactant/product concentrations, adjusted for reaction orders: {rxn_quotient:,.6g}")
             print(f"    Formula used:  {formula}")
-            print(f"2. Ratio of forward/reverse reaction rates: {rate_ratio}")
+            print(f"2. Ratio of forward/reverse reaction rates: {rate_ratio:,.6g}")
             print(f"Discrepancy between the two values: {100 * abs(rxn_quotient - rate_ratio)/rate_ratio :,.4g} %")
             if status:
                 print(f"Reaction IS in equilibrium (within {tolerance:.2g}% tolerance)\n")
@@ -2874,14 +3009,12 @@ class ReactionDynamics:
         # Look at the denominator of the "Reaction Quotient"
         for i, r in enumerate(reactants):
             # Loop over the reactants
-            species_index =  rxn.extract_species_index(r)
+            species_name =  rxn.extract_species_name(r)
             rxn_order =  rxn.extract_rxn_order(r)
             coefficient = rxn.extract_stoichiometry(r)
 
             assert rxn_order == 1, \
                 "find_equilibrium_conc(): Currently only implemented for 1st order reactions"
-
-            species_name = self.chem_data.get_name(species_index)
 
             if i == 0:
                 name_map["A"] = species_name
@@ -2900,13 +3033,11 @@ class ReactionDynamics:
         # Look at the numerator of the "Reaction Quotient"
         for i, p in enumerate(products):
             # Loop over the reaction products
-            species_index =  rxn.extract_species_index(p)
+            species_name =  rxn.extract_species_name(p)
             rxn_order =  rxn.extract_rxn_order(p)
             coefficient = rxn.extract_stoichiometry(p)
 
             assert rxn_order == 1, "find_equilibrium_conc(): Currently only implemented for 1st order reactions"
-
-            species_name =  self.chem_data.get_name(species_index)
 
             if i == 0:
                 name_map["C"] = species_name
@@ -3098,14 +3229,60 @@ class ReactionDynamics:
 
 
 
+    def reach_threshold(self, chem :str, threshold) -> Union[float, None]:
+        """
+
+        :param chem:        The name of the chemical of interest
+        :param threshold:   A number with the concentration value being sought
+        :return:            The time at which the linearly-interpolated concentration of the specified chemical
+                                first reaches the given threshold;
+                                or None if it never does (in which case a message is printed)
+        """
+        # Prepare a Pandas dataframe with 2 columns
+        df = self.get_history(columns=["SYSTEM TIME", chem])
+
+        x_intersection = num.reach_threshold(df, x="SYSTEM TIME", y=chem, y_threshold=threshold)
+        if x_intersection is None:
+            print(f"reach_threshold(): the concentrations of `{chem}` never reaches the specified threshold of {threshold}")
+
+        return x_intersection
+
+
+
+    def curve_intersect(self, chem1 :str, chem2 :str, t_start, t_end, explain=False) -> (float, float):
+        """
+        Find and return the intersection of the concentrations of the chemicals chem1 and chem2,
+        in the time interval [t_start, t_end]
+        If more than one is present, only the first (smallest value of x-coord) one will be returned;
+        so, the specified time interval should be narrow enough to bracket the intersection of interest
+
+        :param chem1:   The name of the 1st chemical of interest
+        :param chem2:   The name of the 2nd chemical of interest
+        :param t_start: The start of the time interval being considered
+        :param t_end:   The end of the time interval being considered
+        :param explain: [OPTIONAL] If True, print out some details of the computation
+        :return:        The pair (time of intersection, common value) ;
+                            if not found, a message is printed, and None is returned
+        """
+        # Prepare a Pandas dataframe with 3 columns
+        df = self.get_history(t_start=t_start, t_end=t_end, columns=["SYSTEM TIME", chem1, chem2])
+
+        intersection = num.curve_intersect(df, x="SYSTEM TIME", var1=chem1, var2=chem2, explain=explain)
+        if intersection is None:
+            print(f"curve_intersect(): No intersection detected between the concentrations of `{chem1}` and `{chem2}` "
+                  f"in the time interval [{t_start} - {t_end}]")
+
+        return intersection
+
+
+
     def curve_intersection(self, chem1, chem2, t_start, t_end) -> (float, float):
         """
+        TODO: OBSOLETE
         Find and return the intersection of the 2 curves in the columns var1 and var2,
         in the time interval [t_start, t_end]
-        If there's more than one intersection, only one - in an unpredictable choice - is returned
-        TODO: the current implementation fails in cases where the 2 curves stay within some distance of each other,
-              and then one curve jumps on the opposite side of the other curve, at at BIGGER distance.
-              See the missed intersection at the end of experiment "reactions_single_compartment/up_regulate_1"
+        If there's more than one intersection, only one - in an unpredictable choice - is returned;
+        so, the specified time interval should be narrow enough to avoid that
 
         :param chem1:   The name of the 1st chemical of interest
         :param chem2:   The name of the 2nd chemical of interest
@@ -3113,15 +3290,15 @@ class ReactionDynamics:
         :param t_end:   The end of the time interval being considered
         :return:        The pair (time of intersection, common value)
         """
-        df = self.get_history(t_start=t_start, t_end=t_end) # A Pandas dataframe
+        print("\n*** The function curve_intersection() is now OBSOLETE : use curve_intersect() instead\n")
+        '''
+        This obsolete implementation fails in cases where the 2 curves stay within some distance of each other,
+        and then one curve jumps on the opposite side of the other curve, at at BIGGER distance.
+        '''
+        # Prepare a Pandas dataframe with 3 columns
+        df = self.get_history(t_start=t_start, t_end=t_end, columns=["SYSTEM TIME", chem1, chem2])
 
-        row_index = abs(df[chem1] - df[chem2]).idxmin()     # The index of the Pandas dataframe row
-                                                            #   with the smallest absolute value
-                                                            #   of difference in concentrations
-        print(f"Min abs distance found at data row: {row_index}")
-
-        return num.curve_intersect_interpolate(df, row_index,
-                                               x="SYSTEM TIME", var1=chem1, var2=chem2)
+        return num.curve_intersection_OLD(df, x="SYSTEM TIME", var1=chem1, var2=chem2)
 
 
 

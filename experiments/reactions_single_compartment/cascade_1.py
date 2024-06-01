@@ -24,7 +24,7 @@
 # In part2, some diagnotic insight is explored.   
 # In part3, two identical runs ("adaptive variable steps" and "fixed small steps") are compared. 
 #
-# LAST REVISED: May 5, 2024
+# LAST REVISED: May 27, 2024  (using v. 1.0beta32)
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -46,6 +46,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
+from src.modules.chemicals.chem_data import ChemData
 from src.modules.reactions.reaction_dynamics import ReactionDynamics
 from src.modules.visualization.plotly_helper import PlotlyHelper
 
@@ -66,29 +67,31 @@ GraphicLog.config(filename=log_file,
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = ReactionDynamics(names=["A", "B", "C"])
+chem = ChemData(names=["A", "B", "C"])
 
 # Reaction A <-> B (fast)
-dynamics.add_reaction(reactants=["A"], products=["B"],
+chem.add_reaction(reactants=["A"], products=["B"],
                        forward_rate=64., reverse_rate=8.) 
 
 # Reaction B <-> C (slow)
-dynamics.add_reaction(reactants=["B"], products=["C"],
+chem.add_reaction(reactants=["B"], products=["C"],
                        forward_rate=12., reverse_rate=2.) 
 
-print("Number of reactions: ", dynamics.number_of_reactions())
+print("Number of reactions: ", chem.number_of_reactions())
 
 # %%
-dynamics.describe_reactions()
+chem.describe_reactions()
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
-dynamics.plot_reaction_network("vue_cytoscape_2")
+chem.plot_reaction_network("vue_cytoscape_2")
 
 # %% [markdown]
 # ## Run the simulation
 
 # %%
+dynamics = ReactionDynamics(chem_data=chem, preset="fast")
+
 dynamics.set_conc([50., 0, 0.], snapshot=True) # Set the initial concentrations of all the chemicals, in their index order
 dynamics.describe_state()
 
@@ -100,10 +103,6 @@ dynamics.get_history()
 
 # %%
 dynamics.set_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
-
-# These settings can be tweaked to make the time resolution finer or coarser.  
-# Here we use a "fast" heuristic: less conservative about taking larger steps
-dynamics.use_adaptive_preset(preset="fast")
 
 dynamics.single_compartment_react(initial_step=0.02, reaction_duration=0.4,
                                   snapshots={"initial_caption": "1st reaction step",
@@ -119,13 +118,13 @@ dynamics.plot_history(title="Coupled reactions A <-> B and B <-> C",
                       colors=['blue', 'orange', 'green'], show_intervals=True)
 
 # %%
-dynamics.curve_intersection("A", "B", t_start=0, t_end=0.05)
+dynamics.curve_intersect("A", "B", t_start=0, t_end=0.05)
 
 # %%
-dynamics.curve_intersection("A", "C", t_start=0, t_end=0.05)
+dynamics.curve_intersect("A", "C", t_start=0, t_end=0.05)
 
 # %%
-dynamics.curve_intersection("B", "C", t_start=0.05, t_end=0.1)
+dynamics.curve_intersect("B", "C", t_start=0.05, t_end=0.1)
 
 # %%
 dynamics.get_history()
@@ -195,12 +194,13 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 # We'll use **constant steps of size 0.0005** , which is 1/4 of the smallest steps (the "substep" size) previously used in the variable-step run
 
 # %%
-dynamics2 = ReactionDynamics(shared=dynamics)  # Re-use the same chemicals and reactions of the previous simulation
+dynamics2 = ReactionDynamics(chem_data=chem)  # Re-use the same chemicals and reactions of the previous simulation
 
 # %% tags=[]
 dynamics2.set_conc([50., 0, 0.], snapshot=True)
 
 # %%
+# Notice that we're using FIXED steps this time
 dynamics2.single_compartment_react(initial_step=0.0005, reaction_duration=0.4,
                                    variable_steps=False,
                                    snapshots={"initial_caption": "1st reaction step",
@@ -215,13 +215,13 @@ dynamics2.plot_history(title="Coupled reactions A <-> B and B <-> C , re-run wit
 # _(Notice that the vertical steps are now equally spaced - and that there are so many of them that we're only showing some)_
 
 # %%
-dynamics2.curve_intersection(t_start=0, t_end=0.05, chem1="A", chem2="B")
+dynamics2.curve_intersect(t_start=0, t_end=0.05, chem1="A", chem2="B")
 
 # %%
-dynamics2.curve_intersection(t_start=0, t_end=0.05, chem1="A", chem2="C")
+dynamics2.curve_intersect(t_start=0, t_end=0.05, chem1="A", chem2="C")
 
 # %%
-dynamics2.curve_intersection(t_start=0.05, t_end=0.1, chem1="B", chem2="C")
+dynamics2.curve_intersect(t_start=0.05, t_end=0.1, chem1="B", chem2="C")
 
 # %%
 df2 = dynamics2.get_history()
@@ -251,6 +251,7 @@ PlotlyHelper.combine_plots(fig_list=[fig1, fig2], title="The 2 runs, contrasted 
                            curve_labels=["B (adaptive variable steps)", "B (fixed small steps)"])
 
 # %% [markdown]
-# #### They overlap fairly well!  The 800 fixed-timestep points vs. the 48 adaptable variable-timestep ones
+# #### They overlap fairly well!  The 800 fixed-timestep points vs. the 48 adaptable variable-timestep ones.
+# The adaptive algorithms avoided 752 extra steps of limited benefit...
 
 # %%

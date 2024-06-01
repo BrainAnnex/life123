@@ -13,34 +13,100 @@ class Numerical:
 
 
     @classmethod
-    def curve_intersect_interpolate(cls, df: pd.DataFrame, row_index :int, x, var1, var2) -> (float, float):
+    def reach_threshold(cls, df, x :str, y :str, y_threshold) -> Union[float, None]:
         """
-        Fine-tune the intersection point between 2 Pandas dataframe columns,
+        Given a set of 2-D points, whose x- and y- coordinates are stored, respectively, in the
+        columns whose names are given by the arguments x and y, locate the x-coordinate at which
+        the curve first reaches the given y-value threshold.
+        That is, its intersection with the horizontal line y = y_threshold
+        Linear interpolation is used.
+
+        The dataframe is *assumed* sorted by the x variable, increasing monotonically; an Exception is
+        raised if that's not the case.
+        
+        Note that if there are multiple intersections, only the leftmost (smallest x) is returned.
+
+        In case no intersection is found, None is returned.
+
+        :param df:          A Pandas dataframe with at least 2 columns
+        :param x:           The name of the column with the x-values
+        :param y:           The name of the column with the y-values
+        :param y_threshold: A number with a y-value being sought in the xy curve
+        :return:            The x-value at which the linearly-interpolated curve first reaches
+                                the y-value y_threshold, or None if not found
+        """
+
+        # Iterate through the DataFrame rows to find the (first) segment where y0 lies between
+        for i in range(len(df) - 1):
+            # For each row, except the last one
+
+            x1 = df.loc[i, x]
+            x2 = df.loc[i + 1, x]
+            assert x2 > x1, \
+                f"reach_threshold(): the x-values (column `{x}`) are not monotonically-increasing, as expected"
+
+            y1 = df.loc[i, y]                   # y-value at the start of the sliding interval
+            y2 = df.loc[i + 1, y]               # y-value at the end of the sliding interval
+            if min(y1, y2) <= y_threshold <= max(y1, y2):    # This checks if y0 is between y1 and y2
+
+                if np.allclose(y1, y2):
+                    return x1                   # A convention we're following : "when is the target value first reached?"
+
+                # Perform linear interpolation
+                x_intersection = x1 + (y_threshold - y1) * (x2 - x1) / (y2 - y1)
+                return x_intersection
+
+        return None  # Return None if no intersection is found
+
+
+
+    @classmethod
+    def curve_intersection_OLD(cls, df: pd.DataFrame,
+                               x :str, var1 :str, var2 :str, print_row=True) -> (float, float):
+        """
+        TODO: OBSOLETED by curve_intersect()
+
+        Determine the intersection point between 2 Pandas dataframe columns,
         using linear interpolation
 
         :param df:          A Pandas dataframe with at least 3 columns
-        :param row_index:   The index of the Pandas dataframe row
-                                with the smallest absolute value of difference in concentrations
         :param x:           The name of the dataframe column with the independent variable
         :param var1:        The name of the dataframe column with the data from the 1st curve
         :param var2:        The name of the dataframe column with the data from the 2nd curve
-        :return:            The pair (time of intersection, common value)
+        :param print_row:   [OPTIONAL] If True, print the number of the row with the smallest abs(difference)
+        :return:            The pair (x-coordinate of intersection, common value)
+
+        :return:            The pair (x-coordinate of intersection, common value)
         """
-        df_size = len(df)
+        '''
+        TODO:   the current implementation fails in cases where the 2 curves stay within some distance of each other,
+                and then one curve jumps on the opposite side of the other curve, at at BIGGER distance.
+                See the missed intersection at the end of experiment "reactions_single_compartment/up_regulate_1"
+        '''
+
+        row_index = abs(df[var1] - df[var2]).idxmin()   # The index of the Pandas dataframe row
+                                                        #   with the smallest absolute value
+                                                        #   of difference between the values
+                                                        #   in the columns var1 and var2
+        if print_row:
+            print(f"curve_intersect_interpolate(): Min abs(distance) found at data row: {row_index}")
+
+
+        df_size = len(df)   # Number of rows in the dataframe
         assert df_size >= 3, \
             f"curve_intersect_interpolate(): the Pandas dataframe must have at least 3 rows (it has {df_size}). Not enough data..."
 
         # The next 2 integers are the indices of the boundaries of the passed dataframe
-        first_index = df.iloc[0].name           # TODO: try df.index[0]
-        last_index = df.iloc[df_size-1].name    # TODO: try df.index[-1]
+        first_index = df.index[0]
+        last_index = df.index[-1]
 
         assert row_index > first_index, \
-            f"curve_intersect_interpolate(): the given row (index {row_index}) in the Pandas dataframe must be past " \
-            f"the first one (whose index is {first_index}). Try using a bigger dataframe with an earlier start point!"
+            f"curve_intersect_interpolate(): the row (index {row_index}) in the Pandas dataframe with the smallest abs(distance) is " \
+            f"the first one (index {first_index}). Try using a bigger dataframe with an earlier start point!"
 
         assert row_index < last_index, \
-            f"curve_intersect_interpolate(): the given row (index {row_index}) in the Pandas dataframe must be before " \
-            f"the last one (whose index is {last_index}). Try using a bigger dataframe with an later end point!"
+            f"curve_intersect_interpolate(): the row (index {row_index}) in the Pandas dataframe with the smallest abs(distance) is " \
+            f"the last one (index {last_index}). Try using a bigger dataframe with an later end point!"
 
         col_names = list(df.columns)
         assert x in col_names, f"the given Pandas dataframe lacks a column named `{x}`"
@@ -67,7 +133,7 @@ class Numerical:
         prev_val1 = prev_row[var1]
         prev_val2 = prev_row[var2]
 
-        if np.allclose(val1, val2):     # The intersection occurs at the given middle point
+        if np.allclose(val1, val2):     # If a (near-)perfect intersection was found
             #print("val1 is very close to, or equal to, val2")
             if np.allclose(next_val1, next_val2) or np.allclose(prev_val1, prev_val2):
                 raise Exception("the intersection isn't well-defined because there's extended overlap")
@@ -109,16 +175,144 @@ class Numerical:
 
 
         print("Unable to locate a crossover in the curves; "
-              "a coarser value is returned as intersection point")
+              "a coarser value is returned as rough approximation of the intersection point")
 
         return (t, avg_val)
 
 
 
     @classmethod
+    def curve_intersect(cls, df: pd.DataFrame,
+                        x :str, var1 :str, var2 :str, explain=False) -> (float, float):
+        """
+        Determine the intersection point between 2 Pandas dataframe columns,
+        using linear interpolation.
+        If more than one is present, only the first (smallest value of x-coord) one will be returned;
+        so, the specified time interval should be narrow enough to bracket the intersection of interest
+
+        :param df:      A Pandas dataframe with at least 3 columns
+        :param x:       The name of the dataframe column with the independent variable
+        :param var1:    The name of the dataframe column with the data from the 1st curve
+        :param var2:    The name of the dataframe column with the data from the 2nd curve
+        :param explain: [OPTIONAL] If True, print out some details of the computation
+        :return:        The pair (x-coordinate of intersection, common value)
+
+        :return:        The pair (x-coordinate of intersection, common value)
+        """
+        df_size = len(df)   # Number of rows in the dataframe
+
+        # Validation
+        assert df_size >= 2, \
+            f"curve_intersect(): the Pandas dataframe must have at least 2 rows (it has {df_size}). Not enough data..."
+
+        col_names = list(df.columns)
+        assert x in col_names, f"curve_intersect(): the given Pandas dataframe lacks a column named `{x}`"
+        assert var1 in col_names, f"curve_intersect(): the given Pandas dataframe lacks a column named `{var1}`"
+        assert var2 in col_names, f"curve_intersect(): the given Pandas dataframe lacks a column named `{var2}`"
+
+        # The next 2 integers are the indices of the boundaries of the passed dataframe
+        first_index = df.index[0]
+        last_index = df.index[-1]
+        if explain:
+            print(f"first_index: {first_index}, last_index: {last_index}")
+
+        # Examine the y-values of the two curves at the first (zero-th) point
+        prev_val1 = df.loc[first_index, var1]
+        prev_val2 = df.loc[first_index, var2]
+
+        if np.allclose(prev_val1, prev_val2):     # Trivial intersection immediately found
+            if explain:
+                print(f"curve_intersect(): Curve intersection found at data row {first_index}, when `{x}` = {df.loc[first_index, x]}")
+                if np.allclose(df.loc[1, var1], df.loc[1, var2]):
+                    print(f"curve_intersect(): NOTICE - the intersection isn't well-defined because there's extended overlap "
+                          f"of the two curves  between `{x}` = {df.loc[first_index, x]} and `{x}` = {df.loc[1, x]}")
+
+            return (df.loc[first_index, x], prev_val1)
+
+
+        # Make a note of which curve has a bigger value at the initial point
+        if prev_val1 > prev_val2:
+            initially_larger = 1
+        else:
+            initially_larger = 2
+
+        row_index_curve_crossover = None
+
+        # Iterate through the DataFrame rows to find the first occurrence of a curve crossover
+        # (inversion about which one is larger)
+        for i in range(first_index+1, last_index+1):
+            # For each row, except the first one
+
+            # y-coords of the two curves at the i-th point
+            prev_val1 = df.loc[i, var1]
+            prev_val2 = df.loc[i, var2]
+
+            #print(f"val1: {val1} , val2: {val2}")
+
+            if np.allclose(prev_val1, prev_val2):  # Trivial intersection found at the i-th point
+                if explain:
+                    print(f"curve_intersect(): Curve intersection found at data row {i}, when `{x}` = {df.loc[i, x]}")
+                    if (i+1 < df_size) and np.allclose(df.loc[i+1, var1], df.loc[i+1, var2]):
+                        print(f"curve_intersect(): NOTICE - the intersection isn't well-defined because there's extended overlap "
+                              f"of the two curves between `{x}` = {df.loc[i, x]} and `{x}` = {df.loc[i+1, x]}")
+
+                return (df.loc[i, x], df.loc[i, var1])
+
+
+            if (prev_val1 > prev_val2) and (initially_larger == 2):
+                # Curve 1 is now the larger one
+                row_index_curve_crossover = i       # Value inversion found
+                break
+
+            if (prev_val2 > prev_val1) and (initially_larger == 1):
+                # Curve 2 is now the larger one
+                row_index_curve_crossover = i       # Value inversion found
+                break
+        # END for
+
+
+        if row_index_curve_crossover is None:      # No crossover found between the two curves
+            if explain:
+                print("curve_intersect(): No curve crossover detected; i.e., one curve is always above the other one")
+            return None         # No intersection located
+
+        if explain:
+            print(f"curve_intersect(): Curve crossover detected at data row: {row_index_curve_crossover}")
+
+        before_index = row_index_curve_crossover - 1    # Dataframe row index just before the crossover
+        after_index = row_index_curve_crossover         # Dataframe row index just after the crossover
+
+
+        row_before = df.loc[before_index]
+        prev_t = row_before[x]
+        prev_val1 = row_before[var1]
+        prev_val2 = row_before[var2]
+
+        row_after = df.loc[after_index]
+        next_t = row_after[x]
+        next_val1 = row_after[var1]
+        next_val2 = row_after[var2]
+
+        if np.allclose(prev_t, next_t):     # Curve discontinuity that requires special handling
+            print(f"WARNING: curve_intersect(): Discontinuity detected at `{x}` = {prev_t}")
+            if np.allclose(prev_val1, next_val1):
+                return (prev_t, prev_val1)
+            if np.allclose(prev_val2, next_val2):
+                return (prev_t, prev_val2)
+            return None
+
+
+        return cls.segment_intersect(  t=(prev_t, next_t),
+                                       y1=(prev_val1, next_val1),
+                                       y2=(prev_val2, next_val2)
+                                    )
+
+
+
+    @classmethod
     def segment_intersect(cls, t, y1, y2) -> (float, float):
         """
-        Find the intersection of 2 segments in 2D.
+        Find the intersection of two segments in 2D.
         Their respective endpoints share the same x-coordinates: (t_start, t_end)
 
         Note: for an alternate method, see line_intersect()
@@ -137,13 +331,14 @@ class Numerical:
         y1_start, y1_end = y1
         y2_start, y2_end = y2
 
-        assert t_end > t_start, "t_end must be strictly > t_start"
+        assert t_end > t_start, \
+            f"segment_intersect(): t_end must be strictly > t_start.  Here, t_start = {t_start} , t_end = {t_end}"
 
-        if np.allclose(y1_start, y1_end):   # if line1 is horizontal
-            assert y2_start != y2_end, "cannot intersect 2 horizontal segments"
+        if np.allclose(y1_start, y1_end):       # If line1 is horizontal
+            assert y2_start != y2_end, "segment_intersect(): cannot intersect 2 horizontal segments"
 
-        if np.allclose(y2_start, y2_end):   # if line2 is horizontal
-            assert y1_start != y1_end, "cannot intersect 2 horizontal segments"
+        if np.allclose(y2_start, y2_end):       # If line2 is horizontal
+            assert y1_start != y1_end, "segment_intersect(): cannot intersect 2 horizontal segments"
 
         delta_t = t_end - t_start
         delta_r = y1_end - y1_start

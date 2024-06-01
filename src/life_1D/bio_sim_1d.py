@@ -785,7 +785,7 @@ class BioSim1D:
             if not self.chem_data.get_all_diffusion_rates():
                 print(f"  Species {species_index}{name}. Diff rate: NOT SET. Conc: {all_conc}")
             else:
-                print(f"  Species {species_index}{name}. Diff rate: {self.chem_data.get_diffusion_rate(species_index)}. Conc: {all_conc}")
+                print(f"  Species {species_index}{name}. Diff rate: {self.chem_data.get_diffusion_rate(species_index=species_index)}. Conc: {all_conc}")
 
 
 
@@ -1108,7 +1108,7 @@ class BioSim1D:
         if self.n_bins == 1:
             return increment_vector                                 # There's nothing to do in the case of just 1 bin!
 
-        diff = self.chem_data.get_diffusion_rate(species_index)     # The diffusion rate of the specified single species
+        diff = self.chem_data.get_diffusion_rate(species_index=species_index)     # The diffusion rate of the specified single species
 
         assert not self.is_excessive(time_step, diff, delta_x), \
             f"diffuse_step_single_species(): Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"
@@ -1169,7 +1169,7 @@ class BioSim1D:
         if self.n_bins == 1:
             return increment_vector                             # There's nothing to do in the case of just 1 bin!
 
-        diff = self.chem_data.get_diffusion_rate(species_index)     # The diffusion rate of the specified single species
+        diff = self.chem_data.get_diffusion_rate(species_index=species_index)     # The diffusion rate of the specified single species
 
         # TODO: this Upper Bound is based on a *different* method, and should be made more specific to this method
         #assert not self.is_excessive(time_step, diff, delta_x), \
