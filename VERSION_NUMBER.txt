@@ -1,1 +1,1 @@
-version 1.0.0-beta.32_IN_PROGRESS
+version 1.0.0-beta.32

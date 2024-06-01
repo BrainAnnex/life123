@@ -2564,7 +2564,7 @@ class ReactionDynamics:
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
         if title_prefix is not None:
-            title = f"{title_prefix}.  <br>{title}"
+            title = f"{title_prefix}  <br>{title}"
 
         if show_intervals:
             vertical_lines = df["SYSTEM TIME"]  # Make use of the simulation times
@@ -2790,7 +2790,7 @@ class ReactionDynamics:
     #####################################################################################################
 
 
-    def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True) -> Union[bool, dict]:
+    def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True, verbose=None) -> Union[bool, dict]:
         """
         Ascertain whether the given concentrations (by default the current System concentrations)
         are in equilibrium for the specified reactions (by default, for all reactions)
@@ -2800,13 +2800,14 @@ class ReactionDynamics:
         :param conc:        Dict with the concentrations of the species involved in the reaction(s).
                             The keys are the chemical names
                                 EXAMPLE: {'A': 23.9, 'B': 36.1}
-                            If None, then use the current System concentrations
+                            If None, then use the current System concentrations instead
         :param tolerance:   Allowable relative tolerance, as a PERCENTAGE,
                                 to establish satisfactory match with expected values
         :param explain:     If True, print out details about the analysis,
                                 incl. the formula(s) being used to check the equilibrium
                                 EXAMPLES:   "([C][D]) / ([A][B])"
                                             "[B] / [A]^2"
+        :param verbose:     Alternate name for argument `explain`
 
         :return:            Return True if ALL the reactions are close enough to an equilibrium,
                                 as allowed by the requested tolerance;
@@ -2815,6 +2816,10 @@ class ReactionDynamics:
                                 EXAMPLE:  {False: [3, 6]}
         """
         # TODO: optionally display last lines in diagnostic data, if available
+        # TODO: phase out "explain" in favour of "verbose"
+
+        if verbose is not None:
+            explain = verbose
 
         if conc is None:
             conc=self.get_conc_dict()   # Use the current System concentrations, as a dict.
@@ -2824,7 +2829,7 @@ class ReactionDynamics:
                                         # a list of reactions that fail to meet the criterion for equilibrium
 
         if rxn_index is not None:
-            # Check the 1 reaction that was specified
+            # Check the 1 reaction that was requested
             if explain:
                 description = self.chem_data.single_reaction_describe(rxn_index=rxn_index, concise=True)
                 print(description)
@@ -2834,19 +2839,19 @@ class ReactionDynamics:
                 failures_dict = {False: [rxn_index]}    # Make a note that this reaction failed the equilibrium test
 
         else:
-            # Check all the reactions
+            # Check ALL the reactions
             status = True       # Overall status
             description_list = self.chem_data.multiple_reactions_describe(concise=True)
-            for i in range(self.chem_data.number_of_reactions()):
+            for rxn_index in range(self.chem_data.number_of_reactions()):
                 # For each reaction
                 if explain:
-                    print(description_list[i])
+                    print(description_list[rxn_index])
 
-                single_status = self.reaction_in_equilibrium(rxn_index=i, conc=conc, tolerance=tolerance, explain=explain)
+                single_status = self.reaction_in_equilibrium(rxn_index=rxn_index, conc=conc, tolerance=tolerance, explain=explain)
 
                 if not single_status:
                     status = False
-                    failures_dict[False].append(i)      # Make a note that this reaction failed the equilibrium test
+                    failures_dict[False].append(rxn_index)      # Make a note that this reaction failed the equilibrium test
 
         if status:
             return True
@@ -2855,10 +2860,11 @@ class ReactionDynamics:
 
 
 
-    def reaction_in_equilibrium(self, rxn_index, conc, tolerance, explain :bool) -> bool:
+    def reaction_in_equilibrium(self, rxn_index :int, conc, tolerance, explain :bool) -> bool:
         """
         Ascertain whether the given concentrations are in equilibrium for the specified SINGLE reaction;
         return True or False, accordingly.
+
         Pathological case: if at least one of the reactants AND at least one of the products have zero
         concentration, then the reaction is "stuck" - and thus regarded in "equilibrium"
 
@@ -2868,11 +2874,12 @@ class ReactionDynamics:
                                 EXAMPLE: {'A': 23.9, 'B': 36.1}
         :param tolerance:   Allowable relative tolerance, as a PERCENTAGE,
                                 to establish satisfactory match with expected values
-        :param explain:     If True, print out the formula being used, as well as some other info.
+        :param explain:     If True, print out the formula being used, as well as the concentrations (reactants, then products)
+                                and some other info.
                                 EXAMPLES of formulas:   "([C][D]) / ([A][B])"
                                                         "[B] / [A]^2"
         :return:            True if the given reaction is close enough to an equilibrium,
-                            as allowed by the requested tolerance
+                                as allowed by the requested tolerance
         """
         rxn = self.chem_data.get_reaction(rxn_index)    # Look up the requested reaction
 
@@ -2887,12 +2894,24 @@ class ReactionDynamics:
             rxn_quotient = result
 
         if explain:
-            # Prepare a concise listing from the given concentration,
-            # only including those that are applicable to this reaction
+            # Prepare a concise listing from the given concentrations,
+            # only including the concentrations that are applicable to this reaction
             all_applicable_concs = []
+            '''
             for species_name in rxn.extract_chemicals_in_reaction(exclude_enzyme=False):
                 s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
                 all_applicable_concs.append(s)
+            '''
+            reactants = rxn.extract_reactant_names(exclude_enzyme=False)
+            for species_name in reactants:
+                s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
+                all_applicable_concs.append(s)
+
+            products = rxn.extract_product_names(exclude_enzyme=False)
+            for species_name in products:
+                if species_name not in reactants:           # Don't report the same concentration twice!
+                    s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[B] = 0.3"
+                    all_applicable_concs.append(s)
 
             all_applicable_concs_str = " ; ".join(all_applicable_concs)     # EXAMPLE: "[A] = 20.3 ; [B] = 0.3"
 
@@ -2919,7 +2938,7 @@ class ReactionDynamics:
             print(f"Final concentrations: {all_applicable_concs_str}")
             print(f"1. Ratio of reactant/product concentrations, adjusted for reaction orders: {rxn_quotient:,.6g}")
             print(f"    Formula used:  {formula}")
-            print(f"2. Ratio of forward/reverse reaction rates: {rate_ratio}")
+            print(f"2. Ratio of forward/reverse reaction rates: {rate_ratio:,.6g}")
             print(f"Discrepancy between the two values: {100 * abs(rxn_quotient - rate_ratio)/rate_ratio :,.4g} %")
             if status:
                 print(f"Reaction IS in equilibrium (within {tolerance:.2g}% tolerance)\n")

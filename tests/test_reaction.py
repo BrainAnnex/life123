@@ -214,20 +214,70 @@ def test_extract_rxn_properties():
 
 
 def test_extract_chemicals_in_reaction():
-    chem = ChemData(names=["A", "B"])
+    ChemData(names=["A", "B"])
 
     rxn = Reaction(reactants="A", products="B")
     assert rxn.extract_chemicals_in_reaction() == {"A", "B"}
 
+
     ChemData(names=["A", "B", "C"])
+    rxn = Reaction(reactants=["A", "B"], products="C")
+    assert rxn.extract_chemicals_in_reaction() == {"A", "B", "C"}
+
     rxn = Reaction(reactants=["A", "B"], products=["B", "C"])               # B acts as enzyme
     assert rxn.extract_chemicals_in_reaction(exclude_enzyme=False) == {"A", "B", "C"}
     assert rxn.extract_chemicals_in_reaction(exclude_enzyme=True) == {"A", "C"}
+
 
     ChemData(names=["A", "B", "C", "D", "E"])
     rxn = Reaction(reactants=[(2, "D"), "C"], products=["C", (3, "E")])     # C acts as enzyme
     assert rxn.extract_chemicals_in_reaction(exclude_enzyme=False) == {"C", "D", "E"}
     assert rxn.extract_chemicals_in_reaction(exclude_enzyme=True) == {"D", "E"}
+
+
+
+def test_extract_reactant_names():
+    ChemData(names=["A", "B"])
+
+    rxn = Reaction(reactants="A", products="B")
+    assert rxn.extract_reactant_names() == ["A"]
+
+    rxn = Reaction(reactants=["A", "B"], products="C")
+    assert rxn.extract_reactant_names() == ["A", "B"]
+
+
+    ChemData(names=["A", "B", "C"])
+    rxn = Reaction(reactants=["A", "B"], products=["B", "C"])               # B acts as enzyme
+    assert rxn.extract_reactant_names(exclude_enzyme=False) == ["A", "B"]
+    assert rxn.extract_reactant_names(exclude_enzyme=True) == ["A"]
+
+    ChemData(names=["A", "B", "C", "D", "E"])
+    rxn = Reaction(reactants=[(2, "D"), "C"], products=["C", (3, "E")])     # C acts as enzyme
+    assert rxn.extract_reactant_names(exclude_enzyme=False) == ["D", "C"]
+    assert rxn.extract_reactant_names(exclude_enzyme=True) == ["D"]
+
+
+
+def test_extract_product_names():
+    ChemData(names=["A", "B"])
+
+    rxn = Reaction(reactants="A", products="B")
+    assert rxn.extract_product_names() == ["B"]
+
+    rxn = Reaction(reactants=["A", "B"], products="C")
+    assert rxn.extract_product_names() == ["C"]
+
+
+    ChemData(names=["A", "B", "C"])
+    rxn = Reaction(reactants=["A", "B"], products=["B", "C"])               # B acts as enzyme
+    assert rxn.extract_product_names(exclude_enzyme=False) == ["B", "C"]
+    assert rxn.extract_product_names(exclude_enzyme=True) == ["C"]
+
+    ChemData(names=["A", "B", "C", "D", "E"])
+    rxn = Reaction(reactants=[(2, "D"), "C"], products=["C", (3, "E")])     # C acts as enzyme
+    assert rxn.extract_product_names(exclude_enzyme=False) == ["C", "E"]
+    assert rxn.extract_product_names(exclude_enzyme=True) == ["E"]
+
 
 
 

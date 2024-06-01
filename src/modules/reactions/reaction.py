@@ -238,7 +238,7 @@ class Reaction:
 
     def extract_stoichiometry(self, term :(int, str, int)) -> int:
         """
-        Return the stoichiometry coefficient, from a reaction term
+        Return the stoichiometry coefficient, from a reaction TERM
 
         :param term:    A triplet of integers representing a reaction term
         :return:        An integer with the stoichiometry coefficient
@@ -247,7 +247,7 @@ class Reaction:
 
     def extract_species_name(self, term :(int, str, int)) -> str:
         """
-        Return the index of the chemical species, from a reaction term
+        Return the index of the chemical species, from a reaction TERM
 
         :param term:    A triplet of integers representing a reaction term
         :return:        An integer with the index of the chemical species in the term
@@ -256,7 +256,7 @@ class Reaction:
 
     def extract_rxn_order(self, term :(int, str, int)) -> int:
         """
-        Return the reaction order, from a reaction term
+        Return the reaction order, from a reaction TERM
 
         :param term:    A triplet of integers representing a reaction term
         :return:        An integer with the reaction order for this term
@@ -326,6 +326,39 @@ class Reaction:
             chem_set = chem_set - {self.enzyme}     # Difference between sets
 
         return chem_set
+
+
+
+    def extract_reactant_names(self, exclude_enzyme=False) -> [str]:
+        """
+        In the order in which they appear when the reaction was first defined
+
+        :param exclude_enzyme:
+        :return:
+        """
+        reactants = self.extract_reactants()
+        reactant_names = [self.extract_species_name(r) for r in reactants]
+
+        if exclude_enzyme:
+            reactant_names.remove(self.enzyme)
+
+        return reactant_names
+
+
+    def extract_product_names(self, exclude_enzyme=False) -> [str]:
+        """
+        In the order in which they appear when the reaction was first defined
+
+        :param exclude_enzyme:
+        :return:
+        """
+        products = self.extract_products()
+        product_names = [self.extract_species_name(r) for r in products]
+
+        if exclude_enzyme:
+            product_names.remove(self.enzyme)
+
+        return product_names
 
 
 

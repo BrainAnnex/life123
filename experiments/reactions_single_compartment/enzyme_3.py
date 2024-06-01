@@ -26,9 +26,9 @@
 # 5. [E] = 20  
 # 6. [E] = 30  
 # 7. [E] = 100  
-# 8. [E] = 2000  
+# 8. [E] = 2000  (100 times the initial [S])
 #
-# LAST REVISED: May 22, 2024
+# LAST REVISED: May 31, 2024  (using v. 1.0 beta32)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -64,7 +64,7 @@ chem_data.describe_reactions()     # Notice how the enzyme `E` is noted in the p
 
 # %%
 dynamics = ReactionDynamics(chem_data=chem_data)
-dynamics.set_conc(conc={"S": 20., "P": 0., "E": 0.},
+dynamics.set_conc(conc={"S": 20.},
                   snapshot=True)      # Initially, no enzyme `E`
 dynamics.describe_state()
 
@@ -88,7 +88,7 @@ dynamics.single_compartment_react(duration=4.0,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With ZERO enzyme")
+dynamics.plot_history(colors=['cyan', 'green', 'violet'], show_intervals=True, title_prefix="With ZERO enzyme")
 
 # %% [markdown]
 # ### The reactions, lacking enzyme, are proceeding slowly towards equilibrium, just like the reaction that was discussed in part 1 of the experiment "enzyme_1"
@@ -98,7 +98,7 @@ dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=T
 crossover_points = MovieTabular(parameter_name="Enzyme concentration")
 
 # %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=1.0)
+new_crossover = dynamics.curve_intersect("S", "P", t_start=0, t_end=1.0)
 crossover_points.store(par=dynamics.get_chem_conc("E"), 
                        data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
@@ -116,7 +116,7 @@ dynamics.is_in_equilibrium(tolerance=2)
 dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
 
 # %%
-dynamics.set_conc(conc={"S": 20., "P": 0., "E": 0.2},
+dynamics.set_conc(conc={"S": 20., "E": 0.2},
                   snapshot=True)      # A tiny bit of enzyme `E`
 
 # %%
@@ -133,10 +133,10 @@ dynamics.single_compartment_react(duration=1.5,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a tiny amount of enzyme")
+dynamics.plot_history(colors=['cyan', 'green', 'violet'], show_intervals=True, title_prefix="With a tiny amount of enzyme")
 
 # %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
+new_crossover = dynamics.curve_intersect("S", "P", t_start=0, t_end=0.5)
 crossover_points.store(par=dynamics.get_chem_conc("E"), 
                        data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
@@ -157,7 +157,7 @@ dynamics.is_in_equilibrium()
 dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
 
 # %%
-dynamics.set_conc(conc={"S": 20., "P": 0., "E": 1.},
+dynamics.set_conc(conc={"S": 20., "E": 1.},
                   snapshot=True)      # A more substantial amount of enzyme `E`
 
 # %%
@@ -174,10 +174,10 @@ dynamics.single_compartment_react(duration=0.5,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a more substantial amount of enzyme")
+dynamics.plot_history(colors=['cyan', 'green', 'violet'], show_intervals=True, title_prefix="With a more substantial amount of enzyme")
 
 # %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
+new_crossover = dynamics.curve_intersect("S", "P", t_start=0, t_end=0.5)
 crossover_points.store(par=dynamics.get_chem_conc("E"), 
                        data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
@@ -198,7 +198,7 @@ dynamics.is_in_equilibrium(explain=False)
 dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
 
 # %%
-dynamics.set_conc(conc={"S": 20., "P": 0., "E": 5.},
+dynamics.set_conc(conc={"S": 20., "E": 5.},
                   snapshot=True)      # A good amount of enzyme `E`
 
 # %%
@@ -215,10 +215,10 @@ dynamics.single_compartment_react(duration=0.2,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a good amount of enzyme")
+dynamics.plot_history(colors=['cyan', 'green', 'violet'], show_intervals=True, title_prefix="With a good amount of enzyme")
 
 # %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
+new_crossover = dynamics.curve_intersect("S", "P", t_start=0, t_end=0.5)
 crossover_points.store(par=dynamics.get_chem_conc("E"), 
                        data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
@@ -239,7 +239,7 @@ dynamics.is_in_equilibrium(explain=False)
 dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
 
 # %%
-dynamics.set_conc(conc={"S": 20., "P": 0., "E": 20.},
+dynamics.set_conc(conc={"S": 20., "E": 20.},
                   snapshot=True)      # A lot of enzyme `E`
 
 # %%
@@ -256,10 +256,10 @@ dynamics.single_compartment_react(duration=0.05,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a lot of enzyme")
+dynamics.plot_history(colors=['cyan', 'green', 'violet'], show_intervals=True, title_prefix="With a lot of enzyme")
 
 # %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
+new_crossover = dynamics.curve_intersect("S", "P", t_start=0, t_end=0.5)
 crossover_points.store(par=dynamics.get_chem_conc("E"), 
                        data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
@@ -280,7 +280,7 @@ dynamics.is_in_equilibrium(explain=False)
 dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
 
 # %%
-dynamics.set_conc(conc={"S": 20., "P": 0., "E": 30.},
+dynamics.set_conc(conc={"S": 20., "E": 30.},
                   snapshot=True)      # A very large amount of enzyme `E`
 
 # %%
@@ -297,10 +297,10 @@ dynamics.single_compartment_react(duration=0.02,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a very large amount of enzyme")
+dynamics.plot_history(colors=['cyan', 'green', 'violet'], show_intervals=True, title_prefix="With a very large amount of enzyme")
 
 # %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
+new_crossover = dynamics.curve_intersect("S", "P", t_start=0, t_end=0.5)
 crossover_points.store(par=dynamics.get_chem_conc("E"), 
                        data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
@@ -321,7 +321,7 @@ dynamics.is_in_equilibrium(explain=False)
 dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
 
 # %%
-dynamics.set_conc(conc={"S": 20., "P": 0., "E": 100.},
+dynamics.set_conc(conc={"S": 20., "E": 100.},
                   snapshot=True)      # A lavish amount of enzyme `E`
 
 # %%
@@ -338,10 +338,10 @@ dynamics.single_compartment_react(duration=0.02,
 #dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a huge amount of enzyme")
+dynamics.plot_history(colors=['cyan', 'green', 'violet'], show_intervals=True, title_prefix="With a huge amount of enzyme")
 
 # %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
+new_crossover = dynamics.curve_intersect("S", "P", t_start=0, t_end=0.5)
 crossover_points.store(par=dynamics.get_chem_conc("E"), 
                        data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
@@ -362,7 +362,7 @@ dynamics.is_in_equilibrium(explain=False)
 dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
 
 # %%
-dynamics.set_conc(conc={"S": 20., "P": 0., "E": 2000.},
+dynamics.set_conc(conc={"S": 20., "E": 2000.},
                   snapshot=True)      # A lavish amount of enzyme `E`
 
 # %%
@@ -380,13 +380,13 @@ dynamics.single_compartment_react(duration=0.0015,
 
 # %%
 dynamics.plot_history(chemicals=['S', 'P'],
-                      colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="With a LAVISH amount of enzyme (NOT shown)")
+                      colors=['cyan', 'green', 'violet'], show_intervals=True, title_prefix="With a LAVISH amount of enzyme (NOT shown)")
 
 # %% [markdown]
 # _Note: NOT showing the enzyme (concentration 2,000) in the graph, to avoid squishing down the other curves!_
 
 # %%
-new_crossover = dynamics.curve_intersection("S", "P", t_start=0, t_end=0.5)
+new_crossover = dynamics.curve_intersect("S", "P", t_start=0, t_end=0.5)
 crossover_points.store(par=dynamics.get_chem_conc("E"), 
                        data_snapshot = {"crossover time": new_crossover[0]})
 new_crossover
