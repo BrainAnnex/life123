@@ -29,44 +29,35 @@ class ExcessiveTimeStepSoft(Exception):
 #############################################################################################
 
 
-class ReactionDynamics:
+class UniformCompartment:
     """
     Used to simulate the dynamics of reactions (in a single compartment.)
     In the context of Life123, this may be thought of as a "zero-dimensional system"
 
-    TODO: supersede by the new class "UniformCompartment"
+    (This class was formerly named "ReactionDynamics")
     """
 
-    def __init__(self, chem_data=None, names=None, shared=None, preset="mid"):
+    def __init__(self, chem_data=None, names=None, preset="mid"):
         """
-        Note: AT MOST 1 of the following 3 arguments can be passed
+        Note: AT MOST 1 of the following 2 arguments can be passed
         :param chem_data:   [OPTIONAL 1] Object of type "ChemData" (with data about the chemicals and their reactions)
                                        NOTE: This is the recommended argument; the other 2 options are, or might be, deprecated
         :param names:       [OPTIONAL 2 - MIGHT BE DEPRECATED] A single name, or list or tuple of names, of the chemicals
                                        the reactions can be added later, with calls to add_reaction()
-        :param shared:      [OPTIONAL 3 - DEPRECATED] Object of type "ReactionDynamics", with which to share the "ChemData" info,
-                                       i.e. the data about the chemicals and their reactions.
-                                       Typically meant for re-using the same chemicals and reactions of a previous simulation
-                                       CAUTION: the shared "ChemData" info is NOT cloned; so, if modified within one
-                                       ReactionDynamics object, the modification will be seen everywhere
 
         :param preset:  String with code that can be adjusted make the time resolution finer or coarser;
                         it will stay in effect from now on, unless explicitly changed later
         """
-        print("\n\n*********** THIS CLASS IS NOW DEPRECATED!  Use UniformCompartment instead ***********\n\n")
-
         number_args = 0
         if chem_data:
             number_args += 1
         if names:
             number_args += 1
-        if shared:
-            print("ReactionDynamics instantiation: *** The argument `shared` is DEPRECATED.  Use `chem_data` instead")
-            number_args += 1
+
 
         assert number_args <= 1, \
-            f"ReactionDynamics instantiation: Can only pass at most one of the arguments " \
-            f"`chem_data`, `names` and `share` ({number_args} were passed)"
+            f"UniformCompartment instantiation: Can only pass at most one of the arguments " \
+            f"`chem_data`, and `names` ({number_args} were passed)"
 
         self.chem_data = chem_data  # Object of type "ChemData" (with data about the chemicals and their reactions,
                                     #                            incl. macromolecules)
@@ -200,11 +191,11 @@ class ReactionDynamics:
 
         if type(conc) == list or type(conc) == tuple:
             assert len(conc) == self.chem_data.number_of_chemicals(), \
-                f"ReactionDynamics.set_conc(): when a list or tuple is passed as the argument 'conc', " \
+                f"UniformCompartment.set_conc(): when a list or tuple is passed as the argument 'conc', " \
                 f"its size must match the number of declared chemicals ({self.chem_data.number_of_chemicals()})"
 
             assert min(conc) >= 0, \
-                f"ReactionDynamics.set_conc(): values meant to be chemical concentrations cannot be negative " \
+                f"UniformCompartment.set_conc(): values meant to be chemical concentrations cannot be negative " \
                 f"(such as the passed value {min(conc)})"
 
             self.system = np.array(conc, dtype='d')      # float64      TODO: allow users to specify the type
@@ -235,14 +226,14 @@ class ReactionDynamics:
         """
         # Validate the arguments
         assert conc >= 0, \
-            f"ReactionDynamics.set_single_conc(): chemical concentrations cannot be negative (value passed: {conc})"
+            f"UniformCompartment.set_single_conc(): chemical concentrations cannot be negative (value passed: {conc})"
 
         if species_name is not None:
             species_index = self.chem_data.get_index(species_name)
         elif species_index is not None:
             self.chem_data.assert_valid_species_index(species_index)
         else:
-            raise Exception("ReactionDynamics.set_single_conc(): at least one "
+            raise Exception("UniformCompartment.set_single_conc(): at least one "
                             "of the arguments `species_index` or `species_name` must be provided")
 
 
@@ -299,7 +290,7 @@ class ReactionDynamics:
             system_data = self.system
         else:
             assert system_data.size == self.chem_data.number_of_chemicals(), \
-                f"ReactionDynamics.get_conc_dict(): the argument `system_data` must be a 1-D Numpy array with as many entries " \
+                f"UniformCompartment.get_conc_dict(): the argument `system_data` must be a 1-D Numpy array with as many entries " \
                 f"as the declared number of chemicals ({self.chem_data.number_of_chemicals()})"
 
 
@@ -311,7 +302,7 @@ class ReactionDynamics:
                         for index, conc in enumerate(system_data)}
         else:
             assert type(species) == list or  type(species) == tuple, \
-                f"ReactionDynamics.get_conc_dict(): the argument `species` must be a list or tuple" \
+                f"UniformCompartment.get_conc_dict(): the argument `species` must be a list or tuple" \
                 f" (it was of type {type(species)})"
 
             conc_dict = {}
@@ -643,10 +634,10 @@ class ReactionDynamics:
         :return:                The pair (time_step, n_steps)
         """
         assert (not total_duration or not time_step or not n_steps), \
-            "ReactionDynamics.specify_steps(): cannot specify all 3 arguments: `total_duration`, `time_step`, `n_steps` (specify only any 2 of them)"
+            "UniformCompartment.specify_steps(): cannot specify all 3 arguments: `total_duration`, `time_step`, `n_steps` (specify only any 2 of them)"
 
         assert (total_duration and time_step) or (total_duration and n_steps) or (time_step and n_steps), \
-            "ReactionDynamics.specify_steps(): must provide exactly 2 arguments from:  `total_duration`, `time_step`, `n_steps`"
+            "UniformCompartment.specify_steps(): must provide exactly 2 arguments from:  `total_duration`, `time_step`, `n_steps`"
 
         if not time_step:
             time_step = total_duration / n_steps
@@ -716,16 +707,16 @@ class ReactionDynamics:
             duration = reaction_duration    # For backward compatibility.   TODO: phase out
 
         # Validation
-        assert self.system is not None, "ReactionDynamics.single_compartment_react(): " \
+        assert self.system is not None, "UniformCompartment.single_compartment_react(): " \
                                         "the concentration values of the various chemicals must be set first"
 
         if variable_steps and (n_steps is not None):
-            raise Exception("ReactionDynamics.single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
+            raise Exception("UniformCompartment.single_compartment_react(): if `variable_steps` is True, cannot specify `n_steps` "
                             "(because the number of steps will vary); specify `duration` or `target_end_time` instead")
 
         if stop is not None:
             assert type(stop) == tuple and len(stop) == 2, \
-                f"ReactionDynamics.single_compartment_react(): the argument `stop`, if passed, must be a pair of values"
+                f"UniformCompartment.single_compartment_react(): the argument `stop`, if passed, must be a pair of values"
 
 
         """
@@ -919,7 +910,7 @@ class ReactionDynamics:
             self.system = conc_array    # For historical reasons, as a convenience to Bio1D, etc.
 
         # Validate arguments
-        assert self.system is not None, "ReactionDynamics.reaction_step_common(): " \
+        assert self.system is not None, "UniformCompartment.reaction_step_common(): " \
                                         "the concentration values of the various chemicals must be set first"
 
 
@@ -1619,7 +1610,7 @@ class ReactionDynamics:
             species_index = self.chem_data.get_index(species_name)
             conc = self.system[species_index]
             #assert conc is not None, \
-            #   f"ReactionDynamics.compute_reaction_delta_rate(): lacking the value for the concentration of the chemical species `{self.reaction_data.get_name(species_index)}`"
+            #   f"UniformCompartment.compute_reaction_delta_rate(): lacking the value for the concentration of the chemical species `{self.reaction_data.get_name(species_index)}`"
             forward_rate *= conc ** order      # Raise to power
 
         reverse_rate = rev_rate_constant
@@ -1630,7 +1621,7 @@ class ReactionDynamics:
             species_index = self.chem_data.get_index(species_name)
             conc = self.system[species_index]
             #assert conc is not None, \
-            #   f"ReactionDynamics.compute_reaction_delta_rate(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
+            #   f"UniformCompartment.compute_reaction_delta_rate(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
             reverse_rate *= conc ** order     # Raise to power
 
         return forward_rate - reverse_rate
@@ -2389,12 +2380,12 @@ class ReactionDynamics:
         if use_history:
             df = self.get_history()
             assert not df.empty , \
-                "ReactionDynamics.explain_time_advance(): no history data found.  " \
+                "UniformCompartment.explain_time_advance(): no history data found.  " \
                 "Did you run the reaction simulation prior to calling this function?"
         else:
             df = self.get_diagnostic_conc_data()
             assert not df.empty , \
-                "ReactionDynamics.explain_time_advance(): no diagnostic data found.  " \
+                "UniformCompartment.explain_time_advance(): no diagnostic data found.  " \
                 "Did you call set_diagnostics() prior to the reaction run?"
 
         n_entries = len(df)
@@ -2404,7 +2395,7 @@ class ReactionDynamics:
             t = list(df["TIME"])    # List of times (simulation step points)
 
         if n_entries == 1:
-            print(f"ReactionDynamics.explain_time_advance(): no time advance found. "
+            print(f"UniformCompartment.explain_time_advance(): no time advance found. "
                   f"Diagnostics only contain an initial System Time of {t[0]:.3g} ;  "
                   f"did you run the reaction simulation?")
             return
