@@ -185,7 +185,7 @@ class ReactionDynamics:
                                 in their index order
                             OR
                             (2) a dict indexed by the chemical names, for some or all of the chemicals
-                                EXAMPLE of the latter:  {"A": 12.4, "B": 0.23, "C": 2.6}
+                                EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}  Anything not specified will be set to zero
 
                         Note: any previous values will get over-written
 
@@ -3291,14 +3291,8 @@ class ReactionDynamics:
         :return:        The pair (time of intersection, common value)
         """
         print("\n*** The function curve_intersection() is now OBSOLETE : use curve_intersect() instead\n")
-        '''
-        This obsolete implementation fails in cases where the 2 curves stay within some distance of each other,
-        and then one curve jumps on the opposite side of the other curve, at at BIGGER distance.
-        '''
-        # Prepare a Pandas dataframe with 3 columns
-        df = self.get_history(t_start=t_start, t_end=t_end, columns=["SYSTEM TIME", chem1, chem2])
 
-        return num.curve_intersection_OLD(df, x="SYSTEM TIME", var1=chem1, var2=chem2)
+        return self.curve_intersect(chem1, chem2, t_start, t_end, explain=False)
 
 
 
