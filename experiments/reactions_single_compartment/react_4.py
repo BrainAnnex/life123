@@ -173,7 +173,7 @@ dynamics.plot_history(colors=['red', 'green'], show_intervals=True,
 # ### The intersection of the two lines may be found as follows:
 
 # %%
-dynamics.curve_intersection('A', 'C', t_start=0, t_end=0.01)
+dynamics.curve_intersect('A', 'C', t_start=0, t_end=0.01)
 
 # %%
 

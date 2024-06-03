@@ -117,7 +117,7 @@ dynamics.plot_history(colors=["blue", "green"], title="Single reaction A <-> B (
 # #### Notice the intersection at the exact midpoint of the 2 initial concentrations (50 and 0):
 
 # %%
-dynamics.curve_intersection('A', 'B', t_start=0, t_end=0.1)
+dynamics.curve_intersect('A', 'B', t_start=0, t_end=0.1)
 
 # %%
 # Verify that all the reactions have reached equilibrium
@@ -274,9 +274,9 @@ fig.show()
 
 # %%
 # Look at where the curves intersect
-dynamics.curve_intersection("A", "B", t_start=0, t_end=0.1)
+dynamics.curve_intersect("A", "B", t_start=0, t_end=0.1)
 
 # %%
-dynamics.curve_intersection("A", "S", t_start=0.1, t_end=0.2)
+dynamics.curve_intersect("A", "S", t_start=0.1, t_end=0.2)
 
 # %%

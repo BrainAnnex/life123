@@ -101,7 +101,7 @@ np.array(transition_times)    # Note: there will be one more transition time (th
 dynamics.plot_history(colors=['lightgray', 'green', 'lightgray', 'orange', 'blue', 'lightgray'])
 
 # %%
-dynamics.curve_intersection("U", "X", t_start=0.3, t_end=0.35)
+dynamics.curve_intersect("U", "X", t_start=0.3, t_end=0.35)
 
 # %%
 
@@ -166,6 +166,6 @@ np.array(transition_times)    # Note: there will be one more transition time (th
 dynamics.plot_history(colors=['green', 'orange', 'blue', 'gray'])
 
 # %%
-dynamics.curve_intersection("U", "X", t_start=0.3, t_end=0.35)
+dynamics.curve_intersect("U", "X", t_start=0.3, t_end=0.35)
 
 # %%

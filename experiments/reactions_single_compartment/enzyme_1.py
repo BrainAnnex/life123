@@ -74,7 +74,7 @@ dynamics.plot_history(colors=['darkorange', 'green'], show_intervals=True, title
 # #### Note how the time steps get automatically adjusted, as needed by the amount of change - including a complete step abort/redo at time=0
 
 # %%
-dynamics.curve_intersection("A", "B", t_start=0, t_end=1.0)
+dynamics.curve_intersect("A", "B", t_start=0, t_end=1.0)
 
 # %%
 # Verify that the reaction has reached equilibrium
@@ -138,7 +138,7 @@ dynamics.single_compartment_react(reaction_duration=0.1,
 dynamics.plot_history(colors=['darkorange', 'green', 'violet'], show_intervals=True, title_prefix="WITH enzyme")
 
 # %%
-dynamics.curve_intersection("A", "B", t_start=0, t_end=0.02)
+dynamics.curve_intersect("A", "B", t_start=0, t_end=0.02)
 
 # %%
 # Verify that the reaction has reached equilibrium

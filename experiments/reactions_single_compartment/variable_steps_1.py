@@ -107,7 +107,7 @@ np.array(transition_times)    # Note: there will be one more transition time (th
 dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %%
-dynamics.curve_intersection("U", "X", t_start=0.3, t_end=0.35)  # Compare with the value from experiment "variable_steps_2"
+dynamics.curve_intersect("U", "X", t_start=0.3, t_end=0.35)  # Compare with the value from experiment "variable_steps_2"
 
 # %%
 dynamics.plot_history(colors=['green', 'orange', 'blue'], show_intervals=True)

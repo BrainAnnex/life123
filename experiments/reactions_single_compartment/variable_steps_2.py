@@ -97,6 +97,6 @@ df.iloc[1850]
 dynamics.plot_history(colors=['green', 'orange', 'blue'])
 
 # %%
-dynamics.curve_intersection("U", "X", t_start=0.3, t_end=0.35)
+dynamics.curve_intersect("U", "X", t_start=0.3, t_end=0.35)
 
 # %%
