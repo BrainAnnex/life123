@@ -37,6 +37,9 @@ class UniformCompartment:
     (This class was formerly named "ReactionDynamics")
     """
 
+    #TODO: maybe split off part of this class into a separate "ReactionDynamics" class
+
+
     def __init__(self, chem_data=None, names=None, preset="mid"):
         """
         Note: AT MOST 1 of the following 2 arguments can be passed
@@ -92,20 +95,26 @@ class UniformCompartment:
 
         # ***  FOR AUTOMATED ADAPTIVE TIME STEP SIZES  ***
         # Note: The "aborts" below are "elective" aborts - i.e. not aborts from hard errors (further below)
-        #       The default values below were empirically found to be "conservative" but not excessively so
-        #       Users in need to change these default values will generally use use_adaptive_preset(), below;
-        #       or, for more control, set_thresholds(), set_step_factors() and set_error_step_factor()
+        #       The default values get packed into a "preset", specified by a name, and optionally passed when
+        #       instantiating this object.
+        #       Users in need to change these values post-instantiation will generally use use_adaptive_preset(), below;
+        #       or, for more control, set_thresholds() and set_step_factors()
         self.thresholds = []    # A list of "rules"
         # EXAMPLE:                  [
         #                             {"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
         #                             {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}
         #                           ]
         self.step_factors = {}
-                            # EXAMPLE: {"upshift": 1.2, "downshift": 0.5, "abort": 0.4}
-                            # "upshift" must be > 1 .   "downshift" and "abort" must be < 1
+                            # EXAMPLE: {"upshift": 1.2, "downshift": 0.5, "abort": 0.4, "error": 0.2}
+                            # "upshift" must be > 1 ; all the other values must be < 1
+                            # Generally, error < abort < downshift
+                            # "Error" value: Factor by which to multiply the time step
+                            #   in case of negative-concentration error from excessive step size
+                            #   NOTE: this is from ERROR aborts,
+                            #   not to be confused with general aborts based on reaching high threshold
 
 
-        self.error_abort_step_factor = None     # MUST BE < 1.  EXAMPLE: 0.25
+        #self.error_abort_step_factor = None     # MUST BE < 1.  EXAMPLE: 0.25
                                                 # Factor by which to multiply the time step
                                                 #   in case of negative-concentration error from excessive step size
                                                 #   NOTE: this is from ERROR aborts,
@@ -185,6 +194,7 @@ class UniformCompartment:
                             a snapshot of this state being set
         :return:        None
         """
+        # TODO: rename set_conc_all()
         # TODO: more validations, incl. of individual values being wrong data type
         # TODO: also allow a Numpy array; make sure to do a copy() to it!
 
@@ -330,7 +340,7 @@ class UniformCompartment:
         :return:    None
         """
         self.chem_data.clear_reactions_data()
-        #self.set_rxn_speed_all_fast()   # Reset all the reaction speeds to "Fast"
+
 
 
 
@@ -396,15 +406,27 @@ class UniformCompartment:
 
     def set_thresholds(self, norm="norm_A", low=None, high=None, abort=None) -> None:
         """
-        Over-ride default values for simulation parameters.
+        Over-ride default values for simulation parameters that affect the adaptive variable step sizes.
         The default None values can be used to eliminate some of the threshold rules, for the specified norm
 
-        :param norm:
-        :param low:
-        :param high:
-        :param abort:
-        :return:            None
+        :param norm:    The name of the "norm" (criterion) being used
+        :param low:     The value below which the norm is considered to be good (and the variable steps are being made larger);
+                            if None, it doesn't get used
+
+        :param high:    The value above which the norm is considered to be excessive (and the variable steps get reduced);
+                            if None, it doesn't get used
+
+        :param abort:   The value above which the norm is considered to be dangerously large (and the last variable step gets
+                            discarded and back-tracked with a smaller size) ;
+                            if None, it doesn't get used
+        :return:        None
         """
+        assert abort >= high, \
+            "set_thresholds(): `abort` value must be >= `high' value"
+
+        assert high >= low, \
+            "set_thresholds(): `high` value must be >= `low' value"
+
         for i, t in enumerate(self.thresholds):
             if t.get("norm") == norm:
                 if low is None:
@@ -442,38 +464,53 @@ class UniformCompartment:
 
 
 
-    def set_step_factors(self, upshift, downshift, abort) -> None:
+    def set_step_factors(self, upshift=None, downshift=None, abort=None, error=None) -> None:
         """
-        Over-ride default values for simulation parameters
+        Over-ride current values for simulation parameters that affect the adaptive variable step sizes.
+        Values not explicitly passed will remain the same.
 
-        :param upshift:
-        :param downshift:
-        :param abort:
+        :param upshift:     Fraction by which to increase the variable step size
+        :param downshift:   Fraction by which to decrease the variable step size
+        :param abort:       Fraction by which to decrease the variable step size in cases of step re-do
+        :param error:       Fraction by which to decrease the variable step size in cases of error
         :return:            None
         """
-        if self.step_factors is None:
-            self.step_factors = {}
-
-        if abort is not None:
-            self.step_factors["abort"] = abort
-        if downshift is not None:
-            self.step_factors["downshift"] = downshift
         if upshift is not None:
             self.step_factors["upshift"] = upshift
+            assert upshift > 1, "set_step_factors(): `upshift` value must be > 1"
+
+        if downshift is not None:
+            assert 0 < downshift < 1, "set_step_factors(): `downshift` value must be a positive number < 1"
+            self.step_factors["downshift"] = downshift
+        if abort is not None:
+            assert 0 < abort < 1, "set_step_factors(): `abort` value must be a positive number < 1"
+            self.step_factors["abort"] = abort
+
+        if error is not None:
+            assert 0 < error < 1, "set_step_factors(): `error` value must be a positive number < 1"
+            self.step_factors["error"] = error
+
 
 
     def set_error_step_factor(self, value) -> None:
         """
         Over-ride the default value for the simulation parameter error_abort_step_factor
 
-        :param value:
+        :param value:   Fraction by which to decrease the variable step size in cases of
+                            value errors (such as negative concentrations) during a variable step
         :return:        None
         """
-        #TODO: maybe combine with set_step_factors(), and perhaps tweak some names
+        # TODO: OBSOLETE
+
+        print("\n\n**************  set_error_step_factor() is DEPRECATED : use set_step_factors() instead  **************\n\n")
+
+        self.set_step_factors(error=value)
+        '''
         assert value < 1, "set_error_step_factor(): the argument must strictly be < 1"
         assert value > 0, "set_error_step_factor(): the argument must be a non-zero positive number"
 
         self.error_abort_step_factor = value
+        '''
 
 
 
@@ -486,7 +523,7 @@ class UniformCompartment:
         print("Parameters used for the automated adaptive time step sizes -")
         print("    THRESHOLDS: ", self.thresholds)
         print("    STEP FACTORS: ", self.step_factors)
-        print("    STEP FACTOR in case of 'ERROR RE-DOs': ", self.error_abort_step_factor)
+        #print("    STEP FACTOR in case of 'ERROR RE-DOs': ", self.error_abort_step_factor)
 
 
 
@@ -497,13 +534,12 @@ class UniformCompartment:
         The preset will affect the degree to which the simulation will be "risk-taker" vs. "risk-averse" about
         taking larger steps.
 
-        Note:   for more control, use set_thresholds(), set_step_factors() and set_error_step_factor()
+        Note:   for more control, use set_thresholds() and set_step_factors()
 
                 For example, using the "mid" preset is the same as issuing:
                     dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
                     dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-                    dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4)
-                    dynamics.set_error_step_factor(0.25)
+                    dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4, error=0.25)
 
         :param preset:  String with one of the available preset names;
                             allowed values are (in generally-increasing speed):
@@ -513,26 +549,26 @@ class UniformCompartment:
         if preset == "slower":   # Very conservative about taking larger steps
             self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
                                {"norm": "norm_B", "low": 0.03, "high": 0.05, "abort": 0.5}]
-            self.step_factors = {"upshift": 1.01, "downshift": 0.5, "abort": 0.1}
-            self.error_abort_step_factor = 0.1
+            self.step_factors = {"upshift": 1.01, "downshift": 0.5, "abort": 0.1, "error": 0.1}
+            #self.error_abort_step_factor = 0.1
 
         elif preset == "slow":   # Conservative about taking larger steps
             self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
                                {"norm": "norm_B", "low": 0.05, "high": 0.4, "abort": 1.3}]
-            self.step_factors = {"upshift": 1.1, "downshift": 0.3, "abort": 0.2}
-            self.error_abort_step_factor = 0.1
+            self.step_factors = {"upshift": 1.1, "downshift": 0.3, "abort": 0.2, "error": 0.1}
+            #self.error_abort_step_factor = 0.1
 
         elif preset == "mid":     # A "middle-of-the road" heuristic: somewhat "conservative" but not overly so
             self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
                                {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
-            self.step_factors = {"upshift": 1.2, "downshift": 0.5, "abort": 0.4}
-            self.error_abort_step_factor = 0.25
+            self.step_factors = {"upshift": 1.2, "downshift": 0.5, "abort": 0.4, "error": 0.25}
+            #self.error_abort_step_factor = 0.25
 
         elif preset == "fast":   # Less conservative (more "risk-taker") about taking larger steps
             self.thresholds = [{"norm": "norm_A", "low": 0.8, "high": 1.2, "abort": 1.7},
                                {"norm": "norm_B", "low": 0.15, "high": 0.8, "abort": 1.8}]
-            self.step_factors = {"upshift": 1.5, "downshift": 0.8, "abort": 0.6}
-            self.error_abort_step_factor = 0.5
+            self.step_factors = {"upshift": 1.5, "downshift": 0.8, "abort": 0.6, "error": 0.5}
+            #self.error_abort_step_factor = 0.5
 
         else:
             raise Exception(f"set_adaptive_parameters(): unknown value for the `preset` argument ({preset}); "
@@ -946,7 +982,8 @@ class UniformCompartment:
                 #       2. negative concentration from the combined effect of multiple reactions - caught in this function
                 #print("*** CAUGHT a HARD ABORT")
                 print(ex)
-                delta_time *= self.error_abort_step_factor       # Reduce the excessive time step by a pre-set factor
+                delta_time *= self.step_factors["error"]       # Reduce the excessive time step by a pre-set factor
+                #delta_time *= self.error_abort_step_factor
                 recommended_next_step = delta_time
                 # At this point, the loop will generally try the simulation again, with a smaller step (a revised delta_time)
 
@@ -1101,7 +1138,7 @@ class UniformCompartment:
             # A type of HARD ABORT is detected (a negative concentration resulting from the combined effect of all reactions)
             if self.diagnostics:
                 self.save_diagnostic_decisions_data(data={"action": "ABORT",
-                                                          "step_factor": self.error_abort_step_factor,
+                                                          "step_factor": self.step_factors["error"],
                                                           "caption": "neg. conc. from combined effect of all rxns",
                                                           "time_step": delta_time})
                 for rxn_index in range(self.chem_data.number_of_reactions()):
@@ -1112,7 +1149,7 @@ class UniformCompartment:
             raise ExcessiveTimeStepHard(f"INFO: the tentative time step ({delta_time:.5g}) "
                                         f"leads to a NEGATIVE concentration of one of the chemicals: "
                                         f"\n      -> will backtrack, and re-do step with a SMALLER delta time, "
-                                        f"multiplied by {self.error_abort_step_factor} (set to {delta_time * self.error_abort_step_factor:.5g}) "
+                                        f"multiplied by {self.step_factors['error']} (set to {delta_time * self.step_factors['error']:.5g}) "
                                         f"[Step started at t={self.system_time:.5g}, and will rewind there.  Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
 
 
@@ -1540,7 +1577,7 @@ class UniformCompartment:
             #   while it's possible that other coupled reactions might counterbalance this - nonetheless, it's taken as a sign of excessive step size)
             if self.diagnostics:
                 self.save_diagnostic_decisions_data(data={"action": "ABORT",
-                                                          "step_factor": self.error_abort_step_factor,
+                                                          "step_factor": self.step_factors['error'],
                                                           "caption": f"neg. conc. in {self.chem_data.get_name(species_index)} from rxn # {rxn_index}",
                                                           "time_step": delta_time})
                 self.save_diagnostic_rxn_data(rxn_index=rxn_index, time_step=delta_time,
@@ -1552,7 +1589,7 @@ class UniformCompartment:
                                     f"from reaction {self.chem_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
                                     f"\n      Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}"
                                     f"\n      -> will backtrack, and re-do step with a SMALLER delta time, "
-                                    f"multiplied by {self.error_abort_step_factor} (set to {delta_time * self.error_abort_step_factor:.5g}) "
+                                    f"multiplied by {self.step_factors['error']} (set to {delta_time * self.step_factors['error']:.5g}) "
                                     f"[Step started at t={self.system_time:.5g}, and will rewind there]")
 
 

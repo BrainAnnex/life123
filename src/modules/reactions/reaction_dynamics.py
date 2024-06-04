@@ -29,7 +29,7 @@ class ExcessiveTimeStepSoft(Exception):
 #############################################################################################
 
 
-class ReactionDynamics:
+class ReactionDynamics:     # *********** TODO: OBSOLETE ********
     """
     Used to simulate the dynamics of reactions (in a single compartment.)
     In the context of Life123, this may be thought of as a "zero-dimensional system"

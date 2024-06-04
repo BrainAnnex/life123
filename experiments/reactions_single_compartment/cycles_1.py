@@ -91,7 +91,7 @@ initial_conc
 # %%
 
 # %% [markdown]
-# # Run # 1 : FIXED time resolution, with COARSE time steps   
+# # Run # 1 : FIXED time resolution, with COARSE time steps - broken up in 3 time intervals    
 # (trial and error, not shown, reveals that increasing any of the time steps below, leads to "excessive time step" errors)
 
 # %%
