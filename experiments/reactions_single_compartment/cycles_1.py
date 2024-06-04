@@ -22,7 +22,7 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: May 5, 2024
+# LAST REVISED: June 3, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -31,7 +31,7 @@ import set_path      # Importing this module will add the project's home directo
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 from src.modules.numerical.numerical import Numerical as num
 
 from src.modules.visualization.graphic_log import GraphicLog
@@ -75,7 +75,7 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}  # Note the abundant energy source "E_high"
+initial_conc = {"A": 100., "E_high": 1000.}  # Note the abundant energy source "E_high"; anything not specified will default to zero
 initial_conc
 
 # %% [markdown] tags=[]
@@ -86,15 +86,16 @@ initial_conc
 #
 # ### and we'll do MULTIPLE RUNS, at varying time resolutions.
 
-# %% [markdown]
-#
+# %%
+
+# %%
 
 # %% [markdown]
 # # Run # 1 : FIXED time resolution, with COARSE time steps   
 # (trial and error, not shown, reveals that increasing any of the time steps below, leads to "excessive time step" errors)
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 
@@ -157,11 +158,9 @@ run1
 # %%
 dynamics.is_in_equilibrium()
 
-# %% [markdown]
-#
+# %%
 
-# %% [markdown]
-#
+# %%
 
 # %% [markdown]
 # # _NOTE: Everything below is JUST A REPEAT of the same experiment, with different time steps, for accuracy comparisons_
@@ -170,7 +169,7 @@ dynamics.is_in_equilibrium()
 # # Run # 2. VARIABLE time resolution
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
+dynamics = UniformCompartment(chem_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
 dynamics.set_conc(conc=initial_conc, snapshot=True) 
 dynamics.describe_state()
 
@@ -231,7 +230,7 @@ run2
 #
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
+dynamics = UniformCompartment(chem_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
 dynamics.set_conc(conc=initial_conc, snapshot=True) 
 dynamics.describe_state()
 

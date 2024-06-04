@@ -42,7 +42,7 @@ class UniformCompartment:
         Note: AT MOST 1 of the following 2 arguments can be passed
         :param chem_data:   [OPTIONAL 1] Object of type "ChemData" (with data about the chemicals and their reactions)
                                        NOTE: This is the recommended argument; the other 2 options are, or might be, deprecated
-        :param names:       [OPTIONAL 2 - MIGHT BE DEPRECATED] A single name, or list or tuple of names, of the chemicals
+        :param names:       [OPTIONAL 2 - MIGHT GET DEPRECATED] A single name, or list or tuple of names, of the chemicals
                                        the reactions can be added later, with calls to add_reaction()
 
         :param preset:  String with code that can be adjusted make the time resolution finer or coarser;
@@ -153,8 +153,7 @@ class UniformCompartment:
 
         if names:
             self.chem_data = ChemData(names=names)
-        elif shared:
-            self.chem_data = shared.chem_data
+
 
 
 
