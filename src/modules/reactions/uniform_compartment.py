@@ -107,7 +107,7 @@ class UniformCompartment:
         self.step_factors = {}
                             # EXAMPLE: {"upshift": 1.2, "downshift": 0.5, "abort": 0.4, "error": 0.2}
                             # "upshift" must be > 1 ; all the other values must be < 1
-                            # Generally, error < abort < downshift
+                            # Generally, error <= abort <= downshift
                             # "Error" value: Factor by which to multiply the time step
                             #   in case of negative-concentration error from excessive step size
                             #   NOTE: this is from ERROR aborts,
@@ -543,36 +543,37 @@ class UniformCompartment:
 
         :param preset:  String with one of the available preset names;
                             allowed values are (in generally-increasing speed):
-                            'slower', 'slow', 'mid', 'fast'
+                            'heavy_brakes', 'slower', 'slow', 'mid', 'fast'
         :return:        None
         """
-        if preset == "slower":   # Very conservative about taking larger steps
+        if preset == "heavy_brakes":   # It slams on the "brakes" hard in case of abort or errors
+            self.thresholds = [{"norm": "norm_A", "low": 0.02, "high": 0.025, "abort": 0.03},
+                               {"norm": "norm_B", "low": 0.05, "high": 1.0, "abort": 2.0}]
+            self.step_factors = {"upshift": 1.6, "downshift": 0.15, "abort": 0.08, "error": 0.05}
+
+        elif preset == "slower":   # Very conservative about taking larger steps
             self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
                                {"norm": "norm_B", "low": 0.03, "high": 0.05, "abort": 0.5}]
             self.step_factors = {"upshift": 1.01, "downshift": 0.5, "abort": 0.1, "error": 0.1}
-            #self.error_abort_step_factor = 0.1
 
         elif preset == "slow":   # Conservative about taking larger steps
             self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
                                {"norm": "norm_B", "low": 0.05, "high": 0.4, "abort": 1.3}]
             self.step_factors = {"upshift": 1.1, "downshift": 0.3, "abort": 0.2, "error": 0.1}
-            #self.error_abort_step_factor = 0.1
 
         elif preset == "mid":     # A "middle-of-the road" heuristic: somewhat "conservative" but not overly so
             self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
                                {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
             self.step_factors = {"upshift": 1.2, "downshift": 0.5, "abort": 0.4, "error": 0.25}
-            #self.error_abort_step_factor = 0.25
 
         elif preset == "fast":   # Less conservative (more "risk-taker") about taking larger steps
             self.thresholds = [{"norm": "norm_A", "low": 0.8, "high": 1.2, "abort": 1.7},
                                {"norm": "norm_B", "low": 0.15, "high": 0.8, "abort": 1.8}]
             self.step_factors = {"upshift": 1.5, "downshift": 0.8, "abort": 0.6, "error": 0.5}
-            #self.error_abort_step_factor = 0.5
 
         else:
             raise Exception(f"set_adaptive_parameters(): unknown value for the `preset` argument ({preset}); "
-                            f"allowed values are 'slower', 'slow', 'mid', 'fast'")
+                            f"allowed values are 'heavy_brakes', 'slower', 'slow', 'mid', 'fast'")
 
 
 
@@ -1073,6 +1074,7 @@ class UniformCompartment:
             # Abort the current step if the rate of change is deemed excessive.
             # TODO: maybe ALWAYS check this, regardless of variable-steps option
             if action == "abort":       # NOTE: this is a "strategic" abort, not a hard one from error
+                # TODO: also print out WHICH of the norms led to the ABORT
                 msg =   f"* INFO: the tentative time step ({delta_time:.5g}) " \
                         f"leads to a least one norm value > its ABORT threshold:\n" \
                         f"      -> will backtrack, and re-do step with a SMALLER delta time, multiplied by {step_factor} (set to {delta_time * step_factor:.5g}) " \

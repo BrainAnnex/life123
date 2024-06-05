@@ -22,7 +22,7 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: June 3, 2024 (using v. 1.0 beta33)
+# LAST REVISED: June 4, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -169,7 +169,7 @@ dynamics.is_in_equilibrium()
 # # Run # 2. VARIABLE time resolution
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
+dynamics = UniformCompartment(chem_data=chem_data, preset="heavy_brakes")   # Note: OVER-WRITING the "dynamics" object
 dynamics.set_conc(conc=initial_conc, snapshot=True) 
 dynamics.describe_state()
 
@@ -178,10 +178,9 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 
 # %%
 # These settings can be tweaked to make the time resolution finer or coarser
-dynamics.set_thresholds(norm="norm_A", low=0.01, high=0.012, abort=0.015)
-dynamics.set_thresholds(norm="norm_B", low=0.002, high=0.4, abort=0.5)
-dynamics.set_step_factors(upshift=1.6, downshift=0.15, abort=0.05)
-dynamics.set_error_step_factor(0.05)
+#dynamics.set_thresholds(norm="norm_A", low=0.02, high=0.025, abort=0.03)          # low=0.01, high=0.012, abort=0.015
+#dynamics.set_thresholds(norm="norm_B", low=0.05, high=1.0, abort=2.0)          # low=0.002, high=0.4, abort=0.5                   low=0.008, high=0.6, abort=0.8
+#dynamics.set_step_factors(upshift=1.6, downshift=0.15, abort=0.08, error=0.05)    # upshift=1.6,           downshift=0.15, abort=0.05, error=0.05
 
 dynamics.single_compartment_react(initial_step=0.0001, target_end_time=8.0,
                                   variable_steps=True, explain_variable_steps=False)
