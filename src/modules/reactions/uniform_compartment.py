@@ -404,12 +404,13 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def set_thresholds(self, norm="norm_A", low=None, high=None, abort=None) -> None:
+    def set_thresholds(self, norm :str, low=None, high=None, abort=None) -> None:
         """
         Over-ride default values for simulation parameters that affect the adaptive variable step sizes.
-        The default None values can be used to eliminate some of the threshold rules, for the specified norm
+        The default None values can be used to eliminate some of the threshold rules, for the specified norm.
+        If the specified norm was not previously set, it will be added.
 
-        :param norm:    The name of the "norm" (criterion) being used
+        :param norm:    The name of the "norm" (criterion) being used - either a previously-set one or not
         :param low:     The value below which the norm is considered to be good (and the variable steps are being made larger);
                             if None, it doesn't get used
 
@@ -421,6 +422,9 @@ class UniformCompartment:
                             if None, it doesn't get used
         :return:        None
         """
+        assert type(norm) == str and norm != "", \
+            "set_thresholds(): the `norm` argument must be a non-empty string"
+
         if (abort is not None) and (high is not None):
             assert abort >= high, \
                 f"set_thresholds(): `abort` value ({abort}) must be >= `high' value ({high})"
@@ -1050,7 +1054,7 @@ class UniformCompartment:
             step_factor = decision_data['step_factor']
             action = decision_data['action']
             all_norms = decision_data['norms']
-            applicable_norms = decision_data['applicable_norms']    # TODO: show this in the diagnostics
+            applicable_norms = decision_data['applicable_norms']
 
             if explain_variable_steps:
                 print(f"\n(STEP {step_counter}) ANALYSIS: Examining Conc. Changes from System Time {self.system_time:.5g} "
@@ -1062,11 +1066,7 @@ class UniformCompartment:
                     print(f"    Restricting adaptive time step analysis to {len(self.chem_data.active_chemicals)} "
                     f"chemicals only: {self.chem_data.names_of_active_chemicals()} , with indexes: {self.chem_data.active_chemicals}")
 
-                #with np.errstate(divide='ignore'):  # Suppress warning about divisions by zero,
-                                                     # which are expected, and no issue here
-                    #print("    Relative Deltas:   ", delta_concentrations / self.system)
                 print("    Norms:    ", all_norms)
-
                 print("    Thresholds:    ")
                 for rule in self.thresholds:
                     print(self.display_thresholds(rule, all_norms.get(rule['norm'])))
@@ -1075,13 +1075,12 @@ class UniformCompartment:
                 print(f"    => Action: '{action.upper()}'  (with step size factor of {step_factor})")
 
 
-            # Abort the current step if the rate of change is deemed excessive.
+            # Abort the current step if some rate of change is deemed excessive.
             # TODO: maybe ALWAYS check this, regardless of variable-steps option
             if action == "abort":       # NOTE: this is a "strategic" abort, not a hard one from error
-                # TODO: also print out WHICH of the norms led to the ABORT
                 msg =   f"* INFO: the tentative time step ({delta_time:.5g}) " \
-                        f"leads to a least one norm value > its ABORT threshold:\n" \
-                        f"      -> will backtrack, and re-do step with a SMALLER delta time, multiplied by {step_factor} (set to {delta_time * step_factor:.5g}) " \
+                        f"leads to a value of {applicable_norms} > its ABORT threshold:\n" \
+                        f"      -> will backtrack, and re-do step with a SMALLER Δt, x{step_factor:.5g} (now set to {delta_time * step_factor:.5g}) " \
                         f"[Step started at t={self.system_time:.5g}, and will rewind there]"
                 #print("WARNING: ", msg)
                 if self.diagnostics:
