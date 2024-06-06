@@ -421,11 +421,13 @@ class UniformCompartment:
                             if None, it doesn't get used
         :return:        None
         """
-        assert abort >= high, \
-            "set_thresholds(): `abort` value must be >= `high' value"
+        if (abort is not None) and (high is not None):
+            assert abort >= high, \
+                f"set_thresholds(): `abort` value ({abort}) must be >= `high' value ({high})"
 
-        assert high >= low, \
-            "set_thresholds(): `high` value must be >= `low' value"
+        if (high is not None) and (low is not None):
+            assert high >= low, \
+                f"set_thresholds(): `high` value ({high}) must be >= `low' value ({low})"
 
         for i, t in enumerate(self.thresholds):
             if t.get("norm") == norm:
@@ -448,8 +450,9 @@ class UniformCompartment:
                     del self.thresholds[i]      # Completely eliminate this un-used norm
                 return
 
-        # If we get here, it means that we're handling a norm not currently present in the list self.thresholds
-        new_t = {}
+        # If we get here, it means that we're handling a norm
+        # not currently present in the list self.thresholds
+        new_t = {"norm": norm}
         if low is not None:
             new_t["low"] = low
         if high is not None:
@@ -1043,10 +1046,11 @@ class UniformCompartment:
         recommended_next_step = delta_time       # Baseline value; no reason yet to suggest a change in step size
 
         if variable_steps:
-            decision_data = self.adjust_speed(delta_conc=delta_concentrations, baseline_conc=self.system)
-            step_factor = decision_data[1]
-            action = decision_data[0]
-            all_norms = decision_data[2]
+            decision_data = self.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=self.system, prev_conc=None)    # TODO: pass the prev_conc
+            step_factor = decision_data['step_factor']
+            action = decision_data['action']
+            all_norms = decision_data['norms']
+            applicable_norms = decision_data['applicable_norms']    # TODO: show this in the diagnostics
 
             if explain_variable_steps:
                 print(f"\n(STEP {step_counter}) ANALYSIS: Examining Conc. Changes from System Time {self.system_time:.5g} "
@@ -1163,8 +1167,9 @@ class UniformCompartment:
 
     def norm_A(self, delta_conc: np.array) -> float:
         """
-        Return "version A" of a measure of system change, based on the average concentration changes
-        of ALL chemicals across a time step, adjusted for the number of chemicals
+        Return a measure of system change, based on the average concentration changes
+        of ALL chemicals across a time step, adjusted for the number of chemicals.
+        A square-of-sums computation (the square of an L2 norm) is used.
 
         :param delta_conc:  A Numpy array with the concentration changes
                                 of the chemicals of interest across a time step
@@ -1185,7 +1190,7 @@ class UniformCompartment:
 
     def norm_B(self, baseline_conc: np.array, delta_conc: np.array) -> float:
         """
-        Return "version B" of a measure of system change, based on the max absolute relative concentration
+        Return a measure of system change, based on the max absolute relative concentration
         change of all the chemicals across a time step (based on an L infinity norm - but disregarding
         any baseline concentration that is very close to zero)
 
@@ -1198,8 +1203,17 @@ class UniformCompartment:
         arr_size = len(baseline_conc)
         assert len(delta_conc) == arr_size, "norm_B(): mismatch in the sizes of the 2 passed array arguments"
 
+        to_keep = ~ np.isclose(baseline_conc, 0)    # Element-wise negation; this will be an array of Booleans
+                                                    # with True for all the elements of baseline_conc that aren't too close to 0
+
+        ratios = delta_conc[to_keep] / baseline_conc[to_keep]   # Using boolean indexing to only select some of the elements :
+                                                                # the non-zero denominators, and their corresponding numerators
+        return max(abs(ratios))
+
+        '''
+        # Alternate implementation
         largest = 0.
-        for i in range(len(baseline_conc)):
+        for i in range(arr_size):
             if np.allclose(baseline_conc[i], 0):
                 continue            # We ignore any baseline concentrations that are very close to zero
 
@@ -1208,25 +1222,68 @@ class UniformCompartment:
                 largest = abs_ratio
 
         return largest
+        '''
 
 
 
-    def adjust_speed(self, delta_conc: np.array, baseline_conc=None) -> (str, Union[float, int], dict):     #TODO: test
+    def norm_C(self, prev_conc: np.array, baseline_conc: np.array, delta_conc: np.array) -> float:
+        """
+        Return a measure of system short-period oscillation; larger values might be heralding
+        onset of simulation instability
+
+        :param prev_conc:       A numpy array with the concentration of the chemicals of interest,
+                                    in the step prior to the current one (i.e. an "archive" value)
+        :param baseline_conc:   A Numpy array with the concentration of the chemicals of interest
+                                    at the start of a simulation time step
+        :param delta_conc:      A Numpy array with the concentration changes
+                                    of the chemicals of interest across a time step
+        :return:
+        """
+        D1 = baseline_conc - prev_conc
+        D2 = delta_conc
+
+        sign_flip = ((D1 >= 0) & (D2 < 0)) | ((D1 < 0) & (D2 >= 0))
+
+        criterion_met = sign_flip & (abs(D2) > abs(D1))
+        #print("criterion_met: ", criterion_met)
+
+        # Use boolean indexing to select elements from delta1 where the criterion is True
+        D1_selected = D1[criterion_met]
+        D2_selected = D2[criterion_met]
+
+        #print("delta1_selected: ", D1_selected)
+        #print("delta2_selected: ", D2_selected)
+
+        ratios = abs(D2_selected / D1_selected)
+        #print(ratios)
+
+        res = np.sum(ratios)    # An argument might be made for taking the MAX instead
+
+        return res
+
+
+
+    def adjust_timestep(self, delta_conc: np.array, baseline_conc=None, prev_conc=None) -> dict:
         """
         Computes some measures of the size of delta_concentrations, from the last step, in the context of the
         baseline initial concentrations of that same step.
         Propose a course of action about what to do for the next step.
 
         :param delta_conc:      A numpy array of changes in concentrations for the chemicals of interest,
-                                    across a simulation time step
+                                    across a simulation time step (typically, the current step a run in progress)
         :param baseline_conc:   A numpy array of baseline concentration values for those same chemicals,
                                     prior to the above change, at the start of a simulation time step
-        :return:                A triplet:
-                                    1) String with the name of detected state: either "low", "stay", "high" or "abort"
-                                    2) A factor by which to multiple the time step at the next iteration round;
-                                       if no change is deemed necessary, 1 is returned
-                                    3) A dict of all the computed norms (any of the last ones, except the first one, may be missing),
-                                       indexed by their names
+        :param prev_conc:       A numpy array of concentration values for those same chemicals,
+                                    in the step prior to the current one (i.e. an "archive" value)
+        :return:                A dict:
+                                    "action"           - String with the name of the computed recommended action:
+                                                            either "low", "stay", "high" or "abort"
+                                    "step_factor"      - A factor by which to multiply the time step at the next iteration round;
+                                                            if no change is deemed necessary, 1
+                                    "norms"            - A dict of all the computed norm name/values (any of the norms, except norm_A,
+                                                            may be missing)
+                                    "applicable_norms" - The name of the norm that triggered the decision; if all norms were involved,
+                                                            it will be "ALL"
         """
         n_chems = self.chem_data.number_of_chemicals()
 
@@ -1243,14 +1300,12 @@ class UniformCompartment:
         # If some chemicals are not dynamically involved in the reactions
         # (i.e. if they don't occur in any reaction, or occur as enzyme),
         # restrict our consideration to only the dynamically involved ones
-        #if len(self.chem_data.active_chemicals) < n_chems:
+        # CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
+        #          the reactions are simulated
         if len(self.chem_data.names_of_enzymes()) > 0:
-            #n_chems = len(self.chem_data.names_of_active_chemicals())
-            #delta_conc = delta_conc[list(self.chem_data.active_chemicals)]
             delta_conc = delta_conc[self.chem_data.indexes_of_active_chemicals()]
             #print(f"\nadjust_speed(): restricting adaptive time step analysis to {n_chems} chemicals only; their delta_conc is {delta_conc}")
             if baseline_conc is not None:
-                #baseline_conc = baseline_conc[list(self.chem_data.active_chemicals)]
                 baseline_conc = baseline_conc[self.chem_data.indexes_of_active_chemicals()]
                 #print(f"    and their baseline_conc is {baseline_conc}")
 
@@ -1259,21 +1314,25 @@ class UniformCompartment:
 
         all_small = True
 
-        for i, rule in enumerate(self.thresholds):
+        for rule in self.thresholds:
             norm_name = rule["norm"]
 
             if norm_name == "norm_A":
                 result = self.norm_A(delta_conc)
-            else:
+            elif norm_name == "norm_B":
                 result = self.norm_B(baseline_conc, delta_conc)
+            else:
+                result = self.norm_C(prev_conc, baseline_conc, delta_conc)
 
             all_norms[norm_name] = result
 
             if ("abort" in rule) and (result > rule["abort"]):
-                return ("abort", self.step_factors["abort"], all_norms)
+                return {"action": "abort", "step_factor": self.step_factors["abort"], "norms": all_norms, "applicable_norms": norm_name}
+                #return ("abort", self.step_factors["abort"], all_norms)
 
             if ("high" in rule) and (result > rule["high"]):
-                return ("high", self.step_factors["downshift"], all_norms)
+                return {"action": "high", "step_factor": self.step_factors["downshift"], "norms": all_norms, "applicable_norms": norm_name}
+                #return ("high", self.step_factors["downshift"], all_norms)
 
             if all_small and ("low" in rule):
                 if result >= rule["low"]:
@@ -1281,9 +1340,11 @@ class UniformCompartment:
 
 
         if all_small:
-            return ("low", self.step_factors["upshift"], all_norms)
+            #return ("low", self.step_factors["upshift"], all_norms)
+            return {"action": "low", "step_factor": self.step_factors["upshift"], "norms": all_norms, "applicable_norms": "ALL"}
 
-        return ("stay", 1, all_norms)
+        #return ("stay", 1, all_norms)
+        return {"action": "stay", "step_factor": 1, "norms": all_norms, "applicable_norms": "ALL"}
 
 
 

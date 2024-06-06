@@ -342,10 +342,13 @@ class AllReactions(Diffusion):
 
         self.active_chemicals = set()   # Set of the names of the chemicals - not counting pure catalysts - involved
                                         # in any of the registered reactions
+                                        # CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
+                                        #          the reactions are simulated
 
         self.active_enzymes = set()     # Set of the names of the enzymes (catalysts) involved
                                         # in any of the registered reactions
-
+                                        # CAUTION: the concept of "active enzyme" might change in future versions, where only SOME of
+                                        #          the reactions are simulated
 
 
 
@@ -723,6 +726,9 @@ class AllReactions(Diffusion):
         but NOT counting chemicals that always appear in a catalytic role in all the reactions they
         participate in
         (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here)
+
+        CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
+                 the reactions are simulated
         """
         index_list = list(map(self.get_index, self.active_chemicals))
         return sorted(index_list)

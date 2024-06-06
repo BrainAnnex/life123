@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 from src.modules.movies.movies import MovieTabular
 
 
@@ -11,7 +11,7 @@ from src.modules.movies.movies import MovieTabular
 def test_set_conc():
     #TODO: test the snapshot argument
     chem_data = ChemData(names=["A", "B", "C"])
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     with pytest.raises(Exception):
         rxn.set_conc(conc=[1, 2, 3, 4])         # Wrong number of entries
@@ -30,7 +30,7 @@ def test_set_conc():
     assert np.allclose(rxn.system, [10., 100., 30.])
 
 
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
     rxn.set_conc(conc={"C": 3})
     assert np.allclose(rxn.system, [0., 0., 3.])
 
@@ -44,7 +44,7 @@ def test_set_conc():
 
 def test_get_system_conc():
     chem_data = ChemData(names=["A", "B", "C"])
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
     rxn.set_conc(conc=(10., 20., 30.))
 
     result = rxn.get_system_conc()
@@ -54,7 +54,7 @@ def test_get_system_conc():
 
 def test_get_chem_conc():
     chem_data = ChemData(names=["A", "B"])
-    dyn = ReactionDynamics(chem_data)
+    dyn = UniformCompartment(chem_data)
     dyn.set_conc(conc=(10., 20.))
 
     assert np.allclose(dyn.get_chem_conc("A"), 10.)
@@ -66,7 +66,7 @@ def test_get_chem_conc():
 
 def test_get_conc_dict():
     chem_data = ChemData(names=["A", "B", "C", "D"])
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
     rxn.set_conc(conc=(100, 200, 300, 400))
 
     result = rxn.get_conc_dict()
@@ -91,7 +91,7 @@ def test_get_conc_dict():
 
 
 def test_specify_steps():
-    rxn = ReactionDynamics(None)
+    rxn = UniformCompartment(None)
 
     with pytest.raises(Exception):
         # Too few arguments
@@ -127,12 +127,12 @@ def test_single_compartment_react():
 
     initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
 
-    dynamics = ReactionDynamics(chem_data=chem_data)
+    dynamics = UniformCompartment(chem_data=chem_data)
     dynamics.set_conc(conc=initial_conc, snapshot=False)
 
     dynamics.set_diagnostics()
 
-    dynamics.error_abort_step_factor = 0.5  # Will be used by an excessive first step
+    dynamics.set_step_factors(error=0.5)    # Will be used by an excessive first step
                                             # leading to a hard abort
 
     dynamics.single_compartment_react(initial_step=0.0010, target_end_time=0.0035, variable_steps=False)
@@ -148,7 +148,7 @@ def test_single_compartment_react():
     # The above computation automatically took 2 normal steps, 1 half-size step and 1 normal step;
     # now repeat the process manually
 
-    dynamics2 = ReactionDynamics(chem_data=chem_data)
+    dynamics2 = UniformCompartment(chem_data=chem_data)
     dynamics2.set_conc(conc=initial_conc, snapshot=False)
 
     dynamics2.set_diagnostics()
@@ -168,7 +168,7 @@ def test_single_compartment_react():
 
 def test_single_reaction_fixed_step():
     chem_data = ChemData(names=["A", "B"])
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     rxn.set_conc(conc=[10., 50.], snapshot=False)
 
@@ -204,7 +204,7 @@ def test_single_reaction_fixed_step():
 
 def test_single_reaction_variable_step_1():
     chem_data = ChemData(names=["A", "B"])
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     rxn.set_conc(conc=[10., 50.], snapshot=False)
 
@@ -240,7 +240,7 @@ def test_single_reaction_variable_step_1():
 
 def test_single_reaction_step_2():
     chem_data = ChemData(names=["A", "B", "C"])
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     rxn.set_conc(conc=[10., 50., 20.], snapshot=False)
 
@@ -268,7 +268,7 @@ def test_single_reaction_step_2():
 
 def test_single_reaction_step_3():
     chem_data = ChemData(names=["A", "C", "D"])
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     rxn.set_conc(conc=[4., 7., 2.], snapshot=False)
 
@@ -286,7 +286,7 @@ def test_single_reaction_step_3():
 
 def test_single_reaction_step_4():
     chem_data = ChemData(names=["A", "B", "C", "D"])
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     rxn.set_conc(conc=[4., 7., 5., 2.], snapshot=False)
 
@@ -305,7 +305,7 @@ def test_single_reaction_step_4():
 
 def test_single_reaction_step_5():
     chem_data = ChemData(names=["A", "B"])
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     rxn.set_conc(conc=[3., 5.], snapshot=False)
 
@@ -321,7 +321,7 @@ def test_single_reaction_step_5():
 
 def test_single_reaction_step_6():
     chem_data = ChemData(names=["A", "B", "C", "D", "E"])
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     rxn.set_conc(conc=[3., 5., 1., 0.4, 0.1], snapshot=False)
 
@@ -354,7 +354,7 @@ def test_single_compartment_react_variable_steps_1():
     chem_data.add_reaction(reactants="S", products="X",
                            forward_rate=6., reverse_rate=3.)
 
-    dynamics = ReactionDynamics(chem_data=chem_data)
+    dynamics = UniformCompartment(chem_data=chem_data)
     dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
     dynamics.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
@@ -398,15 +398,14 @@ def test_single_compartment_correct_neg_conc_1():
     chem_data.add_reaction(reactants="S", products="X",
                            forward_rate=6., reverse_rate=3.)
 
-    dynamics = ReactionDynamics(chem_data=chem_data)
+    dynamics = UniformCompartment(chem_data=chem_data)
     dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
     dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
     dynamics.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
                            {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
-    dynamics.step_factors = {"upshift": 1.5, "downshift": 0.5, "abort": 0.5}
-    dynamics.error_abort_step_factor = 0.5
+    dynamics.step_factors = {"upshift": 1.5, "downshift": 0.5, "abort": 0.5, "error": 0.5}
 
     dynamics.single_compartment_react(initial_step=0.1, target_end_time=0.8, variable_steps=False)
     # Note: negative concentrations that would arise from the given step size, get automatically intercepted - and
@@ -447,46 +446,164 @@ def test_single_compartment_correct_neg_conc_1():
 
 
 def test_norm_A():
-    chem_data = ChemData()
-    rxn = ReactionDynamics(chem_data)
+    uc = UniformCompartment()
 
     delta_conc = np.array([1, 4])
-    result = rxn.norm_A(delta_conc)
+    result = uc.norm_A(delta_conc)
     assert np.allclose(result, 4.25)
 
     delta_conc = np.array([.5, 2])
-    result = rxn.norm_A(delta_conc)
+    result = uc.norm_A(delta_conc)
     assert np.allclose(result, 1.0625)
 
     delta_conc = np.array([.5, 2, 1])
-    result = rxn.norm_A(delta_conc)
+    result = uc.norm_A(delta_conc)
     assert np.allclose(result, 0.5833333333)
+
+    delta =    np.array([0.5, 1, 4, -2, -5])
+    result = uc.norm_A(delta_conc=delta)
+    assert np.allclose(result, 1.85)
+
 
 
 def test_norm_B():
-    chem_data = ChemData()
-    rxn = ReactionDynamics(chem_data)
+    uc = UniformCompartment()
 
-    base = np.array([10, 2])
     delta = np.array([4, -1])
-    result = rxn.norm_B(baseline_conc=base, delta_conc=delta)
+    base = np.array([10, 2])
+    result = uc.norm_B(baseline_conc=base, delta_conc=delta)
     assert np.allclose(result, 0.5)
 
     base = np.array([10, 0])
-    result = rxn.norm_B(baseline_conc=base, delta_conc=delta)
+    result = uc.norm_B(baseline_conc=base, delta_conc=delta)
     assert np.allclose(result, 0.4)     # The zero baseline concentration is disregarded
 
-    with pytest.raises(Exception):
-        rxn.norm_B(baseline_conc=np.array([1, 2, 3]), delta_conc=delta) # Too many entries in array
+    delta = np.array([300,        6, 0, -1])
+    base = np.array([0.00000001, 10, 0,  2])
+    result = uc.norm_B(baseline_conc=base, delta_conc=delta)
+    assert np.allclose(result, 0.6)
+
+    delta = np.array([300,   6, 0, -1])
+    base = np.array([0.001, 10, 0,  2])
+    result = uc.norm_B(baseline_conc=base, delta_conc=delta)
+    assert np.allclose(result, 300000)
+
+    base = np.array([2,   5, 5, 14, 14])
+    delta = np.array([0.5, 1, 4, -2, -5])
+    result = uc.norm_B(baseline_conc=base, delta_conc=delta)
+    assert np.allclose(result, 0.8)
 
     with pytest.raises(Exception):
-        rxn.norm_B(baseline_conc=base, delta_conc=np.array([1]))    # Too few entries in array
+        uc.norm_B(baseline_conc=np.array([1, 2, 3]), delta_conc=delta) # Too many entries in array
+
+    with pytest.raises(Exception):
+        uc.norm_B(baseline_conc=base, delta_conc=np.array([1]))        # Too few entries in array
+
+
+
+def test_norm_C():
+    uc = UniformCompartment()
+
+    result = uc.norm_C(prev_conc=np.array([1]), baseline_conc=np.array([2]), delta_conc=np.array([0.5]))
+    assert result == 0
+
+    result = uc.norm_C(prev_conc=np.array([8]), baseline_conc=np.array([5]), delta_conc=np.array([1]))
+    assert result == 0
+
+    result = uc.norm_C(prev_conc=np.array([8]), baseline_conc=np.array([5]), delta_conc=np.array([4]))
+    assert np.allclose(result, [4/3])
+
+    result = uc.norm_C(prev_conc=np.array([10]), baseline_conc=np.array([14]), delta_conc=np.array([-2]))
+    assert result == 0
+
+    result = uc.norm_C(prev_conc=np.array([10]), baseline_conc=np.array([14]), delta_conc=np.array([-5]))
+    assert np.allclose(result, [5/4])
+
+    prev =     np.array([1,   8, 8, 10, 10])
+    baseline = np.array([2,   5, 5, 14, 14])
+    delta =    np.array([0.5, 1, 4, -2, -5])
+    result = uc.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
+
+    assert np.allclose(result, 4/3 + 5/4)
+
+
+
+def test_adjust_timestep():
+    uc = UniformCompartment(names=["C1", "C2", "C3", "C4", "C5"])
+    prev =     np.array([1,   8, 8, 10, 10])
+    baseline = np.array([2,   5, 5, 14, 14])
+    delta =    np.array([0.5, 1, 4, -2, -5])
+
+    normA = uc.norm_A(delta_conc=delta)
+    assert np.allclose(normA, 1.85)
+
+    normB = uc.norm_B(baseline_conc=baseline, delta_conc=delta)
+    assert np.allclose(normB, 0.8)
+
+    normC = uc.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
+    assert np.allclose(normC, 2.583333333333333)        # 4/3 + 5/4
+
+    uc.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.84)
+    uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)
+    uc.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4, error=0.25)
+
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85}, 'applicable_norms': 'norm_A'}
+
+    uc.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.86)     # normA (1.85) no longer triggers abort
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85}, 'applicable_norms': 'norm_A'}
+
+    uc.set_thresholds(norm="norm_A", low=0.5, high=1.86, abort=1.87)    # normA (1.85) no longer triggers high nor abort
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'norm_B'}
+
+    uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.81)    # normB (0.8) no longer triggers abort
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'norm_B'}
+
+    uc.set_thresholds(norm="norm_B", low=0.08, high=0.81, abort=0.81)    # normB (0.8) no longer triggers high nor abort
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
+
+    uc.set_thresholds(norm="norm_A", low=1.86, high=1.87, abort=1.87)   # normA (1.85) will now trigger a "low"
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
+                      # We're still on the 'stay' action because we aren't below ALL the thresholds
+
+    uc.set_thresholds(norm="norm_B", low=0.81, high=0.82, abort=0.83)   # normB (0.8) will now trigger a "low", too
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'low', 'step_factor': 1.2, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
+
+    uc.set_thresholds(norm="norm_C", low=2.59, high=2.60, abort=2.61)   # normC (2.583) will still continue to trigger a "low"
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'low', 'step_factor': 1.2, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 2.583333333333333}, 'applicable_norms': 'ALL'}
+
+    uc.set_thresholds(norm="norm_C", low=2.58, high=2.60, abort=2.61)   # normC (2.583) will no longer trigger a "low" - but not a "high" nor an "abort"
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 2.583333333333333}, 'applicable_norms': 'ALL'}
+
+    uc.set_thresholds(norm="norm_C", low=2.57, high=2.58, abort=2.61)   # normC (2.583) will now trigger a "high"
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 2.583333333333333}, 'applicable_norms': 'norm_C'}
+
+    uc.set_thresholds(norm="norm_C", low=2.56, high=2.57, abort=2.58)   # normC (2.583) will now trigger an "abort"
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 2.583333333333333}, 'applicable_norms': 'norm_C'}
+
+    uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)    # normB (0.8) will now trigger an "abort" before we can even get to normC
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'norm_B'}
+
+    uc.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.84)    # normA (1.85) will now trigger an "abort" before we can even get to normB
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85}, 'applicable_norms': 'norm_A'}
 
 
 
 def test_compute_all_rate_deltas():
     chem_data = ChemData(names=["A", "B", "C", "D"])
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     # Start with reaction A <-> B , with 1st-order kinetics in both directions
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=20., reverse_rate=2.)  # Reaction 0
@@ -546,7 +663,7 @@ def test_compute_all_rate_deltas():
 
 def test_compute_reaction_delta_rate():
     chem_data = ChemData(names=["A", "B", "C", "D"])
-    dynamics = ReactionDynamics(chem_data)
+    dynamics = UniformCompartment(chem_data)
     dynamics.set_conc(conc=[5., 8., 0, 0], snapshot=False)
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
@@ -597,7 +714,7 @@ def test_compute_reaction_delta_rate():
 
 def test_is_in_equilibrium():
     chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     # Reaction 0 : A <-> B
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
@@ -634,7 +751,7 @@ def test_is_in_equilibrium():
 
 def test_reaction_in_equilibrium():
     chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     # Reaction 0 : A <-> B
     chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
@@ -709,7 +826,7 @@ def test_reaction_in_equilibrium():
 
 def test_validate_increment():
     chem_data = ChemData(names=["A", "B", "C"])
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     chem_data.add_reaction(reactants=["A"], products=["B"])
 
@@ -723,7 +840,7 @@ def test_validate_increment():
 
 def test_stoichiometry_checker():
     chem = ChemData(names=["A", "B", "C", "D"])
-    rxn = ReactionDynamics(chem)
+    rxn = UniformCompartment(chem)
 
     chem.add_reaction(reactants=["A"], products=["B"])          # Reaction 0:   A <--> B
 
@@ -777,7 +894,7 @@ def test_stoichiometry_checker():
 
 
 def test_sigmoid():
-    rxn = ReactionDynamics(None)
+    rxn = UniformCompartment(None)
 
     # When the concentration matches Kd, the occupancy is 1/2 by definition
     assert np.allclose(rxn.sigmoid(conc=1., Kd=1.), 0.5)
@@ -800,7 +917,7 @@ def test_sigmoid():
 
 
 def test_logistic():
-    rxn = ReactionDynamics(None)
+    rxn = UniformCompartment(None)
 
     #print(rxn.logistic(-10))
     assert np.allclose(rxn.logistic(-100), 0)
@@ -819,7 +936,7 @@ def test_set_macromolecules():
     chem.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
     chem.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
 
-    rxn = ReactionDynamics(chem)
+    rxn = UniformCompartment(chem)
     rxn.set_macromolecules()    # By default, set counts to 1 for all the registered macromolecules
 
     assert rxn.macro_system == {"M1": 1, "M2": 1}
@@ -859,7 +976,7 @@ def test_set_occupancy():
     chem_data = ChemData(names=["A", "B"])
     chem_data.add_macromolecules(["M1", "M2"])
 
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     with pytest.raises(Exception):
         # Occupancy out of range
@@ -891,7 +1008,7 @@ def test_get_occupancy():
     chem_data = ChemData(names=["A", "B", "C"])
     chem_data.add_macromolecules(["M1", "M2"])
 
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     with pytest.raises(Exception):
         # The system state for macromolecules has not been set yet
@@ -930,7 +1047,7 @@ def test_update_occupancy():
     chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="C", Kd=300)
 
 
-    rxn = ReactionDynamics(chem_data)
+    rxn = UniformCompartment(chem_data)
 
     rxn.set_macromolecules()
     assert rxn.macro_system == {"M1": 1, "M2": 1}
@@ -1030,7 +1147,7 @@ def test_update_occupancy():
 
 
 def test_explain_time_advance():
-    rxn = ReactionDynamics(None)
+    rxn = UniformCompartment(None)
 
     with pytest.raises(Exception):
         rxn.explain_time_advance(return_times=True)      # Diagnostics weren't first enabled
@@ -1103,7 +1220,7 @@ def test_explain_time_advance():
 
 def test__delta_names():
     chem_data = ChemData(names=["A", "B", "X"])
-    dyn = ReactionDynamics(chem_data)
+    dyn = UniformCompartment(chem_data)
 
     assert dyn._delta_names() == ["Delta A", "Delta B", "Delta X"]
 
@@ -1111,7 +1228,7 @@ def test__delta_names():
 
 def test__delta_conc_dict():
     chem_data = ChemData(names=["A", "B", "X"])
-    dyn = ReactionDynamics(chem_data)
+    dyn = UniformCompartment(chem_data)
 
     assert dyn._delta_conc_dict(np.array([10, 20, 30])) == \
            {"Delta A": 10, "Delta B": 20, "Delta X": 30}
@@ -1128,7 +1245,7 @@ def test_save_diagnostic_rxn_data():
     chem_data.add_reaction(reactants=["A"], products=["X"], forward_rate=5., reverse_rate=2.)
     chem_data.add_reaction(reactants=["A", "B"], products=["X"], forward_rate=5., reverse_rate=2.)
 
-    dyn = ReactionDynamics(chem_data)
+    dyn = UniformCompartment(chem_data)
     assert len(dyn.diagnostic_rxn_data) == 0
 
     dyn.system_time = 100
@@ -1204,7 +1321,7 @@ def test_get_diagnostic_rxn_data():
     chem_data.add_reaction(reactants=["A"], products=["X"], forward_rate=5., reverse_rate=2.)
     chem_data.add_reaction(reactants=["A", "B"], products=["X"], forward_rate=5., reverse_rate=2.)
 
-    dyn = ReactionDynamics(chem_data)
+    dyn = UniformCompartment(chem_data)
 
     dyn.system_time = 100
 
