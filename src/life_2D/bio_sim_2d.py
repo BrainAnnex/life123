@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from typing import Union, List, Tuple
 from src.modules.movies.movies import MovieTabular
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 
 
 class BioSim2D:
@@ -86,7 +86,7 @@ class BioSim2D:
         if reactions:
             self.reaction_dynamics = reactions
         else:
-            self.reaction_dynamics = ReactionDynamics(chem_data=chem_data)
+            self.reaction_dynamics = UniformCompartment(chem_data=chem_data)
 
         self.n_bins_x = n_cells_x
         self.n_bins_y = n_cells_y

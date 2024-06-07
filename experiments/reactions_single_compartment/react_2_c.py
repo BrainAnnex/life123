@@ -33,7 +33,7 @@ import set_path      # Importing this module will add the project's home directo
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 
 import numpy as np
 import plotly.graph_objects as go
@@ -64,7 +64,7 @@ chem.describe_reactions()
 # we'll note that number, and in Part 2 we'll do exactly that same number of fixed steps
 
 # %%
-dynamics_variable = ReactionDynamics(chem_data=chem, preset="mid")
+dynamics_variable = UniformCompartment(chem_data=chem, preset="mid")
 
 # Initial concentrations of all the chemicals, in their index order
 dynamics_variable.set_conc([10., 50.])
@@ -107,7 +107,7 @@ dynamics_variable.plot_history(colors=['blue', 'orange'], show_intervals=True)
 # The fixed time step is chosen to attain the same total number of data points as obtained with the variable time steps of part 1
 
 # %%
-dynamics_fixed = ReactionDynamics(chem_data=chem)   # Re-use same chemicals and reactions of part 1
+dynamics_fixed = UniformCompartment(chem_data=chem)   # Re-use same chemicals and reactions of part 1
 
 # %%
 # Initial concentrations of all the chemicals, in their index order
@@ -193,7 +193,7 @@ PlotlyHelper.combine_plots(fig_list=[fig_fixed, fig_variable, fig_exact],
 
 # %%
 # A coarser version of the variable-step simulation of Part 1
-dynamics_variable_new = ReactionDynamics(chem_data=chem, preset="fast")   # Re-use same chemicals and reactions of part 2
+dynamics_variable_new = UniformCompartment(chem_data=chem, preset="fast")   # Re-use same chemicals and reactions of part 2
 
 dynamics_variable_new.set_conc([10., 50.])
 
@@ -213,7 +213,7 @@ fig_variable = dynamics_variable_new.plot_history(chemicals='A', colors='aqua', 
 
 # %%
 # Now, a coarser version of the fixed-step simulation of Part 2
-dynamics_fixed_new = ReactionDynamics(chem_data=dynamics_fixed.chem_data)   # Re-using same chemicals and reactions of part 2
+dynamics_fixed_new = UniformCompartment(chem_data=dynamics_fixed.chem_data)   # Re-using same chemicals and reactions of part 2
 
 dynamics_fixed_new.set_conc([10., 50.])
 

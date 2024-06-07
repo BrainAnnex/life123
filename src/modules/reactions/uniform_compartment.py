@@ -76,6 +76,8 @@ class UniformCompartment:
                             # Note that this is the counterpart - with 1 less dimension - of the array by the same name
                             #       in the class BioSim1D
 
+        self.previous_system = None # TODO: experimental
+
 
         self.macro_system = {}      # A dict mapping macromolecule names to their counts
                                     # EXAMPLE:  {"M1": 1, "M2": 3, "M3": 1}
@@ -114,13 +116,6 @@ class UniformCompartment:
                             #   not to be confused with general aborts based on reaching high threshold
 
 
-        #self.error_abort_step_factor = None     # MUST BE < 1.  EXAMPLE: 0.25
-                                                # Factor by which to multiply the time step
-                                                #   in case of negative-concentration error from excessive step size
-                                                #   NOTE: this is from ERROR aborts,
-                                                #   not to be confused with general aborts based on reaching high threshold
-                                                #   TODO: maybe change name to "error_step_factor" or "error_correct_step_factor"
-                                                #         to avoid confusion with the "abort" step factor
 
         self.use_adaptive_preset(preset)
 
@@ -852,9 +847,10 @@ class UniformCompartment:
                                               step_counter=step_count)
 
             # Update the System State
+            self.previous_system = self.system
             self.system += delta_concentrations
             if min(self.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
-                print(f"+++++++++++ SYSTEM STATE ERROR: FAILED TO CATCH negative concentration upon advancing reactions from system time t={self.system_time:,.4g}")
+                print(f"+++++++++++ SYSTEM STATE ERROR: FAILED TO CATCH negative concentration upon advancing reactions from system time t={self.system_time:,.5g}")
 
             self.system_time += step_actually_taken
 
@@ -1050,7 +1046,7 @@ class UniformCompartment:
         recommended_next_step = delta_time       # Baseline value; no reason yet to suggest a change in step size
 
         if variable_steps:
-            decision_data = self.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=self.system, prev_conc=None)    # TODO: pass the prev_conc
+            decision_data = self.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=self.system, prev_conc=self.previous_system)
             step_factor = decision_data['step_factor']
             action = decision_data['action']
             all_norms = decision_data['norms']
@@ -1209,20 +1205,6 @@ class UniformCompartment:
                                                                 # the non-zero denominators, and their corresponding numerators
         return max(abs(ratios))
 
-        '''
-        # Alternate implementation
-        largest = 0.
-        for i in range(arr_size):
-            if np.allclose(baseline_conc[i], 0):
-                continue            # We ignore any baseline concentrations that are very close to zero
-
-            abs_ratio = abs(delta_conc[i] / baseline_conc[i])
-            if abs_ratio > largest:
-                largest = abs_ratio
-
-        return largest
-        '''
-
 
 
     def norm_C(self, prev_conc: np.array, baseline_conc: np.array, delta_conc: np.array) -> float:
@@ -1238,6 +1220,9 @@ class UniformCompartment:
                                     of the chemicals of interest across a time step
         :return:
         """
+        if prev_conc is None:
+            return 0            # Unable to compute a norm; 0 represents "perfect"
+
         D1 = baseline_conc - prev_conc
         D2 = delta_conc
 
@@ -1579,33 +1564,6 @@ class UniformCompartment:
         if self.diagnostics:
             self.save_diagnostic_data(delta_time, increment_vector_single_rxn, rxn_index)
         '''
-
-
-
-    def criterion_fast_reaction(self, delta_conc, fast_threshold_fraction,
-                                baseline_conc=None, use_baseline=False) -> bool:
-        """
-        Apply a criterion to determine, from the given data,
-        whether the originating reaction (the source of the data) needs to be classified as "Fast".
-        All the passed data is for the concentration changes in 1 chemical from 1 reaction
-
-        :param delta_conc:
-        :param fast_threshold_fraction:
-        :param baseline_conc:           # TODO: probably phase out
-        :param use_baseline:            # TODO: gave poor results when formerly used for substeps
-
-        :return:                        True if the concentration change is so large (based on some criteria)
-                                            that the reaction that caused it, ought to be regarded as "fast"
-        """
-        if use_baseline:    # TODO: this criterion gives poor results, and will probably be eliminated
-            # if abs(delta_conc) / baseline_conc > fast_threshold_fraction / time_subdivision
-            # Perhaps more intuitive as shown above;
-            # but, to avoid time-consuming divisions (and potential divisions by zero), re-formulated as below:
-            return abs(delta_conc) > fast_threshold_fraction * baseline_conc
-
-        else:
-            # Perhaps more intuitive written as:  if abs(delta_conc) > fast_threshold_fraction / time_subdivision
-            return abs(delta_conc) > fast_threshold_fraction
 
 
 

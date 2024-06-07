@@ -25,7 +25,7 @@ import set_path      # Importing this module will add the project's home directo
 
 # %% tags=[]
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 
 # %%
 # Initialize the system
@@ -47,7 +47,7 @@ chem_data.describe_reactions()     # Notice how the enzyme `E` is noted in the p
 # ### Set the initial concentrations of all the chemicals - starting with no enzyme
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"A": 20., "B": 0., "E": 0.},
                   snapshot=True)      # Initially, no enzyme `E`
 dynamics.describe_state()

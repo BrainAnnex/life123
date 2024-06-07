@@ -48,7 +48,7 @@ raise StopExecution     # See: https://stackoverflow.com/a/56953105/5478830
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData as chem
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 
 from src.modules.visualization.graphic_log import GraphicLog
 
@@ -85,7 +85,7 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # # Run 1 : extremely small fixed time steps (no substeps)
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -104,7 +104,7 @@ dynamics.plot_history(colors=['green', 'orange', 'blue'])
 # # Run 2 : very small time steps, with dynamic substeps
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -124,7 +124,7 @@ dynamics.plot_history(colors=['green', 'orange', 'blue'])
 # # Run 3 : small-ish time steps, with dynamic substeps
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -144,7 +144,7 @@ dynamics.plot_history(colors=['green', 'orange', 'blue'])
 # # Run 4 : same as previous run, but fewer dynamic substeps
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -164,7 +164,7 @@ dynamics.plot_history(colors=['green', 'orange', 'blue'])
 # # Run 5 : same as previous run, but slightly larger primary step
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 
@@ -187,7 +187,7 @@ dynamics.plot_history(colors=['green', 'orange', 'blue'])
 # # Run 6 : same as previous run, but no substeps
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 #dynamics.describe_state()
 

@@ -29,7 +29,7 @@ import set_path      # Importing this module will add the project's home directo
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -55,7 +55,7 @@ chem_data.add_reaction(reactants="A", products=[(3,"B",1)], forward_rate=5., rev
 chem_data.describe_reactions()
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"A": 10., "B": 50.},
                   snapshot=True)
 dynamics.describe_state()

@@ -66,7 +66,7 @@ raise StopExecution     # See: https://stackoverflow.com/a/56953105/5478830
 # %% tags=[]
 
 from src.modules.chemicals.chem_data import ChemData as chem
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -94,7 +94,7 @@ chem_data.describe_reactions()
 # It cannot be replicated with current versions of Life123.  DO NOT ATTEMPT TO RE-RUN!
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 
@@ -201,7 +201,7 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 # Same as for Run #1
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 
@@ -279,7 +279,7 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 # Same as for the previous runs
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 
@@ -330,7 +330,7 @@ all_fig.show()
 
 # %%
 # Same as for the previous runs
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 dynamics.describe_state()
 

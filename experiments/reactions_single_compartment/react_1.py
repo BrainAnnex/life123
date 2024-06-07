@@ -24,7 +24,7 @@
 import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 
 # %%
 
@@ -33,7 +33,7 @@ from src.modules.reactions.reaction_dynamics import ReactionDynamics
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = ReactionDynamics(names=["A", "B"])
+dynamics = UniformCompartment(names=["A", "B"])
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 dynamics.add_reaction(reactants="A", products="B", 

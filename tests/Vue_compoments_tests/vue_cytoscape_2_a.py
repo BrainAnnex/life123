@@ -10,7 +10,7 @@ and to send the diagram of the reaction network to the log file.
 import pathlib
 from src.modules.html_log.html_log import HtmlLog as log
 from src.modules.visualization.graphic_log import GraphicLog
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 
 
 COMPONENT_NAME = "vue_cytoscape_2"           # *** CHANGE AS NEEDED ***
@@ -34,7 +34,7 @@ log.write(f'Reaction Network Diagram, using the Vue module "{COMPONENT_NAME}"',
 
 
 # Instantiate the simulator and specify the chemicals
-dynamics = ReactionDynamics(names=["A", "B"])
+dynamics = UniformCompartment(names=["A", "B"])
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 dynamics.add_reaction(reactants=["A"], products=["B"],

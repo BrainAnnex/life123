@@ -29,7 +29,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
@@ -52,7 +52,7 @@ GraphicLog.config(filename=log_file,
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = ReactionDynamics(names=["A", "C"])
+dynamics = UniformCompartment(names=["A", "C"])
 
 # Reaction 2A <-> C , with 2nd-order kinetics for A, and 1st-order kinetics for C
 dynamics.add_reaction(reactants=[(2, "A")], products="C",

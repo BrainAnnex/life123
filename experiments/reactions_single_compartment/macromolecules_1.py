@@ -23,7 +23,7 @@ import set_path      # Importing this module will add the project's home directo
 
 # %% tags=[]
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 from src.modules.movies.movies import MovieTabular
 
 import numpy as np
@@ -81,7 +81,7 @@ aff.Kd
 # ## Start setting up the dynamical system
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem)
+dynamics = UniformCompartment(chem_data=chem)
 
 # %%
 dynamics.set_macromolecules()      # By default, set counts to 1 for all the registered macromolecules

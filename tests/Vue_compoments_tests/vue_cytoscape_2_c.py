@@ -4,7 +4,7 @@ import pathlib
 from src.modules.html_log.html_log import HtmlLog as log
 from src.modules.visualization.graphic_log import GraphicLog
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 
 
 COMPONENT_NAME = "vue_cytoscape_2"           # *** CHANGE AS NEEDED ***
@@ -31,7 +31,7 @@ log.write(f'Reaction Network Diagram, using the Vue module "{COMPONENT_NAME}"',
 chem_data = ChemData(names=["A", "B", "C", "D", "E"],
                      diffusion_rates=[0.1, 0.2, 0.3, 0.4, 0.5])
 
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 
 
 # Reaction A + 2B <-> C , with 2nd-order kinetics in B

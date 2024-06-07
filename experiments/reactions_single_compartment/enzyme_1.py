@@ -23,7 +23,7 @@ import set_path      # Importing this module will add the project's home directo
 
 # %% tags=[]
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 
 # %% [markdown]
 # # 1. WITHOUT ENZYME
@@ -44,7 +44,7 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"A": 20., "B": 0.},
                   snapshot=True)
 dynamics.describe_state()
@@ -108,7 +108,7 @@ chem_data.describe_reactions()  # Notice how the enzyme `E` is noted in the prin
 # ### Set the initial concentrations of all the chemicals (to what they originally were)
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"A": 20., "B": 0., "E": 30.},
                   snapshot=True)      # Plenty of enzyme `E`
 dynamics.describe_state()

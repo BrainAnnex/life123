@@ -33,7 +33,7 @@ import set_path      # Importing this module will add the project's home directo
 import numpy as np
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 from src.modules.visualization.plotly_helper import PlotlyHelper
 from src.modules.visualization.graphic_log import GraphicLog
 
@@ -53,7 +53,7 @@ GraphicLog.config(filename=log_file,
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = ReactionDynamics(names=["A", "B"])
+dynamics = UniformCompartment(names=["A", "B"])
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 dynamics.add_reaction(reactants=["A"], products=["B"], 

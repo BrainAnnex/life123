@@ -30,7 +30,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 from src.modules.visualization.plotly_helper import PlotlyHelper
 
 # %%
@@ -41,7 +41,7 @@ from src.modules.visualization.plotly_helper import PlotlyHelper
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = ReactionDynamics(names=["A", "B", "C"])
+dynamics = UniformCompartment(names=["A", "B", "C"])
 
 # Reaction A <-> B (much slower, and with a much smaller K)
 dynamics.add_reaction(reactants="A", products="B",

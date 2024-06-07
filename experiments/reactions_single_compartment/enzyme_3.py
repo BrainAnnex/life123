@@ -35,7 +35,7 @@ import set_path      # Importing this module will add the project's home directo
 
 # %% tags=[]
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 from src.modules.movies.movies import MovieTabular
 
 import pandas as pd
@@ -63,7 +63,7 @@ chem_data.describe_reactions()     # Notice how the enzyme `E` is noted in the p
 # # 1. Set the initial concentrations of all the chemicals - starting with no enzyme
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"S": 20.},
                   snapshot=True)      # Initially, no enzyme `E`
 dynamics.describe_state()
@@ -113,7 +113,7 @@ dynamics.is_in_equilibrium(tolerance=2)
 # # 2. Re-start all the reactions from the same initial concentrations - except for now having a tiny amount of enzyme (two orders of magnitude less than the starting [S])
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
+dynamics = UniformCompartment(chem_data=chem_data)   # A brand-new simulation
 
 # %%
 dynamics.set_conc(conc={"S": 20., "E": 0.2},
@@ -154,7 +154,7 @@ dynamics.is_in_equilibrium()
 # # 3. Re-start all the reactions from the same initial concentrations - except for now having a more substantial amount of enzyme
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
+dynamics = UniformCompartment(chem_data=chem_data)   # A brand-new simulation
 
 # %%
 dynamics.set_conc(conc={"S": 20., "E": 1.},
@@ -195,7 +195,7 @@ dynamics.is_in_equilibrium(explain=False)
 # # 4. Re-start all the reactions from the same initial concentrations - except for now having a good amount of enzyme
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
+dynamics = UniformCompartment(chem_data=chem_data)   # A brand-new simulation
 
 # %%
 dynamics.set_conc(conc={"S": 20., "E": 5.},
@@ -236,7 +236,7 @@ dynamics.is_in_equilibrium(explain=False)
 # # 5. Re-start all the reactions from the same initial concentrations - except for now having a lot of enzyme (same as the initial [S])
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
+dynamics = UniformCompartment(chem_data=chem_data)   # A brand-new simulation
 
 # %%
 dynamics.set_conc(conc={"S": 20., "E": 20.},
@@ -277,7 +277,7 @@ dynamics.is_in_equilibrium(explain=False)
 # # 6. Re-start all the reactions from the same initial concentrations - except for now having a very large amount of enzyme (more than the initial substrate concentration [S])
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
+dynamics = UniformCompartment(chem_data=chem_data)   # A brand-new simulation
 
 # %%
 dynamics.set_conc(conc={"S": 20., "E": 30.},
@@ -318,7 +318,7 @@ dynamics.is_in_equilibrium(explain=False)
 # # 7. Finally, re-start all the reactions from the same initial concentrations - except for now having a huge amount of enzyme (far more than the initial [S])
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
+dynamics = UniformCompartment(chem_data=chem_data)   # A brand-new simulation
 
 # %%
 dynamics.set_conc(conc={"S": 20., "E": 100.},
@@ -359,7 +359,7 @@ dynamics.is_in_equilibrium(explain=False)
 # # 8. Finally, re-start all the reactions from the same initial concentrations - except for now having a LAVISH amount of enzyme (two orders of magnitude more than the starting substrate concentration [S])
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # A brand-new simulation  
+dynamics = UniformCompartment(chem_data=chem_data)   # A brand-new simulation
 
 # %%
 dynamics.set_conc(conc={"S": 20., "E": 2000.},

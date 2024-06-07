@@ -52,7 +52,7 @@ raise StopExecution     # See: https://stackoverflow.com/a/56953105/5478830
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData as chem
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 
 from src.modules.visualization.graphic_log import GraphicLog
 
@@ -110,7 +110,7 @@ initial_conc
 # Negative concentrations are automatically avoided, but nonetheless the plots are ragged... and the solutions are eventually unstable.
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 
@@ -179,7 +179,7 @@ dynamics.plot_history(chemicals=["A", "B", "C"])
 # (Note: the 1/2 substeps are on a per-reaction basis)
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
+dynamics = UniformCompartment(chem_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
 dynamics.set_conc(conc=initial_conc, snapshot=True) 
 dynamics.describe_state()
 

@@ -47,7 +47,7 @@ import set_path      # Importing this module will add the project's home directo
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.reaction_dynamics import UniformCompartment
 from src.modules.visualization.plotly_helper import PlotlyHelper
 
 from src.modules.visualization.graphic_log import GraphicLog
@@ -90,7 +90,7 @@ chem.plot_reaction_network("vue_cytoscape_2")
 # ## Run the simulation
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem, preset="fast")
+dynamics = UniformCompartment(chem_data=chem, preset="fast")
 
 dynamics.set_conc([50., 0, 0.], snapshot=True) # Set the initial concentrations of all the chemicals, in their index order
 dynamics.describe_state()
@@ -194,7 +194,7 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 # We'll use **constant steps of size 0.0005** , which is 1/4 of the smallest steps (the "substep" size) previously used in the variable-step run
 
 # %%
-dynamics2 = ReactionDynamics(chem_data=chem)  # Re-use the same chemicals and reactions of the previous simulation
+dynamics2 = UniformCompartment(chem_data=chem)  # Re-use the same chemicals and reactions of the previous simulation
 
 # %% tags=[]
 dynamics2.set_conc([50., 0, 0.], snapshot=True)
