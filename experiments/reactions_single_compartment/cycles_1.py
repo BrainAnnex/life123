@@ -90,7 +90,7 @@ initial_conc
 
 # %%
 
-# %% [markdown]
+# %% [markdown] tags=[] jp-MarkdownHeadingCollapsed=true
 # # Run # 1 : FIXED time resolution, with COARSE time steps - broken up in 3 time intervals    
 # (trial and error, not shown, reveals that increasing any of the time steps below, leads to "excessive time step" errors)
 
@@ -169,12 +169,15 @@ dynamics.is_in_equilibrium()
 # # Run # 2. VARIABLE time resolution
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="heavy_brakes")   # Note: OVER-WRITING the "dynamics" object
+dynamics = UniformCompartment(chem_data=chem_data, preset="fast")   # Note: OVER-WRITING the "dynamics" object  # heavy_brakes
 dynamics.set_conc(conc=initial_conc, snapshot=True) 
 dynamics.describe_state()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+# %%
+dynamics.set_thresholds(norm="norm_C", low=0, high=1.2, abort=2.0)
 
 # %%
 # These settings can be tweaked to make the time resolution finer or coarser
@@ -183,10 +186,10 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 #dynamics.set_step_factors(upshift=1.6, downshift=0.15, abort=0.08, error=0.05)    # upshift=1.6,           downshift=0.15, abort=0.05, error=0.05
 
 dynamics.single_compartment_react(initial_step=0.0001, target_end_time=8.0,
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True, explain_variable_steps=True)
 
 # %% [markdown] tags=[]
-# ### Notice we created 9,499 data points, a fair bit more than in run #1
+# ### Notice we created 2,551 data points, a fair bit less than in run #1
 
 # %%
 # dynamics.get_history()
@@ -196,7 +199,10 @@ dynamics.single_compartment_react(initial_step=0.0001, target_end_time=8.0,
 dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_history(chemicals=["A", "B", "C"])
+dynamics.plot_history(chemicals=["A", "B", "C"], show_intervals=True)
+
+# %%
+dynamics.get_history()
 
 # %% [markdown]
 # ### The two plots have 4 distinctive intersections among them; locate and save them:

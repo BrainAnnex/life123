@@ -66,7 +66,7 @@ dynamics.set_diagnostics()         # To save diagnostic information about the ca
 # Here we use a "mid" heuristic: neither too fast nor too prudent
 dynamics.use_adaptive_preset(preset="mid")
 
-dynamics.single_compartment_react(initial_step=0.01, reaction_duration=0.5,
+dynamics.single_compartment_react(initial_step=0.01, duration=0.5,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   variable_steps=True, explain_variable_steps=False)

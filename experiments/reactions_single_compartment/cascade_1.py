@@ -104,7 +104,7 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
 
-dynamics.single_compartment_react(initial_step=0.02, reaction_duration=0.4,
+dynamics.single_compartment_react(initial_step=0.02, duration=0.4,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   variable_steps=True, explain_variable_steps=False)
@@ -201,11 +201,11 @@ dynamics2.set_conc([50., 0, 0.], snapshot=True)
 
 # %%
 # Notice that we're using FIXED steps this time
-dynamics2.single_compartment_react(initial_step=0.0005, reaction_duration=0.4,
+dynamics2.single_compartment_react(initial_step=0.0005, duration=0.4,
                                    variable_steps=False,
                                    snapshots={"initial_caption": "1st reaction step",
                                               "final_caption": "last reaction step"},
-                                  )      
+                                   )
 
 # %%
 dynamics2.plot_history(title="Coupled reactions A <-> B and B <-> C , re-run with CONSTANT STEPS",

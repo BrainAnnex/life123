@@ -511,20 +511,39 @@ def test_norm_C():
     assert result == 0
 
     result = uc.norm_C(prev_conc=np.array([8]), baseline_conc=np.array([5]), delta_conc=np.array([4]))
-    assert np.allclose(result, [4/3])
+    assert np.isclose(result, 4/3)
 
     result = uc.norm_C(prev_conc=np.array([10]), baseline_conc=np.array([14]), delta_conc=np.array([-2]))
     assert result == 0
 
     result = uc.norm_C(prev_conc=np.array([10]), baseline_conc=np.array([14]), delta_conc=np.array([-5]))
-    assert np.allclose(result, [5/4])
+    assert np.isclose(result, 5/4)
 
     prev =     np.array([1,   8, 8, 10, 10])
     baseline = np.array([2,   5, 5, 14, 14])
     delta =    np.array([0.5, 1, 4, -2, -5])
     result = uc.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
+    assert np.isclose(result, 4/3 + 5/4)
 
-    assert np.allclose(result, 4/3 + 5/4)
+    # A scenario where the 'prev' and 'baseline' values are almost identical
+    prev = np.append(prev, 3)
+    baseline = np.append(baseline, 2.999999999)
+    delta = np.append(delta, 8)
+    result = uc.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
+    assert np.isclose(result, 4/3 + 5/4)
+
+    # A scenario where the 'delta' dwarfs the change between 'prev' and 'baseline'
+    prev = np.append(prev, 10)
+    baseline = np.append(baseline, 10.05)
+    delta = np.append(delta, -9)
+    result = uc.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
+    assert np.isclose(result, 4/3 + 5/4)
+
+    prev = np.append(prev, 10)
+    baseline = np.append(baseline, 10.1)
+    delta = np.append(delta, -9)
+    result = uc.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
+    assert np.isclose(result, 4/3 + 5/4 + 90)
 
 
 

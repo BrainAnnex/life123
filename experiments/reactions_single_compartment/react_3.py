@@ -96,7 +96,7 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 # Here we use a "fast" heuristic: advance quickly thru time
 dynamics.use_adaptive_preset(preset="fast")
 
-dynamics.single_compartment_react(initial_step=0.004, reaction_duration=0.06,
+dynamics.single_compartment_react(initial_step=0.004, duration=0.06,
                                   variable_steps=True, explain_variable_steps=False,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"})

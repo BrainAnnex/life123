@@ -736,12 +736,14 @@ class UniformCompartment:
         :param silent:              If True, less output is generated
 
         :param variable_steps:      If True, the steps sizes will get automatically adjusted, based on thresholds
-        :param explain_variable_steps:  If True, a description of the steps taken gets printed out
+        :param explain_variable_steps:  If True, a brief explanation is printed about how the variable step sizes were chosen;
+                                            only applicable if variable_steps is True
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
 
-        if not duration:
+        if reaction_duration and not duration:
+            print("single_compartment_react(): the argument `reaction_duration` is deprecated; use `duration` instead")
             duration = reaction_duration    # For backward compatibility.   TODO: phase out
 
         # Validation
@@ -847,7 +849,7 @@ class UniformCompartment:
                                               step_counter=step_count)
 
             # Update the System State
-            self.previous_system = self.system
+            self.previous_system = self.system.copy()
             self.system += delta_concentrations
             if min(self.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
                 print(f"+++++++++++ SYSTEM STATE ERROR: FAILED TO CATCH negative concentration upon advancing reactions from system time t={self.system_time:,.5g}")
@@ -931,7 +933,8 @@ class UniformCompartment:
                                     as a Numpy array for ALL the chemical species, in their index order.
                                     If not provided, self.system is used instead
         :param variable_steps:  If True, the step sizes will get automatically adjusted with an adaptive algorithm
-        :param explain_variable_steps:
+        :param explain_variable_steps:  If True, a brief explanation is printed about how the variable step sizes were chosen;
+                                            only applicable if variable_steps is True
         :param step_counter:
 
         :return:                The triplet:
@@ -963,14 +966,13 @@ class UniformCompartment:
 
         delta_concentrations = None
 
-        SMALLEST_VALUE_TO_TRY = delta_time / 1000.       # Used to prevent infinite loops
+        SMALLEST_VALUE_TO_TRY = delta_time / 2000.       # Used to prevent infinite loops
 
         normal_exit = False
 
         while delta_time > SMALLEST_VALUE_TO_TRY:       # TODO: consider moving the inside of the WHILE loop into a separate function
             try:    # We want to catch Exceptions that can arise from excessively large time steps
                     #   that lead to negative concentrations or violation of user-set thresholds ("HARD" or "SOFT" aborts)
-
                 (delta_concentrations, recommended_next_step) = \
                         self._attempt_reaction_step(delta_time, variable_steps, explain_variable_steps, step_counter)
                 normal_exit = True
@@ -1034,7 +1036,6 @@ class UniformCompartment:
 
         :return:                The pair (delta_concentrations, recommended_next_step)
         """
-
         # *****  CORE OPERATION  *****
         delta_concentrations = self._reaction_elemental_step(delta_time=delta_time, rxn_list=None)
 
@@ -1053,8 +1054,9 @@ class UniformCompartment:
             applicable_norms = decision_data['applicable_norms']
 
             if explain_variable_steps:
-                print(f"\n(STEP {step_counter}) ANALYSIS: Examining Conc. Changes from System Time {self.system_time:.5g} "
-                      f"due to tentative step of {delta_time:.5g}:")
+                print(f"\n(STEP {step_counter}) SYSTEM TIME {self.system_time:.5g} : Examining Conc. changes "
+                      f"due to tentative Δt={delta_time:.5g} ...")
+                print("    Previous: ", self.previous_system)
                 print("    Baseline: ", self.system)
                 print("    Deltas:   ", delta_concentrations)
 
@@ -1082,7 +1084,7 @@ class UniformCompartment:
                 if self.diagnostics:
                     # Expand the dict diagnostic_data_snapshot
                     diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
-                    diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
+                    diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')        # TODO: add 'norm_C'
                     diagnostic_data_snapshot['action'] = "ABORT"
                     diagnostic_data_snapshot['step_factor'] = step_factor
                     diagnostic_data_snapshot['time_step'] = delta_time
@@ -1108,19 +1110,20 @@ class UniformCompartment:
 
 
             if explain_variable_steps:
-                msg =   f"the tentative time step ({delta_time:.5g}) results in norm values that leads to the following:\n"
+                #msg =   f"the tentative time step ({delta_time:.5g}) results in norm values that lead to the following:\n"
+                msg = ""
 
                 if step_factor > 1:         # "INCREASE
-                    msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER, " \
+                    msg +=  f"    ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER, " \
                             f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because all norms are low"
                 elif step_factor < 1:     # "DECREASE"
-                    msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL SMALLER, " \
-                            f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because at least one norm is high"
+                    msg +=  f"    ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL SMALLER, " \
+                            f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because {applicable_norms} is high"
                 else:   # "STAY THE COURSE"
-                    msg +=  f"ACTION: COMPLETE NORMALLY - we're inside the target range.  No change to step size."
+                    msg +=  f"    ACTION: COMPLETE NORMALLY - we're inside the target range of all norms.  No change to step size."
 
-                msg += f"\n        [The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time:.5g}]"
-                print("NOTICE:", msg)
+                msg += f"\n    [The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time:.5g}]"
+                print("    NOTICE:", msg)
         # END if variable_steps
 
 
@@ -1226,17 +1229,22 @@ class UniformCompartment:
         D1 = baseline_conc - prev_conc
         D2 = delta_conc
 
+        print("******************************************* D1: ", D1)
+        print("******************************************* D2: ", D2)
+
         sign_flip = ((D1 >= 0) & (D2 < 0)) | ((D1 < 0) & (D2 >= 0))
 
-        criterion_met = sign_flip & (abs(D2) > abs(D1))
+        criterion_met = sign_flip & (abs(D2) > abs(D1)) & ~np.isclose(D1, 0) & (abs(D2) < 50 * abs(D1))
+        # Note: values with D1 very close to zero are ignored
+        #       likewise, values where |D2| dwarfs |D1| are ignored
         #print("criterion_met: ", criterion_met)
 
         # Use boolean indexing to select elements from delta1 where the criterion is True
         D1_selected = D1[criterion_met]
         D2_selected = D2[criterion_met]
 
-        #print("delta1_selected: ", D1_selected)
-        #print("delta2_selected: ", D2_selected)
+        print("******************************************* delta1_selected: ", D1_selected)
+        print("******************************************* delta2_selected: ", D2_selected)
 
         ratios = abs(D2_selected / D1_selected)
         #print(ratios)
@@ -1319,7 +1327,7 @@ class UniformCompartment:
                 #return ("high", self.step_factors["downshift"], all_norms)
 
             if all_small and ("low" in rule):
-                if result >= rule["low"]:
+                if result > rule["low"]:
                     all_small = False
 
 
@@ -1355,7 +1363,7 @@ class UniformCompartment:
         high = rule.get('high')
         abort = rule.get('abort')
 
-        if low is not None and value < low:
+        if low is not None and value <= low:
             # The value is below the `low` threshold
             return f"{s}(VALUE {value:.5g}) | low {low} | high {high} | abort {abort}"
 
@@ -2640,9 +2648,13 @@ class UniformCompartment:
                     "if not None, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
 
             vline_list = []
-            step = 1 + len(vertical_lines) // MAX_NUMBER_VERTICAL_LINES
-            if step > 1:
-                print(f"plot_curves() WARNING: Excessive number of vertical lines ({len(vertical_lines)}) - only showing 1 every {step} lines")
+            if xrange:
+                step = 1    # Always show all vertical lines if a range on the x-axis was specified
+            else:
+                # Possibly limit the number of vertical lines shown
+                step = 1 + len(vertical_lines) // MAX_NUMBER_VERTICAL_LINES
+                if step > 1:
+                    print(f"plot_curves() WARNING: Excessive number of vertical lines ({len(vertical_lines)}) - only showing 1 every {step} lines")
 
             for xi in vertical_lines[::step] :  # Notice that if step > 1 then we're sampling a subset of the elements
                 # The following is the internal data structure used by Plotly Express,

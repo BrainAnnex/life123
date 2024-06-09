@@ -80,7 +80,7 @@ dynamics.set_thresholds(norm="norm_B", low=0.2, high=0.5, abort=1.5)
 dynamics.set_step_factors(upshift=1.4, downshift=0.5, abort=0.5)
 dynamics.set_error_step_factor(0.333)
 
-dynamics.single_compartment_react(initial_step=0.0005, reaction_duration=0.015,
+dynamics.single_compartment_react(initial_step=0.0005, duration=0.015,
                                   variable_steps=True, explain_variable_steps=False)
 
 # %% [markdown]

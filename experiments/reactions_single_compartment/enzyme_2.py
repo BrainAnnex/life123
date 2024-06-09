@@ -65,7 +65,7 @@ dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4)
 dynamics.set_error_step_factor(0.25)
 
 # Perform the reactions
-dynamics.single_compartment_react(reaction_duration=0.25,
+dynamics.single_compartment_react(duration=0.25,
                                   initial_step=0.05, variable_steps=True, explain_variable_steps=False)
 
 # %%
@@ -90,7 +90,7 @@ dynamics.describe_state()
 # ### Take the system to equilibrium
 
 # %%
-dynamics.single_compartment_react(reaction_duration=0.04, 
+dynamics.single_compartment_react(duration=0.04,
                                   initial_step=0.005, variable_steps=True, explain_variable_steps=False)
 
 # %% [markdown]

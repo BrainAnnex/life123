@@ -65,7 +65,7 @@ dynamics.describe_state()
 # Here we use a "mid" heuristic: neither too fast nor too prudent
 dynamics.use_adaptive_preset(preset="mid")
 
-dynamics.single_compartment_react(initial_step=0.01, reaction_duration=0.8,
+dynamics.single_compartment_react(initial_step=0.01, duration=0.8,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
                                   variable_steps=True, explain_variable_steps=False)
