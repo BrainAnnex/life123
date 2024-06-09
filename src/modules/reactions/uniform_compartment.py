@@ -1054,7 +1054,12 @@ class UniformCompartment:
             applicable_norms = decision_data['applicable_norms']
 
             if explain_variable_steps:
-                print(f"\n(STEP {step_counter}) SYSTEM TIME {self.system_time:.5g} : Examining Conc. changes "
+                if action == "abort":
+                    step_status = "aborted"
+                else:
+                    step_status = "completed"
+
+                print(f"\n(STEP {step_counter} {step_status}) SYSTEM TIME {self.system_time:.5g} : Examining Conc. changes "
                       f"due to tentative Δt={delta_time:.5g} ...")
                 print("    Previous: ", self.previous_system)
                 print("    Baseline: ", self.system)
@@ -1257,9 +1262,9 @@ class UniformCompartment:
 
     def adjust_timestep(self, delta_conc: np.array, baseline_conc=None, prev_conc=None) -> dict:
         """
-        Computes some measures of the size of delta_concentrations, from the last step, in the context of the
-        baseline initial concentrations of that same step.
-        Propose a course of action about what to do for the next step.
+        Computes some measures of the change of concentrations, from the last step, in the context of the
+        baseline initial concentrations of that same step, and the concentrations in the step before that.
+        Based on the magnitude of the measures, propose a course of action about what to do for the next step.
 
         :param delta_conc:      A numpy array of changes in concentrations for the chemicals of interest,
                                     across a simulation time step (typically, the current step a run in progress)
@@ -1304,7 +1309,10 @@ class UniformCompartment:
 
         all_norms = {}
 
-        all_small = True
+        all_small = True            # Provisional answer to the question: "do ALL the rule yield a 'low'?"
+                                    # Any rule failing to yield a 'low' will flip this status
+
+        high_seen_at = []           # List of rule names at which a "high" is encountered, if applicable
 
         for rule in self.thresholds:
             norm_name = rule["norm"]
@@ -1319,23 +1327,27 @@ class UniformCompartment:
             all_norms[norm_name] = result
 
             if ("abort" in rule) and (result > rule["abort"]):
-                return {"action": "abort", "step_factor": self.step_factors["abort"], "norms": all_norms, "applicable_norms": norm_name}
-                #return ("abort", self.step_factors["abort"], all_norms)
+                # If any rules declares an abort, no need to proceed further: it's an abort
+                return {"action": "abort", "step_factor": self.step_factors["abort"], "norms": all_norms, "applicable_norms": [norm_name]}
 
             if ("high" in rule) and (result > rule["high"]):
-                return {"action": "high", "step_factor": self.step_factors["downshift"], "norms": all_norms, "applicable_norms": norm_name}
-                #return ("high", self.step_factors["downshift"], all_norms)
+                # If any rules declares a "high", still need to consider the other rules - in case any of them over-rides
+                # the "high" with an "abort"
+                high_seen_at.append(norm_name)
 
-            if all_small and ("low" in rule):
-                if result > rule["low"]:
-                    all_small = False
+                all_small = False
 
+            if all_small and ("low" in rule) and (result > rule["low"]):
+                all_small = False           # The assumed unanimity of 'low` yields got broken
+        # END for
+
+        if high_seen_at:
+            return {"action": "high", "step_factor": self.step_factors["downshift"], "norms": all_norms, "applicable_norms": high_seen_at}
 
         if all_small:
-            #return ("low", self.step_factors["upshift"], all_norms)
             return {"action": "low", "step_factor": self.step_factors["upshift"], "norms": all_norms, "applicable_norms": "ALL"}
 
-        #return ("stay", 1, all_norms)
+        # If we get thus far, none of the rules were found applicable
         return {"action": "stay", "step_factor": 1, "norms": all_norms, "applicable_norms": "ALL"}
 
 

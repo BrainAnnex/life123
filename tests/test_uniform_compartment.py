@@ -567,19 +567,25 @@ def test_adjust_timestep():
     uc.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4, error=0.25)
 
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85}, 'applicable_norms': 'norm_A'}
+    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85}, 'applicable_norms': ['norm_A']}
 
-    uc.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.86)     # normA (1.85) no longer triggers abort
+    uc.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.86)     # normA (1.85) no longer triggers abort, but normB (0.8) still does
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85}, 'applicable_norms': 'norm_A'}
+    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
+
+    uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.81)    # normB (0.8) no longer triggers abort, but triggers a high.
+                                                                        # normA (1.85) triggers a high, too
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_A', 'norm_B']}
 
     uc.set_thresholds(norm="norm_A", low=0.5, high=1.86, abort=1.87)    # normA (1.85) no longer triggers high nor abort
+    uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'norm_B'}
+    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
 
-    uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.81)    # normB (0.8) no longer triggers abort
+    uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.81)    # normB (0.8) no longer triggers abort, but still triggers a high
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'norm_B'}
+    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
 
     uc.set_thresholds(norm="norm_B", low=0.08, high=0.81, abort=0.81)    # normB (0.8) no longer triggers high nor abort
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
@@ -604,19 +610,19 @@ def test_adjust_timestep():
 
     uc.set_thresholds(norm="norm_C", low=2.57, high=2.58, abort=2.61)   # normC (2.583) will now trigger a "high"
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 2.583333333333333}, 'applicable_norms': 'norm_C'}
+    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 2.583333333333333}, 'applicable_norms': ['norm_C']}
 
     uc.set_thresholds(norm="norm_C", low=2.56, high=2.57, abort=2.58)   # normC (2.583) will now trigger an "abort"
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 2.583333333333333}, 'applicable_norms': 'norm_C'}
+    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 2.583333333333333}, 'applicable_norms': ['norm_C']}
 
     uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)    # normB (0.8) will now trigger an "abort" before we can even get to normC
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'norm_B'}
+    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
 
     uc.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.84)    # normA (1.85) will now trigger an "abort" before we can even get to normB
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85}, 'applicable_norms': 'norm_A'}
+    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85}, 'applicable_norms': ['norm_A']}
 
 
 
