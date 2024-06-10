@@ -122,6 +122,10 @@ class UniformCompartment:
         self.number_neg_concs = 0
         self.number_soft_aborts = 0
 
+        self.norm_usage = {"norm_A": 0, "norm_B": 0, "norm_C": 0, "norm_D": 0}  # Number of times that each norm
+                                                                                #   got involved in step-size decision
+
+
 
         # ***  FOR DIAGNOSTICS  ***     TODO: maybe turn all diagnostic data/methods into a separate object
 
@@ -521,7 +525,6 @@ class UniformCompartment:
         print("Parameters used for the automated adaptive time step sizes -")
         print("    THRESHOLDS: ", self.thresholds)
         print("    STEP FACTORS: ", self.step_factors)
-        #print("    STEP FACTOR in case of 'ERROR RE-DOs': ", self.error_abort_step_factor)
 
 
 
@@ -819,7 +822,7 @@ class UniformCompartment:
 
 
         step_count = 0
-        #while self.system_time < target_end_time:
+
         while True:
             # Check various criteria for termination
             if (max_steps is not None) and (step_count >= max_steps):
@@ -901,8 +904,10 @@ class UniformCompartment:
 
         if not silent:
             print(f"{n_steps_taken} total step(s) taken")
-            print(f"Number of step re-do's because of negative concentrations: {self.number_neg_concs}")
-            print(f"Number of step re-do's because of elective soft aborts: {self.number_soft_aborts}")
+            if variable_steps:
+                print(f"Number of step re-do's because of negative concentrations: {self.number_neg_concs}")
+                print(f"Number of step re-do's because of elective soft aborts: {self.number_soft_aborts}")
+                print(f"Norm usage:", self.norm_usage)
 
 
         if snapshots and "final_caption" in snapshots:
@@ -1185,19 +1190,19 @@ class UniformCompartment:
 
 
 
-
-
-    def norm_A(self, delta_conc: np.array) -> float:
+    # TODO -----------------------------------------------------------------------------
+    # TODO: move to separate static class, "ReactionDynamics"
+    def norm_A(self, delta_conc :np.array) -> float:
         """
         Return a measure of system change, based on the average concentration changes
-        of ALL chemicals across a time step, adjusted for the number of chemicals.
+        of ALL the specified chemicals across a time step, adjusted for the number of chemicals.
         A square-of-sums computation (the square of an L2 norm) is used.
 
         :param delta_conc:  A Numpy array with the concentration changes
                                 of the chemicals of interest across a time step
         :return:            A measure of change in the concentrations across the simulation step
         """
-        arr_size = len(delta_conc)
+        n_active_chemicals = len(delta_conc)
 
         # The following are normalized by the number of chemicals
         #L2_rate = np.linalg.norm(delta_concentrations) / n_chems
@@ -1205,7 +1210,7 @@ class UniformCompartment:
         #print("    L_inf norm:   ", np.linalg.norm(delta_concentrations, ord=np.inf) / delta_time)
         #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
 
-        adjusted_L2_rate = np.sum(delta_conc * delta_conc) / (arr_size * arr_size)
+        adjusted_L2_rate = np.sum(delta_conc * delta_conc) / (n_active_chemicals * n_active_chemicals)
         return adjusted_L2_rate
 
 
@@ -1328,6 +1333,7 @@ class UniformCompartment:
 
 
 
+    # TODO: move to separate static class
     def adjust_timestep(self, delta_conc: np.array, baseline_conc=None, prev_conc=None) -> dict:
         """
         Computes some measures of the change of concentrations, from the last step, in the context of the
@@ -1350,6 +1356,9 @@ class UniformCompartment:
                                     "applicable_norms" - The name of the norm that triggered the decision; if all norms were involved,
                                                             it will be "ALL"
         """
+        #TODO: pass the value of self.chem_data.indexes_of_active_chemicals() as argument
+        #      to this method
+
         n_chems = self.chem_data.number_of_chemicals()
 
         if baseline_conc is not None:
@@ -1372,8 +1381,8 @@ class UniformCompartment:
             #print(f"\nadjust_speed(): restricting adaptive time step analysis to {n_chems} chemicals only; their delta_conc is {delta_conc}")
             if baseline_conc is not None:
                 baseline_conc = baseline_conc[self.chem_data.indexes_of_active_chemicals()]
-                #print(f"    and their baseline_conc is {baseline_conc}")
-
+                prev_conc = prev_conc[self.chem_data.indexes_of_active_chemicals()]
+        # Note: setting delta_conc, etc, only affects local variables, and won't mess up the arrays passed as arguments
 
         all_norms = {}
 
@@ -1398,6 +1407,7 @@ class UniformCompartment:
 
             if ("abort" in rule) and (result > rule["abort"]):
                 # If any rules declares an abort, no need to proceed further: it's an abort
+                self.norm_usage[norm_name] += 1
                 return {"action": "abort", "step_factor": self.step_factors["abort"], "norms": all_norms, "applicable_norms": [norm_name]}
 
             if ("high" in rule) and (result > rule["high"]):
@@ -1412,7 +1422,14 @@ class UniformCompartment:
 
 
         if high_seen_at:
+            for n in high_seen_at:
+                self.norm_usage[n] += 1
             return {"action": "high", "step_factor": self.step_factors["downshift"], "norms": all_norms, "applicable_norms": high_seen_at}
+
+
+        # If we get thus far, all of the norms were used
+        for i in self.norm_usage:
+            self.norm_usage[i] += 1
 
         if all_small:
             return {"action": "low", "step_factor": self.step_factors["upshift"], "norms": all_norms, "applicable_norms": "ALL"}
