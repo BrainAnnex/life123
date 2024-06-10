@@ -547,6 +547,16 @@ def test_norm_C():
 
 
 
+def test_norm_D():
+    uc = UniformCompartment()
+    prev =     np.array([ 12.96672432,  31.10067726,  55.93259842,  44.72389482, 955.27610518])
+    baseline = np.array([ 12.99244738,  31.04428765,  55.96326497,  43.91117372, 956.08882628])
+    delta =    np.array([-2.56160549,   -0.03542113,   2.59702662,   1.36089356,  -1.36089356])
+    result = uc.norm_D(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
+    assert np.isclose(result, 37.64942285399873)
+
+
+
 def test_adjust_timestep():
     uc = UniformCompartment(names=["C1", "C2", "C3", "C4", "C5"])
     prev =     np.array([1,   8, 8, 10, 10])

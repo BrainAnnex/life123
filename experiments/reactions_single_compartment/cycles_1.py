@@ -90,7 +90,7 @@ initial_conc
 
 # %%
 
-# %% [markdown] tags=[] jp-MarkdownHeadingCollapsed=true tags=[] jp-MarkdownHeadingCollapsed=true jp-MarkdownHeadingCollapsed=true tags=[] jp-MarkdownHeadingCollapsed=true jp-MarkdownHeadingCollapsed=true tags=[]
+# %% [markdown] tags=[] jp-MarkdownHeadingCollapsed=true tags=[] jp-MarkdownHeadingCollapsed=true jp-MarkdownHeadingCollapsed=true tags=[] jp-MarkdownHeadingCollapsed=true jp-MarkdownHeadingCollapsed=true tags=[] jp-MarkdownHeadingCollapsed=true
 # # Run # 1 : FIXED time resolution, with COARSE time steps - broken up in 3 time intervals    
 # (trial and error, not shown, reveals that increasing any of the time steps below, leads to "excessive time step" errors)
 
@@ -173,30 +173,33 @@ dynamics.is_in_equilibrium()
 # # Run # 2. VARIABLE time resolution
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="fast")   # Note: OVER-WRITING the "dynamics" object  # heavy_brakes
+dynamics = UniformCompartment(chem_data=chem_data, preset="mid_inclusive")   # Note: OVER-WRITING the "dynamics" object  # heavy_brakes
 dynamics.set_conc(conc=initial_conc, snapshot=True) 
 dynamics.describe_state()
 
 # %%
-dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+#dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %%
-dynamics.set_thresholds(norm="norm_C", low=0.5, high=1.2, abort=2.0)
+#dynamics.set_thresholds(norm="norm_C", low=0.5, high=1.2, abort=1.6)
+#dynamics.set_thresholds(norm="norm_D", low=1.3, high=1.7, abort=1.8)
 
 # %%
-dynamics.set_thresholds(norm="norm_D", low=1.3, high=1.8, abort=2.3)
+#dynamics.set_thresholds(norm="norm_A", low=0.2, high=0.8, abort=1.44)
+#dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
 
 # %%
-# These settings can be tweaked to make the time resolution finer or coarser
-#dynamics.set_thresholds(norm="norm_A", low=0.02, high=0.025, abort=0.03)          # low=0.01, high=0.012, abort=0.015
-#dynamics.set_thresholds(norm="norm_B", low=0.05, high=1.0, abort=2.0)          # low=0.002, high=0.4, abort=0.5                   low=0.008, high=0.6, abort=0.8
-#dynamics.set_step_factors(upshift=1.6, downshift=0.15, abort=0.08, error=0.05)    # upshift=1.6,           downshift=0.15, abort=0.05, error=0.05
+dynamics.show_adaptive_parameters()
 
+# %%
+#dynamics.set_step_factors(upshift=1.1, downshift=0.5, abort=0.4, error=0.25)
+
+# %%
 dynamics.single_compartment_react(initial_step=0.0001, target_end_time=8.0,
-                                  variable_steps=True, explain_variable_steps=[0, 0.1])
+                                  variable_steps=True, explain_variable_steps=None)
 
 # %% [markdown] tags=[]
-# ### Notice we created 2,551 data points, a fair bit less than in run #1
+# ### Notice we created 1,911 data points, a good deal less than in run #1
 
 # %%
 # dynamics.get_history()
@@ -206,10 +209,10 @@ dynamics.single_compartment_react(initial_step=0.0001, target_end_time=8.0,
 dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_history(chemicals=["A", "B", "C"], show_intervals=True)
+dynamics.plot_history(chemicals=["A", "B", "C"])
 
 # %%
-dynamics.plot_history(chemicals=["A", "B", "C"], show_intervals=True, xrange=[3.41, 3.51])
+dynamics.plot_history(chemicals=["A", "B", "C"], show_intervals=True, xrange=[3.2, 3.5])
 
 # %%
 dynamics.get_history()

@@ -119,6 +119,8 @@ class UniformCompartment:
 
         self.use_adaptive_preset(preset)
 
+        self.number_neg_concs = 0
+        self.number_soft_aborts = 0
 
 
         # ***  FOR DIAGNOSTICS  ***     TODO: maybe turn all diagnostic data/methods into a separate object
@@ -507,12 +509,6 @@ class UniformCompartment:
         print("\n\n**************  set_error_step_factor() is DEPRECATED : use set_step_factors() instead  **************\n\n")
 
         self.set_step_factors(error=value)
-        '''
-        assert value < 1, "set_error_step_factor(): the argument must strictly be < 1"
-        assert value > 0, "set_error_step_factor(): the argument must be a non-zero positive number"
-
-        self.error_abort_step_factor = value
-        '''
 
 
 
@@ -573,9 +569,16 @@ class UniformCompartment:
                                {"norm": "norm_B", "low": 0.15, "high": 0.8, "abort": 1.8}]
             self.step_factors = {"upshift": 1.5, "downshift": 0.8, "abort": 0.6, "error": 0.5}
 
+        elif preset == "mid_inclusive": # A "middle-of-the road" heuristic that makes use of more norms
+            self.thresholds = [{'norm': 'norm_A', 'low': 0.2, 'high': 0.8, 'abort': 1.44},
+                               {'norm': 'norm_B', 'low': 0.08, 'high': 0.5, 'abort': 1.5},
+                               {'norm': 'norm_C', 'low': 0.5, 'high': 1.2, 'abort': 1.6},
+                               {'norm': 'norm_D', 'low': 1.3, 'high': 1.7, 'abort': 1.8}]
+            self.step_factors = {'upshift': 1.1, 'downshift': 0.5, 'abort': 0.4, 'error': 0.25}
+
         else:
             raise Exception(f"set_adaptive_parameters(): unknown value for the `preset` argument ({preset}); "
-                            f"allowed values are 'heavy_brakes', 'slower', 'slow', 'mid', 'fast'")
+                            f"allowed values are 'heavy_brakes', 'slower', 'slow', 'mid', 'fast', 'mid_inclusive'")
 
 
 
@@ -898,6 +901,8 @@ class UniformCompartment:
 
         if not silent:
             print(f"{n_steps_taken} total step(s) taken")
+            print(f"Number of step re-do's because of negative concentrations: {self.number_neg_concs}")
+            print(f"Number of step re-do's because of elective soft aborts: {self.number_soft_aborts}")
 
 
         if snapshots and "final_caption" in snapshots:
@@ -993,9 +998,11 @@ class UniformCompartment:
                 #       1. negative concentrations from any one reaction - caught by  validate_increment()
                 #       2. negative concentration from the combined effect of multiple reactions - caught in this function
                 #print("*** CAUGHT a HARD ABORT")
-                print(ex)
+                self.number_neg_concs += 1
+                if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
+                    print(ex)
+
                 delta_time *= self.step_factors["error"]       # Reduce the excessive time step by a pre-set factor
-                #delta_time *= self.error_abort_step_factor
                 recommended_next_step = delta_time
                 # At this point, the loop will generally try the simulation again, with a smaller step (a revised delta_time)
 
@@ -1006,7 +1013,9 @@ class UniformCompartment:
                 # under the following scenario:
                 #       3. excessive norm(s) measures in the overall step - caught in this function (currently only checked in case of the variable-steps option)
                 #print("*** CAUGHT a soft ABORT")
-                print(ex)
+                self.number_soft_aborts += 1
+                if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
+                    print(ex)
                 delta_time *= self.step_factors["abort"]       # Reduce the excessive time step by a pre-set factor
                 recommended_next_step = delta_time
                 # At this point, the loop will generally try the simulation again, with a smaller step (a revised delta_time)
@@ -1149,9 +1158,10 @@ class UniformCompartment:
         # if so, raised an "ExcessiveTimeStepHard" exception (a custom exception)
         tentative_updated_system = self.system + delta_concentrations
         if min(tentative_updated_system) < 0:
-            print(f"*** CAUTION: negative concentration resulting from the combined effect of all reactions, "
-                  f"upon advancing reactions from system time t={self.system_time:,.5g}\n"
-                  f"         It'll be AUTOMATICALLY CORRECTED with a reduction in time step size")
+            if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
+                print(f"*** CAUTION: negative concentration resulting from the combined effect of all reactions, "
+                      f"upon advancing reactions from system time t={self.system_time:,.5g}\n"
+                      f"         It'll be AUTOMATICALLY CORRECTED with a reduction in time step size")
 
             # A type of HARD ABORT is detected (a negative concentration resulting from the combined effect of all reactions)
             if self.diagnostics:
@@ -1290,10 +1300,10 @@ class UniformCompartment:
         D1 = baseline_conc - prev_conc
         D2 = delta_conc
 
-        #print("norm_D ****** D1: ", D1)
+        #print("\nnorm_D ****** D1: ", D1)
         #print("norm_D ****** D2: ", D2)
 
-        criterion_met = ~np.isclose(D1, 0) & (abs(D2) < 50 * abs(D1))
+        criterion_met = ~np.isclose(D1, 0) & (abs(D2) < 100 * abs(D1))
         # Note: values with D1 very close to zero are ignored
         #       likewise, values where |D2| dwarfs |D1| are ignored
         #print("criterion_met: ", criterion_met)
@@ -1669,8 +1679,8 @@ class UniformCompartment:
         :return:                        None (an Exception is raised if a negative concentration is detected)
         """
         if (baseline_conc + delta_conc) < 0:
-            print(f"\n*** CAUTION: negative concentration in chemical `{self.chem_data.get_name(species_index)}` in step starting at t={self.system_time:.4g}.  "
-                  f"It will be AUTOMATICALLY CORRECTED with a reduction in time step size, as follows:")
+            #print(f"\n*** CAUTION: negative concentration in chemical `{self.chem_data.get_name(species_index)}` in step starting at t={self.system_time:.4g}.  "
+            #      f"It will be AUTOMATICALLY CORRECTED with a reduction in time step size, as follows:")
 
             # A type of HARD ABORT is detected (a single reaction that, by itself, would lead to a negative concentration;
             #   while it's possible that other coupled reactions might counterbalance this - nonetheless, it's taken as a sign of excessive step size)
