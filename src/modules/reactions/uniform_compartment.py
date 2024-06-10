@@ -690,7 +690,7 @@ class UniformCompartment:
     def single_compartment_react(self, duration=None, target_end_time=None, stop=None,
                                  initial_step=None, n_steps=None, max_steps=None,
                                  snapshots=None, silent=False,
-                                 variable_steps=True, explain_variable_steps=False,
+                                 variable_steps=True, explain_variable_steps=None,
                                  reaction_duration=None) -> None:
         """
         Perform ALL the reactions in the single compartment -
@@ -736,7 +736,8 @@ class UniformCompartment:
         :param silent:              If True, less output is generated
 
         :param variable_steps:      If True, the steps sizes will get automatically adjusted, based on thresholds
-        :param explain_variable_steps:  If True, a brief explanation is printed about how the variable step sizes were chosen;
+        :param explain_variable_steps:  If not None, a brief explanation is printed about how the variable step sizes were chosen,
+                                            when the System time inside that range;
                                             only applicable if variable_steps is True
 
         :return:                None.   The object attributes self.system and self.system_time get updated
@@ -905,7 +906,7 @@ class UniformCompartment:
 
 
     def reaction_step_common(self, delta_time: float, conc_array=None,
-                             variable_steps=False, explain_variable_steps=False, step_counter=1) -> (np.array, float, float):
+                             variable_steps=False, explain_variable_steps=None, step_counter=1) -> (np.array, float, float):
         """
         This is the common entry point for both single-compartment reactions,
         and the reaction part of reaction-diffusions in 1D, 2D and 3D.
@@ -933,7 +934,8 @@ class UniformCompartment:
                                     as a Numpy array for ALL the chemical species, in their index order.
                                     If not provided, self.system is used instead
         :param variable_steps:  If True, the step sizes will get automatically adjusted with an adaptive algorithm
-        :param explain_variable_steps:  If True, a brief explanation is printed about how the variable step sizes were chosen;
+        :param explain_variable_steps:  If not None, a brief explanation is printed about how the variable step sizes were chosen,
+                                            when the System time inside that range;
                                             only applicable if variable_steps is True
         :param step_counter:
 
@@ -956,9 +958,13 @@ class UniformCompartment:
                                         "the concentration values of the various chemicals must be set first"
 
 
-        if 2 in self.verbose_list:
-            print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_common() with:")
-            print(f"             delta_time={delta_time}, system={self.system}, ")
+        if explain_variable_steps is not None:
+            assert (type(explain_variable_steps) == list) and (len(explain_variable_steps) == 2), \
+                "reaction_step_common(): the argument `explain_variable_steps`, if provided, must be a pair of numbers [t_start, t_end]"
+
+
+        #print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_common() with:")
+        #print(f"             delta_time={delta_time}, system={self.system}, ")
 
 
         recommended_next_step = delta_time     # Baseline value; no reason yet to suggest a change in step size
@@ -1029,9 +1035,10 @@ class UniformCompartment:
 
         :param delta_time:              The requested time duration of the reaction step
         :param variable_steps:          If True, the step sizes will get automatically adjusted with an adaptive algorithm
-        :param explain_variable_steps:  If True, a brief explanation is printed about how the variable step sizes were chosen;
+        :param explain_variable_steps:  If not None, a brief explanation is printed about how the variable step sizes were chosen,
+                                            when the System time inside that range;
                                             only applicable if variable_steps is True
-        :param step_counter:            A number to show in the explanations about the variable step sizes;
+        :param step_counter:            A pair with a time range inside which to show in the explanations about the variable step sizes;
                                             only applicable if explain_variable_steps is True
 
         :return:                The pair (delta_concentrations, recommended_next_step)
@@ -1053,7 +1060,7 @@ class UniformCompartment:
             all_norms = decision_data['norms']
             applicable_norms = decision_data['applicable_norms']
 
-            if explain_variable_steps:
+            if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
                 if action == "abort":
                     step_status = "aborted"
                 else:
@@ -1074,7 +1081,9 @@ class UniformCompartment:
                 for rule in self.thresholds:
                     print(self.display_thresholds(rule, all_norms.get(rule['norm'])))
 
-                print("    Step Factors:    ", self.step_factors)
+                if action != "stay":    # The step is trivially 1 when the action is "stay"
+                    print("    Step Factors:    ", self.step_factors)
+
                 print(f"    => Action: '{action.upper()}'  (with step size factor of {step_factor})")
 
 
@@ -1114,21 +1123,21 @@ class UniformCompartment:
                 diagnostic_data_snapshot['time_step'] = delta_time
 
 
-            if explain_variable_steps:
+            if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
                 #msg =   f"the tentative time step ({delta_time:.5g}) results in norm values that lead to the following:\n"
-                msg = ""
+                msg = "    "
 
                 if step_factor > 1:         # "INCREASE
-                    msg +=  f"    ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER, " \
+                    msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER, " \
                             f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because all norms are low"
                 elif step_factor < 1:     # "DECREASE"
-                    msg +=  f"    ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL SMALLER, " \
+                    msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL SMALLER, " \
                             f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because {applicable_norms} is high"
                 else:   # "STAY THE COURSE"
-                    msg +=  f"    ACTION: COMPLETE NORMALLY - we're inside the target range of all norms.  No change to step size."
+                    msg +=  f"ACTION: COMPLETE NORMALLY - we're inside the target range of all norms.  No change to step size."
 
                 msg += f"\n    [The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time:.5g}]"
-                print("    NOTICE:", msg)
+                print(msg)
         # END if variable_steps
 
 
@@ -1186,7 +1195,7 @@ class UniformCompartment:
         #print("    L_inf norm:   ", np.linalg.norm(delta_concentrations, ord=np.inf) / delta_time)
         #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
 
-        adjusted_L2_rate = np.sum(delta_conc * delta_conc) / (arr_size * arr_size)   # The square of the rate above
+        adjusted_L2_rate = np.sum(delta_conc * delta_conc) / (arr_size * arr_size)
         return adjusted_L2_rate
 
 
@@ -1234,12 +1243,13 @@ class UniformCompartment:
         D1 = baseline_conc - prev_conc
         D2 = delta_conc
 
-        print("******************************************* D1: ", D1)
-        print("******************************************* D2: ", D2)
+        #print("****** D1: ", D1)
+        #print("****** D2: ", D2)
 
         sign_flip = ((D1 >= 0) & (D2 < 0)) | ((D1 < 0) & (D2 >= 0))
 
         criterion_met = sign_flip & (abs(D2) > abs(D1)) & ~np.isclose(D1, 0) & (abs(D2) < 50 * abs(D1))
+        #criterion_met = sign_flip & ~np.isclose(D1, 0) & (abs(D2) < 50 * abs(D1))
         # Note: values with D1 very close to zero are ignored
         #       likewise, values where |D2| dwarfs |D1| are ignored
         #print("criterion_met: ", criterion_met)
@@ -1248,15 +1258,63 @@ class UniformCompartment:
         D1_selected = D1[criterion_met]
         D2_selected = D2[criterion_met]
 
-        print("******************************************* delta1_selected: ", D1_selected)
-        print("******************************************* delta2_selected: ", D2_selected)
+        #print("**** delta1_selected: ", D1_selected)
+        #print("*** delta2_selected: ", D2_selected)
+
+        ratios = abs(D2_selected / D1_selected)
+        #print(ratios)
+
+        if len(ratios) == 0:
+            return 0
+        else:
+            return np.max(ratios)    # An argument might be made for taking the avg SUM instead
+
+
+
+    def norm_D(self, prev_conc: np.array, baseline_conc: np.array, delta_conc: np.array) -> float:
+        """
+        Return a measure of curvature in the concentration vs. time curves; larger values might be heralding
+        onset of simulation instability
+
+        :param prev_conc:       A numpy array with the concentration of the chemicals of interest,
+                                    in the step prior to the current one (i.e. an "archive" value)
+        :param baseline_conc:   A Numpy array with the concentration of the chemicals of interest
+                                    at the start of a simulation time step
+        :param delta_conc:      A Numpy array with the concentration changes
+                                    of the chemicals of interest across a time step
+        :return:
+        """
+        if prev_conc is None:
+            return 0            # Unable to compute a norm; 0 represents "perfect"
+
+        D1 = baseline_conc - prev_conc
+        D2 = delta_conc
+
+        #print("norm_D ****** D1: ", D1)
+        #print("norm_D ****** D2: ", D2)
+
+        criterion_met = ~np.isclose(D1, 0) & (abs(D2) < 50 * abs(D1))
+        # Note: values with D1 very close to zero are ignored
+        #       likewise, values where |D2| dwarfs |D1| are ignored
+        #print("criterion_met: ", criterion_met)
+
+        # Use boolean indexing to select elements from delta1 where the criterion is True
+        D1_selected = D1[criterion_met]
+        D2_selected = D2[criterion_met]
+
+        #print("norm_D **** delta1_selected: ", D1_selected)
+        #print("norm_D *** delta2_selected: ", D2_selected)
 
         ratios = abs(D2_selected / D1_selected)
         #print(ratios)
 
         res = np.sum(ratios)    # An argument might be made for taking the MAX instead
 
-        return res
+        arr_size = len(baseline_conc)
+
+        normalized_res = res / arr_size
+        #print("norm_D *** : ", normalized_res)
+        return normalized_res
 
 
 
@@ -1321,8 +1379,10 @@ class UniformCompartment:
                 result = self.norm_A(delta_conc)
             elif norm_name == "norm_B":
                 result = self.norm_B(baseline_conc, delta_conc)
-            else:
+            elif norm_name == "norm_C":
                 result = self.norm_C(prev_conc, baseline_conc, delta_conc)
+            else:
+                result = self.norm_D(prev_conc, baseline_conc, delta_conc)
 
             all_norms[norm_name] = result
 
@@ -1334,12 +1394,12 @@ class UniformCompartment:
                 # If any rules declares a "high", still need to consider the other rules - in case any of them over-rides
                 # the "high" with an "abort"
                 high_seen_at.append(norm_name)
-
-                all_small = False
+                all_small = False           # No longer the case of all 'low` yields
 
             if all_small and ("low" in rule) and (result > rule["low"]):
-                all_small = False           # The assumed unanimity of 'low` yields got broken
+                all_small = False           # No longer the case of all 'low` yields
         # END for
+
 
         if high_seen_at:
             return {"action": "high", "step_factor": self.step_factors["downshift"], "norms": all_norms, "applicable_norms": high_seen_at}
@@ -1349,7 +1409,6 @@ class UniformCompartment:
 
         # If we get thus far, none of the rules were found applicable
         return {"action": "stay", "step_factor": 1, "norms": all_norms, "applicable_norms": "ALL"}
-
 
 
 

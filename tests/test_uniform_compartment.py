@@ -540,10 +540,10 @@ def test_norm_C():
     assert np.isclose(result, 4/3 + 5/4)
 
     prev = np.append(prev, 10)
-    baseline = np.append(baseline, 10.1)
+    baseline = np.append(baseline, 10.2)
     delta = np.append(delta, -9)
     result = uc.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
-    assert np.isclose(result, 4/3 + 5/4 + 90)
+    assert np.isclose(result, 4/3 + 5/4 + 45)
 
 
 
