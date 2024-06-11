@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.uniform_compartment import UniformCompartment
+from src.modules.reactions.uniform_compartment import UniformCompartment, RxnDynamics
 from src.modules.movies.movies import MovieTabular
 
 
@@ -445,132 +445,22 @@ def test_single_compartment_correct_neg_conc_1():
 ###########################  LOWER-LEVEL METHODS  ###########################
 
 
-def test_norm_A():
-    uc = UniformCompartment()
-
-    delta_conc = np.array([1, 4])
-    result = uc.norm_A(delta_conc)
-    assert np.allclose(result, 4.25)
-
-    delta_conc = np.array([.5, 2])
-    result = uc.norm_A(delta_conc)
-    assert np.allclose(result, 1.0625)
-
-    delta_conc = np.array([.5, 2, 1])
-    result = uc.norm_A(delta_conc)
-    assert np.allclose(result, 0.5833333333)
-
-    delta =    np.array([0.5, 1, 4, -2, -5])
-    result = uc.norm_A(delta_conc=delta)
-    assert np.allclose(result, 1.85)
-
-
-
-def test_norm_B():
-    uc = UniformCompartment()
-
-    delta = np.array([4, -1])
-    base = np.array([10, 2])
-    result = uc.norm_B(baseline_conc=base, delta_conc=delta)
-    assert np.allclose(result, 0.5)
-
-    base = np.array([10, 0])
-    result = uc.norm_B(baseline_conc=base, delta_conc=delta)
-    assert np.allclose(result, 0.4)     # The zero baseline concentration is disregarded
-
-    delta = np.array([300,        6, 0, -1])
-    base = np.array([0.00000001, 10, 0,  2])
-    result = uc.norm_B(baseline_conc=base, delta_conc=delta)
-    assert np.allclose(result, 0.6)
-
-    delta = np.array([300,   6, 0, -1])
-    base = np.array([0.001, 10, 0,  2])
-    result = uc.norm_B(baseline_conc=base, delta_conc=delta)
-    assert np.allclose(result, 300000)
-
-    base = np.array([2,   5, 5, 14, 14])
-    delta = np.array([0.5, 1, 4, -2, -5])
-    result = uc.norm_B(baseline_conc=base, delta_conc=delta)
-    assert np.allclose(result, 0.8)
-
-    with pytest.raises(Exception):
-        uc.norm_B(baseline_conc=np.array([1, 2, 3]), delta_conc=delta) # Too many entries in array
-
-    with pytest.raises(Exception):
-        uc.norm_B(baseline_conc=base, delta_conc=np.array([1]))        # Too few entries in array
-
-
-
-def test_norm_C():
-    uc = UniformCompartment()
-
-    result = uc.norm_C(prev_conc=np.array([1]), baseline_conc=np.array([2]), delta_conc=np.array([0.5]))
-    assert result == 0
-
-    result = uc.norm_C(prev_conc=np.array([8]), baseline_conc=np.array([5]), delta_conc=np.array([1]))
-    assert result == 0
-
-    result = uc.norm_C(prev_conc=np.array([8]), baseline_conc=np.array([5]), delta_conc=np.array([4]))
-    assert np.isclose(result, 4/3)
-
-    result = uc.norm_C(prev_conc=np.array([10]), baseline_conc=np.array([14]), delta_conc=np.array([-2]))
-    assert result == 0
-
-    result = uc.norm_C(prev_conc=np.array([10]), baseline_conc=np.array([14]), delta_conc=np.array([-5]))
-    assert np.isclose(result, 5/4)
-
-    prev =     np.array([1,   8, 8, 10, 10])
-    baseline = np.array([2,   5, 5, 14, 14])
-    delta =    np.array([0.5, 1, 4, -2, -5])
-    result = uc.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
-    assert np.isclose(result, 4/3 + 5/4)
-
-    # A scenario where the 'prev' and 'baseline' values are almost identical
-    prev = np.append(prev, 3)
-    baseline = np.append(baseline, 2.999999999)
-    delta = np.append(delta, 8)
-    result = uc.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
-    assert np.isclose(result, 4/3 + 5/4)
-
-    # A scenario where the 'delta' dwarfs the change between 'prev' and 'baseline'
-    prev = np.append(prev, 10)
-    baseline = np.append(baseline, 10.05)
-    delta = np.append(delta, -9)
-    result = uc.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
-    assert np.isclose(result, 4/3 + 5/4)
-
-    prev = np.append(prev, 10)
-    baseline = np.append(baseline, 10.2)
-    delta = np.append(delta, -9)
-    result = uc.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
-    assert np.isclose(result, 4/3 + 5/4 + 45)
-
-
-
-def test_norm_D():
-    uc = UniformCompartment()
-    prev =     np.array([ 12.96672432,  31.10067726,  55.93259842,  44.72389482, 955.27610518])
-    baseline = np.array([ 12.99244738,  31.04428765,  55.96326497,  43.91117372, 956.08882628])
-    delta =    np.array([-2.56160549,   -0.03542113,   2.59702662,   1.36089356,  -1.36089356])
-    result = uc.norm_D(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
-    assert np.isclose(result, 37.64942285399873)
-
-
-
 def test_adjust_timestep():
     uc = UniformCompartment(names=["C1", "C2", "C3", "C4", "C5"])
     prev =     np.array([1,   8, 8, 10, 10])
     baseline = np.array([2,   5, 5, 14, 14])
     delta =    np.array([0.5, 1, 4, -2, -5])
 
-    normA = uc.norm_A(delta_conc=delta)
+    normA = RxnDynamics.norm_A(delta_conc=delta)
     assert np.allclose(normA, 1.85)
 
-    normB = uc.norm_B(baseline_conc=baseline, delta_conc=delta)
+    normB = RxnDynamics.norm_B(baseline_conc=baseline, delta_conc=delta)
     assert np.allclose(normB, 0.8)
 
-    normC = uc.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
-    assert np.allclose(normC, 2.583333333333333)        # 4/3 + 5/4
+    normC = RxnDynamics.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
+    assert np.allclose(normC, 4/3)
+
+    # TODO: also test norm_D
 
     uc.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.84)
     uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)
@@ -610,21 +500,21 @@ def test_adjust_timestep():
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
     assert result == {'action': 'low', 'step_factor': 1.2, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
 
-    uc.set_thresholds(norm="norm_C", low=2.59, high=2.60, abort=2.61)   # normC (2.583) will still continue to trigger a "low"
+    uc.set_thresholds(norm="norm_C", low=1.34, high=2.60, abort=2.61)   # normC (1.333) will still continue to trigger a "low"
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'low', 'step_factor': 1.2, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 2.583333333333333}, 'applicable_norms': 'ALL'}
+    assert result == {'action': 'low', 'step_factor': 1.2, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': 'ALL'}
 
-    uc.set_thresholds(norm="norm_C", low=2.58, high=2.60, abort=2.61)   # normC (2.583) will no longer trigger a "low" - but not a "high" nor an "abort"
+    uc.set_thresholds(norm="norm_C", low=1.32, high=2.60, abort=2.61)   # normC (1.333) will no longer trigger a "low" - but not a "high" nor an "abort"
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 2.583333333333333}, 'applicable_norms': 'ALL'}
+    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': 'ALL'}
 
-    uc.set_thresholds(norm="norm_C", low=2.57, high=2.58, abort=2.61)   # normC (2.583) will now trigger a "high"
+    uc.set_thresholds(norm="norm_C", low=1.3, high=1.32, abort=2.61)   # normC (1.333) will now trigger a "high"
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 2.583333333333333}, 'applicable_norms': ['norm_C']}
+    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': ['norm_C']}
 
-    uc.set_thresholds(norm="norm_C", low=2.56, high=2.57, abort=2.58)   # normC (2.583) will now trigger an "abort"
+    uc.set_thresholds(norm="norm_C", low=1, high=1.31, abort=1.32)   # normC (1.333) will now trigger an "abort"
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 2.583333333333333}, 'applicable_norms': ['norm_C']}
+    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': ['norm_C']}
 
     uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)    # normB (0.8) will now trigger an "abort" before we can even get to normC
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)

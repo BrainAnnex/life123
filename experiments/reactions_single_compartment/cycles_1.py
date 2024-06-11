@@ -14,15 +14,15 @@
 # ---
 
 # %% [markdown]
-# ## A cycle of reactions `A <-> B <-> C <-> A`
+# ## A cycle of reactions between `A`, `B` and `C` :  (1) `A <-> B <-> C `
 # #### the "closing" of the above cycle (the "return" path from `C` to `A`) is coupled with an "energy donor" reaction:
-# #### `C + E_High <-> A + E_Low`
+# ## (2) `C + E_High <-> A + E_Low`
 # #### where `E_High` and `E_Low` are, respectively, the high- and low- energy molecules that drive the cycle (for example, think of ATP/ADP).   
 # Comparisons are made between results obtained with 3 different time resolutions.
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: June 4, 2024 (using v. 1.0 beta33)
+# LAST REVISED: June 10, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -78,21 +78,14 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 initial_conc = {"A": 100., "E_high": 1000.}  # Note the abundant energy source "E_high"; anything not specified will default to zero
 initial_conc
 
-# %% [markdown] tags=[]
-# ### We'll split each simulation in three segments (apparent from the graphs of the runs, further down):  
-# Time [0-0.03] fast changes   
-# Time [0.03-5.] medium changes   
-# Time [5.-8.] slow changes, as we approach equilibrium  
-#
-# ### and we'll do MULTIPLE RUNS, at varying time resolutions.
-
 # %%
 
 # %%
 
-# %% [markdown] tags=[] jp-MarkdownHeadingCollapsed=true tags=[] jp-MarkdownHeadingCollapsed=true jp-MarkdownHeadingCollapsed=true tags=[] jp-MarkdownHeadingCollapsed=true jp-MarkdownHeadingCollapsed=true tags=[] jp-MarkdownHeadingCollapsed=true
+# %% [markdown] tags=[] jp-MarkdownHeadingCollapsed=true tags=[] jp-MarkdownHeadingCollapsed=true jp-MarkdownHeadingCollapsed=true tags=[] jp-MarkdownHeadingCollapsed=true jp-MarkdownHeadingCollapsed=true tags=[] jp-MarkdownHeadingCollapsed=true tags=[]
 # # Run # 1 : FIXED time resolution, with COARSE time steps - broken up in 3 time intervals    
-# (trial and error, not shown, reveals that increasing any of the time steps below, leads to "excessive time step" errors)
+# (trial and error, not shown, reveals that increasing any of the time steps below, leads to "excessive time step" errors;  
+# note: fixed time resolution is generelly NOT recommended, except for double-checks and error analysis)
 
 # %%
 dynamics = UniformCompartment(chem_data=chem_data)
@@ -101,6 +94,12 @@ dynamics.describe_state()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+
+# %% [markdown] tags=[]
+# ### We'll split the simulation in three segments (apparent from the graphs of the runs, further down):  
+# Time [0-0.03] fast changes   
+# Time [0.03-5.] medium changes   
+# Time [5.-8.] slow changes, as we approach equilibrium  
 
 # %%
 dynamics.single_compartment_react(initial_step=0.0008, target_end_time=0.03, variable_steps=False)
@@ -117,7 +116,7 @@ dynamics.single_compartment_react(initial_step=0.005, target_end_time=8., variab
 dynamics.get_history()
 
 # %% [markdown]
-# ### Notice we created 5,609 data points
+# ### Notice we created 5,609 data points, in 3 hand-picked segments at different time resolutions
 
 # %%
 dynamics.explain_time_advance()
@@ -165,7 +164,7 @@ dynamics.is_in_equilibrium()
 # %%
 
 # %% [markdown] tags=[]
-# # _NOTE: Everything below is JUST A REPEAT of the same experiment, with different time steps, for accuracy comparisons_
+# # _NOTE: Everything below, to the end, is JUST A REPEAT of the same experiment, with different time steps, for accuracy comparisons_
 
 # %%
 
@@ -178,21 +177,12 @@ dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 
 # %%
-#dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+# These will affect the dynamic automated choices of time steps, 
+# and were specified by the preset used in instantiating the "dynamics" object
+dynamics.show_adaptive_parameters()  
 
 # %%
-#dynamics.set_thresholds(norm="norm_C", low=0.5, high=1.2, abort=1.6)
-#dynamics.set_thresholds(norm="norm_D", low=1.3, high=1.7, abort=1.8)
-
-# %%
-#dynamics.set_thresholds(norm="norm_A", low=0.2, high=0.8, abort=1.44)
-#dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-
-# %%
-dynamics.show_adaptive_parameters()
-
-# %%
-#dynamics.set_step_factors(upshift=1.1, downshift=0.5, abort=0.4, error=0.25)
+dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %%
 dynamics.single_compartment_react(initial_step=0.0001, target_end_time=8.0,
@@ -202,8 +192,7 @@ dynamics.single_compartment_react(initial_step=0.0001, target_end_time=8.0,
 # ### Notice we created 1,911 data points, a good deal less than in run #1
 
 # %%
-# dynamics.get_history()
-# dynamics.explain_time_advance()
+dynamics.get_history()
 
 # %%
 dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
@@ -212,13 +201,14 @@ dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 dynamics.plot_history(chemicals=["A", "B", "C"])
 
 # %%
-dynamics.plot_history(chemicals=["A", "B", "C"], show_intervals=True, xrange=[3.2, 3.5])
+# Show the timestepe taken (vertical dashed lines) in a small section of the plot
+dynamics.plot_history(chemicals=["A", "B", "C"], show_intervals=True, xrange=[2.5, 3.5])
 
 # %%
-dynamics.get_history()
+dynamics.explain_time_advance()  # Notice a lot of timestep adjustments, as needed
 
 # %% [markdown]
-# ### The two plots have 4 distinctive intersections among them; locate and save them:
+# ### Just like we saw in the earlier run, the two plots have 4 distinctive intersections among them; locate and save them:
 
 # %%
 run2 = []
@@ -243,9 +233,7 @@ run2
 # %%
 
 # %% [markdown]
-# # Run # 3. FIXED time resolution, using the smallest time substeps from run # 2  
-# #### (i.e. FINER fixed resolution than in run #1)
-#
+# # Run # 3. FIXED time resolution, using FINER fixed resolution than in run #1 
 
 # %%
 dynamics = UniformCompartment(chem_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
@@ -268,7 +256,7 @@ dynamics.single_compartment_react(initial_step=0.0025, target_end_time=8., varia
 dynamics.get_history()
 
 # %% [markdown]
-# ### Notice we created 11,217 data points, a fair bit more than in run #2, and a good deal more than in run #1
+# ### Notice we created 11,215 data points, A LOT MORE than in runs #1 and #2
 
 # %%
 dynamics.explain_time_advance()
@@ -283,7 +271,7 @@ dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
 dynamics.plot_history(chemicals=["A", "B", "C"])
 
 # %% [markdown]
-# ### Again, the two plots have 4 distinctive intersections among them; locate and save them:
+# ### Yet again, the two plots have 4 distinctive intersections among them; locate and save them:
 
 # %%
 run3 = []
@@ -305,6 +293,8 @@ run3
 
 # %%
 
+# %%
+
 # %% [markdown]
 # # Finally, compare (using a Euclidean metric) the discrepancy between the runs
 # Run #3, at high resolution, could be thought of as "the closest to the actual values"
@@ -318,7 +308,7 @@ num.compare_results(run1, run3)
 num.compare_results(run2, run3)
 
 # %% [markdown]
-# The fact that our measure of distance of run 2 (with intermediate resolution) from run3 is actually a little GREATER than the distance of run 1 (with low resolution) from run3, might be an artifact of the limited accuracy in the extraction of intersection coordinates from the saved run data.
+# Run 2 (with a lot fewer points than run 1), not surprisingly deviates a bit more from the (presumably) highly-accurate run 3
 
 # %% [markdown]
 # #### The coordinates of the 4 critical points, from the 3 different runs, are pretty similar to one another - as can be easily seen:
