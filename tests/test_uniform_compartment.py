@@ -90,21 +90,98 @@ def test_get_conc_dict():
 
 
 
+
+
+################   PARAMETERS FOR ADAPTIVE STEPS   ################
+
+
+def test_set_thresholds():
+    uc = UniformCompartment(preset=None)
+    assert uc.thresholds == []
+
+    with pytest.raises(Exception):
+        uc.set_thresholds(norm=123)     # Bad norm name
+
+    with pytest.raises(Exception):
+        uc.set_thresholds(norm="")      # Bad norm name
+
+    with pytest.raises(Exception):
+        uc.set_thresholds(norm="norm_A", low=5, high=1)     # Can't have low > high
+
+    with pytest.raises(Exception):
+        uc.set_thresholds(norm="norm_A", low=5, abort=1)    # Can't have low > abort
+
+    with pytest.raises(Exception):
+        uc.set_thresholds(norm="norm_A", high=8, abort=1)   # Can't have high > abort
+
+    uc.set_thresholds(norm="norm_A", low=5)                 # Create a new rule, for norm_A
+    assert uc.thresholds == [{'norm': 'norm_A', 'low': 5}]
+
+    uc.set_thresholds(norm="norm_A", low=6)                 # Update an existing value
+    assert uc.thresholds == [{'norm': 'norm_A', 'low': 6}]
+
+    uc.set_thresholds(norm="norm_A", high=8)                # Add a new value to an existing rule
+    assert uc.thresholds == [{'norm': 'norm_A', 'low': 6, 'high': 8}]
+
+    uc.set_thresholds(norm="norm_A", abort=10)               # Add a new value to an existing rule
+    assert uc.thresholds == [{'norm': 'norm_A', 'low': 6, 'high': 8, 'abort': 10}]
+
+    # Bad values that violate low < high < abort
+    with pytest.raises(Exception):
+        uc.set_thresholds(norm="norm_A", low=8)
+
+    with pytest.raises(Exception):
+        uc.set_thresholds(norm="norm_A", high=6)    # Too small
+
+    with pytest.raises(Exception):
+        uc.set_thresholds(norm="norm_A", high=10)   # Too big
+
+    with pytest.raises(Exception):
+        uc.set_thresholds(norm="norm_A", abort=8)
+
+
+
+def test_delete_thresholds():
+    uc = UniformCompartment(preset=None)
+    assert uc.thresholds == []
+
+    with pytest.raises(Exception):
+        uc.delete_thresholds(norm="not found")  # No rule with that norm exists
+
+    uc.set_thresholds(norm="norm_A", low=1, high=2, abort=3)
+    assert uc.thresholds == [{'norm': 'norm_A', 'low': 1, 'high': 2, 'abort': 3}]
+
+    uc.delete_thresholds(norm="norm_A", high=True)
+    assert uc.thresholds == [{'norm': 'norm_A', 'low': 1, 'abort': 3}]
+
+    with pytest.raises(Exception):
+        uc.delete_thresholds(norm="norm_A", high=True)  # Trying to delete a non-existing threshold
+
+    uc.delete_thresholds(norm="norm_A", low=True)
+    assert uc.thresholds == [{'norm': 'norm_A', 'abort': 3}]
+
+    uc.delete_thresholds(norm="norm_A", abort=True)
+    assert uc.thresholds == []      # Nothing is left of that rule
+
+
+
+##########################################################################################################
+
 def test_specify_steps():
-    rxn = UniformCompartment(None)
+    uc = UniformCompartment()
 
     with pytest.raises(Exception):
         # Too few arguments
-        rxn.specify_steps()
-        rxn.specify_steps(total_duration=15.1)
-        rxn.specify_steps(time_step=0.2)
-        rxn.specify_steps(n_steps=30)
+        uc.specify_steps()
+        uc.specify_steps(total_duration=15.1)
+        uc.specify_steps(time_step=0.2)
+        uc.specify_steps(n_steps=30)
         # Too many arguments
-        rxn.specify_steps(total_duration=15.1, time_step=0.2, n_steps=30)
+        uc.specify_steps(total_duration=15.1, time_step=0.2, n_steps=30)
 
-    assert rxn.specify_steps(time_step=0.5, n_steps=24) == (0.5, 24)
-    assert rxn.specify_steps(total_duration=12.0, time_step=0.5) == (0.5, 24)
-    assert rxn.specify_steps(total_duration=12.0, n_steps=24) == (0.5, 24)
+    assert uc.specify_steps(time_step=0.5, n_steps=24) == (0.5, 24)
+    assert uc.specify_steps(total_duration=12.0, time_step=0.5) == (0.5, 24)
+    assert uc.specify_steps(total_duration=12.0, n_steps=24) == (0.5, 24)
 
 
 
@@ -354,11 +431,10 @@ def test_single_compartment_react_variable_steps_1():
     chem_data.add_reaction(reactants="S", products="X",
                            forward_rate=6., reverse_rate=3.)
 
-    dynamics = UniformCompartment(chem_data=chem_data)
+    dynamics = UniformCompartment(chem_data=chem_data, preset=None)
     dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
     dynamics.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
-    dynamics.set_thresholds(norm="norm_B", low=None, high=None, abort=None)
     dynamics.set_step_factors(abort=0.5, downshift=0.5, upshift=2.0)
 
     dynamics.single_compartment_react(initial_step=0.01, target_end_time=0.2,
@@ -446,7 +522,7 @@ def test_single_compartment_correct_neg_conc_1():
 
 
 def test_adjust_timestep():
-    uc = UniformCompartment(names=["C1", "C2", "C3", "C4", "C5"])
+    uc = UniformCompartment(names=["C1", "C2", "C3", "C4", "C5"], preset=None)
     prev =     np.array([1,   8, 8, 10, 10])
     baseline = np.array([2,   5, 5, 14, 14])
     delta =    np.array([0.5, 1, 4, -2, -5])
@@ -487,11 +563,11 @@ def test_adjust_timestep():
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
     assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
 
-    uc.set_thresholds(norm="norm_B", low=0.08, high=0.81, abort=0.81)    # normB (0.8) no longer triggers high nor abort
+    uc.set_thresholds(norm="norm_B", low=0.08, high=0.81, abort=0.82)    # normB (0.8) no longer triggers high nor abort
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
     assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
 
-    uc.set_thresholds(norm="norm_A", low=1.86, high=1.87, abort=1.87)   # normA (1.85) will now trigger a "low"
+    uc.set_thresholds(norm="norm_A", low=1.86, high=1.87, abort=1.88)   # normA (1.85) will now trigger a "low"
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
     assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
                       # We're still on the 'stay' action because we aren't below ALL the thresholds

@@ -273,8 +273,8 @@ class UniformCompartment:
                             #   not to be confused with general aborts based on reaching high threshold
 
 
-
-        self.use_adaptive_preset(preset)
+        if preset:
+            self.use_adaptive_preset(preset)
 
         self.number_neg_concs = 0
         self.number_soft_aborts = 0
@@ -564,50 +564,72 @@ class UniformCompartment:
 
     def set_thresholds(self, norm :str, low=None, high=None, abort=None) -> None:
         """
-        Over-ride default values for the rules (simulation parameters) that affect the adaptive variable step sizes.
-        The default None values can be used to eliminate some of the threshold rules, for the specified norm.
-        If the specified norm was not previously set, it will be added.
+        Create or update a rule based on the given norm
+        (simulation parameters that affect the adaptive variable step sizes.)
+        If no rule with the specified norm was previously set, it will be added.
+
+        All None values in the arguments are ignored.
 
         :param norm:    The name of the "norm" (criterion) being used - either a previously-set one or not
         :param low:     The value below which the norm is considered to be good (and the variable steps are being made larger);
-                            if None, any existing value gets taken out
+                            if None, it doesn't get changed
         :param high:    The value above which the norm is considered to be excessive (and the variable steps get reduced);
-                            if None, any existing value gets taken out
+                            if None, it doesn't get changed
         :param abort:   The value above which the norm is considered to be dangerously large (and the last variable step gets
                             discarded and back-tracked with a smaller size) ;
-                            if None, any existing value gets taken out
+                            if None, it doesn't get changed
         :return:        None
         """
         assert type(norm) == str and norm != "", \
             "set_thresholds(): the `norm` argument must be a non-empty string"
 
         if (abort is not None) and (high is not None):
-            assert abort >= high, \
-                f"set_thresholds(): `abort` value ({abort}) must be >= `high' value ({high})"
+            assert abort > high, \
+                f"set_thresholds(): `abort` value ({abort}) must be > `high' value ({high})"
 
         if (high is not None) and (low is not None):
-            assert high >= low, \
-                f"set_thresholds(): `high` value ({high}) must be >= `low' value ({low})"
+            assert high > low, \
+                f"set_thresholds(): `high` value ({high}) must be > `low' value ({low})"
+
+        if (abort is not None) and (low is not None):
+            assert abort > low, \
+                f"add_thresholds(): `abort` value ({high}) must be > `low' value ({low})"
 
         for i, t in enumerate(self.thresholds):
             if t.get("norm") == norm:
-                if low is None:
-                    del t["low"]
-                else:
+                # Found a rule using the requested norm
+
+                t_original = t.copy()  # Create a backup copy in case of error
+
+                if low is not None:
                     t["low"] = low
 
-                if high is None:
-                    del t["high"]
-                else:
+                if high is not None:
                     t["high"] = high
 
-                if abort is None:
-                    del t["abort"]
-                else:
+                if abort is not None:
                     t["abort"] = abort
 
                 if len(t) == 1:
                     del self.thresholds[i]      # Completely eliminate this un-used norm
+
+                low, high, abort = t.get("low"), t.get("high"), t.get("abort")
+
+                if (abort is not None) and (high is not None):
+                    if abort <= high:
+                        self.thresholds[i] = t_original     # Restore original values
+                        raise Exception(f"set_thresholds(): `abort` value ({abort}) must be > `high' value ({high})")
+
+                if (high is not None) and (low is not None):
+                    if high <= low:
+                        self.thresholds[i] = t_original     # Restore original values
+                        raise Exception(f"set_thresholds(): `high` value ({high}) must be > `low' value ({low})")
+
+                if (abort is not None) and (low is not None):
+                    if abort <= low:
+                        self.thresholds[i] = t_original     # Restore original values
+                        raise Exception(f"add_thresholds(): `abort` value ({high}) must be > `low' value ({low})")
+
                 return
 
         # If we get here, it means that we're handling a norm
@@ -627,52 +649,38 @@ class UniformCompartment:
 
 
 
-    def update_thresholds(self, norm :str, low=None, high=None, abort=None) -> None:
+    def delete_thresholds(self, norm :str, low=False, high=False, abort=False) -> None:
         """
-        Change current values for the rules (simulation parameters) that affect the adaptive variable step sizes.
-        The default None values can be used to eliminate some of the threshold rules, for the specified norm.
-        If the specified norm was not previously defined, an Exception will be raised
+        Delete one or more of the threshold values associated to a rule using the specified norm.
+        If none of the threshold values remains in place, the whole rule gets eliminated altogether.
+        Attempting to delete something not present, will raise an Exception
 
-        :param norm:    The name of the "norm" (criterion) whose threshold(s) to update.  It must have previously defined,
-                            or an Exception will get raised
-        :param low:     The value below which the norm is considered to be good (and the variable steps are being made larger);
-                            if None, it doesn't get changed
-        :param high:    The value above which the norm is considered to be excessive (and the variable steps get reduced);
-                            if None, it doesn't get changed
-        :param abort:   The value above which the norm is considered to be dangerously large (and the last variable step gets
-                            discarded and back-tracked with a smaller size) ;
-                            if None, it doesn't get changed
+        :param norm:    The name of the "norm" (criterion) being used - for a previously-set rule
+        :param low:     If True, this threshold value will get deleted
+        :param high:    If True, this threshold value will get deleted
+        :param abort:   If True, this threshold value will get deleted
         :return:        None
         """
-        #TODO: unit test
-        assert type(norm) == str and norm != "", \
-            "update_thresholds(): the `norm` argument must be a non-empty string"
+        for i, t in enumerate(self.thresholds):
+            if t.get("norm") == norm:
+                # Found a rule using the requested norm
 
-        if (abort is not None) and (high is not None):
-            assert abort >= high, \
-                f"update_thresholds(): `abort` value ({abort}) must be >= `high' value ({high})"
+                if low:
+                    del t["low"]
 
-        if (high is not None) and (low is not None):
-            assert high >= low, \
-                f"update_thresholds(): `high` value ({high}) must be >= `low' value ({low})"
+                if high:
+                    del t["high"]
 
-        for rule in self.thresholds:
-            if rule.get("norm") == norm:
-                if low is not None:
-                    rule["low"] = low
+                if abort:
+                    del t["abort"]
 
-                if high is not None:
-                    rule["high"] = high
+                if len(t) == 1:
+                    del self.thresholds[i]      # Completely eliminate this un-used norm
+                return
 
-                if abort is not None:
-                    rule["abort"] = abort
-
-                return      # A rule with the given norm was found
-
-        # If we get here, it means that the specified norm
-        # is not currently present in the list of rules in self.thresholds
-        raise Exception(f"update_thresholds(): no norm named '{norm}' was found.  "
-                        f"To create a new norm, use set_thresholds()")
+        # If we get here, it means that we're handling a norm
+        # not currently present in the list self.thresholds
+        raise Exception(f"delete_thresholds(): no norm named '{norm}' was found")
 
 
 
