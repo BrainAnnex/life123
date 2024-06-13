@@ -58,8 +58,7 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 # All of these settings are currently close to the default values... but subject to change; set for repeatability
 dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
 dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5)
-dynamics.set_error_step_factor(0.5)
+dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5, error=0.5)
 
 dynamics.single_compartment_react(duration=3.0,
                                   initial_step=0.1, variable_steps=True, explain_variable_steps=False)
@@ -123,7 +122,7 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
 dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
 dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4)
-dynamics.set_error_step_factor(0.25)
+dynamics.set_step_factors(0.25)
 
 dynamics.single_compartment_react(duration=0.1,
                                   initial_step=0.1, variable_steps=True, explain_variable_steps=False)

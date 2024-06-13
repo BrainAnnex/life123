@@ -139,6 +139,8 @@ def test_set_thresholds():
     with pytest.raises(Exception):
         uc.set_thresholds(norm="norm_A", abort=8)
 
+    assert uc.thresholds == [{'norm': 'norm_A', 'low': 6, 'high': 8, 'abort': 10}]  # Nothing got changed by the failed calls
+
 
 
 def test_delete_thresholds():

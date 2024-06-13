@@ -93,7 +93,7 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
 dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
 dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5)
-dynamics.set_error_step_factor(0.5)
+dynamics.set_step_factors(0.5)
 
 dynamics.single_compartment_react(initial_step=0.01, target_end_time=1.5,
                                   variable_steps=True, explain_variable_steps=False)

@@ -83,7 +83,7 @@ dynamics.set_diagnostics()       # To save diagnostic information about the call
 dynamics.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
 dynamics.set_thresholds(norm="norm_B")   # We are disabling norm_B (to conform to the original run)
 dynamics.set_step_factors(upshift=2.0, downshift=0.5, abort=0.5)    # Note: upshift=2.0 seems to often be excessive.  About 1.4 is currently recommended
-dynamics.set_error_step_factor(0.5)
+dynamics.set_step_factors(0.5)
 
 dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0, 
                                   variable_steps=True, explain_variable_steps=True)

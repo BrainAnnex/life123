@@ -765,6 +765,11 @@ class UniformCompartment:
                                {"norm": "norm_B", "low": 0.05, "high": 1.0, "abort": 2.0}]
             self.step_factors = {"upshift": 1.6, "downshift": 0.15, "abort": 0.08, "error": 0.05}
 
+        elif preset == "small_rel_change":
+            self.thresholds = [{"norm": "norm_A", "low": 2., "high": 5., "abort": 10.},
+                               {"norm": "norm_B", "low": 0.008, "high": 0.5, "abort": 2.0}]     # The "low" value of "norm_B" is very strict
+            self.step_factors = {"upshift": 1.5, "downshift": 0.25, "abort": 0.25, "error": 0.2}
+
         elif preset == "slower":   # Very conservative about taking larger steps
             self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
                                {"norm": "norm_B", "low": 0.03, "high": 0.05, "abort": 0.5}]
@@ -790,6 +795,13 @@ class UniformCompartment:
                                {'norm': 'norm_B', 'low': 0.08, 'high': 0.5, 'abort': 1.5},
                                {'norm': 'norm_C', 'low': 0.5, 'high': 1.2, 'abort': 1.6},
                                {'norm': 'norm_D', 'low': 1.3, 'high': 1.7, 'abort': 1.8}]
+            self.step_factors = {'upshift': 1.1, 'downshift': 0.5, 'abort': 0.4, 'error': 0.25}
+
+        elif preset == "mid_inclusive_slow":
+            self.thresholds = [{'norm': 'norm_A', 'low': 0.15, 'high': 0.8, 'abort': 1.44},
+                               {'norm': 'norm_B', 'low': 0.05, 'high': 0.5, 'abort': 1.5},
+                               {'norm': 'norm_C', 'low': 0.5, 'high': 1.2, 'abort': 1.6},
+                               {'norm': 'norm_D', 'low': 1.1, 'high': 1.7, 'abort': 1.8}]
             self.step_factors = {'upshift': 1.1, 'downshift': 0.5, 'abort': 0.4, 'error': 0.25}
 
         else:
@@ -1181,7 +1193,7 @@ class UniformCompartment:
                                         "the concentration values of the various chemicals must be set first"
 
 
-        if explain_variable_steps is not None:
+        if explain_variable_steps:
             assert (type(explain_variable_steps) == list) and (len(explain_variable_steps) == 2), \
                 "reaction_step_common(): the argument `explain_variable_steps`, if provided, must be a pair of numbers [t_start, t_end]"
 

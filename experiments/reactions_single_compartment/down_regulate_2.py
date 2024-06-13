@@ -64,7 +64,7 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 
 # %%
 dynamics = UniformCompartment(chem_data=chem_data)
-dynamics.set_conc(conc={"A": 5., "B": 100., "Y": 0.},
+dynamics.set_conc(conc={"A": 5., "B": 100.},
                   snapshot=True)      # A is scarce, B is plentiful, Y is absent
 dynamics.describe_state()
 
@@ -77,8 +77,7 @@ dynamics.describe_state()
 # All of these settings are currently close to the default values... but subject to change; set for repeatability
 dynamics.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.44)
 dynamics.set_thresholds(norm="norm_B", low=0.2, high=0.5, abort=1.5)
-dynamics.set_step_factors(upshift=1.4, downshift=0.5, abort=0.5)
-dynamics.set_error_step_factor(0.333)
+dynamics.set_step_factors(upshift=1.4, downshift=0.5, abort=0.5, error=0.333)
 
 dynamics.single_compartment_react(initial_step=0.0005, duration=0.015,
                                   variable_steps=True, explain_variable_steps=False)
