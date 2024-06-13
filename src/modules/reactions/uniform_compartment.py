@@ -1245,7 +1245,7 @@ class UniformCompartment:
                 #print("*** CAUGHT a soft ABORT")
                 self.number_soft_aborts += 1
                 if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
-                    print(ex)
+                    print(f"       {ex}")
                 delta_time *= self.step_factors["abort"]       # Reduce the excessive time step by a pre-set factor
                 recommended_next_step = delta_time
                 # At this point, the loop will generally try the simulation again, with a smaller step (a revised delta_time)
@@ -1331,7 +1331,7 @@ class UniformCompartment:
             if action == "abort":       # NOTE: this is a "strategic" abort, not a hard one from error
                 msg =   f"* INFO: the tentative time step ({delta_time:.5g}) " \
                         f"leads to a value of {applicable_norms} > its ABORT threshold:\n" \
-                        f"      -> will backtrack, and re-do step with a SMALLER Δt, x{step_factor:.5g} (now set to {delta_time * step_factor:.5g}) " \
+                        f"       -> will backtrack, and re-do step with a SMALLER Δt, x{step_factor:.5g} (now set to {delta_time * step_factor:.5g}) " \
                         f"[Step started at t={self.system_time:.5g}, and will rewind there]"
                 #print("WARNING: ", msg)
                 if self.diagnostics:
@@ -1364,16 +1364,16 @@ class UniformCompartment:
 
             if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
                 #msg =   f"the tentative time step ({delta_time:.5g}) results in norm values that lead to the following:\n"
-                msg = "    "
+                msg = "       "
 
                 if step_factor > 1:         # "INCREASE
-                    msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER, " \
+                    msg +=  f"INFO: COMPLETE STEP NORMALLY and MAKE THE INTERVAL LARGER, " \
                             f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because all norms are low"
                 elif step_factor < 1:     # "DECREASE"
-                    msg +=  f"ACTION: COMPLETE STEP NORMALLY and MAKE THE INTERVAL SMALLER, " \
+                    msg +=  f"INFO: COMPLETE STEP NORMALLY and MAKE THE INTERVAL SMALLER, " \
                             f"multiplied by {step_factor} (set to {recommended_next_step:.5g}) at the next round, because {applicable_norms} is high"
                 else:   # "STAY THE COURSE"
-                    msg +=  f"ACTION: COMPLETE NORMALLY - we're inside the target range of all norms.  No change to step size."
+                    msg +=  f"INFO: COMPLETE NORMALLY - we're inside the target range of all norms.  No change to step size."
 
                 msg += f"\n    [The current step started at System Time: {self.system_time:.5g}, and will continue to {self.system_time + delta_time:.5g}]"
                 print(msg)

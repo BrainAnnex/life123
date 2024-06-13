@@ -23,7 +23,7 @@ import set_path      # Importing this module will add the project's home directo
 
 # %% tags=[]
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import UniformCompartment
+from src.modules.reactions.uniform_compartment import UniformCompartment
 
 # %% [markdown]
 # # 1. WITHOUT ENZYME

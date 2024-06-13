@@ -29,7 +29,7 @@ import set_path      # Importing this module will add the project's home directo
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import UniformCompartment
+from src.modules.reactions.uniform_compartment import UniformCompartment
 
 import plotly.express as px
 import plotly.graph_objects as go

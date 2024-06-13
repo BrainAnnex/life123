@@ -21,7 +21,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #
-# LAST REVISED: May 5, 2024
+# LAST REVISED: June 13, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -29,7 +29,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_dynamics import UniformCompartment
+from src.modules.reactions.uniform_compartment import UniformCompartment
 from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
@@ -52,7 +52,7 @@ GraphicLog.config(filename=log_file,
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = UniformCompartment(names=["A", "C"])
+dynamics = UniformCompartment(names=["A", "C"], preset="fast")
 
 # Reaction 2A <-> C , with 2nd-order kinetics for A, and 1st-order kinetics for C
 dynamics.add_reaction(reactants=[(2, "A")], products="C",
@@ -67,7 +67,7 @@ dynamics.describe_reactions()
 dynamics.plot_reaction_network("vue_cytoscape_2")
 
 # %%
-# Initial concentrations of all the chemicals, in index order
+# Initial concentrations of all the chemicals, in their index order
 dynamics.set_conc([200., 40.], snapshot=True)
 
 # %%
@@ -82,28 +82,27 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# For repeatibility, we avoid the defaults, and instead specify a particular group of preset parameters 
-# applicable to the adaptive time steps.
-# Here we use a "fast" heuristic: advance quickly thru time
-dynamics.use_adaptive_preset(preset="fast")
-
 dynamics.single_compartment_react(initial_step=0.002, duration=0.03,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %% [markdown]
 # ### Note how the (tentative) original time step that we provide, 0.002, turned out to be so large that the simulation backtracks several times, because of "hard" aborts (negative concentrations) or "soft" aborts (concentration changes surpassing the thresholds we provided)
+#
+# #### For example, the first step was automatically reduced from 0.002 to 0.000008
 
 # %%
 dynamics.get_history()
 
 # %%
-dynamics.plot_history(colors=['red', 'green'],
+dynamics.plot_history(colors=['darkturquoise', 'green'],
                       title="Reaction 2A <-> C  (2nd order in A).  Changes in concentrations with time")
 
 # %% [markdown]
 # ### Note: "A" (now largely depleted) is the limiting reagent
+
+# %%
 
 # %%
 
@@ -118,8 +117,8 @@ dynamics.plot_history(colors=['red', 'green'],
 dynamics.get_history(t=0.002)
 
 # %% [markdown]
-# ### Because of the very large changes happening between t=0 and 0.002, the simulation automatically slowed down and opted to actually take 80 steps in lieu of the 1 step we had (optimistically!) proposed  
-# The number of variable steps actually taken can be modulated by changing the preset passed to our earlier call to `use_adaptive_preset()`.  For finer control, advanced users may tweak internal parameters such as "norm thresholds" and "step factors"
+# ### Because of the very large changes happening between t=0 and 0.002, the simulation automatically slowed down and opted to actually take 80 steps in lieu of the 1 step we had (rather optimistically!) proposed  
+# The number of variable steps actually taken can be modulated by changing the _preset_ passed when the `UniformCompartment` class is first instantiated - or, alternatively, using calls to `use_adaptive_preset()`. For finer control, advanced users may tweak internal parameters such as "norm thresholds" and "step factors"
 
 # %% [markdown]
 # ### Notice how, late in the simulation, the step sizes get BIGGER than the 0.002 we had originally proposed:
@@ -128,7 +127,7 @@ dynamics.get_history(t=0.002)
 dynamics.explain_time_advance()
 
 # %% [markdown]
-# ### Notice how the reaction proceeds in far-smaller steps in the early times, when the concentrations are changing much more rapidly
+# ### One can see how the reaction proceeds in far-smaller steps in the early times, when the concentrations are changing much more rapidly
 
 # %%
 # Let's look at the first two arrays of concentrations, from the run's history
@@ -166,7 +165,7 @@ dynamics.is_in_equilibrium()
 # ## Display the variable time steps
 
 # %%
-dynamics.plot_history(colors=['red', 'green'], show_intervals=True,
+dynamics.plot_history(colors=['darkturquoise', 'green'], show_intervals=True,
                       title="Reaction 2A <-> C  (2nd order in A).  Concentrations changes")
 
 # %% [markdown]

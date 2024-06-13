@@ -24,7 +24,7 @@
 import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
-from src.modules.reactions.reaction_dynamics import UniformCompartment
+from src.modules.reactions.uniform_compartment import UniformCompartment
 
 # %%
 

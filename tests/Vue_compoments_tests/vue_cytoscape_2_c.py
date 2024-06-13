@@ -4,7 +4,7 @@ import pathlib
 from src.modules.html_log.html_log import HtmlLog as log
 from src.modules.visualization.graphic_log import GraphicLog
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import UniformCompartment
+from src.modules.reactions.uniform_compartment import UniformCompartment
 
 
 COMPONENT_NAME = "vue_cytoscape_2"           # *** CHANGE AS NEEDED ***
