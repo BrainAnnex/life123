@@ -22,7 +22,7 @@
 #
 # This is the 1D version of the single-compartment reaction by the same name
 #
-# LAST REVISED: May 6, 2024
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -57,8 +57,8 @@ chem_data.add_reaction(reactants=["A"], products=[(3,"B",1)], forward_rate=5., r
 
 bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
-bio.set_uniform_concentration(species_index=0, conc=10.)
-bio.set_uniform_concentration(species_index=1, conc=50.)
+bio.set_uniform_concentration(species_name="A", conc=10.)
+bio.set_uniform_concentration(species_name="B", conc=50.)
 
 bio.describe_state()
 
@@ -99,7 +99,7 @@ df = bio.get_history()
 
 px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B"], 
               title="Reaction A <-> 3B .  Changes in [A] and [B] over time",
-              color_discrete_sequence = ['navy', 'darkorange'],
+              color_discrete_sequence = ['darkturquoise', 'green'],
               labels={"value":"concentration", "variable":"Chemical"})
 
 # %%
@@ -152,6 +152,6 @@ all_fig = go.Figure(data=fig0.data + fig1.data, layout = fig1.layout)
 all_fig.show()
 
 # %% [markdown]
-# #### Note how the trajectory is progressively slowing down towards the dynamical system's "attractor" (equilibrium state of the reaction)
+# ### Note how the trajectory is progressively slowing down towards the dynamical system's "attractor" (equilibrium state of the reaction)
 
 # %%

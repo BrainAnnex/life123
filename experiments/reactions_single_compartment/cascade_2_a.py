@@ -23,7 +23,7 @@
 #
 # **Background**: please see experiments `cascade_1` and `mystery_reaction_1`
 #
-# LAST REVISED: Dec. 6, 2023
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -31,8 +31,10 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 from src.modules.visualization.plotly_helper import PlotlyHelper
+
+# %%
 
 # %%
 
@@ -42,7 +44,7 @@ from src.modules.visualization.plotly_helper import PlotlyHelper
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = ReactionDynamics(names=["A", "B", "C"])
+dynamics = UniformCompartment(names=["A", "B", "C"], preset="mid")
 
 # Reaction A <-> B (slower, and with a smaller K)
 dynamics.add_reaction(reactants="A", products="B",
@@ -58,24 +60,22 @@ dynamics.describe_reactions()
 # ### Run the simulation
 
 # %%
-dynamics.set_conc([50., 0., 0.], snapshot=True)  # Set the initial concentrations of all the chemicals, in their index order
+dynamics.set_conc({"A": 50.}, snapshot=True)  # Set the initial concentrations of all the chemicals, in their index order
 dynamics.describe_state()
 
 # %%
-# These settings can be tweaked to make the time resolution finer or coarser.  
-# Here we use a "mid" heuristic: neither too fast nor too prudent
-dynamics.use_adaptive_preset(preset="mid")
-
-dynamics.single_compartment_react(initial_step=0.01, reaction_duration=0.8,
+dynamics.single_compartment_react(initial_step=0.01, duration=0.8,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %%
-dynamics.plot_history(colors=['blue', 'orange', 'green'], show_intervals=True)
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], show_intervals=True)
 
 # %%
 dynamics.is_in_equilibrium(tolerance=15)
+
+# %%
 
 # %%
 
@@ -124,7 +124,7 @@ dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=C_c
 # We'll pick time **t=0.1** as the divider between the 2 domains of the `A <-> C` time evolution that we want to model. 
 
 # %%
-dynamics.plot_history(colors=['blue', 'orange', 'green'], xrange=[0, 0.4], 
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4], 
                       vertical_lines=[0.1])
 
 # %% [markdown]
@@ -169,7 +169,7 @@ dynamics.estimate_rate_constants(t=t_arr_early, reactant_conc=A_conc_early, prod
 # It's not surprise that an elementary reaction is a good fit, if one observes what happens to the time evolution of the concentrations.  Repeating the earlier plot, but only showing `A` and `C` (i.e. hiding the intermediary `B`):
 
 # %%
-dynamics.plot_history(colors=['blue', 'green'], xrange=[0, 0.4], vertical_lines=[0.1], 
+dynamics.plot_history(colors=['darkturquoise', 'green'], xrange=[0, 0.4], vertical_lines=[0.1], 
                      chemicals=['A', 'C'], title="Changes in concentration for `A <-> C`")
 
 # %% [markdown]
@@ -192,7 +192,7 @@ dynamics.estimate_rate_constants(t=t_arr_late, reactant_conc=A_conc_late, produc
 # Let's see the graph again:
 
 # %%
-dynamics.plot_history(colors=['blue', 'orange', 'green'], xrange=[0, 0.4], 
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4], 
                       vertical_lines=[0.1])
 
 # %% [markdown]

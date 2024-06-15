@@ -15,15 +15,16 @@
 
 # %% [markdown]
 # ## Macromolecules : Binding Affinity and Fractional Occupancy
+#   
 #
-# LAST REVISED: Nov. 4, 2023
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 from src.modules.movies.movies import MovieTabular
 
 import numpy as np
@@ -81,7 +82,7 @@ aff.Kd
 # ## Start setting up the dynamical system
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem)
+dynamics = UniformCompartment(chem_data=chem)
 
 # %%
 dynamics.set_macromolecules()      # By default, set counts to 1 for all the registered macromolecules

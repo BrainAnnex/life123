@@ -5,7 +5,7 @@ from scipy.fft import rfft, rfftfreq    # Fast Fourier Transforms to extract fre
 from scipy.stats import norm
 from typing import Union, List, Tuple
 from src.modules.movies.movies import MovieTabular
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 import plotly.express as px
 from src.modules.html_log.html_log import HtmlLog as log
 from src.modules.visualization.graphic_log import GraphicLog
@@ -127,7 +127,7 @@ class BioSim1D:
         if reactions:
             self.reaction_dynamics = reactions
         else:
-            self.reaction_dynamics = ReactionDynamics(chem_data=chem_data)
+            self.reaction_dynamics = UniformCompartment(chem_data=chem_data)
 
         self.n_bins = n_bins
 

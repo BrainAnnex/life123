@@ -333,8 +333,8 @@ class Reaction:
         """
         In the order in which they appear when the reaction was first defined
 
-        :param exclude_enzyme:
-        :return:
+        :param exclude_enzyme:  If True, any enzyme, if present, won't be included
+        :return:                List of chemical names
         """
         reactants = self.extract_reactants()
         reactant_names = [self.extract_species_name(r) for r in reactants]
@@ -349,8 +349,8 @@ class Reaction:
         """
         In the order in which they appear when the reaction was first defined
 
-        :param exclude_enzyme:
-        :return:
+        :param exclude_enzyme:  If True, any enzyme, if present, won't be included
+        :return:                List of chemical names
         """
         products = self.extract_products()
         product_names = [self.extract_species_name(r) for r in products]

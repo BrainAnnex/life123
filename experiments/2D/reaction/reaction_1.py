@@ -18,7 +18,7 @@
 #
 # Diffusion not done
 #
-# LAST REVISED: May 6, 2024
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
 

@@ -24,7 +24,7 @@
 # In part2, some diagnotic insight is explored.   
 # In part3, two identical runs ("adaptive variable steps" and "fixed small steps") are compared. 
 #
-# LAST REVISED: May 27, 2024  (using v. 1.0beta32)
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -47,7 +47,7 @@ import set_path      # Importing this module will add the project's home directo
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 from src.modules.visualization.plotly_helper import PlotlyHelper
 
 from src.modules.visualization.graphic_log import GraphicLog
@@ -90,9 +90,9 @@ chem.plot_reaction_network("vue_cytoscape_2")
 # ## Run the simulation
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem, preset="fast")
+dynamics = UniformCompartment(chem_data=chem, preset="fast")
 
-dynamics.set_conc([50., 0, 0.], snapshot=True) # Set the initial concentrations of all the chemicals, in their index order
+dynamics.set_conc({"A": 50.}, snapshot=True) # Set the initial concentrations of all the chemicals, in their index order
 dynamics.describe_state()
 
 # %%
@@ -104,10 +104,10 @@ dynamics.get_history()
 # %%
 dynamics.set_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
 
-dynamics.single_compartment_react(initial_step=0.02, reaction_duration=0.4,
+dynamics.single_compartment_react(initial_step=0.02, duration=0.4,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %% [markdown]
 # ### <a name="cascade_1_plot"> Plots of changes of concentration with time</a>
@@ -194,18 +194,18 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 # We'll use **constant steps of size 0.0005** , which is 1/4 of the smallest steps (the "substep" size) previously used in the variable-step run
 
 # %%
-dynamics2 = ReactionDynamics(chem_data=chem)  # Re-use the same chemicals and reactions of the previous simulation
+dynamics2 = UniformCompartment(chem_data=chem)  # Re-use the same chemicals and reactions of the previous simulation
 
 # %% tags=[]
-dynamics2.set_conc([50., 0, 0.], snapshot=True)
+dynamics2.set_conc({"A": 50.}, snapshot=True)
 
 # %%
 # Notice that we're using FIXED steps this time
-dynamics2.single_compartment_react(initial_step=0.0005, reaction_duration=0.4,
+dynamics2.single_compartment_react(initial_step=0.0005, duration=0.4,
                                    variable_steps=False,
                                    snapshots={"initial_caption": "1st reaction step",
                                               "final_caption": "last reaction step"},
-                                  )      
+                                   )
 
 # %%
 dynamics2.plot_history(title="Coupled reactions A <-> B and B <-> C , re-run with CONSTANT STEPS",

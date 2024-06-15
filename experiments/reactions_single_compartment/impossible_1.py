@@ -22,7 +22,7 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: May 5, 2024
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %% [markdown]
 # ![Temporarily suspending the Laws of Physics](../../docs/impossible_1.png)
@@ -34,7 +34,7 @@ import set_path      # Importing this module will add the project's home directo
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData as chem
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -72,7 +72,7 @@ chem_data.add_reaction(reactants="B", products="C",
 # LET'S VIOLATE THE LAWS OF PHYSICS!
 # Reaction C <-> A, also mostly in forward direction - MAGICALLY GOING "UPSTREAM" from C, to the higher-energy level of "A"
 chem_data.add_reaction(reactants="C" , products="A",
-                       forward_rate=3., reverse_rate=2.) # PHYSICALLY IMPOSSIBLE! Future versions of Life123 may flag this!
+                       forward_rate=3., reverse_rate=2.) # *** PHYSICALLY IMPOSSIBLE! *** Future versions of Life123 may flag this!
 
 chem_data.describe_reactions()
 
@@ -89,11 +89,11 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-initial_conc = {"A": 100., "B": 0., "C": 0.} 
+initial_conc = {"A": 100.} 
 initial_conc
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 
@@ -119,7 +119,7 @@ dynamics.plot_history()
 dynamics.is_in_equilibrium()
 
 # %% [markdown]
-# ## Not surprisingly, none of the reactions of this physically-impossible hypothetical system are in equilibrium
+# ## Not surprisingly, _none_ of the reactions of this physically-impossible hypothetical system are in equilibrium
 # ### Even though the concentrations don't change, it's NOT from equilibrium in the reactions - but rather from a balancing out of consuming and replenishing across reactions. 
 # #### Consider, for example, the concentrations of the chemical `A` at the end time, and contributions to its change ("Delta A") from the _individual_ reactions affecting `A`, as available from the diagnostic data:
 
@@ -132,6 +132,8 @@ dynamics.get_diagnostic_rxn_data(rxn_index=2, tail=3)
 # %% [markdown]
 # ### Looking at the last row from each of the 2 dataframes above, one case see that, at every reaction cycle, [A] gets reduced by some quantity (0.914286) by the reaction `A <-> B`, while simultaneously getting increased by the SAME amount by the (fictional) reaction `C <-> A`.   
 # ### Hence, the concentration of A remains constant - but none of the reactions is in equilibrium!
+
+# %%
 
 # %%
 

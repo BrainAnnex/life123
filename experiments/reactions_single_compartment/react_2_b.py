@@ -18,7 +18,7 @@
 #
 # This is a repeat of the experiment _"react_2_a"_ , but with adaptive variable time steps
 #
-# LAST REVISED: May 6, 2024
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -26,7 +26,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
@@ -48,7 +48,7 @@ GraphicLog.config(filename=log_file,
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = ReactionDynamics(names=["A", "B"])
+dynamics = UniformCompartment(names=["A", "B"], preset="mid")
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 dynamics.add_reaction(reactants=["A"], products=["B"], 
@@ -74,17 +74,16 @@ dynamics.set_diagnostics()      # To save diagnostic information about the call 
                                 # Useful for insight into the inner workings of the simulation
 
 # %%
-# For experiment repeatability, we specify a particular group of preset parameters applicable to the adaptive time steps
-dynamics.use_adaptive_preset(preset="mid")       # A "middle-of-the road" heuristic: somewhat "conservative" but not overly so
-
-dynamics.show_adaptive_parameters()              # Details may vary across different versions of Life123
+# For experiment repeatability, we specified, when instantiating the "UniformCompartment" class, 
+# a particular preset applicable to the adaptive time steps
+dynamics.show_adaptive_parameters() 
 
 # %% [markdown] tags=[]
 # ### Run the reaction
 
 # %%
 dynamics.single_compartment_react(initial_step=0.1, target_end_time=1.2,
-                                  variable_steps=True, explain_variable_steps=False,
+                                  variable_steps=True,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"}
                                   )
@@ -102,6 +101,8 @@ dynamics.explain_time_advance()
 # %% [markdown] tags=[]
 # ## Notice how the reaction proceeds in smaller steps in the early times, when [A] and [B] are changing much more rapidly
 # ### That resulted from passing the flag _variable_steps=True_ to single_compartment_react()
+
+# %%
 
 # %%
 
@@ -141,7 +142,7 @@ baseline_conc
 
 # %%
 # Computes some measures of how large delta_concentrations is, and propose a course of action
-dynamics.adjust_speed(delta_conc=delta_concentrations, baseline_conc=baseline_conc)  
+dynamics.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=baseline_conc)  
 
 # %% [markdown]
 # #### The above analysis indicates that the time step is just about right, and the simulations should STAY on that course : that's based on the shown computed norms (indicating the extent of the change taking place.)  
@@ -179,7 +180,7 @@ baseline_conc
 
 # %%
 # Computes a measure of how large delta_concentrations is, and propose a course of action
-dynamics.adjust_speed(delta_conc=delta_concentrations, baseline_conc=baseline_conc)  
+dynamics.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=baseline_conc)  
 
 # %% [markdown]
 # #### The above analysis indicates that the time step is on the "LOW" side, and the simulations should increase it by a factor 1.2 : again, that's based on the shown computed norms (indicating the extent of the change taking place.)  
@@ -203,7 +204,7 @@ next_step / original_step
 dynamics.show_adaptive_parameters()
 
 # %% [markdown]
-# **1.2** is stored as the "step factor" (for the time steps to take) in case an 'upshift' (in step size) is the decided course of action
+# **1.2** is stored as the "step factor" (for the time steps to take) in case an _'upshift'_ (in step size) is the decided course of action
 
 # %%
 
@@ -230,7 +231,7 @@ dynamics.is_in_equilibrium()
 # ### Plots of changes of concentration with time
 
 # %%
-dynamics.plot_history(colors=['blue', 'orange'], show_intervals=True)
+dynamics.plot_history(colors=['darkturquoise', 'orange'], show_intervals=True)
 
 # %% [markdown]
 # ## Note how the left-hand side of this plot is much smoother than it was in experiment `react_2_a`, where no adaptive time steps were used!

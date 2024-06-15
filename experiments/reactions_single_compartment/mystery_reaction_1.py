@@ -23,7 +23,7 @@
 # In PART 2, the time functions generated in Part 1 are taken as a _starting point,_ to estimate the rate constants of `A <-> B`  
 # In PART 3, we'll repeat what we did in Part 2, but this time showing the full details of how the answer is arrived at
 #
-# LAST REVISED: Dec. 3, 2023
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -31,7 +31,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 from src.modules.visualization.plotly_helper import PlotlyHelper
 
 import numpy as np
@@ -44,7 +44,7 @@ import numpy as np
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = ReactionDynamics(names=["A", "B"])
+dynamics = UniformCompartment(names=["A", "B"], preset="mid")
 
 # Reaction A <-> B
 dynamics.add_reaction(reactants="A", products="B",
@@ -62,14 +62,10 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
 
-# These settings can be tweaked to make the time resolution finer or coarser.  
-# Here we use a "mid" heuristic: neither too fast nor too prudent
-dynamics.use_adaptive_preset(preset="mid")
-
-dynamics.single_compartment_react(initial_step=0.01, reaction_duration=0.5,
+dynamics.single_compartment_react(initial_step=0.01, duration=0.5,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %% [markdown]
 # ### <a name="cascade_1_plot"> Plots of changes of concentration with time</a>
@@ -77,7 +73,9 @@ dynamics.single_compartment_react(initial_step=0.01, reaction_duration=0.5,
 
 # %%
 dynamics.plot_history(title="Reaction A <-> B",
-                      colors=['blue', 'green'], show_intervals=True)
+                      colors=['darkturquoise', 'green'], show_intervals=True)
+
+# %%
 
 # %%
 
@@ -131,6 +129,8 @@ np.gradient(t_arr)
 
 # %% [markdown]
 # #### The variable time grid, and the skimpy number of data points, are best seen in the plot that was shown at the end of PART 1
+
+# %%
 
 # %%
 

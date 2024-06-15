@@ -24,7 +24,7 @@
 # This experiment gets continued in _"react_2_b"_ , with a more sophisticated approach, 
 # involving adaptive variable time steps.
 #
-# LAST REVISED: May 6, 2024
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -33,7 +33,7 @@ import set_path      # Importing this module will add the project's home directo
 import numpy as np
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 from src.modules.visualization.plotly_helper import PlotlyHelper
 from src.modules.visualization.graphic_log import GraphicLog
 
@@ -53,7 +53,7 @@ GraphicLog.config(filename=log_file,
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = ReactionDynamics(names=["A", "B"])
+dynamics = UniformCompartment(names=["A", "B"])
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 dynamics.add_reaction(reactants=["A"], products=["B"], 
@@ -146,7 +146,7 @@ dynamics.is_in_equilibrium()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_history(colors=['blue', 'orange'])
+dynamics.plot_history(colors=['darkturquoise', 'orange'])
 
 # %% [markdown]
 # ### Note the raggedness of the left-side (early times) of the curves.  
@@ -154,7 +154,7 @@ dynamics.plot_history(colors=['blue', 'orange'])
 # ### By contrast, here we used _FIXED_ time steps (shown below), which generally gives poor results, unless taking a very large number of very small steps!
 
 # %%
-dynamics.plot_history(colors=['blue', 'orange'], show_intervals=True)
+dynamics.plot_history(colors=['darkturquoise', 'orange'], show_intervals=True)
 
 # %%
 df = dynamics.get_history()         # Revisited from earlier
@@ -184,8 +184,8 @@ df
 
 # %%
 dynamics.plot_history(chemicals=["A", "A_dot"], colors=['navy', 'brown'], 
-                      ylabel="concentration (blue) /<br> concentration change per unit time (brown)",
-                      title="Concentration of A with time (blue), and its rate of change (brown)")
+                      ylabel="concentration (darkturquoise) /<br> concentration change per unit time (brown)",
+                      title="Concentration of A with time (darkturquoise), and its rate of change (brown)")
 
 # %% [markdown]
 # ### At t=0 :  
@@ -195,6 +195,6 @@ dynamics.plot_history(chemicals=["A", "A_dot"], colors=['navy', 'brown'],
 
 # %% [markdown]
 # #### **NOTE:** The curves are jagged because of limitations of numerically estimating derivatives, as well as _the large time steps taken_ (especially in the early times, when there's a lot of change.)  
-# ## In experiment "react_2_b", we revisit the same reaction using a better simulator that employs _adaptive variable time steps_
+# ## In experiment "react_2_b", we revisit the same reaction using a better simulator that employs **_adaptive variable time steps_**
 
 # %%

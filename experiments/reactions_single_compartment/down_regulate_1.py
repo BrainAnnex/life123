@@ -24,9 +24,9 @@
 # **[Scenario 3](#down_regulate_1_scenario_3)** : The shunt (`A <-> S`) is has a *kinetic* DIS-advantage but a *thermodynamic* advantage compared to `A <-> B`     
 # (i.e. `A <-> S` is slow, but energetically favored)  
 #
-# All reactions 1st order, mostly forward.  Taken to equilibrium.
+# All reactions are 1st order, mostly forward.  Taken to equilibrium.
 #
-# LAST REVISED: May 5, 2024
+# LAST REVISED: June 12, 2024 (using v. 1.0 beta33)
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -44,7 +44,7 @@ import set_path      # Importing this module will add the project's home directo
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData as chem
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 
 import plotly.express as px
 from src.modules.visualization.graphic_log import GraphicLog
@@ -78,11 +78,11 @@ chem_data.add_reaction(reactants=["A"], products=["B"],
 chem_data.describe_reactions()
 
 # %% [markdown]
-# ### Set the initial concentrations of all the chemicals, in their index order
+# ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
-dynamics.set_conc([50., 0.], snapshot=True)
+dynamics = UniformCompartment(chem_data=chem_data, preset="fast")
+dynamics.set_conc(conc={"A": 50.}, snapshot=True)
 dynamics.describe_state()
 
 # %% [markdown]
@@ -91,17 +91,11 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()          # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are currently close to the default values... but subject to change; set for repeatability
-dynamics.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.44)
-dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5)
-dynamics.set_error_step_factor(0.5)
-
 # The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
-dynamics.single_compartment_react(initial_step=0.001, reaction_duration=0.3,
+dynamics.single_compartment_react(initial_step=0.001, duration=0.3,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %%
 dynamics.get_history()
@@ -110,24 +104,23 @@ dynamics.get_history()
 dynamics.explain_time_advance()
 
 # %%
-dynamics.plot_history(colors=["blue", "green"], title="Single reaction A <-> B (no downregulation)",
+dynamics.plot_history(colors=["darkturquoise", "green"], title="Single reaction A <-> B (no downregulation)",
                       show_intervals=True)
 
 # %% [markdown]
 # #### Notice the intersection at the exact midpoint of the 2 initial concentrations (50 and 0):
 
 # %%
-dynamics.curve_intersection('A', 'B', t_start=0, t_end=0.1)
+dynamics.curve_intersect('A', 'B', t_start=0, t_end=0.1)
 
 # %%
 # Verify that all the reactions have reached equilibrium
-dynamics.is_in_equilibrium(tolerance=2)
+dynamics.is_in_equilibrium()
 
 # %%
 
 # %% [markdown]
-# # <a name="down_regulate_1_scenario_2"></a>  Scenario 2: 
-# ### downregulated by shunt: 
+# # <a name="down_regulate_1_scenario_2"></a>  Scenario 2 - downregulated by shunt: 
 # ### kinetically fast,   
 # ### but with thermodynamical dis-advantage (i.e. energetically un-favored)
 
@@ -145,12 +138,9 @@ chem_data.describe_reactions()
 # Send a plot of the network of reactions to the HTML log file
 chem_data.plot_reaction_network("vue_cytoscape_2")
 
-# %% [markdown]
-# ### Set the initial concentrations of all the chemicals, in their index order
-
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)   # Notice we're over-writing the earlier "dynamics" object
-dynamics.set_conc([50., 0, 0.], snapshot=True)
+dynamics = UniformCompartment(chem_data=chem_data, preset="mid")   # Notice we're over-writing the earlier "dynamics" object
+dynamics.set_conc(conc={"A": 50.}, snapshot=True)
 dynamics.describe_state()
 
 # %% [markdown] tags=[]
@@ -159,20 +149,14 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are currently close to the default values... but subject to change; set for repeatability
-dynamics.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.44)
-dynamics.set_thresholds(norm="norm_B", low=0.05, high=0.5, abort=1.5)
-dynamics.set_step_factors(upshift=1.4, downshift=0.5, abort=0.5)
-dynamics.set_error_step_factor(0.333)
-
 # The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
-dynamics.single_compartment_react(initial_step=0.001, reaction_duration=0.3,
+dynamics.single_compartment_react(initial_step=0.001, duration=0.3,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %%
-dynamics.plot_history(colors=["blue", "green", "red"],
+dynamics.plot_history(colors=["darkturquoise", "green", "red"],
                       title="Coupled reactions A <-> B and A <-> S (fast but disadvantaged energetically)",
                       show_intervals=True)
 
@@ -182,43 +166,33 @@ dynamics.plot_history(colors=["blue", "green", "red"],
 # ### but EVENTUALLY PETERS OUT (energy dis-advantage)
 
 # %%
-dynamics.explain_time_advance()
-
-# %%
-dynamics.get_history()
-
-# %%
 # Verify that all the reactions have reached equilibrium
 dynamics.is_in_equilibrium()
 
 # %%
 
 # %% [markdown]
-# # <a name="down_regulate_1_scenario_3"></a> Scenario 3: 
-# ### downregulated by shunt:   
+# # <a name="down_regulate_1_scenario_3"></a> Scenario 3 - downregulated by shunt:   
 # ### kinetically slow,   
 # ### but with thermodynamical advantage (i.e. energetically favored)
 
 # %%
 # Specify the chemicals  (notice that we're starting with new objects)
-chem_data = chem(names=["A", "B", "S"])
+new_chem_data = chem(names=["A", "B", "S"])
 
 # Reaction A <-> B (as before)
-chem_data.add_reaction(reactants=["A"], products=["B"],
+new_chem_data.add_reaction(reactants=["A"], products=["B"],
                        forward_rate=30., reverse_rate=5.) 
 
 # Reaction A <-> S (slow shunt, excellent thermodynamical energetic advantage)
-chem_data.add_reaction(reactants=["A"], products=["S"],
+new_chem_data.add_reaction(reactants=["A"], products=["S"],
                        forward_rate=3., reverse_rate=0.1)
 
-chem_data.describe_reactions()
-
-# %% [markdown]
-# ### Set the initial concentrations of all the chemicals, in their index order
+new_chem_data.describe_reactions()
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
-dynamics.set_conc([50., 0, 0.], snapshot=True)
+dynamics = UniformCompartment(chem_data=new_chem_data, preset="small_rel_change")
+dynamics.set_conc(conc={"A": 50.}, snapshot=True)
 dynamics.describe_state()
 
 # %% [markdown] tags=[]
@@ -227,20 +201,14 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# These settings can be tweaked to make the time resolution finer or coarser
-dynamics.set_thresholds(norm="norm_A", low=2.0, high=5.0, abort=10.0)
-dynamics.set_thresholds(norm="norm_B", low=0.008, high=0.5, abort=2.0)    # The "low" value here seems especially critical to fend off instabilities
-dynamics.set_step_factors(upshift=1.5, downshift=0.25, abort=0.25)
-dynamics.set_error_step_factor(0.2)
-
 # The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
-dynamics.single_compartment_react(initial_step=0.005, reaction_duration=7.0,
-                                   snapshots={"initial_caption": "1st reaction step",
+dynamics.single_compartment_react(initial_step=0.005, duration=7.0,
+                                  snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                   variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %%
-dynamics.plot_history(colors=["blue", "green", "red"],
+dynamics.plot_history(colors=["darkturquoise", "green", "red"],
                       title="Coupled reactions A <-> B and A <-> S (slow but with energetic advantage)")
 
 # %% [markdown]
@@ -251,32 +219,26 @@ dynamics.plot_history(colors=["blue", "green", "red"],
 # %%
 dynamics.explain_time_advance()
 
-# %%
-dynamics.get_history()
-
 # %% [markdown]
 # ### Check the final equilibrium
 
 # %%
-# Verify that all the reactions have reached equilibrium
+# Verify that all the reactions are close to equilibrium
 dynamics.is_in_equilibrium(tolerance=12)
 
 # %% [markdown]
-# #### Please note the much-longer timescale from the earlier plots
+# ### Please note the **much-longer** timescale from the earlier plots
 # If we look at early time interval, this is what it looks like:
 
 # %%
-fig = px.line(data_frame=dynamics.get_history().loc[:250], x="SYSTEM TIME", y=["A", "B", "S"], 
-              title="Same plot as above, both only showing initial detail",
-              color_discrete_sequence = ["blue", "green", "red"],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+dynamics.plot_history(colors=["darkturquoise", "green", "red"],
+                      title="Same plot as above, both only showing initial detail", xrange=[0, 0.3])
 
 # %%
 # Look at where the curves intersect
-dynamics.curve_intersection("A", "B", t_start=0, t_end=0.1)
+dynamics.curve_intersect("A", "B", t_start=0, t_end=0.1)
 
 # %%
-dynamics.curve_intersection("A", "S", t_start=0.1, t_end=0.2)
+dynamics.curve_intersect("A", "S", t_start=0.1, t_end=0.2)
 
 # %%

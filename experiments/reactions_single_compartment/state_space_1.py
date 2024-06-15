@@ -20,7 +20,7 @@
 #
 # See also the experiment "1D/reaction/reaction_2"
 #
-# LAST REVISED: May 5, 2024
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -29,7 +29,7 @@ import set_path      # Importing this module will add the project's home directo
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -55,7 +55,7 @@ chem_data.add_reaction(reactants="A", products=[(3,"B",1)], forward_rate=5., rev
 chem_data.describe_reactions()
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data)
 dynamics.set_conc(conc={"A": 10., "B": 50.},
                   snapshot=True)
 dynamics.describe_state()
@@ -131,6 +131,6 @@ all_fig = go.Figure(data=fig0.data + fig1.data, layout = fig1.layout)
 all_fig.show()
 
 # %% [markdown]
-# #### Note how the trajectory is progressively slowing down towards the dynamical system's "attractor" (equilibrium state of the reaction)
+# ### **Note how the trajectory is progressively slowing down towards the dynamical system's "attractor" (equilibrium state of the reaction)**
 
 # %%

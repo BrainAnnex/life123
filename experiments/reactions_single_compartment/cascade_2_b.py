@@ -22,7 +22,7 @@
 #
 # **Background**: please see experiment `cascade_2_a`  
 #
-# LAST REVISED: Dec. 6, 2023
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -30,7 +30,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 from src.modules.visualization.plotly_helper import PlotlyHelper
 
 # %%
@@ -41,7 +41,7 @@ from src.modules.visualization.plotly_helper import PlotlyHelper
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = ReactionDynamics(names=["A", "B", "C"])
+dynamics = UniformCompartment(names=["A", "B", "C"], preset="mid")
 
 # Reaction A <-> B (much slower, and with a much smaller K)
 dynamics.add_reaction(reactants="A", products="B",
@@ -57,27 +57,25 @@ dynamics.describe_reactions()
 # ### Run the simulation
 
 # %%
-dynamics.set_conc([50., 0., 0.], snapshot=True)  # Set the initial concentrations of all the chemicals, in their index order
+dynamics.set_conc({"A": 50.}, snapshot=True)  # Set the initial concentrations of all the chemicals, in their index order
 dynamics.describe_state()
 
 # %%
-# These settings can be tweaked to make the time resolution finer or coarser.  
-# Here we use a "mid" heuristic: neither too fast nor too prudent
-dynamics.use_adaptive_preset(preset="mid")
-
-dynamics.single_compartment_react(initial_step=0.01, reaction_duration=0.8,
+dynamics.single_compartment_react(initial_step=0.01, duration=0.8,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %%
-dynamics.plot_history(colors=['blue', 'orange', 'green'], show_intervals=True)
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], show_intervals=True)
 
 # %%
-dynamics.is_in_equilibrium(tolerance=15)
+dynamics.is_in_equilibrium()
 
 # %% [markdown]
 # We didn't quite advance to equilibrium this time.  A separate run (not shown) displayed far-better values if we had progressed the simulation just a little more in time. 
+
+# %%
 
 # %%
 
@@ -120,14 +118,14 @@ dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=C_c
 
 # %% [markdown]
 # ### But it looks like we'll do much better if splitting into 2 portions, one where A(t) ranges from 0 to about 40, and one from about 40 to 50   
-# Indeed, revisiting the early portion of the time plot from Part 1, one can see an inflection in the [C] green curve roughly around time t=0.028, which is when [A] is around 40 (blue).  That's around the peak of the mystery intermediate B (orange).
+# Indeed, revisiting the early portion of the time plot from Part 1, one can see an inflection in the [C] green curve roughly around time t=0.028, which is when [A] is around 40 (turquoise).  That's around the peak of the mystery intermediate B (orange).
 #
 # We'll pick time **t=0.028** as the divider between the 2 domains of the `A <-> C` time evolution that we want to model. 
 #
 # Note that this is a much smaller time than we saw in experiment `cascade_2_a`
 
 # %%
-dynamics.plot_history(colors=['blue', 'orange', 'green'], xrange=[0, 0.4], 
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4], 
                       vertical_lines=[0.028])
 
 # %% [markdown]
@@ -177,7 +175,7 @@ dynamics.estimate_rate_constants(t=t_arr_late, reactant_conc=A_conc_late, produc
 # Let's see the graph again:
 
 # %%
-dynamics.plot_history(colors=['blue', 'orange', 'green'], xrange=[0, 0.4], 
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4], 
                       vertical_lines=[0.028])
 
 # %% [markdown]

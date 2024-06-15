@@ -21,7 +21,7 @@
 # ### We'll REJECT the customary Michaelis-Menten assumptions that [E] << [S] and that the rates satisfy k1_reverse >> k2_forward !   
 # #### We'll explore exotic scenarios with lavish amount of enzyme, leading to diminishing (though fast-produced!) products,  and a buildup of the (not-so-transient!) ES* intermediate
 #
-# LAST REVISED: May 31, 2024  (using v. 1.0 beta32)
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -30,7 +30,7 @@ import set_path      # Importing this module will add the project's home directo
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 from src.modules.movies.movies import MovieTabular
 from src.modules.visualization.graphic_log import GraphicLog
 
@@ -82,7 +82,7 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # # 1. Set the initial concentrations of all the chemicals - starting with no enzyme
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data, preset="mid")
+dynamics = UniformCompartment(chem_data=chem_data, preset="mid")
 dynamics.set_conc(conc={"S": 20.},  snapshot=True)      # Initially, no enzyme `E`
 dynamics.describe_state()
 
@@ -135,7 +135,7 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 0.2     # A tiny bit of enzyme `E`: 1/100 of the initial [S]
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before 
+dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 dynamics.set_conc(conc={"S": 20., "E": E_init},
                   snapshot=True)     
@@ -212,7 +212,7 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 0.4
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before 
+dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 dynamics.set_conc(conc={"S": 20., "E": E_init},
                   snapshot=True)     
@@ -279,7 +279,7 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 1.0
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before 
+dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 dynamics.set_conc(conc={"S": 20., "E": E_init}, snapshot=True)     
 dynamics.describe_state()
@@ -345,7 +345,7 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 2.0      # 1/10 of the initial [S]
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before 
+dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 dynamics.set_conc(conc={"S": 20., "E": E_init}, snapshot=True)     
 dynamics.describe_state()
@@ -411,7 +411,7 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 10.0      # 1/2 of the initial [S]
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before 
+dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 dynamics.set_conc(conc={"S": 20., "E": E_init}, snapshot=True)     
 dynamics.describe_state()
@@ -480,7 +480,7 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 20.0      # Same as the initial [S]
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before 
+dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 dynamics.set_conc(conc={"S": 20., "E": E_init}, snapshot=True)     
 dynamics.describe_state()
@@ -549,7 +549,7 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 30.0      # 50% higher than the initial [S]
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before 
+dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 dynamics.set_conc(conc={"S": 20., "E": E_init}, snapshot=True)     
 dynamics.describe_state()
@@ -618,7 +618,7 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 60.0      # Triple the initial [S]
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before 
+dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 dynamics.set_conc(conc={"S": 20., "E": E_init}, snapshot=True)     
 dynamics.describe_state()
@@ -677,7 +677,7 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 100.0      # Quintuple the initial [S]
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before 
+dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 dynamics.set_conc(conc={"S": 20., "E": E_init}, snapshot=True)     
 dynamics.describe_state()

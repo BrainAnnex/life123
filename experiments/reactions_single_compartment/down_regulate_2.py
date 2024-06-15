@@ -21,7 +21,7 @@
 #
 # See also 1D/reactions/down_regulation_1
 #
-# LAST REVISED: May 5, 2024
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -30,7 +30,7 @@ import set_path      # Importing this module will add the project's home directo
 from experiments.get_notebook_info import get_notebook_basename
 
 from src.modules.chemicals.chem_data import ChemData as chem
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 
 from src.modules.visualization.graphic_log import GraphicLog
 
@@ -63,10 +63,12 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = ReactionDynamics(chem_data=chem_data)
-dynamics.set_conc(conc={"A": 5., "B": 100., "Y": 0.},
+dynamics = UniformCompartment(chem_data=chem_data, preset="fast")
+dynamics.set_conc(conc={"A": 5., "B": 100.},
                   snapshot=True)      # A is scarce, B is plentiful, Y is absent
 dynamics.describe_state()
+
+# %%
 
 # %%
 
@@ -75,13 +77,9 @@ dynamics.describe_state()
 
 # %%
 # All of these settings are currently close to the default values... but subject to change; set for repeatability
-dynamics.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.44)
-dynamics.set_thresholds(norm="norm_B", low=0.2, high=0.5, abort=1.5)
-dynamics.set_step_factors(upshift=1.4, downshift=0.5, abort=0.5)
-dynamics.set_error_step_factor(0.333)
 
-dynamics.single_compartment_react(initial_step=0.0005, reaction_duration=0.015,
-                                  variable_steps=True, explain_variable_steps=False)
+dynamics.single_compartment_react(initial_step=0.0005, duration=0.015,
+                                  variable_steps=True)
 
 # %% [markdown]
 # A, as the scarse limiting reagent, stops the reaction.  
@@ -106,6 +104,8 @@ dynamics.is_in_equilibrium()
 
 # %%
 
+# %%
+
 # %% [markdown] tags=[]
 # # 2. Now, let's suddenly increase [A]
 
@@ -121,7 +121,7 @@ dynamics.history.get_dataframe(tail=5)
 
 # %%
 dynamics.single_compartment_react(initial_step=0.0005, target_end_time=0.055,
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %%
 dynamics.plot_history(colors=['red', 'darkorange', 'green'],
@@ -140,6 +140,8 @@ dynamics.is_in_equilibrium()
 
 # %%
 
+# %%
+
 # %% [markdown] tags=[]
 # # 3. Let's again suddenly increase [A]
 
@@ -155,7 +157,7 @@ dynamics.history.get_dataframe(tail=5)
 
 # %%
 dynamics.single_compartment_react(initial_step=0.001, target_end_time=0.09,
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %%
 dynamics.plot_history(colors=['red', 'darkorange', 'green'],
@@ -166,10 +168,12 @@ dynamics.get_history()
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium()
+dynamics.is_in_equilibrium(tolerance=2)
 
 # %% [markdown]
 # **A**, again the scarse limiting reagent, stops the reaction yet again
+
+# %%
 
 # %%
 
@@ -184,7 +188,7 @@ dynamics.describe_state()
 
 # %%
 dynamics.single_compartment_react(initial_step=0.001, target_end_time=0.16,
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 
 # %%

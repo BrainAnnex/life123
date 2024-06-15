@@ -20,7 +20,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_4"_  
 #
-# LAST REVISED: May 5, 2024
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -28,7 +28,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.reaction_dynamics import ReactionDynamics
+from src.modules.reactions.uniform_compartment import UniformCompartment
 from src.modules.visualization.graphic_log import GraphicLog
 
 # %% tags=[]
@@ -48,7 +48,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Instantiate the simulator and specify the chemicals
-dynamics = ReactionDynamics(names=["A", "B", "C"])
+dynamics = UniformCompartment(names=["A", "B", "C"], preset="fast")
 
 # %%
 # Reaction A + B <-> C , with 1st-order kinetics for each species
@@ -91,13 +91,8 @@ dynamics.find_equilibrium_conc(rxn_index=0)    # This is an EXACT solution
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# For repeatibility, we avoid the defaults, and instead specify a particular group of preset parameters 
-# applicable to the adaptive time steps.
-# Here we use a "fast" heuristic: advance quickly thru time
-dynamics.use_adaptive_preset(preset="fast")
-
-dynamics.single_compartment_react(initial_step=0.004, reaction_duration=0.06,
-                                  variable_steps=True, explain_variable_steps=False,
+dynamics.single_compartment_react(initial_step=0.004, duration=0.06,
+                                  variable_steps=True,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"})
 
@@ -147,9 +142,11 @@ dynamics.get_history(tail=3)
 
 # %%
 
+# %%
+
 # %% [markdown]
-# # Everthing below is just for diagnostic insight 
-# ## into the adaptive variable time steps  
+# # _Everthing below is just for diagnostic insight_ 
+# ## _into the adaptive variable time steps_   
 # This information is available because we made a call to `dynamics.set_diagnostics()` prior to running the simulation
 
 # %%
