@@ -131,6 +131,6 @@ all_fig = go.Figure(data=fig0.data + fig1.data, layout = fig1.layout)
 all_fig.show()
 
 # %% [markdown]
-# #### Note how the trajectory is progressively slowing down towards the dynamical system's "attractor" (equilibrium state of the reaction)
+# ### **Note how the trajectory is progressively slowing down towards the dynamical system's "attractor" (equilibrium state of the reaction)**
 
 # %%

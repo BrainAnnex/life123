@@ -47,8 +47,8 @@ chem_data.describe_reactions()     # Notice how the enzyme `E` is noted in the p
 # ### Set the initial concentrations of all the chemicals - starting with no enzyme
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)
-dynamics.set_conc(conc={"A": 20., "B": 0., "E": 0.},
+dynamics = UniformCompartment(chem_data=chem_data, preset="mid")
+dynamics.set_conc(conc={"A": 20.},
                   snapshot=True)      # Initially, no enzyme `E`
 dynamics.describe_state()
 
@@ -58,15 +58,9 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are currently close to the default values... but subject to change; set for repeatability
-dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
-dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4)
-dynamics.set_step_factors(0.25)
-
 # Perform the reactions
 dynamics.single_compartment_react(duration=0.25,
-                                  initial_step=0.05, variable_steps=True, explain_variable_steps=False)
+                                  initial_step=0.05, variable_steps=True)
 
 # %%
 #dynamics.explain_time_advance()
@@ -91,7 +85,7 @@ dynamics.describe_state()
 
 # %%
 dynamics.single_compartment_react(duration=0.04,
-                                  initial_step=0.005, variable_steps=True, explain_variable_steps=False)
+                                  initial_step=0.005, variable_steps=True)
 
 # %% [markdown]
 # #### Note how the (proposed) initial step - in spite of having been reduced from the earlier run - is now appearing _large_, given the much-faster reaction dynamics.  However, the variable-step engine intercepts and automatically corrects the problem!

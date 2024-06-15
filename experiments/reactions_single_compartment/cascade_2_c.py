@@ -41,7 +41,7 @@ from src.modules.visualization.plotly_helper import PlotlyHelper
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = UniformCompartment(names=["A", "B", "C"])
+dynamics = UniformCompartment(names=["A", "B", "C"], preset="mid")
 
 # Reaction A <-> B (much faster, and with a much larger K)
 dynamics.add_reaction(reactants="A", products="B",
@@ -57,27 +57,25 @@ dynamics.describe_reactions()
 # ### Run the simulation
 
 # %%
-dynamics.set_conc([50., 0., 0.], snapshot=True)  # Set the initial concentrations of all the chemicals, in their index order
+dynamics.set_conc({"A": 50.}, snapshot=True)
 dynamics.describe_state()
 
 # %%
-# These settings can be tweaked to make the time resolution finer or coarser.  
-# Here we use a "mid" heuristic: neither too fast nor too prudent
-dynamics.use_adaptive_preset(preset="mid")
-
 dynamics.single_compartment_react(initial_step=0.01, duration=0.8,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %%
-dynamics.plot_history(colors=['blue', 'orange', 'green'], show_intervals=True)
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], show_intervals=True)
 
 # %%
 dynamics.is_in_equilibrium(tolerance=3)
 
 # %% [markdown]
 # #### A profoundly different plot than we got in experiment `cascade_2_b`
+
+# %%
 
 # %%
 
@@ -123,7 +121,7 @@ dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=C_c
 # Let's visually locate at what times those [A] values occur:
 
 # %%
-dynamics.plot_history(chemicals='A', colors='blue', xrange=[0, 0.15], 
+dynamics.plot_history(chemicals='A', colors='darkturquoise', xrange=[0, 0.15], 
                       vertical_lines=[0.028, 0.1], title="[A] as a function of time")
 
 # %%
@@ -192,7 +190,7 @@ dynamics.estimate_rate_constants(t=t_arr_late, reactant_conc=A_conc_late, produc
 # Let's see the time evolution again, but just for `A` and `C`:
 
 # %%
-dynamics.plot_history(chemicals=['A', 'C'], colors=['blue',  'green'], xrange=[0, 0.25], 
+dynamics.plot_history(chemicals=['A', 'C'], colors=['darkturquoise',  'green'], xrange=[0, 0.25], 
                       vertical_lines=[0.028, 0.1], title='A <-> C compound reaction')
 
 # %% [markdown]

@@ -1340,7 +1340,9 @@ class UniformCompartment:
                 if self.diagnostics:
                     # Expand the dict diagnostic_data_snapshot
                     diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
-                    diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')        # TODO: add 'norm_C'
+                    diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
+                    diagnostic_data_snapshot['norm_C'] = all_norms.get('norm_C')
+                    diagnostic_data_snapshot['norm_D'] = all_norms.get('norm_D')
                     diagnostic_data_snapshot['action'] = "ABORT"
                     diagnostic_data_snapshot['step_factor'] = step_factor
                     diagnostic_data_snapshot['time_step'] = delta_time
@@ -1360,6 +1362,8 @@ class UniformCompartment:
                 # Expand the dict diagnostic_data_snapshot
                 diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
                 diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
+                diagnostic_data_snapshot['norm_C'] = all_norms.get('norm_C')
+                diagnostic_data_snapshot['norm_D'] = all_norms.get('norm_D')
                 diagnostic_data_snapshot['action'] = f"OK ({action})"
                 diagnostic_data_snapshot['step_factor'] = step_factor
                 diagnostic_data_snapshot['time_step'] = delta_time
@@ -1448,11 +1452,11 @@ class UniformCompartment:
 
         if baseline_conc is not None:
             assert len(baseline_conc) == len(delta_conc), \
-                f"adjust_speed(): the number of entries in the passed array `delta_conc` ({len(delta_conc)}) " \
+                f"adjust_timestep(): the number of entries in the passed array `delta_conc` ({len(delta_conc)}) " \
                 f"does not match the number of entries in the passed array `baseline_conc` ({len(baseline_conc)})"
 
         assert n_chems == len(delta_conc), \
-            f"adjust_speed(): the number of entries in the passed array `delta_conc` ({len(delta_conc)}) " \
+            f"adjust_timestep(): the number of entries in the passed array `delta_conc` ({len(delta_conc)}) " \
             f"does not match the number of registered chemicals ({n_chems})"
 
 
@@ -1463,7 +1467,7 @@ class UniformCompartment:
         #          the reactions are simulated
         if self.chem_data.number_of_active_chemicals() < n_chems:
             delta_conc = delta_conc[self.chem_data.indexes_of_active_chemicals()]
-            #print(f"\nadjust_speed(): restricting adaptive time step analysis to {n_chems} chemicals only; their delta_conc is {delta_conc}")
+            #print(f"\nadjust_timestep(): restricting adaptive time step analysis to {n_chems} chemicals only; their delta_conc is {delta_conc}")
             if baseline_conc is not None:
                 baseline_conc = baseline_conc[self.chem_data.indexes_of_active_chemicals()]
             if prev_conc is not None:

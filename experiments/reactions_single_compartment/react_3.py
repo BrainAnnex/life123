@@ -48,7 +48,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Instantiate the simulator and specify the chemicals
-dynamics = UniformCompartment(names=["A", "B", "C"])
+dynamics = UniformCompartment(names=["A", "B", "C"], preset="fast")
 
 # %%
 # Reaction A + B <-> C , with 1st-order kinetics for each species
@@ -91,13 +91,8 @@ dynamics.find_equilibrium_conc(rxn_index=0)    # This is an EXACT solution
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# For repeatibility, we avoid the defaults, and instead specify a particular group of preset parameters 
-# applicable to the adaptive time steps.
-# Here we use a "fast" heuristic: advance quickly thru time
-dynamics.use_adaptive_preset(preset="fast")
-
 dynamics.single_compartment_react(initial_step=0.004, duration=0.06,
-                                  variable_steps=True, explain_variable_steps=False,
+                                  variable_steps=True,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"})
 
@@ -147,9 +142,11 @@ dynamics.get_history(tail=3)
 
 # %%
 
+# %%
+
 # %% [markdown]
-# # Everthing below is just for diagnostic insight 
-# ## into the adaptive variable time steps  
+# # _Everthing below is just for diagnostic insight_ 
+# ## _into the adaptive variable time steps_   
 # This information is available because we made a call to `dynamics.set_diagnostics()` prior to running the simulation
 
 # %%

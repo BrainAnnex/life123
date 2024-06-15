@@ -63,7 +63,7 @@ chem_data.describe_reactions()     # Notice how the enzyme `E` is noted in the p
 # # 1. Set the initial concentrations of all the chemicals - starting with no enzyme
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data, preset="mid")
 dynamics.set_conc(conc={"S": 20.},
                   snapshot=True)      # Initially, no enzyme `E`
 dynamics.describe_state()
@@ -74,15 +74,9 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-
-# This setting is a preset that can be adjusted make the time resolution finer or coarser;
-# it will stay in effect from now on, unless explicitly changed later
-dynamics.use_adaptive_preset(preset="mid")
-
-
 # Perform the reactions
 dynamics.single_compartment_react(duration=4.0,
-                                  initial_step=0.1, variable_steps=True, explain_variable_steps=False)
+                                  initial_step=0.1, variable_steps=True)
 
 # %%
 #dynamics.explain_time_advance()
@@ -109,11 +103,13 @@ dynamics.is_in_equilibrium(tolerance=2)
 
 # %%
 
+# %%
+
 # %% [markdown]
 # # 2. Re-start all the reactions from the same initial concentrations - except for now having a tiny amount of enzyme (two orders of magnitude less than the starting [S])
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)   # A brand-new simulation
+dynamics = UniformCompartment(chem_data=chem_data, preset="mid")   # A brand-new simulation
 
 # %%
 dynamics.set_conc(conc={"S": 20., "E": 0.2},
@@ -127,7 +123,7 @@ dynamics.describe_state()
 
 # %%
 dynamics.single_compartment_react(duration=1.5, 
-                                  initial_step=0.05, variable_steps=True, explain_variable_steps=False)
+                                  initial_step=0.05, variable_steps=True)
 
 # %%
 #dynamics.explain_time_advance()
@@ -150,11 +146,13 @@ dynamics.is_in_equilibrium()
 
 # %%
 
+# %%
+
 # %% [markdown]
 # # 3. Re-start all the reactions from the same initial concentrations - except for now having a more substantial amount of enzyme
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)   # A brand-new simulation
+dynamics = UniformCompartment(chem_data=chem_data, preset="mid")   # A brand-new simulation
 
 # %%
 dynamics.set_conc(conc={"S": 20., "E": 1.},
@@ -168,7 +166,7 @@ dynamics.describe_state()
 
 # %%
 dynamics.single_compartment_react(duration=0.5, 
-                                  initial_step=0.02, variable_steps=True, explain_variable_steps=False)
+                                  initial_step=0.02, variable_steps=True)
 
 # %%
 #dynamics.explain_time_advance()
@@ -195,7 +193,7 @@ dynamics.is_in_equilibrium(explain=False)
 # # 4. Re-start all the reactions from the same initial concentrations - except for now having a good amount of enzyme
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)   # A brand-new simulation
+dynamics = UniformCompartment(chem_data=chem_data, preset="mid")   # A brand-new simulation
 
 # %%
 dynamics.set_conc(conc={"S": 20., "E": 5.},
@@ -209,7 +207,7 @@ dynamics.describe_state()
 
 # %%
 dynamics.single_compartment_react(duration=0.2, 
-                                  initial_step=0.01, variable_steps=True, explain_variable_steps=False)
+                                  initial_step=0.01, variable_steps=True)
 
 # %%
 #dynamics.explain_time_advance()
@@ -232,11 +230,13 @@ dynamics.is_in_equilibrium(explain=False)
 
 # %%
 
+# %%
+
 # %% [markdown]
 # # 5. Re-start all the reactions from the same initial concentrations - except for now having a lot of enzyme (same as the initial [S])
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)   # A brand-new simulation
+dynamics = UniformCompartment(chem_data=chem_data, preset="mid")   # A brand-new simulation
 
 # %%
 dynamics.set_conc(conc={"S": 20., "E": 20.},
@@ -250,7 +250,7 @@ dynamics.describe_state()
 
 # %%
 dynamics.single_compartment_react(duration=0.05, 
-                                  initial_step=0.005, variable_steps=True, explain_variable_steps=False)
+                                  initial_step=0.005, variable_steps=True)
 
 # %%
 #dynamics.explain_time_advance()
@@ -273,11 +273,13 @@ dynamics.is_in_equilibrium(explain=False)
 
 # %%
 
+# %%
+
 # %% [markdown]
 # # 6. Re-start all the reactions from the same initial concentrations - except for now having a very large amount of enzyme (more than the initial substrate concentration [S])
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)   # A brand-new simulation
+dynamics = UniformCompartment(chem_data=chem_data, preset="mid")   # A brand-new simulation
 
 # %%
 dynamics.set_conc(conc={"S": 20., "E": 30.},
@@ -291,7 +293,7 @@ dynamics.describe_state()
 
 # %%
 dynamics.single_compartment_react(duration=0.02, 
-                                  initial_step=0.001, variable_steps=True, explain_variable_steps=False)
+                                  initial_step=0.001, variable_steps=True)
 
 # %%
 #dynamics.explain_time_advance()
@@ -314,11 +316,13 @@ dynamics.is_in_equilibrium(explain=False)
 
 # %%
 
+# %%
+
 # %% [markdown]
 # # 7. Finally, re-start all the reactions from the same initial concentrations - except for now having a huge amount of enzyme (far more than the initial [S])
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)   # A brand-new simulation
+dynamics = UniformCompartment(chem_data=chem_data, preset="mid")   # A brand-new simulation
 
 # %%
 dynamics.set_conc(conc={"S": 20., "E": 100.},
@@ -332,7 +336,7 @@ dynamics.describe_state()
 
 # %%
 dynamics.single_compartment_react(duration=0.02, 
-                                  initial_step=0.0005, variable_steps=True, explain_variable_steps=False)
+                                  initial_step=0.0005, variable_steps=True)
 
 # %%
 #dynamics.explain_time_advance()
@@ -355,11 +359,13 @@ dynamics.is_in_equilibrium(explain=False)
 
 # %%
 
+# %%
+
 # %% [markdown]
 # # 8. Finally, re-start all the reactions from the same initial concentrations - except for now having a LAVISH amount of enzyme (two orders of magnitude more than the starting substrate concentration [S])
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)   # A brand-new simulation
+dynamics = UniformCompartment(chem_data=chem_data, preset="mid")   # A brand-new simulation
 
 # %%
 dynamics.set_conc(conc={"S": 20., "E": 2000.},
@@ -373,7 +379,7 @@ dynamics.describe_state()
 
 # %%
 dynamics.single_compartment_react(duration=0.0015, 
-                                  initial_step=0.000005, variable_steps=True, explain_variable_steps=False)
+                                  initial_step=0.000005, variable_steps=True)
 
 # %%
 #dynamics.explain_time_advance()

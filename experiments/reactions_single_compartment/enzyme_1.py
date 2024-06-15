@@ -44,8 +44,8 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)
-dynamics.set_conc(conc={"A": 20., "B": 0.},
+dynamics = UniformCompartment(chem_data=chem_data, preset="fast")
+dynamics.set_conc(conc={"A": 20.},
                   snapshot=True)
 dynamics.describe_state()
 
@@ -55,13 +55,8 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are currently close to the default values... but subject to change; set for repeatability
-dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
-dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5, error=0.5)
-
 dynamics.single_compartment_react(duration=3.0,
-                                  initial_step=0.1, variable_steps=True, explain_variable_steps=False)
+                                  initial_step=0.1, variable_steps=True)
 
 # %%
 #dynamics.explain_time_advance()
@@ -77,7 +72,7 @@ dynamics.curve_intersect("A", "B", t_start=0, t_end=1.0)
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(tolerance=3)
+dynamics.is_in_equilibrium()
 
 # %%
 
@@ -107,7 +102,7 @@ chem_data.describe_reactions()  # Notice how the enzyme `E` is noted in the prin
 # ### Set the initial concentrations of all the chemicals (to what they originally were)
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)
+dynamics = UniformCompartment(chem_data=chem_data, preset="mid")
 dynamics.set_conc(conc={"A": 20., "B": 0., "E": 30.},
                   snapshot=True)      # Plenty of enzyme `E`
 dynamics.describe_state()
@@ -118,14 +113,8 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are currently close to the default values... but subject to change; set for repeatability
-dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
-dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4)
-dynamics.set_step_factors(0.25)
-
 dynamics.single_compartment_react(duration=0.1,
-                                  initial_step=0.1, variable_steps=True, explain_variable_steps=False)
+                                  initial_step=0.1, variable_steps=True)
 
 # %% [markdown]
 # #### Note how the (proposed) initial step - kept the same as the previous run - is now _extravagantly large_, given the much-faster reaction dynamics.  However, the variable-step engine intercepts and automatically corrects the problem!
