@@ -1313,7 +1313,7 @@ class UniformCompartment:
 
                 if len(self.chem_data.active_chemicals) < self.chem_data.number_of_chemicals():
                     print(f"    Restricting adaptive time step analysis to {len(self.chem_data.active_chemicals)} "
-                    f"chemicals only: {self.chem_data.names_of_active_chemicals()} , with indexes: {self.chem_data.active_chemicals}")
+                    f"chemicals only: {self.chem_data.names_of_active_chemicals()} , with indexes: {self.chem_data.indexes_of_active_chemicals()}")
 
                 print("    Norms:    ", all_norms)
                 print("    Thresholds:    ")
@@ -1458,13 +1458,14 @@ class UniformCompartment:
         # restrict our consideration to only the dynamically involved ones
         # CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
         #          the reactions are simulated
-        if len(self.chem_data.names_of_enzymes()) > 0:
+        if self.chem_data.number_of_active_chemicals() < n_chems:
             delta_conc = delta_conc[self.chem_data.indexes_of_active_chemicals()]
             #print(f"\nadjust_speed(): restricting adaptive time step analysis to {n_chems} chemicals only; their delta_conc is {delta_conc}")
             if baseline_conc is not None:
                 baseline_conc = baseline_conc[self.chem_data.indexes_of_active_chemicals()]
+            if prev_conc is not None:
                 prev_conc = prev_conc[self.chem_data.indexes_of_active_chemicals()]
-        # Note: setting delta_conc, etc, only affects local variables, and won't mess up the arrays passed as arguments
+            # Note: setting delta_conc, etc, only affects local variables, and won't mess up the arrays passed as arguments
 
         all_norms = {}
 
@@ -1797,7 +1798,7 @@ class UniformCompartment:
                                     f"\n      Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}"
                                     f"\n      -> will backtrack, and re-do step with a SMALLER delta time, "
                                     f"multiplied by {self.step_factors['error']} (set to {delta_time * self.step_factors['error']:.5g}) "
-                                    f"[Step started at t={self.system_time:.5g}, and will rewind there]")
+                                    f"\n      [Step started at t={self.system_time:.5g}, and will rewind there]")
 
 
 

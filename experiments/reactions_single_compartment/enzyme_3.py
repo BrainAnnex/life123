@@ -28,7 +28,7 @@
 # 7. [E] = 100  
 # 8. [E] = 2000  (100 times the initial [S])
 #
-# LAST REVISED: May 31, 2024  (using v. 1.0 beta32)
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

@@ -22,7 +22,7 @@
 #
 # All 1st-order kinetics.    
 #
-# LAST REVISED: May 5, 2024
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %% [markdown]
 # ![Temporarily suspending the Laws of Physics](../../docs/impossible_1.png)

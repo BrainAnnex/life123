@@ -719,6 +719,18 @@ class AllReactions(Diffusion):
 
 
 
+    def number_of_active_chemicals(self) -> int:
+        """
+        Return the number of all the chemicals
+        involved in ANY of the registered reactions,
+        but NOT counting chemicals that always appear in a catalytic role in all the reactions they
+        participate in
+        (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here)
+        """
+        return len(self.active_chemicals)
+
+
+
     def indexes_of_active_chemicals(self) -> [int]:
         """
         Return the ordered list (numerically sorted) of the index numbers of all the chemicals

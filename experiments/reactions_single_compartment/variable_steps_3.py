@@ -25,7 +25,7 @@
 #
 # In either case, the extra chemicals and the enzyme don't vary in concentration - and thus **get automatically excluded from considerations about the adaptive variable step sizes** , which remain exactly as they were in experiment `variable_steps_1`
 #
-# LAST REVISED: Dec. 3, 2023
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -37,6 +37,8 @@ from src.modules.chemicals.chem_data import ChemData as chem
 from src.modules.reactions.uniform_compartment import UniformCompartment
 
 import numpy as np
+
+# %%
 
 # %%
 
@@ -62,21 +64,23 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)
-dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0., "EXTRA 1": 0.,  "EXTRA 2": 55.,  "EXTRA 3": 100. })
+dynamics = UniformCompartment(chem_data=chem_data, preset=None)
+dynamics.set_conc(conc={"U": 50., "X": 100., "EXTRA 2": 55.,  "EXTRA 3": 100. })  # The EXTRA's are junk for testing
 dynamics.describe_state()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are currently close to the default values... but subject to change; set for repeatability
+# These adaptive-time settings (normally specified with a preset) are being set explicitly
 dynamics.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
-dynamics.set_thresholds(norm="norm_B")   # We are disabling norm_B (to conform to the original run)
-dynamics.set_step_factors(upshift=2.0, downshift=0.5, abort=0.5)    # Note: upshift=2.0 seems to often be excessive.  About 1.4 is currently recommended
-dynamics.set_step_factors(0.5)
+dynamics.set_step_factors(upshift=2.0, downshift=0.5, abort=0.5, error=0.5)    
+                                        # Note: upshift=2.0 seems to often be excessive.  About 1.4 is currently recommended
 
+dynamics.show_adaptive_parameters()
+
+# %%
 dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0, 
-                                  variable_steps=True, explain_variable_steps=True)
+                                  variable_steps=True, explain_variable_steps=[0, 2])
 
 # %% [markdown]
 # ## Compare the above printout with its counterpart from the experiment `variable_steps_1`
@@ -98,10 +102,12 @@ np.array(transition_times)    # Note: there will be one more transition time (th
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_history(colors=['lightgray', 'green', 'lightgray', 'orange', 'blue', 'lightgray'])
+dynamics.plot_history(colors=['lightgray', 'green', 'lightgray', 'orange', 'darkturquoise', 'lightgray'])
 
 # %%
 dynamics.curve_intersect("U", "X", t_start=0.3, t_end=0.35)
+
+# %%
 
 # %%
 
@@ -127,21 +133,22 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)
-dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0., "E": 1. })
+dynamics = UniformCompartment(chem_data=chem_data, preset=None)
+dynamics.set_conc(conc={"U": 50., "X": 100., "E": 1. })
 dynamics.describe_state()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# All of these settings are currently close to the default values... but subject to change; set for repeatability
+# These adaptive-time settings (normally specified with a preset) are being set explicitly
 dynamics.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
-dynamics.set_thresholds(norm="norm_B")   # We are disabling norm_B (to conform to the original run)
-dynamics.set_step_factors(upshift=2.0, downshift=0.5, abort=0.5)    # Note: upshift=2.0 seems to often be excessive.  About 1.4 is currently recommended
-dynamics.set_step_factors(0.5)
+dynamics.set_step_factors(upshift=2.0, downshift=0.5, abort=0.5, error=0.5)
 
+dynamics.show_adaptive_parameters()
+
+# %%
 dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0, 
-                                  variable_steps=True, explain_variable_steps=True)
+                                  variable_steps=True, explain_variable_steps=[0,2])
 
 # %% [markdown]
 # ## Compare the above printout with its counterpart from the experiment `variable_steps_1`
@@ -163,7 +170,7 @@ np.array(transition_times)    # Note: there will be one more transition time (th
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_history(colors=['green', 'orange', 'blue', 'gray'])
+dynamics.plot_history(colors=['green', 'orange', 'darkturquoise', 'gray'])
 
 # %%
 dynamics.curve_intersect("U", "X", t_start=0.3, t_end=0.35)

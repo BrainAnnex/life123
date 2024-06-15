@@ -17,9 +17,9 @@
 # ## Accurate results in the simulation of the 2 coupled reactions `2 S <-> U` and `S <-> X`   
 # Both mostly forward.  1st-order kinetics throughout.   
 #
-# Same as `variable_steps_1`, but with fixed time steps: a lot of tiny steps - as a proxy for the "exact value"
+# Same as `variable_steps_1`, but with FIXED TIME STEPS: a lot of TINY steps - as a proxy for the "exact value"
 #
-# LAST REVISED: May 5, 2024
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -66,7 +66,7 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 
 # %%
 dynamics = UniformCompartment(chem_data=chem_data)
-dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
+dynamics.set_conc(conc={"U": 50., "X": 100.})
 dynamics.describe_state()
 
 # %%
@@ -94,7 +94,7 @@ df.iloc[1850]
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_history(colors=['green', 'orange', 'blue'])
+dynamics.plot_history(colors=['green', 'orange', 'darkturquoise'])
 
 # %%
 dynamics.curve_intersect("U", "X", t_start=0.3, t_end=0.35)

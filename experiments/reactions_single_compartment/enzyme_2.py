@@ -18,7 +18,7 @@
 # A direct reaction and the same reaction, catalyzed
 # ### Enzyme `E` initially zero, and then suddenly added mid-reaction
 #
-# LAST REVISED: Dec. 3, 2023
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

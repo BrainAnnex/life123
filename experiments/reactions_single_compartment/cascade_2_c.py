@@ -22,7 +22,7 @@
 #
 # **Background**: please see experiment `cascade_2_b`  
 #
-# LAST REVISED: Dec. 6, 2023
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

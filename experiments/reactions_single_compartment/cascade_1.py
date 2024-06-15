@@ -24,7 +24,7 @@
 # In part2, some diagnotic insight is explored.   
 # In part3, two identical runs ("adaptive variable steps" and "fixed small steps") are compared. 
 #
-# LAST REVISED: May 27, 2024  (using v. 1.0beta32)
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -92,7 +92,7 @@ chem.plot_reaction_network("vue_cytoscape_2")
 # %%
 dynamics = UniformCompartment(chem_data=chem, preset="fast")
 
-dynamics.set_conc([50., 0, 0.], snapshot=True) # Set the initial concentrations of all the chemicals, in their index order
+dynamics.set_conc({"A": 50.}, snapshot=True) # Set the initial concentrations of all the chemicals, in their index order
 dynamics.describe_state()
 
 # %%
@@ -107,7 +107,7 @@ dynamics.set_diagnostics()         # To save diagnostic information about the ca
 dynamics.single_compartment_react(initial_step=0.02, duration=0.4,
                                   snapshots={"initial_caption": "1st reaction step",
                                              "final_caption": "last reaction step"},
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %% [markdown]
 # ### <a name="cascade_1_plot"> Plots of changes of concentration with time</a>
@@ -197,7 +197,7 @@ dynamics.get_diagnostic_rxn_data(rxn_index=1)
 dynamics2 = UniformCompartment(chem_data=chem)  # Re-use the same chemicals and reactions of the previous simulation
 
 # %% tags=[]
-dynamics2.set_conc([50., 0, 0.], snapshot=True)
+dynamics2.set_conc({"A": 50.}, snapshot=True)
 
 # %%
 # Notice that we're using FIXED steps this time

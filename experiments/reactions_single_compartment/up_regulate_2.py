@@ -22,7 +22,7 @@
 # Invoking [Le Chatelier's principle](https://www.chemguide.co.uk/physical/equilibria/lechatelier.html), it can be seen that, starting from equilibrium, when [U] goes up, so does [D]; and when [D] goes up, so does [X].   
 # Conversely, when [U] goes down, so does [D]; and when [D] goes down, so does [X].     
 #
-# LAST REVISED: May 5, 2024
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -68,8 +68,8 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)
-dynamics.set_conc(conc={"U": 50., "X": 100., "D": 0.})
+dynamics = UniformCompartment(chem_data=chem_data, preset = "fast")
+dynamics.set_conc(conc={"U": 50., "X": 100.})
 dynamics.describe_state()
 
 # %%
@@ -79,12 +79,6 @@ dynamics.describe_state()
 
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-
-# All of these settings are currently close to the default values... but subject to change; set for repeatability
-dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
-dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-dynamics.set_step_factors(upshift=1.5, downshift=0.5, abort=0.5)
-dynamics.set_step_factors(0.5)
 
 dynamics.single_compartment_react(initial_step=0.03, target_end_time=0.5,
                                   variable_steps=True, explain_variable_steps=False)
@@ -109,6 +103,8 @@ dynamics.is_in_equilibrium()
 
 # %%
 
+# %%
+
 # %% [markdown] tags=[]
 # # 2. Now, let's suddenly increase [U]
 
@@ -124,7 +120,7 @@ dynamics.get_history(tail=3)
 
 # %%
 dynamics.single_compartment_react(initial_step=0.03, target_end_time=1,
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %%
 #dynamics.get_history()
@@ -138,7 +134,9 @@ dynamics.plot_history(colors=['red', 'green', 'gray'])
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium()
+dynamics.is_in_equilibrium(tolerance=2)
+
+# %%
 
 # %%
 
@@ -157,7 +155,7 @@ dynamics.get_history(tail=3)
 
 # %%
 dynamics.single_compartment_react(initial_step=0.03, target_end_time=1.6,
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %%
 #dynamics.get_history()
@@ -171,7 +169,9 @@ dynamics.plot_history(colors=['red', 'green', 'gray'])
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium(tolerance=2)
+dynamics.is_in_equilibrium()
+
+# %%
 
 # %%
 
@@ -190,7 +190,7 @@ dynamics.get_history(tail=3)
 
 # %%
 dynamics.single_compartment_react(initial_step=0.03, target_end_time=2.3,
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %%
 #dynamics.get_history()

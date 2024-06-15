@@ -23,7 +23,7 @@
 # In PART 2, the time functions generated in Part 1 are taken as a _starting point,_ to estimate the rate constants of `A <-> B`  
 # In PART 3, we'll repeat what we did in Part 2, but this time showing the full details of how the answer is arrived at
 #
-# LAST REVISED: Dec. 3, 2023
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
