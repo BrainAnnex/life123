@@ -27,6 +27,9 @@ class RxnDynamics:
         """
         n_active_chemicals = len(delta_conc)
 
+        assert n_active_chemicals > 0, \
+            "norm_A(): zero-sized array was passed as argument"
+
         # The following are normalized by the number of chemicals
         #L2_rate = np.linalg.norm(delta_concentrations) / n_chems
         #L2_rate = np.sqrt(np.sum(delta_concentrations * delta_concentrations)) / n_chems
@@ -54,10 +57,13 @@ class RxnDynamics:
         assert len(delta_conc) == arr_size, "norm_B(): mismatch in the sizes of the 2 passed array arguments"
 
         to_keep = ~ np.isclose(baseline_conc, 0)    # Element-wise negation; this will be an array of Booleans
-        # with True for all the elements of baseline_conc that aren't too close to 0
+                                                    # with True for all the elements of baseline_conc that aren't too close to 0
 
         ratios = delta_conc[to_keep] / baseline_conc[to_keep]   # Using boolean indexing to only select some of the elements :
-        # the non-zero denominators, and their corresponding numerators
+                                                                # the non-zero denominators, and their corresponding numerators
+        if len(ratios) == 0:
+            return 0.
+
         return max(abs(ratios))
 
 
@@ -125,8 +131,8 @@ class RxnDynamics:
         if prev_conc is None:
             return 0            # Unable to compute a norm; 0 represents "perfect"
 
-        D1 = baseline_conc - prev_conc
-        D2 = delta_conc
+        D1 = baseline_conc - prev_conc  # Change from prev state to current one
+        D2 = delta_conc                 # Change from current state to next one
 
         #print("\nnorm_D ****** D1: ", D1)
         #print("norm_D ****** D2: ", D2)
@@ -143,15 +149,15 @@ class RxnDynamics:
         #print("norm_D **** delta1_selected: ", D1_selected)
         #print("norm_D *** delta2_selected: ", D2_selected)
 
-        ratios = abs(D2_selected / D1_selected)
+        ratios = abs(D2_selected / D1_selected) # How big are the next changes relative to the previous ones
         #print(ratios)
 
         res = np.sum(ratios)    # An argument might be made for taking the MAX instead
-
+                                # TODO: turn into a separate norm
         arr_size = len(baseline_conc)
-
         normalized_res = res / arr_size
         #print("norm_D *** : ", normalized_res)
+
         return normalized_res
 
 

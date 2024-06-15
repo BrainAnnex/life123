@@ -27,7 +27,7 @@
 # A LOT of plots are sent to the log file from this experiment; the reason is to compare two
 # graphic elements, "vue_curves_3" and "vue_curves_4"
 #
-# LAST REVISED: May 6, 2024
+# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -90,8 +90,8 @@ lineplot_pars = {"range": [0, 20],
 # # Inject initial concentrations of A and B at opposite ends of the system
 
 # %%
-bio.set_bin_conc(bin_address=0, species_index=0, conc=20.)
-bio.set_bin_conc(bin_address=6, species_index=1, conc=20.)
+bio.set_bin_conc(bin_address=0, species_name="A", conc=20.)
+bio.set_bin_conc(bin_address=6, species_name="B", conc=20.)
 
 bio.describe_state()
 

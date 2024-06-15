@@ -538,12 +538,23 @@ def test_adjust_timestep():
     normC = RxnDynamics.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
     assert np.allclose(normC, 4/3)
 
-    # TODO: also test norm_D
+    normD = RxnDynamics.norm_D(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
+    assert np.allclose(normD, 0.7833333333333333)
+
 
     uc.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.84)
     uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)
     uc.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4, error=0.25)
 
+    uc.chem_data.active_chemicals = ["C1"]  # A hack to make sure just chemical "C1" is considered in the norms
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 0.25, 'norm_B': 0.25}, 'applicable_norms': 'ALL'}
+
+    uc.chem_data.active_chemicals = ["C1", "C2"]  # A hack to make sure just chemicals "C1" and "C2" are considered in the norms
+    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
+    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 0.3125, 'norm_B': 0.25}, 'applicable_norms': 'ALL'}
+
+    uc.chem_data.active_chemicals = ["C1", "C2", "C3", "C4", "C5"]  # A hack to make sure that all the chemicals are considered in the norms
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
     assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85}, 'applicable_norms': ['norm_A']}
 
@@ -601,6 +612,8 @@ def test_adjust_timestep():
     uc.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.84)    # normA (1.85) will now trigger an "abort" before we can even get to normB
     result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
     assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85}, 'applicable_norms': ['norm_A']}
+
+    # TODO: also test with the other norms
 
 
 
