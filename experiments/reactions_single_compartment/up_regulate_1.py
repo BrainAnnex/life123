@@ -63,8 +63,8 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)
-dynamics.set_conc(conc={"A": 5., "X": 100., "B": 0.},
+dynamics = UniformCompartment(chem_data=chem_data, preset="fast")
+dynamics.set_conc(conc={"A": 5., "X": 100.},
                   snapshot=True)      # A is scarce, X is plentiful, B is absent
 dynamics.describe_state()
 
@@ -74,12 +74,8 @@ dynamics.describe_state()
 # %%
 dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# This setting is a preset that can be adjusted make the time resolution finer or coarser;
-# it will stay in effect from now on, unless explicitly changed later
-dynamics.use_adaptive_preset(preset="fast")
-
 dynamics.single_compartment_react(initial_step=0.0005, duration=0.015,
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %%
 dynamics.plot_history(colors=['red', 'darkorange', 'green'], show_intervals=True)
@@ -103,6 +99,8 @@ dynamics.is_in_equilibrium()
 
 # %%
 
+# %%
+
 # %% [markdown] tags=[]
 # # STEP 2. Now, let's suddenly increase [A]
 
@@ -121,7 +119,7 @@ dynamics.get_history(tail=5)
 
 # %%
 dynamics.single_compartment_react(initial_step=0.0005, target_end_time=0.035,
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %%
 dynamics.plot_history(colors=['red', 'darkorange', 'green'], show_intervals=True)
@@ -142,6 +140,8 @@ dynamics.is_in_equilibrium()
 
 # %%
 
+# %%
+
 # %% [markdown] tags=[]
 # # STEP 3.  Let's again suddenly increase [A]
 
@@ -157,7 +157,7 @@ dynamics.get_history(tail=5)
 
 # %%
 dynamics.single_compartment_react(initial_step=0.0005, target_end_time=0.070,
-                                  variable_steps=True, explain_variable_steps=False)
+                                  variable_steps=True)
 
 # %%
 dynamics.plot_history(colors=['red', 'darkorange', 'green'], show_intervals=True)

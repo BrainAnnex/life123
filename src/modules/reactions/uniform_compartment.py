@@ -276,9 +276,10 @@ class UniformCompartment:
         if preset:
             self.use_adaptive_preset(preset)
 
+
+        # The following 3 diagnostic values get reset at every run
         self.number_neg_concs = 0
         self.number_soft_aborts = 0
-
         self.norm_usage = {"norm_A": 0, "norm_B": 0, "norm_C": 0, "norm_D": 0}  # Number of times that each norm
                                                                                 #   got involved in step-size decision
 
@@ -1002,7 +1003,6 @@ class UniformCompartment:
                 "single_compartment_react(): when using the `stop` argument, a `max_steps` argument must be provided"
             time_step = initial_step
 
-
         else:
             if target_end_time is not None:
                 if duration is not None:
@@ -1047,6 +1047,10 @@ class UniformCompartment:
 
 
         step_count = 0
+        # Reset some diagnostic variables
+        self.number_neg_concs = 0
+        self.number_soft_aborts = 0
+        self.norm_usage = {"norm_A": 0, "norm_B": 0, "norm_C": 0, "norm_D": 0}
 
         while True:
             # Check various criteria for termination
@@ -1184,7 +1188,6 @@ class UniformCompartment:
                                     3) recommended_next_step : a suggestions to the calling module
                                        about the next step to best take
         """
-
         if conc_array is not None:
             self.system = conc_array    # For historical reasons, as a convenience to Bio1D, etc.
 
