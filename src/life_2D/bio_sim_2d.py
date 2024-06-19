@@ -41,7 +41,7 @@ class BioSim2D:
         self.container_diffusion = None      # A NumPy array for each species: diffusion rate in/out of the container
 
 
-        self.reaction_dynamics = None        # Object of class "ReactionDynamics"
+        self.reaction_dynamics = None        # Object of class "UniformCompartment"
 
         self.system_time = None              # Global time of the system, from initialization on
 

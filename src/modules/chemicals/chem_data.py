@@ -940,7 +940,7 @@ class Macromolecules(AllReactions):
         """
         Register one or more macromolecule species, specified by their name(s)
         Note: this is a register of names, NOT of dynamical information
-              about counts of macromolecules in the system (which is the domain of the class ReactionDynamics)
+              about counts of macromolecules in the system (which is the domain of the class UniformCompartment)
 
         :param names:   A string, or list of strings, with the name(s) of the macromolecule(s)
         :return:        None.  The object attribute self.macro_molecules will get modified

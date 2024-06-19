@@ -24,8 +24,8 @@ class BioSim1D:
 
         :param n_bins:      The number of compartments (bins) to use in the simulation
         :param chem_data:   (OPTIONAL) Object of class "ReactionData";
-                                if not specified, it will get extracted from the "ReactionDynamics" class
-        :param reactions:   (OPTIONAL) Object of class "ReactionDynamics";
+                                if not specified, it will get extracted from the "UniformCompartment" class
+        :param reactions:   (OPTIONAL) Object of class "UniformCompartment";
                                 if not specified, it'll get instantiated here   TODO: maybe no longer necessary
         """
         self.debug = False
@@ -78,7 +78,7 @@ class BioSim1D:
                                             #   in the diffusion process.
                                             #   See explanation in file overly_large_single_timesteps.py
 
-        self.reaction_dynamics = None       # Object of class "ReactionDynamics"
+        self.reaction_dynamics = None       # Object of class "UniformCompartment"
 
         self.history = MovieTabular()       # To store user-selected snapshots of (parts of) the system,
                                             #   whenever requested by the user.
@@ -108,8 +108,8 @@ class BioSim1D:
 
         :param n_bins:      The number of compartments (bins) to use in the simulation
         :param chem_data:   (OPTIONAL) Object of class "ReactionData";
-                                if not specified, it will get extracted from the "ReactionDynamics" class
-        :param reactions:   (OPTIONAL) Object of class "ReactionDynamics";
+                                if not specified, it will get extracted from the "UniformCompartment" class
+        :param reactions:   (OPTIONAL) Object of class "UniformCompartment";
                                 if not specified, it'll get instantiated here
         :return:            None
         """

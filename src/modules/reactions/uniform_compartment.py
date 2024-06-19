@@ -10,9 +10,12 @@ from src.modules.numerical.numerical import Numerical as num
 from src.modules.visualization.plotly_helper import PlotlyHelper
 
 
-
+# TODO: rename "ReactionDynamics", and move to separate file
 class RxnDynamics:
-    # TODO: rename "ReactionDynamics", and move to separate file
+    """
+    Static methods for variable time steps
+    """
+
 
     @staticmethod
     def norm_A(delta_conc :np.array) -> float:
@@ -192,7 +195,7 @@ class UniformCompartment:
     (This class was formerly named "ReactionDynamics")
     """
 
-    #TODO: maybe split off part of this class into a separate "ReactionDynamics" class
+    #TODO: maybe split off part of this class into the new "RxnDynamics" class
 
 
     def __init__(self, chem_data=None, names=None, preset="mid"):
@@ -3527,26 +3530,6 @@ class UniformCompartment:
                   f"in the time interval [{t_start} - {t_end}]")
 
         return intersection
-
-
-
-    def curve_intersection(self, chem1, chem2, t_start, t_end) -> (float, float):
-        """
-        TODO: OBSOLETE
-        Find and return the intersection of the 2 curves in the columns var1 and var2,
-        in the time interval [t_start, t_end]
-        If there's more than one intersection, only one - in an unpredictable choice - is returned;
-        so, the specified time interval should be narrow enough to avoid that
-
-        :param chem1:   The name of the 1st chemical of interest
-        :param chem2:   The name of the 2nd chemical of interest
-        :param t_start: The start of the time interval being considered
-        :param t_end:   The end of the time interval being considered
-        :return:        The pair (time of intersection, common value)
-        """
-        print("\n*** The function curve_intersection() is now OBSOLETE : use curve_intersect() instead\n")
-
-        return self.curve_intersect(chem1, chem2, t_start, t_end, explain=False)
 
 
 
