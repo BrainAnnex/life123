@@ -11,7 +11,7 @@ class PyGraphVisual:
         self.db = db                    # Object of "NeoAccess" class
 
         self.structure = []             # The data that defines a graph to visualize.
-                                        #    A list of dicts defining nodes, and possibly edges as well.
+                                        #   A list of dicts defining nodes, and possibly edges as well.
                                         #   NODES must contain the keys 'id' and 'labels'
                                         #   EDGES must contain the keys 'name', 'source', and 'target'
                                         #       (and presumably 'id' is required as well?)
