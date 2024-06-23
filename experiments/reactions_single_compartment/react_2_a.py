@@ -24,7 +24,7 @@
 # This experiment gets continued in _"react_2_b"_ , with a more sophisticated approach, 
 # involving adaptive variable time steps.
 #
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

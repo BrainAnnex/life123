@@ -26,7 +26,7 @@
 #
 # Note: numerical errors in the same reactions (with the same initial conditions) is explored in the experiment "large_time_steps_2"
 #
-# LAST REVISED: May 5, 2024
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
