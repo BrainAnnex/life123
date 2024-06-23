@@ -21,7 +21,7 @@
 # ### We'll REJECT the customary Michaelis-Menten assumptions that [E] << [S] and that the rates satisfy k1_reverse >> k2_forward !   
 # #### We'll explore exotic scenarios with lavish amount of enzyme, leading to diminishing (though fast-produced!) products,  and a buildup of the (not-so-transient!) ES* intermediate
 #
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path

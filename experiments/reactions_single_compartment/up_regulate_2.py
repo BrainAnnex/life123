@@ -22,7 +22,7 @@
 # Invoking [Le Chatelier's principle](https://www.chemguide.co.uk/physical/equilibria/lechatelier.html), it can be seen that, starting from equilibrium, when [U] goes up, so does [D]; and when [D] goes up, so does [X].   
 # Conversely, when [U] goes down, so does [D]; and when [D] goes down, so does [X].     
 #
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
