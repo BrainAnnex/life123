@@ -25,16 +25,16 @@
 # Just as seen in the case of *diffusion_along_gradient_1*, the concentration peak
 # remains in place, and simply spreads out from there
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
-from src.life_1D.bio_sim_1d import BioSim1D
+from life123 import BioSim1D
 
 import plotly.express as px
-from src.modules.chemicals.chem_data import ChemData as chem
+from life123 import ChemData as chem
 
 # %%
 # Initialize the system with a uniform concentration (of the only species)

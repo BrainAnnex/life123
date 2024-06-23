@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "life123"
+version = "1.0.0.beta.35"
+authors = [
+  { name = "Julian West Life123.science" },
+]
+maintainers = [
+  { email = "julian@brainannex.org" },
+]
+description = "Dynamical Modeling of Biological Systems"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+	"neo4j==4.4.11",
+	"neoaccess==4.3.1",
+	"numpy~=1.22.4",
+	"scipy~=1.10.1",
+	"pandas~=1.4.3",
+	"plotly~=5.9.0"
+]
+keywords = [
+  "systems biology",
+  "dynamical modeling",
+]
+
+[project.urls]
+Homepage = "https://life123.science"
+"Home-page" = "https://life123.science"
+"Bug Tracker" = "https://github.com/BrainAnnex/life123/issues"
+Source = "https://github.com/BrainAnnex/life123"
+Documentation = "https://life123.science"

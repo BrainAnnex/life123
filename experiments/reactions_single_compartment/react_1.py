@@ -18,13 +18,13 @@
 #
 # "No frills!"  For advanced graphics, analysis, diagnostics, fine-tuning, etc, please see other experiments.
 #
-# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
-from src.modules.reactions.uniform_compartment import UniformCompartment
+from life123 import UniformCompartment
 
 # %%
 

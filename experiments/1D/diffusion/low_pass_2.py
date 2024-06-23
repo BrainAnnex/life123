@@ -16,22 +16,22 @@
 # ## The attenuation over time of a single-frequency in the initial concentration
 #
 # ### The initial system state is a sine wave of frequency 2 (i.e. 2 cycles across the system's length), of amplitude 10, with a baseline (bias) of 30
-# ### Afterward, the process is restarted and repeated with a frequency 5 times larger
-#
-#
-# LAST REVISED: July 14, 2023
+# ### Afterward, the process is restarted and repeated with a frequency 5 times larger  
+#   
+#   
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 
-from src.life_1D.bio_sim_1d import BioSim1D
+from life123 import BioSim1D
 
 import plotly.express as px
 import plotly.graph_objects as go
 
-from src.modules.chemicals.chem_data import ChemData as chem
+from life123 import ChemData as chem
 
 # %%
 # Initialize the system.  We use a RELATIVELY LARGE NUMBER OF BINS, 

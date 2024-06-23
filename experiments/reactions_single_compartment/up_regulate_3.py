@@ -34,10 +34,10 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.chemicals.chem_data import ChemData as chem
-from src.modules.reactions.uniform_compartment import UniformCompartment
+from life123 import ChemData as chem
+from life123 import UniformCompartment
 
-from src.modules.visualization.graphic_log import GraphicLog
+from life123 import GraphicLog
 
 # %% tags=[]
 # Initialize the HTML logging

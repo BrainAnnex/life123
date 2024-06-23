@@ -21,7 +21,7 @@
 # ### We'll REJECT the customary Michaelis-Menten assumptions that [E] << [S] and that the rates satisfy k1_reverse >> k2_forward !   
 # #### We'll explore exotic scenarios with lavish amount of enzyme, leading to diminishing (though fast-produced!) products,  and a buildup of the (not-so-transient!) ES* intermediate
 #
-# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -29,10 +29,10 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.uniform_compartment import UniformCompartment
-from src.modules.movies.movies import MovieTabular
-from src.modules.visualization.graphic_log import GraphicLog
+from life123 import ChemData
+from life123 import UniformCompartment
+from life123 import MovieTabular
+from life123 import GraphicLog
 
 import pandas as pd
 
