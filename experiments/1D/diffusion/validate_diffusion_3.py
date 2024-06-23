@@ -20,17 +20,17 @@
 # with an even finer resolution, and more complex initial concentrations,
 # repeated for 2 different diffusion algorithms.
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 
-from src.life_1D.bio_sim_1d import BioSim1D
-from src.modules.chemicals.chem_data import ChemData as chem
-from src.modules.movies.movies import MovieArray
-from src.modules.numerical.numerical import Numerical as num
+from life123 import BioSim1D
+from life123 import ChemData as chem
+from life123 import MovieArray
+from life123 import Numerical as num
 
 import numpy as np
 
@@ -45,6 +45,8 @@ delta_x = 2       # Note that the number of bins also define the fraction of the
 
 # %%
 chem_data = chem(diffusion_rates=[diffusion_rate], names=["A"])
+
+# %%
 
 # %% [markdown]
 # # ALGORITHM 1
@@ -113,6 +115,8 @@ num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 ed
 
 # %% [markdown]
 # The above number is a measure of the discrepancy from the perfect match (zero distance) that an ideal solution would provide. 
+
+# %%
 
 # %% [markdown]
 # # ALGORITHM 2

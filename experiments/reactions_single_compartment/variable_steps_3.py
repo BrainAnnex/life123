@@ -25,7 +25,7 @@
 #
 # In either case, the extra chemicals and the enzyme don't vary in concentration - and thus **get automatically excluded from considerations about the adaptive variable step sizes** , which remain exactly as they were in experiment `variable_steps_1`
 #
-# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -33,8 +33,8 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.chemicals.chem_data import ChemData as chem
-from src.modules.reactions.uniform_compartment import UniformCompartment
+from life123 import ChemData as chem
+from life123 import UniformCompartment
 
 import numpy as np
 

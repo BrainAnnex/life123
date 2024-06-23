@@ -24,7 +24,7 @@
 # In part2, some diagnotic insight is explored.   
 # In part3, two identical runs ("adaptive variable steps" and "fixed small steps") are compared. 
 #
-# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -46,11 +46,11 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.uniform_compartment import UniformCompartment
-from src.modules.visualization.plotly_helper import PlotlyHelper
+from life123 import ChemData
+from life123 import UniformCompartment
+from life123.visualization.plotly_helper import PlotlyHelper
 
-from src.modules.visualization.graphic_log import GraphicLog
+from life123 import GraphicLog
 
 # %% tags=[]
 # Initialize the HTML logging (for the graphics)

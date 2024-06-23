@@ -17,7 +17,7 @@
 #
 # The system starts out with a pulse in bins near the *left* and the *right* endpoints
 #
-# LAST REVISED: July 14, 2023
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -25,13 +25,13 @@ import set_path      # Importing this module will add the project's home directo
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.life_1D.bio_sim_1d import BioSim1D
+from life123 import BioSim1D
 
 import plotly.express as px
 
-from src.modules.chemicals.chem_data import ChemData as chem
-from src.modules.html_log.html_log import HtmlLog as log
-from src.modules.visualization.graphic_log import GraphicLog
+from life123 import ChemData as chem
+from life123 import HtmlLog as log
+from life123 import GraphicLog
 
 # %%
 # Initialize the HTML logging

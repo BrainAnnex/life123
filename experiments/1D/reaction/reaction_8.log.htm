@@ -21,7 +21,8 @@
 
 <div id="vue-root-1">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
 
-    <vue_cytoscape_2 v-bind:graph_data="graph_data_json">        
+    <vue_cytoscape_2 v-bind:graph_data="graph_data_json"
+                     v-bind:component_id="1">        
     </vue_cytoscape_2>
     
 </div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
@@ -38,7 +39,7 @@ new Vue({
     el: '#vue-root-1',
 
     data: {
-        graph_data_json: {"structure": [{"name": "RXN", "kF": "5", "kR": "2", "delta_G": "-2,271.45", "K": "2.5", "id": "R-0", "labels": ["Reaction"]}, {"name": "C", "diff_rate": null, "id": "C-2", "labels": ["Chemical"]}, {"name": "produces", "source": "R-0", "target": "C-2", "id": "edge-1", "stoich": 1, "rxn_order": 1}, {"name": "A", "diff_rate": null, "id": "C-0", "labels": ["Chemical"]}, {"name": "reacts", "source": "C-0", "target": "R-0", "id": "edge-2", "stoich": 1, "rxn_order": 1}, {"name": "B", "diff_rate": null, "id": "C-1", "labels": ["Chemical"]}, {"name": "reacts", "source": "C-1", "target": "R-0", "id": "edge-3", "stoich": 1, "rxn_order": 1}, {"name": "RXN", "kF": "8", "kR": "4", "delta_G": "-1,718.28", "K": "2", "id": "R-1", "labels": ["Reaction"]}, {"name": "E", "diff_rate": null, "id": "C-4", "labels": ["Chemical"]}, {"name": "produces", "source": "R-1", "target": "C-4", "id": "edge-4", "stoich": 1, "rxn_order": 1}, {"name": "reacts", "source": "C-2", "target": "R-1", "id": "edge-5", "stoich": 1, "rxn_order": 1}, {"name": "D", "diff_rate": null, "id": "C-3", "labels": ["Chemical"]}, {"name": "reacts", "source": "C-3", "target": "R-1", "id": "edge-6", "stoich": 1, "rxn_order": 1}], "color_mapping": {"Chemical": "#8DCC92", "Reaction": "#D9C8AD"}, "caption_mapping": {"Chemical": "name", "Reaction": "name"}, "component_id": 1}
+        graph_data_json: {"structure": [{"name": "RXN", "kF": "5", "kR": "2", "delta_G": "-2,271.45", "K": "2.5", "id": "R-0", "labels": ["Reaction"]}, {"name": "C", "diff_rate": null, "id": "C-2", "labels": ["Chemical"]}, {"name": "produces", "source": "R-0", "target": "C-2", "id": "edge-1", "stoich": 1, "rxn_order": 1}, {"name": "A", "diff_rate": null, "id": "C-0", "labels": ["Chemical"]}, {"name": "reacts", "source": "C-0", "target": "R-0", "id": "edge-2", "stoich": 1, "rxn_order": 1}, {"name": "B", "diff_rate": null, "id": "C-1", "labels": ["Chemical"]}, {"name": "reacts", "source": "C-1", "target": "R-0", "id": "edge-3", "stoich": 1, "rxn_order": 1}, {"name": "RXN", "kF": "8", "kR": "4", "delta_G": "-1,718.28", "K": "2", "id": "R-1", "labels": ["Reaction"]}, {"name": "E", "diff_rate": null, "id": "C-4", "labels": ["Chemical"]}, {"name": "produces", "source": "R-1", "target": "C-4", "id": "edge-4", "stoich": 1, "rxn_order": 1}, {"name": "reacts", "source": "C-2", "target": "R-1", "id": "edge-5", "stoich": 1, "rxn_order": 1}, {"name": "D", "diff_rate": null, "id": "C-3", "labels": ["Chemical"]}, {"name": "reacts", "source": "C-3", "target": "R-1", "id": "edge-6", "stoich": 1, "rxn_order": 1}], "color_mapping": {"Chemical": "#8DCC92", "Reaction": "#D9C8AD"}, "caption_mapping": {"Chemical": "name", "Reaction": "name"}}
     }
 
 });

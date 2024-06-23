@@ -23,14 +23,14 @@
 # In Part 1 we consider the un-catalyzed reaction `A <-> B`  
 # In Part 2 we'll see what happens when catalysis is added
 #
-# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
-from src.modules.chemicals.chem_data import ChemData
-from src.modules.reactions.uniform_compartment import UniformCompartment
+from life123 import ChemData
+from life123 import UniformCompartment
 
 import plotly.express as px
 

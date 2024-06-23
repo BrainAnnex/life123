@@ -22,7 +22,7 @@
 #
 # **Background**: please see experiment `cascade_2_a`  
 #
-# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -30,8 +30,8 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.uniform_compartment import UniformCompartment
-from src.modules.visualization.plotly_helper import PlotlyHelper
+from life123 import UniformCompartment
+from life123.visualization.plotly_helper import PlotlyHelper
 
 # %%
 

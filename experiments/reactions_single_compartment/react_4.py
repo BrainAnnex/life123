@@ -21,7 +21,7 @@
 #
 # _See also the experiment "1D/reactions/reaction_7"_ 
 #
-# LAST REVISED: June 13, 2024 (using v. 1.0 beta33)
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
@@ -29,8 +29,8 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.reactions.uniform_compartment import UniformCompartment
-from src.modules.visualization.graphic_log import GraphicLog
+from life123 import UniformCompartment
+from life123 import GraphicLog
 
 # %% tags=[]
 # Initialize the HTML logging (for the graphics)

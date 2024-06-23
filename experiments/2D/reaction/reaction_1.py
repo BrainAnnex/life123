@@ -18,17 +18,15 @@
 #
 # Diffusion not done
 #
-# LAST REVISED: June 14, 2024 (using v. 1.0 beta33)
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.chemicals.chem_data import ChemData as chem
-from src.life_2D.bio_sim_2d import BioSim2D
-
-from src.modules.visualization.graphic_log import GraphicLog
+from life123 import ChemData as chem
+from life123 import BioSim2D, GraphicLog
 
 # %%
 # Initialize the HTML logging

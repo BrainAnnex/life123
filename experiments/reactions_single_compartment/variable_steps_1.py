@@ -22,7 +22,7 @@
 #
 # This experiment gets repeated, with very fine _fixed_ steps (as a proxy for the "exact value"), in `variable_steps_2`
 #
-# LAST REVISED: June 13, 2024 (using v. 1.0 beta33)
+# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %% [markdown]
 # ![Adaptive time steps](../../docs/variable_steps.png)
@@ -33,11 +33,11 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from src.modules.chemicals.chem_data import ChemData as chem
-from src.modules.reactions.uniform_compartment import UniformCompartment
+from life123 import ChemData as chem
+from life123 import UniformCompartment
 
 import numpy as np
-from src.modules.visualization.graphic_log import GraphicLog
+from life123 import GraphicLog
 
 # %% tags=[]
 # Initialize the HTML logging
