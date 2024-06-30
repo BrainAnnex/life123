@@ -18,12 +18,12 @@ the use of absolute paths in import of modules into notebooks.
              in the function call at the very bottom of this script!
 
 
-TO USE:
+USAGE:
 ------
 Insert the following line at the top of your notebooks that reside in the
 same folder as this set_path.py file:
 
-import set_path
+import set_path      # Importing this module will add the project's home directory to sys.path
 """
 
 

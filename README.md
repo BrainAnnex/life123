@@ -57,4 +57,6 @@ See the [Life123 Guide](https://life123.science/guide)
 See this [short video](https://www.youtube.com/watch?v=TCvQUKPVimE)
 
 ## How to Run Locally
-See the [Life123 Download/Install page](https://life123.science/install)
+`pip install life123`
+
+For details, see the [Life123 Download/Install page](https://life123.science/install)

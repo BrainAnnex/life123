@@ -10,7 +10,8 @@
     :license: MIT, see LICENSE for more details.
 """
 
-__version__ = "1.0.0.beta.36"
+__version__ = "1.0.0.beta.37"
+
 
 from life123.bio_sim_1d import BioSim1D
 from life123.bio_sim_2d import BioSim2D
@@ -55,3 +56,24 @@ __all__ = [
     'PlotlyHelper',
     'PyGraphVisual'
 ]
+
+
+
+def check_version(expected :str, enforce=False) -> None:
+    """
+    Check the passed version number against the actual version number of this library
+
+    :param expected:A string with the expected version number
+    :param enforce: If True, a mismatch of versions will resulte in an Exception
+    :return:        None
+    """
+    if __version__ != expected:
+        print(f"*** CAUTION: the installed version of the life123 library ({__version__}) "
+              f"does not match the stated expected version ({expected}).\nIn case of errors, "
+              f"change the installed library version, or modify your code to conform to the installed library."
+              f"\nChangelog: https://life123.science/history\n\n")
+
+        if enforce:
+            raise Exception(f"Using version '{__version__}' instead of the expected version '{expected}'")
+
+

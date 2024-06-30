@@ -19,18 +19,14 @@
 # **"No frills!"**  For advanced graphics, analysis, diagnostics, fine-tuning, etc, please see other experiments.
 
 # %%
-LAST_REVISE = "June 30, 2024"
-VERSION_USED = "1.0.0.beta.36"
-
-# %%
-#import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "June 30, 2024"
+LIFE123_VERSION = "1.0.0.beta.37"
 
 # %% tags=[]
 import life123
 
 # %%
-assert life123.__version__ == VERSION_USED, \
-    f"Using version '{life123.__version__}' instead of the expected version '{VERSION_USED}'"
+life123.check_version(LIFE123_VERSION)
 
 # %%
 
