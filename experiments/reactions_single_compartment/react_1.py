@@ -13,18 +13,24 @@
 # ---
 
 # %% [markdown]
-# ### A minimalist, "get-stared", demonstration for the reaction `A <-> B`,
+# ### A MINIMALIST, "get-started", demonstration for the reaction `A <-> B`,
 # with 1st-order kinetics in both directions, taken to equilibrium.
 #
-# "No frills!"  For advanced graphics, analysis, diagnostics, fine-tuning, etc, please see other experiments.
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
+# **"No frills!"**  For advanced graphics, analysis, diagnostics, fine-tuning, etc, please see other experiments.
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISE = "June 30, 2024"
+VERSION_USED = "1.0.0.beta.36"
+
+# %%
+#import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
-from life123 import UniformCompartment
+import life123
+
+# %%
+assert life123.__version__ == VERSION_USED, \
+    f"Using version '{life123.__version__}' instead of the expected version '{VERSION_USED}'"
 
 # %%
 
@@ -33,7 +39,7 @@ from life123 import UniformCompartment
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = UniformCompartment(names=["A", "B"])  
+dynamics = life123.UniformCompartment(names=["A", "B"])  
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 dynamics.add_reaction(reactants="A", products="B", 

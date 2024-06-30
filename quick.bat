@@ -4,13 +4,12 @@
 ::     the PyCharm TERMINAL window tab at the bottom (not to be confused with the Python console!)
 
 :: ****** IMPORTANT ****** - FIRST CHANGE THE FOLDER NAME BELOW TO THE LOCATION ON YOUR MACHINE!!
-
 :: Add the root of the project files to the value of the sys.path seen inside the execution of the notebooks
-set PYTHONPATH=\Docs\- MY CODE\BioSimulations\life123-Win7\
+set PYTHONPATH=\Docs\- MY CODE\Life123\life123-develop\
 
 @echo off
 echo *** IMPORTANT *** Additional LOG FILES TO BE FOUND UNDER THE FOLDER: %PYTHONPATH%experiments
 echo on
 
 :: Start Jupyter Lab (if a port other than the default 8888 is desired, use the option --port YOUR_PORT_NUMBER)
-jupyter-lab
+.\venv\Scripts\jupyter-lab
