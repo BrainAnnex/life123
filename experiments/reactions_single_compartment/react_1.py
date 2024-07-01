@@ -20,10 +20,10 @@
 
 # %%
 LAST_REVISED = "June 30, 2024"
-LIFE123_VERSION = "1.0.0.beta.37"
+LIFE123_VERSION = "1.0.0.beta.37"  # Version this experiment is based on
 
 # %% tags=[]
-import life123
+import life123   # If can't find module, do: 1) import sys  2) sys.path.append("full path of folder containing life123")
 
 # %%
 life123.check_version(LIFE123_VERSION)

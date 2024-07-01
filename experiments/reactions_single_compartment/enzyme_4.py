@@ -15,24 +15,28 @@
 
 # %% [markdown]
 # ## Enzyme Kinetics in a NON Michaelis-Menten modality
-# #### 3 Coupled Reactions: `S <-> P` , `E + S <-> ES*`, and  `ES* <-> E + P` .  Variation of experiment enzyme_3   
-# A direct reaction and the same reaction, catalyzed and showing the intermediate state.  
+# #### 3 Coupled Reactions: `S <-> P` , `E + S <-> ES*`, and  `ES* <-> E + P` .  Variation of experiment `enzyme_3`   
+# A direct reaction and the same reaction, catalyzed by an enzyme `E` and showing the intermediate state.  
 # Re-run from same initial concentrations of S ("Substrate") and P ("Product"), for various concentations of the enzyme `E`: from zero to hugely abundant 
-# ### We'll REJECT the customary Michaelis-Menten assumptions that [E] << [S] and that the rates satisfy k1_reverse >> k2_forward !   
-# #### We'll explore exotic scenarios with lavish amount of enzyme, leading to diminishing (though fast-produced!) products,  and a buildup of the (not-so-transient!) ES* intermediate
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
+# ### We'll REJECT the customary Michaelis-Menten assumptions that `[E] << [S]` and that the rates satisfy `k1_reverse >> k2_forward` !   
+# #### We'll explore exotic scenarios with lavish amount of enzyme, leading to diminishing (though fast-produced!) products,  and a buildup of the (not-so-transient!) `ES*` intermediate
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "July 1, 2024"
+VERSION_BASED_ON = "1.0.0.beta.37"   # Version of Life123 used for this experiment
+
+# %% tags=[]
+import life123   # If can't find module, do: 1) import sys  2) sys.path.append("full path of folder containing life123")
+
+# %%
+life123.check_version(VERSION_BASED_ON)
+
+# %%
 
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData
-from life123 import UniformCompartment
-from life123 import MovieTabular
-from life123 import GraphicLog
+from life123 import ChemData, UniformCompartment, MovieTabular, GraphicLog
 
 import pandas as pd
 

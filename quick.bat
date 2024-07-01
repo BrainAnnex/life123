@@ -2,9 +2,12 @@
 
 :: This batch file can be run, for example, by typing its name (exclusive of the .bat) in
 ::     the PyCharm TERMINAL window tab at the bottom (not to be confused with the Python console!)
+::      On Win11, also need to prefix  ".\"          EXAMPLE:   .\quick
 
 :: ****** IMPORTANT ****** - FIRST CHANGE THE FOLDER NAME BELOW TO THE LOCATION ON YOUR MACHINE!!
 :: Add the root of the project files to the value of the sys.path seen inside the execution of the notebooks
+:: Note: only needed if you use a local copy of the life123 libraries;
+::       not necessary if you pip install life123 in your venv
 set PYTHONPATH=\Docs\- MY CODE\Life123\life123-develop\
 
 @echo off
