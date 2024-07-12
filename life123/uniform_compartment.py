@@ -10,10 +10,11 @@ from life123.numerical import Numerical as num
 from life123.visualization.plotly_helper import PlotlyHelper
 
 
+
 # TODO: rename "ReactionDynamics", and move to separate file
 class RxnDynamics:
     """
-    Static methods for variable time steps
+    Static methods for getting insight into variable time steps
     """
 
     @staticmethod
@@ -189,9 +190,7 @@ class ExcessiveTimeStepSoft(Exception):
 class UniformCompartment:
     """
     Used to simulate the dynamics of reactions (in a single compartment.)
-    In the context of Life123, this may be thought of as a "zero-dimensional system"
-
-    (This class was formerly named "ReactionDynamics")
+    This might be thought of as a "zero-dimensional system"
     """
 
     #TODO: maybe split off part of this class into the new "RxnDynamics" class
@@ -252,7 +251,7 @@ class UniformCompartment:
                                         #   whenever requested by the user.
 
 
-        # ***  FOR AUTOMATED ADAPTIVE TIME STEP SIZES  ***
+        # ***  FOR AUTOMATED ADAPTIVE TIME STEP SIZES  ***    TODO: maybe move to the RxnDynamics class, and make it instantiated
         # Note: The "aborts" below are "elective" aborts - i.e. not aborts from hard errors (further below)
         #       The default values get packed into a "preset", specified by a name, and optionally passed when
         #       instantiating this object.
