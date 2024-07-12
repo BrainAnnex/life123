@@ -737,7 +737,10 @@ class AllReactions(Diffusion):
         involved in ANY of the registered reactions,
         but NOT counting chemicals that always appear in a catalytic role in all the reactions they
         participate in
-        (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here)
+        (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here.)
+
+        EXAMPLE: [2, 7, 8]  if only those 3 chemicals (with indexes of, respectively, 2, 7 and 8)
+                            are actively involved in ANY of the registered reactions
 
         CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
                  the reactions are simulated

@@ -7,163 +7,8 @@ from typing import Union
 from life123.chem_data import ChemData
 from life123.movies import MovieTabular
 from life123.numerical import Numerical as num
+from life123.reaction_dynamics import ReactionDynamics
 from life123.visualization.plotly_helper import PlotlyHelper
-
-
-
-# TODO: rename "ReactionDynamics", and move to separate file
-class RxnDynamics:
-    """
-    Static methods for getting insight into variable time steps
-    """
-
-    @staticmethod
-    def norm_A(delta_conc :np.array) -> float:
-        """
-        Return a measure of system change, based on the average concentration changes
-        of ALL the specified chemicals across a time step, adjusted for the number of chemicals.
-        A square-of-sums computation (the square of an L2 norm) is used.
-
-        :param delta_conc:  A Numpy array with the concentration changes
-                                of the chemicals of interest across a time step
-        :return:            A measure of change in the concentrations across the simulation step
-        """
-        n_active_chemicals = len(delta_conc)
-
-        assert n_active_chemicals > 0, \
-            "norm_A(): zero-sized array was passed as argument"
-
-        # The following are normalized by the number of chemicals
-        #L2_rate = np.linalg.norm(delta_concentrations) / n_chems
-        #L2_rate = np.sqrt(np.sum(delta_concentrations * delta_concentrations)) / n_chems
-        #print("    L_inf norm:   ", np.linalg.norm(delta_concentrations, ord=np.inf) / delta_time)
-        #print("    Adjusted L1 norm:   ", np.linalg.norm(delta_concentrations, ord=1) / n_chems)
-
-        adjusted_L2_rate = np.sum(delta_conc * delta_conc) / (n_active_chemicals * n_active_chemicals)
-        return adjusted_L2_rate
-
-
-    @staticmethod
-    def norm_B(baseline_conc: np.array, delta_conc: np.array) -> float:
-        """
-        Return a measure of system change, based on the max absolute relative concentration
-        change of all the chemicals across a time step (based on an L infinity norm - but disregarding
-        any baseline concentration that is very close to zero)
-
-        :param baseline_conc:   A Numpy array with the concentration of the chemicals of interest
-                                    at the start of a simulation time step
-        :param delta_conc:      A Numpy array with the concentration changes
-                                    of the chemicals of interest across a time step
-        :return:                A measure of change in the concentrations across the simulation step
-        """
-        arr_size = len(baseline_conc)
-        assert len(delta_conc) == arr_size, "norm_B(): mismatch in the sizes of the 2 passed array arguments"
-
-        to_keep = ~ np.isclose(baseline_conc, 0)    # Element-wise negation; this will be an array of Booleans
-                                                    # with True for all the elements of baseline_conc that aren't too close to 0
-
-        ratios = delta_conc[to_keep] / baseline_conc[to_keep]   # Using boolean indexing to only select some of the elements :
-                                                                # the non-zero denominators, and their corresponding numerators
-        if len(ratios) == 0:
-            return 0.
-
-        return max(abs(ratios))
-
-
-    @staticmethod
-    def norm_C(prev_conc: np.array, baseline_conc: np.array, delta_conc: np.array) -> float:
-        """
-        Return a measure of system short-period oscillation; larger values might be heralding
-        onset of simulation instability
-
-        :param prev_conc:       A numpy array with the concentration of the chemicals of interest,
-                                    in the step prior to the current one (i.e. an "archive" value)
-        :param baseline_conc:   A Numpy array with the concentration of the chemicals of interest
-                                    at the start of a simulation time step
-        :param delta_conc:      A Numpy array with the concentration changes
-                                    of the chemicals of interest across a time step
-        :return:
-        """
-        if prev_conc is None:
-            return 0            # Unable to compute a norm; 0 represents "perfect"
-
-        D1 = baseline_conc - prev_conc
-        D2 = delta_conc
-
-        #print("****** D1: ", D1)
-        #print("****** D2: ", D2)
-
-        sign_flip = ((D1 >= 0) & (D2 < 0)) | ((D1 < 0) & (D2 >= 0))
-
-        criterion_met = sign_flip & (abs(D2) > abs(D1)) & ~np.isclose(D1, 0) & (abs(D2) < 50 * abs(D1))
-        #criterion_met = sign_flip & ~np.isclose(D1, 0) & (abs(D2) < 50 * abs(D1))
-        # Note: values with D1 very close to zero are ignored
-        #       likewise, values where |D2| dwarfs |D1| are ignored
-        #print("criterion_met: ", criterion_met)
-
-        # Use boolean indexing to select elements from delta1 where the criterion is True
-        D1_selected = D1[criterion_met]
-        D2_selected = D2[criterion_met]
-
-        #print("**** delta1_selected: ", D1_selected)
-        #print("*** delta2_selected: ", D2_selected)
-
-        ratios = abs(D2_selected / D1_selected)
-        #print(ratios)
-
-        if len(ratios) == 0:
-            return 0
-        else:
-            return np.max(ratios)    # An argument might be made for taking the avg SUM instead
-
-
-    @staticmethod
-    def norm_D(prev_conc: np.array, baseline_conc: np.array, delta_conc: np.array) -> float:
-        """
-        Return a measure of curvature in the concentration vs. time curves; larger values might be heralding
-        onset of simulation instability
-
-        :param prev_conc:       A numpy array with the concentration of the chemicals of interest,
-                                    in the step prior to the current one (i.e. an "archive" value)
-        :param baseline_conc:   A Numpy array with the concentration of the chemicals of interest
-                                    at the start of a simulation time step
-        :param delta_conc:      A Numpy array with the concentration changes
-                                    of the chemicals of interest across a time step
-        :return:
-        """
-        if prev_conc is None:
-            return 0            # Unable to compute a norm; 0 represents "perfect"
-
-        D1 = baseline_conc - prev_conc  # Change from prev state to current one
-        D2 = delta_conc                 # Change from current state to next one
-
-        #print("\nnorm_D ****** D1: ", D1)
-        #print("norm_D ****** D2: ", D2)
-
-        criterion_met = ~np.isclose(D1, 0) & (abs(D2) < 100 * abs(D1))
-        # Note: values with D1 very close to zero are ignored
-        #       likewise, values where |D2| dwarfs |D1| are ignored
-        #print("criterion_met: ", criterion_met)
-
-        # Use boolean indexing to select elements from delta1 where the criterion is True
-        D1_selected = D1[criterion_met]
-        D2_selected = D2[criterion_met]
-
-        #print("norm_D **** delta1_selected: ", D1_selected)
-        #print("norm_D *** delta2_selected: ", D2_selected)
-
-        ratios = abs(D2_selected / D1_selected) # How big are the next changes relative to the previous ones
-        #print(ratios)
-
-        res = np.sum(ratios)    # An argument might be made for taking the MAX instead
-                                # TODO: turn into a separate norm
-        arr_size = len(baseline_conc)
-        normalized_res = res / arr_size
-        #print("norm_D *** : ", normalized_res)
-
-        return normalized_res
-
-
 
 
 
@@ -183,7 +28,6 @@ class ExcessiveTimeStepSoft(Exception):
     """
     pass
 
-
 #############################################################################################
 
 
@@ -192,9 +36,6 @@ class UniformCompartment:
     Used to simulate the dynamics of reactions (in a single compartment.)
     This might be thought of as a "zero-dimensional system"
     """
-
-    #TODO: maybe split off part of this class into the new "RxnDynamics" class
-
 
     def __init__(self, chem_data=None, names=None, preset="mid"):
         """
@@ -251,44 +92,17 @@ class UniformCompartment:
                                         #   whenever requested by the user.
 
 
-        # ***  FOR AUTOMATED ADAPTIVE TIME STEP SIZES  ***    TODO: maybe move to the RxnDynamics class, and make it instantiated
-        # Note: The "aborts" below are "elective" aborts - i.e. not aborts from hard errors (further below)
-        #       The default values get packed into a "preset", specified by a name, and optionally passed when
-        #       instantiating this object.
-        #       Users in need to change these values post-instantiation will generally use use_adaptive_preset(), below;
-        #       or, for more control, set_thresholds() and set_step_factors()
-        self.thresholds = []    # A list of "rules"
-        # EXAMPLE:                  [
-        #                             {"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
-        #                             {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}
-        #                           ]
-        #       low:    The value below which the norm is considered to be good (and the variable steps are being made larger);
-        #                if None, it doesn't get used
-        #       high:   The value above which the norm is considered to be excessive (and the variable steps get reduced);
-        #               if None, it doesn't get used
-        #       abort:  The value above which the norm is considered to be dangerously large (and the last variable step gets
-        #               discarded and back-tracked with a smaller size)
-        #               if None, it doesn't get used
-
-        self.step_factors = {}
-                            # EXAMPLE: {"upshift": 1.2, "downshift": 0.5, "abort": 0.4, "error": 0.2}
-                            # "upshift" must be > 1 ; all the other values must be < 1
-                            # Generally, error <= abort <= downshift
-                            # "Error" value: Factor by which to multiply the time step
-                            #   in case of negative-concentration error from excessive step size
-                            #   NOTE: this is from ERROR aborts,
-                            #   not to be confused with general aborts based on reaching high threshold
-
+        # FOR AUTOMATED ADAPTIVE TIME STEP SIZES 
+        self.adaptive_steps = ReactionDynamics()
 
         if preset:
-            self.use_adaptive_preset(preset)
+            self.adaptive_steps.use_adaptive_preset(preset)
 
 
         # The following 3 diagnostic values get reset at every run
         self.number_neg_concs = 0
         self.number_soft_aborts = 0
-        self.norm_usage = {"norm_A": 0, "norm_B": 0, "norm_C": 0, "norm_D": 0}  # Number of times that each norm
-                                                                                #   got involved in step-size decision
+
 
 
 
@@ -561,263 +375,6 @@ class UniformCompartment:
 
 
 
-    #####################################################################################################
-
-    '''                            ~  PARAMETERS FOR ADAPTIVE STEPS  ~                                '''
-
-    def ________PARAMETERS_FOR_ADAPTIVE_STEPS________(DIVIDER):
-        pass         # Used to get a better structure view in IDEs such asPycharm
-    #####################################################################################################
-
-
-    def set_thresholds(self, norm :str, low=None, high=None, abort=None) -> None:
-        """
-        Create or update a rule based on the given norm
-        (simulation parameters that affect the adaptive variable step sizes.)
-        If no rule with the specified norm was previously set, it will be added.
-
-        All None values in the arguments are ignored.
-
-        :param norm:    The name of the "norm" (criterion) being used - either a previously-set one or not
-        :param low:     The value below which the norm is considered to be good (and the variable steps are being made larger);
-                            if None, it doesn't get changed
-        :param high:    The value above which the norm is considered to be excessive (and the variable steps get reduced);
-                            if None, it doesn't get changed
-        :param abort:   The value above which the norm is considered to be dangerously large (and the last variable step gets
-                            discarded and back-tracked with a smaller size) ;
-                            if None, it doesn't get changed
-        :return:        None
-        """
-        assert type(norm) == str and norm != "", \
-            "set_thresholds(): the `norm` argument must be a non-empty string"
-
-        if (abort is not None) and (high is not None):
-            assert abort > high, \
-                f"set_thresholds(): `abort` value ({abort}) must be > `high' value ({high})"
-
-        if (high is not None) and (low is not None):
-            assert high > low, \
-                f"set_thresholds(): `high` value ({high}) must be > `low' value ({low})"
-
-        if (abort is not None) and (low is not None):
-            assert abort > low, \
-                f"add_thresholds(): `abort` value ({high}) must be > `low' value ({low})"
-
-        for i, t in enumerate(self.thresholds):
-            if t.get("norm") == norm:
-                # Found a rule using the requested norm
-
-                t_original = t.copy()  # Create a backup copy in case of error
-
-                if low is not None:
-                    t["low"] = low
-
-                if high is not None:
-                    t["high"] = high
-
-                if abort is not None:
-                    t["abort"] = abort
-
-                if len(t) == 1:
-                    del self.thresholds[i]      # Completely eliminate this un-used norm
-
-                low, high, abort = t.get("low"), t.get("high"), t.get("abort")
-
-                if (abort is not None) and (high is not None):
-                    if abort <= high:
-                        self.thresholds[i] = t_original     # Restore original values
-                        raise Exception(f"set_thresholds(): `abort` value ({abort}) must be > `high' value ({high})")
-
-                if (high is not None) and (low is not None):
-                    if high <= low:
-                        self.thresholds[i] = t_original     # Restore original values
-                        raise Exception(f"set_thresholds(): `high` value ({high}) must be > `low' value ({low})")
-
-                if (abort is not None) and (low is not None):
-                    if abort <= low:
-                        self.thresholds[i] = t_original     # Restore original values
-                        raise Exception(f"add_thresholds(): `abort` value ({high}) must be > `low' value ({low})")
-
-                return
-
-        # If we get here, it means that we're handling a norm
-        # not currently present in the list self.thresholds
-        new_t = {"norm": norm}
-        if low is not None:
-            new_t["low"] = low
-        if high is not None:
-            new_t["high"] = high
-        if abort is not None:
-            new_t["abort"] = abort
-
-        if self.thresholds is None:
-            self.thresholds = [new_t]
-        else:
-            self.thresholds.append(new_t)
-
-
-
-    def delete_thresholds(self, norm :str, low=False, high=False, abort=False) -> None:
-        """
-        Delete one or more of the threshold values associated to a rule using the specified norm.
-        If none of the threshold values remains in place, the whole rule gets eliminated altogether.
-        Attempting to delete something not present, will raise an Exception
-
-        :param norm:    The name of the "norm" (criterion) being used - for a previously-set rule
-        :param low:     If True, this threshold value will get deleted
-        :param high:    If True, this threshold value will get deleted
-        :param abort:   If True, this threshold value will get deleted
-        :return:        None
-        """
-        for i, t in enumerate(self.thresholds):
-            if t.get("norm") == norm:
-                # Found a rule using the requested norm
-
-                if low:
-                    del t["low"]
-
-                if high:
-                    del t["high"]
-
-                if abort:
-                    del t["abort"]
-
-                if len(t) == 1:
-                    del self.thresholds[i]      # Completely eliminate this un-used norm
-                return
-
-        # If we get here, it means that we're handling a norm
-        # not currently present in the list self.thresholds
-        raise Exception(f"delete_thresholds(): no norm named '{norm}' was found")
-
-
-
-    def set_step_factors(self, upshift=None, downshift=None, abort=None, error=None) -> None:
-        """
-        Over-ride current values for simulation parameters that affect the adaptive variable step sizes.
-        Values not explicitly passed will remain the same.
-
-        :param upshift:     Fraction by which to increase the variable step size
-        :param downshift:   Fraction by which to decrease the variable step size
-        :param abort:       Fraction by which to decrease the variable step size in cases of step re-do
-        :param error:       Fraction by which to decrease the variable step size in cases of error
-        :return:            None
-        """
-        if upshift is not None:
-            assert upshift > 1, "set_step_factors(): `upshift` value must be > 1"
-            self.step_factors["upshift"] = upshift
-
-        if downshift is not None:
-            assert 0 < downshift < 1, "set_step_factors(): `downshift` value must be a positive number < 1"
-            self.step_factors["downshift"] = downshift
-
-        if abort is not None:
-            assert 0 < abort < 1, "set_step_factors(): `abort` value must be a positive number < 1"
-            self.step_factors["abort"] = abort
-
-        if error is not None:
-            assert 0 < error < 1, "set_step_factors(): `error` value must be a positive number < 1"
-            self.step_factors["error"] = error
-
-
-
-    def set_error_step_factor(self, value) -> None:
-        """
-        Over-ride the default value for the simulation parameter error_abort_step_factor
-
-        :param value:   Fraction by which to decrease the variable step size in cases of
-                            value errors (such as negative concentrations) during a variable step
-        :return:        None
-        """
-        # TODO: OBSOLETE
-
-        print("\n\n**************  set_error_step_factor() is DEPRECATED : use set_step_factors() instead  **************\n\n")
-
-        self.set_step_factors(error=value)
-
-
-
-    def show_adaptive_parameters(self) -> None:
-        """
-        Print out the current values for the adaptive time-step parameters
-
-        :return:    None
-        """
-        print("Parameters used for the automated adaptive time step sizes -")
-        print("    THRESHOLDS: ", self.thresholds)
-        print("    STEP FACTORS: ", self.step_factors)
-
-
-
-    def use_adaptive_preset(self, preset :str) -> None:
-        """
-        Lets the user choose a preset to use from now on, unless later explicitly changed,
-        for use in ALL reaction simulations involving adaptive time steps.
-        The preset will affect the degree to which the simulation will be "risk-taker" vs. "risk-averse" about
-        taking larger steps.
-
-        Note:   for more control, use set_thresholds() and set_step_factors()
-
-                For example, using the "mid" preset is the same as issuing:
-                    dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
-                    dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-                    dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4, error=0.25)
-
-        :param preset:  String with one of the available preset names;
-                            allowed values are (in generally-increasing speed):
-                            'heavy_brakes', 'slower', 'slow', 'mid', 'fast'
-        :return:        None
-        """
-        if preset == "heavy_brakes":   # It slams on the "brakes" hard in case of abort or errors
-            self.thresholds = [{"norm": "norm_A", "low": 0.02, "high": 0.025, "abort": 0.03},
-                               {"norm": "norm_B", "low": 0.05, "high": 1.0, "abort": 2.0}]
-            self.step_factors = {"upshift": 1.6, "downshift": 0.15, "abort": 0.08, "error": 0.05}
-
-        elif preset == "small_rel_change":
-            self.thresholds = [{"norm": "norm_A", "low": 2., "high": 5., "abort": 10.},
-                               {"norm": "norm_B", "low": 0.008, "high": 0.5, "abort": 2.0}]     # The "low" value of "norm_B" is very strict
-            self.step_factors = {"upshift": 1.5, "downshift": 0.25, "abort": 0.25, "error": 0.2}
-
-        elif preset == "slower":   # Very conservative about taking larger steps
-            self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
-                               {"norm": "norm_B", "low": 0.03, "high": 0.05, "abort": 0.5}]
-            self.step_factors = {"upshift": 1.01, "downshift": 0.5, "abort": 0.1, "error": 0.1}
-
-        elif preset == "slow":   # Conservative about taking larger steps
-            self.thresholds = [{"norm": "norm_A", "low": 0.2, "high": 0.5, "abort": 0.8},
-                               {"norm": "norm_B", "low": 0.05, "high": 0.4, "abort": 1.3}]
-            self.step_factors = {"upshift": 1.1, "downshift": 0.3, "abort": 0.2, "error": 0.1}
-
-        elif preset == "mid":     # A "middle-of-the road" heuristic: somewhat "conservative" but not overly so
-            self.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
-                               {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
-            self.step_factors = {"upshift": 1.2, "downshift": 0.5, "abort": 0.4, "error": 0.25}
-
-        elif preset == "fast":   # Less conservative (more "risk-taker") about taking larger steps
-            self.thresholds = [{"norm": "norm_A", "low": 0.8, "high": 1.2, "abort": 1.7},
-                               {"norm": "norm_B", "low": 0.15, "high": 0.8, "abort": 1.8}]
-            self.step_factors = {"upshift": 1.5, "downshift": 0.8, "abort": 0.6, "error": 0.5}
-
-        elif preset == "mid_inclusive": # A "middle-of-the road" heuristic that makes use of more norms
-            self.thresholds = [{'norm': 'norm_A', 'low': 0.2, 'high': 0.8, 'abort': 1.44},
-                               {'norm': 'norm_B', 'low': 0.08, 'high': 0.5, 'abort': 1.5},
-                               {'norm': 'norm_C', 'low': 0.5, 'high': 1.2, 'abort': 1.6},
-                               {'norm': 'norm_D', 'low': 1.3, 'high': 1.7, 'abort': 1.8}]
-            self.step_factors = {'upshift': 1.1, 'downshift': 0.5, 'abort': 0.4, 'error': 0.25}
-
-        elif preset == "mid_inclusive_slow":
-            self.thresholds = [{'norm': 'norm_A', 'low': 0.15, 'high': 0.8, 'abort': 1.44},
-                               {'norm': 'norm_B', 'low': 0.05, 'high': 0.5, 'abort': 1.5},
-                               {'norm': 'norm_C', 'low': 0.5, 'high': 1.2, 'abort': 1.6},
-                               {'norm': 'norm_D', 'low': 1.1, 'high': 1.7, 'abort': 1.8}]
-            self.step_factors = {'upshift': 1.1, 'downshift': 0.5, 'abort': 0.4, 'error': 0.25}
-
-        else:
-            raise Exception(f"set_adaptive_parameters(): unknown value for the `preset` argument ({preset}); "
-                            f"allowed values are 'heavy_brakes', 'slower', 'slow', 'mid', 'fast', 'mid_inclusive'")
-
-
-
 
     #####################################################################################################
 
@@ -1057,7 +614,8 @@ class UniformCompartment:
         # Reset some diagnostic variables
         self.number_neg_concs = 0
         self.number_soft_aborts = 0
-        self.norm_usage = {"norm_A": 0, "norm_B": 0, "norm_C": 0, "norm_D": 0}
+        #self.norm_usage = {"norm_A": 0, "norm_B": 0, "norm_C": 0, "norm_D": 0}
+        self.adaptive_steps.reset_norm_usage_stats()
 
         while True:
             # Check various criteria for termination
@@ -1143,7 +701,7 @@ class UniformCompartment:
             if variable_steps:
                 print(f"Number of step re-do's because of negative concentrations: {self.number_neg_concs}")
                 print(f"Number of step re-do's because of elective soft aborts: {self.number_soft_aborts}")
-                print(f"Norm usage:", self.norm_usage)
+                print(f"Norm usage:", self.adaptive_steps.norm_usage)
 
 
         if snapshots and "final_caption" in snapshots:
@@ -1242,7 +800,7 @@ class UniformCompartment:
                 if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
                     print(ex)
 
-                delta_time *= self.step_factors["error"]       # Reduce the excessive time step by a pre-set factor
+                delta_time *= self.adaptive_steps.step_factors["error"]       # Reduce the excessive time step by a pre-set factor
                 recommended_next_step = delta_time
                 # At this point, the loop will generally try the simulation again, with a smaller step (a revised delta_time)
 
@@ -1256,7 +814,7 @@ class UniformCompartment:
                 self.number_soft_aborts += 1
                 if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
                     print(f"       {ex}")
-                delta_time *= self.step_factors["abort"]       # Reduce the excessive time step by a pre-set factor
+                delta_time *= self.adaptive_steps.step_factors["abort"]       # Reduce the excessive time step by a pre-set factor
                 recommended_next_step = delta_time
                 # At this point, the loop will generally try the simulation again, with a smaller step (a revised delta_time)
 
@@ -1266,7 +824,7 @@ class UniformCompartment:
         if not normal_exit:         # i.e., if no reaction simulation took place in the WHILE loop, above
             raise Exception(f"reaction_step_common(): unable to complete the reaction step.  "
                             f"In spite of numerous automated reductions of the time step, it continues to lead to concentration changes that are considered excessive; "
-                            f"consider reducing the original time step, and/or increasing the 'abort' thresholds with set_thresholds(). Current values: {self.thresholds}")
+                            f"consider reducing the original time step, and/or increasing the 'abort' thresholds with set_thresholds(). Current values: {self.adaptive_steps.thresholds}")
 
         # If we get thus far, it's the normal exit of the reaction step
 
@@ -1303,7 +861,9 @@ class UniformCompartment:
         recommended_next_step = delta_time       # Baseline value; no reason yet to suggest a change in step size
 
         if variable_steps:
-            decision_data = self.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=self.system, prev_conc=self.previous_system)
+            decision_data = self.adaptive_steps.adjust_timestep(n_chems=self.chem_data.number_of_chemicals(),
+                                                                indexes_of_active_chemicals= self.chem_data.indexes_of_active_chemicals(),
+                                                                delta_conc=delta_concentrations, baseline_conc=self.system, prev_conc=self.previous_system)
             step_factor = decision_data['step_factor']
             action = decision_data['action']
             all_norms = decision_data['norms']
@@ -1327,11 +887,12 @@ class UniformCompartment:
 
                 print("    Norms:    ", all_norms)
                 print("    Thresholds:    ")
-                for rule in self.thresholds:
-                    print(self.display_thresholds(rule, all_norms.get(rule['norm'])))
+                self.adaptive_steps.display_value_against_thresholds(all_norms)
+                #for rule in self.adaptive_steps.thresholds:
+                    #print(self.adaptive_steps.display_value_against_thresholds_single_rule(rule, all_norms.get(rule['norm'])))
 
                 if action != "stay":    # The step is trivially 1 when the action is "stay"
-                    print("    Step Factors:    ", self.step_factors)
+                    print("    Step Factors:    ", self.adaptive_steps.step_factors)
 
                 print(f"    => Action: '{action.upper()}'  (with step size factor of {step_factor})")
 
@@ -1410,7 +971,7 @@ class UniformCompartment:
             # A type of HARD ABORT is detected (a negative concentration resulting from the combined effect of all reactions)
             if self.diagnostics:
                 self.save_diagnostic_decisions_data(data={"action": "ABORT",
-                                                          "step_factor": self.step_factors["error"],
+                                                          "step_factor": self.adaptive_steps.step_factors["error"],
                                                           "caption": "neg. conc. from combined effect of all rxns",
                                                           "time_step": delta_time})
                 for rxn_index in range(self.chem_data.number_of_reactions()):
@@ -1421,156 +982,11 @@ class UniformCompartment:
             raise ExcessiveTimeStepHard(f"INFO: the tentative time step ({delta_time:.5g}) "
                                         f"leads to a NEGATIVE concentration of one of the chemicals: "
                                         f"\n      -> will backtrack, and re-do step with a SMALLER delta time, "
-                                        f"multiplied by {self.step_factors['error']} (set to {delta_time * self.step_factors['error']:.5g}) "
+                                        f"multiplied by {self.adaptive_steps.step_factors['error']} (set to {delta_time * self.adaptive_steps.step_factors['error']:.5g}) "
                                         f"[Step started at t={self.system_time:.5g}, and will rewind there.  Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
 
 
         return  (delta_concentrations, recommended_next_step)       # Maybe also return tentative_updated_system
-
-
-
-    def adjust_timestep(self, delta_conc: np.array, baseline_conc=None, prev_conc=None) -> dict:
-        """
-        Computes some measures of the change of concentrations, from the last step, in the context of the
-        baseline initial concentrations of that same step, and the concentrations in the step before that.
-        Based on the magnitude of the measures, propose a course of action about what to do for the next step.
-
-        :param delta_conc:      A numpy array of changes in concentrations for the chemicals of interest,
-                                    across a simulation time step (typically, the current step a run in progress)
-        :param baseline_conc:   A numpy array of baseline concentration values for those same chemicals,
-                                    prior to the above change, at the start of a simulation time step
-        :param prev_conc:       A numpy array of concentration values for those same chemicals,
-                                    in the step prior to the current one (i.e. an "archive" value)
-        :return:                A dict:
-                                    "action"           - String with the name of the computed recommended action:
-                                                            either "low", "stay", "high" or "abort"
-                                    "step_factor"      - A factor by which to multiply the time step at the next iteration round;
-                                                            if no change is deemed necessary, 1
-                                    "norms"            - A dict of all the computed norm name/values (any of the norms, except norm_A,
-                                                            may be missing)
-                                    "applicable_norms" - The name of the norm that triggered the decision; if all norms were involved,
-                                                            it will be "ALL"
-        """
-        # TODO: move to separate static class
-        # TODO: pass the value of self.chem_data.indexes_of_active_chemicals() as argument
-        #       to this method
-
-        n_chems = self.chem_data.number_of_chemicals()
-
-        if baseline_conc is not None:
-            assert len(baseline_conc) == len(delta_conc), \
-                f"adjust_timestep(): the number of entries in the passed array `delta_conc` ({len(delta_conc)}) " \
-                f"does not match the number of entries in the passed array `baseline_conc` ({len(baseline_conc)})"
-
-        assert n_chems == len(delta_conc), \
-            f"adjust_timestep(): the number of entries in the passed array `delta_conc` ({len(delta_conc)}) " \
-            f"does not match the number of registered chemicals ({n_chems})"
-
-
-        # If some chemicals are not dynamically involved in the reactions
-        # (i.e. if they don't occur in any reaction, or occur as enzyme),
-        # restrict our consideration to only the dynamically involved ones
-        # CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
-        #          the reactions are simulated
-        if self.chem_data.number_of_active_chemicals() < n_chems:
-            delta_conc = delta_conc[self.chem_data.indexes_of_active_chemicals()]
-            #print(f"\nadjust_timestep(): restricting adaptive time step analysis to {n_chems} chemicals only; their delta_conc is {delta_conc}")
-            if baseline_conc is not None:
-                baseline_conc = baseline_conc[self.chem_data.indexes_of_active_chemicals()]
-            if prev_conc is not None:
-                prev_conc = prev_conc[self.chem_data.indexes_of_active_chemicals()]
-            # Note: setting delta_conc, etc, only affects local variables, and won't mess up the arrays passed as arguments
-
-        all_norms = {}
-
-        all_small = True            # Provisional answer to the question: "do ALL the rule yield a 'low'?"
-                                    # Any rule failing to yield a 'low' will flip this status
-
-        high_seen_at = []           # List of rule names at which a "high" is encountered, if applicable
-
-        for rule in self.thresholds:
-            norm_name = rule["norm"]
-
-            if norm_name == "norm_A":
-                result = RxnDynamics.norm_A(delta_conc)
-            elif norm_name == "norm_B":
-                result = RxnDynamics.norm_B(baseline_conc, delta_conc)
-            elif norm_name == "norm_C":
-                result = RxnDynamics.norm_C(prev_conc, baseline_conc, delta_conc)
-            else:
-                result = RxnDynamics.norm_D(prev_conc, baseline_conc, delta_conc)
-
-            all_norms[norm_name] = result
-
-            if ("abort" in rule) and (result > rule["abort"]):
-                # If any rules declares an abort, no need to proceed further: it's an abort
-                self.norm_usage[norm_name] += 1
-                return {"action": "abort", "step_factor": self.step_factors["abort"], "norms": all_norms, "applicable_norms": [norm_name]}
-
-            if ("high" in rule) and (result > rule["high"]):
-                # If any rules declares a "high", still need to consider the other rules - in case any of them over-rides
-                # the "high" with an "abort"
-                high_seen_at.append(norm_name)
-                all_small = False           # No longer the case of all 'low` yields
-
-            if all_small and ("low" in rule) and (result > rule["low"]):
-                all_small = False           # No longer the case of all 'low` yields
-        # END for
-
-
-        if high_seen_at:
-            for n in high_seen_at:
-                self.norm_usage[n] += 1
-            return {"action": "high", "step_factor": self.step_factors["downshift"], "norms": all_norms, "applicable_norms": high_seen_at}
-
-
-        if all_small:
-            for i in self.norm_usage:
-                self.norm_usage[i] += 1     # All the norms were used
-            return {"action": "low", "step_factor": self.step_factors["upshift"], "norms": all_norms, "applicable_norms": "ALL"}
-
-
-        # If we get thus far, none of the rules were found applicable
-        return {"action": "stay", "step_factor": 1, "norms": all_norms, "applicable_norms": "ALL"}
-
-
-
-    def display_thresholds(self, rule :dict, value) -> str:
-        """
-        Examine how the specified value fits
-        relatively to the 'low', 'high', and 'abort' stored in the given rule
-
-        :param rule:    A dict that must contain the key 'norm',
-                            and may contain the keys: 'low', 'high', and 'abort'
-                            (referring to 3 increasingly-high thresholds)
-        :param value:   Either None, or a number to compare to the thresholds
-        :return:        A string that visually highlights the relative position of the value
-                            relatively to the given thresholds
-        """
-        s = f"                   {rule['norm']} : "     # Name of the norm being used
-
-        if value is None:
-            return s + " (skipped; not needed)"
-
-        # Extract the 3 thresholds (some might be missing)
-        low = rule.get('low')
-        high = rule.get('high')
-        abort = rule.get('abort')
-
-        if low is not None and value <= low:
-            # The value is below the `low` threshold
-            return f"{s}(VALUE {value:.5g}) | low {low} | high {high} | abort {abort}"
-
-        if high is not None and value < high:
-            # The value is between the `low` and `high` thresholds
-            return f"{s}low {low} | (VALUE {value:.5g}) | high {high} | abort {abort}"
-
-        if abort is not None and value < abort:
-            # The value is above the `high` threshold
-            return f"{s}low {low} | high {high} | (VALUE {value:.5g}) | abort {abort}"
-
-        # If we get thus far, the value is above the `abort` threshold
-        return f"{s}low {low} | high {high} | abort {abort} | (VALUE {value:.5g})"
 
 
 
@@ -1799,7 +1215,7 @@ class UniformCompartment:
             #   while it's possible that other coupled reactions might counterbalance this - nonetheless, it's taken as a sign of excessive step size)
             if self.diagnostics:
                 self.save_diagnostic_decisions_data(data={"action": "ABORT",
-                                                          "step_factor": self.step_factors['error'],
+                                                          "step_factor": self.adaptive_steps.step_factors['error'],
                                                           "caption": f"neg. conc. in {self.chem_data.get_name(species_index)} from rxn # {rxn_index}",
                                                           "time_step": delta_time})
                 self.save_diagnostic_rxn_data(rxn_index=rxn_index, time_step=delta_time,
@@ -1811,7 +1227,7 @@ class UniformCompartment:
                                     f"from reaction {self.chem_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
                                     f"\n      Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}"
                                     f"\n      -> will backtrack, and re-do step with a SMALLER delta time, "
-                                    f"multiplied by {self.step_factors['error']} (set to {delta_time * self.step_factors['error']:.5g}) "
+                                    f"multiplied by {self.adaptive_steps.step_factors['error']} (set to {delta_time * self.adaptive_steps.step_factors['error']:.5g}) "
                                     f"\n      [Step started at t={self.system_time:.5g}, and will rewind there]")
 
 

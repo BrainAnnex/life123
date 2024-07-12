@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
-from life123 import ChemData, UniformCompartment, RxnDynamics, MovieTabular
+from life123 import ChemData, UniformCompartment, MovieTabular
 
 
 
@@ -90,81 +90,6 @@ def test_get_conc_dict():
 
 
 
-################   PARAMETERS FOR ADAPTIVE STEPS   ################
-
-
-def test_set_thresholds():
-    uc = UniformCompartment(preset=None)
-    assert uc.thresholds == []
-
-    with pytest.raises(Exception):
-        uc.set_thresholds(norm=123)     # Bad norm name
-
-    with pytest.raises(Exception):
-        uc.set_thresholds(norm="")      # Bad norm name
-
-    with pytest.raises(Exception):
-        uc.set_thresholds(norm="norm_A", low=5, high=1)     # Can't have low > high
-
-    with pytest.raises(Exception):
-        uc.set_thresholds(norm="norm_A", low=5, abort=1)    # Can't have low > abort
-
-    with pytest.raises(Exception):
-        uc.set_thresholds(norm="norm_A", high=8, abort=1)   # Can't have high > abort
-
-    uc.set_thresholds(norm="norm_A", low=5)                 # Create a new rule, for norm_A
-    assert uc.thresholds == [{'norm': 'norm_A', 'low': 5}]
-
-    uc.set_thresholds(norm="norm_A", low=6)                 # Update an existing value
-    assert uc.thresholds == [{'norm': 'norm_A', 'low': 6}]
-
-    uc.set_thresholds(norm="norm_A", high=8)                # Add a new value to an existing rule
-    assert uc.thresholds == [{'norm': 'norm_A', 'low': 6, 'high': 8}]
-
-    uc.set_thresholds(norm="norm_A", abort=10)               # Add a new value to an existing rule
-    assert uc.thresholds == [{'norm': 'norm_A', 'low': 6, 'high': 8, 'abort': 10}]
-
-    # Bad values that violate low < high < abort
-    with pytest.raises(Exception):
-        uc.set_thresholds(norm="norm_A", low=8)
-
-    with pytest.raises(Exception):
-        uc.set_thresholds(norm="norm_A", high=6)    # Too small
-
-    with pytest.raises(Exception):
-        uc.set_thresholds(norm="norm_A", high=10)   # Too big
-
-    with pytest.raises(Exception):
-        uc.set_thresholds(norm="norm_A", abort=8)
-
-    assert uc.thresholds == [{'norm': 'norm_A', 'low': 6, 'high': 8, 'abort': 10}]  # Nothing got changed by the failed calls
-
-
-
-def test_delete_thresholds():
-    uc = UniformCompartment(preset=None)
-    assert uc.thresholds == []
-
-    with pytest.raises(Exception):
-        uc.delete_thresholds(norm="not found")  # No rule with that norm exists
-
-    uc.set_thresholds(norm="norm_A", low=1, high=2, abort=3)
-    assert uc.thresholds == [{'norm': 'norm_A', 'low': 1, 'high': 2, 'abort': 3}]
-
-    uc.delete_thresholds(norm="norm_A", high=True)
-    assert uc.thresholds == [{'norm': 'norm_A', 'low': 1, 'abort': 3}]
-
-    with pytest.raises(Exception):
-        uc.delete_thresholds(norm="norm_A", high=True)  # Trying to delete a non-existing threshold
-
-    uc.delete_thresholds(norm="norm_A", low=True)
-    assert uc.thresholds == [{'norm': 'norm_A', 'abort': 3}]
-
-    uc.delete_thresholds(norm="norm_A", abort=True)
-    assert uc.thresholds == []      # Nothing is left of that rule
-
-
-
 ##########################################################################################################
 
 def test_specify_steps():
@@ -209,7 +134,7 @@ def test_single_compartment_react():
 
     dynamics.set_diagnostics()
 
-    dynamics.set_step_factors(error=0.5)    # Will be used by an excessive first step
+    dynamics.adaptive_steps.set_step_factors(error=0.5)    # Will be used by an excessive first step
                                             # leading to a hard abort
 
     dynamics.single_compartment_react(initial_step=0.0010, target_end_time=0.0035, variable_steps=False)
@@ -434,8 +359,8 @@ def test_single_compartment_react_variable_steps_1():
     dynamics = UniformCompartment(chem_data=chem_data, preset=None)
     dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
-    dynamics.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
-    dynamics.set_step_factors(abort=0.5, downshift=0.5, upshift=2.0)
+    dynamics.adaptive_steps.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
+    dynamics.adaptive_steps.set_step_factors(abort=0.5, downshift=0.5, upshift=2.0)
 
     dynamics.single_compartment_react(initial_step=0.01, target_end_time=0.2,
                                       variable_steps=True)
@@ -479,9 +404,9 @@ def test_single_compartment_correct_neg_conc_1():
 
     dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-    dynamics.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
-                           {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
-    dynamics.step_factors = {"upshift": 1.5, "downshift": 0.5, "abort": 0.5, "error": 0.5}
+    dynamics.adaptive_steps.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
+                                          {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
+    dynamics.adaptive_steps.step_factors = {"upshift": 1.5, "downshift": 0.5, "abort": 0.5, "error": 0.5}
 
     dynamics.single_compartment_react(initial_step=0.1, target_end_time=0.8, variable_steps=False)
     # Note: negative concentrations that would arise from the given step size, get automatically intercepted - and
@@ -519,100 +444,6 @@ def test_single_compartment_correct_neg_conc_1():
 
 
 ###########################  LOWER-LEVEL METHODS  ###########################
-
-
-def test_adjust_timestep():
-    uc = UniformCompartment(names=["C1", "C2", "C3", "C4", "C5"], preset=None)
-    prev =     np.array([1,   8, 8, 10, 10])
-    baseline = np.array([2,   5, 5, 14, 14])
-    delta =    np.array([0.5, 1, 4, -2, -5])
-
-    normA = RxnDynamics.norm_A(delta_conc=delta)
-    assert np.allclose(normA, 1.85)
-
-    normB = RxnDynamics.norm_B(baseline_conc=baseline, delta_conc=delta)
-    assert np.allclose(normB, 0.8)
-
-    normC = RxnDynamics.norm_C(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
-    assert np.allclose(normC, 4/3)
-
-    normD = RxnDynamics.norm_D(prev_conc=prev, baseline_conc=baseline, delta_conc=delta)
-    assert np.allclose(normD, 0.7833333333333333)
-
-
-    uc.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.84)
-    uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)
-    uc.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4, error=0.25)
-
-    uc.chem_data.active_chemicals = ["C1"]  # A hack to make sure just chemical "C1" is considered in the norms
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 0.25, 'norm_B': 0.25}, 'applicable_norms': 'ALL'}
-
-    uc.chem_data.active_chemicals = ["C1", "C2"]  # A hack to make sure just chemicals "C1" and "C2" are considered in the norms
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 0.3125, 'norm_B': 0.25}, 'applicable_norms': 'ALL'}
-
-    uc.chem_data.active_chemicals = ["C1", "C2", "C3", "C4", "C5"]  # A hack to make sure that all the chemicals are considered in the norms
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85}, 'applicable_norms': ['norm_A']}
-
-    uc.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.86)     # normA (1.85) no longer triggers abort, but normB (0.8) still does
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
-
-    uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.81)    # normB (0.8) no longer triggers abort, but triggers a high.
-                                                                        # normA (1.85) triggers a high, too
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_A', 'norm_B']}
-
-    uc.set_thresholds(norm="norm_A", low=0.5, high=1.86, abort=1.87)    # normA (1.85) no longer triggers high nor abort
-    uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
-
-    uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.81)    # normB (0.8) no longer triggers abort, but still triggers a high
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
-
-    uc.set_thresholds(norm="norm_B", low=0.08, high=0.81, abort=0.82)    # normB (0.8) no longer triggers high nor abort
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
-
-    uc.set_thresholds(norm="norm_A", low=1.86, high=1.87, abort=1.88)   # normA (1.85) will now trigger a "low"
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
-                      # We're still on the 'stay' action because we aren't below ALL the thresholds
-
-    uc.set_thresholds(norm="norm_B", low=0.81, high=0.82, abort=0.83)   # normB (0.8) will now trigger a "low", too
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'low', 'step_factor': 1.2, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': 'ALL'}
-
-    uc.set_thresholds(norm="norm_C", low=1.34, high=2.60, abort=2.61)   # normC (1.333) will still continue to trigger a "low"
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'low', 'step_factor': 1.2, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': 'ALL'}
-
-    uc.set_thresholds(norm="norm_C", low=1.32, high=2.60, abort=2.61)   # normC (1.333) will no longer trigger a "low" - but not a "high" nor an "abort"
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'stay', 'step_factor': 1, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': 'ALL'}
-
-    uc.set_thresholds(norm="norm_C", low=1.3, high=1.32, abort=2.61)   # normC (1.333) will now trigger a "high"
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'high', 'step_factor': 0.5, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': ['norm_C']}
-
-    uc.set_thresholds(norm="norm_C", low=1, high=1.31, abort=1.32)   # normC (1.333) will now trigger an "abort"
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8, 'norm_C': 4/3}, 'applicable_norms': ['norm_C']}
-
-    uc.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=0.79)    # normB (0.8) will now trigger an "abort" before we can even get to normC
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85, 'norm_B': 0.8}, 'applicable_norms': ['norm_B']}
-
-    uc.set_thresholds(norm="norm_A", low=0.5, high=1.0, abort=1.84)    # normA (1.85) will now trigger an "abort" before we can even get to normB
-    result = uc.adjust_timestep(delta_conc=delta, baseline_conc=baseline, prev_conc=prev)
-    assert result == {'action': 'abort', 'step_factor': 0.4, 'norms': {'norm_A': 1.85}, 'applicable_norms': ['norm_A']}
-
-    # TODO: also test with the other norms
-
 
 
 def test_compute_all_rate_deltas():
