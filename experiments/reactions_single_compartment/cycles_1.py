@@ -93,7 +93,7 @@ dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 
 # %%
-dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %% [markdown] tags=[]
 # ### We'll split the simulation in three segments (apparent from the graphs of the runs, further down):  
@@ -182,7 +182,7 @@ dynamics.describe_state()
 dynamics.show_adaptive_parameters()  
 
 # %%
-dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %%
 dynamics.single_compartment_react(initial_step=0.0001, target_end_time=8.0,
@@ -241,7 +241,7 @@ dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 
 # %%
-dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # %% tags=[]
 dynamics.single_compartment_react(initial_step=0.0004, target_end_time=0.03, variable_steps=False)

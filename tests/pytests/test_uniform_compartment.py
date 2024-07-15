@@ -1,8 +1,6 @@
 import pytest
 import numpy as np
-import pandas as pd
-from pandas.testing import assert_frame_equal
-from life123 import ChemData, UniformCompartment, MovieTabular
+from life123 import ChemData, UniformCompartment
 
 
 
@@ -132,7 +130,7 @@ def test_single_compartment_react():
     dynamics = UniformCompartment(chem_data=chem_data)
     dynamics.set_conc(conc=initial_conc, snapshot=False)
 
-    dynamics.set_diagnostics()
+    dynamics.enable_diagnostics()
 
     dynamics.adaptive_steps.set_step_factors(error=0.5)    # Will be used by an excessive first step
                                             # leading to a hard abort
@@ -143,7 +141,7 @@ def test_single_compartment_react():
 
     assert np.allclose(run1, [9.69124339e+01, 3.06982519e+00, 1.77408783e-02, 9.99985757e+02, 1.42431633e-02])
     assert np.allclose(dynamics.system_time, 0.0035)
-    assert dynamics.explain_time_advance(return_times=True, silent=True) == \
+    assert dynamics.diagnostics.explain_time_advance(return_times=True, silent=True) == \
                ([0.0, 0.002, 0.0025, 0.0035],
                 [0.001, 0.0005, 0.001])
 
@@ -153,14 +151,14 @@ def test_single_compartment_react():
     dynamics2 = UniformCompartment(chem_data=chem_data)
     dynamics2.set_conc(conc=initial_conc, snapshot=False)
 
-    dynamics2.set_diagnostics()
+    dynamics2.enable_diagnostics()
     dynamics2.single_compartment_react(initial_step=0.0010, n_steps=2, variable_steps=False)
     dynamics2.single_compartment_react(initial_step=0.0005, n_steps=1, variable_steps=False)
     dynamics2.single_compartment_react(initial_step=0.0010, n_steps=1, variable_steps=False)
     run2 = dynamics.get_system_conc()
     assert np.allclose(run2, run1)      # Same result as before
     assert np.allclose(dynamics2.system_time, 0.0035)
-    assert dynamics2.explain_time_advance(return_times=True) == \
+    assert dynamics2.diagnostics.explain_time_advance(return_times=True) == \
            ([0.0, 0.002, 0.0025, 0.0035],
             [0.001, 0.0005, 0.001])
     # The time advance is now different, because multiple calls to single_compartment_react() break up the counting
@@ -402,7 +400,7 @@ def test_single_compartment_correct_neg_conc_1():
     dynamics = UniformCompartment(chem_data=chem_data)
     dynamics.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
-    dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+    dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
     dynamics.adaptive_steps.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
                                           {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
@@ -683,61 +681,6 @@ def test_validate_increment():
 
 
 
-def test_stoichiometry_checker():
-    chem = ChemData(names=["A", "B", "C", "D"])
-    rxn = UniformCompartment(chem)
-
-    chem.add_reaction(reactants=["A"], products=["B"])          # Reaction 0:   A <--> B
-
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 50, 0, 0]), conc_arr_after=np.array([10, 40, 0, 0]))
-    assert not rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 50, 0, 0]), conc_arr_after=np.array([10, 39.9, 0, 0]))
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([90, 10, 0, 0]))
-
-
-    chem.clear_reactions_data()
-    chem.add_reaction(reactants=[(2, "A")], products=["B"])         # Reaction 0:   2A <--> B
-
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([80, 10, 0, 0]))
-    assert not rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([80, 10.1, 0, 0]))
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 50, 0, 0]), conc_arr_after=np.array([10, 45, 0, 0]))
-
-
-    chem.clear_reactions_data()
-    chem.add_reaction(reactants=["A", "B"], products=["C"])         # Reaction 0:   A + B <--> C
-
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 40, 10, 0]))
-    assert not rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 40, 9.9, 0]))
-
-
-    chem.clear_reactions_data()
-    chem.add_reaction(reactants=["A", (3, "B")], products=["C"])     # Reaction 0:   A + 3B <--> C
-
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 10, 0]))
-    assert not rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 9.9, 0]))
-
-
-    chem.clear_reactions_data()
-    chem.add_reaction(reactants=["A", (3, "B")], products=[(4, "C")])                   # Reaction 0:   A + 3B <--> 4C
-
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 40, 0]))
-    assert not rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 39.9, 0]))
-
-
-    chem.clear_reactions_data()
-    chem.add_reaction(reactants=[(2, "A"), (3, "B")], products=[(4, "C"), (5, "D")])     # Reaction 0:   2A + 3B <--> 4C + 5D
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([120, 130, 60, 50]))
-    assert not rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([120.1, 130, 60, 50]))
-    assert rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([80, 70, 140, 150]))
-    assert not rxn.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 100, 100, 100.1]), conc_arr_after=np.array([80, 70, 140, 150]))
-
-
-
 def test_sigmoid():
     rxn = UniformCompartment(None)
 
@@ -988,272 +931,3 @@ def test_update_occupancy():
     #print(rxn.get_occupancy(macromolecule="M2", site_number=1))
     #print(rxn.get_occupancy(macromolecule="M2", site_number=2))
     #print(rxn.get_occupancy(macromolecule="M2", site_number=3))
-
-
-
-def test_explain_time_advance():
-    rxn = UniformCompartment(None)
-
-    with pytest.raises(Exception):
-        rxn.explain_time_advance(return_times=True)      # Diagnostics weren't first enabled
-
-    rxn.set_diagnostics()
-
-    with pytest.raises(Exception):
-        rxn.explain_time_advance(return_times=True)      # No diagnostic data yet present
-
-    # Start out with uniform steps
-    rxn.diagnostic_conc_data.store(par=20.,
-                                   data_snapshot={"time_step": 100.})
-
-    assert rxn.explain_time_advance(return_times=True, silent=True) is None
-
-
-    rxn.diagnostic_conc_data.store(par=30.,
-                                   data_snapshot={"time_step": 100.})
-    result, _ = rxn.explain_time_advance(return_times=True, silent=True)    # TODO: also test the returned step sizes
-    assert np.allclose(result, [20., 30.])
-
-    rxn.diagnostic_conc_data.store(par=40.,
-                                   data_snapshot={"time_step": 100.})
-    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
-    assert np.allclose(result, [20., 40.])
-
-    # Switching to smaller step
-    rxn.diagnostic_conc_data.store(par=45.,
-                                   data_snapshot={"time_step": 100.})
-    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
-    assert np.allclose(result, [20., 40., 45.])
-
-    rxn.diagnostic_conc_data.store(par=50.,
-                                   data_snapshot={"time_step": 100.})
-    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
-    assert np.allclose(result, [20., 40., 50.])
-
-    # Switching to larger step
-    rxn.diagnostic_conc_data.store(par=70.,
-                                   data_snapshot={"time_step": 100.})
-    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
-    assert np.allclose(result, [20., 40., 50., 70.])
-
-    # Yet larger
-    rxn.diagnostic_conc_data.store(par=95.,
-                                   data_snapshot={"time_step": 100.})
-    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
-    assert np.allclose(result, [20., 40., 50., 70., 95.])
-
-    # Smaller again
-    rxn.diagnostic_conc_data.store(par=96.,
-                                   data_snapshot={"time_step": 100.})
-    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
-    assert np.allclose(result, [20., 40., 50., 70., 95., 96.])
-
-    rxn.diagnostic_conc_data.store(par=97.,
-                                   data_snapshot={"time_step": 100.})
-    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
-    assert np.allclose(result, [20., 40., 50., 70., 95., 97.])
-
-    rxn.diagnostic_conc_data.store(par=98.,
-                                   data_snapshot={"time_step": 100.})
-    result, _ = rxn.explain_time_advance(return_times=True, silent=True)
-    assert np.allclose(result, [20., 40., 50., 70., 95., 98.])
-
-    #print(rxn.diagnostic_data_baselines.get())
-    #print(result)
-
-
-
-def test__delta_names():
-    chem_data = ChemData(names=["A", "B", "X"])
-    dyn = UniformCompartment(chem_data)
-
-    assert dyn._delta_names() == ["Delta A", "Delta B", "Delta X"]
-
-
-
-def test__delta_conc_dict():
-    chem_data = ChemData(names=["A", "B", "X"])
-    dyn = UniformCompartment(chem_data)
-
-    assert dyn._delta_conc_dict(np.array([10, 20, 30])) == \
-           {"Delta A": 10, "Delta B": 20, "Delta X": 30}
-
-    with pytest.raises(Exception):
-        dyn._delta_conc_dict(np.array([10, 20, 30, 40]))    # One element too many
-
-
-
-def test_save_diagnostic_rxn_data():
-    chem_data = ChemData(names=["A", "B", "C", "X"])
-    # Add 3 reactions
-    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=5., reverse_rate=2.)
-    chem_data.add_reaction(reactants=["A"], products=["X"], forward_rate=5., reverse_rate=2.)
-    chem_data.add_reaction(reactants=["A", "B"], products=["X"], forward_rate=5., reverse_rate=2.)
-
-    dyn = UniformCompartment(chem_data)
-    assert len(dyn.diagnostic_rxn_data) == 0
-
-    dyn.system_time = 100
-    with pytest.raises(Exception):
-        dyn.save_diagnostic_rxn_data(rxn_index=0, time_step=4,
-                                     increment_vector_single_rxn=np.array([2, -2])) # Wrong size of Numpy array
-
-    # Add data for reaction 0
-    dyn.save_diagnostic_rxn_data(rxn_index=0, time_step=4,
-                                 increment_vector_single_rxn=np.array([2, -2, 0, 0]))
-
-    assert len(dyn.diagnostic_rxn_data) == 3    # Same as the number of reactions
-
-    diagnostic_data_rxn_0 = dyn.diagnostic_rxn_data[0]
-    diagnostic_data_rxn_1 = dyn.diagnostic_rxn_data[1]
-    diagnostic_data_rxn_2 = dyn.diagnostic_rxn_data[2]
-
-    assert (type(diagnostic_data_rxn_0)) == MovieTabular
-    assert (type(diagnostic_data_rxn_1)) == MovieTabular
-    assert (type(diagnostic_data_rxn_2)) == MovieTabular
-
-    df_0 = diagnostic_data_rxn_0.get_dataframe()
-    df_1 = diagnostic_data_rxn_1.get_dataframe()
-    df_2 = diagnostic_data_rxn_2.get_dataframe()
-
-    expected_df_0 = pd.DataFrame([[100, 2, -2, 0, 0, 4, ""]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
-    assert_frame_equal(df_0, expected_df_0, check_dtype=False)
-
-    assert df_1.empty
-    assert df_2.empty
-
-    # Add data for reaction 1
-    dyn.save_diagnostic_rxn_data(rxn_index=1, time_step=4,
-                                 increment_vector_single_rxn=np.array([7, 0, 0, -7]))
-
-    df_0 = diagnostic_data_rxn_0.get_dataframe()
-    df_1 = diagnostic_data_rxn_1.get_dataframe()
-    df_2 = diagnostic_data_rxn_2.get_dataframe()
-
-    assert_frame_equal(df_0, expected_df_0, check_dtype=False)  # Nothing was done to df_0 by processing reaction index 1
-
-    expected_df_1 = pd.DataFrame([[100, 7, 0, 0, -7, 4, ""]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
-    assert_frame_equal(df_1, expected_df_1, check_dtype=False)
-
-    assert df_2.empty
-
-    # Add data for reaction 2
-    dyn.save_diagnostic_rxn_data(rxn_index=2, time_step=4,
-                                 increment_vector_single_rxn=np.array([-8, -8, 0, 8]),
-                                 caption="I'm a caption")
-
-    df_0 = diagnostic_data_rxn_0.get_dataframe()
-    df_1 = diagnostic_data_rxn_1.get_dataframe()
-    df_2 = diagnostic_data_rxn_2.get_dataframe()
-
-    assert_frame_equal(df_0, expected_df_0, check_dtype=False)  # Nothing was done to df_0 by processing reaction index 1
-    assert_frame_equal(df_1, expected_df_1, check_dtype=False)  # Nothing was done to df_1 by processing reaction index 1
-
-    expected_df_2 = pd.DataFrame([[100, -8, -8, 0, 8, 4, "I'm a caption"]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
-    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
-
-    #TODO: test adding multiple entries for any reaction
-
-
-
-def test_get_diagnostic_rxn_data():
-    chem_data = ChemData(names=["A", "B", "C", "X"])
-    # Add 3 reactions
-    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=5., reverse_rate=2.)
-    chem_data.add_reaction(reactants=["A"], products=["X"], forward_rate=5., reverse_rate=2.)
-    chem_data.add_reaction(reactants=["A", "B"], products=["X"], forward_rate=5., reverse_rate=2.)
-
-    dyn = UniformCompartment(chem_data)
-
-    dyn.system_time = 100
-
-    # Add data for reaction 0
-    dyn.save_diagnostic_rxn_data(rxn_index=0, time_step=4,
-                                 increment_vector_single_rxn=np.array([2, -2, 0, 0]))
-
-    df_0 = dyn.get_diagnostic_rxn_data(rxn_index=0, print_reaction=False)
-
-    expected_df_0 = pd.DataFrame([[100, 2, -2, 0, 0, 4, ""]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
-    assert_frame_equal(df_0, expected_df_0, check_dtype=False)
-
-    df_1 = dyn.get_diagnostic_rxn_data(rxn_index=1, print_reaction=False)
-    assert df_1.empty
-    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False)
-    assert df_2.empty
-
-    # Add data for reaction 1
-    dyn.save_diagnostic_rxn_data(rxn_index=1, time_step=4,
-                                 increment_vector_single_rxn=np.array([7, 0, 0, -7]))
-
-    df_1 = dyn.get_diagnostic_rxn_data(rxn_index=1, print_reaction=False)
-
-    expected_df_1 = pd.DataFrame([[100, 7, 0, 0, -7, 4, ""]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
-    assert_frame_equal(df_1, expected_df_1, check_dtype=False)
-
-    df_0 = dyn.get_diagnostic_rxn_data(rxn_index=0, print_reaction=False)
-    assert_frame_equal(df_0, expected_df_0, check_dtype=False)      # No change made to df_0 from the last step
-
-    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False)
-    assert df_2.empty
-
-    # Add data for reaction 2
-    dyn.save_diagnostic_rxn_data(rxn_index=2, time_step=4,
-                                 increment_vector_single_rxn=np.array([-8, -8, 0, 8]),
-                                 caption="I'm a caption")
-
-    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, tail=1) # With just one row, tail=1 won't make a difference
-
-    expected_df_2 = pd.DataFrame([[100, -8, -8, 0, 8, 4, "I'm a caption"]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
-    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
-
-    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, t=50) # With just one row, the time selector won't matter
-
-    expected_df_2 = pd.DataFrame([[50, 100, -8, -8, 0, 8, 4, "I'm a caption"]],
-                                 columns = ["search_value", "START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
-
-    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
-
-    # Add a 2nd data row for reaction 2
-    dyn.system_time = 104
-    dyn.save_diagnostic_rxn_data(rxn_index=2, time_step=4,
-                                 increment_vector_single_rxn=np.array([-11, -11, 0, 11]),
-                                 caption="2nd row")
-
-    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False)
-    expected_df_2 = pd.DataFrame([[100, -8, -8, 0, 8, 4, "I'm a caption"] , [104, -11, -11, 0, 11, 4, "2nd row"]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
-    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
-
-    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, tail=2)   # The full dataset, again
-    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
-
-    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, head=2)   # The full dataset, again
-    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
-
-    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, head=1)   # Just the first row
-    expected_df_2 = pd.DataFrame([[100, -8, -8, 0, 8, 4, "I'm a caption"]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
-    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
-
-    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, tail=1)   # Just the last row
-    expected_df_2 = pd.DataFrame([[104, -11, -11, 0, 11, 4, "2nd row"]],
-                                 columns = ["START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
-    expected_df_2.index = [1]   # To conform to the original index, which the tail parameter doesn't alter
-    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
-
-    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, t=150)   # The row closest in time will be the last row
-    expected_df_2 = pd.DataFrame([[150, 104, -11, -11, 0, 11, 4, "2nd row"]],
-                                 columns = ["search_value", "START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
-    expected_df_2.index = [1]   # To conform to the original index, which the t parameter doesn't alter
-    assert_frame_equal(df_2, expected_df_2, check_dtype=False)
-
-    df_2 = dyn.get_diagnostic_rxn_data(rxn_index=2, print_reaction=False, t=30)   # The row closest in time will be the first row
-    expected_df_2 = pd.DataFrame([[30, 100, -8, -8, 0, 8, 4, "I'm a caption"]],
-                                 columns = ["search_value", "START_TIME", "Delta A", "Delta B", "Delta C", "Delta X", "time_step", "caption"])
-    assert_frame_equal(df_2, expected_df_2, check_dtype=False)

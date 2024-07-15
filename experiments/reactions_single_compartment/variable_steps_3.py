@@ -69,7 +69,7 @@ dynamics.set_conc(conc={"U": 50., "X": 100., "EXTRA 2": 55.,  "EXTRA 3": 100. })
 dynamics.describe_state()
 
 # %%
-dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # These adaptive-time settings (normally specified with a preset) are being set explicitly
 dynamics.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
@@ -138,7 +138,7 @@ dynamics.set_conc(conc={"U": 50., "X": 100., "E": 1. })
 dynamics.describe_state()
 
 # %%
-dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # These adaptive-time settings (normally specified with a preset) are being set explicitly
 dynamics.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)

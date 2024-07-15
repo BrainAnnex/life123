@@ -4,6 +4,7 @@ import pandas as pd
 from life123 import ChemData
 from tests.utilities.comparisons import *
 
+
 #############  ChemCore  #############
 
 def test_number_of_chemicals():
@@ -316,6 +317,38 @@ def test_get_chemicals_in_reaction():
     assert chem.get_chemicals_in_reaction(1) == {1, 2}
     assert chem.get_chemicals_in_reaction(2) == {0, 2}
     assert chem.get_chemicals_in_reaction(3) == {0, 1, 3}
+
+
+
+def test_get_chemicals_indexes_in_reaction():
+    chem = ChemData(names=["A", "B"])
+
+    with pytest.raises(Exception):
+        chem.get_chemicals_indexes_in_reaction(0)   # There are no reactions defined yet
+
+    chem.add_reaction(reactants="A", products="B")  # Reaction 0 : A <-> B
+    assert chem.get_chemicals_indexes_in_reaction(0) == [0, 1]
+
+    with pytest.raises(Exception):
+        chem.get_chemicals_indexes_in_reaction(1)   # There is no reaction 1
+
+    chem.add_chemical("C")
+
+    chem.add_reaction(reactants=["B"], products=[(2, "C")])  # Reaction 1 : B <-> 2C
+    assert chem.get_chemicals_indexes_in_reaction(0) == [0, 1]
+    assert chem.get_chemicals_indexes_in_reaction(1) == [1, 2]
+
+    chem.add_reaction(reactants=["A"], products=["C"])      # Reaction 2 : A <-> C
+    assert chem.get_chemicals_indexes_in_reaction(0) == [0, 1]
+    assert chem.get_chemicals_indexes_in_reaction(1) == [1, 2]
+    assert chem.get_chemicals_indexes_in_reaction(2) == [0, 2]
+
+    chem.add_chemical("D")
+    chem.add_reaction(reactants=["A", "B"], products="D")    # Reaction 3 : A + B <-> D
+    assert chem.get_chemicals_indexes_in_reaction(0) == [0, 1]
+    assert chem.get_chemicals_indexes_in_reaction(1) == [1, 2]
+    assert chem.get_chemicals_indexes_in_reaction(2) == [0, 2]
+    assert chem.get_chemicals_indexes_in_reaction(3) == [0, 1, 3]
 
 
 

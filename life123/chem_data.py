@@ -375,7 +375,7 @@ class AllReactions(Diffusion):
         """
         Return a list of the reaction index numbers of all the active reactions
 
-        :return:
+        :return:    A list of integers, to identify the active reactions by their indices
         """
         l = []
         for i, rxn in enumerate(self.reaction_list):
@@ -494,7 +494,7 @@ class AllReactions(Diffusion):
     def get_chemicals_in_reaction(self, rxn_index :int) -> {int}:
         """
         Return a SET of indices (being a set, they're NOT in any particular order)
-        of all the chemicals in the i-th reaction
+        of all the chemicals participating in the i-th reaction
 
         :param rxn_index:   An integer with the (zero-based) index to identify the reaction of interest
         :return:            A SET of indices of the chemicals involved in the above reaction
@@ -507,6 +507,20 @@ class AllReactions(Diffusion):
         index_set = {self.get_index(name) for name in name_set}
 
         return index_set
+
+
+    def get_chemicals_indexes_in_reaction(self, rxn_index :int) -> [int]:
+        """
+        Return a sorted list of the indexes
+        of all the chemicals participating in the i-th reaction
+
+        :param rxn_index:   An integer with the (zero-based) index to identify the reaction of interest
+        :return:            A sorted list of indices of the chemicals involved in the above reaction
+        """
+        index_set = self.get_chemicals_in_reaction(rxn_index)
+        index_list = list(index_set)
+
+        return sorted(index_list)
 
 
 
@@ -733,7 +747,7 @@ class AllReactions(Diffusion):
 
     def indexes_of_active_chemicals(self) -> [int]:
         """
-        Return the ordered list (numerically sorted) of the index numbers of all the chemicals
+        Return the ordered list (numerically sorted) of the INDEX numbers of all the chemicals
         involved in ANY of the registered reactions,
         but NOT counting chemicals that always appear in a catalytic role in all the reactions they
         participate in

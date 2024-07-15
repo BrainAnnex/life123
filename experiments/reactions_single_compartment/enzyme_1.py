@@ -53,7 +53,7 @@ dynamics.describe_state()
 # ### Take the initial system to equilibrium
 
 # %%
-dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 dynamics.single_compartment_react(duration=3.0,
                                   initial_step=0.1, variable_steps=True)
@@ -111,7 +111,7 @@ dynamics.describe_state()
 # ### Take the initial system to equilibrium
 
 # %%
-dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 dynamics.single_compartment_react(duration=0.1,
                                   initial_step=0.1, variable_steps=True)

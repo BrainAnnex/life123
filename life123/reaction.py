@@ -240,17 +240,17 @@ class Reaction:
         """
         Return the stoichiometry coefficient, from a reaction TERM
 
-        :param term:    A triplet of integers representing a reaction term
+        :param term:    A triplet (int, str, int) representing a reaction term
         :return:        An integer with the stoichiometry coefficient
         """
         return term[0]
 
     def extract_species_name(self, term :(int, str, int)) -> str:
         """
-        Return the index of the chemical species, from a reaction TERM
+        Return the name of the chemical species, from a reaction TERM
 
-        :param term:    A triplet of integers representing a reaction term
-        :return:        An integer with the index of the chemical species in the term
+        :param term:    A triplet (int, str, int) representing a reaction term
+        :return:        The name of the chemical species in the term
         """
         return term[1]
 
@@ -258,7 +258,7 @@ class Reaction:
         """
         Return the reaction order, from a reaction TERM
 
-        :param term:    A triplet of integers representing a reaction term
+        :param term:    A triplet (int, str, int) representing a reaction term
         :return:        An integer with the reaction order for this term
         """
         return term[2]

@@ -77,7 +77,7 @@ dynamics.set_conc(conc={"U": 50., "X": 100.})
 dynamics.describe_state()
 
 # %%
-dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # All of these settings are typically managed by a preset... but set explitly here for demonstration of low-level control
 # Here we're setting just "norm_A" (a measure of concentration changes across a single step), but typically multiple norms are used
@@ -147,6 +147,6 @@ dynamics.get_diagnostic_decisions_data()
 # %%
 
 # %%
-dynamics.get_diagnostic_decisions_data_ALT()      # TODO: OBSOLETE!
+dynamics.get_diagnostic_decisions_data()
 
 # %%

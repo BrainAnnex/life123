@@ -454,9 +454,14 @@ class ReactionDynamics:
 
 
 
-    def increase_norm_count(self, norm_name :str):
+    def increase_norm_count(self, norm_name :str) -> None:
+        """
+
+        :param norm_name:
+        :return:            None
+        """
         assert norm_name in self.norm_usage, \
-            f"increase_norm_count(): unknown norm name ({norm_name})"
+            f"increase_norm_count(): unknown norm named `{norm_name}`"
 
         self.norm_usage[norm_name] += 1
 

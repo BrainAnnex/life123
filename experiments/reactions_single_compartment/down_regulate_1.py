@@ -89,7 +89,7 @@ dynamics.describe_state()
 # ### Run the reaction
 
 # %%
-dynamics.set_diagnostics()          # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()          # To save diagnostic information about the call to single_compartment_react()
 
 # The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
 dynamics.single_compartment_react(initial_step=0.001, duration=0.3,
@@ -147,7 +147,7 @@ dynamics.describe_state()
 # ### Run the reaction
 
 # %%
-dynamics.set_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
 
 # The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
 dynamics.single_compartment_react(initial_step=0.001, duration=0.3,
@@ -199,7 +199,7 @@ dynamics.describe_state()
 # ### Run the reaction
 
 # %%
-dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
 dynamics.single_compartment_react(initial_step=0.005, duration=7.0,

@@ -89,7 +89,7 @@ dynamics.find_equilibrium_conc(rxn_index=0)    # This is an EXACT solution
 # # Run the reaction
 
 # %%
-dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 dynamics.single_compartment_react(initial_step=0.004, duration=0.06,
                                   variable_steps=True,

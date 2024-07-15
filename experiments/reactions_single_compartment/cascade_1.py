@@ -102,7 +102,7 @@ dynamics.get_history()
 # ## Run the reaction
 
 # %%
-dynamics.set_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
 
 dynamics.single_compartment_react(initial_step=0.02, duration=0.4,
                                   snapshots={"initial_caption": "1st reaction step",

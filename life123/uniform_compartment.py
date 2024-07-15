@@ -5,6 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from typing import Union
 from life123.chem_data import ChemData
+from life123.diagnostics import Diagnostics
 from life123.movies import MovieTabular
 from life123.numerical import Numerical as num
 from life123.reaction_dynamics import ReactionDynamics
@@ -106,39 +107,17 @@ class UniformCompartment:
 
 
 
-        # ***  FOR DIAGNOSTICS  ***     TODO: maybe turn all diagnostic data/methods into a separate object
+        # ***  FOR DIAGNOSTICS  ***
 
         self.verbose_list = []          # A list of integers or strings with the codes of the desired verbose checkpoints
                                         #   EXAMPLE: [1, "my_ad_hoc_tag"] to invoke sections of code marked as 1 or 3
                                         #   Those sections will have entry points such as:  if "my_ad_hoc_tag" in self.verbose_list
 
 
-        self.diagnostics = False        # Overall flag about whether using diagnostics
+        self.diagnostics_enabled = False  # Overall flag about whether using diagnostics
 
-        self.diagnostic_rxn_data = {}   # "Diagnostic reaction data", PER REACTION: a dict with as many entries as reactions.
-                                        #   The keys are the reaction indices; the values are objects of type "MovieTabular",
-                                        #   which contain Pandas dataframes with the following columns
-                                        #   (referring to 1 reaction):
-                                        #           'START TIME' , 'Delta A' , 'Delta B' ...'time_step' , 'caption'
-                                        #
-                                        #   Notes:  - entries are always added, even if an interval run is aborted
-                                        #           - the various 'Delta concentrations' are for ALL the chemicals (in the reaction or not),
-                                        #                   over the time interval that *STARTS* at the value in the "TIME" column
+        self.diagnostics = None         # Object of class Diagnostics
 
-        self.diagnostic_conc_data = MovieTabular(parameter_name="TIME")
-                                        # An expanded version of the normal System History.
-                                        #   Columns of the dataframes:
-                                        #       'TIME' 	'A' 'B' ...  'caption'
-                                        #
-                                        #   Note: if an interval run is aborted, NO entry is created here
-                                        #         (this approach DIFFERS from that of other diagnostic data)
-
-        self.diagnostic_decisions_data = MovieTabular(parameter_name="START_TIME")
-                                        #   Columns of the dataframes:
-                                        #       'START_TIME' 	'Delta A' 'Delta B' ...
-                                        #               [plus, if applicable, other fields such as 'action', 'norm_A', 'norm_B', 'step_factors']
-                                        #
-                                        #   Note: entries are always added, even if an interval run is aborted
 
         if names:
             self.chem_data = ChemData(names=names)
@@ -604,10 +583,10 @@ class UniformCompartment:
             first_snapshot = True
 
 
-        if self.diagnostics:
+        if self.diagnostics_enabled:
             # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
             system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
-            self.save_diagnostic_conc_data(system_data)
+            self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
 
 
         step_count = 0
@@ -672,10 +651,10 @@ class UniformCompartment:
                                 "the computation is taking a very large number of steps, probably from automatically trying to correct instability;"
                                 " trying reducing the time_step")   # TODO: is the explanation correctly phrased?
 
-            if self.diagnostics:
+            if self.diagnostics_enabled:
                 # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
                 system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
-                self.save_diagnostic_conc_data(system_data)
+                self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
 
             if variable_steps:
                 time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
@@ -854,8 +833,8 @@ class UniformCompartment:
         delta_concentrations = self._reaction_elemental_step(delta_time=delta_time, rxn_list=None)
 
 
-        if self.diagnostics:
-            diagnostic_data_snapshot = self._delta_conc_dict(delta_concentrations)      # A dict
+        if self.diagnostics_enabled:
+            diagnostic_data_snapshot = self.diagnostics._delta_conc_dict(delta_concentrations)      # A dict
 
 
         recommended_next_step = delta_time       # Baseline value; no reason yet to suggest a change in step size
@@ -888,8 +867,6 @@ class UniformCompartment:
                 print("    Norms:    ", all_norms)
                 print("    Thresholds:    ")
                 self.adaptive_steps.display_value_against_thresholds(all_norms)
-                #for rule in self.adaptive_steps.thresholds:
-                    #print(self.adaptive_steps.display_value_against_thresholds_single_rule(rule, all_norms.get(rule['norm'])))
 
                 if action != "stay":    # The step is trivially 1 when the action is "stay"
                     print("    Step Factors:    ", self.adaptive_steps.step_factors)
@@ -905,7 +882,7 @@ class UniformCompartment:
                         f"       -> will backtrack, and re-do step with a SMALLER Δt, x{step_factor:.5g} (now set to {delta_time * step_factor:.5g}) " \
                         f"[Step started at t={self.system_time:.5g}, and will rewind there]"
                 #print("WARNING: ", msg)
-                if self.diagnostics:
+                if self.diagnostics_enabled:
                     # Expand the dict diagnostic_data_snapshot
                     diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
                     diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
@@ -914,10 +891,11 @@ class UniformCompartment:
                     diagnostic_data_snapshot['action'] = "ABORT"
                     diagnostic_data_snapshot['step_factor'] = step_factor
                     diagnostic_data_snapshot['time_step'] = delta_time
-                    self.save_diagnostic_decisions_data(data=diagnostic_data_snapshot, caption="excessive norm value(s)")
+                    self.diagnostics.save_diagnostic_decisions_data(data=diagnostic_data_snapshot, 
+                                                        system_time=self.system_time, caption="excessive norm value(s)")
 
                     # Make a note of the abort action in all the reaction-specific diagnostics
-                    self.comment_diagnostic_rxn_data("aborted: excessive norm value(s)")
+                    self.diagnostics.comment_diagnostic_rxn_data("aborted: excessive norm value(s)")
 
                 raise ExcessiveTimeStepSoft(msg)    # ABORT THE CURRENT STEP
 
@@ -926,7 +904,7 @@ class UniformCompartment:
             recommended_next_step = delta_time * step_factor
 
 
-            if self.diagnostics:
+            if self.diagnostics_enabled:
                 # Expand the dict diagnostic_data_snapshot
                 diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
                 diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
@@ -955,8 +933,8 @@ class UniformCompartment:
         # END if variable_steps
 
 
-        if self.diagnostics:
-            self.save_diagnostic_decisions_data(data=diagnostic_data_snapshot)
+        if self.diagnostics_enabled:
+            self.diagnostics.save_diagnostic_decisions_data(data=diagnostic_data_snapshot, system_time=self.system_time)
 
 
         # Check whether the COMBINED delta_concentrations will make any conc negative;
@@ -969,15 +947,20 @@ class UniformCompartment:
                       f"         It'll be AUTOMATICALLY CORRECTED with a reduction in time step size")
 
             # A type of HARD ABORT is detected (a negative concentration resulting from the combined effect of all reactions)
-            if self.diagnostics:
-                self.save_diagnostic_decisions_data(data={"action": "ABORT",
+            if self.diagnostics_enabled:
+                self.diagnostics.save_diagnostic_decisions_data(data={"action": "ABORT",
                                                           "step_factor": self.adaptive_steps.step_factors["error"],
                                                           "caption": "neg. conc. from combined effect of all rxns",
-                                                          "time_step": delta_time})
+                                                          "time_step": delta_time}, system_time=self.system_time)
+                # Save up diagnostic data for ALL reactions
+                self.diagnostics.save_diagnostic_aborted_rxns(system_time=self.system_time, time_step=delta_time,
+                                                             caption=f"aborted: neg. conc. from combined multiple rxns")
+                """
                 for rxn_index in range(self.chem_data.number_of_reactions()):
-                    self.save_diagnostic_rxn_data(rxn_index=rxn_index, time_step=delta_time,
-                                                  increment_vector_single_rxn=None,
-                                                  caption=f"aborted: neg. conc. from combined multiple rxns")
+                    self.diagnostics.save_diagnostic_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
+                                                              increment_vector_single_rxn=None,
+                                                              caption=f"aborted: neg. conc. from combined multiple rxns")
+                """
 
             raise ExcessiveTimeStepHard(f"INFO: the tentative time step ({delta_time:.5g}) "
                                         f"leads to a NEGATIVE concentration of one of the chemicals: "
@@ -1104,9 +1087,9 @@ class UniformCompartment:
             increment_vector += increment_vector_single_rxn     # Accumulate the increment vector across ALL reactions
                                                                 # TODO: consider using a small dict in lieu of increment_vector_single_rxn
 
-            if self.diagnostics:
-                self.save_diagnostic_rxn_data(rxn_index=rxn_index, time_step=delta_time,
-                                              increment_vector_single_rxn=increment_vector_single_rxn)
+            if self.diagnostics_enabled:
+                self.diagnostics.save_diagnostic_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
+                                                          increment_vector_single_rxn=increment_vector_single_rxn)
         # END for (over rxn_list)
 
         return increment_vector
@@ -1213,14 +1196,14 @@ class UniformCompartment:
 
             # A type of HARD ABORT is detected (a single reaction that, by itself, would lead to a negative concentration;
             #   while it's possible that other coupled reactions might counterbalance this - nonetheless, it's taken as a sign of excessive step size)
-            if self.diagnostics:
-                self.save_diagnostic_decisions_data(data={"action": "ABORT",
+            if self.diagnostics_enabled:
+                self.diagnostics.save_diagnostic_decisions_data(data={"action": "ABORT",
                                                           "step_factor": self.adaptive_steps.step_factors['error'],
                                                           "caption": f"neg. conc. in {self.chem_data.get_name(species_index)} from rxn # {rxn_index}",
-                                                          "time_step": delta_time})
-                self.save_diagnostic_rxn_data(rxn_index=rxn_index, time_step=delta_time,
-                                              increment_vector_single_rxn=None,
-                                              caption=f"aborted: neg. conc. in `{self.chem_data.get_name(species_index)}`")
+                                                          "time_step": delta_time}, system_time=self.system_time)
+                self.diagnostics.save_diagnostic_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
+                                                          increment_vector_single_rxn=None,
+                                                          caption=f"aborted: neg. conc. in `{self.chem_data.get_name(species_index)}`")
 
             raise ExcessiveTimeStepHard(f"    INFO: the tentative time step ({delta_time:.5g}) "
                                     f"leads to a NEGATIVE concentration of `{self.chem_data.get_name(species_index)}` "
@@ -1329,8 +1312,6 @@ class UniformCompartment:
             "Currently only works for `A <-> B` reactions"
         # TODO: should also verify the reaction orders to be 1
 
-        #A = rxn.extract_species_index(reactants[0])     # The index of the "A" chemical in the expected reaction
-        #B = rxn.extract_species_index(products[0])      # The index of the "B" chemical in the expected reaction
 
         TOT = A0 + B0
         #print(kF, kR, A0, TOT)
@@ -1532,613 +1513,30 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def stoichiometry_checker(self, rxn_index :int, conc_arr_before: np.array, conc_arr_after: np.array) -> bool:
-        """
-        For the indicated reaction, investigate the change in the concentration of the involved chemicals,
-        to ascertain whether the change is consistent with the reaction's stoichiometry.
-        See https://life123.science/reactions
-
-        IMPORTANT: this function is currently meant for simulations involving only 1 reaction (TODO: generalize)
-
-        NOTE: the concentration changes in chemicals not involved in the specified reaction are ignored
-
-        :param rxn_index:       The integer index (0-based) to identify the reaction of interest
-        :param conc_arr_before: Numpy array with the concentrations of ALL the chemicals (whether involved
-                                    in the reaction or not), in their index order, BEFORE the reaction step
-        :param conc_arr_after:  Same as above, but after the reaction
-                                TODO: maybe also accept a Panda's dataframe row
-
-        :return:                True if the change in reactant/product concentrations is consistent with the
-                                    reaction's stoichiometry, or False otherwise
-        """
-        assert self.chem_data.number_of_reactions() == 1, \
-            f"stoichiometry_checker() currently only works for 1-reaction simulations, but " \
-            f"{self.chem_data.number_of_reactions()} reactions are present."
-
-        assert len(conc_arr_before) == self.chem_data.number_of_chemicals(), \
-            f"stoichiometry_checker() : the argument `conc_arr_before` must be a Numpy array " \
-            f"with as many elements as the number of registered chemicals ({self.chem_data.number_of_chemicals()}); " \
-            f"instead, it has {len(conc_arr_before)}"
-
-        assert len(conc_arr_after) == self.chem_data.number_of_chemicals(), \
-            f"stoichiometry_checker() : the argument `conc_arr_after` must be a Numpy array " \
-            f"with as many elements as the number of registered chemicals ({self.chem_data.number_of_chemicals()}); " \
-            f"instead, it has {len(conc_arr_after)}"
-
-        self.chem_data.assert_valid_rxn_index(rxn_index)
-
-        return self._stoichiometry_checker_from_deltas(rxn_index = rxn_index,
-                                                       delta_arr = conc_arr_after-conc_arr_before)
-
-
-
-    def _stoichiometry_checker_from_deltas(self, rxn_index :int, delta_arr: np.array) -> bool:
-        """
-        Helper function.
-
-        For the indicated reaction, investigate the change in the concentration of the involved chemicals,
-        to ascertain whether the change is consistent with the reaction's stoichiometry.
-        See https://life123.science/reactions
-
-        IMPORTANT: this function is currently meant for simulations involving only 1 reaction (TODO: generalize)
-
-        NOTE: the concentration changes in chemicals not involved in the specified reaction are ignored
-
-        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
-        :param delta_arr:   Numpy array of numbers, with the concentrations changes of ALL the chemicals (whether involved
-                                in the reaction or not), in their index order,
-                                as a result of JUST the reaction of interest
-        :return:            True if the change in reactant/product concentrations is consistent with the
-                                reaction's stoichiometry, or False otherwise
-                                Note: if any of the elements of the passed Numpy array is NaN, then True is returned
-                                      (because NaN values are indicative of aborted steps; can't invalidate the stoichiometry
-                                      check because of that)
-        """
-        #print("delta_arr: ", delta_arr)
-
-        if np.isnan(delta_arr).any():
-            return True         # The presence of a NaN, anywhere in delta_arr, is indicative of an aborted step
-
-        rxn = self.chem_data.get_reaction(rxn_index)
-        reactants = self.chem_data.get_reactants(rxn_index)
-        products = self.chem_data.get_products(rxn_index)
-
-        # Pick (arbitrarily) the first reactant,
-        # to establish a baseline change in concentration relative to its stoichiometric coefficient
-        baseline_term = reactants[0]
-        baseline_species_name = rxn.extract_species_name(baseline_term)
-        baseline_species_index = self.chem_data.get_index(baseline_species_name)
-        baseline_stoichiometry = rxn.extract_stoichiometry(baseline_term)
-        baseline_ratio =  (delta_arr[baseline_species_index]) / baseline_stoichiometry
-        #print("\nbaseline_ratio: ", baseline_ratio)
-
-        for i, term in enumerate(reactants):
-            if i != 0:
-                species_name = rxn.extract_species_name(term)
-                species_index = self.chem_data.get_index(species_name)
-                stoichiometry = rxn.extract_stoichiometry(term)
-                ratio =  (delta_arr[species_index]) / stoichiometry
-                #print(f"ratio for `{self.chem_data.get_name(species)}`: {ratio}")
-                if not np.allclose(ratio, baseline_ratio):
-                    return False
-
-        for term in products:
-            species_name = rxn.extract_species_name(term)
-            species_index = self.chem_data.get_index(species_name)
-            stoichiometry = rxn.extract_stoichiometry(term)
-            ratio =  - (delta_arr[species_index]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn
-            #print(f"ratio for `{self.chem_data.get_name(species)}`: {ratio}")
-            if not np.allclose(ratio, baseline_ratio):
-                return False
-
-        return True
-
-
-
-    def stoichiometry_checker_entire_run(self) -> bool:
-        """
-        Verify that the stoichiometry is satisfied in all the reaction steps,
-        using the diagnostic data from an earlier run
-
-        IMPORTANT: this function is currently meant for simulations involving only 1 reaction (TODO: generalize)
-
-        :return:    True if everything checks out, or False otherwise
-        """
-        if self.diagnostic_rxn_data == {}:
-            print("WARNING *** In order to run stoichiometry_checker_entire_run(), "
-                  "the diagnostics must be turned on, with set_diagnostics(), prior to the simulation run!")
-            return False
-
-        number_rxns = self.chem_data.number_of_reactions()
-        assert number_rxns == 1, \
-                f"stoichiometry_checker_entire_run(): this function is currently designed for just 1 reaction " \
-                f"(whereas {number_rxns} are present)"
-
-        for rxn_index in range(number_rxns):
-            diagnostic_data = self.get_diagnostic_rxn_data(rxn_index=rxn_index, print_reaction=False)
-            for row_index in range(len(diagnostic_data)):
-                df_row = diagnostic_data.loc[row_index]     # Row in the Panda's data frame of diagnostic data
-                chemical_delta_list = self._delta_names()           # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
-                delta = df_row[chemical_delta_list].to_numpy(dtype='float32')      # Extract select columns from the data frame row, and turn into Numpy array
-                status = self._stoichiometry_checker_from_deltas(rxn_index=rxn_index, delta_arr=delta)
-                if not status:
-                    print(f"Stoichiometry NOT satisfied by reaction # {rxn_index}: "
-                          f"see row # {row_index} in the diagnostic data for that reaction, from get_diagnostic_rxn_data()")
-                    print(df_row )
-                    return False
-
-        return True
-
-
-
-    def _delta_names(self) -> [str]:
-        """
-        Return a list of strings, with the names of ALL the registered chemicals,
-        in their index order, each prefixed by the string "Delta "
-        EXAMPLE: ["Delta A", "Delta B", "Delta X"]
-
-        :return:    A list of strings
-        """
-        chemical_list = self.chem_data.get_all_names()      # EXAMPLE: ["A", "B", "X"]
-        chemical_delta_list = ["Delta " + name
-                               for name in chemical_list]
-        return chemical_delta_list
-
-
-
-    def _delta_conc_dict(self, delta_conc_arr: np.ndarray) -> dict:
-        """
-        Convert a Numpy array into a dict, based on all the registered chemicals.
-        The keys are the chemical names, prefixed by "Delta "
-
-        :param delta_conc_arr:  A Numpy array of "delta concentrations".  EXAMPLE: array[1.23, 52.2]
-        :return:                A dictionary such as {"Delta A": 1.23, "Delta X": 52.2}
-        """
-        chemical_delta_list = self._delta_names()    # EXAMPLE: ["Delta A", "Delta X"]
-        assert len(chemical_delta_list) == len(delta_conc_arr), \
-            f"_delta_conc_dict(): mismatch in number of chemicals ({len(chemical_delta_list)} vs. {len(delta_conc_arr)})"
-
-        delta_conc_dict = {}
-        for i, delta_name in enumerate(chemical_delta_list):
-            delta_conc_dict[delta_name] = delta_conc_arr[i]
-
-        return delta_conc_dict
-
-
-
-
-    #####  DIAGNOSTICS  #####
-
     def set_diagnostics(self):
-        # Turn on the overall diagnostics mode
-        self.diagnostics = True
-
-    def unset_diagnostics(self):
-        # Turn off the overall diagnostics mode; existing diagnostics data, if any, is left untouched
-        self.diagnostics = False
+        # TODO: Obsolete, to phase out
+        self.enable_diagnostics()
 
 
-
-    #####  1. diagnostic_rxn_data  #####
-
-    def save_diagnostic_rxn_data(self, time_step, increment_vector_single_rxn: Union[np.array, None],
-                                 rxn_index :int, caption="") -> None:
+    def enable_diagnostics(self):
         """
-        Save up diagnostic data for 1 reaction, for a simulation step
-        (by convention, regardless of whether the step is completed or aborted)
+        Turn on the diagnostics mode
 
-        :param time_step:                   The duration of the current simulation step
-        :param increment_vector_single_rxn: A Numpy array of size equal to the total number of chemical species,
-                                                containing the "delta concentrations" for
-                                                ALL the chemicals (whether involved in the reaction or not)
-        :param rxn_index:                   The integer index (0-based) to identify the reaction of interest
-        :param caption:                     OPTIONAL string to describe the snapshot
-        :return:                            None
+        :return: None
         """
-        # Validate the reaction index
-        self.chem_data.assert_valid_rxn_index(rxn_index)
-
-        # Validate increment_vector_single_rxn
-        if increment_vector_single_rxn is None:     # If the values aren't available (as is the case in aborts)
-            increment_vector_single_rxn = np.full(self.chem_data.number_of_chemicals(), np.nan)
-        else:
-            assert len(increment_vector_single_rxn) == self.chem_data.number_of_chemicals(), \
-                f"save_diagnostic_rxn_data(): the length of the Numpy array increment_vector_single_rxn " \
-                f"({len(increment_vector_single_rxn)}) doesn't match the total numbers of chemicals ({self.chem_data.number_of_chemicals()})"
+        self.diagnostics_enabled = True
+        if not self.diagnostics:
+            self.diagnostics = Diagnostics(self.chem_data)
 
 
-        if self.diagnostic_rxn_data == {}:    # INITIALIZE the dictionary self.diagnostic_rxn_data, if needed
-            for i in range(self.chem_data.number_of_reactions()):
-                self.diagnostic_rxn_data[i] = MovieTabular(parameter_name="START_TIME")       # One per reaction
-
-        data_snapshot = {}
-        # Add entries to the above dictionary, starting with the Delta conc. for all the chemicals
-        for index, conc in enumerate(increment_vector_single_rxn):
-            data_snapshot["Delta " + self.chem_data.get_name(index)] = conc
-
-        #data_snapshot["reaction"] = rxn_index           # TODO: now redundant because factored out into separate data frames
-        data_snapshot["time_step"] = time_step
-        self.diagnostic_rxn_data[rxn_index].store(par=self.system_time,
-                                                  data_snapshot=data_snapshot, caption=caption)
-
-
-
-    def comment_diagnostic_rxn_data(self, msg: str) -> None:
+    def pause_diagnostics(self):
         """
-        Set the comment field of the last record for EACH of the reaction-specific dataframe
+        Turn off the overall diagnostics mode; existing diagnostics data, if any, is left untouched
 
-        :param msg: Value to set the comment field to
         :return:    None
         """
-        for rxn_index in range(self.chem_data.number_of_reactions()):
-            self.diagnostic_rxn_data[rxn_index].set_caption_last_snapshot(msg)
+        self.diagnostics_enabled = False
 
-
-
-    def get_diagnostic_rxn_data(self, rxn_index :int, head=None, tail=None,
-                                t=None, print_reaction=True) -> pd.DataFrame:
-        """
-        Return a Pandas dataframe with the diagnostic run data of the requested SINGLE reaction,
-        from the time that the diagnostics were activated by a call to set_diagnostics().
-
-        In particular, the dataframe contains the "Delta" values for each of the chemicals
-        involved in the reaction - i.e. the change in their concentrations
-        over the time interval that *STARTS* at the value in the "TIME" column.
-        (So, there'll be no row with the final current System Time)
-
-        Note: entries are always added, even if an interval run is aborted, and automatically re-done.
-
-        Optionally, print out a brief description of the reaction.
-
-        Optionally, limit the dataframe to a specified numbers of rows at the end,
-        or just return one entry corresponding to a specific time
-        (the row with the CLOSEST time to the requested one, which will appear in an extra column
-        called "search_value")
-
-        :param rxn_index:       The integer index (0-based) to identify the reaction of interest
-                                TODO: if not specified, show all reactions in turn
-
-        :param head:            (OPTIONAL) Number of records to return,
-                                    from the start of the diagnostic dataframe.
-        :param tail:            (OPTIONAL) Number of records to return,
-                                    from the end of the diagnostic dataframe.
-                                    If either the "head" arguments is passed, this argument will get ignored
-
-        :param t:               (OPTIONAL) Individual time to pluck out from the dataframe;
-                                    the row with closest time will be returned.
-                                    If this parameter is specified, an extra column - called "search_value" -
-                                    is inserted at the beginning of the dataframe
-                                    If either the "head" or the "tail" arguments are passed, this argument will get ignored
-
-        :param print_reaction:  (OPTIONAL) If True (default), concisely print out the requested reaction
-
-        :return:                A Pandas data frame with (all or some of)
-                                    the diagnostic data of the specified reaction.
-                                    Columns of the dataframes:
-                                    'START_TIME' 'Delta A' 'Delta B'... 'time_step' 'caption'
-        """
-        # Validate the reaction index
-        self.chem_data.assert_valid_rxn_index(rxn_index)
-
-        if print_reaction:
-            print("Reaction: ", self.chem_data.single_reaction_describe(rxn_index=rxn_index, concise=True))
-
-        movie_obj = self.diagnostic_rxn_data.get(rxn_index)    # Object of type "MovieTabular"
-
-        if movie_obj is None:
-            raise Exception(f"get_diagnostic_rxn_data(): no diagnostics data exists for reaction index {rxn_index} ;"
-                            f" did you call set_diagnostics() prior to the simulation run?")
-
-        return movie_obj.get_dataframe(head=head, tail=tail, search_col="START_TIME", search_val=t)
-
-
-
-    #####  2. diagnostic_conc_data  #####
-
-    def save_diagnostic_conc_data(self, system_data) -> None:
-        """
-        To save the diagnostic concentration data during the run, indexed by the current System Time.
-        Note: if an interval run is aborted, by convention NO entry is created here
-
-        :return: None
-        """
-        self.diagnostic_conc_data.store(par=self.system_time,
-                                        data_snapshot=system_data)
-
-
-
-    def get_diagnostic_conc_data(self) -> pd.DataFrame:
-        """
-        Return the diagnostic concentration data saved during the run.
-        This will be a complete set of simulation steps,
-        even if we only saved part of the history during the run
-
-        Note: if an interval run is aborted, by convention NO entry is created here
-
-        :return: A Pandas dataframe, with the columns:
-                    'TIME' 	'A' 'B' ... 'caption'
-                 where 'A', 'B', ... are all the chemicals
-        """
-        return self.diagnostic_conc_data.get_dataframe()
-
-
-
-    #####  3. save_diagnostic_decisions_data  #####
-
-    def save_diagnostic_decisions_data(self, data, caption="") -> None:
-        """
-        Used to save the diagnostic concentration data during the run, indexed by the current System Time.
-        Note: if an interval run is aborted, by convention an entry is STILL created here
-
-        :return: None
-        """
-        self.diagnostic_decisions_data.store(par=self.system_time,
-                                             data_snapshot=data, caption=caption)
-
-
-    def get_diagnostic_decisions_data(self) -> pd.DataFrame:
-        """
-        Determine and return the diagnostic data about concentration changes at every step - EVEN aborted ones
-
-        :return:    A Pandas dataframe with a "TIME" column, and columns for all the "Delta concentration" values
-        """
-        return self.diagnostic_decisions_data.get_dataframe()
-
-
-
-    def get_diagnostic_decisions_data_ALT(self) -> pd.DataFrame:
-        """
-        Determine and return the diagnostic data about concentration changes at every step - EVEN aborted ones
-        TODO: OBSOLETE - BEING PHASED OUT
-
-        :return:    A Pandas dataframe with a "TIME" column, and columns for all the "Delta concentration" values
-        """
-        fields = self._delta_names()    # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
-
-        rxn_0 = self.get_diagnostic_rxn_data(rxn_index=0, print_reaction=False)
-
-        df_sum = rxn_0[fields]
-
-        time_col = rxn_0["START_TIME"]
-
-        n_rows = len(df_sum)
-
-        for rxn_index in range(1, self.chem_data.number_of_reactions()):
-            rxn = self.get_diagnostic_rxn_data(rxn_index=rxn_index, print_reaction=False)
-            assert len(rxn)  == n_rows, "get_diagnostic_delta_data(): this function cannot be used because different dataframes" \
-                                        "of diagnostic reaction data have different numbers of rows"
-            df_sum += rxn[fields]
-
-        df_sum.insert(0, "START_TIME", time_col)
-
-        return df_sum
-
-
-
-    def explain_reactions(self) -> bool:
-        """
-        Provide a detailed explanation of all the steps of the reactions,
-        from the saved diagnostic data
-
-        WARNING: Currently designed only for exactly 2 reactions!  TODO: generalize to any number of reactions
-
-        TODO: test and validate usefulness, now that substeps got eliminated
-        TODO: allow arguments to specify the min and max reaction times during which to display the explanatory data
-
-        :return:    True if the diagnostic data is consistent for all the steps of all the reactions,
-                    or False otherwise
-        """
-        if not self.diagnostics:
-            print("No diagnostic information is available:\nIn order to run explain_reactions(), "
-                  "call set_diagnostics() prior to running single_compartment_react()")
-            return False
-
-        number_reactions = self.chem_data.number_of_reactions()
-
-        assert number_reactions == 2, \
-            "explain_reactions() currently ONLY works when exactly 2 reactions are present. " \
-            "Future versions will lift this restriction"
-
-        row_baseline = 0
-        row_list = [0, 0]       # TODO: generalize
-        active_list = [0, 1]    # ALL the reactions.  TODO: generalize
-
-        self._explain_reactions_helper(active_list=active_list,
-                                       row_baseline=row_baseline, row_list=row_list)
-
-
-        while row_baseline < len(self.get_diagnostic_conc_data()) - 2:
-            row_baseline += 1
-
-            print("Advance a single-step across all tables")
-
-            for i in active_list:
-                row_list[i] += 1
-
-            status = self._explain_reactions_helper(active_list=active_list, row_baseline=row_baseline, row_list=row_list) # TODO: generalize
-
-
-            if not status:
-                return False    # Error termination
-
-        # END while
-
-        return True             # Successful termination
-
-
-
-    def _explain_reactions_helper(self, active_list, row_baseline, row_list) -> bool:
-        """
-        Helper function for explain_reactions()
-
-        :param active_list:
-        :param row_baseline:
-        :param row_list:
-        :return:            True is the diagnostic data is consistent for this step, or False otherwise
-        """
-        print("-----------")
-        print("ROW of baseline data: ", row_baseline)
-
-        current_time = self.get_diagnostic_conc_data().loc[row_baseline]['TIME']
-        print(f"TIME = {current_time:.5g}")
-
-        print("row_list: ", row_list)
-        print("active_list: ", active_list)
-
-        chemical_list = self.chem_data.get_all_names()
-        chemical_delta_list = self._delta_names()
-
-        conc_arr_before = self.get_diagnostic_conc_data().loc[row_baseline][chemical_list].to_numpy(dtype='float16')
-        print("baseline concentrations: ", conc_arr_before)
-
-        delta_cumulative = np.zeros(self.chem_data.number_of_chemicals(),
-                                    dtype=float)  # One element per chemical species
-
-        # For each reaction
-        for rxn_index in range(self.chem_data.number_of_reactions()):
-            if (rxn_index in active_list):  # If reaction is tagged as "fast"
-                row = row_list[rxn_index]   # Row in the data frame for the diagnostic data on this reaction
-                delta_rxn = self.get_diagnostic_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
-                print(f"From fast rxn {rxn_index}: delta_rxn = {delta_rxn}")
-            else:                           # If reaction is tagged as "slow"
-                row = row_list[rxn_index]   # Row in the data frame for the diagnostic data on this reaction
-                delta_rxn = self.get_diagnostic_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
-                #delta_rxn = np.zeros(self.reaction_data.number_of_chemicals(),
-                #                     dtype=float)   # This is the way it was in release beta 19
-                print(f"From slow rxn {rxn_index}: delta_rxn = {delta_rxn}")
-
-
-            delta_cumulative += delta_rxn
-        # END for
-
-        print("delta_cumulative: ", delta_cumulative)
-
-        conc_after = conc_arr_before + delta_cumulative
-        print("updated concentrations: ", conc_after)
-
-        next_system_state = self.get_diagnostic_conc_data().loc[row_baseline + 1][chemical_list].to_numpy(dtype='float16')
-        print(f"concentrations from the next row ({row_baseline + 1}) of the system state: ", next_system_state)
-
-        status = np.allclose(conc_after.astype(float), next_system_state.astype(float))
-        if status:
-            print("Match OK")
-        else:
-            print("****************************************   MISMATCH!!!  ****************************************")
-
-        print("-----------")
-
-        return status
-
-
-
-    def explain_time_advance(self, return_times=False, silent=False, use_history=False) -> Union[None, tuple]:
-        """
-        Use the saved-up diagnostic data, to print out details of the timescales of the reaction run
-
-        If diagnostics weren't enabled ahead of calling this function, an Exception is raised
-
-        EXAMPLE of output:
-            From time 0 to 0.0304, in 17 FULL steps of 0.0008
-            (for a grand total of 38 FULL steps)
-
-        :param return_times:    If True, all the critical times (times where the interval steps change)
-                                    are saved and returned as a list
-        :param silent:          If True, nothing gets printed out
-        :param use_history:     If True, use the system history in lieu of the diagnostic data;
-                                    to keep in mind is the fact that the user might only have asked
-                                    for PART of the history to be saved
-        :return:                Depending on the argument return_times, either None, or a pair with 2 lists:
-                                        1 - list of time values
-                                        2 - list of step sizes  (will have one less element than the first list)
-        """
-        if use_history:
-            df = self.get_history()
-            assert not df.empty , \
-                "UniformCompartment.explain_time_advance(): no history data found.  " \
-                "Did you run the reaction simulation prior to calling this function?"
-        else:
-            df = self.get_diagnostic_conc_data()
-            assert not df.empty , \
-                "UniformCompartment.explain_time_advance(): no diagnostic data found.  " \
-                "Did you call set_diagnostics() prior to the reaction run?"
-
-        n_entries = len(df)
-        if use_history:
-            t = list(df["SYSTEM TIME"])    # List of times (simulation step points)
-        else:
-            t = list(df["TIME"])    # List of times (simulation step points)
-
-        if n_entries == 1:
-            print(f"UniformCompartment.explain_time_advance(): no time advance found. "
-                  f"Diagnostics only contain an initial System Time of {t[0]:.3g} ;  "
-                  f"did you run the reaction simulation?")
-            return
-
-
-        # If we get thus far, we have at least 2 entries in the list "t" of times
-        grad = np.diff(t)
-        grad_shifted = np.insert(grad, 0, 0)  # Insert a zero at the top (shifting down the array)
-        #print(grad)
-        #print(grad_shifted)
-        start_interval = t[0]
-
-        critical_times = [start_interval]  # List of times to report on (start time, plus times where the steps change)
-        step_sizes = []
-
-        total_number_full_steps = 0
-        for i in range(1, n_entries-1):
-            #print(i)
-            if not np.allclose(grad[i], grad_shifted[i]):
-                #print (f"   Detection at element {i} : time={t[i]}")
-                #print (f"   From time {start_interval} to {t[i]}, in steps of {grad_shifted[i]}")
-                n_full_steps_taken = self._explain_time_advance_helper(t_start=start_interval, t_end=t[i],
-                                                                       delta_baseline=grad_shifted[i], silent=silent)
-
-                start_interval = t[i]
-                if n_full_steps_taken > 0:
-                    total_number_full_steps += n_full_steps_taken
-                    critical_times.append(t[i])
-                    step_sizes.append(grad_shifted[i])
-
-
-        # Final wrap-up of the interval's endpoint
-        n_full_steps_taken = self._explain_time_advance_helper(t_start=start_interval, t_end=t[-1],
-                                                               delta_baseline=grad_shifted[-1], silent=silent)
-
-        if n_full_steps_taken > 0:
-            total_number_full_steps += n_full_steps_taken
-            critical_times.append(t[-1])
-            step_sizes.append(grad_shifted[-1])
-
-        if not silent:
-            print(f"({total_number_full_steps} steps total)")
-
-        if return_times:
-            assert len(critical_times) == len(step_sizes) + 1, \
-                "explain_time_advance(): validation error in the values to return"
-            return (critical_times, step_sizes)
-
-
-
-    def _explain_time_advance_helper(self, t_start, t_end, delta_baseline, silent: bool) -> Union[int, float]:
-        """
-        Using the provided data, about a group of same-size steps, create and print a description of it for the user
-
-        :param t_start:
-        :param t_end:
-        :param delta_baseline:
-        :param silent:          If True, nothing gets printed; otherwise, a line is printed out
-        :return:                The corresponding number of FULL steps taken
-        """
-        if np.allclose(t_start, t_end):
-            #print(f"   [Ignoring interval starting and ending at same time {t_start:.3g}]")
-            return 0
-
-        n_steps = round((t_end - t_start) / delta_baseline)
-        step_s = "step" if n_steps == 1 else "steps"  # singular vs. plural
-        if not silent:
-            print(f"From time {t_start:.4g} to {t_end:.4g}, in {n_steps} {step_s} of {delta_baseline:.3g}")
-        return n_steps
 
 
 
@@ -2303,7 +1701,7 @@ class UniformCompartment:
                                     at the time steps
         :return:                None
         """
-        (transition_times, step_sizes) = self.explain_time_advance(return_times=True, silent=True)
+        (transition_times, step_sizes) = self.diagnostics.explain_time_advance(return_times=True, silent=True)
 
         x=transition_times
         y=step_sizes
@@ -2322,7 +1720,7 @@ class UniformCompartment:
         new_y.append(y[-1])
 
 
-        df = self.get_diagnostic_conc_data()    # Pandas dataframe with a column called "TIME"
+        df = self.diagnostics.get_diagnostic_conc_data()    # Pandas dataframe with a column called "TIME"
 
         # Note: the step size at the final end time isn't a defined quantity - so, we'll just repeat
         #       the last value, to maintain the full x-axis size
@@ -2342,6 +1740,7 @@ class UniformCompartment:
 
 
 
+
     #####################################################################################################
 
     '''                                      ~   HISTORY   ~                                          '''
@@ -2349,6 +1748,7 @@ class UniformCompartment:
     def ________HISTORY________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
+
 
     def add_snapshot(self, species=None, caption="", time=None, system_data=None) -> None:
         """
@@ -2448,6 +1848,7 @@ class UniformCompartment:
             return df.loc[row][chem_list].to_numpy(dtype='float32')
         else:
             return df.iloc[0][chem_list].to_numpy(dtype='float32')
+
 
 
 
@@ -2838,63 +2239,6 @@ class UniformCompartment:
         kF = b - kR
 
         print(f"\n-> ESTIMATED RATE CONSTANTS: kF = {kF:,.4g} , kR = {kR:,.4g}")
-
-        return fig
-
-
-
-
-    def estimate_rate_constants_OLD(self, t :np.array, reactant_conc :np.array, product_conc :np.array,
-                                product_name="Product"):
-        """
-        IMPORTANT : Currently restricted to reactions with a 1:1 stoichiometry between the given reactant and product
-
-        :param t:               A numpy array of time grid points where the other functions are specified
-        :param reactant_conc:
-        :param product_conc:
-        :param product_name:
-        :return:                A plotly "Figure" object
-        """
-        total_conc_arr = reactant_conc + product_conc
-        total_conc = np.median(total_conc_arr)    # TODO: give warning or abort if there's too much variance
-        sd = np.std(total_conc_arr)
-
-        print(f"Total REACTANT + PRODUCT has a median of {total_conc:,.4g}, "
-              f"\n    with standard deviation {sd:,.4g} (expected: zero)")
-
-
-        # The rate of change of [reactant] with time
-        deriv_reactant_conc = np.gradient(reactant_conc, t, edge_order=2)
-        # The rate of change of [product] with time
-        deriv_product_conc = np.gradient(product_conc, t, edge_order=2)
-
-
-        median_sum_derivs = np.median(deriv_reactant_conc + deriv_product_conc)
-        print(f"The sum of the derivatives has a median of {median_sum_derivs:,.4g} (expected: zero)")
-
-
-        # Do a least-square fit of the time-gradient of the product, as a function of the product's concentration
-        Y = deriv_product_conc  # The dependent variable
-        X = product_conc        # The independent variable
-
-        M = np.vstack([np.ones(len(Y)), X]).T
-        # M is an nx2 matrix , where n is the number of data points.  The 2nd column contains the values of X
-
-        a, b = np.linalg.lstsq(M, Y, rcond=None)[0]  # Carry out the least-square fit as: Y = a + b X
-        print(f"Least square fit: Y = {a:,.4g} + {b:,.4g} X"
-              f"\n    where X is the array [{product_name}] and Y is its gradient")
-
-        fig = PlotlyHelper.plot_curves(x=X, y=[Y , a + b*X],
-                                       title=f"d/dt {product_name}(t) as a function of {product_name}(t), alongside its least-square fit",
-                                       xlabel=f"{product_name}(t)", ylabel=f"{product_name}'(t)",
-                                       curve_labels=[f"{product_name}'(t)", "Linear Fit"], legend_title="Curve vs Fit:",
-                                       colors=['green', 'red'])
-
-        kF = a / total_conc
-
-        kR = -(a / total_conc) - b
-
-        print(f"\n-> ESTIMATED RATE CONSTANTS: kF = {kF:,.4g}, kR = {kR:,.4g}")
 
         return fig
 

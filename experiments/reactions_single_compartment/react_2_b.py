@@ -70,7 +70,7 @@ dynamics.describe_state()
 dynamics.get_history()
 
 # %%
-dynamics.set_diagnostics()      # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()      # To save diagnostic information about the call to single_compartment_react()
                                 # Useful for insight into the inner workings of the simulation
 
 # %%

@@ -61,7 +61,7 @@ dynamics1.describe_state()
 
 # %%
 # Take the system to equilibrium
-dynamics1.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics1.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # All of these settings are currently close to the default values... but subject to change; set for repeatability
 #dynamics1.set_thresholds(norm="norm_A", low=0.6, high=1.0, abort=1.44)
@@ -143,7 +143,7 @@ dynamics2.describe_state()
 # ### Take the initial system to equilibrium
 
 # %%
-dynamics2.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics2.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # All of these settings are currently close to the default values... but subject to change; set for repeatability
 #dynamics2.set_thresholds(norm="norm_A", low=0.6, high=1.0, abort=1.44)

@@ -72,7 +72,7 @@ dynamics.describe_state()
 # ### Advance the reactions (for now without enzyme) to equilibrium
 
 # %%
-dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # Perform the reactions
 dynamics.single_compartment_react(duration=4.0,

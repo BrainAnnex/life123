@@ -56,7 +56,9 @@ class MovieTabular:
         :param par:             Typically, the System Time - but could be anything that parametrizes the snapshots
                                     (e.g., a dictionary, or any desired data structure.)
                                     It doesn't have to remain consistent, but it's probably good practice to keep it so
-        :param data_snapshot:   A dict of data to preserve for later use
+        :param data_snapshot:   A dict of data to preserve for later use;
+                                    it's acceptable to add a new field not used before
+                                    (in that case, the dataframe will expand automatically - and NaN values will appear in earlier rows)
         :param caption:         OPTIONAL string to describe the snapshot
         :return:                None (the object variable "self.movie" will get updated)
         """
@@ -71,6 +73,8 @@ class MovieTabular:
             data_snapshot[self.parameter_name] = par                # Expand the snapshot dict
             data_snapshot["caption"] = caption                      # Expand the snapshot dict
             self.movie = pd.concat([self.movie, pd.DataFrame([data_snapshot])], ignore_index=True)    # Append new row to dataframe
+            # Note: we cannot do an in-place addition of a new row, because this new row might contain fields not
+            #       yet present in the dataframe
 
 
 

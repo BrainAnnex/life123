@@ -93,7 +93,7 @@ dynamics.plot_history(colors=['red', 'darkorange', 'green'],
 dynamics.get_history()
 
 # %%
-dynamics.explain_time_advance(use_history=True)
+dynamics.explain_time_advance(sys_history=dynamics.get_history())
 
 # %% [markdown]
 # #### Equilibrium

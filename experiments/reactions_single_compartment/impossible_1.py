@@ -98,7 +98,7 @@ dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 
 # %%
-dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0,
                                   variable_steps=False)   # To avoid extra complexity, we're sticking to simple fixed-time steps

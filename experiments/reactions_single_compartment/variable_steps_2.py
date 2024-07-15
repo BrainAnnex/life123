@@ -70,7 +70,7 @@ dynamics.set_conc(conc={"U": 50., "X": 100.})
 dynamics.describe_state()
 
 # %%
-dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 dynamics.single_compartment_react(initial_step=0.0001, target_end_time=0.35, 
                                   variable_steps=False)
