@@ -103,14 +103,14 @@ class Diagnostics:
 
 
     def save_diagnostic_aborted_rxns(self, system_time, time_step,
-                                 caption="") -> None:
+                                    caption="") -> None:
         """
-        Save up diagnostic data for ALL reactions, in case of aborted simulation step
+        Save up diagnostic data, for ALL reactions, in case of aborted simulation step
 
-        :param system_time:                 The START time of the reaction step
-        :param time_step:                   The duration of the current simulation step
-        :param caption:                     [OPTIONAL] string to describe the snapshot
-        :return:                            None
+        :param system_time: The START time of the reaction step
+        :param time_step:   The duration of the current simulation step
+        :param caption:     [OPTIONAL] string to describe the snapshot
+        :return:            None
         """
         for rxn_index in range(self.chem_data.number_of_reactions()):
             self.save_diagnostic_rxn_data(system_time=system_time, time_step=time_step,
@@ -225,21 +225,35 @@ class Diagnostics:
 
     #####  3. save_diagnostic_decisions_data  #####
 
-    def save_diagnostic_decisions_data(self, data, system_time, caption="") -> None:
+    def save_diagnostic_decisions_data(self, system_time, data :dict,
+                                       delta_conc_arr :Union[np.ndarray, None], caption="") -> None:
         """
-        Used to save the diagnostic concentration data during the run, indexed by the current System Time.
+        Used to save the diagnostic concentration data during the run, indexed by the given System Time.
         Note: if an interval run is aborted, by convention an entry is STILL created here
 
-        :return: None
+        :param data:
+        :param system_time:
+        :param delta_conc_arr:  A Numpy array of "delta concentrations".  EXAMPLE: array[1.23, 52.2]
+        :param caption:
+        :return:                None
         """
+        delta_conc_dict = {}
+        if delta_conc_arr is not None:
+            delta_conc_dict = self._delta_conc_dict(delta_conc_arr)
+            # EXAMPLE:  {"Delta A": 1.23, "Delta X": 52.2}
+
+        #data.update(delta_conc_dict)    # Merge the delta_conc_dict dict into the data dict
+        delta_conc_dict.update(data)
+
         self.diagnostic_decisions_data.store(par=system_time,
-                                             data_snapshot=data, caption=caption)
+                                             data_snapshot=delta_conc_dict, caption=caption)
 
 
 
     def get_diagnostic_decisions_data(self) -> pd.DataFrame:
         """
-        Determine and return the diagnostic data about concentration changes at every step - EVEN aborted ones
+        Determine and return the diagnostic data about concentration changes at every step - by convention,
+        EVEN aborted ones
     
         :return:    A Pandas dataframe with a "TIME" column, and columns for all the "Delta concentration" values
         """
@@ -628,7 +642,7 @@ class Diagnostics:
 
 
 
-    def _delta_conc_dict(self, delta_conc_arr: np.ndarray) -> dict:
+    def _delta_conc_dict(self, delta_conc_arr :np.ndarray) -> dict:
         """
         Convert a Numpy array into a dict, based on all the registered chemicals.
         The keys are the chemical names, prefixed by "Delta "
@@ -638,7 +652,8 @@ class Diagnostics:
         """
         chemical_delta_list = self._delta_names()    # EXAMPLE: ["Delta A", "Delta X"]
         assert len(chemical_delta_list) == len(delta_conc_arr), \
-            f"_delta_conc_dict(): mismatch in number of chemicals ({len(chemical_delta_list)} vs. {len(delta_conc_arr)})"
+            f"_delta_conc_dict(): mismatch in number of chemicals ({len(chemical_delta_list)} " \
+            f"vs. {len(delta_conc_arr)})"
 
         delta_conc_dict = {}
         for i, delta_name in enumerate(chemical_delta_list):

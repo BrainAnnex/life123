@@ -834,7 +834,7 @@ class UniformCompartment:
 
 
         if self.diagnostics_enabled:
-            diagnostic_data_snapshot = self.diagnostics._delta_conc_dict(delta_concentrations)      # A dict
+            diagnostic_data_snapshot = {}
 
 
         recommended_next_step = delta_time       # Baseline value; no reason yet to suggest a change in step size
@@ -883,7 +883,7 @@ class UniformCompartment:
                         f"[Step started at t={self.system_time:.5g}, and will rewind there]"
                 #print("WARNING: ", msg)
                 if self.diagnostics_enabled:
-                    # Expand the dict diagnostic_data_snapshot
+                    # Define the dict diagnostic_data_snapshot
                     diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
                     diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
                     diagnostic_data_snapshot['norm_C'] = all_norms.get('norm_C')
@@ -891,8 +891,9 @@ class UniformCompartment:
                     diagnostic_data_snapshot['action'] = "ABORT"
                     diagnostic_data_snapshot['step_factor'] = step_factor
                     diagnostic_data_snapshot['time_step'] = delta_time
-                    self.diagnostics.save_diagnostic_decisions_data(data=diagnostic_data_snapshot, 
-                                                        system_time=self.system_time, caption="excessive norm value(s)")
+                    self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
+                                                        data=diagnostic_data_snapshot, delta_conc_arr=delta_concentrations,
+                                                        caption="excessive norm value(s)")
 
                     # Make a note of the abort action in all the reaction-specific diagnostics
                     self.diagnostics.comment_diagnostic_rxn_data("aborted: excessive norm value(s)")
@@ -906,7 +907,7 @@ class UniformCompartment:
 
             if self.diagnostics_enabled:
                 # Expand the dict diagnostic_data_snapshot
-                diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')
+                diagnostic_data_snapshot['norm_A'] = all_norms.get('norm_A')    # TODO: combine all norms in 1 step
                 diagnostic_data_snapshot['norm_B'] = all_norms.get('norm_B')
                 diagnostic_data_snapshot['norm_C'] = all_norms.get('norm_C')
                 diagnostic_data_snapshot['norm_D'] = all_norms.get('norm_D')
@@ -934,7 +935,8 @@ class UniformCompartment:
 
 
         if self.diagnostics_enabled:
-            self.diagnostics.save_diagnostic_decisions_data(data=diagnostic_data_snapshot, system_time=self.system_time)
+            self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
+                                                           data=diagnostic_data_snapshot, delta_conc_arr=delta_concentrations)
 
 
         # Check whether the COMBINED delta_concentrations will make any conc negative;
@@ -948,19 +950,15 @@ class UniformCompartment:
 
             # A type of HARD ABORT is detected (a negative concentration resulting from the combined effect of all reactions)
             if self.diagnostics_enabled:
-                self.diagnostics.save_diagnostic_decisions_data(data={"action": "ABORT",
-                                                          "step_factor": self.adaptive_steps.step_factors["error"],
-                                                          "caption": "neg. conc. from combined effect of all rxns",
-                                                          "time_step": delta_time}, system_time=self.system_time)
+                self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
+                                                                data={"action": "ABORT",
+                                                                      "step_factor": self.adaptive_steps.step_factors["error"],
+                                                                      "caption": "neg. conc. from combined effect of all rxns",
+                                                                      "time_step": delta_time},
+                                                                delta_conc_arr=None)
                 # Save up diagnostic data for ALL reactions
                 self.diagnostics.save_diagnostic_aborted_rxns(system_time=self.system_time, time_step=delta_time,
                                                              caption=f"aborted: neg. conc. from combined multiple rxns")
-                """
-                for rxn_index in range(self.chem_data.number_of_reactions()):
-                    self.diagnostics.save_diagnostic_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
-                                                              increment_vector_single_rxn=None,
-                                                              caption=f"aborted: neg. conc. from combined multiple rxns")
-                """
 
             raise ExcessiveTimeStepHard(f"INFO: the tentative time step ({delta_time:.5g}) "
                                         f"leads to a NEGATIVE concentration of one of the chemicals: "
@@ -1197,10 +1195,12 @@ class UniformCompartment:
             # A type of HARD ABORT is detected (a single reaction that, by itself, would lead to a negative concentration;
             #   while it's possible that other coupled reactions might counterbalance this - nonetheless, it's taken as a sign of excessive step size)
             if self.diagnostics_enabled:
-                self.diagnostics.save_diagnostic_decisions_data(data={"action": "ABORT",
-                                                          "step_factor": self.adaptive_steps.step_factors['error'],
-                                                          "caption": f"neg. conc. in {self.chem_data.get_name(species_index)} from rxn # {rxn_index}",
-                                                          "time_step": delta_time}, system_time=self.system_time)
+                self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
+                                                                data={"action": "ABORT",
+                                                                      "step_factor": self.adaptive_steps.step_factors['error'],
+                                                                      "caption": f"neg. conc. in {self.chem_data.get_name(species_index)} from rxn # {rxn_index}",
+                                                                      "time_step": delta_time},
+                                                                delta_conc_arr=None)
                 self.diagnostics.save_diagnostic_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
                                                           increment_vector_single_rxn=None,
                                                           caption=f"aborted: neg. conc. in `{self.chem_data.get_name(species_index)}`")

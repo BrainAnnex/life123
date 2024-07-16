@@ -383,7 +383,7 @@ def test_single_compartment_react_variable_steps_1():
 
 
 
-def test_single_compartment_correct_neg_conc_1():
+def test_single_compartment_correct_neg_conc():
     # Based on "Run 3" of experiment "negative_concentrations_1
 
     # Initialize the system
