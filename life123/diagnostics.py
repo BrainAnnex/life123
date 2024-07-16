@@ -231,10 +231,10 @@ class Diagnostics:
         Used to save the diagnostic concentration data during the run, indexed by the given System Time.
         Note: if an interval run is aborted, by convention an entry is STILL created here
 
-        :param data:
         :param system_time:
+        :param data:
         :param delta_conc_arr:  A Numpy array of "delta concentrations".  EXAMPLE: array[1.23, 52.2]
-        :param caption:
+        :param caption:         [OPTIONAL] String with a caption for this record
         :return:                None
         """
         delta_conc_dict = {}
@@ -242,8 +242,8 @@ class Diagnostics:
             delta_conc_dict = self._delta_conc_dict(delta_conc_arr)
             # EXAMPLE:  {"Delta A": 1.23, "Delta X": 52.2}
 
-        #data.update(delta_conc_dict)    # Merge the delta_conc_dict dict into the data dict
-        delta_conc_dict.update(data)
+
+        delta_conc_dict.update(data)        # Merge the data dict into the delta_conc_dict
 
         self.diagnostic_decisions_data.store(par=system_time,
                                              data_snapshot=delta_conc_dict, caption=caption)

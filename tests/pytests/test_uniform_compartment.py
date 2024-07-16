@@ -444,63 +444,61 @@ def test_single_compartment_correct_neg_conc():
 ###########################  LOWER-LEVEL METHODS  ###########################
 
 
-def test_compute_all_rate_deltas():
+def test_compute_all_reaction_rates():
     chem_data = ChemData(names=["A", "B", "C", "D"])
     rxn = UniformCompartment(chem_data)
 
     # Start with reaction A <-> B , with 1st-order kinetics in both directions
-    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=20., reverse_rate=2.)  # Reaction 0
+    chem_data.add_reaction(reactants="A", products="B", forward_rate=20., reverse_rate=2.)  # Reaction 0
     rxn.set_conc(conc=[5., 8., 0, 0], snapshot=False)
 
-    result = rxn.compute_all_reaction_deltas(delta_time=0.5)    # {0: 42.0}
+    result = rxn.compute_all_reaction_rates()    # {0: 84.}
     assert len(result) == 1
-    assert np.allclose(result[0], 42.0)
+    assert np.allclose(result[0], 84.)
 
     # Add reaction 2B <-> 3C , with 1st-order kinetics in both directions
     chem_data.add_reaction(reactants=[(2, "B", 1)], products=[(3, "C", 1)],
                            forward_rate=10., reverse_rate=25.)   # Rxn 1
     rxn.set_conc(conc=[5., 8., 15., 0], snapshot=False)
-    result = rxn.compute_all_reaction_deltas(delta_time=0.5) # {0: 42.0, 1: -147.5}
+    result = rxn.compute_all_reaction_rates()  # {0: 84., 1: -295.}
     assert len(result) == 2
-    assert np.allclose(result[0], 42.0)
-    assert np.allclose(result[1], -147.5)
+    assert np.allclose(result[0], 84.)
+    assert np.allclose(result[1], -295.)
 
     # Add reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
     chem_data.add_reaction(reactants=[(2,"A",1) , (5,"B",1)], products=[(4,"C",1) , (3,"D",1)],
                      forward_rate=5., reverse_rate=2.)          # Rxn 2
     rxn.set_conc(conc=[5., 8., 15.,  7.], snapshot=False)
-    result = rxn.compute_all_reaction_deltas(delta_time=0.5)    # {0: 42.0, 1: -147.5, 2: -5.0}
+    result = rxn.compute_all_reaction_rates()    # {0: 84., 1: -295., 2: -10.}
     assert len(result) == 3
-    assert np.allclose(result[0], 42.0)
-    assert np.allclose(result[1], -147.5)
-    assert np.allclose(result[2], -5)
-
+    assert np.allclose(result[0], 84.)
+    assert np.allclose(result[1], -295.)
+    assert np.allclose(result[2], -10.)
 
     # Add reaction  2A <-> B , with 2nd-order kinetics in the forward direction
     chem_data.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=3., reverse_rate=2.)
-    result = rxn.compute_all_reaction_deltas(delta_time=0.5)    # {0: 42.0, 1: -147.5, 2: -5.0, 3: 29.5}
+    result = rxn.compute_all_reaction_rates()    # {0: 84., 1: -295., 2: -10., 3: 59.}
     assert len(result) == 4
-    assert np.allclose(result[0], 42.0)
-    assert np.allclose(result[1], -147.5)
-    assert np.allclose(result[2], -5)
-    assert np.allclose(result[3], 29.5)
+    assert np.allclose(result[0], 84.)
+    assert np.allclose(result[1], -295.)
+    assert np.allclose(result[2], -10.)
+    assert np.allclose(result[3], 59.)
 
     # This time, only process reactions 0 and 2
-    result_0_2 = rxn.compute_all_reaction_deltas(delta_time=0.5,
-                                                 rxn_list=[0, 2])   # {0: 42.0, 2: -5.0}
+    result_0_2 = rxn.compute_all_reaction_rates(rxn_list=[0, 2])   # {0: 84., 2: -10.}
     assert len(result_0_2) == 2
-    assert np.allclose(result_0_2[0], 42.0)
-    assert np.allclose(result_0_2[2], -5.0)
+    assert np.allclose(result_0_2[0], 84.)
+    assert np.allclose(result_0_2[2], -10.)
 
 
     # FLUSH OUT ALL REACTIONS (to start over)
     rxn.clear_reactions()
     # Start with reaction A <-> B , with 1st-order kinetics in both directions
-    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=20., reverse_rate=2.)   # Rxn 0
+    chem_data.add_reaction(reactants="A", products="B", forward_rate=20., reverse_rate=2.)   # Rxn 0
     rxn.set_conc(conc=[5., 8., 0, 0], snapshot=False)
-    result = rxn.compute_all_reaction_deltas(delta_time=0.25)   #  {0: 21.0}
+    result = rxn.compute_all_reaction_rates()   #  {0: 84.}
     assert len(result) == 1
-    assert np.allclose(result[0], 21.0)
+    assert np.allclose(result[0], 84.)
 
 
 

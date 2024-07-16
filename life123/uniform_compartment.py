@@ -917,7 +917,6 @@ class UniformCompartment:
 
 
             if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
-                #msg =   f"the tentative time step ({delta_time:.5g}) results in norm values that lead to the following:\n"
                 msg = "       "
 
                 if step_factor > 1:         # "INCREASE
@@ -1001,9 +1000,9 @@ class UniformCompartment:
         increment_vector = np.zeros(self.chem_data.number_of_chemicals(), dtype=float)       # One element per chemical species
 
         # Compute the forward and reverse "conversions" of all the applicable reactions
-        delta_dict = self.compute_all_reaction_deltas(delta_time=delta_time, rxn_list=rxn_list)
+        rate_dict = self.compute_all_reaction_rates(rxn_list=rxn_list)
         if 3 in self.verbose_list:
-            print(f"      delta_list: {delta_dict}")
+            print(f"      delta_list: {rate_dict}")
 
 
         if rxn_list is None:    # Meaning ALL (active) reactions
@@ -1028,9 +1027,11 @@ class UniformCompartment:
             reactants = rxn.extract_reactants()
             products = rxn.extract_products()
 
+            delta_rxn = rate_dict[rxn_index] * delta_time
+
             """
             Determine the concentration adjustments as a result of this reaction step, 
-            for the reaction being considered
+            for this individual reaction being considered
             """
 
             # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
@@ -1044,7 +1045,7 @@ class UniformCompartment:
 
                 stoichiometry = rxn.extract_stoichiometry(r)
 
-                delta_conc = stoichiometry * (- delta_dict[rxn_index])  # Increment to this reactant from the reaction being considered
+                delta_conc = stoichiometry * (- delta_rxn)  # Increment to this reactant from the reaction being considered
                 # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
                 # Note: not enough to detect conc going negative from combined changes from multiple reactions!
                 #       Further testing done upstream
@@ -1065,7 +1066,7 @@ class UniformCompartment:
 
                 stoichiometry = rxn.extract_stoichiometry(p)
 
-                delta_conc = stoichiometry * delta_dict[rxn_index]  # Increment to this reaction product from the reaction being considered
+                delta_conc = stoichiometry * delta_rxn  # Increment to this reaction product from the reaction being considered
                 # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
                 # Note: not enough to detect conc going negative from combined changes from multiple reactions!
                 #       Further testing done upstream
@@ -1086,8 +1087,10 @@ class UniformCompartment:
                                                                 # TODO: consider using a small dict in lieu of increment_vector_single_rxn
 
             if self.diagnostics_enabled:
-                self.diagnostics.save_diagnostic_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
-                                                          increment_vector_single_rxn=increment_vector_single_rxn)
+                self.diagnostics.save_diagnostic_rxn_data(rxn_index=rxn_index,
+                                                          system_time=self.system_time, time_step=delta_time,
+                                                          increment_vector_single_rxn=increment_vector_single_rxn,
+                                                          rate=rate_dict[rxn_index])
         # END for (over rxn_list)
 
         return increment_vector
@@ -1134,7 +1137,6 @@ class UniformCompartment:
                                     rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
             increment_dict_single_rxn[species_index] = increment_dict_single_rxn.get(species_index, 0) + delta_conc
-            #increment_vector_single_rxn[species_index] += delta_conc
 
 
         # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
@@ -1142,21 +1144,19 @@ class UniformCompartment:
             stoichiometry, species_index, order = p             # Unpack
             delta_conc = stoichiometry * delta_dict[rxn_index]  # Increment to this reaction product from the reaction being considered
             # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
-            # Note: not enough to detect conc going negative from combined changes from multiple reactions!  Further testing done upstream
+            # Note: not enough to detect conc going negative from combined changes from multiple reactions!
+            #       Further testing done upstream
             # TODO: it might be more efficient to check this in bulk than with many function calls
             self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
                                     rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
             increment_dict_single_rxn[species_index] = increment_dict_single_rxn.get(species_index, 0) + delta_conc
-            #increment_vector_single_rxn[species_index] += delta_conc
 
 
         for k, v in increment_dict_single_rxn.items():
             increment_vector[k] += v                # Accumulate the increment vector across all the increments from this reaction
-        #increment_vector += increment_vector_single_rxn     # Accumulate the increment vector across all reactions
 
 
-        # If requested to evaluate the reaction "speeds"
         # TODO: need a version of examine_increment_array() and save_diagnostic_data() that accept increment_dict_single_rxn
         #       instead of increment_vector_single_rxn [also, maybe move one or both of them to calling function]
         '''  
@@ -1193,7 +1193,8 @@ class UniformCompartment:
             #      f"It will be AUTOMATICALLY CORRECTED with a reduction in time step size, as follows:")
 
             # A type of HARD ABORT is detected (a single reaction that, by itself, would lead to a negative concentration;
-            #   while it's possible that other coupled reactions might counterbalance this - nonetheless, it's taken as a sign of excessive step size)
+            #   while it's possible that other coupled reactions might counterbalance this - nonetheless,
+            #   it's taken as a sign of excessive step size)
             if self.diagnostics_enabled:
                 self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
                                                                 data={"action": "ABORT",
@@ -1215,21 +1216,19 @@ class UniformCompartment:
 
 
 
-    def compute_all_reaction_deltas(self, delta_time: float, rxn_list=None) -> dict:
+    def compute_all_reaction_rates(self, rxn_list=None) -> dict:
         """
-        For an explanation of the "reaction delta", see compute_reaction_delta().
-        Compute the "reaction delta" for all the specified reaction (by default, all.)
+        For an explanation of the "reaction delta", see compute_reaction_delta_rate().
+        Compute the "reaction delta" for all the specified reaction (by default, all).
         Return a list with an entry for each reaction, in their index order.
 
         For background info: https://life123.science/reactions
 
-        :param delta_time:  The time duration of the reaction step - assumed to be small enough that the
-                                concentration won't vary significantly during this span
         :param rxn_list:    OPTIONAL list of reactions (specified by their integer index);
                                 if None, do all the reactions.  EXAMPLE: [1, 3, 7]
 
         :return:            A dict of the differences between forward and reverse "conversions" -
-                                for explanation, see compute_reaction_delta().
+                                for explanation, see compute_reaction_delta_rate().
                                 The dict is indexed by the reaction number, and contains as many entries as the
                                 number of reactions being investigated
         """
@@ -1241,7 +1240,7 @@ class UniformCompartment:
         # Process the requested reactions
         for i in rxn_list:      # Consider each reaction in turn
             rxn = self.chem_data.get_reaction(i)
-            delta = delta_time * self.compute_reaction_delta_rate(rxn=rxn)
+            delta = self.compute_reaction_delta_rate(rxn=rxn)
             delta_dict[i] = delta
 
         return delta_dict
@@ -1251,7 +1250,8 @@ class UniformCompartment:
     def compute_reaction_delta_rate(self, rxn) -> float:
         """
         For the SINGLE given reaction, and the current concentrations of chemicals in the system,
-        compute the reaction's "forward rate" minus its "reverse rate",
+        compute the reaction's "rate" (aka "velocity"),
+        i.e. its forward rate" minus its "reverse rate",
         as defined in https://life123.science/reactions
 
         :param rxn:         An object of type "Reaction"
