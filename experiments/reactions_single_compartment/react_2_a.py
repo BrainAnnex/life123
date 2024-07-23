@@ -23,19 +23,21 @@
 #
 # This experiment gets continued in _"react_2_b"_ , with a more sophisticated approach, 
 # involving adaptive variable time steps.
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "July 22, 2024"
+LIFE123_VERSION = "1.0.0.beta.37"  # Version this experiment is based on
 
 # %% tags=[]
+# If can't find module, do: 1) import sys  2) sys.path.append("full path of folder containing modules")
+
 import numpy as np
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import UniformCompartment
-from life123.visualization.plotly_helper import PlotlyHelper
-from life123 import GraphicLog
+from life123 import check_version, UniformCompartment, PlotlyHelper, GraphicLog
+
+# %%
+check_version(LIFE123_VERSION)
 
 # %% tags=[]
 # Initialize the HTML logging (for the graphics)
@@ -53,11 +55,11 @@ GraphicLog.config(filename=log_file,
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = UniformCompartment(names=["A", "B"])
+dynamics = UniformCompartment()
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-dynamics.add_reaction(reactants=["A"], products=["B"], 
-                       forward_rate=3., reverse_rate=2.)
+dynamics.add_reaction(reactants="A", products="B", 
+                      forward_rate=3., reverse_rate=2.)
 
 print("Number of reactions: ", dynamics.number_of_reactions())
 
@@ -70,8 +72,8 @@ dynamics.plot_reaction_network("vue_cytoscape_2")
 
 
 # %%
-# Initial concentrations of all the chemicals, in index order
-dynamics.set_conc([10., 50.])
+# Initial concentrations of all the chemicals
+dynamics.set_conc({"A": 10., "B": 50.})
 
 # %%
 dynamics.describe_state()

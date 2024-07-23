@@ -555,7 +555,7 @@ class AllReactions(Diffusion):
         """
         Register a new SINGLE chemical reaction,
         optionally including its kinetic and/or thermodynamic data.
-        All the involved chemicals must be already registered - use add_chemical() if needed.
+        All the involved chemicals can be either previously registered, or not.
 
         NOTE: in the reactants and products, if the stoichiometry coefficients aren't specified,
               they're assumed to be 1.
@@ -591,6 +591,21 @@ class AllReactions(Diffusion):
                        delta_H, delta_S, delta_G, temp=self.temp)
         self.reaction_list.append(rxn)
 
+        # Register any newly-encountered reactant not already registered
+        rxn_reactants = rxn.extract_reactant_names(exclude_enzyme=False)
+        for name in rxn_reactants:
+            if not self.name_exists(name):
+                self.add_chemical(name=name)
+
+        # Register any newly-encountered reaction product not already registered
+        # Note: reactants are done first, because that's typically a more appealing order of appearance
+        rxn_products = rxn.extract_product_names(exclude_enzyme=False)
+        for name in rxn_products:
+            if not self.name_exists(name):
+                self.add_chemical(name=name)
+
+
+        # TODO: since we already have rxn_reactants, rxn_products and rxn.enzyme, the following can be simplified
         involved_chemicals = rxn.extract_chemicals_in_reaction(exclude_enzyme=True)
 
         self.active_chemicals = self.active_chemicals.union(involved_chemicals)     # Union of sets

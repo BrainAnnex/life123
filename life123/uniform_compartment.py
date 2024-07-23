@@ -42,9 +42,9 @@ class UniformCompartment:
         """
         Note: AT MOST 1 of the following 2 arguments can be passed
         :param chem_data:   [OPTIONAL 1] Object of type "ChemData" (with data about the chemicals and their reactions)
-                                       NOTE: This is the recommended argument; the other 2 options are, or might be, deprecated
-        :param names:       [OPTIONAL 2 - MIGHT GET DEPRECATED] A single name, or list or tuple of names, of the chemicals
-                                       the reactions can be added later, with calls to add_reaction()
+        :param names:       [OPTIONAL 2] A single name, or list or tuple of names, of the chemicals
+                                         the reactions can be added later, with calls to add_reaction().
+                                         Providing a list is useful to make the chemicals appear in a particular, desired order
 
         :param preset:  String with code that can be adjusted make the time resolution finer or coarser;
                         it will stay in effect from now on, unless explicitly changed later
@@ -60,8 +60,11 @@ class UniformCompartment:
             f"UniformCompartment instantiation: Can only pass at most one of the arguments " \
             f"`chem_data`, and `names` ({number_args} were passed)"
 
-        self.chem_data = chem_data  # Object of type "ChemData" (with data about the chemicals and their reactions,
-                                    #                            incl. macromolecules)
+        if chem_data:
+            self.chem_data = chem_data  # Object of type "ChemData" (with data about the chemicals and their reactions,
+                                        #                            incl. macromolecules)
+        else:
+            self.chem_data = ChemData()
 
         self.system_time = 0.       # Global time of the system, from initialization on
 
@@ -375,8 +378,10 @@ class UniformCompartment:
         :param kwargs:  Any arbitrary named arguments
         :return:        Integer index of the newly-added reaction
         """
+        '''
         assert self.chem_data, \
             "add_reaction(): must first register the names of the chemicals.  You may use add_chemical()"
+        '''
 
         return self.chem_data.add_reaction(**kwargs)
 

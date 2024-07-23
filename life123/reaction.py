@@ -155,11 +155,12 @@ class Reaction:
     #####################################################################################################
 
 
-    def extract_reactants(self) -> [(int, int, int)]:
+    def extract_reactants(self) -> [(int, str, int)]:
         """
-        Return a list of triplets with details of the reactants of the given reaction
+        Return a list of triplets with details of the reactants of the given reaction,
+        incl. their stoichiometry, name and reaction order
 
-        :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
+        :return:    A list of triplets of the form (stoichiometry, species name, reaction order)
         """
         return self.reactants
 
@@ -177,11 +178,12 @@ class Reaction:
 
 
 
-    def extract_products(self) -> [(int, int, int)]:
+    def extract_products(self) -> [(int, str, int)]:
         """
-        Return a list of triplet with details of the products of the given reaction
+        Return a list of triplet with details of the products of the given reaction,
+        incl. their stoichiometry, name and reaction order
 
-        :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
+        :return:    A list of triplets of the form (stoichiometry, species name, reaction order)
         """
         return self.products
 
