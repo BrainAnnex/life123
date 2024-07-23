@@ -9,4 +9,4 @@ pandas==1.4.3
 
 plotly==5.9.0
 
-neoaccess==4.3.1
+neoaccess==4.4.1

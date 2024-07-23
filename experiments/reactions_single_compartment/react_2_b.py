@@ -14,20 +14,24 @@
 
 # %% [markdown]
 # ### Adaptive time steps (variable time resolution) for reaction `A <-> B`,
-# with 1st-order kinetics in both directions, taken to equilibrium
+# with 1st-order kinetics in both directions, taken to equilibrium.
 #
-# This is a repeat of the experiment _"react_2_a"_ , but with adaptive variable time steps
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
+# This is a repeat of the experiment _"react_2_a"_ , but with **adaptive variable time steps** 
+# and the use of **diagnostic tools** for insight into the details of the simulation.  
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "July 22, 2024"
+LIFE123_VERSION = "1.0.0.beta.37"  # Version this experiment is based on
 
 # %% tags=[]
+# If can't find module, do: 1) import sys  2) sys.path.append("full path of folder containing modules")
+    
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import UniformCompartment
-from life123 import GraphicLog
+from life123 import check_version, UniformCompartment, GraphicLog
+
+# %%
+check_version(LIFE123_VERSION)
 
 # %% tags=[]
 # Initialize the HTML logging (for the graphics)
@@ -37,6 +41,8 @@ log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filen
 GraphicLog.config(filename=log_file,
                   components=["vue_cytoscape_2"],
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
+
+# %%
 
 # %%
 
@@ -51,7 +57,7 @@ GraphicLog.config(filename=log_file,
 dynamics = UniformCompartment(names=["A", "B"], preset="mid")
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-dynamics.add_reaction(reactants=["A"], products=["B"], 
+dynamics.add_reaction(reactants="A", products="B", 
                        forward_rate=3., reverse_rate=2.)
 
 dynamics.describe_reactions()
@@ -70,16 +76,18 @@ dynamics.describe_state()
 dynamics.get_history()
 
 # %%
-dynamics.enable_diagnostics()      # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()   # To save diagnostic information about the call to single_compartment_react()
                                 # Useful for insight into the inner workings of the simulation
 
 # %%
 # For experiment repeatability, we specified, when instantiating the "UniformCompartment" class, 
-# a particular preset applicable to the adaptive time steps
-dynamics.show_adaptive_parameters() 
+# a particular preset applicable to the adaptive time steps; 
+# that preset assigned the following values
+dynamics.adaptive_steps.show_adaptive_parameters() 
 
 # %% [markdown] tags=[]
-# ### Run the reaction
+# ## Run the reaction   
+# #### Passing True to _variable_steps_ automatically adjusts up or down the time steps
 
 # %%
 dynamics.single_compartment_react(initial_step=0.1, target_end_time=1.2,
@@ -88,35 +96,91 @@ dynamics.single_compartment_react(initial_step=0.1, target_end_time=1.2,
                                              "final_caption": "last reaction step"}
                                   )
 
-# %% [markdown]
-# ## The flag _variable_steps_ automatically adjusts up or down the time step
-
 # %%
 history = dynamics.get_history()   # The system's history, saved during the run of single_compartment_react()
 history
 
-# %%
-dynamics.explain_time_advance()
-
 # %% [markdown] tags=[]
 # ## Notice how the reaction proceeds in smaller steps in the early times, when [A] and [B] are changing much more rapidly
-# ### That resulted from passing the flag _variable_steps=True_ to single_compartment_react()
+# #### That resulted from passing the flag _variable_steps=True_ to single_compartment_react()
+
+# %%
+# Verify that the reaction has reached equilibrium
+dynamics.is_in_equilibrium()
+
+# %%
+
+# %%
+
+# %% [markdown]
+# # PART 2 - Visualize the Results
+
+# %% [markdown] tags=[]
+# ### Plots of changes of concentration with time
+
+# %%
+dynamics.plot_history(colors=['darkturquoise', 'orange'], show_intervals=True)
+
+# %% [markdown]
+# ## Note how the left-hand side of this plot is much smoother than it was in experiment `react_2_a`, where no adaptive time steps were used!
+
+# %% [markdown]
+# #### Compare the above with the fixed step sizes of experiment `react_2_a`    
+# To see the sizes of the steps taken:
+
+# %%
+dynamics.plot_step_sizes(show_intervals=True)
 
 # %%
 
 # %%
 
 # %% [markdown] tags=[]
-# # PART 2 - Scrutinizing some instances of step-size changes
+# # PART 2 - Scrutinizing the inner workings of the step-size changes
 
 # %% [markdown]
-# The Delta-concentration values for all the individual reaction time steps, as contribued by a single reaction, may all be inspected at once from the diagnostic data:
+# NOTE: this part is NOT meant for typically end users.  It's for debugging, and for anyone interested in taking an "under the hood" look
 
 # %%
-dynamics.get_diagnostic_rxn_data(rxn_index=0)    # For the 0-th reaction (the only reaction in our case)
+diagnostics = dynamics.diagnostics      # Available because we turned on diagnostics
 
 # %% [markdown]
-# ### Note that diagnostic data with the DELTA Concentrations - above and below - also record the values that were considered (but not actually used) during ABORTED steps
+# The "Diagnostics" object contains a treasure trove of data and methods yo get insights into the inner workings of the simulation.   
+# Diagnostic data was saved because of the call to `enable_diagnostics()` prior to running the reaction
+
+# %%
+type(diagnostics)
+
+# %%
+# Let's revisit the variables steps taken
+dynamics.diagnostics.explain_time_advance()
+
+# %%
+
+# %% [markdown]
+# #### The Delta-concentration values for all the individual reaction time steps, as contribued by a single reaction, may be inspected from the diagnostic data:
+
+# %%
+diagnostics.get_diagnostic_rxn_data(rxn_index=0)    # For the 0-th reaction (the only reaction in our case)
+
+# %% [markdown]
+# ### Note that diagnostic data with the DELTA Concentrations - in the above listing - also records the values that were considered (but not actually used) during *ABORTED* steps.  For example, in steps 0-2, above, the START_TIME remains the same, as the time_step gets progressively reduced until the resulting changes are deemed acceptable.
+
+# %% [markdown]
+# Line 2, above, shows that the concentration of the product [B], which was set by us to an initial value of 50, gets affected by a **rate of change of -70**, sustained over a delta_time of 0.016 .  
+# The reaction rate is negative because _the product is decreasing._  
+# The new value for [B] is:  
+
+# %%
+50. - 70. * 0.016
+
+# %% [markdown]
+# That's indeed the value we saw in the history of the product [B] at time t=0.016 :
+
+# %%
+dynamics.get_history(t=0.016)
+
+# %%
 
 # %% [markdown]
 # In the examples below, we'll re-compute Delta values for individual steps, directly from the system history.
@@ -142,7 +206,8 @@ baseline_conc
 
 # %%
 # Computes some measures of how large delta_concentrations is, and propose a course of action
-dynamics.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=baseline_conc)  
+dynamics.adaptive_steps.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=baseline_conc,
+                                        n_chems=2, indexes_of_active_chemicals=dynamics.chem_data.indexes_of_active_chemicals())  
 
 # %% [markdown]
 # #### The above analysis indicates that the time step is just about right, and the simulations should STAY on that course : that's based on the shown computed norms (indicating the extent of the change taking place.)  
@@ -158,6 +223,8 @@ next_step
 
 # %%
 next_step / original_step
+
+# %%
 
 # %% [markdown] tags=[]
 # ### Example 2: **very late in the run**    
@@ -180,7 +247,8 @@ baseline_conc
 
 # %%
 # Computes a measure of how large delta_concentrations is, and propose a course of action
-dynamics.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=baseline_conc)  
+dynamics.adaptive_steps.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=baseline_conc,
+                                        n_chems=2, indexes_of_active_chemicals=dynamics.chem_data.indexes_of_active_chemicals())  
 
 # %% [markdown]
 # #### The above analysis indicates that the time step is on the "LOW" side, and the simulations should increase it by a factor 1.2 : again, that's based on the shown computed norms (indicating the extent of the change taking place.)  
@@ -201,7 +269,7 @@ next_step / original_step
 # Where does that x1.2 factor come from?  It's one of the parameters that we passed to the simulator; they can be seen as follows:
 
 # %%
-dynamics.show_adaptive_parameters()
+dynamics.adaptive_steps.show_adaptive_parameters()
 
 # %% [markdown]
 # **1.2** is stored as the "step factor" (for the time steps to take) in case an _'upshift'_ (in step size) is the decided course of action
@@ -213,34 +281,9 @@ dynamics.show_adaptive_parameters()
 # _(note - this is possible because we make a call to set_diagnostics() prior to running the simulation)_
 
 # %%
-dynamics.get_diagnostic_conc_data()   # This will be complete, even if we only saved part of the history during the run
+diagnostics.get_diagnostic_conc_data()   # This will be complete, even if we only saved part of the history during the run
 
 # %%
-dynamics.get_diagnostic_decisions_data()
-
-# %%
-
-# %% [markdown]
-# # PART 3 - Analyze the reaction Dynamics
-
-# %%
-# Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium()
-
-# %% [markdown] tags=[]
-# ### Plots of changes of concentration with time
-
-# %%
-dynamics.plot_history(colors=['darkturquoise', 'orange'], show_intervals=True)
-
-# %% [markdown]
-# ## Note how the left-hand side of this plot is much smoother than it was in experiment `react_2_a`, where no adaptive time steps were used!
-
-# %% [markdown]
-# #### Compare the above with the fixed step sizes of experiment `react_2_a`    
-# To see the sizes of the steps taken:
-
-# %%
-dynamics.plot_step_sizes(show_intervals=True)
+diagnostics.get_diagnostic_decisions_data()
 
 # %%

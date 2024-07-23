@@ -678,9 +678,13 @@ class UniformCompartment:
         if not silent:
             print(f"{n_steps_taken} total step(s) taken")
             if variable_steps:
-                print(f"Number of step re-do's because of negative concentrations: {self.number_neg_concs}")
-                print(f"Number of step re-do's because of elective soft aborts: {self.number_soft_aborts}")
+                if self.number_neg_concs:
+                    print(f"Number of step re-do's because of negative concentrations: {self.number_neg_concs}")
+                if self.number_soft_aborts:
+                    print(f"Number of step re-do's because of elective soft aborts: {self.number_soft_aborts}")
+
                 print(f"Norm usage:", self.adaptive_steps.norm_usage)
+
 
 
         if snapshots and "final_caption" in snapshots:

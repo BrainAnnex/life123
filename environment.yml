@@ -14,4 +14,4 @@ dependencies:
   - pip
   - pip:
       - neo4j==4.4.11
-      - neoaccess==4.3.1
+      - neoaccess==4.4.1

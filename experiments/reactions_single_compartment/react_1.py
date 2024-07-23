@@ -19,7 +19,7 @@
 # **"No frills!"**  For advanced graphics, analysis, diagnostics, fine-tuning, etc, please see other experiments.
 
 # %%
-LAST_REVISED = "June 30, 2024"
+LAST_REVISED = "July 22, 2024"
 LIFE123_VERSION = "1.0.0.beta.37"  # Version this experiment is based on
 
 # %% tags=[]

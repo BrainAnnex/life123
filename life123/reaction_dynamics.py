@@ -330,8 +330,11 @@ class ReactionDynamics:
         baseline initial concentrations of that same step, and the concentrations in the step before that.
         Based on the magnitude of the measures, propose a course of action about what to do for the next step.
 
-        :param n_chems:
-        :param indexes_of_active_chemicals:
+        :param n_chems:         The total number of registered chemicals - exclusive of water and of macro-molecules
+        :param indexes_of_active_chemicals: The ordered list (numerically sorted) of the INDEX numbers of all the chemicals
+                                                involved in ANY of the registered reactions,
+                                                but NOT counting chemicals that always appear in a catalytic role in all the reactions they
+                                                participate in
 
         :param delta_conc:      A numpy array of changes in concentrations for the chemicals of interest,
                                     across a simulation time step (typically, the current step a run in progress)
