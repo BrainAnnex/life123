@@ -18,24 +18,29 @@
 #
 # This is a repeat of the experiment _"react_2_a"_ , but with **adaptive variable time steps** 
 # and the use of **diagnostic tools** for insight into the details of the simulation.  
+#
+# **Background**: please see experiment `react_2_a` 
 
 # %%
-LAST_REVISED = "July 22, 2024"
-LIFE123_VERSION = "1.0.0.beta.37"  # Version this experiment is based on
+LAST_REVISED = "July 24, 2024"
+LIFE123_VERSION = "1.0.0.beta.37"    # Version this experiment is based on
 
 # %% tags=[]
-# If can't find module, do: 1) import sys  2) sys.path.append("full path of folder containing modules")
-    
-from experiments.get_notebook_info import get_notebook_basename
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above    
 
-from life123 import check_version, UniformCompartment, GraphicLog
+import ipynbname
+
+from life123 import check_version, UniformCompartment, GraphicLog, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
 
 # %% tags=[]
 # Initialize the HTML logging (for the graphics)
-log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
+log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
+                                            # IN CASE OF PROBLEMS, set manually to any desired name
 
 # Set up the use of some specified graphic (Vue) components
 GraphicLog.config(filename=log_file,
@@ -285,5 +290,56 @@ diagnostics.get_diagnostic_conc_data()   # This will be complete, even if we onl
 
 # %%
 diagnostics.get_diagnostic_decisions_data()
+
+# %%
+
+# %%
+
+# %% [markdown]
+# # PART 3 - Investigate A_dot, i.e. d[A]/dt
+
+# %% [markdown]
+# In experiment `react_2_a`, the time derivative (rate of change) of [A] was obtained by numeric differentiation of [A](t), i.e. the time values of [A]  
+#   
+# But no need for that!  **The rates (at every time step) of each reaction are automatically stored with the diagnostics data, whenever diagnostics data is saved** :)  
+#
+# Let's again look at the table for reaction 0 :
+
+# %%
+df = diagnostics.get_diagnostic_rxn_data(rxn_index=0)    # For the 0-th reaction (the only reaction in our case)
+df
+
+# %% [markdown]
+# #### Note that **reaction rates** are defined for the reaction _products_.  So, for `A`, a reactant, we must flip the sign; since the stoichiometry of `A` is simply 1, no further adjustment needed.
+
+# %%
+df["A_dot"] = -df["rate"]
+df
+
+# %%
+df = df[2:]   # Drop the aborted first 2 steps
+df
+
+# %%
+p1 = dynamics.plot_data(df=df, x_var="START_TIME", fields=["A_dot"], colors=['brown'], 
+                        ylabel="concentration change/unit time",
+                        title="Rate of change of of A with time")
+p1
+
+# %% [markdown]
+# Let's create a combined plot like we had in experiment `react_2_a`:
+
+# %%
+p2 = dynamics.plot_history(chemicals="A", colors='darkturquoise')   # The plot of [A] vs. time that we saw earlier
+
+# %%
+PlotlyHelper.combine_plots([p1, p2],
+                           xlabel="SYSTEM TIME", 
+                           ylabel="concentration (darkturquoise) /<br> concentration change per unit time (brown)",
+                           curve_labels=["A", "A_dot"],
+                           title="Concentration of A with time (darkturquoise), and its rate of change (brown)")
+
+# %% [markdown]
+# ### Notice how much smoother the lines are, compared to what we had in experiment `react_2_a` !
 
 # %%

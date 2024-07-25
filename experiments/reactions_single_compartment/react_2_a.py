@@ -21,18 +21,20 @@
 #
 # See also the experiment _"1D/reactions/reaction_1"_ for a multi-compartment version.  
 #
-# This experiment gets continued in _"react_2_b"_ , with a more sophisticated approach, 
-# involving adaptive variable time steps.
+# #### This experiment gets repeated in _"react_2_b"_ , with a more sophisticated approach, 
+# #### involving adaptive variable time steps.
 
 # %%
-LAST_REVISED = "July 22, 2024"
-LIFE123_VERSION = "1.0.0.beta.37"  # Version this experiment is based on
+LAST_REVISED = "July 24, 2024"
+LIFE123_VERSION = "1.0.0.beta.37"    # Version this experiment is based on
 
 # %% tags=[]
-# If can't find module, do: 1) import sys  2) sys.path.append("full path of folder containing modules")
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above
 
 import numpy as np
-from experiments.get_notebook_info import get_notebook_basename
+import ipynbname
 
 from life123 import check_version, UniformCompartment, PlotlyHelper, GraphicLog
 
@@ -41,12 +43,15 @@ check_version(LIFE123_VERSION)
 
 # %% tags=[]
 # Initialize the HTML logging (for the graphics)
-log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
+log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
+                                            # IN CASE OF PROBLEMS, set manually to any desired name
 
 # Set up the use of some specified graphic (Vue) components
 GraphicLog.config(filename=log_file,
                   components=["vue_cytoscape_2"],
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
+
+# %%
 
 # %%
 
@@ -162,8 +167,13 @@ dynamics.plot_history(colors=['darkturquoise', 'orange'], show_intervals=True)
 df = dynamics.get_history()         # Revisited from earlier
 df
 
+# %%
+
 # %% [markdown]
-# ## Now investigate A_dot, i.e. d[A]/dt
+# ## PART 2 - Now investigate A_dot, i.e. d[A]/dt
+
+# %% [markdown]
+# NOTE: there's actually no need to compute this; it can be automatically saved during the reaction, as demonstrated in experiment `react_2_b`
 
 # %%
 A = list(df.A)
@@ -185,7 +195,7 @@ df['A_dot'] = A_dot     # Add a column to the Pandas dataframe
 df
 
 # %%
-dynamics.plot_history(chemicals=["A", "A_dot"], colors=['navy', 'brown'], 
+dynamics.plot_history(chemicals=["A", "A_dot"], colors=['darkturquoise', 'brown'], 
                       ylabel="concentration (darkturquoise) /<br> concentration change per unit time (brown)",
                       title="Concentration of A with time (darkturquoise), and its rate of change (brown)")
 
@@ -197,6 +207,6 @@ dynamics.plot_history(chemicals=["A", "A_dot"], colors=['navy', 'brown'],
 
 # %% [markdown]
 # #### **NOTE:** The curves are jagged because of limitations of numerically estimating derivatives, as well as _the large time steps taken_ (especially in the early times, when there's a lot of change.)  
-# ## In experiment "react_2_b", we revisit the same reaction using a better simulator that employs **_adaptive variable time steps_**
+# ## In experiment "react_2_b", we revisit the same reaction using a better approach that employs **_adaptive variable time steps_** , and also automatically saves the reaction rates.
 
 # %%

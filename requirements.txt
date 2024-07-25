@@ -10,3 +10,5 @@ pandas==1.4.3
 plotly==5.9.0
 
 neoaccess==4.4.1
+
+ipynbname==2024.1.0.0

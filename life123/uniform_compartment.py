@@ -371,18 +371,12 @@ class UniformCompartment:
         """
         Register a new SINGLE chemical reaction,
         optionally including its kinetic and/or thermodynamic data.
-        All the involved chemicals must be already registered - use add_chemical() if needed.
 
         For details, see ChemData.add_reaction()
 
         :param kwargs:  Any arbitrary named arguments
         :return:        Integer index of the newly-added reaction
         """
-        '''
-        assert self.chem_data, \
-            "add_reaction(): must first register the names of the chemicals.  You may use add_chemical()"
-        '''
-
         return self.chem_data.add_reaction(**kwargs)
 
 
@@ -390,6 +384,7 @@ class UniformCompartment:
     def describe_reactions(self, **kwargs) -> None:
         """
         Print out a user-friendly plain-text form of ALL the reactions.
+
         For details, see ChemData.describe_reactions()
 
         :param kwargs:  Any arbitrary named arguments
@@ -424,7 +419,7 @@ class UniformCompartment:
                                         False for that accept a single data argument, named "graph_data"
         :return:                    None
         """
-        self.chem_data.plot_reaction_network(graphic_component=graphic_component, unpack=False)
+        self.chem_data.plot_reaction_network(graphic_component=graphic_component, unpack=unpack)
 
 
 
@@ -1566,6 +1561,9 @@ class UniformCompartment:
         automatically saved when running reactions.
 
         Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
+              EXAMPLE p1 = plot_history(various args, show=False)
+                      p2 = plot_history(various args, show=False)
+                      PlotlyHelper.combine_plots([p1, p2], other optional args)
 
         :param chemicals:   (OPTIONAL) List of the names of the chemicals whose concentration changes are to be plotted,
                                 or a string with just one name;
@@ -1585,7 +1583,77 @@ class UniformCompartment:
                                     By default, the name in `the chemicals` argument, in square brackets, if only 1 chemical,
                                     or "Concentration" if more than 1 (a legend also shown)
         :param vertical_lines:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
-                                    TODO: rename add_vertical_lines
+                                    TODO: rename vertical_lines_to_add
+                                    List or tuple or Numpy array or Pandas series
+                                    of x-coordinates at which to draw thin vertical dotted gray lines.
+                                    If the number of vertical line is so large as to overwhelm the plot,
+                                    only a sample of them is shown.
+                                    Note that vertical lines, if requested, go into the plot's "layout";
+                                    as a result they might not appear if this plot is later combined with another one.
+        :param show_intervals:  (OPTIONAL) If True, it over-rides any value passed to the `vertical_lines` argument,
+                                    and draws thin vertical dotted gray lines at all the x-coords
+                                    of the data points in the saved history data;
+                                    also, it adds a comment to the title.
+        :param show:        If True, the plot will be shown
+                                Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
+                                      leads to it being automatically shown
+
+        :return:            A plotly "Figure" object
+        """
+        if chemicals is None:
+            chemicals = self.chem_data.get_all_names()      # List of the chemical names.  EXAMPLE: ["A", "B", "H"]
+
+        if title is None:   # If no title was specified, create a default one based on how many reactions are present
+            number_of_rxns = self.chem_data.number_of_reactions()
+            if number_of_rxns > 2:
+                title = f"Changes in concentrations for {number_of_rxns} reactions"
+            elif number_of_rxns == 1:
+                rxn_text = self.chem_data.single_reaction_describe(rxn_index=0, concise=True)   # The only reaction
+                title = f"Reaction `{rxn_text}` .  Changes in concentrations with time"
+            else:   # Exactly 2 reactions
+                rxn_text_0 = self.chem_data.single_reaction_describe(rxn_index=0, concise=True)
+                rxn_text_1 = self.chem_data.single_reaction_describe(rxn_index=1, concise=True)
+                title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
+
+        df = self.get_history()     # A Pandas dataframe that contains a column named "SYSTEM TIME"
+
+        return self.plot_data(df=df, x_var="SYSTEM TIME", fields=chemicals,
+                              colors=colors, title=title, title_prefix=title_prefix,
+                              xrange=xrange, ylabel=ylabel,
+                              vertical_lines_to_add=vertical_lines, show_intervals=show_intervals, show=show)
+
+
+
+    def plot_data(self, df :pd.DataFrame, x_var="SYSTEM TIME", fields=None,
+                  colors=None, title=None, title_prefix=None,
+                  xrange=None, ylabel=None,
+                  vertical_lines_to_add=None, show_intervals=False, show=False) -> go.Figure:
+        """
+        Using plotly, draw the plots of concentration from the given dataframe, based on history data that gets
+        automatically saved when running reactions.
+
+        Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
+
+        :param df:          Pandas dataframe with the data for the plot
+        :param x_var:       Name of column with independent variable for the x-axis
+        :param fields:      List of the names of the dataframe columns whose values are to be plotted,
+                                or a string with just one name;
+                                if None, then display all
+        :param colors:      (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
+                                or list of names to use, in order; if None, then use the hardwired defaults
+        :param title:       (OPTIONAL) Title for the plot;
+                                if None, use default titles that will vary based on the # of reactions; EXAMPLES:
+                                    "Changes in concentrations for 5 reactions"
+                                    "Reaction `A <-> 2 B` .  Changes in concentrations with time"
+                                    "Changes in concentration for `2 S <-> U` and `S <-> X`"
+        :param title_prefix: (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
+                                    whether the title is specified by the user or automatically generated
+        :param xrange:          (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
+                                    Note: it's still possible to zoom out, and see the excluded portion
+        :param ylabel:          (OPTIONAL) Caption to use for the y-axis.
+                                    By default, the name in `the chemicals` argument, in square brackets, if only 1 chemical,
+                                    or "Concentration" if more than 1 (a legend also shown)
+        :param vertical_lines_to_add:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
                                     List or tuple or Numpy array or Pandas series
                                     of x-coordinates at which to draw thin vertical dotted gray lines.
                                     If the number of vertical line is so large as to overwhelm the plot,
@@ -1610,14 +1678,7 @@ class UniformCompartment:
                                             # if this value is exceeded, then the vertical lines are sampled
                                             # infrequently enough to bring the total number below this value
 
-        df = self.get_history()     # The expected columns are "SYSTEM TIME",
-                                    # followed by concentrations for the various chemicals,
-                                    # and a final "caption" column
-
-        if chemicals is None:
-            chemicals = self.chem_data.get_all_names()      # List of the chemical names.  EXAMPLE: ["A", "B", "H"]
-
-        number_of_curves = len(chemicals)
+        number_of_curves = len(fields)
 
         if colors is None:
             colors = PlotlyHelper.get_default_colors(number_of_curves)
@@ -1625,55 +1686,45 @@ class UniformCompartment:
             colors = [colors]
 
 
-        if title is None:   # If no title was specified, create one based on how many reactions are present
-            number_of_rxns = self.chem_data.number_of_reactions()
-            if number_of_rxns > 2:
-                title = f"Changes in concentrations for {number_of_rxns} reactions"
-            elif number_of_rxns == 1:
-                rxn_text = self.chem_data.single_reaction_describe(rxn_index=0, concise=True)   # The only reaction
-                title = f"Reaction `{rxn_text}` .  Changes in concentrations with time"
-            else:   # Exactly 2 reactions
-                rxn_text_0 = self.chem_data.single_reaction_describe(rxn_index=0, concise=True)
-                rxn_text_1 = self.chem_data.single_reaction_describe(rxn_index=1, concise=True)
-                title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
-
         if title_prefix is not None:
             title = f"{title_prefix}  <br>{title}"
 
         if show_intervals:
-            vertical_lines = df["SYSTEM TIME"]  # Make use of the simulation times
+            vertical_lines_to_add = df[x_var]  # Make use of the simulation times
             title += " (time steps shown in dashed lines)"
 
+        if ylabel is None:
+            if type(fields) == str:
+                ylabel = f"[{fields}]"          # EXAMPLE:  "[A]"
+            else:
+                ylabel = "Concentration"
 
         # Create the main plot
-        fig = px.line(data_frame=df, x="SYSTEM TIME", y=chemicals,
+        fig = px.line(data_frame=df, x=x_var, y=fields,
                       title=title, range_x=xrange,
                       color_discrete_sequence = colors,
-                      labels={"value": "Concentration", "variable": "Chemical"})
+                      labels={"value": ylabel, "variable": "Chemical"})
 
-        if type(chemicals) == str:  # Somehow, the `labels` argument in px.line is ignored when chemicals is just a string
-            if ylabel is None:
-                fig.update_layout(yaxis_title=f"[{chemicals}]")     # EXAMPLE:  "[A]"
-            else:
-                fig.update_layout(yaxis_title=ylabel)
+        if type(fields) == str:     # Somehow, the `labels` argument in px.line, above, is ignored when `fields` is just a string
+            fig.update_layout(yaxis_title=ylabel)
 
 
-        if vertical_lines is not None:
-            assert (type(vertical_lines) == list) or (type(vertical_lines) == tuple) \
-                or (type(vertical_lines) == np.ndarray) or (type(vertical_lines) == pd.core.series.Series), \
-                    "plot_curves(): the argument `vertical_lines`, " \
-                    "if not None, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
+        if vertical_lines_to_add is not None:
+            assert (type(vertical_lines_to_add) == list) or (type(vertical_lines_to_add) == tuple) \
+                   or (type(vertical_lines_to_add) == np.ndarray) or (type(vertical_lines_to_add) == pd.core.series.Series), \
+                "plot_curves(): the argument `vertical_lines`, " \
+                "if not None, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
 
             vline_list = []
             if xrange:
                 step = 1    # Always show all vertical lines if a range on the x-axis was specified
             else:
                 # Possibly limit the number of vertical lines shown
-                step = 1 + len(vertical_lines) // MAX_NUMBER_VERTICAL_LINES
+                step = 1 + len(vertical_lines_to_add) // MAX_NUMBER_VERTICAL_LINES
                 if step > 1:
-                    print(f"plot_curves() WARNING: Excessive number of vertical lines ({len(vertical_lines)}) - only showing 1 every {step} lines")
+                    print(f"plot_curves() WARNING: Excessive number of vertical lines ({len(vertical_lines_to_add)}) - only showing 1 every {step} lines")
 
-            for xi in vertical_lines[::step] :  # Notice that if step > 1 then we're sampling a subset of the elements
+            for xi in vertical_lines_to_add[::step] :  # Notice that if step > 1 then we're sampling a subset of the elements
                 # The following is the internal data structure used by Plotly Express,
                 # for each of the vertical lines
                 vline = {  'line': {'color': 'gray', 'dash': 'dot', 'width': 1},
@@ -1684,14 +1735,14 @@ class UniformCompartment:
                            'y0': 0,
                            'y1': 1,
                            'yref': 'y domain'
-                        }
+                           }
                 vline_list.append(vline)
                 # Strangely, a direct call to fig.add_vline(), as done below, dramatically slows things down in case
                 # of a large number of vertical lines; so, we'll be directly modifying the data structure of the "fig" dictionary
                 #fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
             # END for
             fig['layout']['shapes'] = vline_list    # The vertical lines are regarded by Plotly Express as "shapes"
-                                                    # that are stored in the figure's "layout"
+            # that are stored in the figure's "layout"
         if show:
             fig.show()  # Actually display the plot
 

@@ -19,11 +19,15 @@
 # **"No frills!"**  For advanced graphics, analysis, diagnostics, fine-tuning, etc, please see other experiments.
 
 # %%
-LAST_REVISED = "July 22, 2024"
-LIFE123_VERSION = "1.0.0.beta.37"  # Version this experiment is based on
+LAST_REVISED = "July 24, 2024"
+LIFE123_VERSION = "1.0.0.beta.37"      # Version this experiment is based on
 
 # %% tags=[]
-import life123   # If can't find module, do: 1) import sys  2) sys.path.append("full path of folder containing life123")
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above
+
+import life123
 
 # %%
 life123.check_version(LIFE123_VERSION)

@@ -23,34 +23,39 @@
 # This is a continuation of the experiments `react_2_a` (fixed time steps) and  `react_2_b` (adaptive variable time steps)
 #
 # **Background**: please see experiments `react_2_a` and `react_2_b`   
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "July 24, 2024"
+LIFE123_VERSION = "1.0.0.beta.37"    # Version this experiment is based on
 
 # %% tags=[]
-from experiments.get_notebook_info import get_notebook_basename
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above  
 
-from life123 import ChemData
-from life123 import UniformCompartment
+from life123 import check_version, ChemData, UniformCompartment
 
 import numpy as np
 import plotly.graph_objects as go
 from life123.visualization.plotly_helper import PlotlyHelper
 
 # %%
+check_version(LIFE123_VERSION)
+
+# %%
+
+# %%
 
 # %% [markdown]
-# ### Common set up for the chemicals and the reaction (used by all the simulations)
+# ## Common set up for the chemicals and the reaction (used by all the simulations)
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
 chem = ChemData(names=["A", "B"])
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-chem.add_reaction(reactants=["A"], products=["B"], 
-                       forward_rate=3., reverse_rate=2.)
+chem.add_reaction(reactants="A", products="B", 
+                  forward_rate=3., reverse_rate=2.)
 
 chem.describe_reactions()
 

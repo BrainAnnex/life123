@@ -76,18 +76,18 @@ class PlotlyHelper:
 
         :param x:           A Numpy array, with the (common) x-axis values
         :param y:           Either a Numpy array, or a list/tuple of them, with the y-axis values of the curve(s)
-        :param title:       (OPTIONAL) Title to use for the overall plot
-        :param xrange:      (OPTIONAL) list of the form [t_start, t_end], to initially only show a part of the timeline.
+        :param title:       [OPTIONAL] Title to use for the overall plot
+        :param xrange:      [OPTIONAL] list of the form [t_start, t_end], to initially only show a part of the timeline.
                                 Note: it's still possible to zoom out, and see the excluded portion
-        :param xlabel:      (OPTIONAL) Caption to use for the x-axis
-        :param ylabel:      (OPTIONAL) Caption to use for the y-axis
-        :param curve_labels:(OPTIONAL) String, or list of strings.
+        :param xlabel:      [OPTIONAL] Caption to use for the x-axis
+        :param ylabel:      [OPTIONAL] Caption to use for the y-axis
+        :param curve_labels:[OPTIONAL] String, or list of strings.
                                 Label(s) to use for the various curves in the legend and in the hover boxes.
                                 If missing, and there's only 1 curve, the legend box won't be shown
-        :param legend_title:(OPTIONAL) String to show at the top of the legend box.
+        :param legend_title:[OPTIONAL] String to show at the top of the legend box.
                                 Ignored if curve_labels wasn't set.
                                 If not provided, and the legend box is shown, it will appear as "variable"
-        :param colors:      (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
+        :param colors:      [OPTIONAL] Either a single color (string with standard plotly name, such as "red"),
                                 or list of names to use, in order; if None, then use the hardwired defaults
         :param show:        If True, the plot will be shown
                                 Note: in JupyterLab, simply returning a plot object (without assigning it to a variable)
@@ -153,19 +153,19 @@ class PlotlyHelper:
 
     @classmethod
     def combine_plots(cls, fig_list :Union[list, tuple], title="", xlabel=None, ylabel=None,
-                      xrange=None, curve_labels=None, legend_title=None, show=False) -> pgo.Figure:
+                      xrange=None, legend_title=None, curve_labels=None, show=False) -> pgo.Figure:
         """
         Combine together several existing plotly plots
 
         :param fig_list:    List or tuple of plotly "Figure" objects (as returned by several functions)
-        :param title:       (OPTIONAL) The title to use for the overall plot
-        :param xlabel:      (OPTIONAL) Caption to use for the x-axis; if not specified, use that of the 1st plot
-        :param ylabel:      (OPTIONAL) Caption to use for the y-axis; if not specified, use that of the 1st plot
-        :param xrange:      (OPTIONAL) list of the form [t_start, t_end], to initially only show a part of the timeline.
+        :param title:       [OPTIONAL] The title to use for the overall plot
+        :param xlabel:      [OPTIONAL] Caption to use for the x-axis; if not specified, use that of the 1st plot
+        :param ylabel:      [OPTIONAL] Caption to use for the y-axis; if not specified, use that of the 1st plot
+        :param xrange:      [OPTIONAL] list of the form [t_start, t_end], to initially only show a part of the timeline.
                                 Note: it's still possible to zoom out, and see the excluded portion
-        :param curve_labels:(OPTIONAL) List of labels to use for the various curves in the legend
+        :param legend_title:[OPTIONAL] String to show at the top of the legend box
+        :param curve_labels:[OPTIONAL] List of labels to use for the various curves in the legend
                                 and in the hover boxes; if not specified, use the titles of the individual plots
-        :param legend_title:(OPTIONAL) String to show at the top of the legend box
         :param show:        If True, the plot will be shown
                                 Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
                                       leads to it being automatically shown

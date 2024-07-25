@@ -586,7 +586,6 @@ class AllReactions(Diffusion):
         :return:                Integer index of the newly-added reaction
                                     (in the list self.reaction_list, stored as object variable)
         """
-        # TODO: validate that all chemical names in reactants and products are legit
         rxn = Reaction(reactants, products, forward_rate, reverse_rate,
                        delta_H, delta_S, delta_G, temp=self.temp)
         self.reaction_list.append(rxn)

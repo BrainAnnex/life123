@@ -65,7 +65,9 @@ def check_version(expected :str, enforce=False) -> None:
     :param enforce: If True, a mismatch of versions will resulte in an Exception
     :return:        None
     """
-    if __version__ != expected:
+    if __version__ == expected:
+        print("OK")
+    else:
         print(f"*** CAUTION: the installed version of the life123 library ({__version__}) "
               f"does not match the stated expected version ({expected}).\nIn case of errors, "
               f"change the installed library version, or modify your code to conform to the installed library."
