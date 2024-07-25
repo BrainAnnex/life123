@@ -4,15 +4,15 @@
 ::     the PyCharm TERMINAL window tab at the bottom (not to be confused with the Python console!)
 ::      On Win11, also need to prefix  ".\"          EXAMPLE:   .\quick
 
-:: ****** IMPORTANT ****** - FIRST CHANGE THE FOLDER NAME BELOW TO THE LOCATION ON YOUR MACHINE!!
-:: Add the root of the project files to the value of the sys.path seen inside the execution of the notebooks
+:: ****** FIRST CHANGE THE FOLDER NAME BELOW TO THE LOCATION ON YOUR MACHINE, and then uncomment
+:: Add the root of the life123 library files to the value of the sys.path seen inside the execution of the notebooks
 :: Note: only needed if you use a local copy of the life123 libraries;
-::       not necessary if you pip install life123 in your venv
-set PYTHONPATH=\Docs\- MY CODE\Life123\life123-develop\
+::       NOT necessary if you pip install life123 in your venv
+::set PYTHONPATH=\Docs\- MY CODE\Life123\life123-develop\
 
-@echo off
-echo *** IMPORTANT *** Additional LOG FILES TO BE FOUND UNDER THE FOLDER: %PYTHONPATH%experiments
-echo on
+::@echo off
+::echo *** Additional LOG FILES TO BE FOUND UNDER THE FOLDER: %PYTHONPATH%experiments
+::echo on
 
 :: Start Jupyter Lab (if a port other than the default 8888 is desired, use the option --port YOUR_PORT_NUMBER)
 .\venv\Scripts\jupyter-lab
