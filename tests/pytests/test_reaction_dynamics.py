@@ -183,6 +183,22 @@ def test_adjust_timestep():
 
 
 
+def test_relative_significance():
+    rd = ReactionDynamics()
+    
+    # Assess the relative significance of various quantities
+    #       relative to a baseline value of 10
+    assert rd.relative_significance(1, 10) == "S"
+    assert rd.relative_significance(4.9, 10) == "S"
+    assert rd.relative_significance(5.1, 10) == "C"
+    assert rd.relative_significance(10, 10) == "C"
+    assert rd.relative_significance(19.9, 10) == "C"
+    assert rd.relative_significance(20.1, 10) == "L"
+    assert rd.relative_significance(137423, 10) == "L"
+
+
+
+
 
 
 #################   INDIVIDUAL NORMS   #################

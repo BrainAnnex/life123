@@ -10,7 +10,7 @@
     :license: MIT, see LICENSE for more details.
 """
 
-__version__ = "1.0.0.beta.37"
+__version__ = "1.0.0.beta.38"
 
 
 from life123.bio_sim_1d import BioSim1D
@@ -55,6 +55,10 @@ __all__ = [
     'PyGraphVisual'
 ]
 
+
+
+def version():
+    return __version__
 
 
 def check_version(expected :str, enforce=False) -> None:

@@ -8,7 +8,7 @@
 :: Add the root of the life123 library files to the value of the sys.path seen inside the execution of the notebooks
 :: Note: only needed if you use a local copy of the life123 libraries;
 ::       NOT necessary if you pip install life123 in your venv
-::set PYTHONPATH=\Docs\- MY CODE\Life123\life123-develop\
+set PYTHONPATH=\Docs\- MY CODE\Life123\life123-develop\
 
 ::@echo off
 ::echo *** Additional LOG FILES TO BE FOUND UNDER THE FOLDER: %PYTHONPATH%experiments
