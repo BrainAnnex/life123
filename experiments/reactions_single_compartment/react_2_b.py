@@ -25,10 +25,13 @@
 LAST_REVISED = "July 24, 2024"
 LIFE123_VERSION = "1.0.0.beta.37"    # Version this experiment is based on
 
+# %%
+#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
+
 # %% tags=[]
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
-# NOTE: If any of the imports below can't find a module, uncomment the lines above    
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
 import ipynbname
 
