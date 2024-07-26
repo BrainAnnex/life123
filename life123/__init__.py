@@ -62,7 +62,7 @@ def check_version(expected :str, enforce=False) -> None:
     Check the passed version number against the actual version number of this library
 
     :param expected:A string with the expected version number
-    :param enforce: If True, a mismatch of versions will resulte in an Exception
+    :param enforce: If True, a mismatch of versions will result in an Exception
     :return:        None
     """
     if __version__ == expected:
