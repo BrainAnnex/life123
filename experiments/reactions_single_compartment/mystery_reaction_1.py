@@ -13,28 +13,38 @@
 # ---
 
 # %% [markdown]
-# ## A simple `A <-> B` reaction whose rate constants are to be estimated 
-# ## from a given time evolution of [A] and [B]  
+# ## A simple `A <-> B` reaction whose rate constants are to be estimated from a given time evolution of [A] and [B]  
 # ### (values given on a *variable-time* grid.)
 #
 # Assume the reaction is known to be 1st order (won't verify that.)  
 #
 # In PART 1, a time evolution of [A] and [B] is obtained by simulation  
-# In PART 2, the time functions generated in Part 1 are taken as a _starting point,_ to estimate the rate constants of `A <-> B`  
-# In PART 3, we'll repeat what we did in Part 2, but this time showing the full details of how the answer is arrived at
 #
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
+# In PART 2, the time evolutions generated in Part 1 are taken as a _starting point,_ to estimate the rate constants of `A <-> B`  
+#
+# In PART 3, we'll repeat what we did in Part 2, but this time showing the full details of how the answer is arrived at
+
+# %% [markdown]
+# ### TAGS :  "numerical", "uniform compartment", "under-the-hood"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Aug. 15, 2024"
+LIFE123_VERSION = "1.0.0.beta.38"      # Version this experiment is based on
+
+# %%
+#import set_path            # Using MyBinder?  Uncomment this before running the next cell!
+                            # Importing this local file will add the project's home directory to sys.path
 
 # %% tags=[]
-from experiments.get_notebook_info import get_notebook_basename
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
-from life123 import UniformCompartment
-from life123.visualization.plotly_helper import PlotlyHelper
-
+import ipynbname
 import numpy as np
+
+from life123 import check_version, UniformCompartment, PlotlyHelper, Numerical
+
 
 # %%
 
@@ -43,10 +53,10 @@ import numpy as np
 # ## but pretend you don't see this section! (because we later want to estimate those rate constants)
 
 # %% tags=[]
-# Instantiate the simulator and specify the chemicals
-dynamics = UniformCompartment(names=["A", "B"], preset="mid")
+# Instantiate the simulator and specify the accuracy preset
+dynamics = UniformCompartment(preset="mid")
 
-# Reaction A <-> B
+# Reaction A <-> B (mostly in the forward direction)
 dynamics.add_reaction(reactants="A", products="B",
                       forward_rate=12., reverse_rate=2.) 
  
@@ -56,11 +66,11 @@ dynamics.describe_reactions()
 # ### Run the simulation
 
 # %%
-dynamics.set_conc([40., 10.], snapshot=True)  # Set the initial concentrations of all the chemicals, in their index order
+dynamics.set_conc({"A": 40., "B": 10.}, snapshot=True)  # Set the initial concentrations
 dynamics.describe_state()
 
 # %%
-dynamics.enable_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()         # To save diagnostic information for the simulation run, below
 
 dynamics.single_compartment_react(initial_step=0.01, duration=0.5,
                                   snapshots={"initial_caption": "1st reaction step",
@@ -69,18 +79,20 @@ dynamics.single_compartment_react(initial_step=0.01, duration=0.5,
 
 # %% [markdown]
 # ### <a name="cascade_1_plot"> Plots of changes of concentration with time</a>
-# Notice the variable time steps (vertical dashed lines)
 
 # %%
 dynamics.plot_history(title="Reaction A <-> B",
                       colors=['darkturquoise', 'green'], show_intervals=True)
+
+# %% [markdown]
+# Notice the variable time steps (vertical dashed lines), more frequent when there's more change
 
 # %%
 
 # %%
 
 # %% [markdown]
-# # PART 2 - This is the starting point of fitting the data from part 1.  
+# # PART 2 - This is the starting point of fitting the data from part 1  
 # ### We're given the data of the above curves - i.e. the system history, and we want to estimate the rate constants (forward and reverse) of the reaction `A <-> B`
 
 # %% [markdown]
@@ -89,6 +101,9 @@ dynamics.plot_history(title="Reaction A <-> B",
 # %%
 df = dynamics.get_history() 
 df
+
+# %% [markdown]
+# The reaction is mostly forward; the reactant `A` gets consumed, while the product `B` gets produced
 
 # %% [markdown]
 # #### Let's extract some columns, as Numpy arrays:
@@ -103,17 +118,19 @@ A_conc = df["A"].to_numpy()
 B_conc = df["B"].to_numpy()
 
 # %% [markdown]
-# ### Here, we take the easy way out, using a specialized Life123 function!
+# ### **Here, we take the easy way out,** using a specialized Life123 function!
 # (in Part 3, we'll do a step-by-step derivation, to see how it works)
 
 # %%
-dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=B_conc, reactant_name="A", product_name="B")
+dynamics.estimate_rate_constants(t=t_arr, 
+                                 reactant_conc=A_conc, product_conc=B_conc, 
+                                 reactant_name="A", product_name="B")
 
 # %% [markdown]
 # ### The least-square fit is good...  and the values estimated from the data for kF and kR are in good agreement with the values we used in the simulation to get that data, respectively 12 and 2 (see PART 1, above)  
 
 # %% [markdown]
-# Note that our data set is quite skimpy in the number of points:
+# Note that our data set is _quite skimpy_ in the number of points:
 
 # %%
 len(B_conc)
@@ -125,7 +142,7 @@ len(B_conc)
 t_arr  # Time points in our data set
 
 # %%
-np.gradient(t_arr)
+np.gradient(t_arr)   # Notice how it gets larger in later times, as bigger steps get taken
 
 # %% [markdown]
 # #### The variable time grid, and the skimpy number of data points, are best seen in the plot that was shown at the end of PART 1
@@ -163,9 +180,10 @@ A_conc + B_conc
 TOT_conc = 50.
 
 # %%
-# Incidentally, there's a function to verify that the stoichiometry of a single reaction holds true across the entire simulation run 
+# Incidentally, there's a function to verify that the stoichiometry 
+# of a single reaction holds true across the entire simulation run 
 # (overkill in this case!)
-dynamics.stoichiometry_checker_entire_run() 
+dynamics.diagnostics.stoichiometry_checker_entire_run() 
 
 # %%
 
@@ -180,8 +198,9 @@ Deriv_A = np.gradient(A_conc, t_arr, edge_order=2)
 Deriv_B = np.gradient(B_conc, t_arr, edge_order=2)
 
 # %%
-# As expected from the stoichiometry, the two derivatives are opposites: when [A] increases by a certain amount, [B] decreases by that same amount
-Deriv_A + Deriv_B
+# As expected from the stoichiometry, the two derivatives are opposites: 
+# when [A] increases by a certain amount, [B] decreases by that same amount
+Deriv_A + Deriv_B   # Will be very close to zero throughout
 
 # %% tags=[]
 PlotlyHelper.plot_curves(x=t_arr, y=[Deriv_A , Deriv_B], title="d/dt A(t) and d/dt B(t) as a function of time",
@@ -258,14 +277,7 @@ X
 # #### Let's do the least-square fit:
 
 # %%
-M = np.vstack([np.ones(len(Y)), X]).T
-# M is an nx2 matrix , where n is the number of data points.  
-# The 2nd column contains the values of X
-
-M[:10, :]   # Show the first 10 rows
-
-# %%
-a, b = np.linalg.lstsq(M, Y, rcond=None)[0]  # Carry out the least-square fit  as: Y = a + b X
+a, b = Numerical.simple_least_square(X, Y)
 a, b
 
 # %% [markdown]
@@ -299,5 +311,7 @@ kF
 
 # %% [markdown]
 # #### We just obtained the same values of the estimated kF and kR as were computed by a call to `estimate_rate_constants()` in Part 2
+
+# %%
 
 # %%

@@ -23,7 +23,8 @@ LAST_REVISED = "July 24, 2024"
 LIFE123_VERSION = "1.0.0.beta.37"      # Version this experiment is based on
 
 # %%
-#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
+#import set_path            # Using MyBinder?  Uncomment this before running the next cell!
+                            # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 #import sys

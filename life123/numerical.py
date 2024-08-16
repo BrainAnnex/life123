@@ -13,6 +13,34 @@ class Numerical:
 
 
     @classmethod
+    def simple_least_square(cls, X :np.ndarray, Y: np.ndarray) -> (float, float):
+        """
+        Give two numeric 1-D arrays X and Y, of the same size,
+        we want to fit: Y = a + b * X , for some numbers a and b
+
+        :param X:   A numpy numeric 1-D array
+        :param Y:   A numpy numeric 1-D array, with the same number of elements as X
+        :return:    A pair of numbers (a, b) that provide the least-square fit for Y = a + b * X
+        """
+        assert len(X) == len(Y), \
+            "simple_least_square(): the two arguments must be numeric 1-D arrays with the SAME dimension"
+        #TODO: more validations
+
+        M = np.vstack([np.ones(len(Y)), X]).T
+        # M will be an n x 2 matrix , where n is the number of data points in each of the arguments.
+        # The 1st column is all 1's ; the 2nd column contains the values of X
+        # EXAMPLE  of M, if X = array([40., 35., 19.]):
+        '''
+        array([[ 1.        , 40.],
+               [ 1.        , 35.],
+               [ 1.        , 19.]])
+        '''
+        a, b = np.linalg.lstsq(M, Y, rcond=None)[0]     # Carry out the least-square fit  as: Y = a + b X
+        return a, b
+
+
+
+    @classmethod
     def reach_threshold(cls, df, x :str, y :str, y_threshold) -> Union[float, None]:
         """
         Given a set of 2-D points, whose x- and y- coordinates are stored, respectively, in the

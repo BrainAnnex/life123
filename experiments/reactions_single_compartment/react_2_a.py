@@ -17,19 +17,20 @@
 # with 1st-order kinetics in both directions, taken to equilibrium,
 # using a simple, **coarse fixed-timestep simulation.**  
 #
-# Afterwards, perform some analysis of the results
+# Afterwards, perform some analysis of the results: in particular, examine the reaction rates 
 #
-# See also the experiment _"1D/reactions/reaction_1"_ for a multi-compartment version.  
+# (See also the experiment _"1D/reactions/reaction_1"_ for a multi-compartment version)  
 #
 # #### This experiment gets repeated in _"react_2_b"_ , with a more sophisticated approach, 
 # #### involving adaptive variable time steps.
 
 # %%
-LAST_REVISED = "July 24, 2024"
-LIFE123_VERSION = "1.0.0.beta.37"    # Version this experiment is based on
+LAST_REVISED = "July 26, 2024"
+LIFE123_VERSION = "1.0.0.beta.38"    # Version this experiment is based on
 
 # %%
-#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
+#import set_path            # Using MyBinder?  Uncomment this before running the next cell!
+                            # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 #import sys
@@ -169,6 +170,8 @@ dynamics.plot_history(colors=['darkturquoise', 'orange'], show_intervals=True)
 # %%
 df = dynamics.get_history()         # Revisited from earlier
 df
+
+# %%
 
 # %%
 

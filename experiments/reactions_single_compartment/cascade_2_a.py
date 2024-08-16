@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## A complex (multistep) reaction `A <-> C` derived from 2 coupled elementary reactions: 
+# ## A complex (composite/multistep) reaction `A <-> C` derived from 2 coupled elementary reactions: 
 # ## `A <-> B` and `B <-> C`  
 # We are given the time evolution of the complex reaction,  
 # and want to determine whether it can be modeled as an elementary reaction.  
@@ -22,17 +22,24 @@
 # In PART 2, the time functions generated in Part 1 are taken as a _starting point,_ to explore how to model the composite reaction `A <-> C`  
 #
 # **Background**: please see experiments `cascade_1` and `mystery_reaction_1`
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "July 26, 2024"
+LIFE123_VERSION = "1.0.0.beta.38"    # Version this experiment is based on
+
+# %%
+#import set_path            # Using MyBinder?  Uncomment this before running the next cell!
+                            # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
-from experiments.get_notebook_info import get_notebook_basename
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
-from life123 import UniformCompartment
-from life123.visualization.plotly_helper import PlotlyHelper
+from life123 import check_version, UniformCompartment, PlotlyHelper
+
+# %%
+check_version(LIFE123_VERSION)
 
 # %%
 
@@ -44,7 +51,7 @@ from life123.visualization.plotly_helper import PlotlyHelper
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = UniformCompartment(names=["A", "B", "C"], preset="mid")
+dynamics = UniformCompartment(preset="mid")
 
 # Reaction A <-> B (slower, and with a smaller K)
 dynamics.add_reaction(reactants="A", products="B",
@@ -73,7 +80,7 @@ dynamics.single_compartment_react(initial_step=0.01, duration=0.8,
 dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], show_intervals=True)
 
 # %%
-dynamics.is_in_equilibrium(tolerance=15)
+dynamics.is_in_equilibrium(tolerance=12)
 
 # %%
 
@@ -87,7 +94,8 @@ dynamics.is_in_equilibrium(tolerance=15)
 # Let's start by taking stock of the actual data (saved during the simulation of part 1):
 
 # %%
-df = dynamics.get_history(columns=["SYSTEM TIME", "A", "C", "caption"])   # We're NOT given the intermediary B
+# For this analysis, we're NOT given the intermediary B
+df = dynamics.get_history(columns=["SYSTEM TIME", "A", "C", "caption"])
 df
 
 # %% [markdown]
@@ -115,7 +123,7 @@ dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=C_c
 
 # %% [markdown]
 # ### The least-square fit is awful : the complex reaction `A <-> C` doesn't seem to be amenable to being modeled as a simple reaction with some suitable rate constants
-# Probably not too surprising given our "secret" knowledge from Part 1 that the complex reaction originates from 2 elementary reactions where one doesn't dominate the other one in terms of reaction kinetics
+# Probably not too surprising given our "secret" knowledge from Part 1 that the complex reaction originates from 2 elementary reactions where the intermediate product builds up at one point
 
 # %% [markdown]
 # ### A glance at the above diagram reveals much-better linear fits, if split into 2 portions, one where A(t) ranges from 0 to about 24, and one from about 24 to 50   
@@ -135,8 +143,8 @@ dynamics.get_history(t=0.1)
 
 # %% [markdown]
 # ### Let's split the `A_conc` and `C_conc` arrays we extracted earlier (with the entire time evolution of, respectively, [A] and [C]) into two parts:  
-# 1) points numbered 0-47   
-# 2) points 48-end
+# 1) points numbered 0 thru 47   
+# 2) points 48 - end
 
 # %%
 A_conc_early = A_conc[:48]
@@ -166,7 +174,7 @@ dynamics.estimate_rate_constants(t=t_arr_early, reactant_conc=A_conc_early, prod
 
 # %% [markdown]
 # Trying to fit an elementary reaction to that region leads to a **negative** reverse rate constant!  
-# It's not surprise that an elementary reaction is a good fit, if one observes what happens to the time evolution of the concentrations.  Repeating the earlier plot, but only showing `A` and `C` (i.e. hiding the intermediary `B`):
+# It's no surprise that an elementary reaction is a good fit, if one observes what happens to the time evolution of the concentrations.  Repeating the earlier plot, but only showing `A` and `C` (i.e. hiding the intermediary `B`):
 
 # %%
 dynamics.plot_history(colors=['darkturquoise', 'green'], xrange=[0, 0.4], vertical_lines=[0.1], 
@@ -176,6 +184,8 @@ dynamics.plot_history(colors=['darkturquoise', 'green'], xrange=[0, 0.4], vertic
 # In the zone to the left of the vertical dashed line:  
 # when the reactant `A` is plentiful, the rate of change (gradient) of the product `C` is low - and vice versa.  
 # Does that look like an elementary reaction in its kinetics?  Nope!
+
+# %%
 
 # %% [markdown]
 # ### II. And now let's consider the LATE region, when t > 0.1
@@ -187,7 +197,7 @@ dynamics.estimate_rate_constants(t=t_arr_late, reactant_conc=A_conc_late, produc
 # %% [markdown]
 # This time we have an adequate linear fit AND meaningful rate constants : kF of about 8 and kR of about 0.  Do those numbers sound familiar?  A definite resemblance to the kF=8, kR=2 of the SLOWER elementary reaction `A <-> B`!  
 #
-# #### The slower `A <-> B` reaction dominates the kinetics from about t=0.1  
+# #### The slower `A <-> B` reaction dominates the kinetics, from about t=0.1 on  
 #
 # Let's see the graph again:
 
@@ -204,10 +214,15 @@ dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.
 # The slow link (`A <-> B`) largely determines the kinetics of the supply line.
 
 # %% [markdown]
-# ### While it's a well-known Chemistry notion that the slower reaction is the rate-determining step in a chain, we saw in this experiment  that the complex reaction could be roughly modeled with the rate constants of the slower reaction only after some time.  
+# ### While it's a well-known Chemistry notion that the slower reaction is the rate-determining step in a chain, we saw in this experiment  that **the complex reaction could be roughly modeled with the rate constants of the slower reaction ONLY AFTER SOME TIME**.  
 
 # %% [markdown]
 # If we were interested in early transients (for example, if diffusion quickly intervened), we couldn't use that model.
+
+# %% [markdown]
+# #### Is that surprising?  At early times, compare the inflection of the final product, C, of the composite reaction vs. the inflection of the product of a simple reaction (such as B in experiment `react1`, both appearing in green.)
+
+# %%
 
 # %% [markdown]
 # #### In the continuation experiment, `cascade_2_b`, we explore the scenario where the 2 elementary reactions are much more different from each other

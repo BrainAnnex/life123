@@ -21,10 +21,9 @@
 # Adaptive variable time resolution is used, with extensive diagnostics, 
 # and finally compared to a new run using fixed time intervals, with the same initial data.
 #
-# In part2, some diagnotic insight is explored.   
-# In part3, two identical runs ("adaptive variable steps" and "fixed small steps") are compared. 
+# In part2, some diagnostic insight is explored.  
 #
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+# In part3, two identical runs ("adaptive variable steps" vs. "fixed small steps") are compared. 
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -41,20 +40,28 @@
 # ![2 Coupled Reactions](../../docs/2_coupled_reactions.png)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "July 26, 2024"
+LIFE123_VERSION = "1.0.0.beta.38"      # Version this experiment is based on
+
+# %%
+#import set_path            # Using MyBinder?  Uncomment this before running the next cell!
+                            # Importing this local file will add the project's home directory to sys.path
 
 # %% tags=[]
-from experiments.get_notebook_info import get_notebook_basename
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
-from life123 import ChemData
-from life123 import UniformCompartment
-from life123.visualization.plotly_helper import PlotlyHelper
+import ipynbname
 
-from life123 import GraphicLog
+from life123 import check_version, ChemData, UniformCompartment, PlotlyHelper, GraphicLog
+
+# %%
+check_version(LIFE123_VERSION)
 
 # %% tags=[]
 # Initialize the HTML logging (for the graphics)
-log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
+log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
 
 # Set up the use of some specified graphic (Vue) components
 GraphicLog.config(filename=log_file,
@@ -66,15 +73,16 @@ GraphicLog.config(filename=log_file,
 # Specify the chemicals and the reactions
 
 # %% tags=[]
-# Instantiate the simulator and specify the chemicals
-chem = ChemData(names=["A", "B", "C"])
+# Specify the chemicals and the reactions; this data structure will get re-used in 
+# the various simulations below
+chem = ChemData()
 
 # Reaction A <-> B (fast)
-chem.add_reaction(reactants=["A"], products=["B"],
+chem.add_reaction(reactants="A", products="B",
                        forward_rate=64., reverse_rate=8.) 
 
 # Reaction B <-> C (slow)
-chem.add_reaction(reactants=["B"], products=["C"],
+chem.add_reaction(reactants="B", products="C",
                        forward_rate=12., reverse_rate=2.) 
 
 print("Number of reactions: ", chem.number_of_reactions())
@@ -85,6 +93,8 @@ chem.describe_reactions()
 # %%
 # Send a plot of the network of reactions to the HTML log file
 chem.plot_reaction_network("vue_cytoscape_2")
+
+# %%
 
 # %% [markdown]
 # ## Run the simulation
@@ -102,7 +112,7 @@ dynamics.get_history()
 # ## Run the reaction
 
 # %%
-dynamics.enable_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
+dynamics.enable_diagnostics()    # To save diagnostic information about the call to single_compartment_react()
 
 dynamics.single_compartment_react(initial_step=0.02, duration=0.4,
                                   snapshots={"initial_caption": "1st reaction step",
@@ -115,7 +125,7 @@ dynamics.single_compartment_react(initial_step=0.02, duration=0.4,
 
 # %%
 dynamics.plot_history(title="Coupled reactions A <-> B and B <-> C",
-                      colors=['blue', 'orange', 'green'], show_intervals=True)
+                      colors=['darkturquoise', 'orange', 'green'], show_intervals=True)
 
 # %%
 dynamics.curve_intersect("A", "B", t_start=0, t_end=0.05)
@@ -130,7 +140,7 @@ dynamics.curve_intersect("B", "C", t_start=0.05, t_end=0.1)
 dynamics.get_history()
 
 # %%
-dynamics.explain_time_advance()
+dynamics.diagnostics.explain_time_advance()
 
 # %% [markdown]
 # ### Check the final equilibrium
@@ -174,14 +184,13 @@ C_final / A_final
 # %%
 # Concentration increments due to reaction 0 (A <-> B)
 # Note that [C] is not affected
-dynamics.get_diagnostic_rxn_data(rxn_index=0)
+dynamics.diagnostics.get_diagnostic_rxn_data(rxn_index=0)
 
 # %%
-# Concentration increments due to reaction 1 (B <-> C)
-# Note that [A] is not affected.  
-# Also notice that the 0-th row from the A <-> B reaction isn't seen here, because that step was aborted
-# early on, before even getting to THIS reaction
-dynamics.get_diagnostic_rxn_data(rxn_index=1)
+# Concentration increments due to reaction 1 (B <-> C) 
+# Also notice that the 0-th row from the A <-> B reaction isn't seen here (start time 0 and step 0.02), 
+# because that step was aborted early on, BEFORE even getting to THIS reaction
+dynamics.diagnostics.get_diagnostic_rxn_data(rxn_index=1)
 
 # %%
 
@@ -209,10 +218,10 @@ dynamics2.single_compartment_react(initial_step=0.0005, duration=0.4,
 
 # %%
 dynamics2.plot_history(title="Coupled reactions A <-> B and B <-> C , re-run with CONSTANT STEPS",
-                       colors=['blue', 'orange', 'green'], show_intervals=True)
+                       colors=['darkturquoise', 'orange', 'green'], show_intervals=True)
 
 # %% [markdown]
-# _(Notice that the vertical steps are now equally spaced - and that there are so many of them that we're only showing some)_
+# _(Notice that the vertical steps are now equally spaced - and that there are so many of them that we're only showing 1 every 6)_
 
 # %%
 dynamics2.curve_intersect(t_start=0, t_end=0.05, chem1="A", chem2="B")

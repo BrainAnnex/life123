@@ -4,6 +4,27 @@ from life123 import Numerical as num
 import pandas as pd
 
 
+def test_simple_least_square():
+    X = np.array([1, 2, 3])
+    Y = np.array([1, 2, 3, 4])
+
+    with pytest.raises(Exception):
+        num.simple_least_square(X, Y)   # Mismatched array size
+
+    Y = np.array([2, 4, 6])
+    result = num.simple_least_square(X, Y)
+    assert np.allclose(result, (0, 2))
+
+    Y = np.array([12, 14, 16])
+    result = num.simple_least_square(X, Y)
+    assert np.allclose(result, (10, 2))
+
+    Y = np.array([-11, -12, -13])
+    result = num.simple_least_square(X, Y)
+    assert np.allclose(result, (-10, -1))
+
+
+
 def test_reaches_threshold():
     df = pd.DataFrame({"T": [1, 2, 3], "A": [10, 12, 14]})
 
