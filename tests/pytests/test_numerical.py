@@ -4,9 +4,16 @@ from life123 import Numerical as num
 import pandas as pd
 
 
+
 def test_simple_least_square():
     X = np.array([1, 2, 3])
     Y = np.array([1, 2, 3, 4])
+
+    with pytest.raises(Exception):
+        num.simple_least_square(123, Y)
+
+    with pytest.raises(Exception):
+        num.simple_least_square(X, 123)
 
     with pytest.raises(Exception):
         num.simple_least_square(X, Y)   # Mismatched array size
@@ -22,6 +29,21 @@ def test_simple_least_square():
     Y = np.array([-11, -12, -13])
     result = num.simple_least_square(X, Y)
     assert np.allclose(result, (-10, -1))
+
+
+
+def test_two_vector_least_square():
+    V = np.array([1, 2, 3])
+    W = np.array([10, 10, 10])
+    Y = np.array([12, 14, 16])
+    result = num.two_vector_least_square(V, W, Y)
+    assert np.allclose(result, (2, 1))
+
+    V = np.array([1, 2, 3])
+    W = np.array([10, 10, 10])
+    Y = np.array([10, 20, 30])
+    result = num.two_vector_least_square(V, W, Y)
+    assert np.allclose(result, (10, 0))
 
 
 

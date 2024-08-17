@@ -16,17 +16,19 @@ class Numerical:
     def simple_least_square(cls, X :np.ndarray, Y: np.ndarray) -> (float, float):
         """
         Give two numeric 1-D arrays X and Y, of the same size,
-        we want to fit: Y = a + b * X , for some numbers a and b
+        do a least-square fit: Y = a + b * X , for some numbers a and b
 
         :param X:   A numpy numeric 1-D array
         :param Y:   A numpy numeric 1-D array, with the same number of elements as X
         :return:    A pair of numbers (a, b) that provide the least-square fit for Y = a + b * X
         """
+        assert np.ndim(X) == 1, "simple_least_square(): the argument `X` must be a 1-D array"
+        assert np.ndim(Y) == 1, "simple_least_square(): the argument `Y` must be a 1-D array"
         assert len(X) == len(Y), \
             "simple_least_square(): the two arguments must be numeric 1-D arrays with the SAME dimension"
         #TODO: more validations
 
-        M = np.vstack([np.ones(len(Y)), X]).T
+        M = np.vstack([np.ones(len(X)), X]).T
         # M will be an n x 2 matrix , where n is the number of data points in each of the arguments.
         # The 1st column is all 1's ; the 2nd column contains the values of X
         # EXAMPLE  of M, if X = array([40., 35., 19.]):
@@ -36,6 +38,22 @@ class Numerical:
                [ 1.        , 19.]])
         '''
         a, b = np.linalg.lstsq(M, Y, rcond=None)[0]     # Carry out the least-square fit  as: Y = a + b X
+        return a, b
+
+
+    @classmethod
+    def two_vector_least_square(cls, V :np.ndarray, W :np.ndarray, Y :np.ndarray) -> (float, float):
+        """
+        Give three numeric 1-D arrays V, W and Y, of the same size,
+        do a least-square fit: Y = a * V + b * W, for some numbers a and b
+
+        :param V:
+        :param W:
+        :param Y:
+        :return:
+        """
+        M = np.vstack([V, W]).T
+        a, b = np.linalg.lstsq(M, Y, rcond=None)[0]
         return a, b
 
 
