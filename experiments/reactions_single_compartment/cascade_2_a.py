@@ -119,7 +119,7 @@ C_conc = df["C"].to_numpy()
 # Let's see what happens if we try to do such a linear fit!
 
 # %%
-dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=C_conc, reactant_name="A", product_name="C")
+dynamics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, reactant_name="A", product_name="C")
 
 # %% [markdown]
 # ### The least-square fit is awful : the complex reaction `A <-> C` doesn't seem to be amenable to being modeled as a simple reaction with some suitable rate constants
@@ -169,8 +169,8 @@ t_arr_late = t_arr[48:]
 # ### I. Let's start with the EARLY region, when t < 0.1
 
 # %%
-dynamics.estimate_rate_constants(t=t_arr_early, reactant_conc=A_conc_early, product_conc=C_conc_early, 
-                                 reactant_name="A", product_name="C")
+dynamics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_conc=C_conc_early,
+                                        reactant_name="A", product_name="C")
 
 # %% [markdown]
 # Trying to fit an elementary reaction to that region leads to a **negative** reverse rate constant!  
@@ -191,8 +191,8 @@ dynamics.plot_history(colors=['darkturquoise', 'green'], xrange=[0, 0.4], vertic
 # ### II. And now let's consider the LATE region, when t > 0.1
 
 # %%
-dynamics.estimate_rate_constants(t=t_arr_late, reactant_conc=A_conc_late, product_conc=C_conc_late, 
-                                 reactant_name="A", product_name="C")
+dynamics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc=C_conc_late,
+                                        reactant_name="A", product_name="C")
 
 # %% [markdown]
 # This time we have an adequate linear fit AND meaningful rate constants : kF of about 8 and kR of about 0.  Do those numbers sound familiar?  A definite resemblance to the kF=8, kR=2 of the SLOWER elementary reaction `A <-> B`!  

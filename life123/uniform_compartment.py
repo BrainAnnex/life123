@@ -7,7 +7,7 @@ from typing import Union
 from life123.chem_data import ChemData
 from life123.diagnostics import Diagnostics
 from life123.movies import MovieTabular
-from life123.numerical import Numerical as num
+from life123.numerical import Numerical
 from life123.reaction_dynamics import ReactionDynamics
 from life123.visualization.plotly_helper import PlotlyHelper
 
@@ -2239,64 +2239,108 @@ class UniformCompartment:
 
 
 
+    def estimate_rate_constants(self, df, t, reactants, products):
+        """
+        TODO: not yet implemented
 
-    def estimate_rate_constants(self, t :np.array, reactant_conc :np.array, product_conc :np.array,
-                                reactant_name="Reactant", product_name="Product"):
+        EXAMPLE:  estimate_rate_constants(df, t="SYSTEM TIME", reactants=["A", "B"], products="C")
+                    where df is a Pandas dataframe containing the columns "SYSTEM TIME", "A", "B" and "C"
+
+        :param df:
+        :param t:
+        :param reactants:
+        :param products:
+        :return:
+        """
+        pass
+
+
+
+    def estimate_rate_constants_simple(self, t :np.ndarray,
+                                       A_conc :np.ndarray, B_conc :np.ndarray,
+                                       reactant_name="Reactant", product_name="Product"):
         """
         Estimate the rate constants for a 1-st order reaction of the type A <-> B,
         given time evolution of [A] and [B] on a grid of time points (don't need to be equally spaced)
 
-        IMPORTANT : Currently restricted to reactions with a 1:1 stoichiometry between the given reactant and product
+        IMPORTANT : This is for reactions with a 1:1 stoichiometry between the given reactant and product
 
         :param t:               A numpy array of time grid points where the other functions are specified
-        :param reactant_conc:
-        :param product_conc:
+        :param A_conc:          A numpy array of the concentrations of the reactant, at the times in the array t
+        :param B_conc:
         :param reactant_name:
         :param product_name:
         :return:                A plotly "Figure" object.  The estimated rate constants are printed out
         """
-        total_conc_arr = reactant_conc + product_conc
+        total_conc_arr = A_conc + B_conc
         total_conc = np.median(total_conc_arr)    # TODO: give warning or abort if there's too much variance
         sd = np.std(total_conc_arr)
 
+        print(f"Reaction {reactant_name} <-> {product_name}")
         print(f"Total REACTANT + PRODUCT has a median of {total_conc:,.4g}, "
               f"\n    with standard deviation {sd:,.4g} (ideally should be zero)")
 
 
         # The rate of change of [reactant] with time
-        deriv_reactant_conc = np.gradient(reactant_conc, t, edge_order=2)
+        A_prime = np.gradient(A_conc, t, edge_order=2)
         # The rate of change of [product] with time
-        deriv_product_conc = np.gradient(product_conc, t, edge_order=2)
+        B_prime = np.gradient(B_conc, t, edge_order=2)
 
-
-        median_sum_derivs = np.median(deriv_reactant_conc + deriv_product_conc)
-        print(f"The sum of the time derivatives of reactant and product "
+        median_sum_derivs = np.median(A_prime + B_prime)
+        print(f"The sum of the time derivatives of the reactant and the product "
               f"\n    has a median of {median_sum_derivs:,.4g} (ideally should be zero)")
 
 
-        # Do a least-square fit of the time-gradient of the PRODUCT concentration,
-        # as a function of the REACTANT's concentration
-        Y = deriv_product_conc  # The dependent variable:   B'(t)
-        X = reactant_conc       # The independent variable: A(t)
+        # Do a least-square fit
+        kF, kR = Numerical.two_vector_least_square(V = A_conc, W = -B_conc, Y = B_prime)
 
-        M = np.vstack([np.ones(len(Y)), X]).T
-        # M is an nx2 matrix , where n is the number of data points.
-        # The 1st column is all 1's, and the 2nd column contains the values of X
-
-        a, b = np.linalg.lstsq(M, Y, rcond=None)[0]  # Carry out the least-square fit as: Y = a + b X
-        print(f"Least square fit: Y = {a:,.4g} + {b:,.4g} X"
-              f"\n    where X is the array [{reactant_name}] and Y is the time gradient of {product_name}")
+        print(f"Least square fit to {product_name}'(t) = kF * {reactant_name}(t) + kR * (- {product_name}(t) )")
 
         # Plot both Y and its least-square fit, as functions of X
-        fig = PlotlyHelper.plot_curves(x=X, y=[Y , a + b*X],
+        fig = PlotlyHelper.plot_curves(x=A_conc, y=[B_prime , kF * A_conc - kR * B_conc],
                                        title=f"d/dt {product_name}(t) as a function of {reactant_name}(t), alongside its least-square fit",
                                        xlabel=f"{reactant_name}(t)", ylabel=f"{product_name}'(t)",
                                        curve_labels=[f"{product_name}'(t)", "Linear Fit"], legend_title="Curve vs Fit:",
                                        colors=['green', 'red'])
 
-        kR = -a / total_conc
+        print(f"\n-> ESTIMATED RATE CONSTANTS: kF = {kF:,.4g} , kR = {kR:,.4g}")
 
-        kF = b - kR
+        return fig
+
+
+
+    def estimate_rate_constants_association(self, t :np.ndarray,
+                                       A_conc :np.ndarray, B_conc :np.ndarray,  C_conc :np.ndarray,
+                                       reactants :[str, str], product :str):
+        """
+        Estimate the rate constants for a 1-st order association (synthesis) reaction of the type A + B <-> C,
+        given time evolution of [A], [B] and [C] on a grid of time points (don't need to be equally spaced)
+
+        IMPORTANT : This is for reactions with a 1:1:1 stoichiometry
+
+        :param t:               A numpy array of time grid points where the other functions are specified
+        :param A_conc:          A numpy array of the concentrations of the reactant, at the times in the array t
+        :param B_conc:
+        :param C_conc:
+        :param reactants:
+        :param product:
+        :return:                A plotly "Figure" object.  The estimated rate constants are printed out
+        """
+
+        # The rate of change of [product] with time
+        Deriv_C = np.gradient(C_conc, t, edge_order=2)
+
+        # Do a least-square fit
+        kF, kR = Numerical.two_vector_least_square(V = A_conc * B_conc, W = - C_conc, Y = Deriv_C)
+
+        print(f"Least square fit to {product}'(t) = kF * {reactants[0]}(t) * {reactants[1]}(t) + kR * (- {product}(t) )")
+
+        # Plot both Y and its least-square fit, as functions of X
+        fig = PlotlyHelper.plot_curves(x=A_conc, y=[Deriv_C , kF * A_conc * B_conc - kR * C_conc],
+                                       title=f"d/dt {product}(t) as a function of {reactants[0]}(t), alongside its least-square fit",
+                                       xlabel=f"{reactants[0]}(t)", ylabel=f"{product}'(t)",
+                                       curve_labels=[f"{product}'(t)", "Linear Fit"], legend_title="Curve vs Fit:",
+                                       colors=['green', 'red'])
 
         print(f"\n-> ESTIMATED RATE CONSTANTS: kF = {kF:,.4g} , kR = {kR:,.4g}")
 
@@ -2316,7 +2360,7 @@ class UniformCompartment:
         # Prepare a Pandas dataframe with 2 columns
         df = self.get_history(columns=["SYSTEM TIME", chem])
 
-        x_intersection = num.reach_threshold(df, x="SYSTEM TIME", y=chem, y_threshold=threshold)
+        x_intersection = Numerical.reach_threshold(df, x="SYSTEM TIME", y=chem, y_threshold=threshold)
         if x_intersection is None:
             print(f"reach_threshold(): the concentrations of `{chem}` never reaches the specified threshold of {threshold}")
 
@@ -2342,7 +2386,7 @@ class UniformCompartment:
         # Prepare a Pandas dataframe with 3 columns
         df = self.get_history(t_start=t_start, t_end=t_end, columns=["SYSTEM TIME", chem1, chem2])
 
-        intersection = num.curve_intersect(df, x="SYSTEM TIME", var1=chem1, var2=chem2, explain=explain)
+        intersection = Numerical.curve_intersect(df, x="SYSTEM TIME", var1=chem1, var2=chem2, explain=explain)
         if intersection is None:
             print(f"curve_intersect(): No intersection detected between the concentrations of `{chem1}` and `{chem2}` "
                   f"in the time interval [{t_start} - {t_end}]")

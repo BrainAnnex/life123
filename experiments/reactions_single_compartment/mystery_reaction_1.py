@@ -28,7 +28,7 @@
 # ### TAGS :  "numerical", "uniform compartment", "under-the-hood"
 
 # %%
-LAST_REVISED = "Aug. 16, 2024"
+LAST_REVISED = "Aug. 17, 2024"
 LIFE123_VERSION = "1.0.0.beta.38"      # Version this experiment is based on
 
 # %%
@@ -121,9 +121,9 @@ B_conc = df["B"].to_numpy()
 # (in Part 3, we'll do a step-by-step derivation, to see how it works)
 
 # %%
-dynamics.estimate_rate_constants(t=t_arr, 
-                                 reactant_conc=A_conc, product_conc=B_conc, 
-                                 reactant_name="A", product_name="B")
+dynamics.estimate_rate_constants_simple(t=t_arr,
+                                        A_conc=A_conc, B_conc=B_conc,
+                                        reactant_name="A", product_name="B")
 
 # %% [markdown]
 # ### The least-square fit is good...  and the values estimated from the data for kF and kR are in good agreement with the values we used in the simulation to get that data, respectively 12 and 2 (see PART 1, above)  

@@ -111,7 +111,7 @@ C_conc = df["C"].to_numpy()
 # Let's see what happens if we try to do such a linear fit!
 
 # %%
-dynamics.estimate_rate_constants(t=t_arr, reactant_conc=A_conc, product_conc=C_conc, reactant_name="A", product_name="C")
+dynamics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, reactant_name="A", product_name="C")
 
 # %% [markdown]
 # ### A terrible fit!  But it looks like we'll do much better if split it into 3 portions, one where A(t) ranges from 0 to about 0.04, one from about 0.04 to 5, and one from about 5 to 50   
@@ -159,8 +159,8 @@ t_arr_late = t_arr[129:]
 # ### I. Let's start with the EARLY region, when t < 0.028
 
 # %%
-dynamics.estimate_rate_constants(t=t_arr_early, reactant_conc=A_conc_early, product_conc=C_conc_early, 
-                                 reactant_name="A", product_name="C")
+dynamics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_conc=C_conc_early,
+                                        reactant_name="A", product_name="C")
 
 # %% [markdown]
 # Just as we saw in experiment `cascade_2_b`, trying to fit an elementary reaction to that region leads to a **negative** reverse rate constant!  
@@ -170,8 +170,8 @@ dynamics.estimate_rate_constants(t=t_arr_early, reactant_conc=A_conc_early, prod
 # ### II. Let's now consider the MID region (not seen in earlier experiments in this series), when 0.028 < t < 0.1
 
 # %%
-dynamics.estimate_rate_constants(t=t_arr_mid, reactant_conc=A_conc_mid, product_conc=C_conc_mid, 
-                                 reactant_name="A", product_name="C")
+dynamics.estimate_rate_constants_simple(t=t_arr_mid, A_conc=A_conc_mid, B_conc=C_conc_mid,
+                                        reactant_name="A", product_name="C")
 
 # %% [markdown]
 # For this region, too, trying to fit an elementary reaction to that region leads to a **negative** reverse rate!  
@@ -181,8 +181,8 @@ dynamics.estimate_rate_constants(t=t_arr_mid, reactant_conc=A_conc_mid, product_
 # ### III. And now let's consider the LATE region, when t > 0.1
 
 # %%
-dynamics.estimate_rate_constants(t=t_arr_late, reactant_conc=A_conc_late, product_conc=C_conc_late, 
-                                 reactant_name="A", product_name="C")
+dynamics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc=C_conc_late,
+                                        reactant_name="A", product_name="C")
 
 # %% [markdown]
 # This time we have an adequate linear fit AND positive rate constants, but a **huge value of kF** relative to that of any of the elementary reactions!  
