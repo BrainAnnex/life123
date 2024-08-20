@@ -1,8 +1,81 @@
+# Classes ReactionDynamics and VariableTimeSteps:
+
 import numpy as np
+from life123.reaction import Reaction
 
 
 
 class ReactionDynamics:
+    """
+    Static methods about the dynamic evolution of reactions
+    """
+
+    @classmethod
+    def solve_exactly(cls, rxn :Reaction, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
+        """
+        Return the exact solution of the reaction with the requested index,
+        PROVIDED that it is a 1st Order Reaction of the type A <=> B.
+
+        Use the given initial conditions,
+        and return the solutions sampled at the specified times.
+
+        For details, see https://life123.science/reactions
+
+        :param rxn:     Object of type "Reaction", containing data for the reaction of interest
+        :param A0:      The initial concentration of the reactant A
+        :param B0:      The initial concentration of the product B
+        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
+        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
+        """
+
+        reactants, products, kF, kR = rxn.unpack_for_dynamics()
+
+        assert len(reactants) == 1, "Currently only works for `A <-> B` reactions"
+        assert len(products) == 1, "Currently only works for `A <-> B` reactions"
+        assert rxn.extract_stoichiometry(reactants[0]) == 1, \
+            "Currently only works for `A <-> B` reactions"
+        assert rxn.extract_stoichiometry(products[0]) == 1, \
+            "Currently only works for `A <-> B` reactions"
+        # TODO: should also verify the reaction orders to be 1
+
+
+        return cls._exact_solution(kF, kR, A0, B0, t_arr)
+
+
+
+    @classmethod
+    def _exact_solution(cls, kF, kR, A0, B0, t_arr) -> (np.array, np.array):
+        """
+        Return the exact solution of the 1st Order Reaction A <=> B,
+        with the specified parameters,
+        sampled at the given times.
+
+        For details, see https://life123.science/reactions
+
+        :param kF:
+        :param kR:
+        :param A0:
+        :param B0:
+        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
+        :return:        A pair of Numpy arrays
+        """
+        TOT = A0 + B0
+        # (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
+
+        sum_rates = kF + kR
+        A_arr = (A0 - (kR * TOT) / sum_rates) * np.exp(-sum_rates * t_arr) + kR * TOT / sum_rates
+        B_arr = TOT - A_arr
+        return (A_arr, B_arr)
+
+
+
+
+
+
+
+###########################################################################################
+
+class VariableTimeSteps:
     """
     Methods for managing variable time steps during reactions
     """

@@ -8,7 +8,7 @@ from life123.chem_data import ChemData
 from life123.diagnostics import Diagnostics
 from life123.movies import MovieTabular
 from life123.numerical import Numerical
-from life123.reaction_dynamics import ReactionDynamics
+from life123.reaction_dynamics import VariableTimeSteps
 from life123.visualization.plotly_helper import PlotlyHelper
 
 
@@ -97,7 +97,7 @@ class UniformCompartment:
 
 
         # FOR AUTOMATED ADAPTIVE TIME STEP SIZES 
-        self.adaptive_steps = ReactionDynamics()
+        self.adaptive_steps = VariableTimeSteps()
 
         if preset:
             self.adaptive_steps.use_adaptive_preset(preset)
@@ -1244,14 +1244,14 @@ class UniformCompartment:
         # Process the requested reactions
         for i in rxn_list:      # Consider each reaction in turn
             rxn = self.chem_data.get_reaction(i)
-            delta = self.compute_reaction_delta_rate(rxn=rxn)
+            delta = self.compute_reaction_rate(rxn=rxn)
             delta_dict[i] = delta
 
         return delta_dict
 
 
 
-    def compute_reaction_delta_rate(self, rxn) -> float:
+    def compute_reaction_rate(self, rxn) -> float:
         """
         For the SINGLE given reaction, and the current concentrations of chemicals in the system,
         compute the reaction's "rate" (aka "velocity"),
@@ -1286,63 +1286,6 @@ class UniformCompartment:
             reverse_rate *= conc ** order     # Raise to power
 
         return forward_rate - reverse_rate
-
-
-
-    def solve_exactly(self, rxn_index :int, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
-        """
-        Return the exact solution of the reaction with the requested index,
-        PROVIDED that it is a 1st Order Reaction of the type A <=> B.
-
-        Use the given initial conditions,
-        and return the solutions sampled at the specified times.
-
-        For details, see https://life123.science/reactions
-
-        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
-        :param A0:
-        :param B0:
-        :param t_arr:       A Numpy array with the desired times at which the solutions are desired
-        :return:            A pair of Numpy arrays
-        """
-        rxn = self.chem_data.get_reaction(rxn_index)
-        reactants, products, kF, kR = rxn.unpack_for_dynamics()
-
-        assert len(reactants) == 1, "Currently only works for `A <-> B` reactions"
-        assert len(products) == 1, "Currently only works for `A <-> B` reactions"
-        assert rxn.extract_stoichiometry(reactants[0]) == 1, \
-            "Currently only works for `A <-> B` reactions"
-        assert rxn.extract_stoichiometry(products[0]) == 1, \
-            "Currently only works for `A <-> B` reactions"
-        # TODO: should also verify the reaction orders to be 1
-
-
-        TOT = A0 + B0
-        #print(kF, kR, A0, TOT)
-
-        return self._exact_solution(kF, kR, A0, TOT, t_arr)
-
-
-        
-    def _exact_solution(self, kF, kR, A0, TOT, t_arr) -> (np.array, np.array):
-        """
-        Return the exact solution of the 1st Order Reaction A <=> B,
-        with the specified parameters, 
-        sampled at the given times.
-        
-        For details, see https://life123.science/reactions
-
-        :param kF:
-        :param kR:
-        :param A0:
-        :param TOT:
-        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
-        :return:        A pair of Numpy arrays
-        """
-        # (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
-        A_arr = (A0 - (kR * TOT) / (kF + kR)) * np.exp(-(kF + kR) * t_arr) + kR * TOT / (kF + kR)
-        B_arr = TOT - A_arr
-        return (A_arr, B_arr)
 
 
 

@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ### Comparison of:  
+# ## Comparison of:  
 # (1) adaptive variable time steps  
 # (2) fixed time steps   
 # (3) exact solution  
@@ -25,8 +25,8 @@
 # **Background**: please see experiments `react_2_a` and `react_2_b`   
 
 # %%
-LAST_REVISED = "July 24, 2024"
-LIFE123_VERSION = "1.0.0.beta.37"    # Version this experiment is based on
+LAST_REVISED = "Aug. 19, 2024"
+LIFE123_VERSION = "1.0.0.beta.38"    # Version this experiment is based on
 
 # %%
 #import set_path              # Using MyBinder?  Uncomment this before running the next cell!
@@ -40,6 +40,7 @@ from life123 import check_version, ChemData, UniformCompartment
 
 import numpy as np
 import plotly.graph_objects as go
+from life123 import ReactionDynamics
 from life123.visualization.plotly_helper import PlotlyHelper
 
 # %%
@@ -54,13 +55,13 @@ check_version(LIFE123_VERSION)
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-chem = ChemData(names=["A", "B"])
+chem_data = ChemData()
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-chem.add_reaction(reactants="A", products="B", 
+chem_data.add_reaction(reactants="A", products="B", 
                   forward_rate=3., reverse_rate=2.)
 
-chem.describe_reactions()
+chem_data.describe_reactions()
 
 # %%
 
@@ -72,10 +73,10 @@ chem.describe_reactions()
 # we'll note that number, and in Part 2 we'll do exactly that same number of fixed steps
 
 # %%
-dynamics_variable = UniformCompartment(chem_data=chem, preset="mid")
+dynamics_variable = UniformCompartment(chem_data=chem_data, preset="mid")
 
-# Initial concentrations of all the chemicals, in their index order
-dynamics_variable.set_conc([10., 50.])
+# Initial concentrations of all the chemicals
+dynamics_variable.set_conc({"A": 10., "B": 50.})
 
 dynamics_variable.describe_state()
 
@@ -115,11 +116,11 @@ dynamics_variable.plot_history(colors=['darkturquoise', 'orange'], show_interval
 # The fixed time step is chosen to attain the same total number of data points as obtained with the variable time steps of part 1
 
 # %%
-dynamics_fixed = UniformCompartment(chem_data=chem)   # Re-use same chemicals and reactions of part 1
+dynamics_fixed = UniformCompartment(chem_data=chem_data)   # Re-use same chemicals and reactions of part 1
 
 # %%
-# Initial concentrations of all the chemicals, in their index order
-dynamics_fixed.set_conc([10., 50.])
+# Initial concentrations of all the chemicals
+dynamics_fixed.set_conc({"A": 10., "B": 50.})
 
 dynamics_fixed.describe_state()
 
@@ -155,7 +156,9 @@ t_arr
 
 # %%
 # The exact solution is available for a simple scenario like the one we're simulating here
-A_exact, B_exact = dynamics_variable.solve_exactly(rxn_index=0, A0=10., B0=50., t_arr=t_arr)
+rxn = chem_data.get_reaction(0)   # Object of type life123.reaction.Reaction
+
+A_exact, B_exact = ReactionDynamics.solve_exactly(rxn=rxn, A0=10., B0=50., t_arr=t_arr)
 
 # %%
 fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=[A_exact, B_exact], title="EXACT solution", xlabel="SYSTEM TIME", ylabel="concentration", 
@@ -201,7 +204,7 @@ PlotlyHelper.combine_plots(fig_list=[fig_fixed, fig_variable, fig_exact],
 
 # %%
 # A coarser version of the variable-step simulation of Part 1
-dynamics_variable_new = UniformCompartment(chem_data=chem, preset="fast")   # Re-use same chemicals and reactions of part 2
+dynamics_variable_new = UniformCompartment(chem_data=chem_data, preset="fast")   # Re-use same chemicals and reactions of part 2
 
 dynamics_variable_new.set_conc([10., 50.])
 

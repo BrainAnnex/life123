@@ -1,11 +1,29 @@
 import pytest
 import numpy as np
-from life123.reaction_dynamics import ReactionDynamics
+from life123.reaction import Reaction
+from life123.reaction_dynamics import ReactionDynamics, VariableTimeSteps
 
 
+
+
+def test_solve_exactly():
+    rxn = Reaction(reactants = "A", products="B", forward_rate=3., reverse_rate=2.)
+
+    t = np.array([0, 0.005, 0.31739, 1.12, 100.])
+
+    A_exact, B_exact = ReactionDynamics.solve_exactly(rxn=rxn, A0=80., B0=10., t_arr=t)
+
+    assert np.allclose(A_exact, [80, 78.91363613, 45.0, 36.162706, 36])
+    assert np.allclose(B_exact, [10, 11.08636387, 45.0, 53.837294, 54])
+
+
+
+
+
+#########################################################################################################
 
 def test_set_thresholds():
-    rd = ReactionDynamics()
+    rd = VariableTimeSteps()
     assert rd.thresholds == []
 
     with pytest.raises(Exception):
@@ -53,7 +71,7 @@ def test_set_thresholds():
 
 
 def test_delete_thresholds():
-    rd = ReactionDynamics()
+    rd = VariableTimeSteps()
     assert rd.thresholds == []
 
     with pytest.raises(Exception):
@@ -77,7 +95,7 @@ def test_delete_thresholds():
 
 
 def test_adjust_timestep():
-    rd = ReactionDynamics()
+    rd = VariableTimeSteps()
 
     prev =     np.array([1,   8, 8, 10, 10])
     baseline = np.array([2,   5, 5, 14, 14])
@@ -184,7 +202,7 @@ def test_adjust_timestep():
 
 
 def test_relative_significance():
-    rd = ReactionDynamics()
+    rd = VariableTimeSteps()
     
     # Assess the relative significance of various quantities
     #       relative to a baseline value of 10
@@ -204,7 +222,7 @@ def test_relative_significance():
 #################   INDIVIDUAL NORMS   #################
 
 def test_norms():
-    rd = ReactionDynamics()
+    rd = VariableTimeSteps()
     
     prev =     np.array([1,   8, 8, 10, 10])
     baseline = np.array([2,   5, 5, 14, 14])
@@ -225,7 +243,7 @@ def test_norms():
 
 
 def test_norm_A():
-    rd = ReactionDynamics()
+    rd = VariableTimeSteps()
 
     delta_conc = np.array([1, 4])
     result = rd.norm_A(delta_conc)
@@ -246,7 +264,7 @@ def test_norm_A():
 
 
 def test_norm_B():
-    rd = ReactionDynamics()
+    rd = VariableTimeSteps()
 
     delta = np.array([4, -1])
     base = np.array([10, 2])
@@ -281,7 +299,7 @@ def test_norm_B():
 
 
 def test_norm_C():
-    rd = ReactionDynamics()
+    rd = VariableTimeSteps()
 
     result = rd.norm_C(prev_conc=np.array([1]), baseline_conc=np.array([2]), delta_conc=np.array([0.5]))
     assert result == 0
@@ -327,7 +345,7 @@ def test_norm_C():
 
 
 def test_norm_D():
-    rd = ReactionDynamics()
+    rd = VariableTimeSteps()
 
     prev =     np.array([ 12.96672432,  31.10067726,  55.93259842,  44.72389482, 955.27610518])
     baseline = np.array([ 12.99244738,  31.04428765,  55.96326497,  43.91117372, 956.08882628])
