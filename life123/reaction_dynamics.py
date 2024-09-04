@@ -13,7 +13,7 @@ class ReactionDynamics:
     @classmethod
     def solve_exactly(cls, rxn :Reaction, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
         """
-        Return the exact solution of the reaction with the requested index,
+        Return the exact solution of the given reaction,
         PROVIDED that it is a 1st Order Reaction of the type A <=> B.
 
         Use the given initial conditions,
@@ -38,19 +38,18 @@ class ReactionDynamics:
             "Currently only works for `A <-> B` reactions"
         # TODO: should also verify the reaction orders to be 1
 
-
         return cls._exact_solution(kF, kR, A0, B0, t_arr)
 
 
 
     @classmethod
-    def _exact_solution(cls, kF, kR, A0, B0, t_arr) -> (np.array, np.array):
+    def _exact_solution(cls, kF, kR, A0, B0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray):
         """
         Return the exact solution of the 1st Order Reaction A <=> B,
         with the specified parameters,
         sampled at the given times.
 
-        For details, see https://life123.science/reactions
+        For details, see https://life123.science/reactions   (TODO: make B(t) more symmetric, as suggested by ChatGPT)
 
         :param kF:
         :param kR:
@@ -60,10 +59,10 @@ class ReactionDynamics:
         :return:        A pair of Numpy arrays
         """
         TOT = A0 + B0
-        # (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
+        # Formula is:  A = (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
 
         sum_rates = kF + kR
-        A_arr = (A0 - (kR * TOT) / sum_rates) * np.exp(-sum_rates * t_arr) + kR * TOT / sum_rates
+        A_arr = (A0 - (kR * TOT) / sum_rates) * np.exp(-sum_rates * t_arr) + (kR * TOT / sum_rates)
         B_arr = TOT - A_arr
         return (A_arr, B_arr)
 
