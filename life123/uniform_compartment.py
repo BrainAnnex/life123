@@ -41,10 +41,11 @@ class UniformCompartment:
     def __init__(self, chem_data=None, names=None, preset="mid"):
         """
         Note: AT MOST 1 of the following 2 arguments can be passed
-        :param chem_data:   [OPTIONAL 1] Object of type "ChemData" (with data about the chemicals and their reactions)
-        :param names:       [OPTIONAL 2] A single name, or list or tuple of names, of the chemicals
+        :param chem_data:   [OPTIONAL 1] Object of type "ChemData" (with data
+                                         about the chemicals and their reactions)
+        :param names:       [OPTIONAL 2] A single name, or list or tuple of names, of the chemicals;
                                          the reactions can be added later, with calls to add_reaction().
-                                         Providing a list is useful to make the chemicals appear in a particular, desired order
+                                         Providing a list is useful to make the chemicals appear in a particular desired order
 
         :param preset:  String with code that can be adjusted make the time resolution finer or coarser;
                         it will stay in effect from now on, unless explicitly changed later
@@ -139,6 +140,15 @@ class UniformCompartment:
     #####################################################################################################
 
 
+    def get_chem_data(self) -> ChemData:
+        """
+
+        :return:    Object of type "ChemData"
+        """
+        return self.chem_data
+
+
+
     def set_conc(self, conc: Union[list, tuple, dict], snapshot=True) -> None:
         """
         Set the concentrations of ALL the chemicals at once
@@ -148,7 +158,8 @@ class UniformCompartment:
                                 in their index order
                             OR
                             (2) a dict indexed by the chemical names, for some or all of the chemicals
-                                EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}  Anything not specified will be set to zero
+                                Anything not specified will be set to zero.
+                                EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}
 
                         Note: any previous values will get over-written
 
@@ -1569,11 +1580,11 @@ class UniformCompartment:
 
     def plot_data(self, df :pd.DataFrame, x_var="SYSTEM TIME", fields=None,
                   colors=None, title=None, title_prefix=None,
-                  xrange=None, ylabel=None,
-                  vertical_lines_to_add=None, show_intervals=False, show=False) -> go.Figure:
+                  xrange=None, ylabel=None, legend_header="Chemical",
+                  vertical_lines_to_add=None,
+                  show_intervals=False, show=False) -> go.Figure:
         """
-        Using plotly, draw the plots of concentration from the given dataframe, based on history data that gets
-        automatically saved when running reactions.
+        Using plotly, draw the plots of concentration from the given dataframe.
 
         Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
 
@@ -1583,7 +1594,7 @@ class UniformCompartment:
                                 or a string with just one name;
                                 if None, then display all
         :param colors:      (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
-                                or list of names to use, in order; if None, then use the hardwired defaults
+                                or list of names to use, in order; if None, then the hardwired default colors are used
         :param title:       (OPTIONAL) Title for the plot;
                                 if None, use default titles that will vary based on the # of reactions; EXAMPLES:
                                     "Changes in concentrations for 5 reactions"
@@ -1591,9 +1602,9 @@ class UniformCompartment:
                                     "Changes in concentration for `2 S <-> U` and `S <-> X`"
         :param title_prefix: (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
                                     whether the title is specified by the user or automatically generated
-        :param xrange:          (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
+        :param xrange:       (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param ylabel:          (OPTIONAL) Caption to use for the y-axis.
+        :param ylabel:       (OPTIONAL) Caption to use for the y-axis.
                                     By default, the name in `the chemicals` argument, in square brackets, if only 1 chemical,
                                     or "Concentration" if more than 1 (a legend also shown)
         :param vertical_lines_to_add:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
@@ -1615,6 +1626,7 @@ class UniformCompartment:
         """
         # TODO: allow alternate label for x-axis
         # TODO: allow specifying a yrange
+        # TODO: move to a general visualization module
 
         MAX_NUMBER_VERTICAL_LINES = 150     # Used to avoid extreme clutter in the plot, in case
                                             # a very large number of vertical lines is requested;
@@ -1646,7 +1658,7 @@ class UniformCompartment:
         fig = px.line(data_frame=df, x=x_var, y=fields,
                       title=title, range_x=xrange,
                       color_discrete_sequence = colors,
-                      labels={"value": ylabel, "variable": "Chemical"})
+                      labels={"value": ylabel, "variable": legend_header})
 
         if type(fields) == str:     # Somehow, the `labels` argument in px.line, above, is ignored when `fields` is just a string
             fig.update_layout(yaxis_title=ylabel)
@@ -1799,7 +1811,7 @@ class UniformCompartment:
                                    If this parameter is specified, an extra column - called "search_value" -
                                    is inserted at the beginning of the dataframe.
                                    If either the "head" or the "tail" arguments are passed, this argument will get ignored
-        :param columns: (OPTIONAL) List of columns to return; if not specified, all are returned.
+        :param columns: (OPTIONAL) Name, or list of names, of the column(s) to return; if not specified, all are returned.
                                    Make sure to include "SYSTEM TIME" in the list, if the time variable needs to be included
 
         :return:        A Pandas dataframe
@@ -1811,8 +1823,8 @@ class UniformCompartment:
                                         search_col="SYSTEM TIME", val_start=t_start, val_end=t_end)
 
         if columns:
-            assert type(columns) == list, \
-                "get_history(): the argument `columns`, if specified, must be a list"
+            assert (type(columns) == list) or (type(columns) == str), \
+                "get_history(): the argument `columns`, if specified, must be a list or string"
             return df[columns]
 
         return df
@@ -2027,19 +2039,19 @@ class UniformCompartment:
     def find_equilibrium_conc(self, rxn_index :int) -> dict:
         """
         Determine the equilibrium concentrations that would be reached by the chemicals
-        participating in the specified reaction, given their current concentrations,
+        participating in the specified reversible reaction, given their current concentrations,
         IN THE ABSENCE of any other reaction.
 
-        IMPORTANT: currently limited to just aA + bB <-> cC + dD reactions, first-order in all chemicals,
-                   (some of terms can be missing)
-                   An Exception will be raised in all other cases
+        RESTRICTIONS:  currently limited to just aA + bB <-> cC + dD reversible reactions,
+                       first-order in all chemicals (some of terms may be missing.)
+                       An Exception will be raised in all other cases!
 
         :param rxn_index:   The integer index (0-based) to identify the reaction of interest
         :return:            A dictionary of the equilibrium concentrations of the
                                 chemicals involved in the specified reaction
                             EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8}
         """
-        #TODO: generalize to reactions with more terms and higher order
+        #TODO: handle scenarios where kF or kR is zero
 
         rxn = self.chem_data.get_reaction(rxn_index)    # Look up the requested reaction
 
@@ -2060,8 +2072,9 @@ class UniformCompartment:
         the equilibrium equation is:  
                 [(C0 + c*m) (D0 + d*m)] / [(A0 - a*m) (B0 - b*m)]  =  K
             
-        where K is the Equilibrium constant,
-        and the unknown m (to be solved for) is the number of "moles of forward reaction", 
+        where K is the Equilibrium constant (kF/kR),
+        and the unknown m (to be solved for) is the number of "moles/liter of forward reaction"
+        (i.e. the the Product concentration change)
         from the starting point to the equilibrium point
         
         For reaction terms that aren't present (for example the "D" part in the reaction A + B <-> C),

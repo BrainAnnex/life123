@@ -1,6 +1,9 @@
 # Classes ReactionDynamics and VariableTimeSteps:
 
+import math
+import cmath
 import numpy as np
+from scipy.special import lambertw
 from life123.reaction import Reaction
 
 
@@ -22,8 +25,8 @@ class ReactionDynamics:
         For details, see https://life123.science/reactions
 
         :param rxn:     Object of type "Reaction", containing data for the reaction of interest
-        :param A0:      The initial concentration of the reactant A
-        :param B0:      The initial concentration of the product B
+        :param A0:      Initial concentration of the reactant A
+        :param B0:      Initial concentration of the product B
         :param t_arr:   A Numpy array with the desired times at which the solutions are desired
         :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
         """
@@ -51,12 +54,14 @@ class ReactionDynamics:
 
         For details, see https://life123.science/reactions   (TODO: make B(t) more symmetric, as suggested by ChatGPT)
 
-        :param kF:
-        :param kR:
-        :param A0:
-        :param B0:
+        :param kF:      Forward reaction rate constant
+        :param kR:      Reverse reaction rate constant
+        :param A0:      Initial concentration of the reactant A
+        :param B0:      Initial concentration of the product B
         :param t_arr:   A Numpy array with the desired times at which the solutions are desired
-        :return:        A pair of Numpy arrays
+
+        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
+                            at the times given by the argument t_arr
         """
         TOT = A0 + B0
         # Formula is:  A = (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
@@ -64,9 +69,156 @@ class ReactionDynamics:
         sum_rates = kF + kR
         A_arr = (A0 - (kR * TOT) / sum_rates) * np.exp(-sum_rates * t_arr) + (kR * TOT / sum_rates)
         B_arr = TOT - A_arr
+
         return (A_arr, B_arr)
 
 
+
+    @classmethod
+    def approx_solution_combination_rxn(cls, kF, kR, A0, B0, C0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray):
+        """
+        Return the approximate analytical solution, by way of exponentials,
+        of the reversible 2nd Order Reaction A + B <=> C,
+        with the specified parameters, sampled at the given times.
+
+        :param kF:      Forward reaction rate constant (cannot be zero)
+        :param kR:      Reverse reaction rate constant
+        :param A0:      Initial concentration of the 1st reactant A
+        :param B0:      Initial concentration of the 2nd reactant B
+        :param C0:      Initial concentration of the product C
+        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
+
+        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
+                            at the times given by the argument t_arr
+        """
+        # Calculate the equilibrium concentrations
+        K_inv = kR / kF     # Inverse of the equilibrium constant.  Note that we're assuming kF isn't zero
+
+        # The following derive from solving the quadratic equation  (A0 - m) * (B0 - m) / (C0 + m) == K_inv , for m
+        # where m is the Product concentration change ("moles/liter of forward reaction")
+        TOT_reactants = A0+B0
+        r = (K_inv**2 + TOT_reactants**2) / 4  +  K_inv * TOT_reactants / 2  + C0 * K_inv - A0 * B0
+        m = (K_inv + TOT_reactants)/2  - math.sqrt(r)         # Product concentration change
+
+        # The reactants get consumed by m, while the product increases by m
+        A_eq = A0 - m
+        B_eq = B0 - m
+        #C_eq = C0 + m
+
+        #print(f"\nProduct concentration change: {m} | A_eq: {A_eq}  |  B_eq: {B_eq}")
+
+        l = (kF + kR) * (A_eq + B_eq)  # Relaxation rate constant λ
+
+        AC_tot = A0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
+        delta_B_A = B0 - A0     # Another conserved quantity
+
+        A_arr = A_eq + (A0 - A_eq) * np.exp(-l * t_arr)     # Approximate analytical solution
+        B_arr = A_arr + delta_B_A
+        C_arr = AC_tot - A_arr
+
+        return (A_arr, B_arr, C_arr)
+
+
+
+    @classmethod
+    def exact_solution_combination_rxn(cls, kF, kR, A0, B0, C0, t) -> (np.ndarray, np.ndarray, np.ndarray):
+        """
+        Return the exact solution of the reversible 2nd Order Reaction A + B <=> C,
+        with the specified parameters,
+        sampled at the given times.
+
+        :param kF:      Forward reaction rate constant
+        :param kR:      Reverse reaction rate constant 
+        :param A0:      Initial concentration of the 1st reactant A
+        :param B0:      Initial concentration of the 2nd reactant B
+        :param C0:      Initial concentration of the product C
+        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
+
+        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
+                            at the times given by the argument t_arr
+        """
+        #TODO: test!
+
+        AC_tot = A0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
+        BC_tot = B0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
+
+        rad = 4 * AC_tot * BC_tot * kF**2 - ( (AC_tot + BC_tot) * kF + kR )**2
+        
+        div = A0**2 * kF**2 + B0**2 * kF**2 + 2 * B0 * kF * kR + \
+              4 * C0 * kF * kR + kR**2 + 2 * A0 * kF * (-B0 * kF + kR)
+
+        # Note: div = -rad
+
+        arctan_arg = (A0 * kF + B0 * kF + kR) * cmath.sqrt(rad) / div
+
+        arctan= np.arctan(arctan_arg)
+
+        f = 0.5 * cmath.sqrt(rad)
+
+        tan = np.tan(f * t + arctan)
+
+        big = cmath.sqrt(rad) * tan
+
+        factor = (A0 * kF + B0 * kF + kR) + 2 * C0 * kF+ big    # Note repeat of portion from arctan_arg term
+        
+        final = factor / (2*kF)
+
+        return final.real
+
+
+        for t in t_arr:
+            pass
+
+
+        #return (A_arr, B_arr, C_arr)
+
+
+
+    @classmethod
+    def exact_solution_combination_rxn_WRONG(cls, kF, kR, A0, B0, C0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray):
+        """
+        Return the exact solution of the reversible 2nd Order Reaction A + B <=> C,
+        with the specified parameters,
+        sampled at the given times.
+        The Lambert W function is utilized for the analytical solution.
+
+        :param kF:      Forward reaction rate constant
+        :param kR:      Reverse reaction rate constant (cannot be zero)
+        :param A0:      Initial concentration of the 1st reactant A
+        :param B0:      Initial concentration of the 2nd reactant B
+        :param C0:      Initial concentration of the product C
+        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
+
+        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
+                            at the times given by the argument t_arr
+        """
+        #TODO: IT DOES NOT WORK! :(
+
+        # Calculate the equilibrium concentrations
+        #K_inv = kR / kF     # Inverse of the equilibrium constant.  Note that we're assuming kF isn't zero
+
+
+        AC_tot = A0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
+        BC_tot = B0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
+        #delta_B_A = B0 - A0     # Another conserved quantity
+
+        #A_arr = 0
+        #B_arr = A_arr + delta_B_A
+
+        for t in t_arr:
+            # According to ChatGPT
+            p = kF*A0/kR * math.exp((kF*A0-kR)*t/kR)
+            A = kR * A0 / (kR + kF * A0 * lambertw(p))
+            print(f"\nA({t}) = {A}")
+
+            # According to Perplexity
+            term = AC_tot + BC_tot - C0
+            v = (kF*term/kR * math.exp(kF*term - kR*t))
+            C = AC_tot + BC_tot - lambertw(v) / kF
+            print(f"C({t}) = {C}")
+
+
+        #return (A_arr, B_arr, C_arr)
 
 
 

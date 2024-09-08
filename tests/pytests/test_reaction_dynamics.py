@@ -18,6 +18,47 @@ def test_solve_exactly():
 
 
 
+def test_approx_solution_combination_rxn():
+    #rxn = Reaction(reactants = ["A", "B"], products="C", forward_rate=3., reverse_rate=2.)
+
+    t = np.array([0, 0.000864, 0.001555, 0.009850, 0.067400])
+
+    result = ReactionDynamics.approx_solution_combination_rxn(kF=5., kR=2., A0=10., B0=50., C0=20., t_arr=t)
+
+    assert np.allclose(result[0], [10., 7.88742367,   6.53396759,  0.88583575,  0.29487746])
+    assert np.allclose(result[1], [50., 47.88742367, 46.53396759, 40.88583575, 40.29487746])
+    assert np.allclose(result[2], [20., 22.11257633, 23.46603241, 29.11416425, 29.70512254])
+
+
+
+def test_exact_solution_combination_rxn():
+    #rxn = Reaction(reactants = ["A", "B"], products="C", forward_rate=3., reverse_rate=2.)
+
+    t = np.array([0, 0.000864, 0.001555, 0.009850, 0.067400])
+
+    print()
+    result = ReactionDynamics.exact_solution_combination_rxn(kF=5., kR=2., A0=10., B0=50., C0=20., t=0)
+    print(result)
+    print()
+    result = ReactionDynamics.exact_solution_combination_rxn(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.03)
+    print(result)
+
+
+
+def test_exact_solution_combination_rxn_WRONG():
+    #rxn = Reaction(reactants = ["A", "B"], products="C", forward_rate=3., reverse_rate=2.)
+
+    t = np.array([0, 0.000864, 0.001555, 0.009850, 0.067400])
+
+    result = ReactionDynamics.exact_solution_combination_rxn_WRONG(kF=5., kR=2., A0=10., B0=50., C0=20., t_arr=t)
+
+    '''
+    assert np.allclose(result[0], [10., 7.88742367,   6.53396759,  0.88583575,  0.29487746])
+    assert np.allclose(result[1], [50., 47.88742367, 46.53396759, 40.88583575, 40.29487746])
+    assert np.allclose(result[2], [20., 22.11257633, 23.46603241, 29.11416425, 29.70512254])
+    '''
+
+
 
 
 #########################################################################################################
