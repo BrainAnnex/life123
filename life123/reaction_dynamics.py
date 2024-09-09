@@ -1,8 +1,184 @@
+# Classes ReactionDynamics and VariableTimeSteps:
+
+import math
+import cmath
 import numpy as np
+from scipy.special import lambertw
+from life123.reaction import Reaction
 
 
 
 class ReactionDynamics:
+    """
+    Static methods about the dynamic evolution of reactions
+    """
+
+    @classmethod
+    def solve_exactly(cls, rxn :Reaction, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
+        """
+        Return the exact solution of the given reaction,
+        PROVIDED that it is a 1st Order Reaction of the type A <=> B.
+
+        Use the given initial conditions,
+        and return the solutions sampled at the specified times.
+
+        For details, see https://life123.science/reactions
+
+        :param rxn:     Object of type "Reaction", containing data for the reaction of interest
+        :param A0:      Initial concentration of the reactant A
+        :param B0:      Initial concentration of the product B
+        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
+        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
+        """
+
+        reactants, products, kF, kR = rxn.unpack_for_dynamics()
+
+        assert len(reactants) == 1, "Currently only works for `A <-> B` reactions"
+        assert len(products) == 1, "Currently only works for `A <-> B` reactions"
+        assert rxn.extract_stoichiometry(reactants[0]) == 1, \
+            "Currently only works for `A <-> B` reactions"
+        assert rxn.extract_stoichiometry(products[0]) == 1, \
+            "Currently only works for `A <-> B` reactions"
+        # TODO: should also verify the reaction orders to be 1
+
+        return cls._exact_solution(kF, kR, A0, B0, t_arr)
+
+
+
+    @classmethod
+    def _exact_solution(cls, kF, kR, A0, B0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray):
+        """
+        Return the exact solution of the 1st Order Reaction A <=> B,
+        with the specified parameters,
+        sampled at the given times.
+
+        For details, see https://life123.science/reactions   (TODO: make B(t) more symmetric, as suggested by ChatGPT)
+
+        :param kF:      Forward reaction rate constant
+        :param kR:      Reverse reaction rate constant
+        :param A0:      Initial concentration of the reactant A
+        :param B0:      Initial concentration of the product B
+        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
+
+        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
+                            at the times given by the argument t_arr
+        """
+        TOT = A0 + B0
+        # Formula is:  A = (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
+
+        sum_rates = kF + kR
+        A_arr = (A0 - (kR * TOT) / sum_rates) * np.exp(-sum_rates * t_arr) + (kR * TOT / sum_rates)
+        B_arr = TOT - A_arr
+
+        return (A_arr, B_arr)
+
+
+
+    @classmethod
+    def approx_solution_combination_rxn(cls, kF, kR, A0, B0, C0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray):
+        """
+        Return the approximate analytical solution, by way of exponentials,
+        of the reversible 2nd Order Reaction A + B <=> C,
+        with the specified parameters, sampled at the given times.
+
+        :param kF:      Forward reaction rate constant (cannot be zero)
+        :param kR:      Reverse reaction rate constant
+        :param A0:      Initial concentration of the 1st reactant A
+        :param B0:      Initial concentration of the 2nd reactant B
+        :param C0:      Initial concentration of the product C
+        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
+
+        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
+                            at the times given by the argument t_arr
+        """
+        # Calculate the equilibrium concentrations
+        K_inv = kR / kF     # Inverse of the equilibrium constant.  Note that we're assuming kF isn't zero
+
+        # The following derive from solving the quadratic equation  (A0 - m) * (B0 - m) / (C0 + m) == K_inv , for m
+        # where m is the Product concentration change ("moles/liter of forward reaction")
+        TOT_reactants = A0+B0
+        r = (K_inv**2 + TOT_reactants**2) / 4  +  K_inv * TOT_reactants / 2  + C0 * K_inv - A0 * B0
+        m = (K_inv + TOT_reactants)/2  - math.sqrt(r)         # Product concentration change
+
+        # The reactants get consumed by m, while the product increases by m
+        A_eq = A0 - m
+        B_eq = B0 - m
+        #C_eq = C0 + m
+
+        #print(f"\nProduct concentration change: {m} | A_eq: {A_eq}  |  B_eq: {B_eq}")
+
+        l = (kF + kR) * (A_eq + B_eq)  # Relaxation rate constant λ
+
+        AC_tot = A0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
+        delta_B_A = B0 - A0     # Another conserved quantity
+
+        A_arr = A_eq + (A0 - A_eq) * np.exp(-l * t_arr)     # Approximate analytical solution
+        B_arr = A_arr + delta_B_A
+        C_arr = AC_tot - A_arr
+
+        return (A_arr, B_arr, C_arr)
+
+
+
+    @classmethod
+    def exact_solution_combination_rxn(cls, kF, kR, A0, B0, C0, t_arr) -> (np.ndarray, np.ndarray, np.ndarray):
+        """
+        Return the exact solution of the reversible 2nd Order Reaction A + B <=> C,
+        with the specified parameters,
+        sampled at the given times.
+
+        :param kF:      Forward reaction rate constant
+        :param kR:      Reverse reaction rate constant
+        :param A0:      Initial concentration of the 1st reactant A
+        :param B0:      Initial concentration of the 2nd reactant B
+        :param C0:      Initial concentration of the product C
+        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
+
+        :return:        A triplet of Numpy arrays with, respectively, the concentrations of A, B and C
+                            at the times given by the argument t_arr
+        """
+        AC_tot = A0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
+        BC_tot = B0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
+
+        alpha = kF
+        beta = kF * (AC_tot + BC_tot) + kR
+        gamma = kF * AC_tot * BC_tot
+
+        '''
+        The ODE to solve for C(t) is:
+            C'(t) = kF A(t) B(t) - kR C(t)
+            
+        which can be re-arranged to:
+            C'(t) = alpha [C(t)]^2 - beta C(t) + gamma
+        
+        The following is based on the answer by Mathematica v.7 to:
+            DSolve[{c'[t] == alpha (c[t])^2 - beta c[t] + gamma, c[0] == C0}, c[t], t]
+            Simplify[%]
+        '''
+        term = - beta**2 + 4 * alpha * gamma
+        sqrt_term = cmath.sqrt(term)
+
+        arctan_arg = (beta - 2 * alpha * C0) / sqrt_term    # This will be the argument to pass to the ArcTan function, below
+        arctan_value = np.arctan(arctan_arg)
+        # Note that every variable so far is a constant, NOT dependent on time
+
+        tan_arg = 0.5 * sqrt_term * t_arr - arctan_value     # This will be the argument to pass to the Tan function, below
+
+        result = (beta + sqrt_term * np.tan(tan_arg) ) / (2*alpha)
+        C_arr = result.real             # Drop the imaginary components (which ought to be very close to zero)
+
+        A_arr = AC_tot - C_arr
+        B_arr = BC_tot - C_arr
+
+        return (A_arr, B_arr, C_arr)
+
+
+
+
+
+####################################################################################################
+
+class VariableTimeSteps:
     """
     Methods for managing variable time steps during reactions
     """
@@ -433,6 +609,40 @@ class ReactionDynamics:
 
         # If we get thus far, none of the rules were found applicable
         return {"action": "stay", "step_factor": 1, "norms": all_norms, "applicable_norms": "ALL"}
+
+
+
+    def relative_significance(self, value :float, baseline :float) -> str:
+        """
+        Estimate, in a loose categorical fashion, the magnitude of the quantity "value"
+        in proportion to the quantity "baseline".
+        Both are assumed non-negative (NOT checked.)
+        Return one of:
+            "S" ("Small" ; up to 1/2 the size)
+            "C" ("Comparable" ; from 1/2 to double)
+            "L" ("Large" ; over double the size)
+        This method is meant for large-scale computations, and on purpose avoids doing divisions.
+
+        NOT IN CURRENT ACTIVE USAGE (in former use for the discontinued substep implementation)
+
+        :param value:
+        :param baseline:
+        :return:        An assessment of relative significance, as one of
+                        "S" ("Small"), "C" ("Comparable"), "L" ("Large")
+        """
+        #TODO: a Numpy array version
+
+        if value < baseline:
+            if value + value < baseline:
+                return "S"
+            else:
+                return "C"
+
+        else:
+            if baseline + baseline < value:
+                return "L"
+            else:
+                return "C"
 
 
 

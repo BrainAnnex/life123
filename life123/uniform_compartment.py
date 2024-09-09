@@ -7,8 +7,8 @@ from typing import Union
 from life123.chem_data import ChemData
 from life123.diagnostics import Diagnostics
 from life123.movies import MovieTabular
-from life123.numerical import Numerical as num
-from life123.reaction_dynamics import ReactionDynamics
+from life123.numerical import Numerical
+from life123.reaction_dynamics import VariableTimeSteps
 from life123.visualization.plotly_helper import PlotlyHelper
 
 
@@ -41,10 +41,11 @@ class UniformCompartment:
     def __init__(self, chem_data=None, names=None, preset="mid"):
         """
         Note: AT MOST 1 of the following 2 arguments can be passed
-        :param chem_data:   [OPTIONAL 1] Object of type "ChemData" (with data about the chemicals and their reactions)
-        :param names:       [OPTIONAL 2] A single name, or list or tuple of names, of the chemicals
+        :param chem_data:   [OPTIONAL 1] Object of type "ChemData" (with data
+                                         about the chemicals and their reactions)
+        :param names:       [OPTIONAL 2] A single name, or list or tuple of names, of the chemicals;
                                          the reactions can be added later, with calls to add_reaction().
-                                         Providing a list is useful to make the chemicals appear in a particular, desired order
+                                         Providing a list is useful to make the chemicals appear in a particular desired order
 
         :param preset:  String with code that can be adjusted make the time resolution finer or coarser;
                         it will stay in effect from now on, unless explicitly changed later
@@ -97,7 +98,7 @@ class UniformCompartment:
 
 
         # FOR AUTOMATED ADAPTIVE TIME STEP SIZES 
-        self.adaptive_steps = ReactionDynamics()
+        self.adaptive_steps = VariableTimeSteps()
 
         if preset:
             self.adaptive_steps.use_adaptive_preset(preset)
@@ -139,6 +140,15 @@ class UniformCompartment:
     #####################################################################################################
 
 
+    def get_chem_data(self) -> ChemData:
+        """
+
+        :return:    Object of type "ChemData"
+        """
+        return self.chem_data
+
+
+
     def set_conc(self, conc: Union[list, tuple, dict], snapshot=True) -> None:
         """
         Set the concentrations of ALL the chemicals at once
@@ -148,7 +158,8 @@ class UniformCompartment:
                                 in their index order
                             OR
                             (2) a dict indexed by the chemical names, for some or all of the chemicals
-                                EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}  Anything not specified will be set to zero
+                                Anything not specified will be set to zero.
+                                EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}
 
                         Note: any previous values will get over-written
 
@@ -1244,14 +1255,14 @@ class UniformCompartment:
         # Process the requested reactions
         for i in rxn_list:      # Consider each reaction in turn
             rxn = self.chem_data.get_reaction(i)
-            delta = self.compute_reaction_delta_rate(rxn=rxn)
+            delta = self.compute_reaction_rate(rxn=rxn)
             delta_dict[i] = delta
 
         return delta_dict
 
 
 
-    def compute_reaction_delta_rate(self, rxn) -> float:
+    def compute_reaction_rate(self, rxn) -> float:
         """
         For the SINGLE given reaction, and the current concentrations of chemicals in the system,
         compute the reaction's "rate" (aka "velocity"),
@@ -1286,63 +1297,6 @@ class UniformCompartment:
             reverse_rate *= conc ** order     # Raise to power
 
         return forward_rate - reverse_rate
-
-
-
-    def solve_exactly(self, rxn_index :int, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
-        """
-        Return the exact solution of the reaction with the requested index,
-        PROVIDED that it is a 1st Order Reaction of the type A <=> B.
-
-        Use the given initial conditions,
-        and return the solutions sampled at the specified times.
-
-        For details, see https://life123.science/reactions
-
-        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
-        :param A0:
-        :param B0:
-        :param t_arr:       A Numpy array with the desired times at which the solutions are desired
-        :return:            A pair of Numpy arrays
-        """
-        rxn = self.chem_data.get_reaction(rxn_index)
-        reactants, products, kF, kR = rxn.unpack_for_dynamics()
-
-        assert len(reactants) == 1, "Currently only works for `A <-> B` reactions"
-        assert len(products) == 1, "Currently only works for `A <-> B` reactions"
-        assert rxn.extract_stoichiometry(reactants[0]) == 1, \
-            "Currently only works for `A <-> B` reactions"
-        assert rxn.extract_stoichiometry(products[0]) == 1, \
-            "Currently only works for `A <-> B` reactions"
-        # TODO: should also verify the reaction orders to be 1
-
-
-        TOT = A0 + B0
-        #print(kF, kR, A0, TOT)
-
-        return self._exact_solution(kF, kR, A0, TOT, t_arr)
-
-
-        
-    def _exact_solution(self, kF, kR, A0, TOT, t_arr) -> (np.array, np.array):
-        """
-        Return the exact solution of the 1st Order Reaction A <=> B,
-        with the specified parameters, 
-        sampled at the given times.
-        
-        For details, see https://life123.science/reactions
-
-        :param kF:
-        :param kR:
-        :param A0:
-        :param TOT:
-        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
-        :return:        A pair of Numpy arrays
-        """
-        # (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
-        A_arr = (A0 - (kR * TOT) / (kF + kR)) * np.exp(-(kF + kR) * t_arr) + kR * TOT / (kF + kR)
-        B_arr = TOT - A_arr
-        return (A_arr, B_arr)
 
 
 
@@ -1561,9 +1515,11 @@ class UniformCompartment:
         automatically saved when running reactions.
 
         Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
-              EXAMPLE p1 = plot_history(various args, show=False)
-                      p2 = plot_history(various args, show=False)
-                      PlotlyHelper.combine_plots([p1, p2], other optional args)
+              EXAMPLE:
+                    from life123 import PlotlyHelper
+                    p1 = plot_history(various args, show=False)
+                    p2 = plot_history(various args, show=False)
+                    PlotlyHelper.combine_plots([p1, p2], other optional args)
 
         :param chemicals:   (OPTIONAL) List of the names of the chemicals whose concentration changes are to be plotted,
                                 or a string with just one name;
@@ -1617,136 +1573,10 @@ class UniformCompartment:
 
         df = self.get_history()     # A Pandas dataframe that contains a column named "SYSTEM TIME"
 
-        return self.plot_data(df=df, x_var="SYSTEM TIME", fields=chemicals,
-                              colors=colors, title=title, title_prefix=title_prefix,
-                              xrange=xrange, ylabel=ylabel,
-                              vertical_lines_to_add=vertical_lines, show_intervals=show_intervals, show=show)
-
-
-
-    def plot_data(self, df :pd.DataFrame, x_var="SYSTEM TIME", fields=None,
-                  colors=None, title=None, title_prefix=None,
-                  xrange=None, ylabel=None,
-                  vertical_lines_to_add=None, show_intervals=False, show=False) -> go.Figure:
-        """
-        Using plotly, draw the plots of concentration from the given dataframe, based on history data that gets
-        automatically saved when running reactions.
-
-        Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
-
-        :param df:          Pandas dataframe with the data for the plot
-        :param x_var:       Name of column with independent variable for the x-axis
-        :param fields:      List of the names of the dataframe columns whose values are to be plotted,
-                                or a string with just one name;
-                                if None, then display all
-        :param colors:      (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
-                                or list of names to use, in order; if None, then use the hardwired defaults
-        :param title:       (OPTIONAL) Title for the plot;
-                                if None, use default titles that will vary based on the # of reactions; EXAMPLES:
-                                    "Changes in concentrations for 5 reactions"
-                                    "Reaction `A <-> 2 B` .  Changes in concentrations with time"
-                                    "Changes in concentration for `2 S <-> U` and `S <-> X`"
-        :param title_prefix: (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
-                                    whether the title is specified by the user or automatically generated
-        :param xrange:          (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
-                                    Note: it's still possible to zoom out, and see the excluded portion
-        :param ylabel:          (OPTIONAL) Caption to use for the y-axis.
-                                    By default, the name in `the chemicals` argument, in square brackets, if only 1 chemical,
-                                    or "Concentration" if more than 1 (a legend also shown)
-        :param vertical_lines_to_add:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
-                                    List or tuple or Numpy array or Pandas series
-                                    of x-coordinates at which to draw thin vertical dotted gray lines.
-                                    If the number of vertical line is so large as to overwhelm the plot,
-                                    only a sample of them is shown.
-                                    Note that vertical lines, if requested, go into the plot's "layout";
-                                    as a result they might not appear if this plot is later combined with another one.
-        :param show_intervals:  (OPTIONAL) If True, it over-rides any value passed to the `vertical_lines` argument,
-                                    and draws thin vertical dotted gray lines at all the x-coords
-                                    of the data points in the saved history data;
-                                    also, it adds a comment to the title.
-        :param show:        If True, the plot will be shown
-                                Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
-                                      leads to it being automatically shown
-
-        :return:            A plotly "Figure" object
-        """
-        # TODO: allow alternate label for x-axis
-        # TODO: allow specifying a yrange
-
-        MAX_NUMBER_VERTICAL_LINES = 150     # Used to avoid extreme clutter in the plot, in case
-                                            # a very large number of vertical lines is requested;
-                                            # if this value is exceeded, then the vertical lines are sampled
-                                            # infrequently enough to bring the total number below this value
-
-        number_of_curves = len(fields)
-
-        if colors is None:
-            colors = PlotlyHelper.get_default_colors(number_of_curves)
-        elif type(colors) == str:
-            colors = [colors]
-
-
-        if title_prefix is not None:
-            title = f"{title_prefix}  <br>{title}"
-
-        if show_intervals:
-            vertical_lines_to_add = df[x_var]  # Make use of the simulation times
-            title += " (time steps shown in dashed lines)"
-
-        if ylabel is None:
-            if type(fields) == str:
-                ylabel = f"[{fields}]"          # EXAMPLE:  "[A]"
-            else:
-                ylabel = "Concentration"
-
-        # Create the main plot
-        fig = px.line(data_frame=df, x=x_var, y=fields,
-                      title=title, range_x=xrange,
-                      color_discrete_sequence = colors,
-                      labels={"value": ylabel, "variable": "Chemical"})
-
-        if type(fields) == str:     # Somehow, the `labels` argument in px.line, above, is ignored when `fields` is just a string
-            fig.update_layout(yaxis_title=ylabel)
-
-
-        if vertical_lines_to_add is not None:
-            assert (type(vertical_lines_to_add) == list) or (type(vertical_lines_to_add) == tuple) \
-                   or (type(vertical_lines_to_add) == np.ndarray) or (type(vertical_lines_to_add) == pd.core.series.Series), \
-                "plot_curves(): the argument `vertical_lines`, " \
-                "if not None, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
-
-            vline_list = []
-            if xrange:
-                step = 1    # Always show all vertical lines if a range on the x-axis was specified
-            else:
-                # Possibly limit the number of vertical lines shown
-                step = 1 + len(vertical_lines_to_add) // MAX_NUMBER_VERTICAL_LINES
-                if step > 1:
-                    print(f"plot_curves() WARNING: Excessive number of vertical lines ({len(vertical_lines_to_add)}) - only showing 1 every {step} lines")
-
-            for xi in vertical_lines_to_add[::step] :  # Notice that if step > 1 then we're sampling a subset of the elements
-                # The following is the internal data structure used by Plotly Express,
-                # for each of the vertical lines
-                vline = {  'line': {'color': 'gray', 'dash': 'dot', 'width': 1},
-                           'type': 'line',
-                           'x0': xi,
-                           'x1': xi,
-                           'xref': 'x',
-                           'y0': 0,
-                           'y1': 1,
-                           'yref': 'y domain'
-                           }
-                vline_list.append(vline)
-                # Strangely, a direct call to fig.add_vline(), as done below, dramatically slows things down in case
-                # of a large number of vertical lines; so, we'll be directly modifying the data structure of the "fig" dictionary
-                #fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
-            # END for
-            fig['layout']['shapes'] = vline_list    # The vertical lines are regarded by Plotly Express as "shapes"
-            # that are stored in the figure's "layout"
-        if show:
-            fig.show()  # Actually display the plot
-
-        return fig
+        return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=chemicals,
+                                        colors=colors, title=title, title_prefix=title_prefix,
+                                        xrange=xrange, ylabel=ylabel,
+                                        vertical_lines_to_add=vertical_lines, show_intervals=show_intervals, show=show)
 
 
 
@@ -1856,7 +1686,7 @@ class UniformCompartment:
                                    If this parameter is specified, an extra column - called "search_value" -
                                    is inserted at the beginning of the dataframe.
                                    If either the "head" or the "tail" arguments are passed, this argument will get ignored
-        :param columns: (OPTIONAL) List of columns to return; if not specified, all are returned.
+        :param columns: (OPTIONAL) Name, or list of names, of the column(s) to return; if not specified, all are returned.
                                    Make sure to include "SYSTEM TIME" in the list, if the time variable needs to be included
 
         :return:        A Pandas dataframe
@@ -1868,8 +1698,8 @@ class UniformCompartment:
                                         search_col="SYSTEM TIME", val_start=t_start, val_end=t_end)
 
         if columns:
-            assert type(columns) == list, \
-                "get_history(): the argument `columns`, if specified, must be a list"
+            assert (type(columns) == list) or (type(columns) == str), \
+                "get_history(): the argument `columns`, if specified, must be a list or string"
             return df[columns]
 
         return df
@@ -2084,19 +1914,19 @@ class UniformCompartment:
     def find_equilibrium_conc(self, rxn_index :int) -> dict:
         """
         Determine the equilibrium concentrations that would be reached by the chemicals
-        participating in the specified reaction, given their current concentrations,
+        participating in the specified reversible reaction, given their current concentrations,
         IN THE ABSENCE of any other reaction.
 
-        IMPORTANT: currently limited to just aA + bB <-> cC + dD reactions, first-order in all chemicals,
-                   (some of terms can be missing)
-                   An Exception will be raised in all other cases
+        RESTRICTIONS:  currently limited to just aA + bB <-> cC + dD reversible reactions,
+                       first-order in all chemicals (some of terms may be missing.)
+                       An Exception will be raised in all other cases!
 
         :param rxn_index:   The integer index (0-based) to identify the reaction of interest
         :return:            A dictionary of the equilibrium concentrations of the
                                 chemicals involved in the specified reaction
                             EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8}
         """
-        #TODO: generalize to reactions with more terms and higher order
+        #TODO: handle scenarios where kF or kR is zero
 
         rxn = self.chem_data.get_reaction(rxn_index)    # Look up the requested reaction
 
@@ -2117,8 +1947,9 @@ class UniformCompartment:
         the equilibrium equation is:  
                 [(C0 + c*m) (D0 + d*m)] / [(A0 - a*m) (B0 - b*m)]  =  K
             
-        where K is the Equilibrium constant,
-        and the unknown m (to be solved for) is the number of "moles of forward reaction", 
+        where K is the Equilibrium constant (kF/kR),
+        and the unknown m (to be solved for) is the number of "moles/liter of forward reaction"
+        (i.e. the the Product concentration change)
         from the starting point to the equilibrium point
         
         For reaction terms that aren't present (for example the "D" part in the reaction A + B <-> C),
@@ -2239,64 +2070,108 @@ class UniformCompartment:
 
 
 
+    def estimate_rate_constants(self, df, t, reactants, products):
+        """
+        TODO: not yet implemented
 
-    def estimate_rate_constants(self, t :np.array, reactant_conc :np.array, product_conc :np.array,
-                                reactant_name="Reactant", product_name="Product"):
+        EXAMPLE:  estimate_rate_constants(df, t="SYSTEM TIME", reactants=["A", "B"], products="C")
+                    where df is a Pandas dataframe containing the columns "SYSTEM TIME", "A", "B" and "C"
+
+        :param df:
+        :param t:
+        :param reactants:
+        :param products:
+        :return:
+        """
+        pass
+
+
+
+    def estimate_rate_constants_simple(self, t :np.ndarray,
+                                       A_conc :np.ndarray, B_conc :np.ndarray,
+                                       reactant_name="Reactant", product_name="Product"):
         """
         Estimate the rate constants for a 1-st order reaction of the type A <-> B,
         given time evolution of [A] and [B] on a grid of time points (don't need to be equally spaced)
 
-        IMPORTANT : Currently restricted to reactions with a 1:1 stoichiometry between the given reactant and product
+        IMPORTANT : This is for reactions with a 1:1 stoichiometry between the given reactant and product
 
         :param t:               A numpy array of time grid points where the other functions are specified
-        :param reactant_conc:
-        :param product_conc:
+        :param A_conc:          A numpy array of the concentrations of the reactant, at the times in the array t
+        :param B_conc:
         :param reactant_name:
         :param product_name:
         :return:                A plotly "Figure" object.  The estimated rate constants are printed out
         """
-        total_conc_arr = reactant_conc + product_conc
+        total_conc_arr = A_conc + B_conc
         total_conc = np.median(total_conc_arr)    # TODO: give warning or abort if there's too much variance
         sd = np.std(total_conc_arr)
 
+        print(f"Reaction {reactant_name} <-> {product_name}")
         print(f"Total REACTANT + PRODUCT has a median of {total_conc:,.4g}, "
               f"\n    with standard deviation {sd:,.4g} (ideally should be zero)")
 
 
         # The rate of change of [reactant] with time
-        deriv_reactant_conc = np.gradient(reactant_conc, t, edge_order=2)
+        A_prime = np.gradient(A_conc, t, edge_order=2)
         # The rate of change of [product] with time
-        deriv_product_conc = np.gradient(product_conc, t, edge_order=2)
+        B_prime = np.gradient(B_conc, t, edge_order=2)
 
-
-        median_sum_derivs = np.median(deriv_reactant_conc + deriv_product_conc)
-        print(f"The sum of the time derivatives of reactant and product "
+        median_sum_derivs = np.median(A_prime + B_prime)
+        print(f"The sum of the time derivatives of the reactant and the product "
               f"\n    has a median of {median_sum_derivs:,.4g} (ideally should be zero)")
 
 
-        # Do a least-square fit of the time-gradient of the PRODUCT concentration,
-        # as a function of the REACTANT's concentration
-        Y = deriv_product_conc  # The dependent variable:   B'(t)
-        X = reactant_conc       # The independent variable: A(t)
+        # Do a least-square fit
+        kF, kR = Numerical.two_vector_least_square(V = A_conc, W = -B_conc, Y = B_prime)
 
-        M = np.vstack([np.ones(len(Y)), X]).T
-        # M is an nx2 matrix , where n is the number of data points.
-        # The 1st column is all 1's, and the 2nd column contains the values of X
-
-        a, b = np.linalg.lstsq(M, Y, rcond=None)[0]  # Carry out the least-square fit as: Y = a + b X
-        print(f"Least square fit: Y = {a:,.4g} + {b:,.4g} X"
-              f"\n    where X is the array [{reactant_name}] and Y is the time gradient of {product_name}")
+        print(f"Least square fit to {product_name}'(t) = kF * {reactant_name}(t) + kR * (- {product_name}(t) )")
 
         # Plot both Y and its least-square fit, as functions of X
-        fig = PlotlyHelper.plot_curves(x=X, y=[Y , a + b*X],
+        fig = PlotlyHelper.plot_curves(x=A_conc, y=[B_prime , kF * A_conc - kR * B_conc],
                                        title=f"d/dt {product_name}(t) as a function of {reactant_name}(t), alongside its least-square fit",
                                        xlabel=f"{reactant_name}(t)", ylabel=f"{product_name}'(t)",
                                        curve_labels=[f"{product_name}'(t)", "Linear Fit"], legend_title="Curve vs Fit:",
                                        colors=['green', 'red'])
 
-        kR = -a / total_conc
+        print(f"\n-> ESTIMATED RATE CONSTANTS: kF = {kF:,.4g} , kR = {kR:,.4g}")
 
-        kF = b - kR
+        return fig
+
+
+
+    def estimate_rate_constants_association(self, t :np.ndarray,
+                                       A_conc :np.ndarray, B_conc :np.ndarray,  C_conc :np.ndarray,
+                                       reactants :[str, str], product :str):
+        """
+        Estimate the rate constants for a 1-st order association (synthesis) reaction of the type A + B <-> C,
+        given time evolution of [A], [B] and [C] on a grid of time points (don't need to be equally spaced)
+
+        IMPORTANT : This is for reactions with a 1:1:1 stoichiometry
+
+        :param t:               A numpy array of time grid points where the other functions are specified
+        :param A_conc:          A numpy array of the concentrations of the reactant, at the times in the array t
+        :param B_conc:
+        :param C_conc:
+        :param reactants:
+        :param product:
+        :return:                A plotly "Figure" object.  The estimated rate constants are printed out
+        """
+
+        # The rate of change of [product] with time
+        Deriv_C = np.gradient(C_conc, t, edge_order=2)
+
+        # Do a least-square fit
+        kF, kR = Numerical.two_vector_least_square(V = A_conc * B_conc, W = - C_conc, Y = Deriv_C)
+
+        print(f"Least square fit to {product}'(t) = kF * {reactants[0]}(t) * {reactants[1]}(t) + kR * (- {product}(t) )")
+
+        # Plot both Y and its least-square fit, as functions of X
+        fig = PlotlyHelper.plot_curves(x=A_conc, y=[Deriv_C , kF * A_conc * B_conc - kR * C_conc],
+                                       title=f"d/dt {product}(t) as a function of {reactants[0]}(t), alongside its least-square fit",
+                                       xlabel=f"{reactants[0]}(t)", ylabel=f"{product}'(t)",
+                                       curve_labels=[f"{product}'(t)", "Linear Fit"], legend_title="Curve vs Fit:",
+                                       colors=['green', 'red'])
 
         print(f"\n-> ESTIMATED RATE CONSTANTS: kF = {kF:,.4g} , kR = {kR:,.4g}")
 
@@ -2316,7 +2191,7 @@ class UniformCompartment:
         # Prepare a Pandas dataframe with 2 columns
         df = self.get_history(columns=["SYSTEM TIME", chem])
 
-        x_intersection = num.reach_threshold(df, x="SYSTEM TIME", y=chem, y_threshold=threshold)
+        x_intersection = Numerical.reach_threshold(df, x="SYSTEM TIME", y=chem, y_threshold=threshold)
         if x_intersection is None:
             print(f"reach_threshold(): the concentrations of `{chem}` never reaches the specified threshold of {threshold}")
 
@@ -2342,7 +2217,7 @@ class UniformCompartment:
         # Prepare a Pandas dataframe with 3 columns
         df = self.get_history(t_start=t_start, t_end=t_end, columns=["SYSTEM TIME", chem1, chem2])
 
-        intersection = num.curve_intersect(df, x="SYSTEM TIME", var1=chem1, var2=chem2, explain=explain)
+        intersection = Numerical.curve_intersect(df, x="SYSTEM TIME", var1=chem1, var2=chem2, explain=explain)
         if intersection is None:
             print(f"curve_intersect(): No intersection detected between the concentrations of `{chem1}` and `{chem2}` "
                   f"in the time interval [{t_start} - {t_end}]")

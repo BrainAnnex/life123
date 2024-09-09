@@ -19,11 +19,12 @@
 # **"No frills!"**  For advanced graphics, analysis, diagnostics, fine-tuning, etc, please see other experiments.
 
 # %%
-LAST_REVISED = "July 24, 2024"
-LIFE123_VERSION = "1.0.0.beta.37"      # Version this experiment is based on
+LAST_REVISED = "Aug. 19, 2024"
+LIFE123_VERSION = "1.0.0.beta.38"      # Version this experiment is based on
 
 # %%
-#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
+#import set_path            # Using MyBinder?  Uncomment this before running the next cell!
+                            # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
 #import sys
@@ -42,11 +43,11 @@ life123.check_version(LIFE123_VERSION)
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-dynamics = life123.UniformCompartment(names=["A", "B"])  
+dynamics = life123.UniformCompartment()  
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
 dynamics.add_reaction(reactants="A", products="B", 
-                       forward_rate=3., reverse_rate=2.)
+                      forward_rate=3., reverse_rate=2.)
 
 dynamics.describe_reactions()
 

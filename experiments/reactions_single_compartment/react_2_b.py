@@ -22,8 +22,8 @@
 # **Background**: please see experiment `react_2_a` 
 
 # %%
-LAST_REVISED = "July 24, 2024"
-LIFE123_VERSION = "1.0.0.beta.37"    # Version this experiment is based on
+LAST_REVISED = "Sep. 8, 2024"
+LIFE123_VERSION = "1.0.0.beta.38"    # Version this experiment is based on
 
 # %%
 #import set_path              # Using MyBinder?  Uncomment this before running the next cell!
@@ -324,9 +324,9 @@ df = df[2:]   # Drop the aborted first 2 steps
 df
 
 # %%
-p1 = dynamics.plot_data(df=df, x_var="START_TIME", fields=["A_dot"], colors=['brown'], 
-                        ylabel="concentration change/unit time",
-                        title="Rate of change of of A with time")
+p1 = PlotlyHelper.plot_pandas(df=df, x_var="START_TIME", fields=["A_dot"], colors=['brown'], 
+                              ylabel="concentration change/unit time",
+                              title="Rate of change of of A with time")
 p1
 
 # %% [markdown]

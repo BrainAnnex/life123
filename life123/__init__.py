@@ -10,14 +10,13 @@
     :license: MIT, see LICENSE for more details.
 """
 
-__version__ = "1.0.0.beta.37"
+__version__ = "1.0.0.beta.38"
 
 
 from life123.bio_sim_1d import BioSim1D
 from life123.bio_sim_2d import BioSim2D
 from life123.bio_sim_3d import BioSim3D
 from life123.chem_data import ChemData
-from life123.heuristics import Heuristics
 from life123.html_log import HtmlLog
 from life123.movies	import (
     MovieTabular,
@@ -28,7 +27,7 @@ from life123.numerical import Numerical
 from life123.reaction import Reaction
 from life123.thermodynamics import ThermoDynamics
 from life123.uniform_compartment import UniformCompartment
-from life123.reaction_dynamics import ReactionDynamics
+from life123.reaction_dynamics import (ReactionDynamics, VariableTimeSteps)
 
 from life123.visualization.graphic_log import GraphicLog
 from life123.visualization.plotly_helper import PlotlyHelper
@@ -40,21 +39,25 @@ __all__ = [
     'BioSim2D',
     'BioSim3D',
     'ChemData',
-    'Heuristics',
     'HtmlLog',
     'MovieTabular',
     'MovieArray',
     'MovieGeneral',
     'Numerical',
     'Reaction',
-    'ThermoDynamics',
     'ReactionDynamics',
+    'ThermoDynamics',
+    'VariableTimeSteps',
     'UniformCompartment',
     'GraphicLog',
     'PlotlyHelper',
     'PyGraphVisual'
 ]
 
+
+
+def version():
+    return __version__
 
 
 def check_version(expected :str, enforce=False) -> None:

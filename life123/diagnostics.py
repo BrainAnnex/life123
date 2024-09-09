@@ -600,6 +600,7 @@ class Diagnostics:
 
         :return:    True if everything checks out, or False otherwise
         """
+        # TODO: maybe make it also accept as inputs a reaction object and a Pandas dataframe
         if self.diagnostic_rxn_data == {}:
             print("WARNING *** In order to run stoichiometry_checker_entire_run(), "
                   "the diagnostics must be turned on, with set_diagnostics(), prior to the simulation run!")
