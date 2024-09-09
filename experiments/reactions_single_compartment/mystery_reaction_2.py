@@ -30,7 +30,7 @@
 # ### TAGS :  "numerical", "uniform compartment", "under-the-hood"
 
 # %%
-LAST_REVISED = "Aug. 17, 2024"
+LAST_REVISED = "Sep. 8, 2024"
 LIFE123_VERSION = "1.0.0.beta.38"      # Version this experiment is based on
 
 # %%
@@ -47,6 +47,9 @@ import numpy as np
 
 from life123 import check_version, UniformCompartment, PlotlyHelper, Numerical
 
+
+# %%
+check_version(LIFE123_VERSION)
 
 # %%
 
