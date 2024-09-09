@@ -1,5 +1,7 @@
 import plotly.express as px
 import plotly.graph_objects as pgo
+import numpy as np
+import pandas as pd
 from typing import Union
 
 
@@ -144,6 +146,135 @@ class PlotlyHelper:
             fig.update_layout(xaxis={"range": xrange})
 
 
+        if show:
+            fig.show()  # Actually display the plot
+
+        return fig
+
+
+
+    @classmethod
+    def plot_pandas(cls, df :pd.DataFrame, x_var="SYSTEM TIME", fields=None,
+                  colors=None, title=None, title_prefix=None,
+                  xrange=None, ylabel=None, legend_header="Chemical",
+                  vertical_lines_to_add=None,
+                  show_intervals=False, show=False) -> pgo.Figure:
+        """
+        Using plotly, draw the plots of concentration from the given dataframe.
+
+        Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
+
+        :param df:          Pandas dataframe with the data for the plot
+        :param x_var:       Name of column with independent variable for the x-axis
+        :param fields:      List of the names of the dataframe columns whose values are to be plotted,
+                                or a string with just one name;
+                                if None, then display all
+        :param colors:      (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
+                                or list of names to use, in order; if None, then the hardwired default colors are used
+        :param title:       (OPTIONAL) Title for the plot;
+                                if None, use default titles that will vary based on the # of reactions; EXAMPLES:
+                                    "Changes in concentrations for 5 reactions"
+                                    "Reaction `A <-> 2 B` .  Changes in concentrations with time"
+                                    "Changes in concentration for `2 S <-> U` and `S <-> X`"
+        :param title_prefix: (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
+                                    whether the title is specified by the user or automatically generated
+        :param xrange:       (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
+                                    Note: it's still possible to zoom out, and see the excluded portion
+        :param ylabel:       (OPTIONAL) Caption to use for the y-axis.
+                                    By default, the name in `the chemicals` argument, in square brackets, if only 1 chemical,
+                                    or "Concentration" if more than 1 (a legend also shown)
+        :param legend_header:(OPTIONAL) Caption to use at the top of the legend box
+        :param vertical_lines_to_add:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
+                                    List or tuple or Numpy array or Pandas series
+                                    of x-coordinates at which to draw thin vertical dotted gray lines.
+                                    If the number of vertical line is so large as to overwhelm the plot,
+                                    only a sample of them is shown.
+                                    Note that vertical lines, if requested, go into the plot's "layout";
+                                    as a result they might not appear if this plot is later combined with another one.
+        :param show_intervals:  (OPTIONAL) If True, it over-rides any value passed to the `vertical_lines` argument,
+                                    and draws thin vertical dotted gray lines at all the x-coords
+                                    of the data points in the saved history data;
+                                    also, it adds a comment to the title.
+        :param show:        If True, the plot will be shown
+                                Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
+                                      leads to it being automatically shown
+
+        :return:            A plotly "Figure" object
+        """
+        # TODO: allow alternate label for x-axis
+        # TODO: allow specifying a yrange
+        # TODO: move to a general visualization module
+
+        MAX_NUMBER_VERTICAL_LINES = 150     # Used to avoid extreme clutter in the plot, in case
+        # a very large number of vertical lines is requested;
+        # if this value is exceeded, then the vertical lines are sampled
+        # infrequently enough to bring the total number below this value
+
+        number_of_curves = len(fields)
+
+        if colors is None:
+            colors = PlotlyHelper.get_default_colors(number_of_curves)
+        elif type(colors) == str:
+            colors = [colors]
+
+
+        if title_prefix is not None:
+            title = f"{title_prefix}  <br>{title}"
+
+        if show_intervals:
+            vertical_lines_to_add = df[x_var]  # Make use of the simulation times
+            title += " (time steps shown in dashed lines)"
+
+        if ylabel is None:
+            if type(fields) == str:
+                ylabel = f"[{fields}]"          # EXAMPLE:  "[A]"
+            else:
+                ylabel = "Concentration"
+
+        # Create the main plot
+        fig = px.line(data_frame=df, x=x_var, y=fields,
+                      title=title, range_x=xrange,
+                      color_discrete_sequence = colors,
+                      labels={"value": ylabel, "variable": legend_header})
+
+        if type(fields) == str:     # Somehow, the `labels` argument in px.line, above, is ignored when `fields` is just a string
+            fig.update_layout(yaxis_title=ylabel)
+
+
+        if vertical_lines_to_add is not None:
+            assert (type(vertical_lines_to_add) == list) or (type(vertical_lines_to_add) == tuple) \
+                   or (type(vertical_lines_to_add) == np.ndarray) or (type(vertical_lines_to_add) == pd.core.series.Series), \
+                "plot_curves(): the argument `vertical_lines`, " \
+                "if not None, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
+
+            vline_list = []
+            if xrange:
+                step = 1    # Always show all vertical lines if a range on the x-axis was specified
+            else:
+                # Possibly limit the number of vertical lines shown
+                step = 1 + len(vertical_lines_to_add) // MAX_NUMBER_VERTICAL_LINES
+                if step > 1:
+                    print(f"plot_curves() WARNING: Excessive number of vertical lines ({len(vertical_lines_to_add)}) - only showing 1 every {step} lines")
+
+            for xi in vertical_lines_to_add[::step] :  # Notice that if step > 1 then we're sampling a subset of the elements
+                # The following is the internal data structure used by Plotly Express,
+                # for each of the vertical lines
+                vline = {  'line': {'color': 'gray', 'dash': 'dot', 'width': 1},
+                           'type': 'line',
+                           'x0': xi,
+                           'x1': xi,
+                           'xref': 'x',
+                           'y0': 0,
+                           'y1': 1,
+                           'yref': 'y domain'
+                           }
+                vline_list.append(vline)
+                # Strangely, a direct call to fig.add_vline(), as done below, dramatically slows things down in case
+                # of a large number of vertical lines; so, we'll be directly modifying the data structure of the "fig" dictionary
+                #fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
+            # END for
+            fig['layout']['shapes'] = vline_list    # The vertical lines are regarded by Plotly Express as "shapes"
+            # that are stored in the figure's "layout"
         if show:
             fig.show()  # Actually display the plot
 

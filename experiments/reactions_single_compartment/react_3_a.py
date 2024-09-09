@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## The revesable Synthesis/Decomposition reaction `A + B <-> C`
+# ## The reversible Synthesis/Decomposition reaction `A + B <-> C`
 # #### with 1st-order kinetics for each species, taken to equilibrium.
 # #### Exploration of debugging and diagnostics options
 # (Adaptive variable time steps are used)
@@ -24,7 +24,7 @@
 # ### TAGS :  "uniform compartment", "under-the-hood"
 
 # %%
-LAST_REVISED = "Sep. 5, 2024"
+LAST_REVISED = "Sep. 8, 2024"
 LIFE123_VERSION = "1.0.0.beta.38"      # Version this experiment is based on
 
 # %%

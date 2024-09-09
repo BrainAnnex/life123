@@ -121,110 +121,62 @@ class ReactionDynamics:
 
 
     @classmethod
-    def exact_solution_combination_rxn(cls, kF, kR, A0, B0, C0, t) -> (np.ndarray, np.ndarray, np.ndarray):
+    def exact_solution_combination_rxn(cls, kF, kR, A0, B0, C0, t_arr) -> (np.ndarray, np.ndarray, np.ndarray):
         """
         Return the exact solution of the reversible 2nd Order Reaction A + B <=> C,
         with the specified parameters,
         sampled at the given times.
 
         :param kF:      Forward reaction rate constant
-        :param kR:      Reverse reaction rate constant 
+        :param kR:      Reverse reaction rate constant
         :param A0:      Initial concentration of the 1st reactant A
         :param B0:      Initial concentration of the 2nd reactant B
         :param C0:      Initial concentration of the product C
         :param t_arr:   A Numpy array with the desired times at which the solutions are desired
 
-        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
+        :return:        A triplet of Numpy arrays with, respectively, the concentrations of A, B and C
                             at the times given by the argument t_arr
         """
-        #TODO: test!
-
         AC_tot = A0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
         BC_tot = B0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
 
-        rad = 4 * AC_tot * BC_tot * kF**2 - ( (AC_tot + BC_tot) * kF + kR )**2
+        alpha = kF
+        beta = kF * (AC_tot + BC_tot) + kR
+        gamma = kF * AC_tot * BC_tot
+
+        '''
+        The ODE to solve for C(t) is:
+            C'(t) = kF A(t) B(t) - kR C(t)
+            
+        which can be re-arranged to:
+            C'(t) = alpha [C(t)]^2 - beta C(t) + gamma
         
-        div = A0**2 * kF**2 + B0**2 * kF**2 + 2 * B0 * kF * kR + \
-              4 * C0 * kF * kR + kR**2 + 2 * A0 * kF * (-B0 * kF + kR)
+        The following is based on the answer by Mathematica v.7 to:
+            DSolve[{c'[t] == alpha (c[t])^2 - beta c[t] + gamma, c[0] == C0}, c[t], t]
+            Simplify[%]
+        '''
+        term = - beta**2 + 4 * alpha * gamma
+        sqrt_term = cmath.sqrt(term)
 
-        # Note: div = -rad
+        arctan_arg = (beta - 2 * alpha * C0) / sqrt_term    # This will be the argument to pass to the ArcTan function, below
+        arctan_value = np.arctan(arctan_arg)
+        # Note that every variable so far is a constant, NOT dependent on time
 
-        arctan_arg = (A0 * kF + B0 * kF + kR) * cmath.sqrt(rad) / div
+        tan_arg = 0.5 * sqrt_term * t_arr - arctan_value     # This will be the argument to pass to the Tan function, below
 
-        arctan= np.arctan(arctan_arg)
+        result = (beta + sqrt_term * np.tan(tan_arg) ) / (2*alpha)
+        C_arr = result.real             # Drop the imaginary components (which ought to be very close to zero)
 
-        f = 0.5 * cmath.sqrt(rad)
+        A_arr = AC_tot - C_arr
+        B_arr = BC_tot - C_arr
 
-        tan = np.tan(f * t + arctan)
-
-        big = cmath.sqrt(rad) * tan
-
-        factor = (A0 * kF + B0 * kF + kR) + 2 * C0 * kF+ big    # Note repeat of portion from arctan_arg term
-        
-        final = factor / (2*kF)
-
-        return final.real
-
-
-        for t in t_arr:
-            pass
-
-
-        #return (A_arr, B_arr, C_arr)
-
-
-
-    @classmethod
-    def exact_solution_combination_rxn_WRONG(cls, kF, kR, A0, B0, C0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray):
-        """
-        Return the exact solution of the reversible 2nd Order Reaction A + B <=> C,
-        with the specified parameters,
-        sampled at the given times.
-        The Lambert W function is utilized for the analytical solution.
-
-        :param kF:      Forward reaction rate constant
-        :param kR:      Reverse reaction rate constant (cannot be zero)
-        :param A0:      Initial concentration of the 1st reactant A
-        :param B0:      Initial concentration of the 2nd reactant B
-        :param C0:      Initial concentration of the product C
-        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
-
-        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
-                            at the times given by the argument t_arr
-        """
-        #TODO: IT DOES NOT WORK! :(
-
-        # Calculate the equilibrium concentrations
-        #K_inv = kR / kF     # Inverse of the equilibrium constant.  Note that we're assuming kF isn't zero
-
-
-        AC_tot = A0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
-        BC_tot = B0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
-        #delta_B_A = B0 - A0     # Another conserved quantity
-
-        #A_arr = 0
-        #B_arr = A_arr + delta_B_A
-
-        for t in t_arr:
-            # According to ChatGPT
-            p = kF*A0/kR * math.exp((kF*A0-kR)*t/kR)
-            A = kR * A0 / (kR + kF * A0 * lambertw(p))
-            print(f"\nA({t}) = {A}")
-
-            # According to Perplexity
-            term = AC_tot + BC_tot - C0
-            v = (kF*term/kR * math.exp(kF*term - kR*t))
-            C = AC_tot + BC_tot - lambertw(v) / kF
-            print(f"C({t}) = {C}")
-
-
-        #return (A_arr, B_arr, C_arr)
+        return (A_arr, B_arr, C_arr)
 
 
 
 
 
-###########################################################################################
+####################################################################################################
 
 class VariableTimeSteps:
     """
