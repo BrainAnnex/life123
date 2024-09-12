@@ -34,7 +34,7 @@ LIFE123_VERSION = "1.0.0.beta.38"      # Version this experiment is based on
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
 import pandas as pd
-from life123 import check_version, UniformCompartment, ReactionDynamics, PlotlyHelper
+from life123 import check_version, UniformCompartment, ReactionKinetics, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
@@ -132,7 +132,7 @@ t_arr
 
 # %%
 # The EXACT, analytical solution
-A_exact, B_exact, C_exact = ReactionDynamics.exact_solution_combination_rxn(kF, kR, A0=10., B0=50., C0=20., t_arr=t_arr)
+A_exact, B_exact, C_exact = ReactionKinetics.exact_solution_synthesis_rxn(kF, kR, A0=10., B0=50., C0=20., t_arr=t_arr)
 
 # %%
 C_exact

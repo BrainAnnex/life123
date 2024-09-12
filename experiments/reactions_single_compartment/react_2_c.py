@@ -40,7 +40,7 @@ from life123 import check_version, ChemData, UniformCompartment
 
 import numpy as np
 import plotly.graph_objects as go
-from life123 import ReactionDynamics
+from life123 import ReactionKinetics
 from life123.visualization.plotly_helper import PlotlyHelper
 
 # %%
@@ -158,7 +158,7 @@ t_arr
 # The exact solution is available for a simple scenario like the one we're simulating here
 rxn = chem_data.get_reaction(0)   # Object of type life123.reaction.Reaction
 
-A_exact, B_exact = ReactionDynamics.solve_exactly(rxn=rxn, A0=10., B0=50., t_arr=t_arr)
+A_exact, B_exact = ReactionKinetics.solve_exactly(rxn=rxn, A0=10., B0=50., t_arr=t_arr)
 
 # %%
 fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=[A_exact, B_exact], title="EXACT solution", xlabel="SYSTEM TIME", ylabel="concentration", 

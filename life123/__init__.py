@@ -27,7 +27,7 @@ from life123.numerical import Numerical
 from life123.reaction import Reaction
 from life123.thermodynamics import ThermoDynamics
 from life123.uniform_compartment import UniformCompartment
-from life123.reaction_dynamics import (ReactionDynamics, VariableTimeSteps)
+from life123.reaction_kinetics import (ReactionKinetics, VariableTimeSteps)
 
 from life123.visualization.graphic_log import GraphicLog
 from life123.visualization.plotly_helper import PlotlyHelper
@@ -45,7 +45,7 @@ __all__ = [
     'MovieGeneral',
     'Numerical',
     'Reaction',
-    'ReactionDynamics',
+    'ReactionKinetics',
     'ThermoDynamics',
     'VariableTimeSteps',
     'UniformCompartment',

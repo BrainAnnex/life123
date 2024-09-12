@@ -131,9 +131,9 @@ C_conc = df["C"].to_numpy()
 # (in Part 3, we'll do a step-by-step derivation, to see how it works)
 
 # %%
-dynamics.estimate_rate_constants_association(t=t_arr, 
-                                             A_conc=A_conc, B_conc=B_conc, C_conc=C_conc, 
-                                             reactants=["A", "B"], product="C")
+dynamics.estimate_rate_constants_synthesis(t=t_arr,
+                                           A_conc=A_conc, B_conc=B_conc, C_conc=C_conc,
+                                           reactants=["A", "B"], product="C")
 
 # %% [markdown]
 # ### The least-square fit is good...  and the values estimated from the data for kF and kR are in good agreement with the values we used in the simulation to get that data, respectively 12 and 2 (see PART 1, above)  

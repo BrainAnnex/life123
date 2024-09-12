@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from life123.reaction import Reaction
-from life123.reaction_dynamics import ReactionDynamics, VariableTimeSteps
+from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
 
 
 
@@ -11,7 +11,7 @@ def test_solve_exactly():
 
     t = np.array([0, 0.005, 0.31739, 1.12, 100.])
 
-    A_exact, B_exact = ReactionDynamics.solve_exactly(rxn=rxn, A0=80., B0=10., t_arr=t)
+    A_exact, B_exact = ReactionKinetics.solve_exactly(rxn=rxn, A0=80., B0=10., t_arr=t)
 
     assert np.allclose(A_exact, [80, 78.91363613, 45.0, 36.162706, 36])
     assert np.allclose(B_exact, [10, 11.08636387, 45.0, 53.837294, 54])
@@ -23,7 +23,7 @@ def test_approx_solution_combination_rxn():
 
     t = np.array([0, 0.000864, 0.001555, 0.009850, 0.067400])
 
-    result = ReactionDynamics.approx_solution_combination_rxn(kF=5., kR=2., A0=10., B0=50., C0=20., t_arr=t)
+    result = ReactionKinetics.approx_solution_synthesis_rxn(kF=5., kR=2., A0=10., B0=50., C0=20., t_arr=t)
 
     assert np.allclose(result[0], [10., 7.88742367,   6.53396759,  0.88583575,  0.29487746])
     assert np.allclose(result[1], [50., 47.88742367, 46.53396759, 40.88583575, 40.29487746])
@@ -37,7 +37,7 @@ def test_exact_solution_combination_rxn():
     t = np.array([0, 0.0001, 0.0003, 0.0004, 0.0005, 0.0007, 0.001, 0.0015, 0.002, 0.003, 0.005, 0.008, 0.01, 1.])
 
 
-    result = ReactionDynamics.exact_solution_combination_rxn(kF=5., kR=2., A0=10., B0=50., C0=20., t_arr=t)
+    result = ReactionKinetics.exact_solution_synthesis_rxn(kF=5., kR=2., A0=10., B0=50., C0=20., t_arr=t)
 
     assert np.allclose(result[2],  [20., 20.24233229989, 20.70580471094, 20.927461929486, 21.14272449633, 21.554973213,
                                     22.130796453845, 22.989395248289, 23.73870897904, 24.9720196494, 26.681100361833,

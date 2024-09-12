@@ -8,8 +8,9 @@ from typing import Union
 
 class PlotlyHelper:
     """
-    To assist in the use of the plotly library
+    Static class to assist in the use of the plotly library
     """
+
     @classmethod
     def get_default_colors(cls, n :int) -> [int]:
         """
