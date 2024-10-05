@@ -479,9 +479,8 @@ class UniformCompartment:
                                  variable_steps=True, explain_variable_steps=None,
                                  reaction_duration=None) -> None:
         """
-        Perform ALL the reactions in the single compartment -
-        based on the INITIAL concentrations,
-        which are used as the basis for all the reactions.
+        Perform ALL the (previously-registered) reactions in the single compartment -
+        based on the INITIAL concentrations stored in self.system
 
         Update the system state and the system time accordingly
         (object attributes self.system and self.system_time)
@@ -607,6 +606,8 @@ class UniformCompartment:
         #self.norm_usage = {"norm_A": 0, "norm_B": 0, "norm_C": 0, "norm_D": 0}
         self.adaptive_steps.reset_norm_usage_stats()
 
+
+        # MAIN LOOP
         while True:
             # Check various criteria for termination
             if (max_steps is not None) and (step_count >= max_steps):
@@ -707,7 +708,7 @@ class UniformCompartment:
                              variable_steps=False, explain_variable_steps=None, step_counter=1) -> (np.array, float, float):
         """
         This is the common entry point for both single-compartment reactions,
-        and the reaction part of reaction-diffusions in 1D, 2D and 3D.
+        and the reaction component of reaction-diffusions in 1D, 2D and 3D.
 
         "Compartments" may or may not correspond to the "bins" of the higher layers;
         the calling code might have opted to merge some bins into a single "compartment".
@@ -830,7 +831,7 @@ class UniformCompartment:
 
     def _attempt_reaction_step(self, delta_time, variable_steps, explain_variable_steps, step_counter) -> (np.array, float):
         """
-        Attempt to perform the core reaction step, and then raise an Exception if it needs to be aborted,
+        Attempt to perform a single reaction step - and then raise an Exception if it needs to be aborted,
         based on various criteria.
         If variable_steps is True, determine a new value for the "recommended next step"
 
@@ -1233,48 +1234,53 @@ class UniformCompartment:
 
     def compute_all_reaction_rates(self, rxn_list=None) -> dict:
         """
-        For an explanation of the "reaction delta", see compute_reaction_delta_rate().
-        Compute the "reaction delta" for all the specified reaction (by default, all).
-        Return a list with an entry for each reaction, in their index order.
+        Compute the reaction rates, at the current chemical concentrations,
+        for all the specified reaction (by default, all.)
+        Return a dict with the rates indexed by the reaction number.
 
         For background info: https://life123.science/reactions
 
         :param rxn_list:    OPTIONAL list of reactions (specified by their integer index);
                                 if None, do all the reactions.  EXAMPLE: [1, 3, 7]
 
-        :return:            A dict of the differences between forward and reverse "conversions" -
-                                for explanation, see compute_reaction_delta_rate().
+        :return:            A dict of the reactions rates, as defined by compute_reaction_rate(),
+                                at the current concentrations of chemicals in the system (as stored in self.system).
                                 The dict is indexed by the reaction number, and contains as many entries as the
-                                number of reactions being investigated
+                                number of reactions being included in the simulation
         """
-        delta_dict = {}
+        rates_dict = {}
 
         if rxn_list is None:    # Meaning ALL reactions
             rxn_list = range(self.chem_data.number_of_reactions())
 
         # Process the requested reactions
-        for i in rxn_list:      # Consider each reaction in turn
+        for i in rxn_list:      # Consider each desired reaction in turn
             rxn = self.chem_data.get_reaction(i)
             delta = self.compute_reaction_rate(rxn=rxn)
-            delta_dict[i] = delta
+            rates_dict[i] = delta
 
-        return delta_dict
+        return rates_dict
 
 
 
     def compute_reaction_rate(self, rxn) -> float:
         """
-        For the SINGLE given reaction, and the current concentrations of chemicals in the system,
+        For the SINGLE given reaction, and the current concentrations of chemicals in the system
+        (as stored in self.system)
         compute the reaction's "rate" (aka "velocity"),
-        i.e. its forward rate" minus its "reverse rate",
+        i.e. its "forward rate" minus its "reverse rate",
         as defined in https://life123.science/reactions
+
+        This function is to be used for elementary, or non-elementary, reactions that follow the familiar "Rate Laws",
+        with forward and reverse rate constants stored in the passed "Reaction" object,
+        and with reaction orders, for the various Reactants and Products, also stored in that "Reaction" object.
 
         :param rxn:         An object of type "Reaction"
         :return:            The differences between the reaction's forward and reverse rates
         """
         reactants, products, fwd_rate_constant, rev_rate_constant = rxn.unpack_for_dynamics()
 
-        forward_rate = fwd_rate_constant
+        forward_rate = fwd_rate_constant        # The initial multiplicative factor
         for r in reactants:
             # Unpack data from the reactant r
             species_name = rxn.extract_species_name(r)
@@ -1282,10 +1288,10 @@ class UniformCompartment:
             species_index = self.chem_data.get_index(species_name)
             conc = self.system[species_index]
             #assert conc is not None, \
-            #   f"UniformCompartment.compute_reaction_delta_rate(): lacking the value for the concentration of the chemical species `{self.reaction_data.get_name(species_index)}`"
-            forward_rate *= conc ** order      # Raise to power
+            #   f"UniformCompartment.compute_reaction_rate(): lacking the value for the concentration of the chemical species `{self.reaction_data.get_name(species_index)}`"
+            forward_rate *= conc ** order       # Raise to power
 
-        reverse_rate = rev_rate_constant
+        reverse_rate = rev_rate_constant        # The initial multiplicative factor
         for p in products:
             # Unpack data from the reaction product p
             species_name = rxn.extract_species_name(p)
@@ -1293,7 +1299,7 @@ class UniformCompartment:
             species_index = self.chem_data.get_index(species_name)
             conc = self.system[species_index]
             #assert conc is not None, \
-            #   f"UniformCompartment.compute_reaction_delta_rate(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
+            #   f"UniformCompartment.compute_reaction_rate(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
             reverse_rate *= conc ** order     # Raise to power
 
         return forward_rate - reverse_rate

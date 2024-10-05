@@ -277,7 +277,7 @@ class VariableTimeSteps:
     """
     Methods for managing variable time steps during reactions
     """
-    # TODO: maybe rename "VariableTimeSteps"
+
 
     def __init__(self):
         # ***  PARAMETERS FOR AUTOMATED ADAPTIVE TIME STEP SIZES  ***
@@ -438,7 +438,12 @@ class VariableTimeSteps:
 
 
 
-    def display_value_against_thresholds(self, all_norms):
+    def display_value_against_thresholds(self, all_norms) -> None:
+        """
+
+        :param all_norms:
+        :return:            None
+        """
         for rule in self.thresholds:
             value = all_norms.get(rule['norm'])
             print(self.display_value_against_thresholds_single_rule(rule, value))
