@@ -58,7 +58,17 @@ class ChemCore:
 
 
 
-    def get_index(self, name: str) -> int:
+    def get_name_mapping(self) -> dict:
+        """
+        Return a dict with all the mappings of the chemical names to the registered index
+
+        :return:
+        """
+        return self.name_dict
+
+
+
+    def get_index(self, name :str) -> int:
         """
         Return the index of the chemical species with the given name.
         If not found, an Exception is raised

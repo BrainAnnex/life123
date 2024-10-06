@@ -8,7 +8,7 @@ from life123.chem_data import ChemData
 from life123.diagnostics import Diagnostics
 from life123.movies import MovieTabular
 from life123.numerical import Numerical
-from life123.reaction_kinetics import VariableTimeSteps
+from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
 from life123.visualization.plotly_helper import PlotlyHelper
 
 
@@ -71,9 +71,9 @@ class UniformCompartment:
 
         # TODO: maybe rename "system" to "system_state", and use "system" to store a list or dict of the chemicals
         #       actually involved in this dynamic simulation
-        self.system = None  # Concentration data in the single compartment we're simulating, for all the (bulk) chemicals
-                            # A Numpy array of the concentrations of all the chemical species, in their index order
-                            # 1-dimensional NumPy array of floats, whose size is the number of chemical species.
+        self.system = None  # Concentration data in the single compartment we're simulating, for all the chemicals
+                            # A 1-d Numpy array of the concentrations (floats), in their index order;
+                            # the array size is the total number of chemical species.
                             # Each entry is the concentration of the species with that index (in the "ChemData" object)
                             # Note that this is the counterpart - with 1 less dimension - of the array by the same name
                             #       in the class BioSim1D
@@ -1254,55 +1254,14 @@ class UniformCompartment:
             rxn_list = range(self.chem_data.number_of_reactions())
 
         # Process the requested reactions
+        name_mapping = self.chem_data.get_name_mapping()
         for i in rxn_list:      # Consider each desired reaction in turn
             rxn = self.chem_data.get_reaction(i)
-            delta = self.compute_reaction_rate(rxn=rxn)
+            delta = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=self.system, name_mapping=name_mapping)
             rates_dict[i] = delta
 
         return rates_dict
 
-
-
-    def compute_reaction_rate(self, rxn) -> float:
-        """
-        For the SINGLE given reaction, and the current concentrations of chemicals in the system
-        (as stored in self.system)
-        compute the reaction's "rate" (aka "velocity"),
-        i.e. its "forward rate" minus its "reverse rate",
-        as defined in https://life123.science/reactions
-
-        This function is to be used for elementary, or non-elementary, reactions that follow the familiar "Rate Laws",
-        with forward and reverse rate constants stored in the passed "Reaction" object,
-        and with reaction orders, for the various Reactants and Products, also stored in that "Reaction" object.
-
-        :param rxn:         An object of type "Reaction"
-        :return:            The differences between the reaction's forward and reverse rates
-        """
-        reactants, products, fwd_rate_constant, rev_rate_constant = rxn.unpack_for_dynamics()
-
-        forward_rate = fwd_rate_constant        # The initial multiplicative factor
-        for r in reactants:
-            # Unpack data from the reactant r
-            species_name = rxn.extract_species_name(r)
-            order = rxn.extract_rxn_order(r)
-            species_index = self.chem_data.get_index(species_name)
-            conc = self.system[species_index]
-            #assert conc is not None, \
-            #   f"UniformCompartment.compute_reaction_rate(): lacking the value for the concentration of the chemical species `{self.reaction_data.get_name(species_index)}`"
-            forward_rate *= conc ** order       # Raise to power
-
-        reverse_rate = rev_rate_constant        # The initial multiplicative factor
-        for p in products:
-            # Unpack data from the reaction product p
-            species_name = rxn.extract_species_name(p)
-            order = rxn.extract_rxn_order(p)
-            species_index = self.chem_data.get_index(species_name)
-            conc = self.system[species_index]
-            #assert conc is not None, \
-            #   f"UniformCompartment.compute_reaction_rate(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
-            reverse_rate *= conc ** order     # Raise to power
-
-        return forward_rate - reverse_rate
 
 
 

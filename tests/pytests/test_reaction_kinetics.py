@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from life123.reaction import Reaction
 from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
-
+from life123.chem_data import ChemData
 
 
 
@@ -48,6 +48,54 @@ def test_exact_solution_combination_rxn():
 
     assert np.allclose(np.min(result[1] + result[2]), 70)
     assert np.allclose(np.max(result[1] + result[2]), 70)
+
+
+
+def test_compute_reaction_rate():
+    chem_data = ChemData(names=["A", "B", "C", "D"])
+
+    name_mapping = chem_data.get_name_mapping()
+
+    conc_array = np.array([5., 8., 0, 0])
+
+    # Reaction A <-> B , with 1st-order kinetics in both directions
+    rxn = Reaction(reactants="A", products="B", forward_rate=20., reverse_rate=2.)
+    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=conc_array, name_mapping=name_mapping)
+    assert np.allclose(result, 20. * 5. - 2. * 8.)
+
+    # Reaction 5A <-> 2B , with 1st-order kinetics in both directions.
+    # Same as before, but different stoichiometry (which does NOT influence the result)
+    rxn = Reaction(reactants=[(5, "A", 1)], products=[(2, "B", 1)],
+                                       forward_rate=20., reverse_rate=2.)
+    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=conc_array, name_mapping=name_mapping)
+    assert np.allclose(result, 20. * 5. - 2. * 8.)
+
+    # Reaction C <-> D , with 1st-order kinetics in both directions
+    rxn = Reaction(reactants="C", products="D", forward_rate=20., reverse_rate=2.)
+    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=np.array([0., 0., 5., 8.]), name_mapping=name_mapping)
+    assert np.allclose(result, 20. * 5. - 2. * 8.)
+
+    # Reaction 2B <-> 3C , with 1st-order kinetics in both directions
+    rxn = Reaction(reactants=[(2, "B", 1)], products=[(3, "C", 1)],
+                   forward_rate=10., reverse_rate=25.)
+    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=np.array([0., 8., 15., 0.]), name_mapping=name_mapping)
+    assert np.allclose(result,  10. * 8. - 25. * 15.)
+
+    # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
+    rxn = Reaction(reactants=[(2,"A",1) , (5,"B",1)], products=[(4,"C",1) , (3,"D",1)],
+                   forward_rate=5., reverse_rate=2.)
+    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=np.array([3.5, 9., 11., 7.]), name_mapping=name_mapping)
+    assert np.allclose(result,  5. * 3.5 * 9. - 2. * 11. * 7.)
+
+    # Reaction  2A <-> B , with 2nd-ORDER kinetics in the forward direction
+    rxn = Reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
+    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=np.array([4.5, 6., 0., 0.]), name_mapping=name_mapping)
+    assert np.allclose(result, 5. * 4.5 **2 - 2. * 6.)
+
+    # Reaction  B <-> 2C , with 2nd-ORDER kinetics in the reverse direction
+    rxn = Reaction(reactants=[("B")], products=[(2, "C", 2)], forward_rate=4., reverse_rate=2.)
+    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=np.array([0., 5., 4, 0.]), name_mapping=name_mapping)
+    assert np.allclose(result, 4. * 5. - 2. * 4. **2)
 
 
 
