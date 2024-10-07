@@ -51,6 +51,7 @@ check_version(LIFE123_VERSION)
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
+# Here we use the "mid" preset for the variable steps, a compromise between speed and accuracy
 dynamics = UniformCompartment(preset="mid")
 
 # Reaction A <-> B (slower, and with a smaller K)
@@ -67,7 +68,7 @@ dynamics.describe_reactions()
 # ### Run the simulation
 
 # %%
-dynamics.set_conc({"A": 50.}, snapshot=True)  # Set the initial concentrations of all the chemicals, in their index order
+dynamics.set_conc({"A": 50.}, snapshot=True)  # Set the initial concentrations of all the chemicals
 dynamics.describe_state()
 
 # %%

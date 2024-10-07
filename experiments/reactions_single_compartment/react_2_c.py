@@ -148,7 +148,7 @@ dynamics_fixed.plot_history(colors=['darkturquoise', 'orange'], show_intervals=T
 # %%
 
 # %% [markdown]
-# # PART 3 - Exact Solution
+# # PART 3 - EXACT Solution
 
 # %%
 t_arr = np.linspace(0., 1.2, 41)   # A relatively dense uniform grid across our time range

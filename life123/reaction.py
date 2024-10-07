@@ -639,7 +639,7 @@ class Reaction:
 
         # Process kinetic data, if available
         #       (extracting thermodynamic data when feasible)
-        if (self.kF is not None) and (self.kR is not None):
+        if (self.kF is not None) and (self.kR is not None) and not np.allclose(self.kR, 0):
             # If all the kinetic data is available...
             self.K = self.kF / self.kR    # ...compute the equilibrium constant (from kinetic data)
 

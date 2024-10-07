@@ -510,10 +510,9 @@ class UniformCompartment:
 
         :param snapshots:       (OPTIONAL) Dict that may contain any the following keys:
                                         -"frequency" (default 1)
-                                        -"show_intermediates" (default True)
                                         -"species" (default None, meaning all species)
-                                        -"initial_caption" (default blank)
-                                        -"final_caption" (default blank)
+                                        -"initial_caption" (default: "1st reaction step")
+                                        -"final_caption" (default: "last reaction step")
                                     If provided, take a system snapshot after running a multiple
                                     of "frequency" reaction steps (default 1, i.e. at every step.)
                                     EXAMPLE: snapshots={"frequency": 2, "species": ["A", "H"]}
@@ -584,10 +583,12 @@ class UniformCompartment:
             frequency = snapshots.get("frequency", 1)   # If not present, it will be 1
             species = snapshots.get("species")          # If not present, it will be None (meaning show all)
             first_snapshot = True
-            if not snapshots.get("show_intermediates"):
-                snapshots["show_intermediates"] = True
         else:
-            snapshots = {"frequency": 1, "show_intermediates": True, "species": None, "first_snapshot": True}
+            snapshots = {"frequency": 1,
+                         "species": None,
+                         "initial_caption": "1st reaction step",
+                         "final_caption": "last reaction step"
+                        }
             frequency = 1
             species = None
             first_snapshot = True
@@ -1809,6 +1810,10 @@ class UniformCompartment:
                                 as allowed by the requested tolerance
         """
         rxn = self.chem_data.get_reaction(rxn_index)    # Look up the requested reaction
+
+        if np.allclose(rxn.extract_reverse_rate(), 0):
+            print("reaction_in_equilibrium() currently does NOT handle irreversible reactions (with a zero reverse rate)")
+            return False
 
         rate_ratio = rxn.extract_forward_rate() / rxn.extract_reverse_rate()  # Ratio of forward/reverse reaction rates
 
