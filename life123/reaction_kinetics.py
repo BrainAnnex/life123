@@ -612,9 +612,9 @@ class VariableTimeSteps:
         Note:   for more control, use set_thresholds() and set_step_factors()
 
                 For example, using the "mid" preset is the same as issuing:
-                    dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
-                    dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-                    dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4, error=0.25)
+                    ReactionKinetics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
+                    ReactionKinetics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
+                    ReactionKinetics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4, error=0.25)
 
         :param preset:  String with one of the available preset names;
                             allowed values are (in generally-increasing speed):

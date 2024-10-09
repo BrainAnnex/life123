@@ -165,7 +165,7 @@ uc.get_history(tail=3)
 uc.diagnostics.get_diagnostic_decisions_data()   # diagnostic data about concentration changes at every step - EVEN aborted ones
 
 # %%
-uc.diagnostics.get_diagnostic_rxn_data(rxn_index=0)   # diagnostic run data of the requested SINGLE reaction
+uc.diagnostics.get_rxn_data(rxn_index=0)   # diagnostic run data of the requested SINGLE reaction
 
 # %%
 uc.diagnostics.get_diagnostic_conc_data()   # diagnostic concentration data saved during the run, regardless of how much history we requested to save

@@ -133,8 +133,8 @@ dynamics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, r
 # We'll pick time **t=0.1** as the divider between the 2 domains of the `A <-> C` time evolution that we want to model. 
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4], 
-                      vertical_lines=[0.1])
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4],
+                      vertical_lines_to_add=[0.1])
 
 # %% [markdown]
 # #### Let's locate where the t = 0.1 point occurs in the data
@@ -178,8 +178,8 @@ dynamics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_co
 # It's no surprise that an elementary reaction is a good fit, if one observes what happens to the time evolution of the concentrations.  Repeating the earlier plot, but only showing `A` and `C` (i.e. hiding the intermediary `B`):
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'green'], xrange=[0, 0.4], vertical_lines=[0.1], 
-                     chemicals=['A', 'C'], title="Changes in concentration for `A <-> C`")
+dynamics.plot_history(colors=['darkturquoise', 'green'], xrange=[0, 0.4], vertical_lines_to_add=[0.1],
+                      chemicals=['A', 'C'], title="Changes in concentration for `A <-> C`")
 
 # %% [markdown]
 # In the zone to the left of the vertical dashed line:  
@@ -203,8 +203,8 @@ dynamics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc
 # Let's see the graph again:
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4], 
-                      vertical_lines=[0.1])
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4],
+                      vertical_lines_to_add=[0.1])
 
 # %% [markdown]
 # A possible conclusion to draw is that, in this case, the earlier part of the complex (compound) reaction `A <-> C` cannot be modeled by an elementary reaction, while the later part can indeed be modeled by a 1st order elementary reaction, with kinetics similar to the slower `A <-> B` reaction

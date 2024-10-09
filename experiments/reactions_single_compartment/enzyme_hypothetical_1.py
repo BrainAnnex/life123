@@ -14,8 +14,9 @@
 # ---
 
 # %% [markdown]
-# ## Comparing the dynamics of the reaction `A <-> B` , with and without an enzyme   
-# ### (in a HYPOTHETICAL kinetics scenario)
+# ## Comparing the dynamics of the reaction `A <-> B` , with and without an enzyme 
+#
+# ### Here, we'll explore a HYPOTHETICAL kinetics scenario where the catalyzed reaction `A` + `E` <-> `B` + `E` follows the kinetics of a 2nd-order *elementary* reaction  
 #
 # LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
 

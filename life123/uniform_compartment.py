@@ -226,7 +226,7 @@ class UniformCompartment:
         self.system[species_index] = conc
 
         if snapshot:
-            self.add_snapshot(caption=f"Set concentration of `{self.chem_data.get_name(species_index)}`")
+            self.add_snapshot(caption=f"Set concentration of `{self.chem_data.get_label(species_index)}`")
 
 
 
@@ -280,7 +280,7 @@ class UniformCompartment:
             if system_data is None:
                 return {}
             else:
-                return {self.chem_data.get_name(index): system_data[index]
+                return {self.chem_data.get_label(index): system_data[index]
                         for index, conc in enumerate(system_data)}
         else:
             assert type(species) == list or  type(species) == tuple, \
@@ -338,7 +338,7 @@ class UniformCompartment:
         print(f"{n_species} species:")
 
         # Show a line of line of data for each chemical species in turn
-        for species_index, name in enumerate(self.chem_data.get_all_names()):
+        for species_index, name in enumerate(self.chem_data.get_all_labels()):
             if name:    # If a name was provided, show it
                 name = f" ({name})"
             else:
@@ -1216,15 +1216,15 @@ class UniformCompartment:
                 self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
                                                                 data={"action": "ABORT",
                                                                       "step_factor": self.adaptive_steps.step_factors['error'],
-                                                                      "caption": f"neg. conc. in {self.chem_data.get_name(species_index)} from rxn # {rxn_index}",
+                                                                      "caption": f"neg. conc. in {self.chem_data.get_label(species_index)} from rxn # {rxn_index}",
                                                                       "time_step": delta_time},
                                                                 delta_conc_arr=None)
                 self.diagnostics.save_diagnostic_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
                                                           increment_vector_single_rxn=None,
-                                                          caption=f"aborted: neg. conc. in `{self.chem_data.get_name(species_index)}`")
+                                                          caption=f"aborted: neg. conc. in `{self.chem_data.get_label(species_index)}`")
 
             raise ExcessiveTimeStepHard(f"    INFO: the tentative time step ({delta_time:.5g}) "
-                                    f"leads to a NEGATIVE concentration of `{self.chem_data.get_name(species_index)}` "
+                                    f"leads to a NEGATIVE concentration of `{self.chem_data.get_label(species_index)}` "
                                     f"from reaction {self.chem_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
                                     f"\n      Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}"
                                     f"\n      -> will backtrack, and re-do step with a SMALLER delta time, "
@@ -1255,7 +1255,7 @@ class UniformCompartment:
             rxn_list = range(self.chem_data.number_of_reactions())
 
         # Process the requested reactions
-        name_mapping = self.chem_data.get_name_mapping()
+        name_mapping = self.chem_data.get_label_mapping()
         for i in rxn_list:      # Consider each desired reaction in turn
             rxn = self.chem_data.get_reaction(i)
             delta = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=self.system, name_mapping=name_mapping)
@@ -1437,11 +1437,6 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def set_diagnostics(self):
-        # TODO: Obsolete, to phase out
-        self.enable_diagnostics()
-
-
     def enable_diagnostics(self):
         """
         Turn on the diagnostics mode
@@ -1463,6 +1458,15 @@ class UniformCompartment:
 
 
 
+    def get_diagnostics(self):
+        """
+
+        :return:    Object of type life123.diagnostics.Diagnostics
+        """
+        return self.diagnostics
+
+
+
 
 
     #####################################################################################################
@@ -1473,9 +1477,10 @@ class UniformCompartment:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None, xrange=None,
+    def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None,
+                     xrange=None, yrange=None,
                      ylabel=None,
-                     vertical_lines=None, show_intervals=False, show=False) -> go.Figure:
+                     vertical_lines_to_add=None, show_intervals=False, show=False) -> go.Figure:
         """
         Using plotly, draw the plots of concentration values over time, based on history data that gets
         automatically saved when running reactions.
@@ -1487,25 +1492,25 @@ class UniformCompartment:
                     p2 = plot_history(various args, show=False)
                     PlotlyHelper.combine_plots([p1, p2], other optional args)
 
-        :param chemicals:   (OPTIONAL) List of the names of the chemicals whose concentration changes are to be plotted,
-                                or a string with just one name;
-                                if None, then display all
-        :param colors:      (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
-                                or list of names to use, in order; if None, then use the hardwired defaults
-        :param title:       (OPTIONAL) Title for the plot;
-                                if None, use default titles that will vary based on the # of reactions; EXAMPLES:
+        :param chemicals:       (OPTIONAL) Name, or list of names, of the chemicals whose concentration changes are to be plotted;
+                                    if None, then display all
+        :param colors:          (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
+                                    or list of names to use, in order; if None, then use the hardwired defaults
+        :param title:           (OPTIONAL) Title for the plot;
+                                    if None, use default titles that will vary based on the # of reactions; EXAMPLES:
                                     "Changes in concentrations for 5 reactions"
                                     "Reaction `A <-> 2 B` .  Changes in concentrations with time"
                                     "Changes in concentration for `2 S <-> U` and `S <-> X`"
-        :param title_prefix: (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
+        :param title_prefix:    (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
                                     whether the title is specified by the user or automatically generated
         :param xrange:          (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
+                                    Note: it's still possible to zoom out, and see the excluded portion
+        :param yrange:          (OPTIONAL) list of the form [y_min, y_max], to initially show only a part of the y values.
                                     Note: it's still possible to zoom out, and see the excluded portion
         :param ylabel:          (OPTIONAL) Caption to use for the y-axis.
                                     By default, the name in `the chemicals` argument, in square brackets, if only 1 chemical,
                                     or "Concentration" if more than 1 (a legend also shown)
-        :param vertical_lines:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
-                                    TODO: rename vertical_lines_to_add
+        :param vertical_lines_to_add: (OPTIONAL) Ignored if the argument `show_intervals` is specified.
                                     List or tuple or Numpy array or Pandas series
                                     of x-coordinates at which to draw thin vertical dotted gray lines.
                                     If the number of vertical line is so large as to overwhelm the plot,
@@ -1516,14 +1521,14 @@ class UniformCompartment:
                                     and draws thin vertical dotted gray lines at all the x-coords
                                     of the data points in the saved history data;
                                     also, it adds a comment to the title.
-        :param show:        If True, the plot will be shown
-                                Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
-                                      leads to it being automatically shown
+        :param show:            If True, the plot will be shown
+                                    Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
+                                          leads to it being automatically shown
 
-        :return:            A plotly "Figure" object
+        :return:                A plotly "Figure" object
         """
         if chemicals is None:
-            chemicals = self.chem_data.get_all_names()      # List of the chemical names.  EXAMPLE: ["A", "B", "H"]
+            chemicals = self.chem_data.get_all_labels()      # List of the chemical names.  EXAMPLE: ["A", "B", "H"]
 
         if title is None:   # If no title was specified, create a default one based on how many reactions are present
             number_of_rxns = self.chem_data.number_of_reactions()
@@ -1537,12 +1542,19 @@ class UniformCompartment:
                 rxn_text_1 = self.chem_data.single_reaction_describe(rxn_index=1, concise=True)
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
+        if ylabel is None:
+            if type(chemicals) == str:
+                ylabel = f"[{chemicals}]"          # EXAMPLE:  "[A]"
+            else:
+                ylabel = "Concentration"
+
         df = self.get_history()     # A Pandas dataframe that contains a column named "SYSTEM TIME"
 
         return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=chemicals,
                                         colors=colors, title=title, title_prefix=title_prefix,
-                                        xrange=xrange, ylabel=ylabel,
-                                        vertical_lines_to_add=vertical_lines, show_intervals=show_intervals, show=show)
+                                        xrange=xrange, yrange=yrange,
+                                        ylabel=ylabel,
+                                        vertical_lines_to_add=vertical_lines_to_add, show_intervals=show_intervals, show=show)
 
 
 
@@ -1698,7 +1710,7 @@ class UniformCompartment:
             else:
                 df = self.get_history()
 
-        chem_list = self.chem_data.get_all_names()  # List of all the chemicals' names
+        chem_list = self.chem_data.get_all_labels()  # List of all the chemicals' names
 
         if row:
             return df.loc[row][chem_list].to_numpy(dtype='float32')

@@ -54,7 +54,7 @@ def test_exact_solution_combination_rxn():
 def test_compute_reaction_rate():
     chem_data = ChemData(names=["A", "B", "C", "D"])
 
-    name_mapping = chem_data.get_name_mapping()
+    name_mapping = chem_data.get_label_mapping()
 
     conc_array = np.array([5., 8., 0, 0])
 

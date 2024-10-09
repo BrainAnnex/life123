@@ -184,13 +184,13 @@ C_final / A_final
 # %%
 # Concentration increments due to reaction 0 (A <-> B)
 # Note that [C] is not affected
-dynamics.diagnostics.get_diagnostic_rxn_data(rxn_index=0)
+dynamics.diagnostics.get_rxn_data(rxn_index=0)
 
 # %%
 # Concentration increments due to reaction 1 (B <-> C) 
 # Also notice that the 0-th row from the A <-> B reaction isn't seen here (start time 0 and step 0.02), 
 # because that step was aborted early on, BEFORE even getting to THIS reaction
-dynamics.diagnostics.get_diagnostic_rxn_data(rxn_index=1)
+dynamics.diagnostics.get_rxn_data(rxn_index=1)
 
 # %%
 

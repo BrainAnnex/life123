@@ -157,34 +157,31 @@ class PlotlyHelper:
     @classmethod
     def plot_pandas(cls, df :pd.DataFrame, x_var="SYSTEM TIME", fields=None,
                   colors=None, title=None, title_prefix=None,
-                  xrange=None, ylabel=None, legend_header="Chemical",
+                  xrange=None, yrange=None,
+                  ylabel=None, legend_header="Chemical",
                   vertical_lines_to_add=None,
                   show_intervals=False, show=False) -> pgo.Figure:
         """
-        Using plotly, draw the plots of concentration from the given dataframe.
+        Using plotly, draw line plots from the values in the given dataframe.
 
         Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
 
-        :param df:          Pandas dataframe with the data for the plot
-        :param x_var:       Name of column with independent variable for the x-axis
-        :param fields:      List of the names of the dataframe columns whose values are to be plotted,
-                                or a string with just one name;
-                                if None, then display all
-        :param colors:      (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
-                                or list of names to use, in order; if None, then the hardwired default colors are used
-        :param title:       (OPTIONAL) Title for the plot;
-                                if None, use default titles that will vary based on the # of reactions; EXAMPLES:
-                                    "Changes in concentrations for 5 reactions"
-                                    "Reaction `A <-> 2 B` .  Changes in concentrations with time"
-                                    "Changes in concentration for `2 S <-> U` and `S <-> X`"
-        :param title_prefix: (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
-                                    whether the title is specified by the user or automatically generated
-        :param xrange:       (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
+        :param df:              Pandas dataframe with the data for the plot
+        :param x_var:           Name of column with independent variable for the x-axis
+        :param fields:          Name, or list of names, of the dataframe columns whose values are to be plotted;
+                                    if None, then display all
+        :param colors:          (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
+                                    or list of names to use, in order; if None, then the hardwired default colors are used
+        :param title:           (OPTIONAL) Title for the plot
+        :param title_prefix:    (OPTIONAL) Strint to prefixed (followed by " <br>") to the title
+        :param xrange:          (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param ylabel:       (OPTIONAL) Caption to use for the y-axis.
+        :param yrange:          (OPTIONAL) list of the form [y_min, y_max], to initially show only a part of the y values.
+                                    Note: it's still possible to zoom out, and see the excluded portion
+        :param ylabel:          (OPTIONAL) Caption to use for the y-axis.
                                     By default, the name in `the chemicals` argument, in square brackets, if only 1 chemical,
                                     or "Concentration" if more than 1 (a legend also shown)
-        :param legend_header:(OPTIONAL) Caption to use at the top of the legend box
+        :param legend_header:   (OPTIONAL) Caption to use at the top of the legend box
         :param vertical_lines_to_add:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
                                     List or tuple or Numpy array or Pandas series
                                     of x-coordinates at which to draw thin vertical dotted gray lines.
@@ -196,22 +193,22 @@ class PlotlyHelper:
                                     and draws thin vertical dotted gray lines at all the x-coords
                                     of the data points in the saved history data;
                                     also, it adds a comment to the title.
-        :param show:        If True, the plot will be shown
-                                Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
-                                      leads to it being automatically shown
+        :param show:            If True, the plot will be shown
+                                    Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
+                                          leads to it being automatically shown
 
-        :return:            A plotly "Figure" object
+        :return:                A plotly "Figure" object
         """
+        # TODO: inconsistent names x_var vs. xrange, etc
+        # TODO: inconsistency with Plotly naming convention:  range_x=xrange, range_y=yrange
         # TODO: allow alternate label for x-axis
-        # TODO: allow specifying a yrange
-        # TODO: move to a general visualization module
 
         MAX_NUMBER_VERTICAL_LINES = 150     # Used to avoid extreme clutter in the plot, in case
-        # a very large number of vertical lines is requested;
-        # if this value is exceeded, then the vertical lines are sampled
-        # infrequently enough to bring the total number below this value
+                                            # a very large number of vertical lines is requested;
+                                            # if this value is exceeded, then the vertical lines are sampled
+                                            # infrequently enough to bring the total number below this value
 
-        number_of_curves = len(fields)
+        number_of_curves = len(fields)  # TODO: this will break if fields in None
 
         if colors is None:
             colors = PlotlyHelper.get_default_colors(number_of_curves)
@@ -220,21 +217,16 @@ class PlotlyHelper:
 
 
         if title_prefix is not None:
-            title = f"{title_prefix}  <br>{title}"
+            title = f"{title_prefix} <br>{title}"
 
         if show_intervals:
             vertical_lines_to_add = df[x_var]  # Make use of the simulation times
             title += " (time steps shown in dashed lines)"
 
-        if ylabel is None:
-            if type(fields) == str:
-                ylabel = f"[{fields}]"          # EXAMPLE:  "[A]"
-            else:
-                ylabel = "Concentration"
 
         # Create the main plot
         fig = px.line(data_frame=df, x=x_var, y=fields,
-                      title=title, range_x=xrange,
+                      title=title, range_x=xrange, range_y=yrange,
                       color_discrete_sequence = colors,
                       labels={"value": ylabel, "variable": legend_header})
 

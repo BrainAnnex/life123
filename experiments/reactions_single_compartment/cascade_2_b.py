@@ -125,8 +125,8 @@ dynamics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, r
 # Note that this is a much smaller time than we saw in experiment `cascade_2_a`
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4], 
-                      vertical_lines=[0.028])
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4],
+                      vertical_lines_to_add=[0.028])
 
 # %% [markdown]
 # #### Let's locate where the t = 0.028 point occurs in the data
@@ -175,8 +175,8 @@ dynamics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc
 # Let's see the graph again:
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4], 
-                      vertical_lines=[0.028])
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4],
+                      vertical_lines_to_add=[0.028])
 
 # %% [markdown]
 # Just as we concluded in experiment `cascade_2_a`, the earlier part of the complex (compound) reaction `A <-> C` cannot be modeled by an elementary reaction, while the later part can indeed be modeled by a 1st order elementary reaction, with kinetics similar to the slower `A <-> B` reaction.  This time, with a greater disparity between the two elementary reaction, the transition happens much sooner.

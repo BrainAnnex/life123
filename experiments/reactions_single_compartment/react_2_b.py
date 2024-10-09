@@ -169,7 +169,7 @@ dynamics.diagnostics.explain_time_advance()
 # #### The Delta-concentration values for all the individual reaction time steps, as contribued by a single reaction, may be inspected from the diagnostic data:
 
 # %%
-diagnostics.get_diagnostic_rxn_data(rxn_index=0)    # For the 0-th reaction (the only reaction in our case)
+diagnostics.get_rxn_data(rxn_index=0)    # For the 0-th reaction (the only reaction in our case)
 
 # %% [markdown]
 # ### Note that diagnostic data with the DELTA Concentrations - in the above listing - also records the values that were considered (but not actually used) during *ABORTED* steps.  For example, in steps 0-2, above, the START_TIME remains the same, as the time_step gets progressively reduced until the resulting changes are deemed acceptable.
@@ -309,7 +309,7 @@ diagnostics.get_diagnostic_decisions_data()
 # Let's again look at the table for reaction 0 :
 
 # %%
-df = diagnostics.get_diagnostic_rxn_data(rxn_index=0)    # For the 0-th reaction (the only reaction in our case)
+df = diagnostics.get_rxn_data(rxn_index=0)    # For the 0-th reaction (the only reaction in our case)
 df
 
 # %% [markdown]

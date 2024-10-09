@@ -14,7 +14,7 @@ class Diagnostics:
 
         self.chem_data = chem_data
 
-        # TODO: maybe drop the "diagnostic_" from the name
+        # TODO: maybe drop the "diagnostic_" from the names
         self.diagnostic_rxn_data = {}   # "Diagnostic reaction data", PER REACTION: a dict with as many entries as reactions.
                                         #   The keys are the reaction indices; the values are objects of type "MovieTabular",
                                         #   which contain Pandas dataframes with the following columns
@@ -89,10 +89,10 @@ class Diagnostics:
 
         if increment_vector_single_rxn is None:     # If the values aren't available (as is the case in aborts)
             for index in indexes:
-                data_snapshot["Delta " + self.chem_data.get_name(index)] = np.nan
+                data_snapshot["Delta " + self.chem_data.get_label(index)] = np.nan
         else:
             for index in indexes:
-                data_snapshot["Delta " + self.chem_data.get_name(index)] = increment_vector_single_rxn[index]
+                data_snapshot["Delta " + self.chem_data.get_label(index)] = increment_vector_single_rxn[index]
 
         if rate:
             data_snapshot["rate"] = rate
@@ -131,8 +131,8 @@ class Diagnostics:
 
 
 
-    def get_diagnostic_rxn_data(self, rxn_index :int, head=None, tail=None,
-                                t=None, print_reaction=True) -> Union[pd.DataFrame, None]:
+    def get_rxn_data(self, rxn_index :int, head=None, tail=None,
+                     t=None, print_reaction=True) -> Union[pd.DataFrame, None]:
         """
         Return a Pandas dataframe with the diagnostic run data of the requested SINGLE reaction,
         from the time that the diagnostics were activated by a call to set_diagnostics().
@@ -330,7 +330,7 @@ class Diagnostics:
         print("row_list: ", row_list)
         print("active_list: ", active_list)
 
-        chemical_list = self.chem_data.get_all_names()
+        chemical_list = self.chem_data.get_all_labels()
         chemical_delta_list = self._delta_names()
 
         conc_arr_before = self.get_diagnostic_conc_data().loc[row_baseline][chemical_list].to_numpy(dtype='float16')
@@ -343,11 +343,11 @@ class Diagnostics:
         for rxn_index in range(self.chem_data.number_of_reactions()):
             if (rxn_index in active_list):  # If reaction is tagged as "fast"
                 row = row_list[rxn_index]   # Row in the data frame for the diagnostic data on this reaction
-                delta_rxn = self.get_diagnostic_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
+                delta_rxn = self.get_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
                 print(f"From fast rxn {rxn_index}: delta_rxn = {delta_rxn}")
             else:                           # If reaction is tagged as "slow"
                 row = row_list[rxn_index]   # Row in the data frame for the diagnostic data on this reaction
-                delta_rxn = self.get_diagnostic_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
+                delta_rxn = self.get_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
                 #delta_rxn = np.zeros(self.reaction_data.number_of_chemicals(),
                 #                     dtype=float)   # This is the way it was in release beta 19
                 print(f"From slow rxn {rxn_index}: delta_rxn = {delta_rxn}")
@@ -612,7 +612,7 @@ class Diagnostics:
             f"(whereas {number_rxns} are present)"
 
         for rxn_index in range(number_rxns):
-            diagnostic_data = self.get_diagnostic_rxn_data(rxn_index=rxn_index, print_reaction=False)
+            diagnostic_data = self.get_rxn_data(rxn_index=rxn_index, print_reaction=False)
             for row_index in range(len(diagnostic_data)):
                 df_row = diagnostic_data.loc[row_index]     # Row in the Panda's data frame of diagnostic data
                 chemical_delta_list = self._delta_names()           # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
@@ -636,7 +636,7 @@ class Diagnostics:
 
         :return:    A list of strings
         """
-        chemical_list = self.chem_data.get_all_names()      # EXAMPLE: ["A", "B", "X"]
+        chemical_list = self.chem_data.get_all_labels()      # EXAMPLE: ["A", "B", "X"]
         chemical_delta_list = ["Delta " + name
                                for name in chemical_list]
         return chemical_delta_list
