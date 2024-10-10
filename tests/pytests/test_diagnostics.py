@@ -117,8 +117,8 @@ def test_save_diagnostic_rxn_data():
 
     df_0 = diagnostic_data_rxn_0.get_dataframe()
 
-    expected_df_0 = pd.DataFrame([[100, 4, 2, -2, ""]],
-                                 columns = ["START_TIME", "time_step", "Delta A", "Delta B",  "caption"])
+    expected_df_0 = pd.DataFrame([[100, 4, False, 2, -2, ""]],
+                                 columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta B",  "caption"])
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)
 
 
@@ -133,8 +133,8 @@ def test_save_diagnostic_rxn_data():
 
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)  # Nothing was done to df_0 by processing reaction index 1
 
-    expected_df_1 = pd.DataFrame([[100, 4, 7, -7, ""]],
-                                 columns = ["START_TIME",  "time_step", "Delta A", "Delta X","caption"])
+    expected_df_1 = pd.DataFrame([[100, 4, False, 7, -7, ""]],
+                                 columns = ["START_TIME",  "time_step", "aborted", "Delta A", "Delta X","caption"])
     assert_frame_equal(df_1, expected_df_1, check_dtype=False)
 
 
@@ -150,8 +150,8 @@ def test_save_diagnostic_rxn_data():
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)  # Nothing was done to df_0 by processing reaction index 2
     assert_frame_equal(df_1, expected_df_1, check_dtype=False)  # Nothing was done to df_1 by processing reaction index 2
 
-    expected_df_2 = pd.DataFrame([[100, 4, -8, -8, 8, "I'm a caption"]],
-                                 columns = ["START_TIME", "time_step", "Delta A", "Delta B", "Delta X", "caption"])
+    expected_df_2 = pd.DataFrame([[100, 4, False, -8, -8, 8, "I'm a caption"]],
+                                 columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta B", "Delta X", "caption"])
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
 
@@ -166,7 +166,7 @@ def test_save_diagnostic_rxn_data():
 
 
     df_0 = diagnostic_data_rxn_0.get_dataframe()
-    expected_df_0.loc[len(expected_df_0)] = [104, 6, -1, 1, "my comment"]    # To add a row to the existing df
+    expected_df_0.loc[len(expected_df_0)] = [104, 6, False, -1, 1, "my comment"]    # To add a row to the existing df
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)
 
 
@@ -177,11 +177,11 @@ def test_save_diagnostic_rxn_data():
 
 
     df_0 = diagnostic_data_rxn_0.get_dataframe()
-    expected_df_0 = pd.DataFrame([[100,  4,  2, -2, "", np.nan],
-                                  [104,  6, -1,  1, "my comment", np.nan],
-                                  [110, 12, -4,  4, "start recording rate", 3.0]
+    expected_df_0 = pd.DataFrame([[100,  4,  False, 2, -2, "", np.nan],
+                                  [104,  6, False, -1,  1, "my comment", np.nan],
+                                  [110, 12, False, -4,  4, "start recording rate", 3.0]
                                   ],
-                                  columns = ["START_TIME", "time_step", "Delta A", "Delta B", "caption", "rate"])
+                                  columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta B", "caption", "rate"])
                                   # Notice "retroactively" addind NaN's to the earlier rows that didn't save a rate value
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)
 
@@ -203,18 +203,18 @@ def test_save_diagnostic_aborted_rxns():
     assert len(diag.diagnostic_rxn_data) == 3       # All 3 reactions got set
 
     df_0 = diag.get_rxn_data(rxn_index=0, print_reaction=False)
-    expected_df_0 = pd.DataFrame([[100, 40, np.nan, np.nan, "aborted step"]],
-                                 columns = ["START_TIME", "time_step", "Delta A", "Delta B",  "caption"])
+    expected_df_0 = pd.DataFrame([[100, 40, True, np.nan, np.nan, "aborted step"]],
+                                 columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta B",  "caption"])
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)
 
     df_1 = diag.get_rxn_data(rxn_index=1, print_reaction=False)
-    expected_df_1 = pd.DataFrame([[100, 40, np.nan, np.nan, "aborted step"]],
-                                 columns = ["START_TIME", "time_step", "Delta A", "Delta X",  "caption"])
+    expected_df_1 = pd.DataFrame([[100, 40, True, np.nan, np.nan, "aborted step"]],
+                                 columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta X",  "caption"])
     assert_frame_equal(df_1, expected_df_1, check_dtype=False)
 
     df_2 = diag.get_rxn_data(rxn_index=2, print_reaction=False)
-    expected_df_2 = pd.DataFrame([[100, 40, np.nan, np.nan, np.nan, "aborted step"]],
-                                 columns = ["START_TIME", "time_step", "Delta A", "Delta B",  "Delta X",  "caption"])
+    expected_df_2 = pd.DataFrame([[100, 40, True, np.nan, np.nan, np.nan, "aborted step"]],
+                                 columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta B",  "Delta X",  "caption"])
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
 
@@ -235,8 +235,8 @@ def test_get_diagnostic_rxn_data():
 
     df_0 = diag.get_rxn_data(rxn_index=0, print_reaction=False)
 
-    expected_df_0 = pd.DataFrame([[100, 4, 2, -2, ""]],
-                                 columns = ["START_TIME", "time_step", "Delta A", "Delta B", "caption"])
+    expected_df_0 = pd.DataFrame([[100, 4, False, 2, -2, ""]],
+                                 columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta B", "caption"])
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)
 
     df_1 = diag.get_rxn_data(rxn_index=1, print_reaction=False)
@@ -251,8 +251,8 @@ def test_get_diagnostic_rxn_data():
 
     df_1 = diag.get_rxn_data(rxn_index=1, print_reaction=False)
 
-    expected_df_1 = pd.DataFrame([[100, 4, 7, -7, ""]],
-                                 columns = ["START_TIME", "time_step", "Delta A", "Delta X", "caption"])
+    expected_df_1 = pd.DataFrame([[100, 4, False, 7, -7, ""]],
+                                 columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta X", "caption"])
     assert_frame_equal(df_1, expected_df_1, check_dtype=False)
 
     df_0 = diag.get_rxn_data(rxn_index=0, print_reaction=False)
@@ -269,14 +269,14 @@ def test_get_diagnostic_rxn_data():
 
     df_2 = diag.get_rxn_data(rxn_index=2, print_reaction=False, tail=1) # With just one row, tail=1 won't make a difference
 
-    expected_df_2 = pd.DataFrame([[100, 4,-8, -8,  8,  "I'm a caption"]],
-                                 columns = ["START_TIME", "time_step", "Delta A", "Delta B", "Delta X", "caption"])
+    expected_df_2 = pd.DataFrame([[100, 4, False, -8, -8,  8,  "I'm a caption"]],
+                                 columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta B", "Delta X", "caption"])
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
     df_2 = diag.get_rxn_data(rxn_index=2, print_reaction=False, t=50) # With just one row, the time selector won't matter
 
-    expected_df_2 = pd.DataFrame([[50, 100, 4, -8, -8, 8, "I'm a caption"]],
-                                 columns = ["search_value", "START_TIME", "time_step", "Delta A", "Delta B", "Delta X", "caption"])
+    expected_df_2 = pd.DataFrame([[50, 100, 4, False, -8, -8, 8, "I'm a caption"]],
+                                 columns = ["search_value", "START_TIME", "time_step", "aborted", "Delta A", "Delta B", "Delta X", "caption"])
 
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
@@ -286,8 +286,8 @@ def test_get_diagnostic_rxn_data():
                        caption="2nd row")
 
     df_2 = diag.get_rxn_data(rxn_index=2, print_reaction=False)
-    expected_df_2 = pd.DataFrame([[100, 4, -8, -8, 8, "I'm a caption"] , [104, 4, -11, -11, 11, "2nd row"]],
-                                 columns = ["START_TIME", "time_step", "Delta A", "Delta B", "Delta X", "caption"])
+    expected_df_2 = pd.DataFrame([[100, 4, False, -8, -8, 8, "I'm a caption"] , [104, 4, False, -11, -11, 11, "2nd row"]],
+                                 columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta B", "Delta X", "caption"])
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
     df_2 = diag.get_rxn_data(rxn_index=2, print_reaction=False, tail=2)   # The full dataset, again
@@ -297,25 +297,25 @@ def test_get_diagnostic_rxn_data():
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
     df_2 = diag.get_rxn_data(rxn_index=2, print_reaction=False, head=1)   # Just the first row
-    expected_df_2 = pd.DataFrame([[100, 4, -8, -8, 8, "I'm a caption"]],
-                                 columns = ["START_TIME", "time_step", "Delta A", "Delta B", "Delta X", "caption"])
+    expected_df_2 = pd.DataFrame([[100, 4, False, -8, -8, 8, "I'm a caption"]],
+                                 columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta B", "Delta X", "caption"])
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
     df_2 = diag.get_rxn_data(rxn_index=2, print_reaction=False, tail=1)   # Just the last row
-    expected_df_2 = pd.DataFrame([[104, 4, -11, -11, 11, "2nd row"]],
-                                 columns = ["START_TIME", "time_step", "Delta A", "Delta B", "Delta X", "caption"])
+    expected_df_2 = pd.DataFrame([[104, 4, False, -11, -11, 11, "2nd row"]],
+                                 columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta B", "Delta X", "caption"])
     expected_df_2.index = [1]   # To conform to the original index, which the tail parameter doesn't alter
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
     df_2 = diag.get_rxn_data(rxn_index=2, print_reaction=False, t=150)   # The row closest in time will be the last row
-    expected_df_2 = pd.DataFrame([[150, 104, 4, -11, -11, 11, "2nd row"]],
-                                 columns = ["search_value", "START_TIME", "time_step", "Delta A", "Delta B", "Delta X", "caption"])
+    expected_df_2 = pd.DataFrame([[150, 104, 4, False, -11, -11, 11, "2nd row"]],
+                                 columns = ["search_value", "START_TIME", "time_step", "aborted", "Delta A", "Delta B", "Delta X", "caption"])
     expected_df_2.index = [1]   # To conform to the original index, which the t parameter doesn't alter
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
     df_2 = diag.get_rxn_data(rxn_index=2, print_reaction=False, t=30)   # The row closest in time will be the first row
-    expected_df_2 = pd.DataFrame([[30, 100, 4, -8, -8, 8, "I'm a caption"]],
-                                 columns = ["search_value", "START_TIME", "time_step", "Delta A", "Delta B", "Delta X", "caption"])
+    expected_df_2 = pd.DataFrame([[30, 100, 4, False, -8, -8, 8, "I'm a caption"]],
+                                 columns = ["search_value", "START_TIME", "time_step", "aborted", "Delta A", "Delta B", "Delta X", "caption"])
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
 
