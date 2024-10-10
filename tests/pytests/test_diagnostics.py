@@ -102,12 +102,12 @@ def test_save_diagnostic_rxn_data():
     assert len(diag.diagnostic_rxn_data) == 0
 
     with pytest.raises(Exception):
-        diag.save_diagnostic_rxn_data(rxn_index=0, system_time=100, time_step=4,
-                                     increment_vector_single_rxn=np.array([2, -2]))     # Wrong size of Numpy array
+        diag.save_rxn_data(rxn_index=0, system_time=100, time_step=4,
+                           increment_vector_single_rxn=np.array([2, -2]))     # Wrong size of Numpy array
 
     # Add data for reaction index 0
-    diag.save_diagnostic_rxn_data(rxn_index=0, system_time=100, time_step=4,
-                                 increment_vector_single_rxn=np.array([2, -2, 0, 0]))
+    diag.save_rxn_data(rxn_index=0, system_time=100, time_step=4,
+                       increment_vector_single_rxn=np.array([2, -2, 0, 0]))
 
     assert len(diag.diagnostic_rxn_data) == 1
 
@@ -123,8 +123,8 @@ def test_save_diagnostic_rxn_data():
 
 
     # Add data for reaction index 1
-    diag.save_diagnostic_rxn_data(system_time=100, rxn_index=1, time_step=4,
-                                 increment_vector_single_rxn=np.array([7, 0, 0, -7]))
+    diag.save_rxn_data(system_time=100, rxn_index=1, time_step=4,
+                       increment_vector_single_rxn=np.array([7, 0, 0, -7]))
 
     assert len(diag.diagnostic_rxn_data) == 2       # 2 reactions added so far
     df_0 = diagnostic_data_rxn_0.get_dataframe()
@@ -139,9 +139,9 @@ def test_save_diagnostic_rxn_data():
 
 
     # Add data for reaction index 2
-    diag.save_diagnostic_rxn_data(system_time=100, rxn_index=2, time_step=4,
-                                 increment_vector_single_rxn=np.array([-8, -8, 0, 8]),
-                                 caption="I'm a caption")
+    diag.save_rxn_data(system_time=100, rxn_index=2, time_step=4,
+                       increment_vector_single_rxn=np.array([-8, -8, 0, 8]),
+                       caption="I'm a caption")
 
     assert len(diag.diagnostic_rxn_data) == 3       # 3 reactions added so far
     diagnostic_data_rxn_2 = diag.diagnostic_rxn_data[2]
@@ -156,8 +156,8 @@ def test_save_diagnostic_rxn_data():
 
 
     # Add more data for reaction index 0
-    diag.save_diagnostic_rxn_data(rxn_index=0, system_time=104, time_step=6,
-                                  increment_vector_single_rxn=np.array([-1, 1, 0, 0]), caption="my comment")
+    diag.save_rxn_data(rxn_index=0, system_time=104, time_step=6,
+                       increment_vector_single_rxn=np.array([-1, 1, 0, 0]), caption="my comment")
 
     assert len(diag.diagnostic_rxn_data) == 3       # Still 3 reactions
 
@@ -171,9 +171,9 @@ def test_save_diagnostic_rxn_data():
 
 
     # Add a 3rd entry for reaction index 0, this time with rate information
-    diag.save_diagnostic_rxn_data(rxn_index=0, system_time=110, time_step=12,
-                                  increment_vector_single_rxn=np.array([-4, 4, 0, 0]),
-                                  caption="start recording rate", rate=3)
+    diag.save_rxn_data(rxn_index=0, system_time=110, time_step=12,
+                       increment_vector_single_rxn=np.array([-4, 4, 0, 0]),
+                       caption="start recording rate", rate=3)
 
 
     df_0 = diagnostic_data_rxn_0.get_dataframe()
@@ -230,8 +230,8 @@ def test_get_diagnostic_rxn_data():
 
 
     # Add data for reaction index 0
-    diag.save_diagnostic_rxn_data(system_time=100, rxn_index=0, time_step=4,
-                                 increment_vector_single_rxn=np.array([2, -2, 0, 0]))
+    diag.save_rxn_data(system_time=100, rxn_index=0, time_step=4,
+                       increment_vector_single_rxn=np.array([2, -2, 0, 0]))
 
     df_0 = diag.get_rxn_data(rxn_index=0, print_reaction=False)
 
@@ -246,8 +246,8 @@ def test_get_diagnostic_rxn_data():
 
 
     # Add data for reaction index 1
-    diag.save_diagnostic_rxn_data(system_time=100, rxn_index=1, time_step=4,
-                                 increment_vector_single_rxn=np.array([7, 0, 0, -7]))
+    diag.save_rxn_data(system_time=100, rxn_index=1, time_step=4,
+                       increment_vector_single_rxn=np.array([7, 0, 0, -7]))
 
     df_1 = diag.get_rxn_data(rxn_index=1, print_reaction=False)
 
@@ -263,9 +263,9 @@ def test_get_diagnostic_rxn_data():
 
 
     # Add data for reaction index 2
-    diag.save_diagnostic_rxn_data(system_time=100, rxn_index=2, time_step=4,
-                                 increment_vector_single_rxn=np.array([-8, -8, 0, 8]),
-                                 caption="I'm a caption")
+    diag.save_rxn_data(system_time=100, rxn_index=2, time_step=4,
+                       increment_vector_single_rxn=np.array([-8, -8, 0, 8]),
+                       caption="I'm a caption")
 
     df_2 = diag.get_rxn_data(rxn_index=2, print_reaction=False, tail=1) # With just one row, tail=1 won't make a difference
 
@@ -281,9 +281,9 @@ def test_get_diagnostic_rxn_data():
     assert_frame_equal(df_2, expected_df_2, check_dtype=False)
 
     # Add a 2nd data row for reaction 2
-    diag.save_diagnostic_rxn_data(system_time=104, rxn_index=2, time_step=4,
-                                 increment_vector_single_rxn=np.array([-11, -11, 0, 11]),
-                                 caption="2nd row")
+    diag.save_rxn_data(system_time=104, rxn_index=2, time_step=4,
+                       increment_vector_single_rxn=np.array([-11, -11, 0, 11]),
+                       caption="2nd row")
 
     df_2 = diag.get_rxn_data(rxn_index=2, print_reaction=False)
     expected_df_2 = pd.DataFrame([[100, 4, -8, -8, 8, "I'm a caption"] , [104, 4, -11, -11, 11, "2nd row"]],

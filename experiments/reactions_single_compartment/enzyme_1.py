@@ -22,11 +22,11 @@
 # 2) the non-catalyzed E + S <-> P reaction
 
 # %% [markdown]
-# #### Source of kinetic parameters:  p. 16 of "Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023
+# #### Source of kinetic parameters:  page 16 of "Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023
 
 # %%
-LAST_REVISED = "Oct. 7, 2024"
-LIFE123_VERSION = "1.0.0.rc.0"    # Library version this experiment is based on
+LAST_REVISED = "Oct. 9, 2024"
+LIFE123_VERSION = "1.0.0.beta.39"    # Library version this experiment is based on
 
 # %%
 #import set_path              # Using MyBinder?  Uncomment this before running the next cell!
@@ -69,6 +69,9 @@ chem_data.add_chemical(name="2,6-Diamino-9-β-D-deoxyribofuranosyl-9-H-purine", 
 chem_data.all_chemicals()
 
 # %%
+
+# %% [markdown]
+# ### Specify the Kinetic Parameters
 
 # %% tags=[]
 # Reaction E + S <-> ES* , with 1st-order kinetics, and a forward rate that is much faster than it was without the enzyme
@@ -115,7 +118,7 @@ uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
 
 # %%
 uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], title_prefix="DETAIL at early times",
-                xrange=[0, 0.8], yrange=[0, 2.])
+                range_x=[0, 0.8], range_y=[0, 2.])
 
 # %%
 
@@ -124,17 +127,55 @@ uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], title_prefix="DETAIL 
 # One could take the numerical derivative (gradient) of the time values of [P] - but no need to!  Reaction rates are computed in the course of the simulation, and stored alongside other diagnostic data, if diagnostics were enabled (as we did indeed)
 
 # %%
-uc.get_diagnostics().get_rxn_data(rxn_index=1)
+rates = uc.get_diagnostics().get_rxn_rates(rxn_index=1)
+rates
 
 # %%
-uc.get_diagnostics().get_rxn_data(rxn_index=1)[:300]
+rates[:310]
 
 # %%
-PlotlyHelper.plot_pandas(df=uc.get_diagnostics().get_rxn_data(rxn_index=1), 
+rates[311:330]
+
+# %%
+PlotlyHelper.plot_pandas(df=rates, 
                          title="Reaction rate, dP/dt, over time",
-                         x_var="START_TIME", fields="rate")
+                         x_var="START_TIME", fields="rate", 
+                         x_label="time", y_label="dP/dt")
+
+# %%
+PlotlyHelper.plot_pandas(df=diagnostic_df, 
+                         title="Reaction rate, dP/dt, over time (DETAIL at early times)",
+                         x_var="START_TIME", fields="rate", 
+                         x_label="time", y_label="dP/dt",
+                         range_x=[0,0.05], range_y=[33., 34.5])
 
 # %%
 
 # %% [markdown]
-# TODO: compute kM , and Michaelis-Menten estimate of initial rate
+# ## Let's compute the Michaelis constant kM:
+
+# %%
+kM = (49. + 100.) / 18.
+kM
+
+# %%
+kcat = 49.
+
+# %%
+vmax = kcat * 1.
+vmax
+
+# %%
+rate = (vmax * 20.) / (kM + 20.)
+rate
+
+# %%
+
+# %%
+hist = uc.get_history()[:-1]    # Dropping the last row, because no rate information is know about the next simulation step not taken!
+hist
+
+# %%
+assert len(hist) == len(rates)   # They'd better match up!
+
+# %%

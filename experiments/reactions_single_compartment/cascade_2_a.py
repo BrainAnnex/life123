@@ -133,7 +133,7 @@ dynamics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, r
 # We'll pick time **t=0.1** as the divider between the 2 domains of the `A <-> C` time evolution that we want to model. 
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4],
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], range_x=[0, 0.4],
                       vertical_lines_to_add=[0.1])
 
 # %% [markdown]
@@ -178,7 +178,7 @@ dynamics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_co
 # It's no surprise that an elementary reaction is a good fit, if one observes what happens to the time evolution of the concentrations.  Repeating the earlier plot, but only showing `A` and `C` (i.e. hiding the intermediary `B`):
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'green'], xrange=[0, 0.4], vertical_lines_to_add=[0.1],
+dynamics.plot_history(colors=['darkturquoise', 'green'], range_x=[0, 0.4], vertical_lines_to_add=[0.1],
                       chemicals=['A', 'C'], title="Changes in concentration for `A <-> C`")
 
 # %% [markdown]
@@ -203,7 +203,7 @@ dynamics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc
 # Let's see the graph again:
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4],
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], range_x=[0, 0.4],
                       vertical_lines_to_add=[0.1])
 
 # %% [markdown]

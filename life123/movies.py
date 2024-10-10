@@ -6,16 +6,18 @@ import numpy as np
 
 class MovieTabular:
     """
-    A "tabular movie" is a list of snapshots of data that comes as a python dictionary
+    A "tabular movie" is a Pandas dataframe
+    built up from a sequence of "snapshots" of data that's in  the form of a python dictionary
     (representing a list of values and their corresponding names),
-    such as something based on the state of the system or of parts thereof,
-    either taken at different times,
-    or resulting from varying some parameter(s)
+    such as the state of the system or of parts thereof.
+
+    Each data "snapshots" is taken at different times,
+    or results from varying some parameter.
 
     Each snapshot - incl. its parameter values and optional captions -
     will constitute a "row" in a tabular format
 
-    MAIN DATA STRUCTURE for "tabular" mode:
+    MAIN DATA STRUCTURE for "tabular" movies:
         A Pandas dataframe
     """
 
@@ -64,7 +66,7 @@ class MovieTabular:
         """
         if self.movie.empty:     # No Pandas dataframe was yet started
             assert type(data_snapshot) == dict, \
-                "MovieTabular.store(): The argument `data_snapshot` must be a dictionary"
+                "MovieTabular.store(): The argument `data_snapshot` must be a python dictionary"
 
             self.movie = pd.DataFrame(data_snapshot, index=[0])     # Form the initial Pandas dataframe (zero refers to the initial row)
             self.movie.insert(0, self.parameter_name, par)          # Add a column at the beginning
@@ -179,11 +181,25 @@ class MovieTabular:
         Set the caption field of the last (most recent) snapshot to the given value.
         Any previous value gets over-written
 
-        :param caption:
+        :param caption: String containing a caption to write into the last (most recent) snapshot
         :return:        None
         """
         index = len(self.movie) - 1
         self.movie.loc[index, "caption"] = caption
+
+
+
+    def set_field_last_snapshot(self, field_name: str, field_value) -> None:
+        """
+        Set the specified field of the last (most recent) snapshot to the given value.
+        Any previous value gets over-written
+
+        :param field_name:  Name of field of interest
+        :param field_value: Value to write into the above field for the last (most recent) snapshot
+        :return:            None
+        """
+        index = len(self.movie) - 1
+        self.movie.loc[index, field_name] = field_value
 
 
 

@@ -21,7 +21,7 @@
 
 # %%
 LAST_REVISED = "Oct. 6, 2024"
-LIFE123_VERSION = "1.0.0.rc.0"    # Library version this experiment is based on
+LIFE123_VERSION = "1.0.0.beta.39"    # Library version this experiment is based on
 
 # %%
 #import set_path              # Using MyBinder?  Uncomment this before running the next cell!
@@ -54,7 +54,7 @@ GraphicLog.config(filename=log_file,
 # %%
 
 # %% [markdown]
-# # PART 1 - VARIABLE TIME STEPS
+# # PART 1 - VARIABLE TIME STEPS (Numerical Approximation to Solution)
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
@@ -78,6 +78,10 @@ uc.describe_state()
 
 # %%
 uc.get_history()
+
+# %%
+uc.enable_diagnostics()   # To save diagnostic information about the call to single_compartment_react()
+                          # Useful for insight into the inner workings of the simulation
 
 # %% [markdown] tags=[]
 # ## Run the reaction   
@@ -142,5 +146,8 @@ PlotlyHelper.combine_plots(fig_list=[fig_variable, fig_exact],
                            xrange=[0, 1.5], ylabel="concentration [A]",
                            title="Variable time steps vs. Exact soln, for [A] in irreversible reaction `A->B`",
                            legend_title="Simulation run")    # Both plots put together
+
+# %% [markdown]
+# ### A pretty good overlap!
 
 # %%

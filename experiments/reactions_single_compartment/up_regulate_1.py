@@ -172,7 +172,7 @@ dynamics.plot_history(colors=['red', 'darkorange', 'green'], show_intervals=True
 
 # %%
 # Zoom in on the early part of the last plot
-dynamics.plot_history(colors=['red', 'darkorange', 'green'], xrange=[0, 0.02])
+dynamics.plot_history(colors=['red', 'darkorange', 'green'], range_x=[0, 0.02])
 
 # %%
 # Look up the first intersection of the [A] and [B] curves

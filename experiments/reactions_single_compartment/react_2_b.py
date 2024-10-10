@@ -324,8 +324,8 @@ df = df[2:]   # Drop the aborted first 2 steps
 df
 
 # %%
-p1 = PlotlyHelper.plot_pandas(df=df, x_var="START_TIME", fields=["A_dot"], colors=['brown'], 
-                              ylabel="concentration change/unit time",
+p1 = PlotlyHelper.plot_pandas(df=df, x_var="START_TIME", fields=["A_dot"], colors=['brown'],
+                              y_label="concentration change/unit time",
                               title="Rate of change of of A with time")
 p1
 

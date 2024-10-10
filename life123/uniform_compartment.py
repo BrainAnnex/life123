@@ -913,7 +913,7 @@ class UniformCompartment:
                                                         caption="excessive norm value(s)")
 
                     # Make a note of the abort action in all the reaction-specific diagnostics
-                    self.diagnostics.comment_diagnostic_rxn_data("aborted: excessive norm value(s)")
+                    self.diagnostics.annotate_abort_rxn_data("aborted: excessive norm value(s)")
 
                 raise ExcessiveTimeStepSoft(msg)    # ABORT THE CURRENT STEP
 
@@ -1104,10 +1104,10 @@ class UniformCompartment:
                                                                 # TODO: consider using a small dict in lieu of increment_vector_single_rxn
 
             if self.diagnostics_enabled:
-                self.diagnostics.save_diagnostic_rxn_data(rxn_index=rxn_index,
-                                                          system_time=self.system_time, time_step=delta_time,
-                                                          increment_vector_single_rxn=increment_vector_single_rxn,
-                                                          rate=rate_dict[rxn_index])
+                self.diagnostics.save_rxn_data(rxn_index=rxn_index,
+                                               system_time=self.system_time, time_step=delta_time,
+                                               increment_vector_single_rxn=increment_vector_single_rxn,
+                                               rate=rate_dict[rxn_index])
         # END for (over rxn_list)
 
         return increment_vector
@@ -1219,9 +1219,10 @@ class UniformCompartment:
                                                                       "caption": f"neg. conc. in {self.chem_data.get_label(species_index)} from rxn # {rxn_index}",
                                                                       "time_step": delta_time},
                                                                 delta_conc_arr=None)
-                self.diagnostics.save_diagnostic_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
-                                                          increment_vector_single_rxn=None,
-                                                          caption=f"aborted: neg. conc. in `{self.chem_data.get_label(species_index)}`")
+                self.diagnostics.save_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
+                                               increment_vector_single_rxn=None,
+                                               aborted=True,
+                                               caption=f"aborted: neg. conc. in `{self.chem_data.get_label(species_index)}`")
 
             raise ExcessiveTimeStepHard(f"    INFO: the tentative time step ({delta_time:.5g}) "
                                     f"leads to a NEGATIVE concentration of `{self.chem_data.get_label(species_index)}` "
@@ -1478,8 +1479,8 @@ class UniformCompartment:
     #####################################################################################################
 
     def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None,
-                     xrange=None, yrange=None,
-                     ylabel=None,
+                     range_x=None, range_y=None,
+                     y_label=None,
                      vertical_lines_to_add=None, show_intervals=False, show=False) -> go.Figure:
         """
         Using plotly, draw the plots of concentration values over time, based on history data that gets
@@ -1503,11 +1504,11 @@ class UniformCompartment:
                                     "Changes in concentration for `2 S <-> U` and `S <-> X`"
         :param title_prefix:    (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
                                     whether the title is specified by the user or automatically generated
-        :param xrange:          (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
+        :param range_x:         (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param yrange:          (OPTIONAL) list of the form [y_min, y_max], to initially show only a part of the y values.
+        :param range_y:         (OPTIONAL) list of the form [y_min, y_max], to initially show only a part of the y values.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param ylabel:          (OPTIONAL) Caption to use for the y-axis.
+        :param y_label:          (OPTIONAL) Caption to use for the y-axis.
                                     By default, the name in `the chemicals` argument, in square brackets, if only 1 chemical,
                                     or "Concentration" if more than 1 (a legend also shown)
         :param vertical_lines_to_add: (OPTIONAL) Ignored if the argument `show_intervals` is specified.
@@ -1542,18 +1543,18 @@ class UniformCompartment:
                 rxn_text_1 = self.chem_data.single_reaction_describe(rxn_index=1, concise=True)
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
-        if ylabel is None:
+        if y_label is None:
             if type(chemicals) == str:
-                ylabel = f"[{chemicals}]"          # EXAMPLE:  "[A]"
+                y_label = f"[{chemicals}]"          # EXAMPLE:  "[A]"
             else:
-                ylabel = "Concentration"
+                y_label = "Concentration"
 
         df = self.get_history()     # A Pandas dataframe that contains a column named "SYSTEM TIME"
 
         return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=chemicals,
                                         colors=colors, title=title, title_prefix=title_prefix,
-                                        xrange=xrange, yrange=yrange,
-                                        ylabel=ylabel,
+                                        range_x=range_x, range_y=range_y,
+                                        y_label=y_label,
                                         vertical_lines_to_add=vertical_lines_to_add, show_intervals=show_intervals, show=show)
 
 

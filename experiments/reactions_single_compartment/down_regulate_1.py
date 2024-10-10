@@ -232,7 +232,7 @@ dynamics.is_in_equilibrium(tolerance=12)
 
 # %%
 dynamics.plot_history(colors=["darkturquoise", "green", "red"],
-                      title="Same plot as above, both only showing initial detail", xrange=[0, 0.3])
+                      title="Same plot as above, both only showing initial detail", range_x=[0, 0.3])
 
 # %%
 # Look at where the curves intersect

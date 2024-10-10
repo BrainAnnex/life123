@@ -125,7 +125,7 @@ dynamics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, r
 # Note that this is a much smaller time than we saw in experiment `cascade_2_a`
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4],
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], range_x=[0, 0.4],
                       vertical_lines_to_add=[0.028])
 
 # %% [markdown]
@@ -175,7 +175,7 @@ dynamics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc
 # Let's see the graph again:
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], xrange=[0, 0.4],
+dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], range_x=[0, 0.4],
                       vertical_lines_to_add=[0.028])
 
 # %% [markdown]

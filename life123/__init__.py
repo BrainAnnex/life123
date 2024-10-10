@@ -10,7 +10,7 @@
     :license: MIT, see LICENSE for more details.
 """
 
-__version__ = "1.0.0.rc.0"
+__version__ = "1.0.0.beta.39"
 
 
 from life123.bio_sim_1d import BioSim1D

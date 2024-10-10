@@ -156,11 +156,11 @@ class PlotlyHelper:
 
     @classmethod
     def plot_pandas(cls, df :pd.DataFrame, x_var="SYSTEM TIME", fields=None,
-                  colors=None, title=None, title_prefix=None,
-                  xrange=None, yrange=None,
-                  ylabel=None, legend_header="Chemical",
-                  vertical_lines_to_add=None,
-                  show_intervals=False, show=False) -> pgo.Figure:
+                    colors=None, title=None, title_prefix=None,
+                    range_x=None, range_y=None,
+                    x_label=None, y_label=None, legend_header="Chemical",
+                    vertical_lines_to_add=None,
+                    show_intervals=False, show=False) -> pgo.Figure:
         """
         Using plotly, draw line plots from the values in the given dataframe.
 
@@ -174,13 +174,12 @@ class PlotlyHelper:
                                     or list of names to use, in order; if None, then the hardwired default colors are used
         :param title:           (OPTIONAL) Title for the plot
         :param title_prefix:    (OPTIONAL) Strint to prefixed (followed by " <br>") to the title
-        :param xrange:          (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
+        :param range_x:         (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param yrange:          (OPTIONAL) list of the form [y_min, y_max], to initially show only a part of the y values.
+        :param range_y:         (OPTIONAL) list of the form [y_min, y_max], to initially show only a part of the y values.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param ylabel:          (OPTIONAL) Caption to use for the y-axis.
-                                    By default, the name in `the chemicals` argument, in square brackets, if only 1 chemical,
-                                    or "Concentration" if more than 1 (a legend also shown)
+        :param x_label:         (OPTIONAL) Caption to use for the x-axis
+        :param y_label:         (OPTIONAL) Caption to use for the y-axis
         :param legend_header:   (OPTIONAL) Caption to use at the top of the legend box
         :param vertical_lines_to_add:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
                                     List or tuple or Numpy array or Pandas series
@@ -199,16 +198,16 @@ class PlotlyHelper:
 
         :return:                A plotly "Figure" object
         """
-        # TODO: inconsistent names x_var vs. xrange, etc
-        # TODO: inconsistency with Plotly naming convention:  range_x=xrange, range_y=yrange
-        # TODO: allow alternate label for x-axis
 
         MAX_NUMBER_VERTICAL_LINES = 150     # Used to avoid extreme clutter in the plot, in case
                                             # a very large number of vertical lines is requested;
                                             # if this value is exceeded, then the vertical lines are sampled
                                             # infrequently enough to bring the total number below this value
 
-        number_of_curves = len(fields)  # TODO: this will break if fields in None
+        if fields is None:
+            number_of_curves = len(df.columns) - 1  # All the field but one (since one is the independent variable)
+        else:
+            number_of_curves = len(fields)
 
         if colors is None:
             colors = PlotlyHelper.get_default_colors(number_of_curves)
@@ -226,22 +225,25 @@ class PlotlyHelper:
 
         # Create the main plot
         fig = px.line(data_frame=df, x=x_var, y=fields,
-                      title=title, range_x=xrange, range_y=yrange,
+                      title=title, range_x=range_x, range_y=range_y,
                       color_discrete_sequence = colors,
-                      labels={"value": ylabel, "variable": legend_header})
+                      labels={"value": y_label, "variable": legend_header})
 
         if type(fields) == str:     # Somehow, the `labels` argument in px.line, above, is ignored when `fields` is just a string
-            fig.update_layout(yaxis_title=ylabel)
+            fig.update_layout(yaxis_title=y_label)   # This line will remedy the above issue
+
+        if x_label is not None:
+            fig.update_layout(xaxis_title=x_label)   # Over-ride the default naming of the x-axis
 
 
-        if vertical_lines_to_add is not None:
+        if vertical_lines_to_add is not None:   # User requested to add vertical lines to the plot
             assert (type(vertical_lines_to_add) == list) or (type(vertical_lines_to_add) == tuple) \
                    or (type(vertical_lines_to_add) == np.ndarray) or (type(vertical_lines_to_add) == pd.core.series.Series), \
                 "plot_curves(): the argument `vertical_lines`, " \
                 "if not None, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
 
             vline_list = []
-            if xrange:
+            if range_x:
                 step = 1    # Always show all vertical lines if a range on the x-axis was specified
             else:
                 # Possibly limit the number of vertical lines shown

@@ -202,7 +202,7 @@ dynamics.plot_history(chemicals=["A", "B", "C"])
 
 # %%
 # Show the timestepe taken (vertical dashed lines) in a small section of the plot
-dynamics.plot_history(chemicals=["A", "B", "C"], show_intervals=True, xrange=[2.5, 3.5])
+dynamics.plot_history(chemicals=["A", "B", "C"], show_intervals=True, range_x=[2.5, 3.5])
 
 # %%
 dynamics.explain_time_advance()  # Notice a lot of timestep adjustments, as needed
