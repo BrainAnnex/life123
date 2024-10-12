@@ -40,12 +40,11 @@
 # ![2 Coupled Reactions](../../docs/2_coupled_reactions.png)
 
 # %%
-LAST_REVISED = "July 26, 2024"
-LIFE123_VERSION = "1.0.0.beta.38"      # Version this experiment is based on
+LAST_REVISED = "Oct. 11, 2024"
+LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based on
 
 # %%
-#import set_path            # Using MyBinder?  Uncomment this before running the next cell!
-                            # Importing this local file will add the project's home directory to sys.path
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
 #import sys

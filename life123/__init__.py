@@ -72,7 +72,7 @@ def check_version(expected :str, enforce=False) -> None:
         print("OK")
     else:
         print(f"*** CAUTION: the installed version of the life123 library ({__version__}) "
-              f"does not match the stated expected version ({expected}).\nIn case of errors, "
+              f"doesn't match the stated expected version ({expected}).\nIn case of errors, "
               f"change the installed library version, or modify your code to conform to the installed library."
               f"\nChangelog: https://life123.science/history\n\n")
 

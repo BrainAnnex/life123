@@ -162,7 +162,7 @@ uc.get_history(tail=3)
 # This information is available because we made a call to `dynamics.set_diagnostics()` prior to running the simulation
 
 # %%
-uc.diagnostics.get_diagnostic_decisions_data()   # diagnostic data about concentration changes at every step - EVEN aborted ones
+uc.diagnostics.get_decisions_data()   # diagnostic data about concentration changes at every step - EVEN aborted ones
 
 # %%
 uc.diagnostics.get_rxn_data(rxn_index=0)   # diagnostic run data of the requested SINGLE reaction

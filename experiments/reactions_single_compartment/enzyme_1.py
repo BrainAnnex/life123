@@ -29,8 +29,11 @@
 #
 # Source of kinetic parameters:  *page 16 of "Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023*
 
+# %% [markdown]
+# ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
+
 # %%
-LAST_REVISED = "Oct. 10, 2024"
+LAST_REVISED = "Oct. 11, 2024"
 LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based on
 
 # %%

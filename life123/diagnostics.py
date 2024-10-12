@@ -280,7 +280,7 @@ class Diagnostics:
 
 
 
-    def get_diagnostic_decisions_data(self) -> pd.DataFrame:
+    def get_decisions_data(self) -> pd.DataFrame:
         """
         Determine and return the diagnostic data about concentration changes at every step - by convention,
         EVEN aborted ones

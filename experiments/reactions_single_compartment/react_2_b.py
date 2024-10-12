@@ -292,7 +292,7 @@ dynamics.adaptive_steps.show_adaptive_parameters()
 diagnostics.get_diagnostic_conc_data()   # This will be complete, even if we only saved part of the history during the run
 
 # %%
-diagnostics.get_diagnostic_decisions_data()
+diagnostics.get_decisions_data()
 
 # %%
 

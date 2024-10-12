@@ -22,18 +22,17 @@
 # #### We'll explore exotic scenarios with lavish amount of enzyme, leading to diminishing (though fast-produced!) products,  and a buildup of the (not-so-transient!) `ES*` intermediate
 
 # %%
-LAST_REVISED = "July 1, 2024"
-VERSION_BASED_ON = "1.0.0.beta.37"   # Version of Life123 used for this experiment
-
-# %% tags=[]
-import life123   # If can't find module, do: 1) import sys  2) sys.path.append("full path of folder containing life123")
+LAST_REVISED = "Oct. 11, 2024"
+LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based on
 
 # %%
-life123.check_version(VERSION_BASED_ON)
-
-# %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
 from experiments.get_notebook_info import get_notebook_basename
 
 from life123 import ChemData, UniformCompartment, MovieTabular, GraphicLog
@@ -51,7 +50,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = ChemData(names=["S", "P", "E", "ES*"])
+chem_data = ChemData()
                                                      
 # Reaction S <-> P , with 1st-order kinetics, favorable thermodynamics in the forward direction, 
 # and a forward rate that is much slower than it would be with the enzyme - as seen in the next reaction, below

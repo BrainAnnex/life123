@@ -19,12 +19,15 @@
 # **Adaptive variable time steps** 
 # compared with **exact analytical solution**
 
-# %%
-LAST_REVISED = "Oct. 6, 2024"
-LIFE123_VERSION = "1.0.0.beta.39"    # Library version this experiment is based on
+# %% [markdown]
+# ### TAGS :  "uniform compartment", "chemistry", "numerical", "quick-start", "basic", "under-the-hood"
 
 # %%
-#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
+LAST_REVISED = "Oct. 6, 2024"
+LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based on
+
+# %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
 #import sys
