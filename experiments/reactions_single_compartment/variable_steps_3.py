@@ -24,13 +24,22 @@
 # * in part 2 there's a hypothetical enzyme (with concentration 1) that catalyzes the first reaction 
 #
 # In either case, the extra chemicals and the enzyme don't vary in concentration - and thus **get automatically excluded from considerations about the adaptive variable step sizes** , which remain exactly as they were in experiment `variable_steps_1`
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+
+# %% [markdown]
+# ### TAGS :  "uniform compartment", "under-the-hood"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Oct. 11, 2024"
+LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based on
+
+# %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
 from experiments.get_notebook_info import get_notebook_basename
 
 from life123 import ChemData as chem
@@ -72,11 +81,11 @@ dynamics.describe_state()
 dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # These adaptive-time settings (normally specified with a preset) are being set explicitly
-dynamics.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
-dynamics.set_step_factors(upshift=2.0, downshift=0.5, abort=0.5, error=0.5)    
+dynamics.adaptive_steps.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
+dynamics.adaptive_steps.set_step_factors(upshift=2.0, downshift=0.5, abort=0.5, error=0.5)    
                                         # Note: upshift=2.0 seems to often be excessive.  About 1.4 is currently recommended
 
-dynamics.show_adaptive_parameters()
+dynamics.adaptive_steps.show_adaptive_parameters()
 
 # %%
 dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0, 
@@ -90,7 +99,7 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0,
 dynamics.get_history()
 
 # %%
-(transition_times, step_sizes) = dynamics.explain_time_advance(return_times=True)
+(transition_times, step_sizes) = dynamics.get_diagnostics().explain_time_advance(return_times=True)
 
 # %%
 np.array(step_sizes)
@@ -141,10 +150,10 @@ dynamics.describe_state()
 dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # These adaptive-time settings (normally specified with a preset) are being set explicitly
-dynamics.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
-dynamics.set_step_factors(upshift=2.0, downshift=0.5, abort=0.5, error=0.5)
+dynamics.adaptive_steps.set_thresholds(norm="norm_A", low=0.25, high=0.64, abort=1.44)
+dynamics.adaptive_steps.set_step_factors(upshift=2.0, downshift=0.5, abort=0.5, error=0.5)
 
-dynamics.show_adaptive_parameters()
+dynamics.adaptive_steps.show_adaptive_parameters()
 
 # %%
 dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0, 
@@ -158,7 +167,7 @@ dynamics.single_compartment_react(initial_step=0.01, target_end_time=2.0,
 dynamics.get_history()
 
 # %%
-(transition_times, step_sizes) = dynamics.explain_time_advance(return_times=True)
+(transition_times, step_sizes) = dynamics.get_diagnostics().explain_time_advance(return_times=True)
 
 # %%
 np.array(step_sizes)

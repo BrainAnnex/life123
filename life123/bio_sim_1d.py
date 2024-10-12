@@ -235,7 +235,7 @@ class BioSim1D:
         :return:    A Pandas dataframe: each row is a bin,
                         and each column a chemical species
         """
-        all_chem_names = self.chem_data.get_all_names()
+        all_chem_names = self.chem_data.get_all_labels()
         if self.system is None:
             return pd.DataFrame(columns = all_chem_names)   # Empty dataframe
 
@@ -696,7 +696,7 @@ class BioSim1D:
 
         d = {}
         for species_index in range(self.n_species):
-            name = self.chem_data.get_name(species_index)
+            name = self.chem_data.get_label(species_index)
             conc = self.bin_concentration(bin_address, species_index)
             d[name] = conc
 
@@ -764,7 +764,7 @@ class BioSim1D:
 
         # Show a line of line of data for each chemical species in turn
         for species_index in range(self.n_species):
-            name = self.chem_data.get_name(species_index)
+            name = self.chem_data.get_label(species_index)
             if name:    # If a name was provided, show it
                 name = f" ({name})"
             else:
@@ -1428,7 +1428,7 @@ class BioSim1D:
             title = caption + ".  " + title
 
         if self.n_species == 1:
-            chem_name = self.chem_data.get_name(species_index=0)      # The only chemical in the system
+            chem_name = self.chem_data.get_label(species_index=0)      # The only chemical in the system
 
             fig = px.line(y=self.lookup_species(species_name=chem_name),
                           title= title,
@@ -1585,7 +1585,7 @@ class BioSim1D:
         #print(species_concentrations)
 
         all_data = {
-            "curve_labels": self.chem_data.get_all_names(),
+            "curve_labels": self.chem_data.get_all_labels(),
 
             # Concentration data for the plots
             "plot_data": species_concentrations,

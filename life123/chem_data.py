@@ -20,12 +20,12 @@ class ChemCore:
                                 # Each list entry represents 1 chemical,
                                 # and is a dict required to contain the key "name", plus any other keys
                                 # EXAMPLE: [{"name": "A"} ,
-                                #           {"name": "B", "note": "some note"}]
+                                #           {"name": "Nicotinamide adenine dinucleotide", "label": "NAD", "note": "some note"}]
                                 # The position in this list is referred to as the "INDEX" of that chemical
                                 # Names must be unique
                                 # TODO: maybe use a Pandas dataframe
 
-        self.name_dict = {}     # To map assigned names to their positional index (in the ordered list of chemicals, self.chemical_data);
+        self.label_dict = {}    # To map assigned labels to their positional index (in the ordered list of chemicals, self.chemical_data);
                                 # this is automatically set and maintained
                                 # EXAMPLE: {"A": 0, "B": 1, "C": 2}
 
@@ -58,37 +58,47 @@ class ChemCore:
 
 
 
-    def get_index(self, name: str) -> int:
+    def get_label_mapping(self) -> dict:
         """
-        Return the index of the chemical species with the given name.
+        Return a dict with all the mappings of the chemical names to the registered index
+
+        :return:
+        """
+        return self.label_dict
+
+
+
+    def get_index(self, label :str) -> int:
+        """
+        Return the index of the chemical species with the given label.
         If not found, an Exception is raised
 
-        :param name:    Name of the chemical species of interest
+        :param label:   Label of the chemical species of interest
         :return:        The index of the species with the given name
         """
-        index = self.name_dict.get(name)
+        index = self.label_dict.get(label)
         assert index is not None, \
-            f"ChemData.get_index(): No chemical species named `{name}` was found"
+            f"ChemData.get_index(): No chemical species named `{label}` was found"
 
         return index
 
 
 
-    def name_exists(self, name :str) -> bool:
+    def label_exists(self, label :str) -> bool:
         """
         Return True if the chemical with the given name exists (i.e. was registered),
         or False otherwise
 
-        :param name:    The name of a chemical
+        :param label:   The label of a chemical
         :return:        True if it exists, or False otherwise
         """
-        return name in self.name_dict.keys()
+        return label in self.label_dict.keys()
 
 
 
-    def get_name(self, species_index: int) -> str:
+    def get_label(self, species_index: int) -> str:
         """
-        Return the name of the species with the given index.
+        Return the label of the species with the given index.
 
         :param species_index:   An integer (starting with zero) corresponding to the
                                     original order with which the chemical species were first added
@@ -97,16 +107,16 @@ class ChemCore:
         """
         self.assert_valid_species_index(species_index)
 
-        name = self.chemical_data[species_index].get("name")    # If "name" is not present, None will be returned
+        name = self.chemical_data[species_index].get("label")    # If "label" is not present, None will be returned
 
         assert name, \
-            f"get_name(): A chemical species with the requested index ({species_index}) is present, but it lacks a name"
+            f"get_label(): A chemical species with the requested index ({species_index}) is present, but it lacks a name"
 
         return name
 
 
 
-    def get_all_names(self) -> [str]:
+    def get_all_labels(self) -> [str]:
         """
         Return a list with the names of all the chemical species, in their index order.
         If any is missing or blank, an Exception instead
@@ -116,8 +126,8 @@ class ChemCore:
         """
         all_names = []
         for i, c in enumerate(self.chemical_data):
-            name = c.get("name", None)
-            assert name, f"get_all_names(): missing or blank chemical name in index position {i}"
+            name = c.get("label", None)
+            assert name, f"get_all_labels(): missing or blank chemical name in index position {i}"
             all_names.append(name)
 
         return all_names
@@ -136,20 +146,23 @@ class ChemCore:
 
 
 
-    def add_chemical(self, name :str, note=None, **kwargs) -> int:
+    def add_chemical(self, name :str, label=None, note=None, **kwargs) -> int:
         """
         Register a new chemical species, with a name
         and (optionally) :
             - a note (will be stored in a "note" column)
             - any other named argument(s) that the user wishes to store (i.e. arbitrary-named arguments)
 
-        EXAMPLE:  add_chemical("P1", note = "my note about P1", full_name = "protein P1")
+        EXAMPLE:  add_chemical("Nicotinamide adenine dinucleotide",
+                               label = "NAD", note = "my note about this substrate", CAS_number = "CAS 53-84-9")
 
         Note: if also wanting to set the diffusion rate in a single function call,
               use ChemData.add_chemical_with_diffusion() instead
 
         :param name:    Name of the new chemical species to register; names must be unique -
                             an Exception will be raised if the name was already registered
+        :param label:   [OPTIONAL] Typically, a short version of the name, or a stand-in for it;
+                            if not provided, the name will be used as a label
         :param note:    [OPTIONAL] String with note to attach to the chemical
         :param kwargs:  [OPTIONAL] Dictionary of named arguments (with any desired names)
         :return:        The integer index assigned to the newly-added chemical
@@ -162,17 +175,22 @@ class ChemCore:
         assert name != "", \
             "add_chemical(): the chemical's name cannot be a blank string"
 
-        assert name not in self.name_dict.keys(), \
+        assert name not in self.label_dict.keys(), \
             f"add_chemical(): the requested name (`{name}`) is ALREADY registered"
 
 
-        index = len(self.chemical_data)     # The next available index number (list position)
-        self.name_dict[name] = index
+        if label is None:
+            label = name    # Use the (full) name as a label if no full label is provided
 
-        if note is None:
-            d = {"name": name}
-        else:
-            d = {"name": name, "note": note}
+
+        index = len(self.chemical_data)     # The next available index number (list position)
+        self.label_dict[label] = index
+
+        # Prepare a dict with all the available data
+        d = {"name": name, "label": label}
+
+        if note is not None:
+            d["note"] = note
 
         d.update(kwargs)        # Merge dictionary kwargs into d
 
@@ -204,7 +222,7 @@ class Diffusion(ChemCore):
 
 
 
-    def add_chemical_with_diffusion(self, name :str, diff_rate :Union[float, int], note=None, **kwargs) -> int:
+    def add_chemical_with_diffusion(self, name :str, diff_rate :Union[float, int], label=None, note=None, **kwargs) -> int:
         """
         Register a new chemical species, with a name, a diffusion rate (in water),
         and (optionally) :
@@ -216,9 +234,11 @@ class Diffusion(ChemCore):
 
         Note: if no diffusion is to be set, can also simply use ChemData.add_chemical()
 
-        :param name:        Name of the new chemical species to register;
+        :param name:       Label of the new chemical species to register;
                                 an Exception will be raised if the name was already registered
         :param diff_rate:   Floating-point number with the diffusion rate (in water) of this chemical
+        :param label:       [OPTIONAL] Typically, a short version of the name, or a stand-in for it;
+                                if not provided, the name will be used as a label
         :param note:        [OPTIONAL] String with note to attach to the chemical
         :param kwargs:      [OPTIONAL] Dictionary of named arguments (with any desired names)
         :return:            The integer index assigned to the newly-added chemical
@@ -226,24 +246,27 @@ class Diffusion(ChemCore):
         # Validate the diffusion_rate, if present; other arguments get validated by add_chemical()
         self.assert_valid_diffusion(diff_rate)
 
-        index = self.add_chemical(name=name, note=note, **kwargs)
+        index = self.add_chemical(name=name, label=label, note=note, **kwargs)
 
-        self.set_diffusion_rate(name=name, diff_rate=diff_rate)
+        if label is None:
+            label = name
+
+        self.set_diffusion_rate(label=label, diff_rate=diff_rate)
 
         return index
 
 
 
-    def set_diffusion_rate(self, name :str, diff_rate :Union[float, int]) -> None:
+    def set_diffusion_rate(self, label :str, diff_rate :Union[float, int]) -> None:
         """
         Set the diffusion rate of the given chemical species (identified by its name)
 
-        :param name:        Name of a chemical species
+        :param label:       Label of a chemical species
         :param diff_rate:   Diffusion rate (in water) for the above chemical
         :return:            None
         """
         self.assert_valid_diffusion(diff_rate)
-        self.diffusion_rates[name] = diff_rate
+        self.diffusion_rates[label] = diff_rate
 
 
 
@@ -278,9 +301,9 @@ class Diffusion(ChemCore):
             "get_diffusion_rate(): cannot specify BOTH `name` and `species_index`"
 
         if name is None:
-            name = self.get_name(species_index)
+            name = self.get_label(species_index)
         else:
-            assert self.name_exists(name), \
+            assert self.label_exists(name), \
                 f"get_diffusion_rate(): No chemical named `{name}` exists"
 
         return self.diffusion_rates.get(name)      # If not present, None is returned
@@ -296,7 +319,7 @@ class Diffusion(ChemCore):
 
         :return:    A list of numbers (or None values) with the diffusion rates
         """
-        return [self.diffusion_rates.get(name) for name in self.get_all_names()]
+        return [self.diffusion_rates.get(name) for name in self.get_all_labels()]
         # If any value is not present, None is used for it
 
 
@@ -592,16 +615,16 @@ class AllReactions(Diffusion):
 
         # Register any newly-encountered reactant not already registered
         rxn_reactants = rxn.extract_reactant_names(exclude_enzyme=False)
-        for name in rxn_reactants:
-            if not self.name_exists(name):
-                self.add_chemical(name=name)
+        for label in rxn_reactants:
+            if not self.label_exists(label):
+                self.add_chemical(name=label)
 
         # Register any newly-encountered reaction product not already registered
         # Note: reactants are done first, because that's typically a more appealing order of appearance
         rxn_products = rxn.extract_product_names(exclude_enzyme=False)
-        for name in rxn_products:
-            if not self.name_exists(name):
-                self.add_chemical(name=name)
+        for label in rxn_products:
+            if not self.label_exists(label):
+                self.add_chemical(name=label)
 
 
         # TODO: since we already have rxn_reactants, rxn_products and rxn.enzyme, the following can be simplified
@@ -1021,7 +1044,7 @@ class Macromolecules(AllReactions):
                                     Note that the dissociation constant is inversely proportional to the binding affinity
         :return:                None
         """
-        assert ligand in self.get_all_names(), \
+        assert ligand in self.get_all_labels(), \
             f"set_binding_site_affinity(): no chemical named `{ligand}` found; use add_chemical() first"
 
         assert type(site_number) == int, \
@@ -1286,7 +1309,7 @@ class ChemData(Macromolecules):
                     assigned_name = f"Chemical {i+1}"
                     self.assert_valid_diffusion(diff)
                     self.add_chemical(assigned_name)
-                    self.set_diffusion_rate(name=assigned_name, diff_rate=diff)
+                    self.set_diffusion_rate(label=assigned_name, diff_rate=diff)
 
         else:   # names is not None
             for i, chem_name in enumerate(names):
@@ -1298,4 +1321,4 @@ class ChemData(Macromolecules):
                     diff = diffusion_rates[i]
                     self.assert_valid_diffusion(diff)
                     self.add_chemical(chem_name)
-                    self.set_diffusion_rate(name=chem_name, diff_rate=diff)
+                    self.set_diffusion_rate(label=chem_name, diff_rate=diff)

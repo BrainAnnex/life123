@@ -40,12 +40,11 @@
 # ![2 Coupled Reactions](../../docs/2_coupled_reactions.png)
 
 # %%
-LAST_REVISED = "July 26, 2024"
-LIFE123_VERSION = "1.0.0.beta.38"      # Version this experiment is based on
+LAST_REVISED = "Oct. 11, 2024"
+LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based on
 
 # %%
-#import set_path            # Using MyBinder?  Uncomment this before running the next cell!
-                            # Importing this local file will add the project's home directory to sys.path
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
 #import sys
@@ -184,13 +183,13 @@ C_final / A_final
 # %%
 # Concentration increments due to reaction 0 (A <-> B)
 # Note that [C] is not affected
-dynamics.diagnostics.get_diagnostic_rxn_data(rxn_index=0)
+dynamics.diagnostics.get_rxn_data(rxn_index=0)
 
 # %%
 # Concentration increments due to reaction 1 (B <-> C) 
 # Also notice that the 0-th row from the A <-> B reaction isn't seen here (start time 0 and step 0.02), 
 # because that step was aborted early on, BEFORE even getting to THIS reaction
-dynamics.diagnostics.get_diagnostic_rxn_data(rxn_index=1)
+dynamics.diagnostics.get_rxn_data(rxn_index=1)
 
 # %%
 

@@ -169,7 +169,7 @@ dynamics.diagnostics.explain_time_advance()
 # #### The Delta-concentration values for all the individual reaction time steps, as contribued by a single reaction, may be inspected from the diagnostic data:
 
 # %%
-diagnostics.get_diagnostic_rxn_data(rxn_index=0)    # For the 0-th reaction (the only reaction in our case)
+diagnostics.get_rxn_data(rxn_index=0)    # For the 0-th reaction (the only reaction in our case)
 
 # %% [markdown]
 # ### Note that diagnostic data with the DELTA Concentrations - in the above listing - also records the values that were considered (but not actually used) during *ABORTED* steps.  For example, in steps 0-2, above, the START_TIME remains the same, as the time_step gets progressively reduced until the resulting changes are deemed acceptable.
@@ -292,7 +292,7 @@ dynamics.adaptive_steps.show_adaptive_parameters()
 diagnostics.get_diagnostic_conc_data()   # This will be complete, even if we only saved part of the history during the run
 
 # %%
-diagnostics.get_diagnostic_decisions_data()
+diagnostics.get_decisions_data()
 
 # %%
 
@@ -309,7 +309,7 @@ diagnostics.get_diagnostic_decisions_data()
 # Let's again look at the table for reaction 0 :
 
 # %%
-df = diagnostics.get_diagnostic_rxn_data(rxn_index=0)    # For the 0-th reaction (the only reaction in our case)
+df = diagnostics.get_rxn_data(rxn_index=0)    # For the 0-th reaction (the only reaction in our case)
 df
 
 # %% [markdown]
@@ -324,8 +324,8 @@ df = df[2:]   # Drop the aborted first 2 steps
 df
 
 # %%
-p1 = PlotlyHelper.plot_pandas(df=df, x_var="START_TIME", fields=["A_dot"], colors=['brown'], 
-                              ylabel="concentration change/unit time",
+p1 = PlotlyHelper.plot_pandas(df=df, x_var="START_TIME", fields=["A_dot"], colors=['brown'],
+                              y_label="concentration change/unit time",
                               title="Rate of change of of A with time")
 p1
 

@@ -18,13 +18,22 @@
 # Both mostly forward.  1st-order kinetics throughout.   
 #
 # Same as `variable_steps_1`, but with FIXED TIME STEPS: a lot of TINY steps - as a proxy for the "exact value"
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+
+# %% [markdown]
+# ### TAGS :  "uniform compartment"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Oct. 11, 2024"
+LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based on
+
+# %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
 from experiments.get_notebook_info import get_notebook_basename
 
 from life123 import ChemData as chem
@@ -46,7 +55,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = chem(names=["U", "X", "S"])
+chem_data = chem()
 
 # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
 chem_data.add_reaction(reactants=[(2, "S", 1)], products="U",
@@ -79,7 +88,7 @@ df = dynamics.get_history()
 df
 
 # %%
-dynamics.explain_time_advance()
+dynamics.get_diagnostics().explain_time_advance()
 
 # %% [markdown]
 # ### Look up some values
@@ -94,7 +103,7 @@ df.iloc[1850]
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_history(colors=['green', 'orange', 'darkturquoise'])
+dynamics.plot_history(colors=['darkturquoise', 'green', 'orange'])
 
 # %%
 dynamics.curve_intersect("U", "X", t_start=0.3, t_end=0.35)

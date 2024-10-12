@@ -15,25 +15,24 @@
 
 # %% [markdown]
 # ## Enzyme Kinetics in a NON Michaelis-Menten modality
-# #### 3 Coupled Reactions: `S <-> P` , `E + S <-> ES*`, and  `ES* <-> E + P` .  Variation of experiment `enzyme_3`   
+# #### 3 Coupled Reactions: `S <-> P` , `E + S <-> ES*`, and  `ES* <-> E + P`     
 # A direct reaction and the same reaction, catalyzed by an enzyme `E` and showing the intermediate state.  
 # Re-run from same initial concentrations of S ("Substrate") and P ("Product"), for various concentations of the enzyme `E`: from zero to hugely abundant 
-# ### We'll REJECT the customary Michaelis-Menten assumptions that `[E] << [S]` and that the rates satisfy `k1_reverse >> k2_forward` !   
+# ### We'll REJECT the customary Michaelis-Menten assumptions that `[E] << [S]` and that the rate constants satisfy `k1_reverse >> k2_forward` !   
 # #### We'll explore exotic scenarios with lavish amount of enzyme, leading to diminishing (though fast-produced!) products,  and a buildup of the (not-so-transient!) `ES*` intermediate
 
 # %%
-LAST_REVISED = "July 1, 2024"
-VERSION_BASED_ON = "1.0.0.beta.37"   # Version of Life123 used for this experiment
-
-# %% tags=[]
-import life123   # If can't find module, do: 1) import sys  2) sys.path.append("full path of folder containing life123")
+LAST_REVISED = "Oct. 11, 2024"
+LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based on
 
 # %%
-life123.check_version(VERSION_BASED_ON)
-
-# %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
 from experiments.get_notebook_info import get_notebook_basename
 
 from life123 import ChemData, UniformCompartment, MovieTabular, GraphicLog
@@ -51,7 +50,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = ChemData(names=["S", "P", "E", "ES*"])
+chem_data = ChemData()
                                                      
 # Reaction S <-> P , with 1st-order kinetics, favorable thermodynamics in the forward direction, 
 # and a forward rate that is much slower than it would be with the enzyme - as seen in the next reaction, below
@@ -159,8 +158,8 @@ dynamics.is_in_equilibrium(verbose=False)
 dynamics.curve_intersect("S", "P", t_start=0, t_end=1.0)
 
 # %%
-dynamics.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"[E] init = {E_init}", xrange=[0, 0.4])
+dynamics.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True,
+                      title_prefix=f"[E] init = {E_init}", range_x=[0, 0.4])
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
@@ -174,8 +173,8 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"Detail when [E] init = {E_init}", xrange=[0, 0.002])
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True,
+                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
 
 # %% [markdown]
 # ### Notice how, with this small initial concentration of [E], the timescale of [E] and [ES*] is vastly faster than that of [P] and [S]
@@ -244,8 +243,8 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"Detail when [E] init = {E_init}", xrange=[0, 0.002])
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True,
+                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
 
 # %%
 # The full reaction of E and ES*
@@ -310,8 +309,8 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"Detail when [E] init = {E_init}", xrange=[0, 0.002])
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True,
+                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
 
 # %%
 # The full reaction of E and ES*
@@ -376,8 +375,8 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"Detail when [E] init = {E_init}", xrange=[0, 0.002])
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True,
+                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
 
 # %%
 # The full reaction of E and ES*
@@ -442,8 +441,8 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.05)
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"Detail when [E] init = {E_init}", xrange=[0, 0.002])
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True,
+                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
 
 # %%
 # The full reaction of E and ES*
@@ -511,8 +510,8 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.02)
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"Detail when [E] init = {E_init}", xrange=[0, 0.002])
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True,
+                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
 
 # %%
 # The full reaction of E and ES*
@@ -580,8 +579,8 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.01)
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"Detail when [E] init = {E_init}", xrange=[0, 0.005])
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True,
+                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.005])
 
 # %%
 # The full reaction of E and ES*

@@ -20,13 +20,19 @@
 # Taken to equilibrium.  (Adaptive variable time teps are used)
 #
 # _See also the experiment "1D/reactions/reaction_7"_ 
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Oct. 11, 2024"
+LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based on
+
+# %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
 from experiments.get_notebook_info import get_notebook_basename
 
 from life123 import UniformCompartment
@@ -124,7 +130,7 @@ dynamics.get_history(t=0.002)
 # ### Notice how, late in the simulation, the step sizes get BIGGER than the 0.002 we had originally proposed:
 
 # %%
-dynamics.explain_time_advance()
+dynamics.get_diagnostics().explain_time_advance()
 
 # %% [markdown]
 # ### One can see how the reaction proceeds in far-smaller steps in the early times, when the concentrations are changing much more rapidly
@@ -137,22 +143,22 @@ arr0, arr1
 
 # %%
 # Let's verify that the reaction's stoichiometry is being respected
-dynamics.stoichiometry_checker(rxn_index=0, 
-                               conc_arr_before = arr0, 
-                               conc_arr_after = arr1)
+dynamics.get_diagnostics().stoichiometry_checker(rxn_index=0, 
+                                                 conc_arr_before = arr0, 
+                                                 conc_arr_after = arr1)
 
 # %% [markdown]
 # #### Indeed, it can be easy checked that the drop in [A] is twice the increase in [C], as dictated by the stoichiometry.
 # The diagnostic data, enabled by our earlier call to `set_diagnostics()`, makes it convenient to check
 
 # %%
-dynamics.get_diagnostic_rxn_data(rxn_index=0, head=15)
+dynamics.get_diagnostics().get_rxn_data(rxn_index=0, head=15)
 
 # %% [markdown]
 # ### From the diagnostic data, it can be seen that the first step had several false starts - and the time was automatically repeatedly shrunk - but finally happened.  `Delta A` indeed equals - 2 * `Delta C`, satisfying the stoichiometry
 
 # %%
-dynamics.stoichiometry_checker_entire_run()
+dynamics.get_diagnostics().stoichiometry_checker_entire_run()
 
 # %% [markdown]
 # ### Check the final equilibrium
@@ -181,6 +187,6 @@ dynamics.curve_intersect('A', 'C', t_start=0, t_end=0.01)
 # `norm_A` and `norm_B` are computed quantities that are used to guide the adaptive time steps
 
 # %%
-dynamics.get_diagnostic_decisions_data()
+dynamics.get_diagnostics().get_decisions_data()
 
 # %%

@@ -116,7 +116,7 @@ dynamics.plot_history(colors=['green', 'orange', 'blue'], show_intervals=True)
 
 # %%
 # Show the "critical values", i.e. times when the step size changes
-dynamics.plot_history(colors=['green', 'orange', 'blue'], vertical_lines=transition_times,
+dynamics.plot_history(colors=['green', 'orange', 'blue'], vertical_lines_to_add=transition_times,
                       title="Critical values of time-step changes for reactions `2 S <-> U` and `S <-> X`")
 
 # %% [markdown]

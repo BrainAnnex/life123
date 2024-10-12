@@ -161,8 +161,8 @@ dynamics.is_in_equilibrium(verbose=False)
 dynamics.curve_intersect("S", "P", t_start=0, t_end=1.0)
 
 # %%
-dynamics.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"[E] init = {E_init}", xrange=[0, 0.4])
+dynamics.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True,
+                      title_prefix=f"[E] init = {E_init}", range_x=[0, 0.4])
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
@@ -176,8 +176,8 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"Detail when [E] init = {E_init}", xrange=[0, 0.002])
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True,
+                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
 
 # %% [markdown]
 # ### Notice how, with this small initial concentration of [E], the timescale of [E] and [ES*] is vastly faster than that of [P] and [S]
@@ -246,8 +246,8 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"Detail when [E] init = {E_init}", xrange=[0, 0.002])
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True,
+                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
 
 # %%
 # The full reaction of E and ES*
@@ -312,8 +312,8 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"Detail when [E] init = {E_init}", xrange=[0, 0.002])
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True,
+                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
 
 # %%
 # The full reaction of E and ES*
@@ -378,8 +378,8 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"Detail when [E] init = {E_init}", xrange=[0, 0.002])
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True,
+                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
 
 # %%
 # The full reaction of E and ES*
@@ -444,8 +444,8 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.05)
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"Detail when [E] init = {E_init}", xrange=[0, 0.002])
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True,
+                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
 
 # %%
 # The full reaction of E and ES*
@@ -513,8 +513,8 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.02)
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"Detail when [E] init = {E_init}", xrange=[0, 0.002])
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True,
+                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
 
 # %%
 # The full reaction of E and ES*
@@ -582,8 +582,8 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.01)
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"Detail when [E] init = {E_init}", xrange=[0, 0.005])
+dynamics.plot_history(chemicals=['E', 'ES*'], colors=['violet', 'red'], show_intervals=True,
+                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.005])
 
 # %%
 # The full reaction of E and ES*

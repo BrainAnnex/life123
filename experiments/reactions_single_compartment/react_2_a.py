@@ -201,8 +201,8 @@ df['A_dot'] = A_dot     # Add a column to the Pandas dataframe
 df
 
 # %%
-dynamics.plot_history(chemicals=["A", "A_dot"], colors=['darkturquoise', 'brown'], 
-                      ylabel="concentration (darkturquoise) /<br> concentration change per unit time (brown)",
+dynamics.plot_history(chemicals=["A", "A_dot"], colors=['darkturquoise', 'brown'],
+                      y_label="concentration (darkturquoise) /<br> concentration change per unit time (brown)",
                       title="Concentration of A with time (darkturquoise), and its rate of change (brown)")
 
 # %% [markdown]

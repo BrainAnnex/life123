@@ -203,7 +203,7 @@ Deriv_A + Deriv_B   # Will be very close to zero throughout
 
 # %% tags=[]
 PlotlyHelper.plot_curves(x=t_arr, y=[Deriv_A , Deriv_B], title="d/dt A(t) and d/dt B(t) as a function of time",
-                         xlabel="t", ylabel="Time derivatives", curve_labels=["A'(t)", "B'(t)"], 
+                         x_label="t", y_label="Time derivatives", curve_labels=["A'(t)", "B'(t)"],
                          legend_title="Derivative", colors=['aqua', 'greenyellow'])
 
 # %% [markdown]
@@ -241,14 +241,14 @@ PlotlyHelper.plot_curves(x=t_arr, y=[Deriv_A , Deriv_B], title="d/dt A(t) and d/
 
 # %%
 PlotlyHelper.plot_curves(x=A_conc, y=Deriv_B, title="d/dt B(t) as a function of A(t)",
-                         xlabel="A(t)", ylabel="B'(t)", colors="green")
+                         x_label="A(t)", y_label="B'(t)", colors="green")
 
 # %% [markdown]
 # As expected, it appears to be a straight line (green), and the rate of change in the product B is higher when the concentration of the reactant A is larger.  
 
 # %%
 PlotlyHelper.plot_curves(x=B_conc, y=Deriv_B, title="d/dt B(t) as a function of B(t)",
-                         xlabel="B(t)", ylabel="B'(t)", colors="blue")
+                         x_label="B(t)", y_label="B'(t)", colors="blue")
 
 # %% [markdown]
 # #### Let's do the least-square fit we had set out to do: `B'(t) = a * {A(t)} + b * {- B(t)}` , for some a, b
@@ -268,9 +268,9 @@ a, b
 
 # %%
 # Plot B'(t) vs. its least-square approx
-PlotlyHelper.plot_curves(x=Deriv_B , y=[Deriv_B, (a * A_conc - b * B_conc)],
+PlotlyHelper.plot_curves(x=Deriv_B, y=[Deriv_B, (a * A_conc - b * B_conc)],
                          title="d/dt B(t) as a function of A(t), alongside its least-square fit",
-                         xlabel="A(t)", ylabel="B'(t)", 
+                         x_label="A(t)", y_label="B'(t)",
                          curve_labels=["B'(t)", "Linear Fit"], legend_title="Curve vs Fit:", colors=['green', 'red'])
 
 # %% [markdown]

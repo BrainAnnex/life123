@@ -8,7 +8,7 @@ from life123.chem_data import ChemData
 from life123.diagnostics import Diagnostics
 from life123.movies import MovieTabular
 from life123.numerical import Numerical
-from life123.reaction_kinetics import VariableTimeSteps
+from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
 from life123.visualization.plotly_helper import PlotlyHelper
 
 
@@ -71,9 +71,9 @@ class UniformCompartment:
 
         # TODO: maybe rename "system" to "system_state", and use "system" to store a list or dict of the chemicals
         #       actually involved in this dynamic simulation
-        self.system = None  # Concentration data in the single compartment we're simulating, for all the (bulk) chemicals
-                            # A Numpy array of the concentrations of all the chemical species, in their index order
-                            # 1-dimensional NumPy array of floats, whose size is the number of chemical species.
+        self.system = None  # Concentration data in the single compartment we're simulating, for all the chemicals
+                            # A 1-d Numpy array of the concentrations (floats), in their index order;
+                            # the array size is the total number of chemical species.
                             # Each entry is the concentration of the species with that index (in the "ChemData" object)
                             # Note that this is the counterpart - with 1 less dimension - of the array by the same name
                             #       in the class BioSim1D
@@ -226,7 +226,7 @@ class UniformCompartment:
         self.system[species_index] = conc
 
         if snapshot:
-            self.add_snapshot(caption=f"Set concentration of `{self.chem_data.get_name(species_index)}`")
+            self.add_snapshot(caption=f"Set concentration of `{self.chem_data.get_label(species_index)}`")
 
 
 
@@ -280,7 +280,7 @@ class UniformCompartment:
             if system_data is None:
                 return {}
             else:
-                return {self.chem_data.get_name(index): system_data[index]
+                return {self.chem_data.get_label(index): system_data[index]
                         for index, conc in enumerate(system_data)}
         else:
             assert type(species) == list or  type(species) == tuple, \
@@ -338,7 +338,7 @@ class UniformCompartment:
         print(f"{n_species} species:")
 
         # Show a line of line of data for each chemical species in turn
-        for species_index, name in enumerate(self.chem_data.get_all_names()):
+        for species_index, name in enumerate(self.chem_data.get_all_labels()):
             if name:    # If a name was provided, show it
                 name = f" ({name})"
             else:
@@ -479,9 +479,8 @@ class UniformCompartment:
                                  variable_steps=True, explain_variable_steps=None,
                                  reaction_duration=None) -> None:
         """
-        Perform ALL the reactions in the single compartment -
-        based on the INITIAL concentrations,
-        which are used as the basis for all the reactions.
+        Perform ALL the (previously-registered) reactions in the single compartment -
+        based on the INITIAL concentrations stored in self.system
 
         Update the system state and the system time accordingly
         (object attributes self.system and self.system_time)
@@ -511,10 +510,9 @@ class UniformCompartment:
 
         :param snapshots:       (OPTIONAL) Dict that may contain any the following keys:
                                         -"frequency" (default 1)
-                                        -"show_intermediates" (default True)
                                         -"species" (default None, meaning all species)
-                                        -"initial_caption" (default blank)
-                                        -"final_caption" (default blank)
+                                        -"initial_caption" (default: "1st reaction step")
+                                        -"final_caption" (default: "last reaction step")
                                     If provided, take a system snapshot after running a multiple
                                     of "frequency" reaction steps (default 1, i.e. at every step.)
                                     EXAMPLE: snapshots={"frequency": 2, "species": ["A", "H"]}
@@ -585,10 +583,12 @@ class UniformCompartment:
             frequency = snapshots.get("frequency", 1)   # If not present, it will be 1
             species = snapshots.get("species")          # If not present, it will be None (meaning show all)
             first_snapshot = True
-            if not snapshots.get("show_intermediates"):
-                snapshots["show_intermediates"] = True
         else:
-            snapshots = {"frequency": 1, "show_intermediates": True, "species": None, "first_snapshot": True}
+            snapshots = {"frequency": 1,
+                         "species": None,
+                         "initial_caption": "1st reaction step",
+                         "final_caption": "last reaction step"
+                        }
             frequency = 1
             species = None
             first_snapshot = True
@@ -607,6 +607,8 @@ class UniformCompartment:
         #self.norm_usage = {"norm_A": 0, "norm_B": 0, "norm_C": 0, "norm_D": 0}
         self.adaptive_steps.reset_norm_usage_stats()
 
+
+        # MAIN LOOP
         while True:
             # Check various criteria for termination
             if (max_steps is not None) and (step_count >= max_steps):
@@ -707,7 +709,7 @@ class UniformCompartment:
                              variable_steps=False, explain_variable_steps=None, step_counter=1) -> (np.array, float, float):
         """
         This is the common entry point for both single-compartment reactions,
-        and the reaction part of reaction-diffusions in 1D, 2D and 3D.
+        and the reaction component of reaction-diffusions in 1D, 2D and 3D.
 
         "Compartments" may or may not correspond to the "bins" of the higher layers;
         the calling code might have opted to merge some bins into a single "compartment".
@@ -830,7 +832,7 @@ class UniformCompartment:
 
     def _attempt_reaction_step(self, delta_time, variable_steps, explain_variable_steps, step_counter) -> (np.array, float):
         """
-        Attempt to perform the core reaction step, and then raise an Exception if it needs to be aborted,
+        Attempt to perform a single reaction step - and then raise an Exception if it needs to be aborted,
         based on various criteria.
         If variable_steps is True, determine a new value for the "recommended next step"
 
@@ -911,7 +913,7 @@ class UniformCompartment:
                                                         caption="excessive norm value(s)")
 
                     # Make a note of the abort action in all the reaction-specific diagnostics
-                    self.diagnostics.comment_diagnostic_rxn_data("aborted: excessive norm value(s)")
+                    self.diagnostics.annotate_abort_rxn_data("aborted: excessive norm value(s)")
 
                 raise ExcessiveTimeStepSoft(msg)    # ABORT THE CURRENT STEP
 
@@ -1102,10 +1104,10 @@ class UniformCompartment:
                                                                 # TODO: consider using a small dict in lieu of increment_vector_single_rxn
 
             if self.diagnostics_enabled:
-                self.diagnostics.save_diagnostic_rxn_data(rxn_index=rxn_index,
-                                                          system_time=self.system_time, time_step=delta_time,
-                                                          increment_vector_single_rxn=increment_vector_single_rxn,
-                                                          rate=rate_dict[rxn_index])
+                self.diagnostics.save_rxn_data(rxn_index=rxn_index,
+                                               system_time=self.system_time, time_step=delta_time,
+                                               increment_vector_single_rxn=increment_vector_single_rxn,
+                                               rate=rate_dict[rxn_index])
         # END for (over rxn_list)
 
         return increment_vector
@@ -1214,15 +1216,16 @@ class UniformCompartment:
                 self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
                                                                 data={"action": "ABORT",
                                                                       "step_factor": self.adaptive_steps.step_factors['error'],
-                                                                      "caption": f"neg. conc. in {self.chem_data.get_name(species_index)} from rxn # {rxn_index}",
+                                                                      "caption": f"neg. conc. in {self.chem_data.get_label(species_index)} from rxn # {rxn_index}",
                                                                       "time_step": delta_time},
                                                                 delta_conc_arr=None)
-                self.diagnostics.save_diagnostic_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
-                                                          increment_vector_single_rxn=None,
-                                                          caption=f"aborted: neg. conc. in `{self.chem_data.get_name(species_index)}`")
+                self.diagnostics.save_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
+                                               increment_vector_single_rxn=None,
+                                               aborted=True,
+                                               caption=f"aborted: neg. conc. in `{self.chem_data.get_label(species_index)}`")
 
             raise ExcessiveTimeStepHard(f"    INFO: the tentative time step ({delta_time:.5g}) "
-                                    f"leads to a NEGATIVE concentration of `{self.chem_data.get_name(species_index)}` "
+                                    f"leads to a NEGATIVE concentration of `{self.chem_data.get_label(species_index)}` "
                                     f"from reaction {self.chem_data.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
                                     f"\n      Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}"
                                     f"\n      -> will backtrack, and re-do step with a SMALLER delta time, "
@@ -1233,70 +1236,34 @@ class UniformCompartment:
 
     def compute_all_reaction_rates(self, rxn_list=None) -> dict:
         """
-        For an explanation of the "reaction delta", see compute_reaction_delta_rate().
-        Compute the "reaction delta" for all the specified reaction (by default, all).
-        Return a list with an entry for each reaction, in their index order.
+        Compute the reaction rates, at the current chemical concentrations,
+        for all the specified reaction (by default, all.)
+        Return a dict with the rates indexed by the reaction number.
 
         For background info: https://life123.science/reactions
 
         :param rxn_list:    OPTIONAL list of reactions (specified by their integer index);
                                 if None, do all the reactions.  EXAMPLE: [1, 3, 7]
 
-        :return:            A dict of the differences between forward and reverse "conversions" -
-                                for explanation, see compute_reaction_delta_rate().
+        :return:            A dict of the reactions rates, as defined by compute_reaction_rate(),
+                                at the current concentrations of chemicals in the system (as stored in self.system).
                                 The dict is indexed by the reaction number, and contains as many entries as the
-                                number of reactions being investigated
+                                number of reactions being included in the simulation
         """
-        delta_dict = {}
+        rates_dict = {}
 
         if rxn_list is None:    # Meaning ALL reactions
             rxn_list = range(self.chem_data.number_of_reactions())
 
         # Process the requested reactions
-        for i in rxn_list:      # Consider each reaction in turn
+        name_mapping = self.chem_data.get_label_mapping()
+        for i in rxn_list:      # Consider each desired reaction in turn
             rxn = self.chem_data.get_reaction(i)
-            delta = self.compute_reaction_rate(rxn=rxn)
-            delta_dict[i] = delta
+            delta = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=self.system, name_mapping=name_mapping)
+            rates_dict[i] = delta
 
-        return delta_dict
+        return rates_dict
 
-
-
-    def compute_reaction_rate(self, rxn) -> float:
-        """
-        For the SINGLE given reaction, and the current concentrations of chemicals in the system,
-        compute the reaction's "rate" (aka "velocity"),
-        i.e. its forward rate" minus its "reverse rate",
-        as defined in https://life123.science/reactions
-
-        :param rxn:         An object of type "Reaction"
-        :return:            The differences between the reaction's forward and reverse rates
-        """
-        reactants, products, fwd_rate_constant, rev_rate_constant = rxn.unpack_for_dynamics()
-
-        forward_rate = fwd_rate_constant
-        for r in reactants:
-            # Unpack data from the reactant r
-            species_name = rxn.extract_species_name(r)
-            order = rxn.extract_rxn_order(r)
-            species_index = self.chem_data.get_index(species_name)
-            conc = self.system[species_index]
-            #assert conc is not None, \
-            #   f"UniformCompartment.compute_reaction_delta_rate(): lacking the value for the concentration of the chemical species `{self.reaction_data.get_name(species_index)}`"
-            forward_rate *= conc ** order      # Raise to power
-
-        reverse_rate = rev_rate_constant
-        for p in products:
-            # Unpack data from the reaction product p
-            species_name = rxn.extract_species_name(p)
-            order = rxn.extract_rxn_order(p)
-            species_index = self.chem_data.get_index(species_name)
-            conc = self.system[species_index]
-            #assert conc is not None, \
-            #   f"UniformCompartment.compute_reaction_delta_rate(): lacking the concentration value for the species `{self.reaction_data.get_name(species_index)}`"
-            reverse_rate *= conc ** order     # Raise to power
-
-        return forward_rate - reverse_rate
 
 
 
@@ -1471,11 +1438,6 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def set_diagnostics(self):
-        # TODO: Obsolete, to phase out
-        self.enable_diagnostics()
-
-
     def enable_diagnostics(self):
         """
         Turn on the diagnostics mode
@@ -1497,6 +1459,15 @@ class UniformCompartment:
 
 
 
+    def get_diagnostics(self):
+        """
+
+        :return:    Object of type life123.diagnostics.Diagnostics
+        """
+        return self.diagnostics
+
+
+
 
 
     #####################################################################################################
@@ -1507,9 +1478,10 @@ class UniformCompartment:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None, xrange=None,
-                     ylabel=None,
-                     vertical_lines=None, show_intervals=False, show=False) -> go.Figure:
+    def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None,
+                     range_x=None, range_y=None,
+                     y_label=None,
+                     vertical_lines_to_add=None, show_intervals=False, show=False) -> go.Figure:
         """
         Using plotly, draw the plots of concentration values over time, based on history data that gets
         automatically saved when running reactions.
@@ -1521,25 +1493,25 @@ class UniformCompartment:
                     p2 = plot_history(various args, show=False)
                     PlotlyHelper.combine_plots([p1, p2], other optional args)
 
-        :param chemicals:   (OPTIONAL) List of the names of the chemicals whose concentration changes are to be plotted,
-                                or a string with just one name;
-                                if None, then display all
-        :param colors:      (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
-                                or list of names to use, in order; if None, then use the hardwired defaults
-        :param title:       (OPTIONAL) Title for the plot;
-                                if None, use default titles that will vary based on the # of reactions; EXAMPLES:
+        :param chemicals:       (OPTIONAL) Name, or list of names, of the chemicals whose concentration changes are to be plotted;
+                                    if None, then display all
+        :param colors:          (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
+                                    or list of names to use, in order; if None, then use the hardwired defaults
+        :param title:           (OPTIONAL) Title for the plot;
+                                    if None, use default titles that will vary based on the # of reactions; EXAMPLES:
                                     "Changes in concentrations for 5 reactions"
                                     "Reaction `A <-> 2 B` .  Changes in concentrations with time"
                                     "Changes in concentration for `2 S <-> U` and `S <-> X`"
-        :param title_prefix: (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
+        :param title_prefix:    (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
                                     whether the title is specified by the user or automatically generated
-        :param xrange:          (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
+        :param range_x:         (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param ylabel:          (OPTIONAL) Caption to use for the y-axis.
+        :param range_y:         (OPTIONAL) list of the form [y_min, y_max], to initially show only a part of the y values.
+                                    Note: it's still possible to zoom out, and see the excluded portion
+        :param y_label:          (OPTIONAL) Caption to use for the y-axis.
                                     By default, the name in `the chemicals` argument, in square brackets, if only 1 chemical,
                                     or "Concentration" if more than 1 (a legend also shown)
-        :param vertical_lines:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
-                                    TODO: rename vertical_lines_to_add
+        :param vertical_lines_to_add: (OPTIONAL) Ignored if the argument `show_intervals` is specified.
                                     List or tuple or Numpy array or Pandas series
                                     of x-coordinates at which to draw thin vertical dotted gray lines.
                                     If the number of vertical line is so large as to overwhelm the plot,
@@ -1550,14 +1522,14 @@ class UniformCompartment:
                                     and draws thin vertical dotted gray lines at all the x-coords
                                     of the data points in the saved history data;
                                     also, it adds a comment to the title.
-        :param show:        If True, the plot will be shown
-                                Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
-                                      leads to it being automatically shown
+        :param show:            If True, the plot will be shown
+                                    Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
+                                          leads to it being automatically shown
 
-        :return:            A plotly "Figure" object
+        :return:                A plotly "Figure" object
         """
         if chemicals is None:
-            chemicals = self.chem_data.get_all_names()      # List of the chemical names.  EXAMPLE: ["A", "B", "H"]
+            chemicals = self.chem_data.get_all_labels()      # List of the chemical names.  EXAMPLE: ["A", "B", "H"]
 
         if title is None:   # If no title was specified, create a default one based on how many reactions are present
             number_of_rxns = self.chem_data.number_of_reactions()
@@ -1571,12 +1543,19 @@ class UniformCompartment:
                 rxn_text_1 = self.chem_data.single_reaction_describe(rxn_index=1, concise=True)
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
+        if y_label is None:
+            if type(chemicals) == str:
+                y_label = f"[{chemicals}]"          # EXAMPLE:  "[A]"
+            else:
+                y_label = "Concentration"
+
         df = self.get_history()     # A Pandas dataframe that contains a column named "SYSTEM TIME"
 
         return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=chemicals,
                                         colors=colors, title=title, title_prefix=title_prefix,
-                                        xrange=xrange, ylabel=ylabel,
-                                        vertical_lines_to_add=vertical_lines, show_intervals=show_intervals, show=show)
+                                        range_x=range_x, range_y=range_y,
+                                        y_label=y_label,
+                                        vertical_lines_to_add=vertical_lines_to_add, show_intervals=show_intervals, show=show)
 
 
 
@@ -1584,7 +1563,7 @@ class UniformCompartment:
         """
         Using plotly, draw the plot of the step sizes vs. time
         (only meaningful when the variable-step option was used).
-        The same scale as plot_curves() will be used.
+        The same scale as plot_history() will be used.
         This function requires the diagnostics option to be turned on, prior to running the simulation
 
         :param show_intervals:  If True, will add to the plot thin vertical dotted gray lines
@@ -1732,7 +1711,7 @@ class UniformCompartment:
             else:
                 df = self.get_history()
 
-        chem_list = self.chem_data.get_all_names()  # List of all the chemicals' names
+        chem_list = self.chem_data.get_all_labels()  # List of all the chemicals' names
 
         if row:
             return df.loc[row][chem_list].to_numpy(dtype='float32')
@@ -1844,6 +1823,10 @@ class UniformCompartment:
                                 as allowed by the requested tolerance
         """
         rxn = self.chem_data.get_reaction(rxn_index)    # Look up the requested reaction
+
+        if np.allclose(rxn.extract_reverse_rate(), 0):
+            print("reaction_in_equilibrium() currently does NOT handle irreversible reactions (with a zero reverse rate)")
+            return False
 
         rate_ratio = rxn.extract_forward_rate() / rxn.extract_reverse_rate()  # Ratio of forward/reverse reaction rates
 

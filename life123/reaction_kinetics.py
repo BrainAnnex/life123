@@ -14,6 +14,7 @@ class ReactionKinetics:
     Static methods about reactions kinetics
     """
 
+
     @classmethod
     def solve_exactly(cls, rxn :Reaction, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
         """
@@ -30,7 +31,9 @@ class ReactionKinetics:
         :param B0:      Initial concentration of the product B
         :param t_arr:   A Numpy array with the desired times at which the solutions are desired
         :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
+                            at the times given by the argument t_arr
         """
+        # TODO: also include synthesis reaction
 
         reactants, products, kF, kR = rxn.unpack_for_dynamics()
 
@@ -42,33 +45,60 @@ class ReactionKinetics:
             "Currently only works for `A <-> B` reactions"
         # TODO: should also verify the reaction orders to be 1
 
-        return cls._exact_solution(kF, kR, A0, B0, t_arr)
+        return cls.exact_solution_unimolecular_reversible(kF, kR, A0, B0, t_arr)
 
 
 
     @classmethod
-    def _exact_solution(cls, kF, kR, A0, B0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray):
+    def exact_solution_unimolecular_reversible(cls, kF, kR, A0, B0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray):
         """
-        Return the exact solution of the 1st Order Reaction A <=> B,
+        Return the exact solution of the reversible 1st Order Reaction A <=> B,
         with the specified parameters,
         sampled at the given times.
 
-        For details, see https://life123.science/reactions   (TODO: make B(t) more symmetric, as suggested by ChatGPT)
+        For details, see https://life123.science/reactions
 
         :param kF:      Forward reaction rate constant
         :param kR:      Reverse reaction rate constant
         :param A0:      Initial concentration of the reactant A
         :param B0:      Initial concentration of the product B
-        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
+        :param t_arr:   A Numpy array with the desired times at which the solutions are to be determined
 
         :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
                             at the times given by the argument t_arr
         """
         TOT = A0 + B0
-        # Formula is:  A = (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
+        # Formula is:  A(t) = (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
 
         sum_rates = kF + kR
-        A_arr = (A0 - (kR * TOT) / sum_rates) * np.exp(-sum_rates * t_arr) + (kR * TOT / sum_rates)
+        ratio = (kR * TOT) / sum_rates
+        A_arr = (A0 - ratio) * np.exp(-sum_rates * t_arr) + ratio
+        B_arr = TOT - A_arr
+
+        return (A_arr, B_arr)
+
+
+    @classmethod
+    def exact_solution_unimolecular_irreversible(cls, kF, A0, B0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray):
+        """
+        Return the exact solution of the irreversible 1st Order Reaction A => B,
+        with the specified parameters,
+        sampled at the given times.
+
+        For details, see https://life123.science/reactions
+
+        :param kF:      Forward reaction rate constant (the reverse one is taken to be zero)
+        :param A0:      Initial concentration of the reactant A
+        :param B0:      Initial concentration of the product B
+        :param t_arr:   A Numpy array with the desired times at which the solutions are to be determined
+
+        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
+                            at the times given by the argument t_arr
+        """
+        TOT = A0 + B0
+        # Formula is:  A(t) = A0 Exp(-kF t)
+
+        A_arr = A0 * np.exp(-kF * t_arr)
         B_arr = TOT - A_arr
 
         return (A_arr, B_arr)
@@ -219,7 +249,7 @@ class ReactionKinetics:
         # Plot both Y and its least-square fit, as functions of X
         fig = PlotlyHelper.plot_curves(x=A_conc, y=[B_prime , kF * A_conc - kR * B_conc],
                                        title=f"d/dt {product_name}(t) as a function of {reactant_name}(t), alongside its least-square fit",
-                                       xlabel=f"{reactant_name}(t)", ylabel=f"{product_name}'(t)",
+                                       x_label=f"{reactant_name}(t)", y_label=f"{product_name}'(t)",
                                        curve_labels=[f"{product_name}'(t)", "Linear Fit"], legend_title="Curve vs Fit:",
                                        colors=['green', 'red'])
 
@@ -258,13 +288,56 @@ class ReactionKinetics:
         # Plot both Y and its least-square fit, as functions of X
         fig = PlotlyHelper.plot_curves(x=A_conc, y=[Deriv_C , kF * A_conc * B_conc - kR * C_conc],
                                        title=f"d/dt {product}(t) as a function of {reactants[0]}(t), alongside its least-square fit",
-                                       xlabel=f"{reactants[0]}(t)", ylabel=f"{product}'(t)",
+                                       x_label=f"{reactants[0]}(t)", y_label=f"{product}'(t)",
                                        curve_labels=[f"{product}'(t)", "Linear Fit"], legend_title="Curve vs Fit:",
                                        colors=['green', 'red'])
 
         print(f"\n-> ESTIMATED RATE CONSTANTS: kF = {kF:,.4g} , kR = {kR:,.4g}")
 
         return fig
+
+
+
+    @classmethod
+    def compute_reaction_rate(cls, rxn, conc_array :np.ndarray, name_mapping :dict) -> float:
+        """
+        For the SINGLE given reaction, and the specified concentrations of chemicals,
+        compute its initial reaction's "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate",
+        at the start of the time step.
+
+        This function is to be used for elementary, or non-elementary, reactions that follow the familiar "Rate Laws",
+        with forward and reverse rate constants stored in the passed "Reaction" object,
+        and with reaction orders, for the various Reactants and Products, also stored in that "Reaction" object.
+
+        For background info:  https://life123.science/reactions
+
+        :param rxn:         An object of type "Reaction", with the details of the reaction
+        :param conc_array:  Numpy array of concentrations of ALL chemical, in their index order
+        :param name_mapping:A dict with all the mappings of the chemical names to the registered index
+        :return:            The differences between the reaction's forward and reverse rates
+        """
+        reactants, products, fwd_rate_constant, rev_rate_constant = rxn.unpack_for_dynamics()
+
+        forward_rate = fwd_rate_constant        # The initial multiplicative factor
+        for r in reactants:
+            # Unpack data from the reactant r
+            species_name = rxn.extract_species_name(r)
+            order = rxn.extract_rxn_order(r)
+            species_index = name_mapping[species_name]
+            conc = conc_array[species_index]
+            forward_rate *= conc ** order       # Raise to power
+
+        reverse_rate = rev_rate_constant        # The initial multiplicative factor
+        for p in products:
+            # Unpack data from the reaction product p
+            species_name = rxn.extract_species_name(p)
+            order = rxn.extract_rxn_order(p)
+            species_index = name_mapping[species_name]
+            conc = conc_array[species_index]
+            reverse_rate *= conc ** order     # Raise to power
+
+        return forward_rate - reverse_rate
 
 
 
@@ -277,7 +350,7 @@ class VariableTimeSteps:
     """
     Methods for managing variable time steps during reactions
     """
-    # TODO: maybe rename "VariableTimeSteps"
+
 
     def __init__(self):
         # ***  PARAMETERS FOR AUTOMATED ADAPTIVE TIME STEP SIZES  ***
@@ -438,7 +511,12 @@ class VariableTimeSteps:
 
 
 
-    def display_value_against_thresholds(self, all_norms):
+    def display_value_against_thresholds(self, all_norms) -> None:
+        """
+
+        :param all_norms:
+        :return:            None
+        """
         for rule in self.thresholds:
             value = all_norms.get(rule['norm'])
             print(self.display_value_against_thresholds_single_rule(rule, value))
@@ -534,9 +612,9 @@ class VariableTimeSteps:
         Note:   for more control, use set_thresholds() and set_step_factors()
 
                 For example, using the "mid" preset is the same as issuing:
-                    dynamics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
-                    dynamics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
-                    dynamics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4, error=0.25)
+                    ReactionKinetics.set_thresholds(norm="norm_A", low=0.5, high=0.8, abort=1.44)
+                    ReactionKinetics.set_thresholds(norm="norm_B", low=0.08, high=0.5, abort=1.5)
+                    ReactionKinetics.set_step_factors(upshift=1.2, downshift=0.5, abort=0.4, error=0.25)
 
         :param preset:  String with one of the available preset names;
                             allowed values are (in generally-increasing speed):

@@ -148,7 +148,7 @@ dynamics_fixed.plot_history(colors=['darkturquoise', 'orange'], show_intervals=T
 # %%
 
 # %% [markdown]
-# # PART 3 - Exact Solution
+# # PART 3 - EXACT Solution
 
 # %%
 t_arr = np.linspace(0., 1.2, 41)   # A relatively dense uniform grid across our time range
@@ -161,7 +161,7 @@ rxn = chem_data.get_reaction(0)   # Object of type life123.reaction.Reaction
 A_exact, B_exact = ReactionKinetics.solve_exactly(rxn=rxn, A0=10., B0=50., t_arr=t_arr)
 
 # %%
-fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=[A_exact, B_exact], title="EXACT solution", xlabel="SYSTEM TIME", ylabel="concentration", 
+fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=[A_exact, B_exact], title="EXACT solution", x_label="SYSTEM TIME", y_label="concentration",
                                      legend_title="Chemical", curve_labels=["A (EXACT)", "B (EXACT)"],
                                      colors=["darkturquoise", "orange"], show=True)
 
@@ -180,7 +180,7 @@ fig_variable = dynamics_variable.plot_history(chemicals=['A'], colors='darkturqu
 fig_fixed = dynamics_fixed.plot_history(chemicals=['A'], colors='blue', title="FIXED time steps", show=True)         # Repeat a portion of the diagram seen in Part 2
 
 # %%
-fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=A_exact, title="EXACT solution", xlabel="SYSTEM TIME", ylabel="concentration", 
+fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=A_exact, title="EXACT solution", x_label="SYSTEM TIME", y_label="concentration",
                                      curve_labels="A (EXACT)", legend_title="Chemical",
                                      colors="red", show=True)  # Repeat a portion of the diagram seen in Part 3
 

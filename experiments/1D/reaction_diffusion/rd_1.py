@@ -115,12 +115,12 @@ log.write(f"Initial system state at time t={bio.system_time}:", blanks_before=2,
 
 # Output to the log file a heatmap for each chemical species
 for i in range(bio.n_species):
-    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
+    log.write(f"{bio.chem_data.get_label(i)}:", also_print=False)
     bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
 
 # Output to the log file a one-curve line plot for each chemical species
 for i in range(bio.n_species):
-    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
+    log.write(f"{bio.chem_data.get_label(i)}:", also_print=False)
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
@@ -167,12 +167,12 @@ log.write(f"System state at time t={bio.system_time}:", blanks_before=2, style=l
 
 # Output to the log file a heatmap for each chemical species
 for i in range(bio.n_species):
-    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
+    log.write(f"{bio.chem_data.get_label(i)}:", also_print=False)
     bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
 
 # Output to the log file a one-curve line plot for each chemical species
 for i in range(bio.n_species):
-    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
+    log.write(f"{bio.chem_data.get_label(i)}:", also_print=False)
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
@@ -213,12 +213,12 @@ log.write(f"System state at time t={bio.system_time}:", blanks_before=2, style=l
 
 # Output to the log file a heatmap for each chemical species
 for i in range(bio.n_species):
-    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
+    log.write(f"{bio.chem_data.get_label(i)}:", also_print=False)
     bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
 
 # Output to the log file a one-curve line plot for each chemical species
 for i in range(bio.n_species):
-    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
+    log.write(f"{bio.chem_data.get_label(i)}:", also_print=False)
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
@@ -260,12 +260,12 @@ log.write(f"System state at time t={bio.system_time}:", blanks_before=2, style=l
 
 # Output to the log file a heatmap for each chemical species
 for i in range(bio.n_species):
-    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
+    log.write(f"{bio.chem_data.get_label(i)}:", also_print=False)
     bio.single_species_heatmap(species_index=i, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
 
 # Output to the log file a one-curve line plot for each chemical species
 for i in range(bio.n_species):
-    log.write(f"{bio.chem_data.get_name(i)}:", also_print=False)
+    log.write(f"{bio.chem_data.get_label(i)}:", also_print=False)
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)

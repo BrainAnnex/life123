@@ -273,7 +273,7 @@ class BioSim2D:
         #np.set_printoptions(linewidth=125)
         print(f"SYSTEM STATE at Time t = {self.system_time}:")
         for species_index in range(self.n_species):
-            chem_name = self.chem_data.get_name(species_index)
+            chem_name = self.chem_data.get_label(species_index)
             if chem_name is None:
                 print(f"Species {species_index}:")      # Use the index, if the name isn't available
             else:

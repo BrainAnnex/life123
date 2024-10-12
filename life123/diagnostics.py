@@ -14,7 +14,7 @@ class Diagnostics:
 
         self.chem_data = chem_data
 
-        # TODO: maybe drop the "diagnostic_" from the name
+        # TODO: maybe drop the "diagnostic_" from the names
         self.diagnostic_rxn_data = {}   # "Diagnostic reaction data", PER REACTION: a dict with as many entries as reactions.
                                         #   The keys are the reaction indices; the values are objects of type "MovieTabular",
                                         #   which contain Pandas dataframes with the following columns
@@ -47,10 +47,11 @@ class Diagnostics:
 
     #####  1. diagnostic_rxn_data  #####
 
-    def save_diagnostic_rxn_data(self, rxn_index :int, system_time, time_step,
-                                 increment_vector_single_rxn: Union[np.array, None],
-                                 rate=None,
-                                 caption="") -> None:
+    def save_rxn_data(self, rxn_index :int, system_time, time_step,
+                      increment_vector_single_rxn: Union[np.array, None],
+                      aborted=False,
+                      rate=None,
+                      caption="") -> None:
         """
         Save up diagnostic data for 1 reaction, for a simulation step
         (by convention, regardless of whether the step is completed or aborted)
@@ -62,7 +63,9 @@ class Diagnostics:
                                                 containing the "delta concentrations" caused by this reaction
                                                 for ALL the chemicals (whether involved in the reaction or not);
                                                 it may be None if the current reaction step was aborted
-                                                Note: diagnostic data is saved only the chemicals involved in this reaction
+                                                Note: diagnostic data is saved only for the chemicals involved in this reaction
+        :param aborted:                     True is the current reaction step was aborted (i.e. will get repeated);
+                                                False (default) for normal situations
         :param rate:                        [OPTIONAL] The value of the reaction rate (aka reaction velocity) at this step
         :param caption:                     [OPTIONAL] string to describe the snapshot
         :return:                            None
@@ -85,16 +88,16 @@ class Diagnostics:
             self.diagnostic_rxn_data[rxn_index] = MovieTabular(parameter_name="START_TIME")
 
 
-        data_snapshot = {"time_step": time_step}      # Dict being prepared to add a new row to a Pandas dataframe
+        data_snapshot = {"time_step": time_step, "aborted": aborted}      # Dict being prepared to add a new row to a Pandas dataframe
 
         if increment_vector_single_rxn is None:     # If the values aren't available (as is the case in aborts)
             for index in indexes:
-                data_snapshot["Delta " + self.chem_data.get_name(index)] = np.nan
+                data_snapshot["Delta " + self.chem_data.get_label(index)] = np.nan
         else:
             for index in indexes:
-                data_snapshot["Delta " + self.chem_data.get_name(index)] = increment_vector_single_rxn[index]
+                data_snapshot["Delta " + self.chem_data.get_label(index)] = increment_vector_single_rxn[index]
 
-        if rate:
+        if rate is not None:
             data_snapshot["rate"] = rate
 
         self.diagnostic_rxn_data[rxn_index].store(par=system_time,
@@ -113,13 +116,14 @@ class Diagnostics:
         :return:            None
         """
         for rxn_index in range(self.chem_data.number_of_reactions()):
-            self.save_diagnostic_rxn_data(system_time=system_time, time_step=time_step,
-                                          increment_vector_single_rxn=None,
-                                          rxn_index=rxn_index, caption=caption)
+            self.save_rxn_data(system_time=system_time, time_step=time_step,
+                               increment_vector_single_rxn=None,
+                               aborted=True,
+                               rxn_index=rxn_index, caption=caption)
 
 
 
-    def comment_diagnostic_rxn_data(self, msg: str) -> None:
+    def annotate_abort_rxn_data(self, msg: str) -> None:
         """
         Set the comment field of the last record for EACH of the reaction-specific dataframe
 
@@ -128,21 +132,47 @@ class Diagnostics:
         """
         for rxn_index in range(self.chem_data.number_of_reactions()):
             self.diagnostic_rxn_data[rxn_index].set_caption_last_snapshot(msg)
+            self.diagnostic_rxn_data[rxn_index].set_field_last_snapshot(field_name="aborted", field_value="True")
 
 
 
-    def get_diagnostic_rxn_data(self, rxn_index :int, head=None, tail=None,
-                                t=None, print_reaction=True) -> Union[pd.DataFrame, None]:
+    def get_rxn_rates(self, rxn_index :int) -> Union[pd.DataFrame, None]:
+        """
+        Return a Pandas dataframe with 2 columns: "START_TIME" and "rate",
+        with the rates of the specified reaction at those times.
+
+        Note that the dataframe will have 1 LESS ROW than a corresponding dataframe of reaction history,
+        because the rate at the final time won't be known (since that time would be the start of a simulation step
+        that has not been done)
+
+        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
+        :return:            A Pandas dataframe with times and their corresponding reaction rates
+        """
+        rxn_df = self.get_rxn_data(rxn_index=rxn_index)
+        if rxn_df is None:
+            return None
+
+        # Ditch any row where the "aborted" field has a True value; only take 2 columns of the resulting dataframe
+        df_filtered = rxn_df[rxn_df['aborted'] == False][["START_TIME", "rate"]]
+
+        return df_filtered.reset_index(drop=True)   # Re-number rows (drop=True avoids adding the old index as a new column)
+
+
+
+    def get_rxn_data(self, rxn_index :int, head=None, tail=None,
+                     t=None, print_reaction=True) -> Union[pd.DataFrame, None]:
         """
         Return a Pandas dataframe with the diagnostic run data of the requested SINGLE reaction,
-        from the time that the diagnostics were activated by a call to set_diagnostics().
+        from the time that the diagnostics were enabled by instantiating this class.
 
         In particular, the dataframe contains the "Delta" values for each of the chemicals
         involved in the reaction - i.e. the change in their concentrations
-        over the time interval that *STARTS* at the value in the "TIME" column.
+        over the time interval that *STARTS* at the value in the "START_TIME" column.
         (So, there'll be no row with the final current System Time)
 
-        Note: entries are always added, even if an interval run is aborted, and automatically re-done.
+        Note: entries are always added, even if an interval run is aborted and automatically re-done;
+              therefore, some entries will be duplicates in the "START_TIME" column.
+              Those entries with have a value of True in the "aborted" column.
 
         Optionally, print out a brief description of the reaction.
 
@@ -152,7 +182,6 @@ class Diagnostics:
         called "search_value")
 
         :param rxn_index:       The integer index (0-based) to identify the reaction of interest
-                                TODO: if not specified, maybe show all reactions in turn
 
         :param head:            (OPTIONAL) Number of records to return,
                                     from the start of the diagnostic dataframe.
@@ -183,9 +212,10 @@ class Diagnostics:
         movie_obj = self.diagnostic_rxn_data.get(rxn_index)    # Object of type "MovieTabular"
 
         if movie_obj is None:
+            print(f"get_diagnostic_rxn_data(): no diagnostics data exists for reaction index {rxn_index} ; "
+                  f"did you run the reaction simulation prior to calling this function?" )
             return None
-            #raise Exception(f"get_diagnostic_rxn_data(): no diagnostics data exists for reaction index {rxn_index} ;"
-                            #f" did you call set_diagnostics() prior to the simulation run?")
+
 
         return movie_obj.get_dataframe(head=head, tail=tail, search_col="START_TIME", search_val=t)
 
@@ -250,7 +280,7 @@ class Diagnostics:
 
 
 
-    def get_diagnostic_decisions_data(self) -> pd.DataFrame:
+    def get_decisions_data(self) -> pd.DataFrame:
         """
         Determine and return the diagnostic data about concentration changes at every step - by convention,
         EVEN aborted ones
@@ -330,7 +360,7 @@ class Diagnostics:
         print("row_list: ", row_list)
         print("active_list: ", active_list)
 
-        chemical_list = self.chem_data.get_all_names()
+        chemical_list = self.chem_data.get_all_labels()
         chemical_delta_list = self._delta_names()
 
         conc_arr_before = self.get_diagnostic_conc_data().loc[row_baseline][chemical_list].to_numpy(dtype='float16')
@@ -343,11 +373,11 @@ class Diagnostics:
         for rxn_index in range(self.chem_data.number_of_reactions()):
             if (rxn_index in active_list):  # If reaction is tagged as "fast"
                 row = row_list[rxn_index]   # Row in the data frame for the diagnostic data on this reaction
-                delta_rxn = self.get_diagnostic_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
+                delta_rxn = self.get_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
                 print(f"From fast rxn {rxn_index}: delta_rxn = {delta_rxn}")
             else:                           # If reaction is tagged as "slow"
                 row = row_list[rxn_index]   # Row in the data frame for the diagnostic data on this reaction
-                delta_rxn = self.get_diagnostic_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
+                delta_rxn = self.get_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
                 #delta_rxn = np.zeros(self.reaction_data.number_of_chemicals(),
                 #                     dtype=float)   # This is the way it was in release beta 19
                 print(f"From slow rxn {rxn_index}: delta_rxn = {delta_rxn}")
@@ -400,13 +430,13 @@ class Diagnostics:
         if sys_history:
             df = sys_history
             assert not df.empty , \
-                "UniformCompartment.explain_time_advance(): no history data found.  " \
+                "Diagnostics.explain_time_advance(): no history data found.  " \
                 "Did you run the reaction simulation prior to calling this function?"
         else:
             df = self.get_diagnostic_conc_data()
             assert not df.empty , \
-                "UniformCompartment.explain_time_advance(): no diagnostic data found.  " \
-                "Did you call set_diagnostics() prior to the reaction run?"
+                "Diagnostics.explain_time_advance(): no diagnostic data found.  " \
+                "Did you run the reaction simulation prior to calling this function?"
 
         n_entries = len(df)
         if sys_history:
@@ -415,9 +445,9 @@ class Diagnostics:
             t = list(df["TIME"])    # List of times (simulation step points)
 
         if n_entries == 1:
-            print(f"UniformCompartment.explain_time_advance(): no time advance found. "
+            print(f"Diagnostics.explain_time_advance(): no time advance found. "
                   f"Diagnostics only contain an initial System Time of {t[0]:.3g} ;  "
-                  f"did you run the reaction simulation?")
+                  f"did you run the reaction simulation prior to calling this function?")
             return
 
 
@@ -603,7 +633,7 @@ class Diagnostics:
         # TODO: maybe make it also accept as inputs a reaction object and a Pandas dataframe
         if self.diagnostic_rxn_data == {}:
             print("WARNING *** In order to run stoichiometry_checker_entire_run(), "
-                  "the diagnostics must be turned on, with set_diagnostics(), prior to the simulation run!")
+                  "the diagnostics must be turned enabled prior to the simulation run!")
             return False
 
         number_rxns = self.chem_data.number_of_reactions()
@@ -612,7 +642,7 @@ class Diagnostics:
             f"(whereas {number_rxns} are present)"
 
         for rxn_index in range(number_rxns):
-            diagnostic_data = self.get_diagnostic_rxn_data(rxn_index=rxn_index, print_reaction=False)
+            diagnostic_data = self.get_rxn_data(rxn_index=rxn_index, print_reaction=False)
             for row_index in range(len(diagnostic_data)):
                 df_row = diagnostic_data.loc[row_index]     # Row in the Panda's data frame of diagnostic data
                 chemical_delta_list = self._delta_names()           # EXAMPLE: ["Delta A", "Delta B", "Delta C"]
@@ -636,7 +666,7 @@ class Diagnostics:
 
         :return:    A list of strings
         """
-        chemical_list = self.chem_data.get_all_names()      # EXAMPLE: ["A", "B", "X"]
+        chemical_list = self.chem_data.get_all_labels()      # EXAMPLE: ["A", "B", "X"]
         chemical_delta_list = ["Delta " + name
                                for name in chemical_list]
         return chemical_delta_list

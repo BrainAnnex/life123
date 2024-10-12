@@ -45,58 +45,60 @@ def test_get_index():
 
 def test_name_exists():
     chem_data = ChemData(names=['A', 'B', 'C'])
-    assert chem_data.name_exists("A")
-    assert chem_data.name_exists("C")
-    assert not chem_data.name_exists("X")
+    assert chem_data.label_exists("A")
+    assert chem_data.label_exists("C")
+    assert not chem_data.label_exists("X")
 
     chem_data.add_chemical(name="X")
-    assert chem_data.name_exists("X")
+    assert chem_data.label_exists("X")
 
-    assert not chem_data.name_exists("Z")
+    assert not chem_data.label_exists("Z")
 
 
 
 def test_get_name():
     chem_data = ChemData(names=['A', 'B', 'C'])
-    assert chem_data.get_name(0) == 'A'
-    assert chem_data.get_name(1) == 'B'
-    assert chem_data.get_name(2) == 'C'
+    assert chem_data.get_label(0) == 'A'
+    assert chem_data.get_label(1) == 'B'
+    assert chem_data.get_label(2) == 'C'
 
     with pytest.raises(Exception):
-        chem_data.get_name(3)               # Out of bounds
+        chem_data.get_label(3)               # Out of bounds
     with pytest.raises(Exception):
-        chem_data.get_name(-1)              # Invalid argument value
+        chem_data.get_label(-1)              # Invalid argument value
     with pytest.raises(Exception):
-        chem_data.get_name("some string")   # Invalid argument type
+        chem_data.get_label("some string")   # Invalid argument type
     with pytest.raises(Exception):
-        chem_data.get_name(3.14)            # Invalid argument type
+        chem_data.get_label(3.14)            # Invalid argument type
 
 
 
 def test_get_all_names():
     chem_data = ChemData(names=['A', 'B', 'C'])
-    assert chem_data.get_all_names() == ['A', 'B', 'C']
+    assert chem_data.get_all_labels() == ['A', 'B', 'C']
 
     # Reach into the internal data structure, to mess up some names
     chem_data.chemical_data = [{'name': 'A'}, {'name': ''}, {'name': 'C'}]
 
     with pytest.raises(Exception):
-        chem_data.get_all_names()   # The former name 'B' is now a blank
+        chem_data.get_all_labels()   # The former name 'B' is now a blank
 
     chem_data.chemical_data = [{'name': 'A'}, {'name': 'B'}, {}]
 
     with pytest.raises(Exception):
-        chem_data.get_all_names()   # The former name 'B' is now missing
+        chem_data.get_all_labels()   # The former name 'B' is now missing
 
 
 
 def test_all_chemicals():
     chem_data = ChemData(names=['A', 'B'])
-    chem_data.add_chemical("C", note="this is C", formula="CH4", cost="200")
+    chem_data.add_chemical(label="C", note="this is C", name="CH4", cost="200")
     chem_data.add_chemical_with_diffusion("D", diff_rate=10, note="this is D")
 
     result = chem_data.all_chemicals()
-    expected_recordset = [{'name': 'A'}, {'name': 'B'}, {'name': 'C', 'note': 'this is C', 'formula': 'CH4', 'cost': '200'}, {'name': 'D', 'note': 'this is D'}]
+    expected_recordset = [{'name': 'A', 'label': 'A'}, {'name': 'B', 'label': 'B'},
+                          {'name': 'CH4', 'label': 'C', 'note': 'this is C', 'cost': '200'},
+                          {'name': 'D', 'label': 'D', 'note': 'this is D'}]
     expected_df = pd.DataFrame(expected_recordset)
 
     assert expected_df.equals(result)
@@ -111,8 +113,8 @@ def test_add_chemical():
     result = chem_data.add_chemical("A")
     assert result == 0
     assert chem_data.number_of_chemicals() == 1
-    assert chem_data.chemical_data == [{"name": "A"}]
-    assert chem_data.name_dict == {"A": 0}
+    assert chem_data.chemical_data == [{"name": "A", "label": "A"}]
+    assert chem_data.label_dict == {"A": 0}
 
     with pytest.raises(Exception):
         chem_data.add_chemical("A") # Duplicate!
@@ -120,14 +122,17 @@ def test_add_chemical():
     result = chem_data.add_chemical("B", note="some note")
     assert result == 1
     assert chem_data.number_of_chemicals() == 2
-    assert chem_data.chemical_data == [{"name": "A"}, {"name": "B", "note": "some note"}]
-    assert chem_data.name_dict == {"A": 0, "B": 1}
+    assert chem_data.chemical_data == [ {"name": "A", "label": "A"},
+                                        {"name": "B", "label": "B", "note": "some note"}]
+    assert chem_data.label_dict == {"A": 0, "B": 1}
 
     result = chem_data.add_chemical("C")
     assert result == 2
     assert chem_data.number_of_chemicals() == 3
-    assert chem_data.chemical_data == [{"name": "A"}, {"name": "B", "note": "some note"}, {"name": "C"}]
-    assert chem_data.name_dict == {"A": 0, "B": 1, "C": 2}
+    assert chem_data.chemical_data == [{"name": "A", "label": "A"},
+                                       {"name": "B", "label": "B", "note": "some note"},
+                                       {"name": "C", "label": "C"}]
+    assert chem_data.label_dict == {"A": 0, "B": 1, "C": 2}
 
 
     # Re-start
@@ -136,14 +141,16 @@ def test_add_chemical():
     result = chem_data.add_chemical("Y", note="test")
     assert result == 1
     assert chem_data.number_of_chemicals() == 2
-    assert chem_data.chemical_data == [{"name": "X"}, {"name": "Y", "note": "test"}]
-    assert chem_data.name_dict == {"X": 0, "Y": 1}
+    assert chem_data.chemical_data == [{"name": "X", "label": "X"}, {"name": "Y", "label": "Y", "note": "test"}]
+    assert chem_data.label_dict == {"X": 0, "Y": 1}
 
-    result = chem_data.add_chemical("Z", formula="CH3OH")
+    result = chem_data.add_chemical(label="Z", name="CH3OH")
     assert result == 2
     assert chem_data.number_of_chemicals() == 3
-    assert chem_data.chemical_data == [{"name": "X"}, {"name": "Y", "note": "test"}, {"name": "Z", "formula": "CH3OH"}]
-    assert chem_data.name_dict == {"X": 0, "Y": 1, "Z": 2}
+    assert chem_data.chemical_data == [{"name": "X", "label": "X"},
+                                       {"name": "Y", "label": "Y", "note": "test"},
+                                       {"name": "CH3OH", "label": "Z"}]
+    assert chem_data.label_dict == {"X": 0, "Y": 1, "Z": 2}
 
     with pytest.raises(Exception):
         chem_data.add_chemical(name=123)    # Name is not a string
@@ -160,16 +167,18 @@ def test_add_chemical():
 def test_add_chemical_with_diffusion():
     chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2, 3.14])
     assert chem_data.number_of_chemicals() == 3
-    assert chem_data.get_all_names() == ['A', 'B', 'C']
-    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
+    assert chem_data.get_all_labels() == ['A', 'B', 'C']
+    assert chem_data.label_dict == {'A': 0, 'B': 1, 'C': 2}
+    assert chem_data.chemical_data == [ {'name': 'A', 'label': 'A'}, {'name': 'B', 'label': 'B'}, {'name': 'C', 'label': 'C'} ]
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14])
 
     chem_data.add_chemical_with_diffusion(name="D", diff_rate=8)
     assert chem_data.number_of_chemicals() == 4
-    assert chem_data.get_all_names() == ['A', 'B', 'C', 'D']
-    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+    assert chem_data.get_all_labels() == ['A', 'B', 'C', 'D']
+    assert chem_data.label_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14, 8])
-    assert chem_data.chemical_data == [ {'name': 'A'}, {'name': 'B'}, {'name': 'C'}, {'name': 'D'}]
+    assert chem_data.chemical_data == [ {'name': 'A', 'label': 'A'}, {'name': 'B', 'label': 'B'}, {'name': 'C', 'label': 'C'},
+                                        {'name': 'D', 'label': 'D'}]
 
     with pytest.raises(Exception):
         chem_data.add_chemical_with_diffusion(name="E", diff_rate="I'm not a number")
@@ -182,11 +191,12 @@ def test_add_chemical_with_diffusion():
 
     chem_data.add_chemical_with_diffusion(name="E", diff_rate=25., note="my note", some_field="some value")
     assert chem_data.number_of_chemicals() == 5
-    assert chem_data.get_all_names() == ['A', 'B', 'C', 'D', 'E']
-    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4}
+    assert chem_data.get_all_labels() == ['A', 'B', 'C', 'D', 'E']
+    assert chem_data.label_dict == {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14, 8, 25])
-    assert chem_data.chemical_data == [ {'name': 'A'}, {'name': 'B'}, {'name': 'C'}, {'name': 'D'},
-                                        {'name': 'E', 'note': 'my note', 'some_field': 'some value'}]
+    assert chem_data.chemical_data == [ {'name': 'A', 'label': 'A'}, {'name': 'B', 'label': 'B'}, {'name': 'C', 'label': 'C'},
+                                        {'name': 'D', 'label': 'D'},
+                                        {'name': 'E',  'label': 'E', 'note': 'my note', 'some_field': 'some value'}]
 
     with pytest.raises(Exception):
         chem_data.add_chemical_with_diffusion(name="", diff_rate=25.)
@@ -231,7 +241,7 @@ def test_get_diffusion_rate():
     assert chem_data.get_diffusion_rate(name="Z") is None       # No diffusion value assigned
     assert chem_data.get_diffusion_rate(species_index=3) is None
 
-    chem_data.set_diffusion_rate(name="Z", diff_rate=8)
+    chem_data.set_diffusion_rate(label="Z", diff_rate=8)
     assert chem_data.get_diffusion_rate(name="Z") == 8
     assert chem_data.get_diffusion_rate(species_index=3) == 8
 
@@ -615,8 +625,8 @@ def test_initialize():
 
     chem_data = ChemData(names=['A', 'B', 'C'])
     assert chem_data.number_of_chemicals() == 3
-    assert chem_data.get_all_names() == ['A', 'B', 'C']
-    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
+    assert chem_data.get_all_labels() == ['A', 'B', 'C']
+    assert chem_data.label_dict == {'A': 0, 'B': 1, 'C': 2}
     assert chem_data.diffusion_rates == {}
 
     with pytest.raises(Exception):
@@ -628,7 +638,7 @@ def test_initialize():
     chem_data = ChemData(diffusion_rates=[0.15, 1.2])
     assert chem_data.number_of_chemicals() == 2
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2])
-    assert chem_data.get_all_names() == ['Chemical 1', 'Chemical 2']
+    assert chem_data.get_all_labels() == ['Chemical 1', 'Chemical 2']
 
     with pytest.raises(Exception):
         ChemData(diffusion_rates=123.456)   # Not a list/tuple
@@ -644,8 +654,8 @@ def test_initialize():
 
     chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2, 3.14])
     assert chem_data.number_of_chemicals() == 3
-    assert chem_data.get_all_names() == ['A', 'B', 'C']
-    assert chem_data.name_dict == {'A': 0, 'B': 1, 'C': 2}
+    assert chem_data.get_all_labels() == ['A', 'B', 'C']
+    assert chem_data.label_dict == {'A': 0, 'B': 1, 'C': 2}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14])
 
     assert np.allclose(chem_data.temp, 298.15)      # The default temperature
@@ -656,8 +666,8 @@ def test_init_chemical_data():
     chem_data = ChemData()
     chem_data.init_chemical_data(names=["A", "B", "C", "D", "E", "F"])
 
-    assert chem_data.get_all_names() == ["A", "B", "C", "D", "E", "F"]
-    assert chem_data.name_dict == {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5}
+    assert chem_data.get_all_labels() == ["A", "B", "C", "D", "E", "F"]
+    assert chem_data.label_dict == {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5}
 
     with pytest.raises(Exception):
         chem_data = ChemData()
@@ -674,11 +684,11 @@ def test_init_chemical_data():
     chem_data = ChemData()
     chem_data.init_chemical_data(names=['A', 'B', 'C'], diffusion_rates=[1, 2, 3])
     assert chem_data.number_of_chemicals() == 3
-    assert chem_data.get_all_names() == ['A', 'B', 'C']
+    assert chem_data.get_all_labels() == ['A', 'B', 'C']
     # Verify that the name index also got created successfully
-    assert chem_data.name_dict['A'] == 0
-    assert chem_data.name_dict['B'] == 1
-    assert chem_data.name_dict['C'] == 2
+    assert chem_data.label_dict['A'] == 0
+    assert chem_data.label_dict['B'] == 1
+    assert chem_data.label_dict['C'] == 2
 
 
 
