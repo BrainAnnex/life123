@@ -249,7 +249,7 @@ class ReactionKinetics:
         # Plot both Y and its least-square fit, as functions of X
         fig = PlotlyHelper.plot_curves(x=A_conc, y=[B_prime , kF * A_conc - kR * B_conc],
                                        title=f"d/dt {product_name}(t) as a function of {reactant_name}(t), alongside its least-square fit",
-                                       xlabel=f"{reactant_name}(t)", ylabel=f"{product_name}'(t)",
+                                       x_label=f"{reactant_name}(t)", y_label=f"{product_name}'(t)",
                                        curve_labels=[f"{product_name}'(t)", "Linear Fit"], legend_title="Curve vs Fit:",
                                        colors=['green', 'red'])
 
@@ -288,7 +288,7 @@ class ReactionKinetics:
         # Plot both Y and its least-square fit, as functions of X
         fig = PlotlyHelper.plot_curves(x=A_conc, y=[Deriv_C , kF * A_conc * B_conc - kR * C_conc],
                                        title=f"d/dt {product}(t) as a function of {reactants[0]}(t), alongside its least-square fit",
-                                       xlabel=f"{reactants[0]}(t)", ylabel=f"{product}'(t)",
+                                       x_label=f"{reactants[0]}(t)", y_label=f"{product}'(t)",
                                        curve_labels=[f"{product}'(t)", "Linear Fit"], legend_title="Curve vs Fit:",
                                        colors=['green', 'red'])
 

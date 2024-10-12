@@ -72,7 +72,7 @@ class PlotlyHelper:
 
 
     @classmethod
-    def plot_curves(cls, x, y, title="", xrange=None, xlabel="", ylabel="", curve_labels=None, legend_title=None,
+    def plot_curves(cls, x, y, title="", range_x=None, x_label="", y_label="", curve_labels=None, legend_title=None,
                     colors=None, show=False) -> pgo.Figure:
         """
         Plot one or more 2D curves
@@ -80,10 +80,10 @@ class PlotlyHelper:
         :param x:           A Numpy array, with the (common) x-axis values
         :param y:           Either a Numpy array, or a list/tuple of them, with the y-axis values of the curve(s)
         :param title:       [OPTIONAL] Title to use for the overall plot
-        :param xrange:      [OPTIONAL] list of the form [t_start, t_end], to initially only show a part of the timeline.
+        :param range_x:      [OPTIONAL] list of the form [t_start, t_end], to initially only show a part of the timeline.
                                 Note: it's still possible to zoom out, and see the excluded portion
-        :param xlabel:      [OPTIONAL] Caption to use for the x-axis
-        :param ylabel:      [OPTIONAL] Caption to use for the y-axis
+        :param x_label:      [OPTIONAL] Caption to use for the x-axis
+        :param y_label:      [OPTIONAL] Caption to use for the y-axis
         :param curve_labels:[OPTIONAL] String, or list of strings.
                                 Label(s) to use for the various curves in the legend and in the hover boxes.
                                 If missing, and there's only 1 curve, the legend box won't be shown
@@ -115,16 +115,16 @@ class PlotlyHelper:
 
         fig = px.line(x=x, y=y, color_discrete_sequence=colors)     # y can be one array or a list
 
-        if not xlabel:
-            xlabel = "x"
+        if not x_label:
+            x_label = "x"
 
-        if not ylabel:
-            ylabel = "y"
+        if not y_label:
+            y_label = "y"
 
         if number_of_curves == 1:
-            hovertemplate = f"{xlabel}=%{{x}}<br>{ylabel}=%{{y}}<extra></extra>"
+            hovertemplate = f"{x_label}=%{{x}}<br>{y_label}=%{{y}}<extra></extra>"
         else:
-            hovertemplate = f"{xlabel}=%{{x}}<br>value=%{{y}}<extra></extra>"
+            hovertemplate = f"{x_label}=%{{x}}<br>value=%{{y}}<extra></extra>"
             # The "<extra></extra>" appears to suppress a redundant name showing in the hoverbox
 
         for index in range(number_of_curves):
@@ -137,14 +137,14 @@ class PlotlyHelper:
 
 
         fig.update_layout(title=title,
-                          xaxis_title=xlabel,
-                          yaxis_title=ylabel)
+                          xaxis_title=x_label,
+                          yaxis_title=y_label)
 
         if legend_title:
             fig.update_layout(legend={"title": legend_title})
 
-        if xrange:
-            fig.update_layout(xaxis={"range": xrange})
+        if range_x:
+            fig.update_layout(xaxis={"range": range_x})
 
 
         if show:
@@ -169,7 +169,8 @@ class PlotlyHelper:
         :param df:              Pandas dataframe with the data for the plot
         :param x_var:           Name of column with independent variable for the x-axis
         :param fields:          Name, or list of names, of the dataframe columns whose values are to be plotted;
-                                    if None, then display all
+                                    if a list is passed, also display a figure legend;
+                                    if None, then display all columns except the one that is declared as the independent variable
         :param colors:          (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
                                     or list of names to use, in order; if None, then the hardwired default colors are used
         :param title:           (OPTIONAL) Title for the plot
@@ -198,14 +199,21 @@ class PlotlyHelper:
 
         :return:                A plotly "Figure" object
         """
-
         MAX_NUMBER_VERTICAL_LINES = 150     # Used to avoid extreme clutter in the plot, in case
                                             # a very large number of vertical lines is requested;
                                             # if this value is exceeded, then the vertical lines are sampled
                                             # infrequently enough to bring the total number below this value
 
+        col_list = list(df.columns)
+        assert x_var in col_list, \
+            f"plot_pandas(): the value of the x_var arg ({x_var}) must be the name of one of the columns in the dataframe"
+
         if fields is None:
-            number_of_curves = len(df.columns) - 1  # All the field but one (since one is the independent variable)
+            number_of_curves = len(col_list) - 1  # All the field but one (since one is the independent variable)
+            fields = col_list
+            fields.remove(x_var)
+            if len(fields) == 1:
+                fields = fields[0]      # Take the only element, if there's only one (this has the effect of hiding the legend)
         else:
             number_of_curves = len(fields)
 
@@ -239,7 +247,7 @@ class PlotlyHelper:
         if vertical_lines_to_add is not None:   # User requested to add vertical lines to the plot
             assert (type(vertical_lines_to_add) == list) or (type(vertical_lines_to_add) == tuple) \
                    or (type(vertical_lines_to_add) == np.ndarray) or (type(vertical_lines_to_add) == pd.core.series.Series), \
-                "plot_curves(): the argument `vertical_lines`, " \
+                "plot_pandas(): the argument `vertical_lines`, " \
                 "if not None, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
 
             vline_list = []
@@ -249,7 +257,7 @@ class PlotlyHelper:
                 # Possibly limit the number of vertical lines shown
                 step = 1 + len(vertical_lines_to_add) // MAX_NUMBER_VERTICAL_LINES
                 if step > 1:
-                    print(f"plot_curves() WARNING: Excessive number of vertical lines ({len(vertical_lines_to_add)}) - only showing 1 every {step} lines")
+                    print(f"plot_pandas() NOTICE: Excessive number of vertical lines ({len(vertical_lines_to_add)}) - only showing 1 every {step} lines")
 
             for xi in vertical_lines_to_add[::step] :  # Notice that if step > 1 then we're sampling a subset of the elements
                 # The following is the internal data structure used by Plotly Express,

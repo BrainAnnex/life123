@@ -15,10 +15,10 @@
 
 # %% [markdown]
 # ## Enzyme Kinetics in a NON Michaelis-Menten modality
-# #### 3 Coupled Reactions: `S <-> P` , `E + S <-> ES*`, and  `ES* <-> E + P` .  Variation of experiment `enzyme_3`   
+# #### 3 Coupled Reactions: `S <-> P` , `E + S <-> ES*`, and  `ES* <-> E + P`     
 # A direct reaction and the same reaction, catalyzed by an enzyme `E` and showing the intermediate state.  
 # Re-run from same initial concentrations of S ("Substrate") and P ("Product"), for various concentations of the enzyme `E`: from zero to hugely abundant 
-# ### We'll REJECT the customary Michaelis-Menten assumptions that `[E] << [S]` and that the rates satisfy `k1_reverse >> k2_forward` !   
+# ### We'll REJECT the customary Michaelis-Menten assumptions that `[E] << [S]` and that the rate constants satisfy `k1_reverse >> k2_forward` !   
 # #### We'll explore exotic scenarios with lavish amount of enzyme, leading to diminishing (though fast-produced!) products,  and a buildup of the (not-so-transient!) `ES*` intermediate
 
 # %%

@@ -126,7 +126,7 @@ t_arr
 A_exact, B_exact = ReactionKinetics.exact_solution_unimolecular_irreversible(kF=3., A0=50., B0=10., t_arr=t_arr)
 
 # %%
-fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=[A_exact, B_exact], title="EXACT solution", xlabel="SYSTEM TIME", ylabel="concentration", 
+fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=[A_exact, B_exact], title="EXACT solution", x_label="SYSTEM TIME", y_label="concentration",
                                      legend_title="Chemical", curve_labels=["A (EXACT)", "B (EXACT)"],
                                      colors=["darkturquoise", "orange"], show=True)
 
@@ -134,7 +134,7 @@ fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=[A_exact, B_exact], title="EXACT
 # #### To avoid clutter, we'll just plot [A], as obtained from the variable-step approx solution and the exact analytical solution
 
 # %%
-fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=A_exact, title="EXACT solution", xlabel="SYSTEM TIME", ylabel="concentration", 
+fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=A_exact, title="EXACT solution", x_label="SYSTEM TIME", y_label="concentration",
                                      curve_labels="A (EXACT)", legend_title="Chemical",
                                      colors="red", show=True)     # Repeat a portion of the diagram seen just before
 

@@ -1563,7 +1563,7 @@ class UniformCompartment:
         """
         Using plotly, draw the plot of the step sizes vs. time
         (only meaningful when the variable-step option was used).
-        The same scale as plot_curves() will be used.
+        The same scale as plot_history() will be used.
         This function requires the diagnostics option to be turned on, prior to running the simulation
 
         :param show_intervals:  If True, will add to the plot thin vertical dotted gray lines

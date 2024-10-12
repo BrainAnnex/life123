@@ -226,7 +226,7 @@ Deriv_A - Deriv_B   # Will be very close to zero throughout
 
 # %% tags=[]
 PlotlyHelper.plot_curves(x=t_arr, y=[Deriv_A , Deriv_C], title="d/dt A(t) and d/dt C(t) as a function of time",
-                         xlabel="t", ylabel="Time derivatives", curve_labels=["A'(t)", "C'(t)"], 
+                         x_label="t", y_label="Time derivatives", curve_labels=["A'(t)", "C'(t)"],
                          legend_title="Derivative", colors=['aqua', 'greenyellow'])
 
 # %% [markdown]
