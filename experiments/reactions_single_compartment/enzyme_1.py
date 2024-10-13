@@ -33,8 +33,8 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Oct. 11, 2024"
-LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based on
+LAST_REVISED = "Oct. 12, 2024"
+LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -47,7 +47,7 @@ LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based o
 import ipynbname
 import pandas as pd
 
-from life123 import check_version, ChemData, UniformCompartment, GraphicLog, PlotlyHelper
+from life123 import check_version, ChemData, UniformCompartment, ReactionEnz, GraphicLog, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
@@ -175,6 +175,8 @@ PlotlyHelper.plot_pandas(df=rates,
 
 # %%
 
+# %%
+
 # %% [markdown]
 # # 2. Comparing the results to the Michaelis-Menten model approximation
 
@@ -183,29 +185,31 @@ PlotlyHelper.plot_pandas(df=rates,
 # for background reference, see:  https://vallance.chem.ox.ac.uk/pdfs/KineticsLectureNotes.pdf (p. 20)
 
 # %%
-kM = (chem_data.get_forward_rate(1) + chem_data.get_reverse_rate(0)) / chem_data.get_forward_rate(0)
-kM      # (49. + 100.) / 18. in this experiment
+rxn = ReactionEnz(enzyme="E", substrate="S", product="P",
+                  k1_F=chem_data.get_forward_rate(0), k1_R=chem_data.get_reverse_rate(0), k2_F=chem_data.get_forward_rate(1))
 
 # %%
-kcat = chem_data.get_forward_rate(1)
-kcat
+rxn.kM          #  For the data in this experiment, it comes out to (49. + 100.) / 18.
 
 # %%
-vmax = kcat * E0
+rxn.kcat
+
+# %%
+vmax = rxn.compute_vmax(E0=E0)          # kcat * E0
 vmax
 
 # %%
-initial_rxn_rate = (vmax * S0) / (kM + S0)
+initial_rxn_rate = rxn.compute_rate(S_conc=S0)    #  (vmax * S0) / (kM + S0)
 initial_rxn_rate
 
 # %% [markdown]
 # Not too far from the value of about 34.1 we saw earlier...   
 # To keep in mind that the initial part of the reaction is affected by transients
 
-# %% [markdown]
-# #### Now, let's look at rate as a function of [S]; we'll compare what we computed earlier vs. as given by the approximation of the Michaelis-Menten model
-
 # %%
+
+# %% [markdown]
+# ### Now, let's look at rate as a function of [S]; we'll compare what we computed earlier vs. as given by the approximation of the Michaelis-Menten model
 
 # %%
 # Let's retrieve all the values of `S` at the various simulation time
@@ -217,22 +221,22 @@ hist
 
 assert len(hist) == len(rates)   # They'd better match up!
 
-rate_and_substrate = pd.DataFrame({
+rate_vs_substrate = pd.DataFrame({
     "SYSTEM TIME": hist["SYSTEM TIME"],   # We don't actually need the time, but just for clarity
     "S": hist["S"],
     "computed_rate": rates["rate"]
 })
 
-rate_and_substrate
+rate_vs_substrate
 
 # %%
 # Let's a column with the rate estimated by the Michaelis-Menten model
-rate_and_substrate["Michaelis_rate"] = vmax * rate_and_substrate["S"] / (kM + rate_and_substrate["S"])
-rate_and_substrate
+rate_vs_substrate["Michaelis_rate"] = rxn.compute_rate(S_conc=rate_vs_substrate["S"])
+rate_vs_substrate
 
 # %%
 # Let's see how our computed rate compares with the approximations from the Michaelis-Menten model
-PlotlyHelper.plot_pandas(df=rate_and_substrate, x_var="S", fields=["computed_rate", "Michaelis_rate"],
+PlotlyHelper.plot_pandas(df=rate_vs_substrate, x_var="S", fields=["computed_rate", "Michaelis_rate"],
                          title="Reaction rate, dP/dt, as a function of Substrate concentration",
                          y_label="dP/dt")
 
