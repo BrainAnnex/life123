@@ -1,3 +1,5 @@
+# 2 classes: "ReactionEnz" and "Reaction"
+import math
 from typing import Union, Set, Tuple
 import numpy as np
 from life123.thermodynamics import ThermoDynamics
@@ -56,25 +58,59 @@ class ReactionEnz:
 
 
 
-    def compute_vmax(self, E0 :float) -> float:
+    def compute_vmax(self, E_tot :float) -> float:
         """
 
-        :param E0:
-        :return:
+        :param E_tot:   Total Enzyme concentration (bound and unbound enzyme);
+                            at times referred to as E0
+        :return:        The maximal reaction rate
+                            (the asymptote of the rate, as the Substrate concentration grows large relative to Enzyme concentration)
         """
         assert self.kcat is not None, "compute_vmax(): missing value for kcat"
-        self.vmax = self.kcat * E0
+        self.vmax = self.kcat * E_tot
         return self.vmax
 
 
 
     def compute_rate(self, S_conc :float) -> float:
         """
+        Based on the traditional Michaelis-Menten model.
+        The argument may also be Numpy array.
 
-        :param S_conc:
-        :return:
+        :param S_conc:  The concentration [S] of the (free) Substrate
+        :return:        The corresponding reaction rate, in terms of production of the product P
         """
+        # TODO: possibly move to ReactionKinetics
         return self.vmax * S_conc / (self.kM + S_conc)
+
+
+
+    def compute_rate_morrison(self, S_tot :float, E_tot :float) -> float:
+        """
+        Based on the Morrison model.
+        The arguments may also be Numpy arrays.
+        
+        Reference: eqn 7.32 on page 124 of "Analysis of Enzyme Reaction Kinetics, Vol. 1", 
+                   by F. Xavier Malcata, Wiley, 2023
+
+        :param S_tot:   The total concentration of free Substrate and Substrate bound to Enzyme
+                            (i.e. [S] + [ES])
+        :param E_tot:   Total Enzyme concentration (bound and unbound enzyme);
+                            at times referred to as E0
+        :return:        The corresponding reaction rate, in terms of production of the product P
+        """
+        # TODO: possibly move to ReactionKinetics
+        S_over_E = S_tot / E_tot
+
+        kM_over_E = self.kM / E_tot
+
+        radicand = (1 + S_over_E + kM_over_E)**2 - 4 * S_over_E
+
+        term = 1 + S_over_E + kM_over_E - np.sqrt(radicand)
+
+        return 0.5 * self.vmax * term
+
+
 
 
 

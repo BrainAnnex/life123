@@ -82,7 +82,7 @@ class MovieTabular:
 
     def get_dataframe(self, head=None, tail=None,
                       val_start=None, val_end=None,
-                      search_col=None, search_val=None) -> pd.DataFrame:
+                      search_col=None, search_val=None, return_copy=True) -> pd.DataFrame:
         """
         Return the main data structure (a Pandas dataframe) 
         - or a part thereof (in which case a column named "search_value" is inserted to the left.)
@@ -94,27 +94,34 @@ class MovieTabular:
         IMPORTANT:  if multiple options to restrict the dataset are present, only one is carried out;
                     the priority is:  1) head,  2) tail,  3) filtering,  3) search
 
-        :param head:        (OPTIONAL) Integer.  If provided, only show the first several rows;
+        :param head:        [OPTIONAL] Integer.  If provided, only show the first several rows;
                                 as many as specified by that number.
-        :param tail:        (OPTIONAL) Integer.  If provided, only show the last several rows;
+        :param tail:        [OPTIONAL] Integer.  If provided, only show the last several rows;
                                 as many as specified by that number.
                                 If the "head" argument is passed, this argument will get ignored
 
-        :param val_start:  (OPTIONAL) Perform a FILTERING using the start value in the the specified column
+        :param val_start:  [OPTIONAL] Perform a FILTERING using the start value in the the specified column
                                 - ASSUMING the dataframe is ordered by that value (e.g. a system time)
-        :param val_end:    (OPTIONAL) FILTER by end value.
+        :param val_end:    [OPTIONAL] FILTER by end value.
                                 Either one or both of start/end values may be provided
 
-        :param search_col:  (OPTIONAL) String with the name of a column in the dataframe,
+        :param search_col:  [OPTIONAL] String with the name of a column in the dataframe,
                                 against which to match the value below
-        :param search_val:  (OPTIONAL) Number, or list/tuple of numbers, with value(s)
+        :param search_val:  [OPTIONAL] Number, or list/tuple of numbers, with value(s)
                                 to search in the above column
+
+        :param return_copy: [OPTIONAL] If True (default), the returned dataframe is guaranteed to be a (deep) copy -
+                                so that modifying it won't affect the internal dataframe
 
         :return:            A Pandas dataframe, with all or some of the rows
                                 that were stored in the main data structure.
                                 If a search was requested, insert a column named "search_value" to the left
         """
-        df = self.movie     # The main data structure (a Pandas dataframe), with the "saved snapshots"
+        # The main data structure (a Pandas dataframe), with the "saved snapshots", is available as self.movie
+        if return_copy:
+            df = self.movie.copy()  # Note: some of the operations below also make a copy
+        else:
+            df = self.movie
 
         if head is not None:
             return df.head(head)    # This request is given top priority

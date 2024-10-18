@@ -136,6 +136,36 @@ class Diagnostics:
 
 
 
+    def get_system_history_with_rxn_rates(self, rxn_index :int) -> pd.DataFrame:
+        """
+        Return a Pandas dataframe containing the save System History,
+        plus an extra column named "rate", for the reaction rates of the specified reaction.
+        Notice: the last row of the System History does NOT get included,
+                because no rate information is known about the next simulation step not taken
+
+        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
+        :return:            A Pandas data frame with the following columns:
+                                "TIME"
+                                A series of columns for each of the registered chemicals
+                                "caption"
+                                "rate"
+        """
+        rates = self.get_rxn_rates(rxn_index=rxn_index)     # A Pandas dataframe with 2 columns: "START_TIME" and "rate"
+        system_history = self.get_diagnostic_conc_data()    # Note that is a copy of the dataframe; so, no harm in changing it, below
+        # Dropping the last row, because no rate information is known about the next simulation step not taken!
+        system_history = system_history[:-1]
+
+        # They'd better match up!
+        assert len(system_history) == len(rates), \
+            f"get_system_history_with_rxn_rates() : unable to reconcile " \
+            f"the system history data with the reaction data for the requested reaction (index {rxn_index})"
+
+        system_history["rate"] =  rates["rate"]
+
+        return system_history
+
+
+
     def get_rxn_rates(self, rxn_index :int) -> Union[pd.DataFrame, None]:
         """
         Return a Pandas dataframe with 2 columns: "START_TIME" and "rate",
@@ -217,7 +247,7 @@ class Diagnostics:
             return None
 
 
-        return movie_obj.get_dataframe(head=head, tail=tail, search_col="START_TIME", search_val=t)
+        return movie_obj.get_dataframe(head=head, tail=tail, search_col="START_TIME", search_val=t, return_copy=True)
 
 
 
@@ -240,20 +270,21 @@ class Diagnostics:
         """
         Return the diagnostic concentration data saved during the run.
         This will be a complete set of simulation steps,
-        even if we only saved part of the history during the run
+        even if the user elected to only save part of the history during the run.
 
-        Note: if an interval run is aborted, by convention NO entry is created here
+        Note: if the run of an interval step is aborted,
+              by convention NO entry is created here
 
         :return: A Pandas dataframe, with the columns:
                     'TIME' 	'A' 'B' ... 'caption'
-                 where 'A', 'B', ... are all the chemicals
+                    where 'A', 'B', ... are the labels of all the chemicals
         """
-        return self.diagnostic_conc_data.get_dataframe()
+        return self.diagnostic_conc_data.get_dataframe(return_copy=True)
 
 
 
 
-    #####  3. save_diagnostic_decisions_data  #####
+    #####  3. diagnostic_decisions_data  #####
 
     def save_diagnostic_decisions_data(self, system_time, data :dict,
                                        delta_conc_arr :Union[np.ndarray, None], caption="") -> None:
@@ -287,12 +318,12 @@ class Diagnostics:
     
         :return:    A Pandas dataframe with a "TIME" column, and columns for all the "Delta concentration" values
         """
-        return self.diagnostic_decisions_data.get_dataframe()
+        return self.diagnostic_decisions_data.get_dataframe(return_copy=True)
 
 
 
 
-    #####  EXPLAIN THINGS  #####    
+    #############  EXPLAIN THINGS  #############
 
 
     def explain_reactions(self) -> bool:

@@ -9,6 +9,8 @@ from typing import Union
 class PlotlyHelper:
     """
     Static class to assist in the use of the plotly library
+
+    TODO: improve consistency in argument names; also across UniformCompartment
     """
 
     @classmethod
@@ -183,8 +185,8 @@ class PlotlyHelper:
         :param y_label:         (OPTIONAL) Caption to use for the y-axis
         :param legend_header:   (OPTIONAL) Caption to use at the top of the legend box
         :param vertical_lines_to_add:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
-                                    List or tuple or Numpy array or Pandas series
-                                    of x-coordinates at which to draw thin vertical dotted gray lines.
+                                    Value, or list, or tuple, or Numpy array, or Pandas series,
+                                    of x-coordinate(s) at which to draw thin vertical dotted gray lines.
                                     If the number of vertical line is so large as to overwhelm the plot,
                                     only a sample of them is shown.
                                     Note that vertical lines, if requested, go into the plot's "layout";
@@ -227,7 +229,7 @@ class PlotlyHelper:
             title = f"{title_prefix} <br>{title}"
 
         if show_intervals:
-            vertical_lines_to_add = df[x_var]  # Make use of the simulation times
+            vertical_lines_to_add = df[x_var]   # Make use of the simulation times
             title += " (time steps shown in dashed lines)"
 
 
@@ -245,10 +247,13 @@ class PlotlyHelper:
 
 
         if vertical_lines_to_add is not None:   # User requested to add vertical lines to the plot
-            assert (type(vertical_lines_to_add) == list) or (type(vertical_lines_to_add) == tuple) \
-                   or (type(vertical_lines_to_add) == np.ndarray) or (type(vertical_lines_to_add) == pd.core.series.Series), \
-                "plot_pandas(): the argument `vertical_lines`, " \
-                "if not None, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
+            if isinstance(vertical_lines_to_add, (float, int)):
+                vertical_lines_to_add = [vertical_lines_to_add]
+            else:
+                assert (type(vertical_lines_to_add) == list) or (type(vertical_lines_to_add) == tuple) \
+                       or (type(vertical_lines_to_add) == np.ndarray) or (type(vertical_lines_to_add) == pd.core.series.Series), \
+                            "plot_pandas(): the argument `vertical_lines`, " \
+                            "if not None or a number, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
 
             vline_list = []
             if range_x:

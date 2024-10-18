@@ -1,4 +1,4 @@
-# Classes ReactionDynamics and VariableTimeSteps:
+# Classes ReactionKinetics and VariableTimeSteps:
 
 import math
 import cmath

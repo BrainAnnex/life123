@@ -9,7 +9,8 @@ import pandas as pd
 
 class ChemCore:
     """
-    Core data about the chemical species, such as their names and indexes (position in their listing)
+    Core data about the chemical species, such as their names, labels
+    and indexes (position in their listing)
 
     Note: end users will generally utilize the class ChemData, which extends this one
     """

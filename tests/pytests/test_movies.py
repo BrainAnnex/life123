@@ -8,7 +8,7 @@ from life123 import MovieTabular, MovieArray, MovieGeneral
 
 ###############  For class MovieTabular  ###############
 
-def test_MovieTabular():
+def test_store():
     m = MovieTabular()
 
     m.store(par=10, data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")  # Add a snapshot
@@ -66,7 +66,8 @@ def test_MovieTabular():
     """
 
 
-def test_get():
+
+def test_get_dataframe():
     m = MovieTabular()
 
     # Same data as used in test_MovieTabular(), except that the `SYSTEM TIME` parameter now has floats values
@@ -131,6 +132,37 @@ def test_get():
     expected_df = pd.DataFrame(data_values, index=[3, 4])
 
     assert_frame_equal(df_filtered, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
+
+
+
+def test_get_2():
+    m = MovieTabular()
+
+    m.store(par=10, data_snapshot={"A": 1, "B": 2, }, caption="first entry")  # Add a snapshot
+    row = list(m.movie.iloc[0])                 # By row index, reaching into the internal data structure
+    assert row == [10, 1, 2, 'first entry']
+
+    df_returned_copy = m.get_dataframe(return_copy=True)
+    expected_df = pd.DataFrame([{"SYSTEM TIME": 10, "A": 1, "B": 2, "caption": "first entry"}])
+    assert_frame_equal(df_returned_copy, expected_df)
+
+    # Now we mess around with the returned value
+    df_returned_copy.loc[0, "A"] = 999
+
+    row = list(m.movie.iloc[0])
+    assert row == [10, 1, 2, 'first entry']     # The internal data structure is untouched
+
+
+    df_returned_view = m.get_dataframe(return_copy=False)
+    expected_df = pd.DataFrame([{"SYSTEM TIME": 10, "A": 1, "B": 2, "caption": "first entry"}])
+    assert_frame_equal(df_returned_view, expected_df)
+
+    # Now we mess around with the returned value
+    df_returned_view.loc[0, "A"] = 999
+
+    row = list(m.movie.iloc[0])
+    assert row == [10, 999, 2, 'first entry']     # The internal data structure got messed up as well
+
 
 
 
