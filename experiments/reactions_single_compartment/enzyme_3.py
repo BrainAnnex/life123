@@ -13,22 +13,23 @@
 # ---
 
 # %% [markdown]
-# ## **Enzyme Kinetics** : 
-# #### _Accurate numerical solution_ compared to the **Michaelis-Menten** model approximation and to the alternative **Morrison** model
+# ## IN-PROGRESS
 #
-# #### Same as experiments `enzyme_1` and `enzyme_2` but with _a lavish amount of Enzyme_ relative to the initial Substrate concentration.  
-# Experiment `enzyme_2` had a ten-fold increase in enzyme, relative to `enzyme_1`.  Here, we _another x10 increase!_
+# ## **Enzyme Kinetics** : 
+# #### _Accurate numerical solution_ - compared to the **Michaelis-Menten** model approximation and to the alternative **Morrison** model.
 #
 # #### Two Coupled Reactions: `E + S <-> ES`, and  `ES -> E + P` , using real-life kinetic parameters.  
+# #### Scenario with _small amount of Enzyme_, relative to the initial Substrate concentration.
 #
-# Please refer to `enzyme_1` and `enzyme_2` for more details
+# #### Unlike in experiment `enzyme_1_a`, we'll use data from a reaction that VIOLATES the customary Michaelis-Menten assumption that the rate constants satisfy `k1_reverse >> k2_forward`
 
 # %% [markdown]
 # #### THE REACTION:  
-# the enzyme `Adenosinedeaminase` with the substrate `2,6-Diamino-9-β-D-deoxyribofuranosyl-9-H-purine` (same as in experiment `enzyme_1`)   
-# satisfies the customary Michaelis-Menten assumptions that `k1_reverse >> k2_forward`
+# the enzyme `Chymotrypsin` with the substrate `N-CBZ-Gly-Pro-Arg-p-nitroanilide`,  
+# and the initial concentration values choosen below, all satisfy the customary Michaelis-Menten assumptions that  
+# `[E] << [S]` BUT the reaction rate constants DON'T satisfy `k1_reverse >> k2_forward`
 #
-# However, the initial concentration values choosen below, do NOT satisfy the expected Michaelis-Menten assumptions that `[E] << [S]` 
+# For this reaction: k1_forward = 1.4 × 10^-6, k1_reverse = 6.8, k2_forward = 110.  
 #
 # Source of kinetic parameters:  *page 16 of "Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023*
 
@@ -36,7 +37,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Oct. 16, 2024"
+LAST_REVISED = "Nov. 5, 2024"
 LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
 
 # %%
@@ -50,20 +51,10 @@ LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based o
 import ipynbname
 import pandas as pd
 
-from life123 import check_version, ChemData, UniformCompartment, ReactionEnz, GraphicLog, PlotlyHelper
+from life123 import check_version, ChemData, UniformCompartment, ReactionEnz, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
-
-# %% tags=[]
-# Initialize the HTML logging (for the graphics)
-log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
-                                            # IN CASE OF PROBLEMS, set manually to any desired name
-
-# Set up the use of some specified graphic (Vue) components
-GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_2"],
-                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
 
@@ -77,36 +68,30 @@ chem_data = ChemData(names=["P", "ES"])
 
 # %%
 # Our Enzyme
-chem_data.add_chemical(name="Adenosinedeaminase", label="E") 
+chem_data.add_chemical(name="Aminopeptidase", label="E") 
 
 # Our Substrate
-chem_data.add_chemical(name="2,6-Diamino-9-β-D-deoxyribofuranosyl-9-H-purine", label="S");
+chem_data.add_chemical(name="Leu-Ala-DED", label="S");
 
 # %%
 chem_data.all_chemicals()
 
 # %% [markdown]
-# ### Specify the Kinetic Parameters   
-# This part is identical to experiments `enzyme_1` and `enzyme_2`
+# ### Specify the Kinetic Parameters
 
 # %% [markdown]
 # Source: *page 16 of "Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023*
 
 # %% tags=[]
 # Reaction E + S <-> ES , with 1st-order kinetics, 
-# and a forward rate that is much faster than its revers one
 chem_data.add_reaction(reactants=["E", "S"], products=["ES"],
-                       forward_rate=18., reverse_rate=100.) 
+                       forward_rate=160., reverse_rate=0.089) 
 
-# Reaction ES <-> E + P , with 1st-order kinetics
+# Reaction ES <-> E + P , with 1st-order kinetics, ignoring the reverse reaction
 chem_data.add_reaction(reactants=["ES"], products=["E", "P"],
-                forward_rate=49.,reverse_rate=0)
+                       forward_rate=0.58, reverse_rate=0)  
 
 chem_data.describe_reactions()
-
-# %%
-# Send a plot of the network of reactions to the HTML log file
-chem_data.plot_reaction_network("vue_cytoscape_2")
 
 # %%
 
@@ -114,15 +99,15 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 
 # %% [markdown]
 # ## Set the initial concentrations of all the chemicals
-# ### Unlike in experiments `enzyme_1` and `enzyme_2`, the reaction is "awash" in enzyme, relative to initial substrate concentration
+# ### in the scenario we're exploring, there's LITTLE ENZYME relative to initial substrate concentration
 
 # %%
 S0 = 20.
-E0 = 100.        # A LAVISH AMOUNT!  10 times more than in experiment `enzyme_2` - and x100 as much as experiment`enzyme_1`
+E0 = 1.
 
 # %%
 # Here we use the "slower" preset for the variable steps, a conservative option prioritizing accuracy over speed
-uc = UniformCompartment(chem_data=chem_data, preset="slower")
+uc = UniformCompartment(chem_data=chem_data, preset="mid")
 uc.set_conc(conc={"S": S0, "E": E0})      # Small ampount of enzyme `E`, relative to substrate `S`
 uc.describe_state()
 
@@ -134,25 +119,46 @@ uc.enable_diagnostics()   # To save diagnostic information about the simulation 
 
 # %%
 # Perform the reactions
-uc.single_compartment_react(duration=0.05, initial_step=0.01)  # A much-shorter duration than in previous experiments in the series
+uc.single_compartment_react(duration=3., initial_step=0.00001)
 
 # %%
-uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                title_prefix="Almost as much E as S(0)")
+uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'], show_intervals=True, 
+                title_prefix="Small amout of E relative to S(0)")
+
+# %%
+uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'],
+                title_prefix="Small amout of E relative to S(0)")
+
+# %%
+# Highlight a detail about the initial buildup of ES
+uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'], title_prefix="DETAIL at early times",
+                range_x=[0, 0.001], range_y=[0, 1.5])
 
 # %% [markdown]
-# The general shapes of the various curves is reminiscent of their counterparts in experiment `enzyme_1`, but notice:   
-#
-# 1. The product `P` is being produced on a much-faster timescale than before
-# 2. The maximum amount of the bound enzyme `ES` is no longer puny; in fact, it's a good fraction of the initial [S]
-# 3. The buildup of `ES`, at the very beginning, no longer looks instantaneous relatively to the main reaction: by the time `ES` reaches its maximum value, a non-trivial amount of product `P` has been produced
-#
-# In short, the "transient" is not so "transient"!
+# #### Notice how the bound enzyme `ES` (green) quickly builds up at the very beginning, from time 0 to roughly 0.01 ... and that, in the longer term, the enzyme returns to its unbound state `E`
+
+# %%
+# Perform the reactions
+uc.single_compartment_react(duration=5., initial_step=0.001)
+
+# %%
+uc.adaptive_steps.show_adaptive_parameters()
+
+# %%
+uc.adaptive_steps.use_adaptive_preset("slow")
+
+# %%
+uc.adaptive_steps.show_adaptive_parameters()
+
+# %%
+# Perform the reactions
+uc.single_compartment_react(duration=5., initial_step=0.001)
 
 # %%
 
 # %% [markdown]
-# ### What is the rate of production of the final reaction product `P`?   
+# ### What is the initial rate of production of the final reaction product `P`?   
+# One could take the numerical derivative (gradient) of the time values of [P] - but no need to!  **Reaction rates are computed in the course of the simulation, and stored alongside other diagnostic data**, provided that diagnostics were enabled (as we did indeed enable)
 
 # %%
 rates = uc.get_diagnostics().get_system_history_with_rxn_rates(rxn_index=1)   # We specify the reaction that involves `P`
@@ -165,8 +171,17 @@ PlotlyHelper.plot_pandas(df=rates,
                          x_var="TIME", fields="rate", 
                          x_label="time", y_label="dP/dt")
 
+# %%
+# A closer peek at it maximum value
+PlotlyHelper.plot_pandas(df=rates, 
+                         title="Reaction rate, dP/dt, over time (DETAIL at early times)",
+                         x_var="TIME", fields="rate", 
+                         x_label="time", y_label="dP/dt",
+                         range_x=[0,0.05], range_y=[33., 34.5])
+
 # %% [markdown]
-# **The initial transient phase is no longer miniscule in duration**
+# As we saw earlier, the time it took for `ES` to build up was about 0.01  
+# **Ignoring the brief initial transient phase, the reaction rate starts at about 34.1**
 
 # %%
 
@@ -199,12 +214,13 @@ initial_rxn_rate = rxn.compute_rate(S_conc=S0)    #  (vmax * S0) / (kM + S0)
 initial_rxn_rate
 
 # %% [markdown]
-# #### Both `vmax` and the initial reaction rate are 10x what they were in experiment `enzyme_1`, because we started with an `E0` 10 times as large
+# Not too far from the value of about 34.1 we saw earlier...   
+# To keep in mind that the initial part of the reaction is affected by transients
 
 # %%
 
 # %% [markdown]
-# ### Now, let's look at rate as a function of [S]; we'll compare what we computed earlier vs. as given by the approximation of the Michaelis-Menten model
+# ### Now, let's look at rate as a function of [S]; we'll compare what we computed earlier vs. what is given by the approximation of the Michaelis-Menten model
 
 # %%
 # Let's add a column with the rate estimated by the Michaelis-Menten model
@@ -216,29 +232,27 @@ rates
 PlotlyHelper.plot_pandas(df=rates, x_var="S", fields=["rate", "Michaelis_rate"],
                          title="Reaction rate, dP/dt, as a function of Substrate concentration",
                          y_label="dP/dt", legend_header="Rates",
-                         vertical_lines_to_add=1.65,
-                         colors=["green", "blue"])
+                         vertical_lines_to_add=18.9)
 
 # %% [markdown]
-# Let's recall that our reactions started out with [S]=20  
-# The curve overlap is still passable at later times (left part of graph, when [S] drops below about 12), but is rather bad at earlier times (when [S] > 12)  
-# **We no longer have the striking overlap we had in experiment `enzyme_1`**
+# Let's recall that our reactions started with [S]=20  
+# Virtually overlapped plots, except at the very right! (very early times, when [S] is greater than about 19)
 
 # %% [markdown]
-# ## In this scenario, with a lot more initial enzyme `E` than in experiment `enzyme_1`, the Michaelis-Menten model suffers from poor accuracy for an non-trivial early time, because the transient early phase (when `ES` builds up from zero) is no longer very brief
+# ## In this scenario, the Michaelis-Menten model is remarkable accurate EXCEPT at the very early times of the reaction (the large values of `S`), which is the brief initial transient phase when `ES` builds up from zero
 
 # %% [markdown]
-# #### This is as expected, because we substantially deviated from the Michaelis-Menten assumptions that `[E] << [S]`
+# #### This is as expected, because the kinetic parameters of this reaction satisfy the Michaelis-Menten assumptions that `[E] << [S]` and that the rates satisfy `k1_reverse >> k2_forward`
 
 # %%
 
 # %%
 
-# %% [markdown]
+# %% [markdown] tags=[]
 # # 3. Comparing the results to the Morrison model
 
 # %% [markdown]
-# #### Following section 7.1 of _"Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023_ , we'll test out an the alternative **Morrison** approach, which is expected to perform better than the **Michaelis-Menten** model when the Enzyme concentration isn't so small
+# #### Following section 7.1 of _"Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023_ , we'll test out an the alternative **Morrison** approach, which is expected to perform better than the **Michaelis-Menten** model when the Enzyme concentration isn't so small.  But, in this scenario, we only have small amounts of enzyme - and we'll see below that no significant improvement is gained by switching model.
 
 # %%
 rates["Morrison_rate"] = rxn.compute_rate_morrison(E_tot=E0,
@@ -249,10 +263,11 @@ rates
 PlotlyHelper.plot_pandas(df=rates, x_var="S", fields=["rate", "Michaelis_rate", "Morrison_rate"],
                          title="Reaction rate, dP/dt, as a function of Substrate concentration",
                          y_label="dP/dt", legend_header="Rates",
-                         vertical_lines_to_add=1.65,
+                         vertical_lines_to_add=18.9,
                          colors=["green", "blue", "purple"])
 
 # %% [markdown]
-# ## The Morrison model is **VASTLY better** than the Michaelis-Menten one in this high-enzyme scenario!
+# ## The Morrison model appears to be only very mildly better than the Michaelis-Menten one at the early reaction times - and virtually identical later on.  
+# Then why even bother with it?  In the next two experiments, `enzyme_2` and `enzyme_3`, we'll see how the Morrison model becomes progressively better than Michaelis-Menten at increasingly higher amounts of enzyme.
 
 # %%

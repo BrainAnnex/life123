@@ -26,7 +26,7 @@ class PlotlyHelper:
         """
         # TODO: provide multiple, user-selectable, harmonious assortments of default colors
 
-        default_colors = ['blue', 'green', 'brown', 'red', 'gray',
+        default_colors = ['darkturquoise', 'green', 'brown', 'red', 'gray', 'blue',
                           'orange', 'purple', 'cyan', 'darkorange', 'navy',
                           'darkred', 'black', 'mediumspringgreen']
         '''
@@ -295,6 +295,12 @@ class PlotlyHelper:
                       xrange=None, legend_title=None, curve_labels=None, show=False) -> pgo.Figure:
         """
         Combine together several existing plotly plots
+
+        EXAMPLE:
+                    from life123 import PlotlyHelper
+                    p1 = PlotlyHelper.plot_pandas(various args, show=False)
+                    p2 = PlotlyHelper.plot_pandas(various args, show=False)
+                    PlotlyHelper.combine_plots([p1, p2], other optional args)
 
         :param fig_list:    List or tuple of plotly "Figure" objects (as returned by several functions)
         :param title:       [OPTIONAL] The title to use for the overall plot

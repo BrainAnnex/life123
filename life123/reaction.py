@@ -9,8 +9,9 @@ class ReactionEnz:
     """
     Data about a SINGLE enzyme-catalyzed reaction that can be modeled kinetically as:
 
-    E + S <-> ES* <-> E + P
+    E + S <-> ES <-> E + P
     """
+
     def __init__(self, enzyme, substrate, product,
                  k1_F=None, k1_R=None, k2_F=None, k2_R=None,
                  kM=None, kcat=None):

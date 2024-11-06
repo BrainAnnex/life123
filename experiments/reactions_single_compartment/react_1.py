@@ -19,8 +19,8 @@
 # **"No frills!"**  For advanced graphics, analysis, diagnostics, fine-tuning, etc, please see other experiments.
 
 # %%
-LAST_REVISED = "Aug. 19, 2024"
-LIFE123_VERSION = "1.0.0.beta.38"      # Version this experiment is based on
+LAST_REVISED = "Nov. 5, 2024"
+LIFE123_VERSION = "1.0.0.rc.0"      # Version this experiment is based on
 
 # %%
 #import set_path            # Using MyBinder?  Uncomment this before running the next cell!

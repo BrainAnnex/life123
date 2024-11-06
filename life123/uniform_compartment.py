@@ -682,7 +682,7 @@ class UniformCompartment:
             if extra_steps > 0:
                 if variable_steps:
                     print(f"Some steps were backtracked and re-done, "
-                          f"to prevent negative concentrations or excessively large concentration changes")
+                          f"to prevent negative concentrations or overly large concentration changes")
                 else:
                     print(f"The computation took {extra_steps} extra step(s) - "
                           f"automatically added to prevent negative concentrations")
