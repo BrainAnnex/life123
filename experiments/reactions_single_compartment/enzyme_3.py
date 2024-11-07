@@ -116,13 +116,15 @@ uc.enable_diagnostics()   # To save diagnostic information about the simulation 
 # %%
 
 # %%
+ipynbname.name()
 
 # %% [markdown] tags=[]
 # #### Simulate the very early part of the reaction
 
 # %%
 # Perform the reactions
-uc.single_compartment_react(duration=0.0015, initial_step=0.00001)
+uc.single_compartment_react(duration=0.0015, initial_step=0.00001, 
+                            snapshots={"file": "enzyme_3_system_log.txt"})
 
 # %%
 uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'], show_intervals=True, 
@@ -145,7 +147,19 @@ uc.get_history()
 
 # %%
 # Perform the reactions
-uc.single_compartment_react(duration=30., initial_step=0.00001)
+
+try:
+    uc.single_compartment_react(duration=30., initial_step=0.00001, snapshots={"file": "enzyme_3_system_log.txt"})
+
+except KeyboardInterrupt:
+    print("\n*** KeyboardInterrupt exception caught")
+else:
+    print("Unexpected error")
+
+# %%
+print(uc.system_time)
+
+# %%
 
 # %%
 uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'],

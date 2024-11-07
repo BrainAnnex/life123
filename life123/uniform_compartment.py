@@ -199,11 +199,11 @@ class UniformCompartment:
 
         :param conc:            A non-negative number with the desired concentration value
                                     of the chemical specified below.  (Any previous value will get over-written)
-        :param species_index:   (OPTIONAL) An integer that indexes the chemical of interest (numbering starts at 0)
-        :param species_name:    (OPTIONAL) A name for the chemical of interest.
+        :param species_index:   [OPTIONAL] An integer that indexes the chemical of interest (numbering starts at 0)
+        :param species_name:    [OPTIONAL] A name for the chemical of interest.
                                     If both species_index and species_name are provided, species_name is used
                                     At least one of "species_index" and "species_name" must be specified
-        :param snapshot:        (OPTIONAL) boolean: if True, add to the history
+        :param snapshot:        [OPTIONAL] boolean: if True, add to the history
                                     a snapshot of this state being set.  Default: True
         :return:                None
         """
@@ -262,8 +262,8 @@ class UniformCompartment:
         Retrieve the concentrations of the requested chemicals (by default all),
         as a dictionary indexed by the chemical's name
 
-        :param species:     (OPTIONAL) list or tuple of names of the chemical species; by default, return all
-        :param system_data: (OPTIONAL) a Numpy array of concentration values, in the same order as the
+        :param species:     [OPTIONAL] list or tuple of names of the chemical species; by default, return all
+        :param system_data: [OPTIONAL] a Numpy array of concentration values, in the same order as the
                                 index of the chemical species; by default, use the SYSTEM DATA
                                 (which is set and managed by various functions)
         :return:            A dictionary, indexed by chemical name, of the concentration values;
@@ -507,16 +507,17 @@ class UniformCompartment:
 
         :param n_steps:         The desired number of steps
 
-        :param max_steps:       (OPTIONAL) Max numbers of steps; if reached, it'll terminate regardless of any other criteria
+        :param max_steps:       [OPTIONAL] Max numbers of steps; if reached, it'll terminate regardless of any other criteria
 
-        :param snapshots:       (OPTIONAL) Dict that may contain any the following keys:
-                                        -"frequency" (default 1)
-                                        -"species" (default None, meaning all species)
+        :param snapshots:       [OPTIONAL] Dict that may contain any the following keys:
+                                        -"frequency" (default 1, meaning at every step)
+                                        -"species" (default None, meaning all species; optionally, provide a list of chemical labels)
                                         -"initial_caption" (default: "1st reaction step")
                                         -"final_caption" (default: "last reaction step")
+                                        -"file" (default None, meaning don't also save into a file)
                                     If provided, take a system snapshot after running a multiple
-                                    of "frequency" reaction steps (default 1, i.e. at every step.)
-                                    EXAMPLE: snapshots={"frequency": 2, "species": ["A", "H"]}
+                                    of "frequency" reaction steps
+                                    EXAMPLE: snapshots={"frequency": 2, "species": ["A", "H"], "file": "my_log.txt"}
 
         :param silent:              If True, less output is generated
 
@@ -573,7 +574,8 @@ class UniformCompartment:
                                                     time_step=initial_step,
                                                     n_steps=n_steps)
             # Note: if variable steps are requested then n_steps stops being particularly meaningful; it becomes a
-            #       hypothetical value, in the (unlikely) event that the step sizes were never changed
+            #       hypothetical value, in the (unlikely) event that the step sizes were never changed - and is only
+            #       used to detect a very excessive number of actual attempted steps
 
             if target_end_time is None:
                 if variable_steps:
@@ -581,11 +583,11 @@ class UniformCompartment:
                 else:
                     target_end_time = self.system_time + time_step * n_steps
 
-
+        first_snapshot = True
         if snapshots:
             frequency = snapshots.get("frequency", 1)   # If not present, it will be 1
-            species = snapshots.get("species")          # If not present, it will be None (meaning show all)
-            first_snapshot = True
+            species = snapshots.get("species")          # If not present, it will be None (meaning include all)  
+            snapshot_file = snapshots.get("file")       # If not present, it will be None (meaning don't save into file)
         else:
             snapshots = {"frequency": 1,
                          "species": None,
@@ -594,7 +596,8 @@ class UniformCompartment:
                         }
             frequency = 1
             species = None
-            first_snapshot = True
+            snapshot_file = None
+            
 
 
         if self.diagnostics_enabled:
@@ -607,7 +610,6 @@ class UniformCompartment:
         # Reset some diagnostic variables
         self.number_neg_concs = 0
         self.number_soft_aborts = 0
-        #self.norm_usage = {"norm_A": 0, "norm_B": 0, "norm_C": 0, "norm_D": 0}
         self.adaptive_steps.reset_norm_usage_stats()
         
         # Time-related
@@ -661,10 +663,10 @@ class UniformCompartment:
             # Preserve some of the data, as requested
             if snapshots and ((step_count+1)%frequency == 0):
                 if first_snapshot and "initial_caption" in snapshots:
-                    self.add_snapshot(species=species, caption=snapshots["initial_caption"])
+                    self.add_snapshot(species=species, caption=snapshots["initial_caption"], filename=snapshot_file)
                     first_snapshot = False
                 else:
-                    self.add_snapshot(species=species)
+                    self.add_snapshot(species=species, filename=snapshot_file)
 
             step_count += 1
 
@@ -717,7 +719,6 @@ class UniformCompartment:
 
                 print("Norm usage:", self.adaptive_steps.norm_usage)
                 print(f"System Time is now: {self.system_time:,.5g}")
-
 
 
         if snapshots and "final_caption" in snapshots:
@@ -1515,32 +1516,32 @@ class UniformCompartment:
                     p2 = plot_history(various args, show=False)
                     PlotlyHelper.combine_plots([p1, p2], other optional args)
 
-        :param chemicals:       (OPTIONAL) Name, or list of names, of the chemicals whose concentration changes are to be plotted;
+        :param chemicals:       [OPTIONAL] Name, or list of names, of the chemicals whose concentration changes are to be plotted;
                                     if None, then display all
-        :param colors:          (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
+        :param colors:          [OPTIONAL] Either a single color (string with standard plotly name, such as "red"),
                                     or list of names to use, in order; if None, then use the hardwired defaults
-        :param title:           (OPTIONAL) Title for the plot;
+        :param title:           [OPTIONAL] Title for the plot;
                                     if None, use default titles that will vary based on the # of reactions; EXAMPLES:
                                     "Changes in concentrations for 5 reactions"
                                     "Reaction `A <-> 2 B` .  Changes in concentrations with time"
                                     "Changes in concentration for `2 S <-> U` and `S <-> X`"
-        :param title_prefix:    (OPTIONAL) If present, it gets prefixed (followed by ".  ") to the title,
+        :param title_prefix:    [OPTIONAL] If present, it gets prefixed (followed by ".  ") to the title,
                                     whether the title is specified by the user or automatically generated
-        :param range_x:         (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
+        :param range_x:         [OPTIONAL] list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param range_y:         (OPTIONAL) list of the form [y_min, y_max], to initially show only a part of the y values.
+        :param range_y:         [OPTIONAL] list of the form [y_min, y_max], to initially show only a part of the y values.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param y_label:          (OPTIONAL) Caption to use for the y-axis.
+        :param y_label:          [OPTIONAL] Caption to use for the y-axis.
                                     By default, the name in `the chemicals` argument, in square brackets, if only 1 chemical,
                                     or "Concentration" if more than 1 (a legend also shown)
-        :param vertical_lines_to_add: (OPTIONAL) Ignored if the argument `show_intervals` is specified.
+        :param vertical_lines_to_add: [OPTIONAL] Ignored if the argument `show_intervals` is specified.
                                     List or tuple or Numpy array or Pandas series
                                     of x-coordinates at which to draw thin vertical dotted gray lines.
                                     If the number of vertical line is so large as to overwhelm the plot,
                                     only a sample of them is shown.
                                     Note that vertical lines, if requested, go into the plot's "layout";
                                     as a result they might not appear if this plot is later combined with another one.
-        :param show_intervals:  (OPTIONAL) If True, it over-rides any value passed to the `vertical_lines` argument,
+        :param show_intervals:  [OPTIONAL] If True, it over-rides any value passed to the `vertical_lines` argument,
                                     and draws thin vertical dotted gray lines at all the x-coords
                                     of the data points in the saved history data;
                                     also, it adds a comment to the title.
@@ -1641,32 +1642,32 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def add_snapshot(self, species=None, caption="", time=None, system_data=None) -> None:
+    def add_snapshot(self, species=None, caption="", system_data=None, filename=None) -> None:
         """
         Preserve some or all the chemical concentrations into the history,
-        linked to the passed time (by default the current System Time),
+        linked to the current System Time,
         with an optional caption.
 
-        EXAMPLES:  add_snapshot()
+        EXAMPLES:   add_snapshot()
                     add_snapshot(species=['A', 'B']), caption="Just prior to infusion")
 
-        :param species:     (OPTIONAL) list of name of the chemical species whose concentrations we want to preserve for later use.
+        :param species:     [OPTIONAL] list of name of the chemical species whose concentrations we want to preserve for later use.
                                 If not specified, save all
-        :param caption:     (OPTIONAL) caption to attach to this preserved data
-        :param time:        (OPTIONAL) time value to attach to the snapshot (default: current System Time)
-        :param system_data: (OPTIONAL) a Numpy array of concentration values, in the same order as the
+        :param caption:     [OPTIONAL] caption to attach to this preserved data
+        :param system_data: [OPTIONAL] a Numpy array of concentration values, in the same order as the
                                 index of the chemical species; by default, use the SYSTEM DATA
-                                (which is set and managed by various functions)
+        :parm filename:     [OPTIONAL] name of a file into which also save the same data, in CSV format
         :return:            None
         """
 
         data_snapshot = self.get_conc_dict(species=species, system_data=system_data)    # This will be a dict
 
-        if time is None:
-            time = self.system_time     # By default, use the system time
-
-        self.history.store(par=time,
+        self.history.store(par=self.system_time,
                            data_snapshot=data_snapshot, caption=caption)
+        #print(filename)
+        if filename is not None:
+            with open(filename, "a") as fh:
+                fh.write(f"{self.system_time}\n")
 
 
 
@@ -1677,17 +1678,17 @@ class UniformCompartment:
         Optionally, restrict the result with a start and/or end times,
         or by limiting to a specified numbers of rows at the end
 
-        :param t_start: (OPTIONAL) Start time in the "SYSTEM TIME" column.  Watch out for roundoff errors!
-        :param t_end:   (OPTIONAL) End time.  Watch out for roundoff errors!
-        :param head:    (OPTIONAL) Number of records to return,
+        :param t_start: [OPTIONAL] Start time in the "SYSTEM TIME" column.  Watch out for roundoff errors!
+        :param t_end:   [OPTIONAL] End time.  Watch out for roundoff errors!
+        :param head:    [OPTIONAL] Number of records to return,
                                    from the start of the history dataframe.
-        :param tail:    (OPTIONAL) Number of records to consider, from the end of the history dataframe
-        :param t:       (OPTIONAL) Individual time to pluck out from the dataframe;
+        :param tail:    [OPTIONAL] Number of records to consider, from the end of the history dataframe
+        :param t:       [OPTIONAL] Individual time to pluck out from the dataframe;
                                    the row with closest time will be returned.
                                    If this parameter is specified, an extra column - called "search_value" -
                                    is inserted at the beginning of the dataframe.
                                    If either the "head" or the "tail" arguments are passed, this argument will get ignored
-        :param columns: (OPTIONAL) Name, or list of names, of the column(s) to return; if not specified, all are returned.
+        :param columns: [OPTIONAL] Name, or list of names, of the column(s) to return; if not specified, all are returned.
                                    Make sure to include "SYSTEM TIME" in the list, if the time variable needs to be included
 
         :return:        A Pandas dataframe
@@ -1715,12 +1716,12 @@ class UniformCompartment:
         from one row in the given Pandas data frame (by default, the system history);
         the row can be identified either by it row number, or by the system time.
 
-        :param row: (OPTIONAL) Integer with the zero-based row number of the system history
+        :param row: [OPTIONAL] Integer with the zero-based row number of the system history
                         (which is a Pandas data frame)
-        :param t:   (OPTIONAL) Individual time to pluck out from the dataframe;
+        :param t:   [OPTIONAL] Individual time to pluck out from the dataframe;
                         the row with closest time will be returned.
                         Exactly one of "t" and "row" must be specified
-        :param df:  (OPTIONAL) A Pandas data frame with concentration information in columns that have
+        :param df:  [OPTIONAL] A Pandas data frame with concentration information in columns that have
                         the names of the chemicals (if None, the system history is used)
         :return:    A Numpy array of floats.  EXAMPLE: array([200., 40.5])
         """
