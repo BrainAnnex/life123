@@ -25,11 +25,11 @@
 
 # %% [markdown]
 # #### THE REACTION:  
-# the enzyme `Chymotrypsin` with the substrate `N-CBZ-Gly-Pro-Arg-p-nitroanilide`,  
+# the enzyme `Aminopeptidase` with the substrate `Leu-Ala-DED`,  
 # and the initial concentration values choosen below, all satisfy the customary Michaelis-Menten assumptions that  
 # `[E] << [S]` BUT the reaction rate constants DON'T satisfy `k1_reverse >> k2_forward`
 #
-# For this reaction: k1_forward = 1.4 × 10^-6, k1_reverse = 6.8, k2_forward = 110.  
+# For this reaction: k1_forward = 160 , k1_reverse = 0.089 , k2_forward = 0.58 
 #
 # Source of kinetic parameters:  *page 16 of "Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023*
 
@@ -37,7 +37,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Nov. 5, 2024"
+LAST_REVISED = "Nov. 6, 2024"
 LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
 
 # %%
@@ -106,24 +106,46 @@ S0 = 20.
 E0 = 1.
 
 # %%
-# Here we use the "slower" preset for the variable steps, a conservative option prioritizing accuracy over speed
-uc = UniformCompartment(chem_data=chem_data, preset="mid")
+uc = UniformCompartment(chem_data=chem_data, preset="slow")
 uc.set_conc(conc={"S": S0, "E": E0})      # Small ampount of enzyme `E`, relative to substrate `S`
 uc.describe_state()
 
 # %%
 uc.enable_diagnostics()   # To save diagnostic information about the simulation - in particular, the REACTION RATES
 
+# %%
+
+# %%
+
+# %% [markdown] tags=[]
+# #### Simulate the very early part of the reaction
+
+# %%
+# Perform the reactions
+uc.single_compartment_react(duration=0.0015, initial_step=0.00001)
+
+# %%
+uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'], show_intervals=True, 
+                title_prefix="Small amout of E relative to S(0)")
+
+# %%
+# Highlight a detail about the initial buildup of ES
+uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'], title_prefix="DETAIL at early times",
+                range_y=[0, 1])
+
+# %%
+uc.get_history()
+
+# %%
+
+# %%
+
 # %% [markdown] tags=[]
 # #### Advance the reactions to equilibrium
 
 # %%
 # Perform the reactions
-uc.single_compartment_react(duration=3., initial_step=0.00001)
-
-# %%
-uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'], show_intervals=True, 
-                title_prefix="Small amout of E relative to S(0)")
+uc.single_compartment_react(duration=30., initial_step=0.00001)
 
 # %%
 uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'],
@@ -132,10 +154,15 @@ uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'],
 # %%
 # Highlight a detail about the initial buildup of ES
 uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'], title_prefix="DETAIL at early times",
+                range_y=[0, 1.5])
+
+# %%
+# Highlight a detail about the initial buildup of ES
+uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'], title_prefix="DETAIL at early times",
                 range_x=[0, 0.001], range_y=[0, 1.5])
 
 # %% [markdown]
-# #### Notice how the bound enzyme `ES` (green) quickly builds up at the very beginning, from time 0 to roughly 0.01 ... and that, in the longer term, the enzyme returns to its unbound state `E`
+# #### Notice how the bound enzyme `ES` (red) quickly builds up at the very beginning, from time 0 to roughly 0.01 ... and that, in the longer term, the enzyme returns to its unbound state `E`
 
 # %%
 # Perform the reactions

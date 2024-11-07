@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import pandas as pd
+import time
 import plotly.express as px
 import plotly.graph_objects as go
 from typing import Union
@@ -476,7 +477,7 @@ class UniformCompartment:
     def single_compartment_react(self, duration=None, target_end_time=None, stop=None,
                                  initial_step=None, n_steps=None, max_steps=None,
                                  snapshots=None, silent=False,
-                                 variable_steps=True, explain_variable_steps=None,
+                                 variable_steps=True, explain_variable_steps=None, report_interval=0.5,
                                  reaction_duration=None) -> None:
         """
         Perform ALL the (previously-registered) reactions in the single compartment -
@@ -523,6 +524,8 @@ class UniformCompartment:
         :param explain_variable_steps:  If not None, a brief explanation is printed about how the variable step sizes were chosen,
                                             when the System time inside that range;
                                             only applicable if variable_steps is True
+        :param report_interval:     [OPTIONAL] How frequently, in terms of elapsed running time, in minutes,
+                                        to inform the user of the current status
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
@@ -570,7 +573,7 @@ class UniformCompartment:
                                                     time_step=initial_step,
                                                     n_steps=n_steps)
             # Note: if variable steps are requested then n_steps stops being particularly meaningful; it becomes a
-            #       hypothetical value, in the (unlikely) event that the step size were never changed
+            #       hypothetical value, in the (unlikely) event that the step sizes were never changed
 
             if target_end_time is None:
                 if variable_steps:
@@ -606,6 +609,11 @@ class UniformCompartment:
         self.number_soft_aborts = 0
         #self.norm_usage = {"norm_A": 0, "norm_B": 0, "norm_C": 0, "norm_D": 0}
         self.adaptive_steps.reset_norm_usage_stats()
+        
+        # Time-related
+        t_start = time.perf_counter()
+        t_report = t_start
+        report_interval *= 60.      # Convert to seconds
 
 
         # MAIN LOOP
@@ -645,7 +653,8 @@ class UniformCompartment:
             self.previous_system = self.system.copy()
             self.system += delta_concentrations
             if min(self.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
-                print(f"+++++++++++ SYSTEM STATE ERROR: FAILED TO CATCH negative concentration upon advancing reactions from system time t={self.system_time:,.5g}")
+                print(f"***********  SYSTEM STATE ERROR: FAILED TO CATCH negative concentration "
+                      f"upon advancing reactions from system time t={self.system_time:,.5g}")
 
             self.system_time += step_actually_taken
 
@@ -669,34 +678,45 @@ class UniformCompartment:
                 system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
                 self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
 
+            t_now = time.perf_counter()
+            t_elapsed = t_now - t_report    # Time elapsed since the last report
+            if (not silent) and (t_elapsed > report_interval):
+                if variable_steps:
+                    info_on_step = f"(doing step size {time_step:,.2g})"
+                else:
+                    info_on_step = ""
+                print(f"... currently at System Time {self.system_time:,.4g} {info_on_step} after running for {(t_now - t_start)/60:.1f} min")
+                t_report = t_now            # Reset
+
             if variable_steps:
                 time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
         # END while
 
 
-        # Report whether extra steps were automatically added, as well as the total # taken
+        # We're now at the end of the computation
+        # Report whether extra steps were automatically added
         n_steps_taken = step_count
 
-        if n_steps is not None:
+
+        if (not variable_steps) and (n_steps is not None):
             extra_steps = n_steps_taken - n_steps
             if extra_steps > 0:
-                if variable_steps:
-                    print(f"Some steps were backtracked and re-done, "
-                          f"to prevent negative concentrations or overly large concentration changes")
-                else:
-                    print(f"The computation took {extra_steps} extra step(s) - "
-                          f"automatically added to prevent negative concentrations")
+                print(f"The computation took {extra_steps} extra step(s) - "
+                      f"automatically added to prevent negative concentrations")
 
 
         if not silent:
-            print(f"{n_steps_taken} total step(s) taken")
+            # Print out a summary
+            t_now = time.perf_counter()
+            print(f"{n_steps_taken} total step(s) taken in {(t_now - t_start):.3f} sec")
             if variable_steps:
                 if self.number_neg_concs:
                     print(f"Number of step re-do's because of negative concentrations: {self.number_neg_concs}")
                 if self.number_soft_aborts:
                     print(f"Number of step re-do's because of elective soft aborts: {self.number_soft_aborts}")
 
-                print(f"Norm usage:", self.adaptive_steps.norm_usage)
+                print("Norm usage:", self.adaptive_steps.norm_usage)
+                print(f"System Time is now: {self.system_time:,.5g}")
 
 
 
@@ -819,8 +839,10 @@ class UniformCompartment:
 
         if not normal_exit:         # i.e., if no reaction simulation took place in the WHILE loop, above
             raise Exception(f"reaction_step_common(): unable to complete the reaction step.  "
-                            f"In spite of numerous automated reductions of the time step, it continues to lead to concentration changes that are considered excessive; "
-                            f"consider reducing the original time step, and/or increasing the 'abort' thresholds with set_thresholds(). Current values: {self.adaptive_steps.thresholds}")
+                            f"In spite of numerous automated reductions of the time step, "
+                            f"it continues to lead to concentration changes that are considered excessive; "
+                            f"consider reducing the original time step, and/or increasing the 'abort' thresholds with set_thresholds(). "
+                            f"Current values: {self.adaptive_steps.thresholds}")
 
         # If we get thus far, it's the normal exit of the reaction step
 
