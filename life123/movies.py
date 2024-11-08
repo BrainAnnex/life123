@@ -53,30 +53,32 @@ class MovieTabular:
         Save up the given data snapshot, alongside the specified parameter value and optional caption
 
         EXAMPLE :
-                store(8., {"A": 1., "B": 2.}, "State immediately before injection of 2nd reagent")
+                store(par=8., data_snapshot={"A": 1., "B": 2.}, caption="State immediately before injection of 2nd reactant")
 
-        :param par:             Typically, the System Time - but could be anything that parametrizes the snapshots
-                                    (e.g., a dictionary, or any desired data structure.)
-                                    It doesn't have to remain consistent, but it's probably good practice to keep it so
+        :param par:             Typically, the System Time - but could be any value that parametrizes the snapshots
         :param data_snapshot:   A dict of data to preserve for later use;
-                                    it's acceptable to add a new field not used before
-                                    (in that case, the dataframe will expand automatically - and NaN values will appear in earlier rows)
-        :param caption:         OPTIONAL string to describe the snapshot
+                                    it's acceptable to contain new fields not used in previous calls
+                                    (in that case, the dataframe will add new columns automatically - and NaN values
+                                     will appear in earlier rows)
+        :param caption:         [OPTIONAL] String to describe the snapshot
         :return:                None (the object variable "self.movie" will get updated)
         """
-        if self.movie.empty:     # No Pandas dataframe was yet started
-            assert type(data_snapshot) == dict, \
-                "MovieTabular.store(): The argument `data_snapshot` must be a python dictionary"
+        assert type(data_snapshot) == dict, \
+            "MovieTabular.store(): The argument `data_snapshot` must be a python dictionary"
 
+        if self.movie.empty:            # No Pandas dataframe was yet started
             self.movie = pd.DataFrame(data_snapshot, index=[0])     # Form the initial Pandas dataframe (zero refers to the initial row)
             self.movie.insert(0, self.parameter_name, par)          # Add a column at the beginning
             self.movie["caption"] = caption                         # Add a column at the end
-        else:                       # The Pandas dataframe was already started
-            data_snapshot[self.parameter_name] = par                # Expand the snapshot dict
-            data_snapshot["caption"] = caption                      # Expand the snapshot dict
-            self.movie = pd.concat([self.movie, pd.DataFrame([data_snapshot])], ignore_index=True)    # Append new row to dataframe
-            # Note: we cannot do an in-place addition of a new row, because this new row might contain fields not
+        else:                           # The Pandas dataframe was already started
+            d = data_snapshot.copy()                    # Make a copy, to avoid altering the passed dict
+            d[self.parameter_name] = par                # Expand the snapshot dict
+            d["caption"] = caption                      # Expand the snapshot dict
+            self.movie = pd.concat([self.movie, pd.DataFrame([d])], ignore_index=True)    # Append new row to dataframe
+            # Note: we cannot do an in-place addition of a new row to an existing dataframe,
+            #       because this new row might contain fields not
             #       yet present in the dataframe
+            #       TODO: look into in-place addition when the keys of the dict are all among existing df columns
 
 
 

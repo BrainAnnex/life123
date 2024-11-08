@@ -11,7 +11,10 @@ from life123 import MovieTabular, MovieArray, MovieGeneral
 def test_store():
     m = MovieTabular()
 
-    m.store(par=10, data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")  # Add a snapshot
+    d = {"A": 1, "B": 2, "C": 3}
+    d_original = d
+    m.store(par=10, data_snapshot=d, caption="first entry")  # Add a snapshot
+    assert d == d_original
     assert len(m) == 1
     assert str(m) == "`MovieTabular` object with 1 snapshot(s) parametrized by `SYSTEM TIME`"
     row = list(m.movie.iloc[0])                 # By row index
@@ -40,9 +43,9 @@ def test_store():
     assert str(m) == "`MovieTabular` object with 4 snapshot(s) parametrized by `SYSTEM TIME`"
     df = m.movie
     data_values = [{"SYSTEM TIME": 10, "A": 1,   "B": 2,  "C": 3,  "caption": "first entry"},
-                  {"SYSTEM TIME": 20, "A": 10,  "B": 20, "C": 30, "caption": "second entry"},
-                  {"SYSTEM TIME": 30, "A": -1,  "B": -2, "C": -3, "caption": ""},
-                  {"SYSTEM TIME": 40, "A": 111, "B": 222,         "caption": "notice that C is missing"}
+                   {"SYSTEM TIME": 20, "A": 10,  "B": 20, "C": 30, "caption": "second entry"},
+                   {"SYSTEM TIME": 30, "A": -1,  "B": -2, "C": -3, "caption": ""},
+                   {"SYSTEM TIME": 40, "A": 111, "B": 222,         "caption": "notice that C is missing"}
                   ]
     expected = pd.DataFrame(data_values)
     assert df.equals(expected)

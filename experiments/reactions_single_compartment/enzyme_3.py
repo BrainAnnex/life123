@@ -37,7 +37,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Nov. 6, 2024"
+LAST_REVISED = "Nov. 7, 2024"
 LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
 
 # %%
@@ -55,6 +55,11 @@ from life123 import check_version, ChemData, UniformCompartment, ReactionEnz, Pl
 
 # %%
 check_version(LIFE123_VERSION)
+
+# %% tags=[]
+# Initialize logging (for the system_state)
+csv_log_file = ipynbname.name() + "_system_log.csv"   # Use the notebook base filename 
+                                                      # IN CASE OF PROBLEMS, set manually to any desired name
 
 # %%
 
@@ -106,7 +111,14 @@ S0 = 20.
 E0 = 1.
 
 # %%
+
+# %%
 uc = UniformCompartment(chem_data=chem_data, preset="slow")
+
+# %%
+uc.start_log(csv_log_file)
+
+# %%
 uc.set_conc(conc={"S": S0, "E": E0})      # Small ampount of enzyme `E`, relative to substrate `S`
 uc.describe_state()
 
@@ -115,16 +127,12 @@ uc.enable_diagnostics()   # To save diagnostic information about the simulation 
 
 # %%
 
-# %%
-ipynbname.name()
-
 # %% [markdown] tags=[]
 # #### Simulate the very early part of the reaction
 
 # %%
 # Perform the reactions
-uc.single_compartment_react(duration=0.0015, initial_step=0.00001, 
-                            snapshots={"file": "enzyme_3_system_log.txt"})
+uc.single_compartment_react(duration=0.0015, initial_step=0.00001)
 
 # %%
 uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'], show_intervals=True, 
@@ -146,23 +154,23 @@ uc.get_history()
 # #### Advance the reactions to equilibrium
 
 # %%
-# Perform the reactions
+# Continue the reactions
 
 try:
-    uc.single_compartment_react(duration=30., initial_step=0.00001, snapshots={"file": "enzyme_3_system_log.txt"})
+    uc.single_compartment_react(duration=1., initial_step=0.00001, 
+                                snapshots={"frequency": 2})
 
 except KeyboardInterrupt:
     print("\n*** KeyboardInterrupt exception caught")
-else:
-    print("Unexpected error")
 
 # %%
 print(uc.system_time)
 
 # %%
+uc.get_history()
 
 # %%
-uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'],
+uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'], 
                 title_prefix="Small amout of E relative to S(0)")
 
 # %%

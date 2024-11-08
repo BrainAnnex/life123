@@ -2,6 +2,8 @@ import math
 import numpy as np
 import pandas as pd
 import time
+import os
+import csv
 import plotly.express as px
 import plotly.graph_objects as go
 from typing import Union
@@ -95,7 +97,9 @@ class UniformCompartment:
                                     # For background, see: https://www.annualreviews.org/doi/10.1146/annurev-cellbio-100617-062719
 
         self.history = MovieTabular()   # To store user-selected snapshots of (some of) the chemical concentrations,
-                                        #   whenever requested by the user.
+                                        #   whenever requested by the user
+
+        self.log_file = None
 
 
         # FOR AUTOMATED ADAPTIVE TIME STEP SIZES 
@@ -260,13 +264,13 @@ class UniformCompartment:
     def get_conc_dict(self, species=None, system_data=None) -> dict:
         """
         Retrieve the concentrations of the requested chemicals (by default all),
-        as a dictionary indexed by the chemical's name
+        as a dictionary indexed by the chemicals' labels
 
-        :param species:     [OPTIONAL] list or tuple of names of the chemical species; by default, return all
-        :param system_data: [OPTIONAL] a Numpy array of concentration values, in the same order as the
+        :param species:     [OPTIONAL] List or tuple of labels of the chemical species; by default, return all
+        :param system_data: [OPTIONAL] A Numpy array of concentration values, in the same order as the
                                 index of the chemical species; by default, use the SYSTEM DATA
-                                (which is set and managed by various functions)
-        :return:            A dictionary, indexed by chemical name, of the concentration values;
+
+        :return:            A dictionary, indexed by the chemical labels, of the concentration values;
                                 EXAMPLE: {"A": 1.2, "D": 4.67}
         """
         if system_data is None:
@@ -299,7 +303,7 @@ class UniformCompartment:
 
 
     '''
-    Management of reactions
+    ***  Management of reactions  ***
     '''
 
 
@@ -514,10 +518,9 @@ class UniformCompartment:
                                         -"species" (default None, meaning all species; optionally, provide a list of chemical labels)
                                         -"initial_caption" (default: "1st reaction step")
                                         -"final_caption" (default: "last reaction step")
-                                        -"file" (default None, meaning don't also save into a file)
                                     If provided, take a system snapshot after running a multiple
                                     of "frequency" reaction steps
-                                    EXAMPLE: snapshots={"frequency": 2, "species": ["A", "H"], "file": "my_log.txt"}
+                                    EXAMPLE: snapshots={"frequency": 2, "species": ["A", "H"]}
 
         :param silent:              If True, less output is generated
 
@@ -587,7 +590,6 @@ class UniformCompartment:
         if snapshots:
             frequency = snapshots.get("frequency", 1)   # If not present, it will be 1
             species = snapshots.get("species")          # If not present, it will be None (meaning include all)  
-            snapshot_file = snapshots.get("file")       # If not present, it will be None (meaning don't save into file)
         else:
             snapshots = {"frequency": 1,
                          "species": None,
@@ -596,7 +598,6 @@ class UniformCompartment:
                         }
             frequency = 1
             species = None
-            snapshot_file = None
             
 
 
@@ -663,10 +664,10 @@ class UniformCompartment:
             # Preserve some of the data, as requested
             if snapshots and ((step_count+1)%frequency == 0):
                 if first_snapshot and "initial_caption" in snapshots:
-                    self.add_snapshot(species=species, caption=snapshots["initial_caption"], filename=snapshot_file)
+                    self.add_snapshot(species=species, caption=snapshots["initial_caption"])
                     first_snapshot = False
                 else:
-                    self.add_snapshot(species=species, filename=snapshot_file)
+                    self.add_snapshot(species=species)
 
             step_count += 1
 
@@ -1642,7 +1643,7 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def add_snapshot(self, species=None, caption="", system_data=None, filename=None) -> None:
+    def add_snapshot(self, species=None, caption="", system_data=None) -> None:
         """
         Preserve some or all the chemical concentrations into the history,
         linked to the current System Time,
@@ -1656,18 +1657,59 @@ class UniformCompartment:
         :param caption:     [OPTIONAL] caption to attach to this preserved data
         :param system_data: [OPTIONAL] a Numpy array of concentration values, in the same order as the
                                 index of the chemical species; by default, use the SYSTEM DATA
-        :parm filename:     [OPTIONAL] name of a file into which also save the same data, in CSV format
         :return:            None
         """
-
         data_snapshot = self.get_conc_dict(species=species, system_data=system_data)    # This will be a dict
+                                                                                        # EXAMPLE : {"A": 1.3, "B": 4.9}
 
         self.history.store(par=self.system_time,
                            data_snapshot=data_snapshot, caption=caption)
-        #print(filename)
-        if filename is not None:
-            with open(filename, "a") as fh:
-                fh.write(f"{self.system_time}\n")
+
+        if self.log_file is None:
+            return
+
+
+        # If we get thus far, we have a log file to manage
+        if os.path.exists(self.log_file):
+            new_file = False
+        else:
+            new_file = True
+
+        # Open a CSV file in write mode
+        with open(self.log_file, mode="a", newline="") as fh:
+            fieldnames = ["SYSTEM TIME"] + list(data_snapshot.keys()) + ["caption"]
+            writer = csv.DictWriter(fh, fieldnames = fieldnames)
+
+            data_snapshot["SYSTEM TIME"] = self.system_time
+            data_snapshot["caption"] = caption
+
+            # Write the header (only of a newly-created file)
+            if new_file:
+                writer.writeheader()
+
+            # Write the dictionary as a row
+            writer.writerow(data_snapshot)
+
+
+
+
+    def start_log(self, log_file :str) -> None:
+        """
+        Register the specified filename for all future CSV logs.
+        Any existing file by that name will get over-written.
+
+        :param log_file:Name of a file to use for the CSV logs
+        :return:        None
+        """
+        # TODO: validate log_file
+        self.log_file = log_file
+
+
+        if os.path.exists(log_file):
+            os.remove(log_file)
+            print(f"-> CSV-format output will be LOGGED into the file '{log_file}' . An existing file by that name was over-written")
+        else:
+            print(f"-> CSV-format output will be LOGGED into the file '{log_file}'")
 
 
 
