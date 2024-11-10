@@ -186,7 +186,7 @@ fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=A_exact, title="EXACT solution",
 
 # %%
 PlotlyHelper.combine_plots(fig_list=[fig_fixed, fig_variable, fig_exact],
-                           xrange=[0, 0.4], ylabel="concentration [A]",
+                           xrange=[0, 0.4], y_label="concentration [A]",
                            title="Variable time steps vs. Fixed vs. Exact soln, for [A] in reaction `A<->B`",
                            legend_title="Simulation run")    # All the 3 plots put together: show only the initial part (but it's all there; you can zoom out!)
 
@@ -245,7 +245,7 @@ fig_fixed = dynamics_fixed_new.plot_history(chemicals='A', colors='blue', title=
 # %%
 PlotlyHelper.combine_plots(fig_list=[fig_fixed, fig_variable, fig_exact],
                            curve_labels = ["FIXED time steps", "VARIABLE time steps", "EXACT solution"],
-                           xrange=[0, 0.4], ylabel="concentration [A]",
+                           xrange=[0, 0.4], y_label="concentration [A]",
                            title="Fixed vs. Variable time steps vs. Exact soln, for [A] in reaction `A<->B`",
                            legend_title="Simulation run")
 

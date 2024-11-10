@@ -60,7 +60,7 @@ class MovieTabular:
                                     it's acceptable to contain new fields not used in previous calls
                                     (in that case, the dataframe will add new columns automatically - and NaN values
                                      will appear in earlier rows)
-        :param caption:         [OPTIONAL] String to describe the snapshot
+        :param caption:         [OPTIONAL] String to describe the snapshot.  Use None to avoid including that column
         :return:                None (the object variable "self.movie" will get updated)
         """
         assert type(data_snapshot) == dict, \
@@ -69,11 +69,14 @@ class MovieTabular:
         if self.movie.empty:            # No Pandas dataframe was yet started
             self.movie = pd.DataFrame(data_snapshot, index=[0])     # Form the initial Pandas dataframe (zero refers to the initial row)
             self.movie.insert(0, self.parameter_name, par)          # Add a column at the beginning
-            self.movie["caption"] = caption                         # Add a column at the end
+            if caption is not None:
+                self.movie["caption"] = caption                         # Add a column at the end
         else:                           # The Pandas dataframe was already started
             d = data_snapshot.copy()                    # Make a copy, to avoid altering the passed dict
             d[self.parameter_name] = par                # Expand the snapshot dict
-            d["caption"] = caption                      # Expand the snapshot dict
+            if caption is not None:
+                d["caption"] = caption                      # Expand the snapshot dict
+
             self.movie = pd.concat([self.movie, pd.DataFrame([d])], ignore_index=True)    # Append new row to dataframe
             # Note: we cannot do an in-place addition of a new row to an existing dataframe,
             #       because this new row might contain fields not

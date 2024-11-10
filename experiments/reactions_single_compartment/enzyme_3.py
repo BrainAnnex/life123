@@ -116,7 +116,7 @@ E0 = 1.
 uc = UniformCompartment(chem_data=chem_data, preset="slow")
 
 # %%
-uc.start_log(csv_log_file)
+uc.start_csv_log(csv_log_file)
 
 # %%
 uc.set_conc(conc={"S": S0, "E": E0})      # Small ampount of enzyme `E`, relative to substrate `S`

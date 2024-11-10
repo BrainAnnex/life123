@@ -337,8 +337,8 @@ p2 = dynamics.plot_history(chemicals="A", colors='darkturquoise')   # The plot o
 
 # %%
 PlotlyHelper.combine_plots([p1, p2],
-                           xlabel="SYSTEM TIME", 
-                           ylabel="concentration (darkturquoise) /<br> concentration change per unit time (brown)",
+                           x_label="SYSTEM TIME",
+                           y_label="concentration (darkturquoise) /<br> concentration change per unit time (brown)",
                            curve_labels=["A", "A_dot"],
                            title="Concentration of A with time (darkturquoise), and its rate of change (brown)")
 

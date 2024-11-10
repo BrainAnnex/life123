@@ -146,7 +146,7 @@ fig_variable = uc.plot_history(chemicals=['A'], colors='darkturquoise', title="V
 
 # %%
 PlotlyHelper.combine_plots(fig_list=[fig_variable, fig_exact],
-                           xrange=[0, 1.5], ylabel="concentration [A]",
+                           xrange=[0, 1.5], y_label="concentration [A]",
                            title="Variable time steps vs. Exact soln, for [A] in irreversible reaction `A->B`",
                            legend_title="Simulation run")    # Both plots put together
 

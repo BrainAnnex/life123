@@ -160,7 +160,7 @@ class PlotlyHelper:
     def plot_pandas(cls, df :pd.DataFrame, x_var="SYSTEM TIME", fields=None,
                     colors=None, title=None, title_prefix=None,
                     range_x=None, range_y=None,
-                    x_label=None, y_label=None, legend_header="Chemical",
+                    x_label=None, y_label="Y", legend_header="Plot",
                     vertical_lines_to_add=None,
                     show_intervals=False, show=False) -> pgo.Figure:
         """
@@ -176,14 +176,15 @@ class PlotlyHelper:
         :param colors:          (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
                                     or list of names to use, in order; if None, then the hardwired default colors are used
         :param title:           (OPTIONAL) Title for the plot
-        :param title_prefix:    (OPTIONAL) Strint to prefixed (followed by " <br>") to the title
+        :param title_prefix:    (OPTIONAL) Strint to prefixed (automatically followed by " <br>") to the title
         :param range_x:         (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
         :param range_y:         (OPTIONAL) list of the form [y_min, y_max], to initially show only a part of the y values.
                                     Note: it's still possible to zoom out, and see the excluded portion
         :param x_label:         (OPTIONAL) Caption to use for the x-axis
-        :param y_label:         (OPTIONAL) Caption to use for the y-axis
-        :param legend_header:   (OPTIONAL) Caption to use at the top of the legend box
+        :param y_label:         (OPTIONAL) Caption to use for the y-axis.  Default: "Y"
+        :param legend_header:   (OPTIONAL) Caption to use at the top of the legend box.
+                                            Only applicable if more than 1 curve is being shown.
         :param vertical_lines_to_add:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
                                     Value, or list, or tuple, or Numpy array, or Pandas series,
                                     of x-coordinate(s) at which to draw thin vertical dotted gray lines.
@@ -208,7 +209,13 @@ class PlotlyHelper:
 
         col_list = list(df.columns)
         assert x_var in col_list, \
-            f"plot_pandas(): the value of the x_var arg ({x_var}) must be the name of one of the columns in the dataframe"
+            f"plot_pandas(): the value of the argument `x_var` ({x_var}) must be the name of one of the columns in the dataframe"
+
+        # Prevent obscure error messages that arise when y_label is not a valid string (due to the fact that this string is used
+        # to shows values in the hover boxes when more than 1 curve is being shown)
+        assert type(y_label) == str, \
+            f"plot_pandas(): the value of the argument `y_label` must be a string; the passed values is of type {type(y_label)}"
+
 
         if fields is None:
             number_of_curves = len(col_list) - 1  # All the field but one (since one is the independent variable)
@@ -291,7 +298,7 @@ class PlotlyHelper:
 
 
     @classmethod
-    def combine_plots(cls, fig_list :Union[list, tuple], title="", xlabel=None, ylabel=None,
+    def combine_plots(cls, fig_list :Union[list, tuple], title="", x_label=None, y_label=None,
                       xrange=None, legend_title=None, curve_labels=None, show=False) -> pgo.Figure:
         """
         Combine together several existing plotly plots
@@ -304,8 +311,8 @@ class PlotlyHelper:
 
         :param fig_list:    List or tuple of plotly "Figure" objects (as returned by several functions)
         :param title:       [OPTIONAL] The title to use for the overall plot
-        :param xlabel:      [OPTIONAL] Caption to use for the x-axis; if not specified, use that of the 1st plot
-        :param ylabel:      [OPTIONAL] Caption to use for the y-axis; if not specified, use that of the 1st plot
+        :param x_label:     [OPTIONAL] Caption to use for the x-axis; if not specified, use that of the 1st plot
+        :param y_label:     [OPTIONAL] Caption to use for the y-axis; if not specified, use that of the 1st plot
         :param xrange:      [OPTIONAL] list of the form [t_start, t_end], to initially only show a part of the timeline.
                                 Note: it's still possible to zoom out, and see the excluded portion
         :param legend_title:[OPTIONAL] String to show at the top of the legend box
@@ -321,10 +328,10 @@ class PlotlyHelper:
 
 
         representative_fig = fig_list[0]    # The axes titles of the first plot are used as default values
-        if xlabel is None:
-            xlabel = representative_fig.layout.xaxis.title.text
-        if ylabel is None:
-            ylabel = representative_fig.layout.yaxis.title.text
+        if x_label is None:
+            x_label = representative_fig.layout.xaxis.title.text
+        if y_label is None:
+            y_label = representative_fig.layout.yaxis.title.text
 
 
         # Put together the data from all the various individual plots
@@ -336,8 +343,8 @@ class PlotlyHelper:
         all_fig = pgo.Figure(data=combined_data)    # Note that the + is concatenating lists
 
         all_fig.update_layout(title=title,
-                              xaxis_title=xlabel,
-                              yaxis_title=ylabel)
+                              xaxis_title=x_label,
+                              yaxis_title=y_label)
 
         if legend_title:
             all_fig.update_layout(legend={"title": legend_title})

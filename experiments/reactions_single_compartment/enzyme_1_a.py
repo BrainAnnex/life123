@@ -161,7 +161,7 @@ rates = uc.get_diagnostics().get_system_history_with_rxn_rates(rxn_index=1)   # 
 rates
 
 # %%
-# Let's take a look at how the reaction rate varies with time
+# Let's take a look at how the reaction rate that generates the product P varies with time
 PlotlyHelper.plot_pandas(df=rates, 
                          title="Reaction rate, dP/dt, over time",
                          x_var="TIME", fields="rate", 
