@@ -127,38 +127,37 @@ def test_single_compartment_react():
 
     initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
 
-    dynamics = UniformCompartment(chem_data=chem_data)
-    dynamics.set_conc(conc=initial_conc, snapshot=False)
+    uc = UniformCompartment(chem_data=chem_data, enable_diagnostics=True)
 
-    dynamics.enable_diagnostics()
+    uc.set_conc(conc=initial_conc, snapshot=True)
 
-    dynamics.adaptive_steps.set_step_factors(error=0.5)    # Will be used by an excessive first step
-                                            # leading to a hard abort
+    uc.adaptive_steps.set_step_factors(error=0.5)       # Will be used by an overly-large first step
+                                                        # leading to a hard abort
 
-    dynamics.single_compartment_react(initial_step=0.0010, target_end_time=0.0035, variable_steps=False)
+    uc.single_compartment_react(initial_step=0.0010, target_end_time=0.0035, variable_steps=False)
 
-    run1 = dynamics.get_system_conc()
+    run1 = uc.get_system_conc()
 
     assert np.allclose(run1, [9.69124339e+01, 3.06982519e+00, 1.77408783e-02, 9.99985757e+02, 1.42431633e-02])
-    assert np.allclose(dynamics.system_time, 0.0035)
-    assert dynamics.diagnostics.explain_time_advance(return_times=True, silent=True) == \
+    assert np.allclose(uc.system_time, 0.0035)
+    assert uc.diagnostics.explain_time_advance(return_times=True, silent=True) == \
                ([0.0, 0.002, 0.0025, 0.0035],
                 [0.001, 0.0005, 0.001])
 
     # The above computation automatically took 2 normal steps, 1 half-size step and 1 normal step;
     # now repeat the process manually
 
-    dynamics2 = UniformCompartment(chem_data=chem_data)
-    dynamics2.set_conc(conc=initial_conc, snapshot=False)
+    uc2 = UniformCompartment(chem_data=chem_data, enable_diagnostics=True)
 
-    dynamics2.enable_diagnostics()
-    dynamics2.single_compartment_react(initial_step=0.0010, n_steps=2, variable_steps=False)
-    dynamics2.single_compartment_react(initial_step=0.0005, n_steps=1, variable_steps=False)
-    dynamics2.single_compartment_react(initial_step=0.0010, n_steps=1, variable_steps=False)
-    run2 = dynamics.get_system_conc()
+    uc2.set_conc(conc=initial_conc, snapshot=True)
+
+    uc2.single_compartment_react(initial_step=0.0010, n_steps=2, variable_steps=False)
+    uc2.single_compartment_react(initial_step=0.0005, n_steps=1, variable_steps=False)
+    uc2.single_compartment_react(initial_step=0.0010, n_steps=1, variable_steps=False)
+    run2 = uc.get_system_conc()
     assert np.allclose(run2, run1)      # Same result as before
-    assert np.allclose(dynamics2.system_time, 0.0035)
-    assert dynamics2.diagnostics.explain_time_advance(return_times=True) == \
+    assert np.allclose(uc2.system_time, 0.0035)
+    assert uc2.diagnostics.explain_time_advance(return_times=True) == \
            ([0.0, 0.002, 0.0025, 0.0035],
             [0.001, 0.0005, 0.001])
     # The time advance is now different, because multiple calls to single_compartment_react() break up the counting

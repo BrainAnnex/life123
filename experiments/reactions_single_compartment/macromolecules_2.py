@@ -68,7 +68,7 @@ dynamics1.enable_diagnostics()       # To save diagnostic information about the 
 #dynamics1.set_thresholds(norm="norm_B", low=0.04, high=0.6, abort=1.5)
 #dynamics1.set_step_factors(upshift=1.2, downshift=0.7, abort=0.4, error=0.3)
 
-dynamics1.single_compartment_react(initial_step=0.02, reaction_duration=4.0,
+dynamics1.single_compartment_react(initial_step=0.02, duration=4.0,
                                   variable_steps=True)
 
 # %%
@@ -150,11 +150,11 @@ dynamics2.enable_diagnostics()       # To save diagnostic information about the 
 #dynamics2.set_thresholds(norm="norm_B", low=0.04, high=0.6, abort=1.5)
 #dynamics2.set_step_factors(upshift=1.2, downshift=0.7, abort=0.4, error=0.3)
 
-dynamics2.single_compartment_react(initial_step=0.02, reaction_duration=4.0,
+dynamics2.single_compartment_react(initial_step=0.02, duration=4.0,
                                   variable_steps=True)
 
 # %%
-dynamics2.explain_time_advance()
+dynamics2.diagnostics.explain_time_advance()
 
 # %%
 dynamics2.plot_history(colors=['darkturquoise', 'green', 'darkblue'], show_intervals=True, title_prefix="WITHOUT catalysis")

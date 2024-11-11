@@ -41,7 +41,7 @@ class UniformCompartment:
     This might be thought of as a "zero-dimensional system"
     """
 
-    def __init__(self, chem_data=None, names=None, preset="mid"):
+    def __init__(self, chem_data=None, names=None, preset="mid", enable_diagnostics=False):
         """
         Note: AT MOST 1 of the following 2 arguments can be passed
         :param chem_data:   [OPTIONAL 1] Object of type "ChemData" (with data
@@ -67,6 +67,8 @@ class UniformCompartment:
         if chem_data:
             self.chem_data = chem_data  # Object of type "ChemData" (with data about the chemicals and their reactions,
                                         #                            incl. macromolecules)
+        elif names:
+            self.chem_data = ChemData(names=names)
         else:
             self.chem_data = ChemData()
 
@@ -133,9 +135,8 @@ class UniformCompartment:
 
         self.diagnostics = None         # Object of class Diagnostics
 
-
-        if names:
-            self.chem_data = ChemData(names=names)
+        if enable_diagnostics:
+            self.enable_diagnostics()       # Note: self.chem_data must be defined BEFORE this call
 
 
 
@@ -690,7 +691,7 @@ class UniformCompartment:
                                 " trying reducing the time_step")   # TODO: is the explanation correctly phrased?
 
             if self.diagnostics_enabled:
-                # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
+                # Save up the current time and System State as "diagnostic 'concentration' data"
                 system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
                 self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
 

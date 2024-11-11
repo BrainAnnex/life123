@@ -12,6 +12,9 @@ class Diagnostics:
 
     def __init__(self, chem_data):
 
+        assert chem_data is not None, \
+            "Diagnostics class cannot be instantiated with a missing value for argument `chem_data`"
+
         self.chem_data = chem_data
 
         # TODO: maybe drop the "diagnostic_" from the names, or rename it to "historic_"
@@ -154,6 +157,8 @@ class Diagnostics:
                                 "caption"
                                 "rate"
         """
+        # TODO: probably ditch, because no longer needed.  (Also, the dataframe merge might not always work...)
+
         rates = self.get_rxn_rates(rxn_index=rxn_index)     # A Pandas dataframe with 2 columns: "START_TIME" and "rate"
         system_history = self.get_diagnostic_conc_data()    # Note that is a copy of the dataframe; so, no harm in changing it, below
         # Dropping the last row, because no rate information is known about the next simulation step not taken!
@@ -264,7 +269,7 @@ class Diagnostics:
 
     def save_diagnostic_conc_data(self, system_data, system_time, caption="") -> None:
         """
-        To save the diagnostic concentration data during the run, indexed by the current System Time.
+        Save the diagnostic concentration data during the run, indexed by the current System Time.
         Note: if an interval run is aborted, by convention NO entry is created here
 
         :return: None
@@ -460,9 +465,9 @@ class Diagnostics:
         :param silent:          If True, nothing gets printed out
         :param sys_history:     [OPTIONAL] The system history.
                                     If passed, use it in lieu of the diagnostic data;
-                                    to keep in mind is the fact that the user might only have asked
+                                    a consideration is the fact that the user might only have asked
                                     for PART of the history to be saved
-        :return:                Depending on the argument return_times, either None, or a pair with 2 lists:
+        :return:                Depending on the argument "return_times", it returns either None, or a pair with 2 lists:
                                         1 - list of time values
                                         2 - list of step sizes  (will have one less element than the first list)
         """
@@ -479,9 +484,9 @@ class Diagnostics:
 
         n_entries = len(df)
         if sys_history:
-            t = list(df["SYSTEM TIME"])    # List of times (simulation step points)
+            t = list(df["SYSTEM TIME"])     # List of times (simulation step points)
         else:
-            t = list(df["TIME"])    # List of times (simulation step points)
+            t = list(df["TIME"])            # List of times (simulation step points)
 
         if n_entries == 1:
             print(f"Diagnostics.explain_time_advance(): no time advance found. "
