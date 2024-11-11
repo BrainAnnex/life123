@@ -1,4 +1,4 @@
-# 3 CLASSES: MovieTabular, MovieArray, MovieGeneral
+# 3 CLASSES: MovieTabular, MovieArray, Collection
 
 import pandas as pd
 import numpy as np
@@ -335,14 +335,14 @@ class MovieArray:
 
 ###############################################################################################################
 
-class MovieGeneral:
+class Collection:
     """
-    A "general movie" is a list of snapshots of any values that the user wants to preserve,
+    A "Collection" is a list of snapshots that the user wants to preserve,
     such as the state of the entire system, or of parts thereof,
     either taken at different times,
     or resulting from varying some parameter(s)
 
-    This class accept data in arbitrary formats
+    This class accept data in arbitrary formats.
 
     MAIN DATA STRUCTURE:
         A list of triplets.
@@ -368,17 +368,17 @@ class MovieGeneral:
         """
         self.parameter_name = parameter_name
 
-        self.movie = []     # List of triples
+        self.data = []     # List of triples
 
 
 
     def __len__(self):
-        return len(self.movie)
+        return len(self.data)
 
 
 
     def __str__(self):
-        return f"MovieGeneral object with {len(self.movie)} snapshot(s) parametrized by `{self.parameter_name}`"
+        return f"Collection object with {len(self.data)} snapshot(s) parametrized by `{self.parameter_name}`"
 
 
 
@@ -405,17 +405,17 @@ class MovieGeneral:
         :param caption:         OPTIONAL string to describe the snapshot
         :return:                None
         """
-        self.movie.append((par, data_snapshot, caption))
+        self.data.append((par, data_snapshot, caption))
 
 
 
-    def get_movie(self) -> list:
+    def get_collection(self) -> list:
         """
         Return the main data structure - the list of snapshots, with their attributes
 
         :return:
         """
-        return self.movie
+        return self.data
 
 
 
@@ -425,7 +425,7 @@ class MovieGeneral:
 
         :return:    A list of all the snapshots
         """
-        return [triplet[1] for triplet in self.movie]
+        return [triplet[1] for triplet in self.data]
 
 
     def get_parameters(self) -> list:
@@ -434,7 +434,7 @@ class MovieGeneral:
 
         :return:    A list with all the parameter values
         """
-        return [triplet[0] for triplet in self.movie]
+        return [triplet[0] for triplet in self.data]
 
 
     def get_captions(self) -> [str]:
@@ -443,4 +443,4 @@ class MovieGeneral:
 
         :return:    A list with all the captions
         """
-        return [triplet[2] for triplet in self.movie]
+        return [triplet[2] for triplet in self.data]

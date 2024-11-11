@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
-from life123 import MovieTabular, MovieArray, MovieGeneral
+from life123 import MovieTabular, MovieArray, Collection
 
 
 
@@ -259,26 +259,26 @@ def test_MovieArray():
 
 ###############  For class MovieGeneral  ###############
 
-def test_MovieGeneral():
-    m = MovieGeneral()
+def test_Collection():
+    m = Collection()
 
     m.store(par=10, data_snapshot={"c1": 1, "c2": 2}, caption="first entry")
     assert len(m) == 1
-    assert str(m) == "MovieGeneral object with 1 snapshot(s) parametrized by `SYSTEM TIME`"
-    assert m.get_movie() == [(10, {"c1": 1, "c2": 2}, "first entry")]
+    assert str(m) == "Collection object with 1 snapshot(s) parametrized by `SYSTEM TIME`"
+    assert m.get_collection() == [(10, {"c1": 1, "c2": 2}, "first entry")]
 
     m.store(par=20, data_snapshot=[999, 111], caption="data snapshots can be anything")
     assert len(m) == 2
-    assert str(m) == "MovieGeneral object with 2 snapshot(s) parametrized by `SYSTEM TIME`"
-    data = m.get_movie()
+    assert str(m) == "Collection object with 2 snapshot(s) parametrized by `SYSTEM TIME`"
+    data = m.get_collection()
     assert len(data) == 2
     assert data[0] == (10, {"c1": 1, "c2": 2}, "first entry")
     assert data[1] == (20, [999, 111], "data snapshots can be anything")
 
     m.store(par=(1,2), data_snapshot="001001101")
     assert len(m) == 3
-    assert str(m) == "MovieGeneral object with 3 snapshot(s) parametrized by `SYSTEM TIME`"
-    data = m.get_movie()
+    assert str(m) == "Collection object with 3 snapshot(s) parametrized by `SYSTEM TIME`"
+    data = m.get_collection()
     assert len(data) == 3
     assert data[0] == (10, {"c1": 1, "c2": 2}, "first entry")
     assert data[1] == (20, [999, 111], "data snapshots can be anything")

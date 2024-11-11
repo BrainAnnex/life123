@@ -21,7 +21,7 @@ from life123.html_log import HtmlLog
 from life123.movies	import (
     MovieTabular,
     MovieArray,
-    MovieGeneral
+    Collection
 )
 from life123.numerical import Numerical
 from life123.reaction import Reaction, ReactionEnz
@@ -42,7 +42,7 @@ __all__ = [
     'HtmlLog',
     'MovieTabular',
     'MovieArray',
-    'MovieGeneral',
+    'Collection',
     'Numerical',
     'Reaction',
     'ReactionEnz',

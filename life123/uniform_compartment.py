@@ -131,7 +131,7 @@ class UniformCompartment:
                                         #   Those sections will have entry points such as:  if "my_ad_hoc_tag" in self.verbose_list
 
 
-        self.diagnostics_enabled = False  # Overall flag about whether using diagnostics
+        self.diagnostics_enabled = False  # Flag indicating whether using diagnostics
 
         self.diagnostics = None         # Object of class Diagnostics
 

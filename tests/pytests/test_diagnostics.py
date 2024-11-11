@@ -8,7 +8,7 @@ from life123.diagnostics import Diagnostics
 
 
 def test_explain_time_advance():
-    diag = Diagnostics(None)
+    diag = Diagnostics(ChemData())   # Argument isn't actually used, but it's required
 
     # Start out with uniform steps
     diag.diagnostic_conc_data.store(par=20.,
@@ -18,51 +18,51 @@ def test_explain_time_advance():
 
 
     diag.diagnostic_conc_data.store(par=30.,
-                                   data_snapshot={"time_step": 100.})
+                                    data_snapshot={"time_step": 100.})
     result, _ = diag.explain_time_advance(return_times=True, silent=True)    # TODO: also test the returned step sizes
     assert np.allclose(result, [20., 30.])
 
     diag.diagnostic_conc_data.store(par=40.,
-                                   data_snapshot={"time_step": 100.})
+                                    data_snapshot={"time_step": 100.})
     result, _ = diag.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40.])
 
     # Switching to smaller step
     diag.diagnostic_conc_data.store(par=45.,
-                                   data_snapshot={"time_step": 100.})
+                                    data_snapshot={"time_step": 100.})
     result, _ = diag.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 45.])
 
     diag.diagnostic_conc_data.store(par=50.,
-                                   data_snapshot={"time_step": 100.})
+                                    data_snapshot={"time_step": 100.})
     result, _ = diag.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50.])
 
     # Switching to larger step
     diag.diagnostic_conc_data.store(par=70.,
-                                   data_snapshot={"time_step": 100.})
+                                    data_snapshot={"time_step": 100.})
     result, _ = diag.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70.])
 
     # Yet larger
     diag.diagnostic_conc_data.store(par=95.,
-                                   data_snapshot={"time_step": 100.})
+                                    data_snapshot={"time_step": 100.})
     result, _ = diag.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95.])
 
     # Smaller again
     diag.diagnostic_conc_data.store(par=96.,
-                                   data_snapshot={"time_step": 100.})
+                                    data_snapshot={"time_step": 100.})
     result, _ = diag.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 96.])
 
     diag.diagnostic_conc_data.store(par=97.,
-                                   data_snapshot={"time_step": 100.})
+                                    data_snapshot={"time_step": 100.})
     result, _ = diag.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 97.])
 
     diag.diagnostic_conc_data.store(par=98.,
-                                   data_snapshot={"time_step": 100.})
+                                    data_snapshot={"time_step": 100.})
     result, _ = diag.explain_time_advance(return_times=True, silent=True)
     assert np.allclose(result, [20., 40., 50., 70., 95., 98.])
 
