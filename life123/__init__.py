@@ -19,8 +19,8 @@ from life123.bio_sim_3d import BioSim3D
 from life123.chem_data import ChemData
 from life123.html_log import HtmlLog
 from life123.movies	import (
-    MovieTabular,
-    MovieArray,
+    CollectionTabular,
+    CollectionArray,
     Collection
 )
 from life123.numerical import Numerical
@@ -40,8 +40,8 @@ __all__ = [
     'BioSim3D',
     'ChemData',
     'HtmlLog',
-    'MovieTabular',
-    'MovieArray',
+    'CollectionTabular',
+    'CollectionArray',
     'Collection',
     'Numerical',
     'Reaction',

@@ -179,7 +179,7 @@ rates_df = uc.get_rate_history()
 rates_df
 
 # %% [markdown]
-# Note that **reaction rates** are defined for the reaction _products_; since A is a reactant (in reaction 0, our only reaction), we must flip its sign; since the stoichiometry of A is simply 1, no further adjustment needed.
+# Note that **reaction rates** are defined for the reaction _products_; since `A` is a reactant (in reaction 0, our only reaction), we must flip its sign; since the stoichiometry of A is simply 1, no further adjustment needed.
 
 # %%
 rates_df['A_dot'] = - rates_df['rxn0_rate']    # Add a column to the Pandas dataframe

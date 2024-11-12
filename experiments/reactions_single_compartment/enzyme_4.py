@@ -38,7 +38,7 @@ LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData, UniformCompartment, MovieTabular, GraphicLog
+from life123 import ChemData, UniformCompartment, CollectionTabular, GraphicLog
 
 import pandas as pd
 

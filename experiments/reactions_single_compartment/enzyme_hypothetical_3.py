@@ -39,7 +39,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from life123 import ChemData
 from life123 import UniformCompartment
-from life123 import MovieTabular
+from life123 import CollectionTabular
 
 import pandas as pd
 import plotly.express as px
@@ -92,7 +92,7 @@ dynamics.plot_history(colors=['cyan', 'green', 'violet'], show_intervals=True, t
 
 # %%
 # To save up snapshots of crossover times at various Enzyme concentrations
-crossover_points = MovieTabular(parameter_name="Enzyme concentration")
+crossover_points = CollectionTabular(parameter_name="Enzyme concentration")
 
 # %%
 new_crossover = dynamics.curve_intersect("S", "P", t_start=0, t_end=1.0)

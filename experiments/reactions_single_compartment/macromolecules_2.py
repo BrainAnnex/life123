@@ -14,21 +14,27 @@
 # ---
 
 # %% [markdown]
+# # IN-PROGRESS (INCOMPLETE)
+#
 # ## Macromolecules : Binding Affinity and Fractional Occupancy. Regulation of the rates of reactions catalyzed by the macromolecule
 #
 # ### Reaction `A <-> B` catalyzed when ligand `L` binds to `site 1` of macromolecule `M1`
 #
-# # IN-PROGRESS
-#
 # In Part 1 we consider the un-catalyzed reaction `A <-> B`  
 # In Part 2 we'll see what happens when catalysis is added
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Nov. 11, 2024"
+LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
+
+# %%
+#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
 from life123 import ChemData
 from life123 import UniformCompartment
 
@@ -45,7 +51,7 @@ chem1 = ChemData(names=["A", "B"])
 
 # Reaction A <-> B , without catalysis (slow forward rate, relative to what we'll see in Part 2)
 chem1.add_reaction(reactants="A", products="B",
-                  forward_rate=1. , delta_G= -5000)
+                   forward_rate=1. , delta_G= -5000)
 
 chem1.describe_reactions()
 

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from typing import Union, List, Tuple
-from life123.movies import MovieTabular
+from life123.movies import CollectionTabular
 from life123.uniform_compartment import UniformCompartment
 
 

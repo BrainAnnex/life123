@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from typing import Union
 from life123.chem_data import ChemData
 from life123.diagnostics import Diagnostics
-from life123.movies import MovieTabular
+from life123.movies import CollectionTabular
 from life123.numerical import Numerical
 from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
 from life123.visualization.plotly_helper import PlotlyHelper
@@ -98,14 +98,14 @@ class UniformCompartment:
 
                                     # For background, see: https://www.annualreviews.org/doi/10.1146/annurev-cellbio-100617-062719
 
-        self.history = MovieTabular()   # To store user-selected snapshots of (some of) the chemical concentrations,
+        self.history = CollectionTabular()   # To store user-selected snapshots of (some of) the chemical concentrations,
                                         #   whenever requested by the user
                                         #   Format: a Pandas data frame, with columns: 'SYSTEM TIME', 'A', 'B', ..., 'caption'
                                         #           where 'A', 'B', ... are all the registered chemical labels
 
         self.system_rxn_rates = {}      # Keys are the reaction indexes.  Reaction rates for the last (current) step of all reactions
 
-        self.rate_history = MovieTabular()  # Format: a Pandas data frame, with columns: 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
+        self.rate_history = CollectionTabular()  # Format: a Pandas data frame, with columns: 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
 
         self.log_file = None
 

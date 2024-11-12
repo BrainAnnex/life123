@@ -4,7 +4,7 @@ import math
 from scipy.fft import rfft, rfftfreq    # Fast Fourier Transforms to extract frequency components
 from scipy.stats import norm
 from typing import Union, List, Tuple
-from life123.movies import MovieTabular
+from life123.movies import CollectionTabular
 from life123.uniform_compartment import UniformCompartment
 import plotly.express as px
 from life123.html_log import HtmlLog as log
@@ -80,7 +80,7 @@ class BioSim1D:
 
         self.reaction_dynamics = None       # Object of class "UniformCompartment"
 
-        self.history = MovieTabular()       # To store user-selected snapshots of (parts of) the system,
+        self.history = CollectionTabular()       # To store user-selected snapshots of (parts of) the system,
                                             #   whenever requested by the user.
                                             #   Note that we're using the "tabular" format - friendly to Pandas
 

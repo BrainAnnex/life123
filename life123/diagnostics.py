@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from typing import Union
-from life123.movies import MovieTabular
+from life123.movies import CollectionTabular
 
 
 
@@ -18,7 +18,7 @@ class Diagnostics:
         self.chem_data = chem_data
 
         # TODO: maybe drop the "diagnostic_" from the names, or rename it to "historic_"
-        self.diagnostic_conc_data = MovieTabular(parameter_name="TIME")
+        self.diagnostic_conc_data = CollectionTabular(parameter_name="TIME")
                                         # An expanded version of the normal System History.
                                         #   Columns of the dataframes:
                                         #       'TIME' 	'A' 'B' ...  'caption'
@@ -38,7 +38,7 @@ class Diagnostics:
                                         #             over the time interval that *STARTS* at the value in the "START TIME" column
 
 
-        self.diagnostic_decisions_data = MovieTabular(parameter_name="START_TIME")
+        self.diagnostic_decisions_data = CollectionTabular(parameter_name="START_TIME")
                                         #   Columns of the dataframes:
                                         #       'START_TIME' 	'Delta A' 'Delta B' ...
                                         #               [plus, if applicable, other fields such as
@@ -89,7 +89,7 @@ class Diagnostics:
 
         # Initialize a "MovieTabular" object for this reaction, if needed
         if rxn_index not in self.diagnostic_rxn_data:
-            self.diagnostic_rxn_data[rxn_index] = MovieTabular(parameter_name="START_TIME")
+            self.diagnostic_rxn_data[rxn_index] = CollectionTabular(parameter_name="START_TIME")
 
 
         data_snapshot = {"time_step": time_step, "aborted": aborted}      # Dict being prepared to add a new row to a Pandas dataframe

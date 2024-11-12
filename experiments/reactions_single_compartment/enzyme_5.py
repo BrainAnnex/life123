@@ -38,7 +38,7 @@ life123.check_version(VERSION_BASED_ON)
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData, UniformCompartment, MovieTabular, GraphicLog
+from life123 import ChemData, UniformCompartment, CollectionTabular, GraphicLog
 
 import pandas as pd
 

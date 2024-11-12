@@ -25,7 +25,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from life123 import ChemData
 from life123 import UniformCompartment
-from life123 import MovieTabular
+from life123 import CollectionTabular
 
 import numpy as np
 
@@ -154,7 +154,7 @@ dynamics.describe_state()
 # ### Sweep the values of [A] across a wide range, and compute/store how the fractional occupancies of A change
 
 # %%
-history = MovieTabular(parameter_name="[A]")  # A convenient way to store a sequence of "state snapshots" as a Pandas dataframe
+history = CollectionTabular(parameter_name="[A]")  # A convenient way to store a sequence of "state snapshots" as a Pandas dataframe
 
 # %%
 print(history)

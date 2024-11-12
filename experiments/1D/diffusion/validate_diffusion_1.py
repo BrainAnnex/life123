@@ -28,7 +28,7 @@ import set_path      # Importing this module will add the project's home directo
 
 from life123 import BioSim1D
 from life123 import ChemData as chem
-from life123 import MovieArray
+from life123 import CollectionArray
 from life123 import Numerical as num
 
 import numpy as np
@@ -78,7 +78,7 @@ fig.show()
 
 # %%
 # All the system states will get collected in this object
-history = MovieArray()
+history = CollectionArray()
 
 # %%
 # Store the initial state

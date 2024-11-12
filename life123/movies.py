@@ -1,12 +1,12 @@
-# 3 CLASSES: MovieTabular, MovieArray, Collection
+# 3 CLASSES: CollectionTabular, CollectionArray, Collection
 
 import pandas as pd
 import numpy as np
 
 
-class MovieTabular:
+class CollectionTabular:
     """
-    A "tabular movie" is a Pandas dataframe
+    A "tabular collection" is a Pandas dataframe
     built up from a sequence of "snapshots" of data that's in  the form of a python dictionary
     (representing a list of values and their corresponding names),
     such as the state of the system or of parts thereof.
@@ -17,7 +17,7 @@ class MovieTabular:
     Each snapshot - incl. its parameter values and optional captions -
     will constitute a "row" in a tabular format
 
-    MAIN DATA STRUCTURE for "tabular" movies:
+    MAIN DATA STRUCTURE for "tabular" collections:
         A Pandas dataframe
     """
 
@@ -30,7 +30,7 @@ class MovieTabular:
         """
         self.parameter_name = parameter_name
 
-        self.movie = pd.DataFrame()      # Empty Pandas dataframe
+        self.collection_df = pd.DataFrame()      # Empty Pandas dataframe
 
 
 
@@ -39,12 +39,12 @@ class MovieTabular:
         Return the number of snapshots comprising the movie
         :return:    An integer
         """
-        return len(self.movie)
+        return len(self.collection_df)
 
 
 
     def __str__(self):
-        return f"`MovieTabular` object with {len(self.movie)} snapshot(s) parametrized by `{self.parameter_name}`"
+        return f"`MovieTabular` object with {len(self.collection_df)} snapshot(s) parametrized by `{self.parameter_name}`"
 
 
 
@@ -66,18 +66,18 @@ class MovieTabular:
         assert type(data_snapshot) == dict, \
             "MovieTabular.store(): The argument `data_snapshot` must be a python dictionary"
 
-        if self.movie.empty:            # No Pandas dataframe was yet started
-            self.movie = pd.DataFrame(data_snapshot, index=[0])     # Form the initial Pandas dataframe (zero refers to the initial row)
-            self.movie.insert(0, self.parameter_name, par)          # Add a column at the beginning
+        if self.collection_df.empty:            # No Pandas dataframe was yet started
+            self.collection_df = pd.DataFrame(data_snapshot, index=[0])     # Form the initial Pandas dataframe (zero refers to the initial row)
+            self.collection_df.insert(0, self.parameter_name, par)          # Add a column at the beginning
             if caption is not None:
-                self.movie["caption"] = caption                         # Add a column at the end
+                self.collection_df["caption"] = caption                         # Add a column at the end
         else:                           # The Pandas dataframe was already started
             d = data_snapshot.copy()                    # Make a copy, to avoid altering the passed dict
             d[self.parameter_name] = par                # Expand the snapshot dict
             if caption is not None:
                 d["caption"] = caption                      # Expand the snapshot dict
 
-            self.movie = pd.concat([self.movie, pd.DataFrame([d])], ignore_index=True)    # Append new row to dataframe
+            self.collection_df = pd.concat([self.collection_df, pd.DataFrame([d])], ignore_index=True)    # Append new row to dataframe
             # Note: we cannot do an in-place addition of a new row to an existing dataframe,
             #       because this new row might contain fields not
             #       yet present in the dataframe
@@ -124,9 +124,9 @@ class MovieTabular:
         """
         # The main data structure (a Pandas dataframe), with the "saved snapshots", is available as self.movie
         if return_copy:
-            df = self.movie.copy()  # Note: some of the operations below also make a copy
+            df = self.collection_df.copy()  # Note: some of the operations below also make a copy
         else:
-            df = self.movie
+            df = self.collection_df
 
         if head is not None:
             return df.head(head)    # This request is given top priority
@@ -184,7 +184,7 @@ class MovieTabular:
 
         :return:    None
         """
-        self.movie = pd.DataFrame()      # Empty Pandas dataframe
+        self.collection_df = pd.DataFrame()      # Empty Pandas dataframe
 
 
 
@@ -196,8 +196,8 @@ class MovieTabular:
         :param caption: String containing a caption to write into the last (most recent) snapshot
         :return:        None
         """
-        index = len(self.movie) - 1
-        self.movie.loc[index, "caption"] = caption
+        index = len(self.collection_df) - 1
+        self.collection_df.loc[index, "caption"] = caption
 
 
 
@@ -210,15 +210,15 @@ class MovieTabular:
         :param field_value: Value to write into the above field for the last (most recent) snapshot
         :return:            None
         """
-        index = len(self.movie) - 1
-        self.movie.loc[index, field_name] = field_value
+        index = len(self.collection_df) - 1
+        self.collection_df.loc[index, field_name] = field_value
 
 
 
 
 ###############################################################################################################
 
-class MovieArray:
+class CollectionArray:
     """
     Use this structure if your "snapshots" (data to add to the cumulative collection) are Numpy arrays,
     of any dimension - but always retaining that same dimension.
@@ -243,7 +243,7 @@ class MovieArray:
         """
         self.parameter_name = parameter_name
 
-        self.movie = None           # A Numpy Array
+        self.data_arr = None           # A Numpy Array
         self.snapshot_shape = None
         self.parameters = []
         self.captions = []
@@ -255,7 +255,7 @@ class MovieArray:
         Return the number of snapshots comprising the movie
         :return:    An integer
         """
-        return self.movie.shape[0]
+        return self.data_arr.shape[0]
 
 
     def __str__(self):
@@ -282,14 +282,14 @@ class MovieArray:
             "MovieArray.store(): The argument `data_snapshot` must be a dictionary whenever a 'tabular' movie is created"
 
 
-        if self.movie is None:    # If this is the first call to this function
-            self.movie = np.array([data_snapshot])
+        if self.data_arr is None:    # If this is the first call to this function
+            self.data_arr = np.array([data_snapshot])
             self.snapshot_shape = data_snapshot.shape
         else:                   # this is a later call, to expand existing stored data
             assert data_snapshot.shape == self.snapshot_shape, \
                 f"MovieArray.store(): The argument `data_snapshot` must have the same shape across calls, namely {self.snapshot_shape}"
             new_arr = [data_snapshot]
-            self.movie = np.concatenate((self.movie, new_arr), axis=0)    # "Stack up" along the first axis
+            self.data_arr = np.concatenate((self.data_arr, new_arr), axis=0)    # "Stack up" along the first axis
 
         self.parameters.append(par)
         self.captions.append(caption)
@@ -302,7 +302,7 @@ class MovieArray:
 
         :return:    A Numpy Array with the main data structure
         """
-        return self.movie
+        return self.data_arr
 
 
     def get_parameters(self) -> list:

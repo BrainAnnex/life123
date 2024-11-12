@@ -23,8 +23,8 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "quick-start", "basic", "under-the-hood"
 
 # %%
-LAST_REVISED = "Oct. 6, 2024"
-LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based on
+LAST_REVISED = "Nov. 11, 2024"
+LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -99,7 +99,7 @@ history = uc.get_history()   # The system's history, saved during the run of sin
 history
 
 # %%
-uc.plot_history(colors=['darkturquoise', 'orange'], show_intervals=True)    # Plots of concentration with time
+uc.plot_history(colors=['darkturquoise', 'green'], show_intervals=True)    # Plots of concentration with time
 
 # %% [markdown] tags=[]
 # ### Notice how the reaction proceeds in smaller steps in the early times, when [A] and [B] are changing much more rapidly
@@ -131,7 +131,7 @@ A_exact, B_exact = ReactionKinetics.exact_solution_unimolecular_irreversible(kF=
 # %%
 fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=[A_exact, B_exact], title="EXACT solution", x_label="SYSTEM TIME", y_label="concentration",
                                      legend_title="Chemical", curve_labels=["A (EXACT)", "B (EXACT)"],
-                                     colors=["darkturquoise", "orange"], show=True)
+                                     colors=["darkturquoise", "green"], show=True)
 
 # %% [markdown] tags=[]
 # #### To avoid clutter, we'll just plot [A], as obtained from the variable-step approx solution and the exact analytical solution

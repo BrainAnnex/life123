@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
-from life123 import ChemData, MovieTabular
+from life123 import ChemData, CollectionTabular
 from life123.diagnostics import Diagnostics
 
 
@@ -113,7 +113,7 @@ def test_save_diagnostic_rxn_data():
 
     diagnostic_data_rxn_0 = diag.diagnostic_rxn_data[0]
 
-    assert (type(diagnostic_data_rxn_0)) == MovieTabular
+    assert (type(diagnostic_data_rxn_0)) == CollectionTabular
 
     df_0 = diagnostic_data_rxn_0.get_dataframe()
 

@@ -8,7 +8,7 @@ from scipy.ndimage import shift
 from life123 import BioSim1D
 from life123 import ChemData as chem
 from life123 import Numerical as num
-from life123 import MovieArray
+from life123 import CollectionArray
 
 
 
@@ -464,7 +464,7 @@ def test_diffuse_4():
     bio.inject_sine_conc(species_name="A", frequency=2, amplitude=10)
     bio.inject_sine_conc(species_name="A", frequency=16, amplitude=5)
 
-    history = MovieArray()   # All the system state will get collected in this object
+    history = CollectionArray()   # All the system state will get collected in this object
 
     # Store the initial state
     arr = bio.lookup_species(species_index=0, copy=True)
@@ -523,7 +523,7 @@ def test_diffuse_5():
     bio.inject_sine_conc(species_name="A", frequency=2, amplitude=10)
     bio.inject_sine_conc(species_name="A", frequency=16, amplitude=5)
 
-    history = MovieArray()   # All the system state will get collected in this object
+    history = CollectionArray()   # All the system state will get collected in this object
 
     # Store the initial state
     arr = bio.lookup_species(species_index=0, copy=True)

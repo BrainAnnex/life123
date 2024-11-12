@@ -2,14 +2,14 @@ import pytest
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
-from life123 import MovieTabular, MovieArray, Collection
+from life123 import CollectionTabular, CollectionArray, Collection
 
 
 
 ###############  For class MovieTabular  ###############
 
 def test_store():
-    m = MovieTabular()
+    m = CollectionTabular()
 
     d = {"A": 1, "B": 2, "C": 3}
     d_original = d
@@ -17,31 +17,31 @@ def test_store():
     assert d == d_original
     assert len(m) == 1
     assert str(m) == "`MovieTabular` object with 1 snapshot(s) parametrized by `SYSTEM TIME`"
-    row = list(m.movie.iloc[0])                 # By row index
+    row = list(m.collection_df.iloc[0])                 # By row index
     assert row == [10, 1, 2, 3, 'first entry']
 
     m.store(par=20, data_snapshot={"A": 10, "B": 20, "C": 30}, caption="second entry")  # Add a snapshot
     assert len(m) == 2
     assert str(m) == "`MovieTabular` object with 2 snapshot(s) parametrized by `SYSTEM TIME`"
-    row = list(m.movie.iloc[0])                 # By row index
+    row = list(m.collection_df.iloc[0])                 # By row index
     assert row == [10, 1, 2, 3, 'first entry']
-    row = list(m.movie.iloc[1])                 # By row index
+    row = list(m.collection_df.iloc[1])                 # By row index
     assert row == [20, 10, 20, 30, 'second entry']
 
     m.store(par=30, data_snapshot={"A": -1, "B": -2, "C": -3})      # Add a snapshot
     assert len(m) == 3
     assert str(m) == "`MovieTabular` object with 3 snapshot(s) parametrized by `SYSTEM TIME`"
-    row = list(m.movie.iloc[0])                 # By row index
+    row = list(m.collection_df.iloc[0])                 # By row index
     assert row == [10, 1, 2, 3, 'first entry']
-    row = list(m.movie.iloc[1])                 # By row index
+    row = list(m.collection_df.iloc[1])                 # By row index
     assert row == [20, 10, 20, 30, 'second entry']
-    row = list(m.movie.iloc[2])                 # By row index
+    row = list(m.collection_df.iloc[2])                 # By row index
     assert row == [30, -1, -2, -3, '']
 
     m.store(par=40, data_snapshot={"A": 111, "B": 222}, caption="notice that C is missing")  # Add a snapshot
     assert len(m) == 4
     assert str(m) == "`MovieTabular` object with 4 snapshot(s) parametrized by `SYSTEM TIME`"
-    df = m.movie
+    df = m.collection_df
     data_values = [{"SYSTEM TIME": 10, "A": 1,   "B": 2,  "C": 3,  "caption": "first entry"},
                    {"SYSTEM TIME": 20, "A": 10,  "B": 20, "C": 30, "caption": "second entry"},
                    {"SYSTEM TIME": 30, "A": -1,  "B": -2, "C": -3, "caption": ""},
@@ -53,7 +53,7 @@ def test_store():
     m.store(par=50, data_snapshot={"A": 8, "B": 88, "C": 888, "D": 1}, caption="notice the newly-appeared D")  # Add a snapshot
     assert len(m) == 5
     assert str(m) == "`MovieTabular` object with 5 snapshot(s) parametrized by `SYSTEM TIME`"
-    df = m.movie
+    df = m.collection_df
 
     data_values.append({"SYSTEM TIME": 50, "A": 8, "B": 88, "C": 888, "D": 1, "caption": "notice the newly-appeared D"})
     expected = pd.DataFrame(data_values)
@@ -71,7 +71,7 @@ def test_store():
 
 
 def test_get_dataframe():
-    m = MovieTabular()
+    m = CollectionTabular()
 
     # Same data as used in test_MovieTabular(), except that the `SYSTEM TIME` parameter now has floats values
     m.store(par=10,   data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")
@@ -139,10 +139,10 @@ def test_get_dataframe():
 
 
 def test_get_2():
-    m = MovieTabular()
+    m = CollectionTabular()
 
     m.store(par=10, data_snapshot={"A": 1, "B": 2, }, caption="first entry")  # Add a snapshot
-    row = list(m.movie.iloc[0])                 # By row index, reaching into the internal data structure
+    row = list(m.collection_df.iloc[0])                 # By row index, reaching into the internal data structure
     assert row == [10, 1, 2, 'first entry']
 
     df_returned_copy = m.get_dataframe(return_copy=True)
@@ -152,7 +152,7 @@ def test_get_2():
     # Now we mess around with the returned value
     df_returned_copy.loc[0, "A"] = 999
 
-    row = list(m.movie.iloc[0])
+    row = list(m.collection_df.iloc[0])
     assert row == [10, 1, 2, 'first entry']     # The internal data structure is untouched
 
 
@@ -163,7 +163,7 @@ def test_get_2():
     # Now we mess around with the returned value
     df_returned_view.loc[0, "A"] = 999
 
-    row = list(m.movie.iloc[0])
+    row = list(m.collection_df.iloc[0])
     assert row == [10, 999, 2, 'first entry']     # The internal data structure got messed up as well
 
 
@@ -171,12 +171,12 @@ def test_get_2():
 
 
 def test_set_caption_last_snapshot():
-    m = MovieTabular()
+    m = CollectionTabular()
     m.store(par=100, data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")
     m.store(par=200, data_snapshot={"A": 10, "B": 20, "C": 30})
     m.set_caption_last_snapshot("End of experiment")
     #print(m.movie)
-    last_row = list(m.movie.loc[1])
+    last_row = list(m.collection_df.loc[1])
     assert last_row == [200, 10, 20, 30, 'End of experiment']
 
 
@@ -184,13 +184,13 @@ def test_set_caption_last_snapshot():
 ###############  For class MovieArray  ###############
 
 def test_MovieArray():
-    m = MovieArray()
+    m = CollectionArray()
 
     m.store(par=10, data_snapshot=np.array([1., 2., 3.]), caption="first entry")
     assert m.parameters == [10]
     assert m.captions == ["first entry"]
     assert m.snapshot_shape == (3,)
-    assert np.allclose(m.movie, [[1., 2., 3.]])
+    assert np.allclose(m.data_arr, [[1., 2., 3.]])
     assert len(m) == 1
     assert str(m) == "MovieArray object with 1 snapshot(s) parametrized by `SYSTEM TIME`"
 
@@ -198,8 +198,8 @@ def test_MovieArray():
     assert m.parameters == [10, 20]
     assert m.captions == ["first entry", "second entry"]
     assert m.snapshot_shape == (3,)
-    assert np.allclose(m.movie, [[1., 2., 3.],
-                                 [10., 11., 12.]])
+    assert np.allclose(m.data_arr, [[1., 2., 3.],
+                                    [10., 11., 12.]])
     assert len(m) == 2
     assert str(m) == "MovieArray object with 2 snapshot(s) parametrized by `SYSTEM TIME`"
 
@@ -207,9 +207,9 @@ def test_MovieArray():
     assert m.parameters == [10, 20, 30]
     assert m.captions == ["first entry", "second entry", ""]
     assert m.snapshot_shape == (3,)
-    assert np.allclose(m.movie, [[1., 2., 3.],
-                                 [10., 11., 12.],
-                                 [-10., -11., -12.]])
+    assert np.allclose(m.data_arr, [[1., 2., 3.],
+                                    [10., 11., 12.],
+                                    [-10., -11., -12.]])
     assert len(m) == 3
     assert str(m) == "MovieArray object with 3 snapshot(s) parametrized by `SYSTEM TIME`"
 
@@ -219,7 +219,7 @@ def test_MovieArray():
 
 
     # Again, in higher dimensions (and using methods to fetch the attributes)
-    m_2D = MovieArray(parameter_name="a,b values")
+    m_2D = CollectionArray(parameter_name="a,b values")
 
     m_2D.store(par={"a": 4., "b": 12.3},
                data_snapshot=np.array([[1., 2., 3.],
@@ -227,8 +227,8 @@ def test_MovieArray():
     assert m_2D.get_parameters() == [{"a": 4., "b": 12.3}]
     assert m_2D.get_captions() == [""]
     assert m_2D.get_shape() == (2, 3)
-    assert np.allclose(m_2D.movie, [[1., 2., 3.],
-                                    [10., 11., 12.]])
+    assert np.allclose(m_2D.data_arr, [[1., 2., 3.],
+                                       [10., 11., 12.]])
     assert len(m_2D) == 1
     assert str(m_2D) == "MovieArray object with 1 snapshot(s) parametrized by `a,b values`"
 
@@ -247,7 +247,7 @@ def test_MovieArray():
                             [[-1., -2., -3.],
                              [-10., -11., -12.]]
                         ])
-    assert np.allclose(m_2D.movie, expected)
+    assert np.allclose(m_2D.data_arr, expected)
     assert len(m_2D) == 2
     assert str(m_2D) == "MovieArray object with 2 snapshot(s) parametrized by `a,b values`"
 
