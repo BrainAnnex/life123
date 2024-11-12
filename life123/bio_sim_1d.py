@@ -4,7 +4,7 @@ import math
 from scipy.fft import rfft, rfftfreq    # Fast Fourier Transforms to extract frequency components
 from scipy.stats import norm
 from typing import Union, List, Tuple
-from life123.movies import CollectionTabular
+from life123.collections import CollectionTabular
 from life123.uniform_compartment import UniformCompartment
 import plotly.express as px
 from life123.html_log import HtmlLog as log

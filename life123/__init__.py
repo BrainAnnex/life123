@@ -18,7 +18,7 @@ from life123.bio_sim_2d import BioSim2D
 from life123.bio_sim_3d import BioSim3D
 from life123.chem_data import ChemData
 from life123.html_log import HtmlLog
-from life123.movies	import (
+from life123.collections	import (
     CollectionTabular,
     CollectionArray,
     Collection

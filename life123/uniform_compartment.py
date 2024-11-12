@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from typing import Union
 from life123.chem_data import ChemData
 from life123.diagnostics import Diagnostics
-from life123.movies import CollectionTabular
+from life123.collections import CollectionTabular
 from life123.numerical import Numerical
 from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
 from life123.visualization.plotly_helper import PlotlyHelper

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from typing import Union
-from life123.movies import CollectionTabular
+from life123.collections import CollectionTabular
 
 
 
