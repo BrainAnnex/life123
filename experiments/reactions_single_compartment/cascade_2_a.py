@@ -24,19 +24,18 @@
 # **Background**: please see experiments `cascade_1` and `mystery_reaction_1`
 
 # %%
-LAST_REVISED = "July 26, 2024"
-LIFE123_VERSION = "1.0.0.beta.38"    # Version this experiment is based on
+LAST_REVISED = "Nov. 12, 2024"
+LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
 
 # %%
-#import set_path            # Using MyBinder?  Uncomment this before running the next cell!
-                            # Importing this module will add the project's home directory to sys.path
+#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
-# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import check_version, UniformCompartment, PlotlyHelper
+from life123 import check_version, UniformCompartment, ReactionKinetics, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
@@ -68,13 +67,11 @@ dynamics.describe_reactions()
 # ### Run the simulation
 
 # %%
-dynamics.set_conc({"A": 50.}, snapshot=True)  # Set the initial concentrations of all the chemicals
+dynamics.set_conc({"A": 50.})  # Set the initial concentrations
 dynamics.describe_state()
 
 # %%
 dynamics.single_compartment_react(initial_step=0.01, duration=0.8,
-                                  snapshots={"initial_caption": "1st reaction step",
-                                             "final_caption": "last reaction step"},
                                   variable_steps=True)
 
 # %%
@@ -101,7 +98,7 @@ df
 
 # %% [markdown]
 # ## Column B is NOT given to us.  For example, `B` might be an intermediary we can't measure.  
-# #### Only [A] and [C] are given to us, on some variably-spaced time grid
+# #### Only [A] and [C] are given to us, on a variably-spaced time grid
 
 # %% [markdown]
 # #### Let's extract some columns, as Numpy arrays:
@@ -116,19 +113,19 @@ A_conc = df["A"].to_numpy()
 C_conc = df["C"].to_numpy()
 
 # %% [markdown]
-# #### If the composite reaction `A <-> C` could be modeled as an elementary reaction, we'd expect the rate of change of [C] to be proportional to [A]  
-# Let's see what happens if we try to do such a linear fit!
+# #### If the composite reaction `A <-> C` could be modeled as an elementary reaction, we'd expect the rate of change of [C] to be `C'(t) = kF * A(t) - kR * C(t)` , for some values `kF` and `kR`  
+# Let's see what happens if we try a fit to determine values for `kF` and `kR`!
 
 # %%
-dynamics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, reactant_name="A", product_name="C")
+ReactionKinetics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, reactant_name="A", product_name="C")
 
 # %% [markdown]
-# ### The least-square fit is awful : the complex reaction `A <-> C` doesn't seem to be amenable to being modeled as a simple reaction with some suitable rate constants
+# ### The least-square fit is awful : the complex reaction `A <-> C` doesn't seem to be amenable to being modeled as an elementary reaction with some suitable rate constants
 # Probably not too surprising given our "secret" knowledge from Part 1 that the complex reaction originates from 2 elementary reactions where the intermediate product builds up at one point
 
 # %% [markdown]
 # ### A glance at the above diagram reveals much-better linear fits, if split into 2 portions, one where A(t) ranges from 0 to about 24, and one from about 24 to 50   
-# Indeed, revisiting the early portion of the time plot from Part 1, one can see an inflection in the [C] green curve roughly around time t=0.1, which is when [A] is around 24 (blue).  That's shortly after the peak of the mystery intermediate B (orange).    
+# Indeed, revisiting the early portion of the time plot from Part 1, one can see an inflection in the [C] green curve roughly around time t=0.1, which is when [A] is around 24 (turquoise).  That's shortly after the peak of the mystery intermediate B (orange).    
 #
 # We'll pick time **t=0.1** as the divider between the 2 domains of the `A <-> C` time evolution that we want to model. 
 
@@ -166,16 +163,18 @@ C_conc_late = C_conc[48:]
 t_arr_early = t_arr[:48]
 t_arr_late = t_arr[48:]
 
+# %%
+
 # %% [markdown]
-# ### I. Let's start with the EARLY region, when t < 0.1
+# ## I. Let's start with the EARLY region, when t < 0.1
 
 # %%
-dynamics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_conc=C_conc_early,
+ReactionKinetics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_conc=C_conc_early,
                                         reactant_name="A", product_name="C")
 
 # %% [markdown]
-# Trying to fit an elementary reaction to that region leads to a **negative** reverse rate constant!  
-# It's no surprise that an elementary reaction is a good fit, if one observes what happens to the time evolution of the concentrations.  Repeating the earlier plot, but only showing `A` and `C` (i.e. hiding the intermediary `B`):
+# While the linear fits is a lot better than before - nonetheless trying to fit an elementary reaction to that region leads to a **negative** reverse rate constant!  
+# It's no surprise that an elementary reaction is NOT a good fit, if one observes what happens to the time evolution of the concentrations.  Repeating the earlier plot, but only showing `A` and `C` (i.e. hiding the intermediary `B`):
 
 # %%
 dynamics.plot_history(colors=['darkturquoise', 'green'], range_x=[0, 0.4], vertical_lines_to_add=[0.1],
@@ -183,17 +182,17 @@ dynamics.plot_history(colors=['darkturquoise', 'green'], range_x=[0, 0.4], verti
 
 # %% [markdown]
 # In the zone to the left of the vertical dashed line:  
-# when the reactant `A` is plentiful, the rate of change (gradient) of the product `C` is low - and vice versa.  
+# when the reactant `A` is plentiful, the rate of change (slope of the greeen line) of the product `C` is low - and vice versa.  
 # Does that look like an elementary reaction in its kinetics?  Nope!
 
 # %%
 
 # %% [markdown]
-# ### II. And now let's consider the LATE region, when t > 0.1
+# ## II. And now let's consider the LATE region, when t > 0.1
 
 # %%
-dynamics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc=C_conc_late,
-                                        reactant_name="A", product_name="C")
+ReactionKinetics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc=C_conc_late,
+                                                reactant_name="A", product_name="C")
 
 # %% [markdown]
 # This time we have an adequate linear fit AND meaningful rate constants : kF of about 8 and kR of about 0.  Do those numbers sound familiar?  A definite resemblance to the kF=8, kR=2 of the SLOWER elementary reaction `A <-> B`!  
@@ -207,7 +206,9 @@ dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], range_x=[0, 0
                       vertical_lines_to_add=[0.1])
 
 # %% [markdown]
-# A possible conclusion to draw is that, in this case, the earlier part of the complex (compound) reaction `A <-> C` cannot be modeled by an elementary reaction, while the later part can indeed be modeled by a 1st order elementary reaction, with kinetics similar to the slower `A <-> B` reaction
+# A possible conclusion to draw is that, in this case:  
+# 1) the earlier part of the complex (compound) reaction `A <-> C` cannot be modeled by an elementary reaction
+# 2) while the later part can indeed be modeled by a 1st order elementary reaction, with kinetics similar to the slower `A <-> B` reaction
 
 # %% [markdown]
 # **The intuition:** imagine `A <-> B <-> C` as a supply line.  
@@ -221,11 +222,11 @@ dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], range_x=[0, 0
 # If we were interested in early transients (for example, if diffusion quickly intervened), we couldn't use that model.
 
 # %% [markdown]
-# #### Is that surprising?  At early times, compare the inflection of the final product, C, of the composite reaction vs. the inflection of the product of a simple reaction (such as B in experiment `react1`, both appearing in green.)
+# #### Is that surprising?  At early times, compare the inflection of the final product, `C`, of the composite reaction vs. the inflection of the product of a simple reaction (such as B in experiment `react1`, both appearing in green.)
 
 # %%
 
 # %% [markdown]
-# #### In the continuation experiment, `cascade_2_b`, we explore the scenario where the 2 elementary reactions are much more different from each other
+# #### NEXT: in the continuation experiment, `cascade_2_b`, we explore the scenario where the 2 elementary reactions are much more different from each other
 
 # %%

@@ -2,6 +2,7 @@ import plotly.express as px
 import plotly.graph_objects as pgo
 import numpy as np
 import pandas as pd
+from plotly.subplots import make_subplots
 from typing import Union
 
 
@@ -82,10 +83,10 @@ class PlotlyHelper:
         :param x:           A Numpy array, with the (common) x-axis values
         :param y:           Either a Numpy array, or a list/tuple of them, with the y-axis values of the curve(s)
         :param title:       [OPTIONAL] Title to use for the overall plot
-        :param range_x:      [OPTIONAL] list of the form [t_start, t_end], to initially only show a part of the timeline.
+        :param range_x:     [OPTIONAL] list of the form [t_start, t_end], to initially only show a part of the timeline.
                                 Note: it's still possible to zoom out, and see the excluded portion
-        :param x_label:      [OPTIONAL] Caption to use for the x-axis
-        :param y_label:      [OPTIONAL] Caption to use for the y-axis
+        :param x_label:     [OPTIONAL] Caption to use for the x-axis
+        :param y_label:     [OPTIONAL] Caption to use for the y-axis
         :param curve_labels:[OPTIONAL] String, or list of strings.
                                 Label(s) to use for the various curves in the legend and in the hover boxes.
                                 If missing, and there's only 1 curve, the legend box won't be shown
@@ -301,7 +302,7 @@ class PlotlyHelper:
     def combine_plots(cls, fig_list :Union[list, tuple], title="", x_label=None, y_label=None,
                       xrange=None, legend_title=None, curve_labels=None, show=False) -> pgo.Figure:
         """
-        Combine together several existing plotly plots
+        Combine together several existing plotly plots into a single one (with combined axes)
 
         EXAMPLE:
                     from life123 import PlotlyHelper
@@ -367,3 +368,43 @@ class PlotlyHelper:
             all_fig.show()  # Actually display the plot
 
         return all_fig
+
+
+
+    @classmethod
+    def combine_in_vertical_grid(cls, fig1, fig2, title1 :str, title2 :str,
+                                 title_combined :str, height=900) -> pgo.Figure:
+        """
+        Combine into a vertical grid 2 plotly graph objects (now treated as subplots)
+
+        :param fig1:
+        :param fig2:
+        :param title1:
+        :param title2:
+        :param title_combined:
+        :param height           [OPTIONAL] The overall height of the combined plots
+        :return:                A combined plot (a plotly "figure" object)
+        """
+
+        # Make a visual grid with 2 rows and 1 column; adequate vertical spacing is used to clearly shows axes labels
+        combined_fig = make_subplots(rows=2, cols=1,
+                                     subplot_titles=(title1, title2),
+                                     vertical_spacing=0.15)  # Increase vertical spacing (as a fraction of the plot height)
+
+        # Populate the grid with all the inner parts ("traces") of each individual plot ("figure" object)
+        for trace in fig1.data:
+            combined_fig.add_trace(trace, row=1, col=1)
+        for trace in fig2.data:
+            combined_fig.add_trace(trace, row=2, col=1)
+
+        # The axes labels must be copied over separately
+        combined_fig.update_xaxes(title_text=fig1.layout.xaxis.title.text, row=1, col=1)
+        combined_fig.update_yaxes(title_text=fig1.layout.yaxis.title.text, row=1, col=1)
+
+        combined_fig.update_xaxes(title_text=fig2.layout.xaxis.title.text, row=2, col=1)
+        combined_fig.update_yaxes(title_text=fig2.layout.yaxis.title.text, row=2, col=1)
+
+        # Add a title to the combined layout, and set its overall height
+        combined_fig.update_layout(title=title_combined, height=height)    # height controls the total height of the entire figure
+
+        return combined_fig

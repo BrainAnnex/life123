@@ -211,11 +211,13 @@ class ReactionKinetics:
                                        reactant_name="Reactant", product_name="Product"):
         """
         Estimate the rate constants for a 1-st order reaction of the type A <-> B,
-        given time evolution of [A] and [B] on a grid of time points (don't need to be equally spaced)
+        given time evolution of [A] and [B] on a grid of time points (the points don't need to be equally spaced),
+        and create a plot to show the fit
 
         IMPORTANT : This is for reactions with a 1:1 stoichiometry between the given reactant and product
 
-        :param t:               A numpy array of time grid points where the other functions are specified
+        :param t:               A numpy array of time grid points at which the other functions are specified
+                                    (the points do not need to be equally-spaced)
         :param A_conc:          A numpy array of the concentrations of the reactant, at the times in the array t
         :param B_conc:          A numpy array of the concentrations of the product, at the times in the array t
         :param reactant_name:   [OPTIONAL] The name of the reactant (for display purposes)
@@ -244,18 +246,36 @@ class ReactionKinetics:
         # Do a least-square fit
         kF, kR = Numerical.two_vector_least_square(V = A_conc, W = -B_conc, Y = B_prime)
 
-        print(f"Least square fit to {product_name}'(t) = kF * {reactant_name}(t) + kR * (- {product_name}(t) )")
+        print(f"Least square fit to model as elementary reaction: {product_name}'(t) = kF * {reactant_name}(t) - kR * {product_name}(t)")
 
+        # Plot both Y and its least-square fit, as functions of t
+        fig_main = PlotlyHelper.plot_curves(x=t, y=[B_prime , kF * A_conc - kR * B_conc],
+                                       title=f"d/dt {product_name}(t) and its least-square fit",
+                                       x_label="t", y_label=f"d/dt  {product_name}(t)",
+                                       legend_title="Curves",
+                                       curve_labels=[f"d/dt {product_name}(t): exact", f"d/dt {product_name}(t): least-square fit"],
+                                       colors=['green', 'red'])
+
+        '''
         # Plot both Y and its least-square fit, as functions of X
         fig = PlotlyHelper.plot_curves(x=A_conc, y=[B_prime , kF * A_conc - kR * B_conc],
                                        title=f"d/dt {product_name}(t) as a function of {reactant_name}(t), alongside its least-square fit",
                                        x_label=f"{reactant_name}(t)", y_label=f"{product_name}'(t)",
                                        curve_labels=[f"{product_name}'(t)", "Linear Fit"], legend_title="Curve vs Fit:",
                                        colors=['green', 'red'])
+        '''
+
+        fig_side = PlotlyHelper.plot_curves(x=A_conc, y=B_prime,
+                                         title=f"d/dt {product_name}(t) as a function of {reactant_name}(t)",
+                                         x_label=f"{reactant_name}(t)", y_label=f"d/dt  {product_name}(t)",
+                                         colors="purple")
 
         print(f"\n-> ESTIMATED RATE CONSTANTS: kF = {kF:,.4g} , kR = {kR:,.4g}")
 
-        return fig
+        return PlotlyHelper.combine_in_vertical_grid(fig1=fig_main, fig2=fig_side,
+                                                     title1=f"d/dt {product_name}(t) and its least-square fit",
+                                                     title2=f"d/dt {product_name}(t) as a function of {reactant_name}(t)",
+                                                     title_combined="LEAST-SQUARE FIT ANALYSIS:")
 
 
 

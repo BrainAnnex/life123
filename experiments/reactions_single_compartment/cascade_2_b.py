@@ -21,17 +21,20 @@
 # In PART 2, the time functions generated in Part 1 are taken as a _starting point,_ to explore how to model the composite reaction `A <-> C`   
 #
 # **Background**: please see experiment `cascade_2_a`  
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Nov. 12, 2024"
+LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
+
+# %%
+#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
-from experiments.get_notebook_info import get_notebook_basename
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path 
 
-from life123 import UniformCompartment
-from life123.visualization.plotly_helper import PlotlyHelper
+from life123 import UniformCompartment, ReactionKinetics, PlotlyHelper
 
 # %%
 
@@ -57,13 +60,11 @@ dynamics.describe_reactions()
 # ### Run the simulation
 
 # %%
-dynamics.set_conc({"A": 50.}, snapshot=True)  # Set the initial concentrations of all the chemicals, in their index order
+dynamics.set_conc({"A": 50.}, snapshot=True)  # Set the initial concentrations of the chemicals
 dynamics.describe_state()
 
 # %%
 dynamics.single_compartment_react(initial_step=0.01, duration=0.8,
-                                  snapshots={"initial_caption": "1st reaction step",
-                                             "final_caption": "last reaction step"},
                                   variable_steps=True)
 
 # %%
@@ -111,7 +112,7 @@ C_conc = df["C"].to_numpy()
 # Let's see what happens if we try to do such a linear fit!
 
 # %%
-dynamics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, reactant_name="A", product_name="C")
+ReactionKinetics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C_conc, reactant_name="A", product_name="C")
 
 # %% [markdown]
 # ### The least-square fit is awful : the complex reaction `A <-> C` doesn't seem to be amenable to being modeled as a simple reaction with some suitable rate constants
@@ -149,30 +150,34 @@ C_conc_late = C_conc[20:]
 t_arr_early = t_arr[:20]
 t_arr_late = t_arr[20:]
 
+# %%
+
 # %% [markdown]
-# ### I. Let's start with the EARLY region, when t < 0.028
+# ## I. Let's start with the EARLY region, when t < 0.028
 
 # %%
-dynamics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_conc=C_conc_early,
+ReactionKinetics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_conc=C_conc_early,
                                         reactant_name="A", product_name="C")
 
 # %% [markdown]
 # Just as we saw in experiment `cascade_2_a`, trying to fit an elementary reaction to that region leads to a **negative** reverse rate constant!   
 # This time, we won't discuss this part any further.
 
+# %%
+
 # %% [markdown]
-# ### II. And now let's consider the LATE region, when t > 0.028
+# ## II. And now let's consider the LATE region, when t > 0.028
 
 # %%
-dynamics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc=C_conc_late,
+ReactionKinetics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late, B_conc=C_conc_late,
                                         reactant_name="A", product_name="C")
 
 # %% [markdown]
 # This time we have an adequate linear fit AND meaningful rate constants : kF of about 8 and kR of about 0.  Do those numbers sound familiar?  A definite resemblance to the kF=8, kR=2 of the SLOWER elementary reaction `A <-> B`!  
 #
-# #### The slower `A <-> B` reaction dominates the kinetics from about t=0.028 on    
+# #### The slower `A <-> B` reaction dominates the kinetics from about t=0.028 on.    
 #
-# Let's see the graph again:
+# Let's see the concentrations over time again:
 
 # %%
 dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], range_x=[0, 0.4],
@@ -182,12 +187,14 @@ dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], range_x=[0, 0
 # Just as we concluded in experiment `cascade_2_a`, the earlier part of the complex (compound) reaction `A <-> C` cannot be modeled by an elementary reaction, while the later part can indeed be modeled by a 1st order elementary reaction, with kinetics similar to the slower `A <-> B` reaction.  This time, with a greater disparity between the two elementary reaction, the transition happens much sooner.
 
 # %% [markdown]
-# ### While it's a well-known Chemistry notion that the slower reaction is the rate-determining step in a chain, we saw in this experiment, and in the previous one, that the complex reaction could be roughly modeled with the rate constants of the slower reaction only after some time - especially if the 2 elementary reactions are relatively similar (as in the previous experiment).  
+# ### While it's a well-known Chemistry notion that the slower reaction is the rate-determining step in a chain, we saw in this experiment, and in the previous one, that the complex reaction could be roughly modeled with the rate constants of the slower reaction only after some time - especially if the 2 elementary reactions are relatively similar (as in the previous experiment `cascade_2_a`).  
 
 # %% [markdown]
 # If we were interested in early transients (for example, if diffusion quickly intervened), we couldn't use that model.
 
+# %%
+
 # %% [markdown]
-# #### In the continuation experiment, `cascade_2_c`, we explore the scenario where the 2 elementary reactions are reversed in their relative speeds
+# #### NEXT: In the continuation experiment, `cascade_2_c`, we explore the scenario where the 2 elementary reactions are reversed in their relative speeds
 
 # %%

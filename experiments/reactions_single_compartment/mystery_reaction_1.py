@@ -18,7 +18,7 @@
 #
 # Assume the reaction is known to be 1st order (won't verify that.)  
 #
-# In PART 1, a time evolution of [A] and [B] is obtained by simulation  
+# In PART 1, a time evolution of [A] and [B], with known rate constants, is obtained by simulation  
 #
 # In PART 2, the time evolutions generated in Part 1 are taken as a _starting point,_ to estimate the rate constants of `A <-> B`  
 #
@@ -28,26 +28,27 @@
 # ### TAGS :  "numerical", "uniform compartment", "under-the-hood"
 
 # %%
-LAST_REVISED = "Sep. 8, 2024"
-LIFE123_VERSION = "1.0.0.beta.38"      # Version this experiment is based on
+LAST_REVISED = "Nov. 12, 2024"
+LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
 
 # %%
-#import set_path            # Using MyBinder?  Uncomment this before running the next cell!
-                            # Importing this local file will add the project's home directory to sys.path
+#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
-# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
 import ipynbname
 import numpy as np
 
-from life123 import check_version, UniformCompartment, PlotlyHelper, Numerical
+from life123 import check_version, UniformCompartment, ReactionKinetics, PlotlyHelper, Numerical
 
 
 # %%
 check_version(LIFE123_VERSION)
+
+# %%
 
 # %%
 
@@ -57,34 +58,30 @@ check_version(LIFE123_VERSION)
 
 # %% tags=[]
 # Instantiate the simulator and specify the accuracy preset
-dynamics = UniformCompartment(preset="mid")
+uc = UniformCompartment(preset="mid", enable_diagnostics=True)
 
 # Reaction A <-> B (mostly in the forward direction)
-dynamics.add_reaction(reactants="A", products="B",
-                      forward_rate=12., reverse_rate=2.) 
+uc.add_reaction(reactants="A", products="B",
+                forward_rate=12., reverse_rate=2.) 
  
-dynamics.describe_reactions()
+uc.describe_reactions()
 
 # %% [markdown]
 # ### Run the simulation
 
 # %%
-dynamics.set_conc({"A": 40., "B": 10.}, snapshot=True)  # Set the initial concentrations
-dynamics.describe_state()
+uc.set_conc({"A": 40., "B": 10.})  # Set the initial concentrations
+uc.describe_state()
 
 # %%
-dynamics.enable_diagnostics()         # To save diagnostic information for the simulation run, below
-
-dynamics.single_compartment_react(initial_step=0.01, duration=0.5,
-                                  snapshots={"initial_caption": "1st reaction step",
-                                             "final_caption": "last reaction step"},
-                                  variable_steps=True)
+uc.single_compartment_react(initial_step=0.01, duration=0.5,
+                            variable_steps=True)
 
 # %% [markdown]
 # ### <a name="cascade_1_plot"> Plots of changes of concentration with time</a>
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'green'], show_intervals=True)
+uc.plot_history(colors=['darkturquoise', 'green'], show_intervals=True)
 
 # %% [markdown]
 # Notice the variable time steps (vertical dashed lines), more frequent when there's more change
@@ -101,7 +98,7 @@ dynamics.plot_history(colors=['darkturquoise', 'green'], show_intervals=True)
 # Let's start by taking stock of the actual data (saved during the simulation of part 1):
 
 # %%
-df = dynamics.get_history() 
+df = uc.get_history() 
 df
 
 # %% [markdown]
@@ -124,9 +121,9 @@ B_conc = df["B"].to_numpy()
 # (in Part 3, we'll do a step-by-step derivation, to see how it works)
 
 # %%
-dynamics.estimate_rate_constants_simple(t=t_arr,
-                                        A_conc=A_conc, B_conc=B_conc,
-                                        reactant_name="A", product_name="B")
+ReactionKinetics.estimate_rate_constants_simple(t=t_arr,
+                                                A_conc=A_conc, B_conc=B_conc,
+                                                reactant_name="A", product_name="B")
 
 # %% [markdown]
 # ### The least-square fit is good...  and the values estimated from the data for kF and kR are in good agreement with the values we used in the simulation to get that data, respectively 12 and 2 (see PART 1, above)  
@@ -182,7 +179,7 @@ A_conc + B_conc
 # Incidentally, there's a function to verify that the stoichiometry 
 # of a single reaction holds true across the entire simulation run 
 # (overkill in this case!)
-dynamics.diagnostics.stoichiometry_checker_entire_run() 
+uc.get_diagnostics().stoichiometry_checker_entire_run() 
 
 # %%
 
@@ -236,19 +233,23 @@ PlotlyHelper.plot_curves(x=t_arr, y=[Deriv_A , Deriv_B], title="d/dt A(t) and d/
 # * `kR = b`
 
 # %% [markdown]
-# Let's carry it out!  First, let's verify that `B'(t)` is indeed a linear function of `A(t)` and of `B(t)`.
-# We already have, from our data, B'(t) as the Numpy array `Deriv_B` , and we also have A(t) and B(t) as, respectively, the Numpy arrays `A_conc` and `B_conc`
+# Let's carry it out!  First, let's verify that `B'(t)` is indeed a linear function of `A(t)`.  
+# We already have, from our data, B'(t) as the Numpy array `Deriv_B` , and we also have A(t) as the Numpy arrays `A_conc`
 
 # %%
-PlotlyHelper.plot_curves(x=A_conc, y=Deriv_B, title="d/dt B(t) as a function of A(t)",
-                         x_label="A(t)", y_label="B'(t)", colors="green")
+fig_side = PlotlyHelper.plot_curves(x=A_conc, y=Deriv_B, title="B'(t) as a function of A(t)",
+                                    x_label="A(t)", y_label="B'(t)", colors="purple")
+fig_side
 
 # %% [markdown]
 # As expected, it appears to be a straight line (green), and the rate of change in the product B is higher when the concentration of the reactant A is larger.  
 
+# %% [markdown]
+# Since `A(t) + B(t)` is a constant, then `B'(t)`, just shown to be a linear function of `A(t)`, will also be a linear function of `B(t)`:
+
 # %%
-PlotlyHelper.plot_curves(x=B_conc, y=Deriv_B, title="d/dt B(t) as a function of B(t)",
-                         x_label="B(t)", y_label="B'(t)", colors="blue")
+PlotlyHelper.plot_curves(x=B_conc, y=Deriv_B, title="B'(t) as a function of B(t)",
+                         x_label="B(t)", y_label="B'(t)", colors="gray")
 
 # %% [markdown]
 # #### Let's do the least-square fit we had set out to do: `B'(t) = a * {A(t)} + b * {- B(t)}` , for some a, b
@@ -261,19 +262,23 @@ a, b
 # #### **Voila', those are, respectively, our estimated kF and kR!**
 
 # %% [markdown]
-# #### We just obtained the same values of the estimated kF and kR as were computed by a call to `estimate_rate_constants()` in Part 2
+# #### We just obtained the same values of the estimated `kF` and `kR` as were computed by a call to `estimate_rate_constants()` in Part 2
 
 # %% [markdown]
-# #### Visually verify the least-square fit
+# #### Visually verify the least-square fit:
 
 # %%
-# Plot B'(t) vs. its least-square approx
-PlotlyHelper.plot_curves(x=Deriv_B, y=[Deriv_B, (a * A_conc - b * B_conc)],
-                         title="d/dt B(t) as a function of A(t), alongside its least-square fit",
-                         x_label="A(t)", y_label="B'(t)",
-                         curve_labels=["B'(t)", "Linear Fit"], legend_title="Curve vs Fit:", colors=['green', 'red'])
+# Plot B'(t) and its least-square approx
+fig_main = \
+PlotlyHelper.plot_curves(x=t_arr, y= [Deriv_B, a * A_conc - b * B_conc],
+                         title="d/dt B(t) and its least-square fit",
+                         x_label="t", y_label="d/dt  B(t)",
+                         colors=['green', 'red'],
+                         legend_title="Curves",
+                         curve_labels=["d/dt B(t) : exact", "d/dt B(t) : least-square fit"])
+fig_main
 
 # %% [markdown]
-# _Virtually indistinguishable lines!  And the same plot we saw in Part 2!_
+# _Virtually indistinguishable lines!  And the same plot as we saw in Part 2!_
 
 # %%
