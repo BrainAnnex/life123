@@ -169,15 +169,70 @@ def test_get_2():
 
 
 
-
 def test_set_caption_last_snapshot():
     m = CollectionTabular()
     m.store(par=100, data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")
     m.store(par=200, data_snapshot={"A": 10, "B": 20, "C": 30})
     m.set_caption_last_snapshot("End of experiment")
-    #print(m.movie)
+    #print(m.collection_df)
     last_row = list(m.collection_df.loc[1])
     assert last_row == [200, 10, 20, 30, 'End of experiment']
+
+
+
+def test_set_field_last_snapshot():
+    m = CollectionTabular()
+    m.store(par=100, data_snapshot={"A": 1, "B": 2}, caption="first entry")     # Add a 1st row
+
+    m.set_field_last_snapshot("B", 22)
+    last_row = list(m.collection_df.loc[0])
+    assert last_row == [100, 1, 22, 'first entry']
+
+    m.set_field_last_snapshot("X", 99)
+    last_row = list(m.collection_df.loc[0])
+    assert list(m.collection_df.columns) == ["SYSTEM TIME", "A", "B", "caption", "X"]   # New column present
+    assert last_row == [100, 1, 22, 'first entry', 99]
+
+    m.store(par=200, data_snapshot={"A": -1, "B": -2})      # Add a 2nd row
+
+    m.set_field_last_snapshot("Y", -123)
+
+    assert list(m.collection_df.columns) == ["SYSTEM TIME", "A", "B", "caption", "X", "Y"]   # New column present
+
+    data_values = [ {"SYSTEM TIME": 100, "A": 1,  "B": 22, "caption": "first entry", "X": 99,     "Y": np.nan},
+                    {"SYSTEM TIME": 200, "A": -1, "B": -2, "caption": "",            "X": np.nan, "Y": -123}]
+    expected_df = pd.DataFrame(data_values)
+
+    assert_frame_equal(m.collection_df, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
+
+
+
+def test_update_last_snapshot():
+    m = CollectionTabular()
+    m.store(par=100, data_snapshot={"A": 1, "B": 2}, caption="first entry")     # Add a 1st row
+
+    m.update_last_snapshot({"A": 11, "B": 22})
+    last_row = list(m.collection_df.loc[0])
+    assert last_row == [100, 11, 22, 'first entry']
+
+    m.update_last_snapshot({"A": 9, "X": 99})
+    last_row = list(m.collection_df.loc[0])
+    assert list(m.collection_df.columns) == ["SYSTEM TIME", "A", "B", "caption", "X"]   # New column present
+    assert last_row == [100, 9, 22, 'first entry', 99]
+
+    m.store(par=200, data_snapshot={"A": -1, "B": -2})      # Add a 2nd row
+
+    m.update_last_snapshot({"Y": -123})
+
+    assert list(m.collection_df.columns) == ["SYSTEM TIME", "A", "B", "caption", "X", "Y"]   # New column present
+
+    data_values = [ {"SYSTEM TIME": 100, "A": 9,  "B": 22, "caption": "first entry", "X": 99,     "Y": np.nan},
+                    {"SYSTEM TIME": 200, "A": -1, "B": -2, "caption": "",            "X": np.nan, "Y": -123}]
+    expected_df = pd.DataFrame(data_values)
+
+    assert_frame_equal(m.collection_df, expected_df, check_dtype=False)  # To allow for slight discrepancies in floating-point
+
+
 
 
 

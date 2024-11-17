@@ -68,14 +68,15 @@ class CollectionTabular:
 
         if self.collection_df.empty:            # No Pandas dataframe was yet started
             self.collection_df = pd.DataFrame(data_snapshot, index=[0])     # Form the initial Pandas dataframe (zero refers to the initial row)
-            self.collection_df.insert(0, self.parameter_name, par)          # Add a column at the beginning
+                                                                            #   from the given data dictionary
+            self.collection_df.insert(0, self.parameter_name, par)          # Add a column at the beginning, for the snapshot parameter
             if caption is not None:
-                self.collection_df["caption"] = caption                         # Add a column at the end
-        else:                           # The Pandas dataframe was already started
+                self.collection_df["caption"] = caption                     # Add a column at the end, for the caption
+        else:                                   # The Pandas dataframe was already started
             d = data_snapshot.copy()                    # Make a copy, to avoid altering the passed dict
             d[self.parameter_name] = par                # Expand the snapshot dict
             if caption is not None:
-                d["caption"] = caption                      # Expand the snapshot dict
+                d["caption"] = caption                  # Expand the snapshot dict
 
             self.collection_df = pd.concat([self.collection_df, pd.DataFrame([d])], ignore_index=True)    # Append new row to dataframe
             # Note: we cannot do an in-place addition of a new row to an existing dataframe,
@@ -204,14 +205,34 @@ class CollectionTabular:
     def set_field_last_snapshot(self, field_name: str, field_value) -> None:
         """
         Set the specified field of the last (most recent) snapshot to the given value.
-        Any previous value gets over-written
+        Any previous value gets over-written.
+        If the specified field name is not already one of the columns in the underlying
+        data frame, a new column by that name gets added; any previous rows will have the value NaN
+        assigned to that column
 
         :param field_name:  Name of field of interest
         :param field_value: Value to write into the above field for the last (most recent) snapshot
         :return:            None
         """
-        index = len(self.collection_df) - 1
-        self.collection_df.loc[index, field_name] = field_value
+        last_row_index = len(self.collection_df) - 1
+        self.collection_df.loc[last_row_index, field_name] = field_value
+
+
+
+    def update_last_snapshot(self, update_values: dict) -> None:
+        """
+        Set some fields of the last (most recent) snapshot to the given values.
+        Any previous value gets over-written.
+        If any field name is not already among the columns in the underlying
+        data frame, a new column by that name gets added; any previous rows will have the value NaN
+        assigned to that column
+
+        :param update_values:   Dict whose keys are the names of the columns to update
+        :return:                None
+        """
+        last_row_index = len(self.collection_df) - 1
+        self.collection_df.loc[last_row_index, update_values.keys()] = update_values.values()
+
 
 
 

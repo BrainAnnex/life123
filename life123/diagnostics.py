@@ -158,6 +158,7 @@ class Diagnostics:
                                 "rate"
         """
         # TODO: probably ditch, because no longer needed.  (Also, the dataframe merge might not always work...)
+        # TODO: the times had better match up!  Currently not validated
 
         rates = self.get_rxn_rates(rxn_index=rxn_index)     # A Pandas dataframe with 2 columns: "START_TIME" and "rate"
         system_history = self.get_diagnostic_conc_data()    # Note that is a copy of the dataframe; so, no harm in changing it, below
@@ -208,7 +209,8 @@ class Diagnostics:
         Return a Pandas dataframe with the diagnostic run data of the requested SINGLE reaction,
         from the time that the diagnostics were enabled by instantiating this class.
 
-        In particular, the dataframe contains the "Delta" values for each of the chemicals
+        In particular, the dataframe contains the reaction rate at the start time,
+        and the "Delta" values for each of the chemicals
         involved in the reaction - i.e. the change in their concentrations
         over the time interval that *STARTS* at the value in the "START_TIME" column.
         (So, there'll be no row with the final current System Time)
@@ -243,7 +245,7 @@ class Diagnostics:
         :return:                If present, return a Pandas data frame with (all or some of)
                                     the diagnostic data of the specified reaction.
                                     Columns of the dataframes:
-                                    'START_TIME' 'Delta A' 'Delta B'... 'time_step' 'caption'
+                                    'START_TIME','time_step','aborted','Delta A','Delta B'...,'rate','caption'
                                 If not present, return None
         """
         # Validate the reaction index

@@ -27,8 +27,7 @@
 # %% [markdown]
 # #### THE REACTION:  
 # the enzyme `Adenosine deaminase` with the substrate `2,6-Diamino-9-β-D-deoxyribofuranosyl-9-H-purine`,  
-# and the initial concentration values choosen below, all satisfy the customary Michaelis-Menten assumptions that  
-# `[E] << [S]` and that the reaction rate constants satisfy `k1_reverse >> k2_forward`  
+# and the initial concentration values choosen below, all satisfy the customary Michaelis-Menten assumptions that  `[E] << [S]` and that the reaction rate constants satisfy `k1_reverse >> k2_forward`  
 #
 # For this reaction: k1_forward = 18, k1_reverse = 100, k2_forward = 49  
 #
@@ -122,7 +121,7 @@ S0 = 20.
 E0 = 1.
 
 # %%
-# Here we use the "slower" preset for the variable steps, a conservative option prioritizing accuracy over speed
+# Here we use the "slower" preset for the variable steps, a very conservative option prioritizing accuracy over speed
 uc = UniformCompartment(chem_data=chem_data, preset="slower")
 uc.set_conc(conc={"S": S0, "E": E0})      # Small ampount of enzyme `E`, relative to substrate `S`
 uc.describe_state()
@@ -168,7 +167,7 @@ PlotlyHelper.plot_pandas(df=rates,
                          x_label="time", y_label="dP/dt")
 
 # %%
-# A closer peek at it maximum value
+# A closer peek at its maximum value
 PlotlyHelper.plot_pandas(df=rates, 
                          title="Reaction rate, dP/dt, over time (DETAIL at early times)",
                          x_var="TIME", fields="rate", 

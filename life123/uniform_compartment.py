@@ -104,6 +104,7 @@ class UniformCompartment:
                                         #           where 'A', 'B', ... are all the registered chemical labels
 
         self.system_rxn_rates = {}      # Keys are the reaction indexes.  Reaction rates for the last (current) step of all reactions
+                                        # EXAMPLE: {0: 0.42, 1: 4.26}
 
         self.rate_history = CollectionTabular()  # Format: a Pandas data frame, with columns: 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
 
@@ -534,8 +535,8 @@ class UniformCompartment:
 
         :param silent:              If True, less output is generated
 
-        :param variable_steps:      If True, the steps sizes will get automatically adjusted, based on thresholds
-        :param explain_variable_steps:  If not None, a brief explanation is printed about how the variable step sizes were chosen,
+        :param variable_steps:          [OPTIONAL] If True (default), the steps sizes will get automatically adjusted, based on thresholds
+        :param explain_variable_steps:  [OPTIONAL] If not None, a brief explanation is printed about how the variable step sizes were chosen,
                                             when the System time inside that range;
                                             only applicable if variable_steps is True
         :param report_interval:     [OPTIONAL] How frequently, in terms of elapsed running time, in minutes,
@@ -609,6 +610,8 @@ class UniformCompartment:
 
 
         step_count = 0
+        step_of_last_snapshot = -1
+
         # Reset some diagnostic variables
         self.number_neg_concs = 0
         self.number_soft_aborts = 0
@@ -618,6 +621,17 @@ class UniformCompartment:
         t_start = time.perf_counter()
         t_report = t_start
         report_interval *= 60.      # Convert to seconds
+
+
+        '''
+        TODO: explore a main loop of the form:
+        
+        try:
+            [MAIN LOOP BODY]
+        
+        except KeyboardInterrupt:
+            print("\n*** KeyboardInterrupt exception caught")
+        '''
 
 
         # MAIN LOOP
@@ -661,8 +675,10 @@ class UniformCompartment:
                       f"upon advancing reactions from system time t={self.system_time:,.5g}")
 
 
-            # Preserve some of the data, as requested (part1, before updating the System Time)
-            if (step_count+1)%capture_frequency == 0:
+            # Preserve the RATES data, as requested (part1, BEFORE updating the System Time, because reaction rates are
+            # based on the start time of the simulation step)
+            #if (capture_frequency == 1) or first_snapshot or ((step_count+1)%capture_frequency == 1):
+            if (step_count == 0) or (step_count == step_of_last_snapshot + 1):
                 rxn_rates_snapshot = {}
                 for k, v in self.system_rxn_rates.items():
                     rxn_rates_snapshot[f"rxn{k}_rate"] = v      # EXAMPLE:  "rxn4_rate" = 18.2
@@ -670,17 +686,19 @@ class UniformCompartment:
                 self.rate_history.store(par=self.system_time, data_snapshot=rxn_rates_snapshot, caption=None)
 
 
-            # UPDATE THE SYSTEM TIME
+            # UPDATE THE SYSTEM TIME (now we're at the END of the current time step)
             self.system_time += step_actually_taken
 
 
-            # Preserve some of the data, as requested (part2, after updating the System Time)
+            # Preserve the CONCENTRATION data, as requested (part2, AFTER updating the System Time, because current concentrations
+            # refer to the System Time, just updated at the end of the simulation step)
             if (step_count+1)%capture_frequency == 0:
-                if first_snapshot and capture_initial_caption:
+                if first_snapshot and capture_initial_caption and (step_count == 0):
                     self.add_snapshot(species=capture_species, caption=capture_initial_caption)
                     first_snapshot = False
                 else:
                     self.add_snapshot(species=capture_species)
+                step_of_last_snapshot = step_count
 
 
             step_count += 1
@@ -702,12 +720,13 @@ class UniformCompartment:
                     info_on_step = f"(doing step size {time_step:,.2g})"
                 else:
                     info_on_step = ""
-                print(f"... currently at System Time {self.system_time:,.4g} {info_on_step} after running for {(t_now - t_start)/60:.1f} min")
+                print(f"... running : currently at System Time {self.system_time:,.4g} {info_on_step} after running for {(t_now - t_start)/60:.1f} min")
                 t_report = t_now            # Reset
 
             if variable_steps:
                 time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
-        # END while
+
+        # --- END while ---
 
 
         # We're now at the end of the computation
@@ -723,9 +742,9 @@ class UniformCompartment:
 
 
         if not silent:
-            # Print out a summary
+            # Print out a summary, at the termination of the run
             t_now = time.perf_counter()
-            print(f"{n_steps_taken} total step(s) taken in {(t_now - t_start):.3f} sec")
+            print(f"{n_steps_taken} total step(s) taken in {(t_now - t_start)/60.:.2f} min")
             if variable_steps:
                 if self.number_neg_concs:
                     print(f"Number of step re-do's because of negative concentrations: {self.number_neg_concs}")
@@ -736,8 +755,12 @@ class UniformCompartment:
                 print(f"System Time is now: {self.system_time:,.5g}")
 
 
+        # One final snapshot, unless already taken for the current step
+        if step_count != step_of_last_snapshot + 1:
+            self.add_snapshot(species=capture_species)
+
         if capture_final_caption:
-            self.history.set_caption_last_snapshot(capture_final_caption)
+            self.history.set_caption_last_snapshot(capture_final_caption)   # Add a caption to the very last entry in the system history
 
 
 
