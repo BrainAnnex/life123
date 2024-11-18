@@ -25,7 +25,7 @@
 # 2) the non-catalyzed E + S <-> P reaction
 
 # %% [markdown]
-# #### THE REACTION:  
+# ### THE REACTION:  
 # the enzyme `Adenosine deaminase` with the substrate `2,6-Diamino-9-β-D-deoxyribofuranosyl-9-H-purine`,  
 # and the initial concentration values choosen below, all satisfy the customary Michaelis-Menten assumptions that  `[E] << [S]` and that the reaction rate constants satisfy `k1_reverse >> k2_forward`  
 #
@@ -37,7 +37,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Nov. 5, 2024"
+LAST_REVISED = "Nov. 17, 2024"
 LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
 
 # %%
@@ -126,9 +126,6 @@ uc = UniformCompartment(chem_data=chem_data, preset="slower")
 uc.set_conc(conc={"S": S0, "E": E0})      # Small ampount of enzyme `E`, relative to substrate `S`
 uc.describe_state()
 
-# %%
-uc.enable_diagnostics()   # To save diagnostic information about the simulation - in particular, the REACTION RATES
-
 # %% [markdown] tags=[]
 # #### Advance the reactions to equilibrium
 
@@ -151,28 +148,29 @@ uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'],
 
 # %%
 
-# %% [markdown]
+# %% [markdown] tags=[]
 # ### What is the initial rate of production of the final reaction product `P`?   
-# One could take the numerical derivative (gradient) of the time values of [P] - but no need to!  **Reaction rates are computed in the course of the simulation, and stored alongside other diagnostic data**, provided that diagnostics were enabled (as we did indeed enable)
+# One could take the numerical derivative (gradient) of the time values of [P] - but no need to!  **Reaction rates are computed in the course of the simulation, and stored in a rate-history dataframe**
 
 # %%
-rates = uc.get_diagnostics().get_system_history_with_rxn_rates(rxn_index=1)   # We specify the reaction that involves `P`
+rates = uc.get_rate_history()   # We'll be interested in rxn1_rate (the reaction that leads to `P`)
 rates
 
 # %%
-# Let's take a look at how the reaction rate that generates the product P varies with time
+# Let's take a look at how the reaction rate varies with time
 PlotlyHelper.plot_pandas(df=rates, 
                          title="Reaction rate, dP/dt, over time",
-                         x_var="TIME", fields="rate", 
+                         x_var="SYSTEM TIME", fields="rxn1_rate", 
                          x_label="time", y_label="dP/dt")
 
 # %%
 # A closer peek at its maximum value
 PlotlyHelper.plot_pandas(df=rates, 
                          title="Reaction rate, dP/dt, over time (DETAIL at early times)",
-                         x_var="TIME", fields="rate", 
-                         x_label="time", y_label="dP/dt",
+                         x_var="SYSTEM TIME", fields="rxn1_rate", 
                          range_x=[0,0.05], range_y=[33., 34.5])
+
+# %%
 
 # %% [markdown]
 # As we saw earlier, the time it took for `ES` to build up was about 0.01  
@@ -215,16 +213,23 @@ initial_rxn_rate
 # %%
 
 # %% [markdown]
-# ### Now, let's look at rate as a function of [S]; we'll compare what we computed earlier vs. what is given by the approximation of the Michaelis-Menten model
+# ### Now, let's look at the reaction rate that produces `P` as a function of [S]; we'll compare what we computed earlier vs. what is given by the approximation of the **Michaelis-Menten model**
+
+# %% [markdown]
+# First, we'll merge the concentration history and and the rate history into a single dataframe `df`
+
+# %%
+df = uc.add_rate_to_conc_history(rate_name="rxn1_rate", new_rate_name="P_rate")
+df
 
 # %%
 # Let's add a column with the rate estimated by the Michaelis-Menten model
-rates["Michaelis_rate"] = rxn.compute_rate(S_conc=rates["S"])
-rates
+df["Michaelis_rate"] = rxn.compute_rate(S_conc=df["S"])
+df
 
 # %%
 # Let's see how our computed rate compares with the approximations from the Michaelis-Menten model
-PlotlyHelper.plot_pandas(df=rates, x_var="S", fields=["rate", "Michaelis_rate"],
+PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["P_rate", "Michaelis_rate"],
                          title="Reaction rate, dP/dt, as a function of Substrate concentration",
                          y_label="dP/dt", legend_header="Rates",
                          vertical_lines_to_add=18.9, colors=["blue", "yellow"])
@@ -247,22 +252,31 @@ PlotlyHelper.plot_pandas(df=rates, x_var="S", fields=["rate", "Michaelis_rate"],
 # # 3. Comparing the results to the Morrison model
 
 # %% [markdown]
-# #### Following section 7.1 of _"Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023_ , we'll test out an the alternative **Morrison** approach, which is expected to perform better than the **Michaelis-Menten** model when the Enzyme concentration isn't so small.  But, in this scenario, we only have small amounts of enzyme - and we'll see below that no significant improvement is gained by switching model.
+# #### Following section 7.1 of _"Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023_, we'll test out an the alternative **Morrison** approach, which is expected to perform better than the **Michaelis-Menten** model when the Enzyme concentration isn't so small.  But, in this scenario, we only have small amounts of enzyme - and we'll see below that no significant improvement is gained by switching model.
 
 # %%
-rates["Morrison_rate"] = rxn.compute_rate_morrison(E_tot=E0,
-                                                   S_tot=rates["S"] + rates["ES"])
-rates
+df["Morrison_rate"] = rxn.compute_rate_morrison(E_tot=E0,
+                                                S_tot=df["S"] + df["ES"])
+df
 
 # %%
-PlotlyHelper.plot_pandas(df=rates, x_var="S", fields=["rate", "Michaelis_rate", "Morrison_rate"],
+PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["P_rate", "Michaelis_rate", "Morrison_rate"],
                          title="Reaction rate, dP/dt, as a function of Substrate concentration",
                          y_label="dP/dt", legend_header="Rates",
                          vertical_lines_to_add=18.9,
                          colors=["blue", "yellow", "orange"])
 
+# %%
+# Let's take a closer look at the rightmost portion
+PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["P_rate", "Michaelis_rate", "Morrison_rate"],
+                         title="Reaction rate, dP/dt, as a function of Substrate concentration",
+                         y_label="dP/dt", legend_header="Rates",
+                         vertical_lines_to_add=18.9,
+                         colors=["blue", "yellow", "orange"],
+                         range_x=[17, 20], range_y=[32,35])
+
 # %% [markdown]
-# ## The Morrison model appears to be only very mildly better than the Michaelis-Menten one at the early reaction times - and virtually identical later on.  
+# # In this scenario, the Morrison model appears to be only very mildly better than the Michaelis-Menten one at the early reaction times (large [S], close to the initial value of 20.) - and virtually identical everywhere else.  
 # Then why even bother with it?  In the next two experiments, `enzyme_2` and `enzyme_3`, we'll see how the Morrison model becomes progressively better than Michaelis-Menten at increasingly higher amounts of enzyme.
 
 # %%

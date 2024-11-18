@@ -1837,6 +1837,31 @@ class UniformCompartment:
 
 
 
+    def add_rate_to_conc_history(self, rate_name :str, new_rate_name=None):
+        """
+
+        :param rate_name:
+        :param new_rate_name:
+        :return:            A Pandas dataframe with all the concentration history,
+                                and an extra column ra
+        """
+        history = self.get_history()
+        rates = self.get_rate_history()
+        assert len(history) == len(rates)+1, \
+            "unable to reconcile the system history data with the reaction data"
+
+        df = history[:-1].copy()    # Dropping the last row, because no rate information is known about the next simulation step not taken!
+                                    # Also, duplicate the dataframe, to avoid messing up the concentration history
+
+        if new_rate_name is None:
+            new_rate_name = rate_name
+
+        df[new_rate_name] = rates[rate_name]
+
+        return df
+
+
+
 
 
 

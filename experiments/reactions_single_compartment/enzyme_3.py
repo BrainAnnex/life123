@@ -13,18 +13,16 @@
 # ---
 
 # %% [markdown]
-# ## IN-PROGRESS
-#
 # ## **Enzyme Kinetics** : 
 # #### _Accurate numerical solution_ - compared to the **Michaelis-Menten** model approximation and to the alternative **Morrison** model.
 #
 # #### Two Coupled Reactions: `E + S <-> ES`, and  `ES -> E + P` , using real-life kinetic parameters.  
 # #### Scenario with _small amount of Enzyme_, relative to the initial Substrate concentration.
 #
-# #### Unlike in experiment `enzyme_1_a`, we'll use data from a reaction that VIOLATES the customary Michaelis-Menten assumption that the rate constants satisfy `k1_reverse >> k2_forward`
+# #### Unlike in experiment `enzyme_1_a`, we'll use data from a reaction that **VIOLATES the customary Michaelis-Menten assumption** that the rate constants satisfy `k1_reverse >> k2_forward`
 
 # %% [markdown]
-# #### THE REACTION:  
+# ### THE REACTION:  
 # the enzyme `Aminopeptidase` with the substrate `Leu-Ala-DED`,  
 # and the initial concentration values choosen below, all satisfy the customary Michaelis-Menten assumptions that  `[E] << [S]`    BUT the reaction rate constants DON'T satisfy `k1_reverse >> k2_forward`
 #
@@ -36,7 +34,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Nov. 16, 2024"
+LAST_REVISED = "Nov. 17, 2024"
 LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
 
 # %%
@@ -174,7 +172,7 @@ uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'], title_prefix
 
 # %%
 
-# %% [markdown]
+# %% [markdown] tags=[]
 # ### What is the initial rate of production of the final reaction product `P`?   
 # One could take the numerical derivative (gradient) of the time values of [P] - but no need to!  **Reaction rates are computed in the course of the simulation, and stored in a rate-history dataframe**
 
@@ -189,16 +187,19 @@ PlotlyHelper.plot_pandas(df=rates,
                          x_var="SYSTEM TIME", fields="rxn1_rate", 
                          x_label="time", y_label="dP/dt")
 
+# %% [markdown]
+# ### Notice how very different is it from the Reaction rate over time seen in experiment `enzyme_1_a`
+
 # %%
 # A closer peek at its very quick buildup
 PlotlyHelper.plot_pandas(df=rates, 
                          title="Reaction rate, dP/dt, over time (DETAIL at early times)",
                          x_var="SYSTEM TIME", fields="rxn1_rate", 
-                         range_x=[0,0.0015])
+                         range_x=[0, 0.0015])
 
 # %% [markdown]
 # As we saw earlier, the time it took for `ES` to build up was about 0.001  
-# **Ignoring the very brief initial transient phase, the reaction rate starts at about 0.6, and stays at that value until the substrate gets depleted, arount t=33**
+# **Ignoring the very brief initial transient phase, the reaction rate starts at about 0.57, and stays at that value until the substrate gets depleted, arount t=33**
 
 # %%
 
@@ -217,7 +218,7 @@ rxn = ReactionEnz(enzyme="E", substrate="S", product="P",
                   k2_F=chem_data.get_forward_rate(1))
 
 # %%
-rxn.kM          #  For the data in this experiment, it comes out to (49. + 100.) / 18.
+rxn.kM          #  For the data in this experiment, it comes out to (0.089 + 0.58) / 160.
 
 # %%
 rxn.kcat
@@ -231,25 +232,19 @@ initial_rxn_rate = rxn.compute_rate(S_conc=S0)    #  (vmax * S0) / (kM + S0)
 initial_rxn_rate
 
 # %% [markdown]
-# Not too far from the value of about 34.1 we saw earlier...   
-# To keep in mind that the initial part of the reaction is affected by transients
+# Pretty close the value of about 0.57 we saw earlier, after the initial transient...   
 
 # %%
 
 # %% [markdown]
-# ### Now, let's look at rate as a function of [S]; we'll compare what we computed earlier vs. what is given by the approximation of the Michaelis-Menten model
+# ### Now, let's look at the reaction rate that produces `P` as a function of [S]; we'll compare what we computed earlier vs. what is given by the approximation of the **Michaelis-Menten model**
+
+# %% [markdown]
+# First, we'll merge the concentration history and and the rate history into a single dataframe `df`
 
 # %%
-df = uc.get_history()
+df = uc.add_rate_to_conc_history(rate_name="rxn1_rate", new_rate_name="P_rate")
 df
-
-# %%
-rates
-
-# %% [markdown]
-# # TODO: merge history and rates; deal with time mismatches
-
-# %%
 
 # %%
 # Let's add a column with the rate estimated by the Michaelis-Menten model
@@ -258,20 +253,31 @@ df
 
 # %%
 # Let's see how our computed rate compares with the approximations from the Michaelis-Menten model
-PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["rate", "Michaelis_rate"],
+PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["P_rate", "Michaelis_rate"],
                          title="Reaction rate, dP/dt, as a function of Substrate concentration",
                          y_label="dP/dt", legend_header="Rates",
-                         vertical_lines_to_add=18.9)
+                         vertical_lines_to_add=19, colors=["blue", "yellow"])
 
 # %% [markdown]
 # Let's recall that our reactions started with [S]=20  
 # Virtually overlapped plots, except at the very right! (very early times, when [S] is greater than about 19)
 
 # %% [markdown]
-# ## In this scenario, the Michaelis-Menten model is remarkable accurate EXCEPT at the very early times of the reaction (the large values of `S`), which is the brief initial transient phase when `ES` builds up from zero
+# The overlap at the very left (small [S], late in the reaction) has a few issues, but not too bad; let's magnify the previous plot:
+
+# %%
+PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["P_rate", "Michaelis_rate"],
+                         title="Reaction rate, dP/dt, as a function of Substrate concentration",
+                         y_label="dP/dt", legend_header="Rates",
+                         vertical_lines_to_add=19, colors=["blue", "yellow"],
+                         range_x=[0, .2])
 
 # %% [markdown]
-# #### This is as expected, because the kinetic parameters of this reaction satisfy the Michaelis-Menten assumptions that `[E] << [S]` and that the rates satisfy `k1_reverse >> k2_forward`
+# ## In this scenario, the Michaelis-Menten model is remarkable accurate EXCEPT at the very early times of the reaction (the large values of `S`), which is the brief initial transient phase when `ES` builds up from zero.  
+# ### Some discrepancy also at the end of the reaction (when `S` drops to zero)
+
+# %% [markdown]
+# #### This is as expected, because the kinetic parameters of this reaction satisfy the key Michaelis-Menten assumptions that `[E] << [S]` , but NOT the other assumption that the rates satisfy `k1_reverse >> k2_forward`
 
 # %%
 
@@ -281,22 +287,30 @@ PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["rate", "Michaelis_rate"],
 # # 3. Comparing the results to the Morrison model
 
 # %% [markdown]
-# #### Following section 7.1 of _"Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023_ , we'll test out an the alternative **Morrison** approach, which is expected to perform better than the **Michaelis-Menten** model when the Enzyme concentration isn't so small.  But, in this scenario, we only have small amounts of enzyme - and we'll see below that no significant improvement is gained by switching model.
+# #### Following section 7.1 of _"Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023_, we'll test out an the alternative **Morrison** approach, which is expected to perform better than the **Michaelis-Menten** model when the Enzyme concentration isn't so small.  But, in this scenario, we only have small amounts of enzyme - and we'll see below that no significant improvement is gained by switching model.
 
 # %%
-rates["Morrison_rate"] = rxn.compute_rate_morrison(E_tot=E0,
-                                                   S_tot=rates["S"] + rates["ES"])
-rates
+df["Morrison_rate"] = rxn.compute_rate_morrison(E_tot=E0,
+                                                S_tot=df["S"] + df["ES"])
+df
 
 # %%
-PlotlyHelper.plot_pandas(df=rates, x_var="S", fields=["rate", "Michaelis_rate", "Morrison_rate"],
+PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["P_rate", "Michaelis_rate", "Morrison_rate"],
                          title="Reaction rate, dP/dt, as a function of Substrate concentration",
                          y_label="dP/dt", legend_header="Rates",
-                         vertical_lines_to_add=18.9,
-                         colors=["green", "blue", "purple"])
+                         vertical_lines_to_add=19,
+                         colors=["blue", "yellow", "orange"])
+
+# %%
+# Detail at the very left
+PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["P_rate", "Michaelis_rate", "Morrison_rate"],
+                         title="Reaction rate, dP/dt, as a function of Substrate concentration",
+                         y_label="dP/dt", legend_header="Rates",
+                         vertical_lines_to_add=19,
+                         colors=["blue", "yellow", "orange"],
+                         range_x=[0, 0.02])
 
 # %% [markdown]
-# ## The Morrison model appears to be only very mildly better than the Michaelis-Menten one at the early reaction times - and virtually identical later on.  
-# Then why even bother with it?  In the next two experiments, `enzyme_2` and `enzyme_3`, we'll see how the Morrison model becomes progressively better than Michaelis-Menten at increasingly higher amounts of enzyme.
+# # In this scenario, the Morrison model appears better than the Michaelis-Menten one at late reaction times (small `S`, close to zero) - and virtually identical elsewhere 
 
 # %%
