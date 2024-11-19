@@ -34,7 +34,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Nov. 17, 2024"
+LAST_REVISED = "Nov. 18, 2024"
 LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
 
 # %%
@@ -52,11 +52,6 @@ from life123 import check_version, ChemData, UniformCompartment, ReactionEnz, Pl
 
 # %%
 check_version(LIFE123_VERSION)
-
-# %% tags=[]
-# Initialize logging (for the system state)
-csv_log_file = ipynbname.name() + "_system_log.csv"   # Use the notebook base filename 
-                                                      # IN CASE OF PROBLEMS, set manually to any desired name
 
 # %%
 
@@ -116,9 +111,6 @@ E0 = 1.
 # %%
 # Here we use the "slow" preset for the variable steps, a conservative option prioritizing accuracy over speed
 uc = UniformCompartment(chem_data=chem_data, preset="slow")
-
-# %%
-uc.start_csv_log(csv_log_file)
 
 # %%
 uc.set_conc(conc={"S": S0, "E": E0})      # Small ampount of enzyme `E`, relative to substrate `S`
