@@ -19,21 +19,26 @@
 # Then the system is left undisturbed, and followed to equilibrium.
 #
 # (Note: this is the 2D counterpart of the 1D experiment by the same name)
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Nov. 13, 2024"
+LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
 
 # %%
-from life123 import BioSim2D
-from life123 import ChemData as chem
+#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
+
+# %%
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
+from life123 import BioSim2D, ChemData
 
 import plotly.express as px
 
 # %%
 # Prepare the initial system, with a single non-zero bin, near the left edge of the system, positioned halfway vertically
-chem_data = chem(names=["A"], diffusion_rates=[0.02])
+chem_data = ChemData(names=["A"], diffusion_rates=[0.02])
 bio = BioSim2D(n_bins=(5, 8), chem_data=chem_data)
 
 bio.inject_conc_to_bin(bin_address=(2, 1), species_index=0, delta_conc=10.)

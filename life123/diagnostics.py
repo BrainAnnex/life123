@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from typing import Union
-from life123.movies import MovieTabular
+from life123.collections import CollectionTabular
 
 
 
@@ -12,22 +12,13 @@ class Diagnostics:
 
     def __init__(self, chem_data):
 
+        assert chem_data is not None, \
+            "Diagnostics class cannot be instantiated with a missing value for argument `chem_data`"
+
         self.chem_data = chem_data
 
-        # TODO: maybe drop the "diagnostic_" from the names
-        self.diagnostic_rxn_data = {}   # "Diagnostic reaction data", PER REACTION: a dict with as many entries as reactions.
-                                        #   The keys are the reaction indices; the values are objects of type "MovieTabular",
-                                        #   which contain Pandas dataframes with the following columns
-                                        #   (referring to one specific reaction):
-                                        #           'START TIME' , 'Delta A' , 'Delta B' , ... , 'time_step' , 'caption'
-                                        #
-                                        #   Notes:  - entries are always added, even if an interval run is aborted
-                                        #           - the various 'Delta concentrations' are for ALL the chemicals
-                                        #                   (whether in the reaction or not),
-                                        #                   over the time interval that *STARTS* at the value in the "TIME" column
-                                        #             TODO: the practice of including ALL chemicals will get rather unwieldy soon!
-
-        self.diagnostic_conc_data = MovieTabular(parameter_name="TIME")
+        # TODO: maybe drop the "diagnostic_" from the names, or rename it to "historic_"
+        self.diagnostic_conc_data = CollectionTabular(parameter_name="TIME")
                                         # An expanded version of the normal System History.
                                         #   Columns of the dataframes:
                                         #       'TIME' 	'A' 'B' ...  'caption'
@@ -35,10 +26,23 @@ class Diagnostics:
                                         #   Note: if an interval run is aborted, NO entry is created here
                                         #         (this approach DIFFERS from that of other diagnostic data)
 
-        self.diagnostic_decisions_data = MovieTabular(parameter_name="START_TIME")
+
+        self.diagnostic_rxn_data = {}   # "Diagnostic reaction data", PER REACTION: a dict with as many entries as reactions.
+                                        #   The keys are the reaction indices; the values are objects of type "MovieTabular",
+                                        #   which contain Pandas dataframes with the following columns
+                                        #   (referring to one specific reaction):
+                                        #           'START TIME' , 'time_step' , 'aborted', 'Delta A' , 'Delta B' , ... , 'rate', 'caption'
+                                        #
+                                        #   Note:   - entries are always added, even if a time-step run is aborted
+                                        #           - the various 'Delta concentrations' are for the chemicals involved in the reaction
+                                        #             over the time interval that *STARTS* at the value in the "START TIME" column
+
+
+        self.diagnostic_decisions_data = CollectionTabular(parameter_name="START_TIME")
                                         #   Columns of the dataframes:
                                         #       'START_TIME' 	'Delta A' 'Delta B' ...
-                                        #               [plus, if applicable, other fields such as 'action', 'norm_A', 'norm_B', 'step_factors']
+                                        #               [plus, if applicable, other fields such as
+                                        #               'action', 'norm_A', 'norm_B', 'step_factors']
                                         #
                                         #   Note: entries are always added, even if an interval run is aborted
 
@@ -83,18 +87,18 @@ class Diagnostics:
                 f"({len(increment_vector_single_rxn)}) doesn't match the overall number of chemical ({self.chem_data.number_of_chemicals()})"
 
 
-        # Initialize entry for this reaction, if needed
+        # Initialize a "MovieTabular" object for this reaction, if needed
         if rxn_index not in self.diagnostic_rxn_data:
-            self.diagnostic_rxn_data[rxn_index] = MovieTabular(parameter_name="START_TIME")
+            self.diagnostic_rxn_data[rxn_index] = CollectionTabular(parameter_name="START_TIME")
 
 
         data_snapshot = {"time_step": time_step, "aborted": aborted}      # Dict being prepared to add a new row to a Pandas dataframe
 
         if increment_vector_single_rxn is None:     # If the values aren't available (as is the case in aborts)
-            for index in indexes:
+            for index in indexes:       # For all the chemicals participating in this reaction
                 data_snapshot["Delta " + self.chem_data.get_label(index)] = np.nan
         else:
-            for index in indexes:
+            for index in indexes:       # For all the chemicals participating in this reaction
                 data_snapshot["Delta " + self.chem_data.get_label(index)] = increment_vector_single_rxn[index]
 
         if rate is not None:
@@ -125,7 +129,9 @@ class Diagnostics:
 
     def annotate_abort_rxn_data(self, msg: str) -> None:
         """
-        Set the comment field of the last record for EACH of the reaction-specific dataframe
+        Store the given value in the caption field of the last record
+        for EACH of the reaction-specific dataframes.
+        Also, set the "aborted" fields to "True"
 
         :param msg: Value to set the comment field to
         :return:    None
@@ -133,6 +139,42 @@ class Diagnostics:
         for rxn_index in range(self.chem_data.number_of_reactions()):
             self.diagnostic_rxn_data[rxn_index].set_caption_last_snapshot(msg)
             self.diagnostic_rxn_data[rxn_index].set_field_last_snapshot(field_name="aborted", field_value="True")
+            # TODO: investigate why using "True" rather then True
+
+
+
+    def get_system_history_with_rxn_rates(self, rxn_index :int) -> pd.DataFrame:
+        """
+        Return a Pandas dataframe containing the saved System History,
+        plus an extra column named "rate", for the reaction rates of the specified reaction.
+        Notice: the last row of the System History does NOT get included,
+                because no rate information is known about the next simulation step not taken
+
+        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
+        :return:            A Pandas data frame with the following columns:
+                                "TIME"
+                                A series of columns for each of the registered chemicals
+                                "caption"
+                                "rate"
+        """
+        # TODO: probably ditch, because no longer needed.  (Also, the dataframe merge might not always work...)
+        # TODO: the times had better match up!  Currently not validated
+
+        rates = self.get_rxn_rates(rxn_index=rxn_index)     # A Pandas dataframe with 2 columns: "START_TIME" and "rate"
+        system_history = self.get_diagnostic_conc_data()    # Note that is a copy of the dataframe; so, no harm in changing it, below
+        # Dropping the last row, because no rate information is known about the next simulation step not taken!
+        system_history = system_history[:-1]
+
+        # They'd better match up!
+        assert len(system_history) == len(rates), \
+            f"get_system_history_with_rxn_rates() : unable to reconcile " \
+            f"the system history data with the reaction data for the requested reaction (index {rxn_index}). " \
+            f"The diagnostic concentration data (excluding the last entry, which can't have a rate value) contains {len(system_history)} records, " \
+            f"while the diagnostic rates data contains {len(rates)} values"
+
+        system_history["rate"] =  rates["rate"]
+
+        return system_history
 
 
 
@@ -141,9 +183,11 @@ class Diagnostics:
         Return a Pandas dataframe with 2 columns: "START_TIME" and "rate",
         with the rates of the specified reaction at those times.
 
-        Note that the dataframe will have 1 LESS ROW than a corresponding dataframe of reaction history,
+        Note that the dataframe will have 1 LESS ROW than a corresponding dataframe of concentration history,
         because the rate at the final time won't be known (since that time would be the start of a simulation step
         that has not been done)
+
+        Also, aborted time steps are eliminated (only the rate of the final "re-do" is included)
 
         :param rxn_index:   The integer index (0-based) to identify the reaction of interest
         :return:            A Pandas dataframe with times and their corresponding reaction rates
@@ -165,7 +209,8 @@ class Diagnostics:
         Return a Pandas dataframe with the diagnostic run data of the requested SINGLE reaction,
         from the time that the diagnostics were enabled by instantiating this class.
 
-        In particular, the dataframe contains the "Delta" values for each of the chemicals
+        In particular, the dataframe contains the reaction rate at the start time,
+        and the "Delta" values for each of the chemicals
         involved in the reaction - i.e. the change in their concentrations
         over the time interval that *STARTS* at the value in the "START_TIME" column.
         (So, there'll be no row with the final current System Time)
@@ -200,7 +245,7 @@ class Diagnostics:
         :return:                If present, return a Pandas data frame with (all or some of)
                                     the diagnostic data of the specified reaction.
                                     Columns of the dataframes:
-                                    'START_TIME' 'Delta A' 'Delta B'... 'time_step' 'caption'
+                                    'START_TIME','time_step','aborted','Delta A','Delta B'...,'rate','caption'
                                 If not present, return None
         """
         # Validate the reaction index
@@ -217,22 +262,22 @@ class Diagnostics:
             return None
 
 
-        return movie_obj.get_dataframe(head=head, tail=tail, search_col="START_TIME", search_val=t)
+        return movie_obj.get_dataframe(head=head, tail=tail, search_col="START_TIME", search_val=t, return_copy=True)
 
 
 
 
     #####  2. diagnostic_conc_data  #####
 
-    def save_diagnostic_conc_data(self, system_data, system_time) -> None:
+    def save_diagnostic_conc_data(self, system_data, system_time, caption="") -> None:
         """
-        To save the diagnostic concentration data during the run, indexed by the current System Time.
+        Save the diagnostic concentration data during the run, indexed by the current System Time.
         Note: if an interval run is aborted, by convention NO entry is created here
 
         :return: None
         """
         self.diagnostic_conc_data.store(par=system_time,
-                                        data_snapshot=system_data)
+                                        data_snapshot=system_data, caption=caption)
 
 
 
@@ -240,20 +285,21 @@ class Diagnostics:
         """
         Return the diagnostic concentration data saved during the run.
         This will be a complete set of simulation steps,
-        even if we only saved part of the history during the run
+        even if the user elected to only save part of the history during the run.
 
-        Note: if an interval run is aborted, by convention NO entry is created here
+        Note: if the run of an interval step is aborted,
+              by convention NO entry is created here
 
         :return: A Pandas dataframe, with the columns:
                     'TIME' 	'A' 'B' ... 'caption'
-                 where 'A', 'B', ... are all the chemicals
+                    where 'A', 'B', ... are the labels of all the chemicals
         """
-        return self.diagnostic_conc_data.get_dataframe()
+        return self.diagnostic_conc_data.get_dataframe(return_copy=True)
 
 
 
 
-    #####  3. save_diagnostic_decisions_data  #####
+    #####  3. diagnostic_decisions_data  #####
 
     def save_diagnostic_decisions_data(self, system_time, data :dict,
                                        delta_conc_arr :Union[np.ndarray, None], caption="") -> None:
@@ -287,12 +333,12 @@ class Diagnostics:
     
         :return:    A Pandas dataframe with a "TIME" column, and columns for all the "Delta concentration" values
         """
-        return self.diagnostic_decisions_data.get_dataframe()
+        return self.diagnostic_decisions_data.get_dataframe(return_copy=True)
 
 
 
 
-    #####  EXPLAIN THINGS  #####    
+    #############  EXPLAIN THINGS  #############
 
 
     def explain_reactions(self) -> bool:
@@ -421,9 +467,9 @@ class Diagnostics:
         :param silent:          If True, nothing gets printed out
         :param sys_history:     [OPTIONAL] The system history.
                                     If passed, use it in lieu of the diagnostic data;
-                                    to keep in mind is the fact that the user might only have asked
+                                    a consideration is the fact that the user might only have asked
                                     for PART of the history to be saved
-        :return:                Depending on the argument return_times, either None, or a pair with 2 lists:
+        :return:                Depending on the argument "return_times", it returns either None, or a pair with 2 lists:
                                         1 - list of time values
                                         2 - list of step sizes  (will have one less element than the first list)
         """
@@ -440,9 +486,9 @@ class Diagnostics:
 
         n_entries = len(df)
         if sys_history:
-            t = list(df["SYSTEM TIME"])    # List of times (simulation step points)
+            t = list(df["SYSTEM TIME"])     # List of times (simulation step points)
         else:
-            t = list(df["TIME"])    # List of times (simulation step points)
+            t = list(df["TIME"])            # List of times (simulation step points)
 
         if n_entries == 1:
             print(f"Diagnostics.explain_time_advance(): no time advance found. "

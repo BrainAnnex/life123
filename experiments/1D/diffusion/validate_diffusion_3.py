@@ -29,7 +29,7 @@ import set_path      # Importing this module will add the project's home directo
 
 from life123 import BioSim1D
 from life123 import ChemData as chem
-from life123 import MovieArray
+from life123 import CollectionArray
 from life123 import Numerical as num
 
 import numpy as np
@@ -74,7 +74,7 @@ fig.show()
 # #### Now do 4 rounds of single-step diffusion, to collect the system state at a total of 5 time points: t0 (the initial state), plus t1, t2, t3 and t4
 
 # %%
-history = MovieArray()   # All the system state will get collected in this object
+history = CollectionArray()   # All the system state will get collected in this object
 # Store the initial state
 arr = bio.lookup_species(species_index=0, copy=True)
 history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
@@ -137,7 +137,7 @@ bio.inject_sine_conc(species_name="A", frequency=16, amplitude=5)
 # #### Now do 4 rounds of single-step diffusion, to collect the system state at a total of 5 time points: t0 (the initial state), plus t1, t2, t3 and t4
 
 # %%
-history = MovieArray()   # All the system state will get collected in this object
+history = CollectionArray()   # All the system state will get collected in this object
 # Store the initial state
 arr = bio.lookup_species(species_index=0, copy=True)
 history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")

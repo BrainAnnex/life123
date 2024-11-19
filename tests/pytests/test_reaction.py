@@ -53,7 +53,7 @@ def test_initialize():
         Reaction(reactants=[(2, "A"), "B", "C"], products=["B", (1, "C"), (2, "A")])
 
 
-    rxn = Reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    rxn = Reaction(reactants=["A"], products=["B"], kF=3., kR=2.)
 
     assert np.allclose(rxn.extract_forward_rate() , 3.)
     assert np.allclose(rxn.extract_reverse_rate() , 2.)
@@ -72,7 +72,7 @@ def test_initialize():
  
 
     # Another reaction
-    rxn = Reaction(reactants=[(2, "B", 1)], products=[(5, "C", 1)], forward_rate=9., reverse_rate=7.)
+    rxn = Reaction(reactants=[(2, "B", 1)], products=[(5, "C", 1)], kF=9., kR=7.)
 
     assert np.allclose(rxn.extract_forward_rate() , 9.)
     assert np.allclose(rxn.extract_reverse_rate() , 7.)
@@ -85,7 +85,7 @@ def test_initialize():
 
 
     # Add another reaction.  This time, first set the temperature
-    rxn = Reaction(reactants=[(2, "D", 3)], products=[(1, "C", 2)], forward_rate=11., reverse_rate=13., temp=200)
+    rxn = Reaction(reactants=[(2, "D", 3)], products=[(1, "C", 2)], kF=11., kR=13., temp=200)
 
     assert np.allclose(rxn.extract_forward_rate() , 11.)
     assert np.allclose(rxn.extract_reverse_rate() , 13.)
@@ -98,7 +98,7 @@ def test_initialize():
 
 
     # Add a multi-term reaction
-    rxn = Reaction(reactants=["A", (2, "B", 1)], products=[(3, "C", 2), "D"], forward_rate=5., reverse_rate=1., temp=200)
+    rxn = Reaction(reactants=["A", (2, "B", 1)], products=[(3, "C", 2), "D"], kF=5., kR=1., temp=200)
 
     assert np.allclose(rxn.extract_forward_rate() , 5.)
     assert np.allclose(rxn.extract_reverse_rate() , 1.)
@@ -112,7 +112,7 @@ def test_initialize():
 
     # Add a reaction with thermodynamic data;
     # the reverse reaction rate will get computed from the thermodynamic data
-    rxn = Reaction(reactants=["A"], products=[(2, "B", 1)], forward_rate=10.,
+    rxn = Reaction(reactants=["A"], products=[(2, "B", 1)], kF=10.,
                    delta_H= 5., delta_S= 0.4, temp=200)
 
     assert rxn.extract_reactants() == [(1, "A", 1)]
@@ -180,20 +180,20 @@ def test_describe():
     ChemData(names=["A", "B", "C", "D", "E", "F"])
 
 
-    rxn = Reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    rxn = Reaction(reactants=["A"], products=["B"], kF=3., kR=2.)
     assert rxn.describe(concise=True) == "A <-> B"
     assert rxn.describe(concise=False) == "A <-> B  (kF = 3 / kR = 2 / K = 1.5) | 1st order in all reactants & products"
 
-    rxn = Reaction(reactants=[(2, "B", 1)], products=[(5, "C", 1)], forward_rate=9., reverse_rate=7.)
+    rxn = Reaction(reactants=[(2, "B", 1)], products=[(5, "C", 1)], kF=9., kR=7.)
     assert rxn.describe(concise=True) == "2 B <-> 5 C"
     assert rxn.describe(concise=False) == "2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.2857) | 1st order in all reactants & products"
 
 
-    rxn = Reaction(reactants=[(2, "D", 3)], products=[(1, "C", 2)], forward_rate=11., reverse_rate=13., temp=200)
+    rxn = Reaction(reactants=[(2, "D", 3)], products=[(1, "C", 2)], kF=11., kR=13., temp=200)
     assert rxn.describe(concise=True) == "2 D <-> C"
     assert rxn.describe(concise=False) == "2 D <-> C  (kF = 11 / kR = 13 / delta_G = 277.79 / K = 0.84615) | 3-th order in reactant D | 2-th order in product C"
 
-    rxn = Reaction(reactants=["A", (2, "B", 1)], products=[(3, "C", 2), "D"], forward_rate=5., reverse_rate=1., temp=200)
+    rxn = Reaction(reactants=["A", (2, "B", 1)], products=[(3, "C", 2), "D"], kF=5., kR=1., temp=200)
     assert rxn.describe(concise=True) == "A + 2 B <-> 3 C + D"
     assert rxn.describe(concise=False) == "A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2,676.3 / K = 5) | 2-th order in product C"
 
@@ -201,7 +201,7 @@ def test_describe():
 
 def test_extract_rxn_properties():
     ChemData(names=["A", "B"])
-    rxn = Reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2., temp = 298.15)
+    rxn = Reaction(reactants=["A"], products=["B"], kF=3., kR=2., temp = 298.15)
 
     result = rxn.extract_rxn_properties()
     #print(result)

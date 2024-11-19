@@ -10,7 +10,7 @@
     :license: MIT, see LICENSE for more details.
 """
 
-__version__ = "1.0.0.beta.39"
+__version__ = "1.0.0.rc.0"
 
 
 from life123.bio_sim_1d import BioSim1D
@@ -18,13 +18,13 @@ from life123.bio_sim_2d import BioSim2D
 from life123.bio_sim_3d import BioSim3D
 from life123.chem_data import ChemData
 from life123.html_log import HtmlLog
-from life123.movies	import (
-    MovieTabular,
-    MovieArray,
-    MovieGeneral
+from life123.collections	import (
+    CollectionTabular,
+    CollectionArray,
+    Collection
 )
 from life123.numerical import Numerical
-from life123.reaction import Reaction
+from life123.reaction import Reaction, ReactionEnz
 from life123.thermodynamics import ThermoDynamics
 from life123.uniform_compartment import UniformCompartment
 from life123.reaction_kinetics import (ReactionKinetics, VariableTimeSteps)
@@ -40,11 +40,12 @@ __all__ = [
     'BioSim3D',
     'ChemData',
     'HtmlLog',
-    'MovieTabular',
-    'MovieArray',
-    'MovieGeneral',
+    'CollectionTabular',
+    'CollectionArray',
+    'Collection',
     'Numerical',
     'Reaction',
+    'ReactionEnz',
     'ReactionKinetics',
     'ThermoDynamics',
     'VariableTimeSteps',

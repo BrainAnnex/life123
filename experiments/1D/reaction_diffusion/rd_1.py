@@ -26,21 +26,24 @@
 #
 # A LOT of plots are sent to the log file from this experiment; the reason is to compare two
 # graphic elements, "vue_curves_3" and "vue_curves_4"
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Nov. 13, 2024"
+LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
 
 # %%
+#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
+
+# %%
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import BioSim1D
+from life123 import BioSim1D, ChemData, GraphicLog, HtmlLog as log
 
 import plotly.express as px
-from life123 import ChemData as chem
-from life123 import HtmlLog as log
-from life123 import GraphicLog
 
 # %%
 # Initialize the HTML logging
@@ -53,7 +56,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = chem(names=["A", "B", "C"], diffusion_rates=[50., 50., 1.])
+chem_data = ChemData(names=["A", "B", "C"], diffusion_rates=[50., 50., 1.])
 
 
 

@@ -2,6 +2,7 @@ import plotly.express as px
 import plotly.graph_objects as pgo
 import numpy as np
 import pandas as pd
+from plotly.subplots import make_subplots
 from typing import Union
 
 
@@ -9,6 +10,8 @@ from typing import Union
 class PlotlyHelper:
     """
     Static class to assist in the use of the plotly library
+
+    TODO: improve consistency in argument names; also across UniformCompartment
     """
 
     @classmethod
@@ -24,7 +27,7 @@ class PlotlyHelper:
         """
         # TODO: provide multiple, user-selectable, harmonious assortments of default colors
 
-        default_colors = ['blue', 'green', 'brown', 'red', 'gray',
+        default_colors = ['darkturquoise', 'green', 'brown', 'red', 'gray', 'blue',
                           'orange', 'purple', 'cyan', 'darkorange', 'navy',
                           'darkred', 'black', 'mediumspringgreen']
         '''
@@ -80,10 +83,10 @@ class PlotlyHelper:
         :param x:           A Numpy array, with the (common) x-axis values
         :param y:           Either a Numpy array, or a list/tuple of them, with the y-axis values of the curve(s)
         :param title:       [OPTIONAL] Title to use for the overall plot
-        :param range_x:      [OPTIONAL] list of the form [t_start, t_end], to initially only show a part of the timeline.
+        :param range_x:     [OPTIONAL] list of the form [t_start, t_end], to initially only show a part of the timeline.
                                 Note: it's still possible to zoom out, and see the excluded portion
-        :param x_label:      [OPTIONAL] Caption to use for the x-axis
-        :param y_label:      [OPTIONAL] Caption to use for the y-axis
+        :param x_label:     [OPTIONAL] Caption to use for the x-axis
+        :param y_label:     [OPTIONAL] Caption to use for the y-axis
         :param curve_labels:[OPTIONAL] String, or list of strings.
                                 Label(s) to use for the various curves in the legend and in the hover boxes.
                                 If missing, and there's only 1 curve, the legend box won't be shown
@@ -158,7 +161,7 @@ class PlotlyHelper:
     def plot_pandas(cls, df :pd.DataFrame, x_var="SYSTEM TIME", fields=None,
                     colors=None, title=None, title_prefix=None,
                     range_x=None, range_y=None,
-                    x_label=None, y_label=None, legend_header="Chemical",
+                    x_label=None, y_label="Y", legend_header="Plot",
                     vertical_lines_to_add=None,
                     show_intervals=False, show=False) -> pgo.Figure:
         """
@@ -174,17 +177,18 @@ class PlotlyHelper:
         :param colors:          (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
                                     or list of names to use, in order; if None, then the hardwired default colors are used
         :param title:           (OPTIONAL) Title for the plot
-        :param title_prefix:    (OPTIONAL) Strint to prefixed (followed by " <br>") to the title
+        :param title_prefix:    (OPTIONAL) Strint to prefixed (automatically followed by " <br>") to the title
         :param range_x:         (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
         :param range_y:         (OPTIONAL) list of the form [y_min, y_max], to initially show only a part of the y values.
                                     Note: it's still possible to zoom out, and see the excluded portion
         :param x_label:         (OPTIONAL) Caption to use for the x-axis
-        :param y_label:         (OPTIONAL) Caption to use for the y-axis
-        :param legend_header:   (OPTIONAL) Caption to use at the top of the legend box
+        :param y_label:         (OPTIONAL) Caption to use for the y-axis.  Default: "Y"
+        :param legend_header:   (OPTIONAL) Caption to use at the top of the legend box.
+                                            Only applicable if more than 1 curve is being shown.
         :param vertical_lines_to_add:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
-                                    List or tuple or Numpy array or Pandas series
-                                    of x-coordinates at which to draw thin vertical dotted gray lines.
+                                    Value, or list, or tuple, or Numpy array, or Pandas series,
+                                    of x-coordinate(s) at which to draw thin vertical dotted gray lines.
                                     If the number of vertical line is so large as to overwhelm the plot,
                                     only a sample of them is shown.
                                     Note that vertical lines, if requested, go into the plot's "layout";
@@ -206,7 +210,13 @@ class PlotlyHelper:
 
         col_list = list(df.columns)
         assert x_var in col_list, \
-            f"plot_pandas(): the value of the x_var arg ({x_var}) must be the name of one of the columns in the dataframe"
+            f"plot_pandas(): the value of the argument `x_var` ({x_var}) must be the name of one of the columns in the dataframe"
+
+        # Prevent obscure error messages that arise when y_label is not a valid string (due to the fact that this string is used
+        # to shows values in the hover boxes when more than 1 curve is being shown)
+        assert type(y_label) == str, \
+            f"plot_pandas(): the value of the argument `y_label` must be a string; the passed values is of type {type(y_label)}"
+
 
         if fields is None:
             number_of_curves = len(col_list) - 1  # All the field but one (since one is the independent variable)
@@ -227,7 +237,7 @@ class PlotlyHelper:
             title = f"{title_prefix} <br>{title}"
 
         if show_intervals:
-            vertical_lines_to_add = df[x_var]  # Make use of the simulation times
+            vertical_lines_to_add = df[x_var]   # Make use of the simulation times
             title += " (time steps shown in dashed lines)"
 
 
@@ -245,10 +255,13 @@ class PlotlyHelper:
 
 
         if vertical_lines_to_add is not None:   # User requested to add vertical lines to the plot
-            assert (type(vertical_lines_to_add) == list) or (type(vertical_lines_to_add) == tuple) \
-                   or (type(vertical_lines_to_add) == np.ndarray) or (type(vertical_lines_to_add) == pd.core.series.Series), \
-                "plot_pandas(): the argument `vertical_lines`, " \
-                "if not None, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
+            if isinstance(vertical_lines_to_add, (float, int)):
+                vertical_lines_to_add = [vertical_lines_to_add]
+            else:
+                assert (type(vertical_lines_to_add) == list) or (type(vertical_lines_to_add) == tuple) \
+                       or (type(vertical_lines_to_add) == np.ndarray) or (type(vertical_lines_to_add) == pd.core.series.Series), \
+                            "plot_pandas(): the argument `vertical_lines`, " \
+                            "if not None or a number, must be a list or tuple or Numpy array or Pandas series of numbers (x-axis coords)"
 
             vline_list = []
             if range_x:
@@ -286,15 +299,21 @@ class PlotlyHelper:
 
 
     @classmethod
-    def combine_plots(cls, fig_list :Union[list, tuple], title="", xlabel=None, ylabel=None,
+    def combine_plots(cls, fig_list :Union[list, tuple], title="", x_label=None, y_label=None,
                       xrange=None, legend_title=None, curve_labels=None, show=False) -> pgo.Figure:
         """
-        Combine together several existing plotly plots
+        Combine together several existing plotly plots into a single one (with combined axes)
+
+        EXAMPLE:
+                    from life123 import PlotlyHelper
+                    p1 = PlotlyHelper.plot_pandas(various args, show=False)
+                    p2 = PlotlyHelper.plot_pandas(various args, show=False)
+                    PlotlyHelper.combine_plots([p1, p2], other optional args)
 
         :param fig_list:    List or tuple of plotly "Figure" objects (as returned by several functions)
         :param title:       [OPTIONAL] The title to use for the overall plot
-        :param xlabel:      [OPTIONAL] Caption to use for the x-axis; if not specified, use that of the 1st plot
-        :param ylabel:      [OPTIONAL] Caption to use for the y-axis; if not specified, use that of the 1st plot
+        :param x_label:     [OPTIONAL] Caption to use for the x-axis; if not specified, use that of the 1st plot
+        :param y_label:     [OPTIONAL] Caption to use for the y-axis; if not specified, use that of the 1st plot
         :param xrange:      [OPTIONAL] list of the form [t_start, t_end], to initially only show a part of the timeline.
                                 Note: it's still possible to zoom out, and see the excluded portion
         :param legend_title:[OPTIONAL] String to show at the top of the legend box
@@ -310,10 +329,10 @@ class PlotlyHelper:
 
 
         representative_fig = fig_list[0]    # The axes titles of the first plot are used as default values
-        if xlabel is None:
-            xlabel = representative_fig.layout.xaxis.title.text
-        if ylabel is None:
-            ylabel = representative_fig.layout.yaxis.title.text
+        if x_label is None:
+            x_label = representative_fig.layout.xaxis.title.text
+        if y_label is None:
+            y_label = representative_fig.layout.yaxis.title.text
 
 
         # Put together the data from all the various individual plots
@@ -325,8 +344,8 @@ class PlotlyHelper:
         all_fig = pgo.Figure(data=combined_data)    # Note that the + is concatenating lists
 
         all_fig.update_layout(title=title,
-                              xaxis_title=xlabel,
-                              yaxis_title=ylabel)
+                              xaxis_title=x_label,
+                              yaxis_title=y_label)
 
         if legend_title:
             all_fig.update_layout(legend={"title": legend_title})
@@ -349,3 +368,43 @@ class PlotlyHelper:
             all_fig.show()  # Actually display the plot
 
         return all_fig
+
+
+
+    @classmethod
+    def combine_in_vertical_grid(cls, fig1, fig2, title1 :str, title2 :str,
+                                 title_combined :str, height=900) -> pgo.Figure:
+        """
+        Combine into a vertical grid 2 plotly graph objects (now treated as subplots)
+
+        :param fig1:
+        :param fig2:
+        :param title1:
+        :param title2:
+        :param title_combined:
+        :param height           [OPTIONAL] The overall height of the combined plots
+        :return:                A combined plot (a plotly "figure" object)
+        """
+
+        # Make a visual grid with 2 rows and 1 column; adequate vertical spacing is used to clearly shows axes labels
+        combined_fig = make_subplots(rows=2, cols=1,
+                                     subplot_titles=(title1, title2),
+                                     vertical_spacing=0.15)  # Increase vertical spacing (as a fraction of the plot height)
+
+        # Populate the grid with all the inner parts ("traces") of each individual plot ("figure" object)
+        for trace in fig1.data:
+            combined_fig.add_trace(trace, row=1, col=1)
+        for trace in fig2.data:
+            combined_fig.add_trace(trace, row=2, col=1)
+
+        # The axes labels must be copied over separately
+        combined_fig.update_xaxes(title_text=fig1.layout.xaxis.title.text, row=1, col=1)
+        combined_fig.update_yaxes(title_text=fig1.layout.yaxis.title.text, row=1, col=1)
+
+        combined_fig.update_xaxes(title_text=fig2.layout.xaxis.title.text, row=2, col=1)
+        combined_fig.update_yaxes(title_text=fig2.layout.yaxis.title.text, row=2, col=1)
+
+        # Add a title to the combined layout, and set its overall height
+        combined_fig.update_layout(title=title_combined, height=height)    # height controls the total height of the entire figure
+
+        return combined_fig

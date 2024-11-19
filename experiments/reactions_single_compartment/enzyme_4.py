@@ -21,6 +21,9 @@
 # ### We'll REJECT the customary Michaelis-Menten assumptions that `[E] << [S]` and that the rate constants satisfy `k1_reverse >> k2_forward` !   
 # #### We'll explore exotic scenarios with lavish amount of enzyme, leading to diminishing (though fast-produced!) products,  and a buildup of the (not-so-transient!) `ES*` intermediate
 
+# %% [markdown]
+# ### TAGS :  "uniform compartment", "chemistry", "enzymes"
+
 # %%
 LAST_REVISED = "Oct. 11, 2024"
 LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based on
@@ -35,7 +38,7 @@ LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData, UniformCompartment, MovieTabular, GraphicLog
+from life123 import ChemData, UniformCompartment, CollectionTabular, GraphicLog
 
 import pandas as pd
 

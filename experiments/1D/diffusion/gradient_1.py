@@ -18,22 +18,24 @@
 #
 # The system starts out with a uniform concentration.  
 # Then identical concentrations are repeatedly *injected to the left* and *drained from the right*
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Nov. 12, 2024"
+LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
 
 # %%
+#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
+
+# %%
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import BioSim1D
+from life123 import BioSim1D, ChemData, GraphicLog, HtmlLog as log
 
 import plotly.express as px
-
-from life123 import ChemData as chem
-from life123 import HtmlLog as log
-from life123 import GraphicLog
 
 # %%
 # Initialize the HTML logging
@@ -56,7 +58,7 @@ lineplot_pars = {"range": [75, 125],
 
 # %%
 # Initialize the system with a uniform concentration (of the only species)
-chem_data = chem(names=["A"], diffusion_rates=[0.6])
+chem_data = ChemData(names=["A"], diffusion_rates=[0.6])
 bio = BioSim1D(n_bins=9, chem_data=chem_data)
 
 bio.set_uniform_concentration(species_index=0, conc=100.)

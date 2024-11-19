@@ -1,7 +1,122 @@
+# 2 classes: "ReactionEnz" and "Reaction"
+import math
 from typing import Union, Set, Tuple
 import numpy as np
 from life123.thermodynamics import ThermoDynamics
 
+
+class ReactionEnz:
+    """
+    Data about a SINGLE enzyme-catalyzed reaction that can be modeled kinetically as:
+
+    E + S <-> ES <-> E + P
+    """
+
+    def __init__(self, enzyme, substrate, product,
+                 k1_F=None, k1_R=None, k2_F=None, k2_R=None,
+                 kM=None, kcat=None):
+        """
+
+        :param enzyme:
+        :param substrate:
+        :param product:
+        :param k1_F:
+        :param k1_R:
+        :param k2_F:
+        :param k2_R:
+        :param kM:          Michaelis constant
+        :param kcat:
+        """
+        self.active = True          # TODO: EXPERIMENTAL!
+
+        self.enzyme = enzyme
+        self.substrate = substrate
+        self.product = product
+
+        self.k1_F = k1_F
+        self.k1_R = k1_R
+        self.k2_F = k2_F
+        self.k2_R = k2_R
+
+        self.kM = kM
+        self.kcat = kcat
+
+        self.vmax = None
+
+        if all(v is not None for v in [k1_F, k1_R, k2_F]):
+            self.kM = (k2_F + k1_R) / k1_F
+            if kM is not None:
+                assert np.allclose(self.kM, kM), \
+                    f"Inconsistent values passed during instantiation of ReactionEnz.  " \
+                    f"The passed kM value ({kM}) doesn't the value ({self.kM}) inferred from the given reaction rate constants"
+
+        if k2_F is not None:
+            self.kcat = k2_F
+            if kcat is not None:
+                assert np.allclose(self.kcat, kcat), \
+                    f"Inconsistent values passed during instantiation of ReactionEnz.  " \
+                    f"The passed kcat value ({kcat}) doesn't the value ({self.kcat}) of the given k2_F reaction rate constants"
+
+
+
+    def compute_vmax(self, E_tot :float) -> float:
+        """
+
+        :param E_tot:   Total Enzyme concentration (bound and unbound enzyme);
+                            at times referred to as E0
+        :return:        The maximal reaction rate
+                            (the asymptote of the rate, as the Substrate concentration grows large relative to Enzyme concentration)
+        """
+        assert self.kcat is not None, "compute_vmax(): missing value for kcat"
+        self.vmax = self.kcat * E_tot
+        return self.vmax
+
+
+
+    def compute_rate(self, S_conc :float) -> float:
+        """
+        Based on the traditional Michaelis-Menten model.
+        The argument may also be Numpy array.
+
+        :param S_conc:  The concentration [S] of the (free) Substrate
+        :return:        The corresponding reaction rate, in terms of production of the product P
+        """
+        # TODO: possibly move to ReactionKinetics
+        return self.vmax * S_conc / (self.kM + S_conc)
+
+
+
+    def compute_rate_morrison(self, S_tot :float, E_tot :float) -> float:
+        """
+        Based on the Morrison model.
+        The arguments may also be Numpy arrays.
+        
+        Reference: eqn 7.32 on page 124 of "Analysis of Enzyme Reaction Kinetics, Vol. 1", 
+                   by F. Xavier Malcata, Wiley, 2023
+
+        :param S_tot:   The total concentration of free Substrate and Substrate bound to Enzyme
+                            (i.e. [S] + [ES])
+        :param E_tot:   Total Enzyme concentration (bound and unbound enzyme);
+                            at times referred to as E0
+        :return:        The corresponding reaction rate, in terms of production of the product P
+        """
+        # TODO: possibly move to ReactionKinetics
+        S_over_E = S_tot / E_tot
+
+        kM_over_E = self.kM / E_tot
+
+        radicand = (1 + S_over_E + kM_over_E)**2 - 4 * S_over_E
+
+        term = 1 + S_over_E + kM_over_E - np.sqrt(radicand)
+
+        return 0.5 * self.vmax * term
+
+
+
+
+
+
+###################################################################################################################
 
 class Reaction:
     """
@@ -13,7 +128,7 @@ class Reaction:
         - list of involved enzymes
 
 
-    (Note: this data will eventually be stored in a Neo4j graph database)
+    (Note: this data will eventually be stored in a graph database)
 
     Each reaction contains:
             "reactants"
@@ -29,10 +144,10 @@ class Reaction:
     The "reaction order" in that triplet refers to the forward reaction for reactants, and to the reverse reaction for products.
     Note that any reactant and products might be catalysts
     """
-
+    # TODO: rename ReactionGen?
 
     def __init__(self, reactants: Union[int, str, list], products: Union[int, str, list],
-                 forward_rate=None, reverse_rate=None,
+                 kF=None, kR=None,
                  delta_H=None, delta_S=None, delta_G=None, temp=None):
         """
         Create the structure for a new SINGLE chemical reaction,
@@ -53,26 +168,26 @@ class Reaction:
                 (2, "F", 1) means stoichiometry coefficient 2 and reaction order 1 - no defaults invoked
               It's equally acceptable to use LISTS in lieu of tuples for the pair or triplets
 
-        :param reactants:       A list of triplets (stoichiometry, species name, reaction order),
-                                    or simplified terms in various formats; for details, see above.
-                                    If not a list, it will get turned into one
-        :param products:        A list of triplets (stoichiometry, species name, reaction order of REVERSE reaction),
-                                    or simplified terms in various formats; for details, see above.
-                                    If not a list, it will get turned into one
-        :param forward_rate:    [OPTIONAL] Forward reaction rate constant
-        :param reverse_rate:    [OPTIONAL] Reverse reaction rate constant
-        :param delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
-        :param delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
-        :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products), in Joules
-        :param temp:            [OPTIONAL] Temperature in Kelvins.  For now, assumed constant everywhere,
-                                    and unvarying (or very slowly varying)
+        :param reactants:   A list of triplets (stoichiometry, species name, reaction order),
+                                or simplified terms in various formats; for details, see above.
+                                If not a list, it will get turned into one
+        :param products:    A list of triplets (stoichiometry, species name, reaction order of REVERSE reaction),
+                                or simplified terms in various formats; for details, see above.
+                                If not a list, it will get turned into one
+        :param kF:          [OPTIONAL] Forward reaction rate constant
+        :param kR:          [OPTIONAL] Reverse reaction rate constant
+        :param delta_H:     [OPTIONAL] Change in Enthalpy (from reactants to products)
+        :param delta_S:     [OPTIONAL] Change in Entropy (from reactants to products)
+        :param delta_G:     [OPTIONAL] Change in Free Energy (from reactants to products), in Joules
+        :param temp:        [OPTIONAL] Temperature in Kelvins.  For now, assumed constant everywhere,
+                                and unvarying (or very slowly varying)
         """
         self.active = True          # TODO: EXPERIMENTAL!
         
         self.reactants = None
         self.products = None
-        self.kF = forward_rate
-        self.kR = reverse_rate
+        self.kF = kF
+        self.kR = kR
         self.delta_H = delta_H
         self.delta_S = delta_S
         self.delta_G = delta_G
@@ -127,7 +242,7 @@ class Reaction:
 
 
         # Process the kinetic and thermodynamic data, and update various object attributes accordingly
-        self._set_kinetic_and_thermodynamic(forward_rate=forward_rate, reverse_rate=reverse_rate,
+        self._set_kinetic_and_thermodynamic(forward_rate=kF, reverse_rate=kR,
                                             delta_H=delta_H, delta_S=delta_S, delta_G=delta_G, temp=temp)
 
 

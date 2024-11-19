@@ -17,20 +17,24 @@
 # A single chemical, whose initial concentration is a mix of a bell shape and a gradient.   
 # Contrary to perhaps an intuition of a "pile sliding down a sand dune as a unit", the concentration peak
 # remains in place, and simply spreads out from there
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Nov. 12, 2024"
+LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
 
 # %%
-from life123 import BioSim1D
+#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
 
-from life123 import ChemData as chem
+# %%
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
+from life123 import BioSim1D, ChemData
 
 # %%
 # Initialize the system
-chem_data = chem(names=["A"], diffusion_rates=[10.])
+chem_data = ChemData(names=["A"], diffusion_rates=[10.])
 
 bio = BioSim1D(n_bins=200, chem_data=chem_data)
 
