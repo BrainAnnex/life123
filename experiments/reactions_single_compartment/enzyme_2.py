@@ -13,8 +13,6 @@
 # ---
 
 # %% [markdown]
-# # IN-PROGRESS
-#
 # ## **Enzyme Kinetics** : 
 #
 # #### Our model: `E + S <-> ES` (with kinetic pars _k1_forward_ and _k1_reverse_), and  `ES -> E + P`  (_k2_forward_)  

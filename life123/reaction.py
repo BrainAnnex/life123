@@ -1,5 +1,5 @@
 # 2 classes: "ReactionEnz" and "Reaction"
-import math
+
 from typing import Union, Set, Tuple
 import numpy as np
 from life123.thermodynamics import ThermoDynamics
