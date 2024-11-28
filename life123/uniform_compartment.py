@@ -744,7 +744,8 @@ class UniformCompartment:
         if not silent:
             # Print out a summary, at the termination of the run
             t_now = time.perf_counter()
-            print(f"{n_steps_taken} total step(s) taken in {(t_now - t_start)/60.:.2f} min")
+            step_type_str = "variable " if variable_steps else "fixed "
+            print(f"{n_steps_taken} total {step_type_str}step(s) taken in {(t_now - t_start)/60.:.2f} min")
             if variable_steps:
                 if self.number_neg_concs:
                     print(f"Number of step re-do's because of negative concentrations: {self.number_neg_concs}")

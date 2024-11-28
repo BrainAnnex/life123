@@ -19,7 +19,7 @@
 # A direct reaction and the same reaction, catalyzed by an enzyme `E` and showing the intermediate state.  
 # Re-run from same initial concentrations of S ("Substrate") and P ("Product"), for various concentations of the enzyme `E`: from zero to hugely abundant 
 # ### We'll REJECT the customary Michaelis-Menten assumptions that `[E] << [S]` and that the rate constants satisfy `k1_reverse >> k2_forward` !   
-# #### We'll explore exotic scenarios with lavish amount of enzyme, leading to diminishing (though fast-produced!) products,  and a buildup of the (not-so-transient!) `ES` intermediate
+# #### We'll **repeat runs with increasingly higher initial concentration of Enzyme**, and explore exotic scenarios with lavish amount of enzyme, leading to diminishing (though fast-produced!) products,  and a buildup of the (not-so-transient!) `ES` intermediate
 
 # %% [markdown]
 # ### TAGS :  "uniform compartment", "chemistry", "enzymes"
@@ -44,8 +44,6 @@ import pandas as pd
 
 # %%
 check_version(LIFE123_VERSION)
-
-# %%
 
 # %%
 
@@ -91,43 +89,45 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 
 # %%
 
+# %%
+
 # %% [markdown]
 # # 1. Set the initial concentrations of all the chemicals - starting with no enzyme
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="mid")
-dynamics.set_conc(conc={"S": 20.},  snapshot=True)      # Initially, no enzyme `E`
-dynamics.describe_state()
+uc = UniformCompartment(chem_data=chem_data, preset="mid")
+uc.set_conc(conc={"S": 20.})      # Initially, no enzyme `E`
+uc.describe_state()
 
 # %% [markdown] tags=[]
 # ### Advance the reactions (for now without enzyme) to equilibrium
 
 # %%
-#dynamics.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
+#uc.set_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
 # Perform the reactions
-dynamics.single_compartment_react(duration=4.0,
-                                  initial_step=0.1, variable_steps=True, explain_variable_steps=False)
+uc.single_compartment_react(duration=4.0,
+                            initial_step=0.1)
 
 # %%
-dynamics.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, title_prefix="With ZERO enzyme")
+uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, title_prefix="With ZERO enzyme")
 
 # %% [markdown]
 # ### The reactions, lacking enzyme, are proceeding slowly towards equilibrium, just like the reaction that was discussed in part 1 of the experiment "enzyme_1"
 
 # %%
 # Verify that the reactions have reached equilibrium
-dynamics.is_in_equilibrium(tolerance=2)
+uc.is_in_equilibrium(tolerance=2)
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
-dynamics.curve_intersect("S", "P", t_start=0, t_end=1.0)
+uc.curve_intersect("S", "P", t_start=0, t_end=1.0)
 
 # %%
-dynamics.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
+uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = dynamics.get_chem_conc("P")
+P_equil = uc.get_chem_conc("P")
 P_equil
 
 # %%
@@ -135,7 +135,7 @@ P_70_threshold = P_equil * 0.70
 P_70_threshold
 
 # %%
-dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
+uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
 # %%
 
@@ -148,32 +148,32 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 0.2     # A tiny bit of enzyme `E`: 1/100 of the initial [S]
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
-dynamics.set_conc(conc={"S": 20., "E": E_init},
-                  snapshot=True)     
-dynamics.describe_state()
+uc.set_conc(conc={"S": 20., "E": E_init})
+uc.describe_state()
 
 # %%
 # Perform the reactions (The duration of the run was manually adjusted for optimal visibility)
-dynamics.single_compartment_react(duration=1.3,
-                                  initial_step=0.00005, variable_steps=True, explain_variable_steps=False)
+uc.single_compartment_react(duration=1.3,
+                            initial_step=0.00005)
 
 # %%
 # Verify that the reactions have reached equilibrium
-dynamics.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(verbose=False)
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
-dynamics.curve_intersect("S", "P", t_start=0, t_end=1.0)
+uc.curve_intersect("S", "P", t_start=0, t_end=1.0)
 
 # %%
-dynamics.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True,
-                      title_prefix=f"[E] init = {E_init}", range_x=[0, 0.4])
+# Early part of the reaction
+uc.plot_history(colors=['cyan', 'green', 'violet', 'red'],
+                      title_prefix=f"Early times when E0 = {E_init}", range_x=[0, 0.4])
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
-dynamics.curve_intersect("S", "P", t_start=0, t_end=0.4)
+uc.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %% [markdown]
 # ### Now, let's investigate E and ES in the very early times
@@ -182,29 +182,29 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.4)
 # ## Notice how even a tiny amount of enzyme (1/100 of the initial [S])  makes a very pronounced difference!
 
 # %%
-#The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True,
-                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
+# The very early part of the reaction
+uc.plot_history(chemicals=['E', 'ES', 'P'], colors=['violet', 'red', 'green'],
+                      title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 0.2])
 
 # %% [markdown]
 # ### Notice how, with this small initial concentration of [E], the timescale of [E] and [ES] is vastly faster than that of [P] and [S]
 
 # %%
 # The full reaction of E and ES
-dynamics.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E and ES when [E] init = {E_init}")
+uc.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
+                      title_prefix=f"E and ES when E0 = {E_init}")
 
 # %% [markdown]
 # Notice how at every onset of instability in [E] or [ES], the adaptive time steps shrink down
 
 # %%
-dynamics.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
+uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %% [markdown]
 # Interestingly, most of the inital [E] of 0.2 is now, at equilibrium, stored as [ES]=0.119; the energy of the "activation barrier" from E + S to ES might be unrealistically low (2000 Joules).  Zooming in on the very earl part of the plot:
 
 # %%
-P_equil = dynamics.get_chem_conc("P")
+P_equil = uc.get_chem_conc("P")
 P_equil
 
 # %%
@@ -212,7 +212,7 @@ P_70_threshold = P_equil * 0.70
 P_70_threshold
 
 # %%
-dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
+uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
 # %%
 
@@ -225,46 +225,46 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 1.0
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
-dynamics.set_conc(conc={"S": 20., "E": E_init}, snapshot=True)     
-dynamics.describe_state()
+uc.set_conc(conc={"S": 20., "E": E_init})     
+uc.describe_state()
 
 # %%
 # Perform the reactions (The duration of the run was manually adjusted for optimal visibility)
-dynamics.single_compartment_react(duration=0.4,
-                                  initial_step=0.00005, variable_steps=True, explain_variable_steps=False)
+uc.single_compartment_react(duration=0.4, 
+                            initial_step=0.00005)
 
 # %%
 # Verify that the reactions have reached equilibrium
-dynamics.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(verbose=False)
 
 # %%
-dynamics.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"[E] init = {E_init}")
+uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
+                      title_prefix=f"E0 = {E_init}")
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
-dynamics.curve_intersect("S", "P", t_start=0, t_end=0.4)
+uc.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %% [markdown]
 # The timescale of [S] and [P] continues to become faster with a higher initial [E]
 
 # %%
-#The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True,
-                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
+# The very early part of the reactions
+uc.plot_history(chemicals=['E', 'ES', 'P'], colors=['violet', 'red', 'green'], 
+                      title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 1.])
 
 # %%
 # The full reaction of E and ES
-dynamics.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E and ES when [E] init = {E_init}")
+uc.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
+                      title_prefix=f"E and ES when E0 = {E_init}")
 
 # %%
-dynamics.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
+uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = dynamics.get_chem_conc("P")
+P_equil = uc.get_chem_conc("P")
 P_equil
 
 # %% [markdown]
@@ -275,7 +275,7 @@ P_70_threshold = P_equil * 0.70
 P_70_threshold
 
 # %%
-dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
+uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
 # %% [markdown]
 # #### The time at which we reach the 70% threshold of the equilibrium value of P continues to decrease with increasing initial [E]
@@ -291,46 +291,46 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 2.0      # 1/10 of the initial [S]
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
-dynamics.set_conc(conc={"S": 20., "E": E_init}, snapshot=True)     
-dynamics.describe_state()
+uc.set_conc(conc={"S": 20., "E": E_init})     
+uc.describe_state()
 
 # %%
 # Perform the reactions (The duration of the run was manually adjusted for optimal visibility)
-dynamics.single_compartment_react(duration=0.2,
-                                  initial_step=0.00005, variable_steps=True, explain_variable_steps=False)
+uc.single_compartment_react(duration=0.2,
+                            initial_step=0.00005)
 
 # %%
 # Verify that the reactions have reached equilibrium
-dynamics.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(verbose=False)
 
 # %%
-dynamics.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"[E] init = {E_init}")
+uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
+                      title_prefix=f"E0 = {E_init}")
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
-dynamics.curve_intersect("S", "P", t_start=0, t_end=0.4)
+uc.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %% [markdown]
 # The timescale of [S] and [P] continues to become faster with a higher initial [E]
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True,
-                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
+uc.plot_history(chemicals=['E', 'ES', 'P'], colors=['violet', 'red', 'green'], 
+                      title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 2.])
 
 # %%
-# The full reaction of E and ES
-dynamics.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E and ES when [E] init = {E_init}")
+# Show the full reaction of E and ES
+uc.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
+                      title_prefix=f"E and ES when E0 = {E_init}")
 
 # %%
-dynamics.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
+uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = dynamics.get_chem_conc("P")
+P_equil = uc.get_chem_conc("P")
 P_equil
 
 # %% [markdown]
@@ -341,7 +341,7 @@ P_70_threshold = P_equil * 0.70
 P_70_threshold
 
 # %%
-dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
+uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
 # %% [markdown]
 # #### The time at which we reach the 70% threshold of the equilibrium value of P continues to decrease with increasing initial [E]
@@ -357,49 +357,49 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 10.0      # 1/2 of the initial [S]
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
-dynamics.set_conc(conc={"S": 20., "E": E_init}, snapshot=True)     
-dynamics.describe_state()
+uc.set_conc(conc={"S": 20., "E": E_init})     
+uc.describe_state()
 
 # %%
 # Perform the reactions (The duration of the run was manually adjusted for optimal visibility)
-dynamics.single_compartment_react(duration=0.05,
-                                  initial_step=0.00005, variable_steps=True, explain_variable_steps=False)
+uc.single_compartment_react(duration=0.05,
+                            initial_step=0.00005)
 
 # %%
 # Verify that the reactions have reached equilibrium
-dynamics.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(verbose=False)
 
 # %%
-dynamics.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"[E] init = {E_init}")
+uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
+                      title_prefix=f"E0 = {E_init}")
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
-dynamics.curve_intersect("S", "P", t_start=0, t_end=0.05)
+uc.curve_intersect("S", "P", t_start=0, t_end=0.05)
 
 # %% [markdown]
 # #### The timescale of [S] and [P] continues to become faster with a higher initial [E] -- **AND THEY'RE NOW APPROACHING THE TIMESCALES OF E AND ES**
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True,
-                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
+uc.plot_history(chemicals=['E', 'ES', 'P'], colors=['violet', 'red', 'green'], 
+                      title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 10.])
 
 # %%
 # The full reaction of E and ES
-dynamics.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E and ES when [E] init = {E_init}")
+uc.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
+                      title_prefix=f"E and ES when E0 = {E_init}")
 
 # %% [markdown]
 # #### Notice that at these higher initial concentrations of [E], we're now beginning to see overshoots in [E] and [ES]
 
 # %%
-dynamics.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
+uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = dynamics.get_chem_conc("P")
+P_equil = uc.get_chem_conc("P")
 P_equil
 
 # %% [markdown]
@@ -410,7 +410,7 @@ P_70_threshold = P_equil * 0.70
 P_70_threshold
 
 # %%
-dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
+uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
 # %% [markdown]
 # #### The time at which we reach the 70% threshold of the equilibrium value of P continues to decrease with increasing initial [E]
@@ -426,49 +426,49 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 20.0      # Same as the initial [S]
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
-dynamics.set_conc(conc={"S": 20., "E": E_init}, snapshot=True)     
-dynamics.describe_state()
+uc.set_conc(conc={"S": 20., "E": E_init})     
+uc.describe_state()
 
 # %%
 # Perform the reactions (The duration of the run was manually adjusted for optimal visibility)
-dynamics.single_compartment_react(duration=0.02,
-                                  initial_step=0.00005, variable_steps=True, explain_variable_steps=False)
+uc.single_compartment_react(duration=0.02, 
+                            initial_step=0.00005)
 
 # %%
 # Verify that the reactions have reached equilibrium
-dynamics.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(verbose=False)
 
 # %%
-dynamics.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"[E] init = {E_init}")
+uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
+                      title_prefix=f"E0 = {E_init}")
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
-dynamics.curve_intersect("S", "P", t_start=0, t_end=0.02)
+uc.curve_intersect("S", "P", t_start=0, t_end=0.02)
 
 # %% [markdown]
 # #### The timescale of [S] and [P] continues to become faster with a higher initial [E] -- **AND THEY'RE NOW GETTING CLOSE THE TIMESCALES OF E AND ES**
 
 # %%
-#The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True,
-                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.002])
+# The very early part of the reaction
+uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], 
+                title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 20.])
 
 # %%
 # The full reaction of E and ES
-dynamics.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E and ES when [E] init = {E_init}")
+uc.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
+                      title_prefix=f"E and ES when E0 = {E_init}")
 
 # %% [markdown]
 # #### At these higher initial concentrations of [E], we're now beginning to see overshoots in [E] and [ES] that overlap less
 
 # %%
-dynamics.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
+uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = dynamics.get_chem_conc("P")
+P_equil = uc.get_chem_conc("P")
 P_equil
 
 # %% [markdown]
@@ -479,7 +479,7 @@ P_70_threshold = P_equil * 0.70
 P_70_threshold
 
 # %%
-dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
+uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
 # %% [markdown] tags=[]
 # #### The time at which we reach the 70% threshold of the equilibrium value of P continues to decrease with increasing initial [E]
@@ -495,49 +495,49 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 30.0      # 50% higher than the initial [S]
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
-dynamics.set_conc(conc={"S": 20., "E": E_init}, snapshot=True)     
-dynamics.describe_state()
+uc.set_conc(conc={"S": 20., "E": E_init})     
+uc.describe_state()
 
 # %%
 # Perform the reactions (The duration of the run was manually adjusted for optimal visibility)
-dynamics.single_compartment_react(duration=0.01,
-                                  initial_step=0.00005, variable_steps=True, explain_variable_steps=False)
+uc.single_compartment_react(duration=0.01, 
+                            initial_step=0.00005)
 
 # %%
 # Verify that the reactions have reached equilibrium
-dynamics.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(verbose=False)
 
 # %%
-dynamics.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"[E] init = {E_init}")
+uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
+                      title_prefix=f"E0 = {E_init}")
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
-dynamics.curve_intersect("S", "P", t_start=0, t_end=0.01)
+uc.curve_intersect("S", "P", t_start=0, t_end=0.01)
 
 # %% [markdown]
-# #### The timescale of [S] and [P] continues to become faster with a higher initial [E] -- **AND THEY'RE NOW COMPARABLE THE TIMESCALES OF E AND ES*
+# #### The timescale of [S] and [P] continues to become faster with a higher initial [E] -- **AND THEY'RE NOW COMPARABLE THE TIMESCALES OF E AND ES**
 
 # %%
 #The very early part of the reaction
-dynamics.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True,
-                      title_prefix=f"Detail when [E] init = {E_init}", range_x=[0, 0.005])
+uc.plot_history(colors=['cyan', 'green', 'violet', 'red'],
+                title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.005], range_y=[0, 30.])
 
 # %%
 # The full reaction of E and ES
-dynamics.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E and ES when [E] init = {E_init}")
+uc.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
+                title_prefix=f"E and ES when E0 = {E_init}")
 
 # %% [markdown]
 # #### At these high initial concentrations of [E], we're now beginning to see [E] and [ES] no longer overlapping; the overshoot is still present in both
 
 # %%
-dynamics.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
+uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = dynamics.get_chem_conc("P")
+P_equil = uc.get_chem_conc("P")
 P_equil
 
 # %% [markdown]
@@ -548,7 +548,7 @@ P_70_threshold = P_equil * 0.70
 P_70_threshold
 
 # %%
-dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
+uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
 # %% [markdown] tags=[]
 # #### The time at which we reach the 70% threshold of the equilibrium value of P continues to decrease with increasing initial [E]
@@ -564,27 +564,27 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 60.0      # Triple the initial [S]
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
-dynamics.set_conc(conc={"S": 20., "E": E_init}, snapshot=True)     
-dynamics.describe_state()
+uc.set_conc(conc={"S": 20., "E": E_init})     
+uc.describe_state()
 
 # %%
 # Perform the reactions (The duration of the run was manually adjusted for optimal visibility)
-dynamics.single_compartment_react(duration=0.005,
-                                  initial_step=0.00005, variable_steps=True, explain_variable_steps=False)
+uc.single_compartment_react(duration=0.005,
+                            initial_step=0.00005)
 
 # %%
 # Verify that the reactions have reached equilibrium
-dynamics.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(verbose=False)
 
 # %%
-dynamics.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"[E] init = {E_init}")
+uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
+                      title_prefix=f"E0 = {E_init}")
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
-dynamics.curve_intersect("S", "P", t_start=0, t_end=0.005)
+uc.curve_intersect("S", "P", t_start=0, t_end=0.005)
 
 # %% [markdown]
 # #### The timescales of [S] and [P] continues to become faster with a higher initial [E] -- **AND NOW THEY REMAIN COMPARABLE THE TIMESCALES OF E AND ES**
@@ -593,10 +593,10 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.005)
 # #### At these high initial concentrations of [E],  [E] and [ES] no longer overlapping, and are now getting further apart
 
 # %%
-dynamics.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
+uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = dynamics.get_chem_conc("P")
+P_equil = uc.get_chem_conc("P")
 P_equil
 
 # %% [markdown]
@@ -607,7 +607,7 @@ P_70_threshold = P_equil * 0.70
 P_70_threshold
 
 # %%
-dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
+uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
 # %% [markdown] tags=[]
 # #### The time at which we reach the 70% threshold of the equilibrium value of P continues to decrease with increasing initial [E]
@@ -623,27 +623,27 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 100.0      # Quintuple the initial [S]
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
-dynamics.set_conc(conc={"S": 20., "E": E_init}, snapshot=True)     
-dynamics.describe_state()
+uc.set_conc(conc={"S": 20., "E": E_init})     
+uc.describe_state()
 
 # %%
 # Perform the reactions (The duration of the run was manually adjusted for optimal visibility)
-dynamics.single_compartment_react(duration=0.003,
-                                  initial_step=0.00005, variable_steps=True, explain_variable_steps=False)
+uc.single_compartment_react(duration=0.003,
+                            initial_step=0.00005)
 
 # %%
 # Verify that the reactions have reached equilibrium
-dynamics.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(verbose=False)
 
 # %%
-dynamics.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"[E] init = {E_init}")
+uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
+                      title_prefix=f"E0 = {E_init}")
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
-dynamics.curve_intersect("S", "P", t_start=0, t_end=0.005)
+uc.curve_intersect("S", "P", t_start=0, t_end=0.005)
 
 # %% [markdown]
 # #### The timescales of [S] and [P] continues to become faster with a higher initial [E] -- **AND REMAIN COMPARABLE TO THE TIMESCALES OF E AND ES**
@@ -652,10 +652,10 @@ dynamics.curve_intersect("S", "P", t_start=0, t_end=0.005)
 # #### At these high initial concentrations of [E], the time curves of [E] and [ES] no longer overlapping, and are now getting further apart
 
 # %%
-dynamics.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
+uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
 
 # %%
-P_equil = dynamics.get_chem_conc("P")
+P_equil = uc.get_chem_conc("P")
 P_equil
 
 # %% [markdown]
@@ -666,7 +666,7 @@ P_70_threshold = P_equil * 0.70
 P_70_threshold
 
 # %%
-dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
+uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
 # %%
 
@@ -677,10 +677,10 @@ dynamics.reach_threshold(chem="P", threshold=P_70_threshold)
 # #### The **strange world of departing from the customary Michaelis-Menten assumptions** that `[E] << [S]` and that the rates satisfy `k1_reverse >> k2_forward` !
 
 # %%
-dynamics.get_history(head=1)  # First point in the simulation
+uc.get_history(head=1)  # First point in the simulation
 
 # %%
-dynamics.get_history(tail=1)  # Last point in the simulation
+uc.get_history(tail=1)  # Last point in the simulation
 
 # %% [markdown]
 # ### When the initial [E] is quite high, relatively little of the reactant S goes into making the product P ; most of S binds with the abundant E, to produce a lasting ES 
@@ -726,6 +726,6 @@ chem_data.describe_reactions()
 
 # %%
 # Also review that the chemical equilibrium holds, with the final simulation values
-dynamics.is_in_equilibrium()
+uc.is_in_equilibrium()
 
 # %%
