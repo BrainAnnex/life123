@@ -170,7 +170,7 @@ class UniformCompartment:
                             (1) a list or tuple of concentration values for ALL the registered chemicals,
                                 in their index order
                             OR
-                            (2) a dict indexed by the chemical names, for some or all of the chemicals
+                            (2) a dict indexed by the chemical labels, for some or all of the chemicals
                                 Anything not specified will be set to zero.
                                 EXAMPLE:  {"A": 12.4, "B": 0.23, "E": 2.6}
 

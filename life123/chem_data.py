@@ -12,19 +12,23 @@ class ChemCore:
     Core data about the chemical species, such as their names, labels
     and indexes (position in their listing)
 
-    Note: end users will generally utilize the class ChemData, which extends this one
+    Note: End users will typically utilize the class ChemData, which extends this one
     """
 
     def __init__(self):
 
-        self.chemical_data = [] # Basic data for all chemicals, *except* water and macro-molecules
+        self.chemical_data = [] # Basic data for all chemicals, *except* water and macro-molecules.
                                 # Each list entry represents 1 chemical,
-                                # and is a dict required to contain the key "name", plus any other keys
-                                # EXAMPLE: [{"name": "A"} ,
-                                #           {"name": "Nicotinamide adenine dinucleotide", "label": "NAD", "note": "some note"}]
-                                # The position in this list is referred to as the "INDEX" of that chemical
-                                # Names must be unique
+                                # and is a dict required to contain the keys "label" and "name";
+                                # it may also contain other arbitrary other keys ("notes" is a commonly-used one)
+                                # EXAMPLE: [{"label": "A"} ,
+                                #           {"label": "NAD", "name": "Nicotinamide adenine dinucleotide", "note": "some note"}]
+                                # The position in this list is referred to as the "INDEX" of that chemical;
+                                #          in out example above, "A" has index 0, while "NAD" has index 1
+                                # Labels must be unique; likewise, names must be unique.
+                                # The name of any chemical cannot be the same as the label of a different one.
                                 # TODO: maybe use a Pandas dataframe
+
 
         self.label_dict = {}    # To map assigned labels to their positional index (in the ordered list of chemicals, self.chemical_data);
                                 # this is automatically set and maintained
@@ -161,8 +165,9 @@ class ChemCore:
               use ChemData.add_chemical_with_diffusion() instead
 
         :param name:    Name of the new chemical species to register; names must be unique -
-                            an Exception will be raised if the name was already registered
-        :param label:   [OPTIONAL] Typically, a short version of the name, or a stand-in for it;
+                            an Exception will be raised if the name was already registered as a name or as a label
+        :param label:   [OPTIONAL] Typically, a short version of the name, or a stand-in for it.
+                            If provided, it must be unique, and cannot be identical to the name of another chemical;
                             if not provided, the name will be used as a label
         :param note:    [OPTIONAL] String with note to attach to the chemical
         :param kwargs:  [OPTIONAL] Dictionary of named arguments (with any desired names)
@@ -179,10 +184,22 @@ class ChemCore:
         assert name not in self.label_dict.keys(), \
             f"add_chemical(): the requested name (`{name}`) is ALREADY registered"
 
+        for chem in self.chemical_data:
+            assert name != chem["name"], \
+                f"add_chemical(): the requested name (`{name}`) is ALREADY registered"
 
-        if label is None:
-            label = name    # Use the (full) name as a label if no full label is provided
 
+        if not label:
+            label = name    # Use the (full) name as a label, if no full label is provided
+        else:
+            assert type(label) == str, \
+                f"add_chemical(): a chemical's label, if provided, must be a string value.  " \
+                f"What was passed ({label}) was of type {type(label)}"
+            assert label not in self.label_dict.keys(), \
+                f"add_chemical(): the requested name (`{label}`) is ALREADY registered"
+            for chem in self.chemical_data:
+                assert label != chem["name"], \
+                    f"add_chemical(): the requested label (`{label}`) is ALREADY registered as the name of another chemical"
 
         index = len(self.chemical_data)     # The next available index number (list position)
         self.label_dict[label] = index
@@ -210,15 +227,16 @@ class Diffusion(ChemCore):
     """
     Extends its parent class, to manage diffusion-related data
 
-    End users will generally utilize the class ChemData, which extends this one
+    End users will typically utilize the class ChemData, which extends this one
     """
 
     def __init__(self):
 
         super().__init__()          # Invoke the constructor of its parent class
 
-        self.diffusion_rates = {}   # Values for the diffusion rates, indexed by chemical name.
-                                    # Only chemicals with a given diffusion rate will be present here
+        self.diffusion_rates = {}   # Values for the diffusion rates, indexed by chemical label.
+                                    # All values must be non-negative numbers.
+                                    # Only chemicals with an assigned diffusion rate will be present here
                                     # EXAMPLE: {"A": 6.4, "B": 12.0}
 
 
@@ -230,8 +248,8 @@ class Diffusion(ChemCore):
             - a note
             - any other named argument(s) that the user wishes to store (i.e. arbitrary named arguments)
 
-        EXAMPLE:  add_chemical("P1", diffusion_rate = 0.1,
-                               note = "my note about P1", full_name = "protein P1")
+        EXAMPLE:  add_chemical(label = "P1", diff_rate = 0.1,
+                               note = "my note about P1", name = "protein P1")
 
         Note: if no diffusion is to be set, can also simply use ChemData.add_chemical()
 
@@ -352,7 +370,7 @@ class AllReactions(Diffusion):
     """
     Extends its parent class, to manage reaction-related data
 
-    End users will generally utilize the class ChemData, which extends this one
+    End users will typically utilize the class ChemData, which extends this one
     """
 
     def __init__(self):
@@ -958,7 +976,7 @@ class Macromolecules(AllReactions):
     Extends its parent class to manage modeling of large molecules (such as DNA)
     with multiple binding sites (for example, for Transcription Factors)
 
-    End users will generally utilize the class ChemData, which extends this one
+    End users will typically utilize the class ChemData, which extends this one
     """
 
     def __init__(self):

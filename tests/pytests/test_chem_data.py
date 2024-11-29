@@ -110,29 +110,56 @@ def test_add_chemical():
     assert chem_data.number_of_chemicals() == 0
     assert chem_data.chemical_data == []
 
-    result = chem_data.add_chemical("A")
+    result = chem_data.add_chemical(name="A")
     assert result == 0
     assert chem_data.number_of_chemicals() == 1
     assert chem_data.chemical_data == [{"name": "A", "label": "A"}]
     assert chem_data.label_dict == {"A": 0}
 
     with pytest.raises(Exception):
-        chem_data.add_chemical("A") # Duplicate!
+        chem_data.add_chemical(name="A")     # Duplicate!
 
-    result = chem_data.add_chemical("B", note="some note")
+    result = chem_data.add_chemical(name="B", note="some note")
     assert result == 1
     assert chem_data.number_of_chemicals() == 2
     assert chem_data.chemical_data == [ {"name": "A", "label": "A"},
                                         {"name": "B", "label": "B", "note": "some note"}]
     assert chem_data.label_dict == {"A": 0, "B": 1}
 
-    result = chem_data.add_chemical("C")
+    result = chem_data.add_chemical(name="C")
     assert result == 2
     assert chem_data.number_of_chemicals() == 3
     assert chem_data.chemical_data == [{"name": "A", "label": "A"},
                                        {"name": "B", "label": "B", "note": "some note"},
                                        {"name": "C", "label": "C"}]
     assert chem_data.label_dict == {"A": 0, "B": 1, "C": 2}
+
+    result = chem_data.add_chemical(name="Some long name", label="D")
+    assert result == 3
+    assert chem_data.number_of_chemicals() == 4
+    assert chem_data.chemical_data == [{"name": "A", "label": "A"},
+                                       {"name": "B", "label": "B", "note": "some note"},
+                                       {"name": "C", "label": "C"},
+                                       {"name": "Some long name", "label": "D"}]
+    assert chem_data.label_dict == {"A": 0, "B": 1, "C": 2, "D": 3}
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name="Some long name")   # Duplicate name!
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name="D")                # Name cannot be same as an existing label!
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name="Z", label="A")     # Duplicate label!
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name="Z", label="Some long name")    # Label cannot be same as an existing name!
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name=123)    # Name is not a string
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name="")     # Missing name
 
 
     # Re-start
@@ -152,11 +179,6 @@ def test_add_chemical():
                                        {"name": "CH3OH", "label": "Z"}]
     assert chem_data.label_dict == {"X": 0, "Y": 1, "Z": 2}
 
-    with pytest.raises(Exception):
-        chem_data.add_chemical(name=123)    # Name is not a string
-
-    with pytest.raises(Exception):
-        chem_data.add_chemical(name="")
 
 
 
