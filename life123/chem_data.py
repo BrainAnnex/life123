@@ -21,8 +21,9 @@ class ChemCore:
                                 # Each list entry represents 1 chemical,
                                 # and is a dict required to contain the keys "label" and "name";
                                 # it may also contain other arbitrary other keys ("notes" is a commonly-used one)
-                                # EXAMPLE: [{"label": "A"} ,
-                                #           {"label": "NAD", "name": "Nicotinamide adenine dinucleotide", "note": "some note"}]
+                                # EXAMPLE: [{"label": "A",   "name": "A"},
+                                #           {"label": "NAD", "name": "Nicotinamide adenine dinucleotide", "note": "some note"},
+                                #           {"label": "B",   "name": "B", "plot_color": "purple"]
                                 # The position in this list is referred to as the "INDEX" of that chemical;
                                 #          in out example above, "A" has index 0, while "NAD" has index 1
                                 # Labels must be unique; likewise, names must be unique.
@@ -218,6 +219,21 @@ class ChemCore:
 
 
 
+    def get_plot_color(self, label :str) -> Union[str, None]:
+        """
+
+        :param label:
+        :return:
+        """
+        for chem in self.chemical_data:
+            if chem["label"] == label:
+                return chem["plot_color"]
+
+        return None
+
+
+
+
 
 ###############################################################################################################
 ###############################################################################################################
@@ -234,9 +250,9 @@ class Diffusion(ChemCore):
 
         super().__init__()          # Invoke the constructor of its parent class
 
-        self.diffusion_rates = {}   # Values for the diffusion rates, indexed by chemical label.
+        self.diffusion_rates = {}   # Values for the diffusion rates, indexed by chemical "label".
                                     # All values must be non-negative numbers.
-                                    # Only chemicals with an assigned diffusion rate will be present here
+                                    # Only chemicals with an assigned diffusion rate will be present here.
                                     # EXAMPLE: {"A": 6.4, "B": 12.0}
 
 

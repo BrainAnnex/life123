@@ -1556,10 +1556,10 @@ class UniformCompartment:
                     p2 = plot_history(various args, show=False)
                     PlotlyHelper.combine_plots([p1, p2], other optional args)
 
-        :param chemicals:       [OPTIONAL] Name, or list of names, of the chemicals whose concentration changes are to be plotted;
-                                    if None, then display all
+        :param chemicals:       [OPTIONAL] Label, or list of labels, of the chemicals whose concentration changes are to be plotted;
+                                    if None, then display all, in their index order
         :param colors:          [OPTIONAL] Either a single color (string with standard plotly name, such as "red"),
-                                    or list of names to use, in order; if None, then use the hardwired defaults
+                                    or list of names to use, in the same order as the chemicals; if None, then use the hardwired defaults
         :param title:           [OPTIONAL] Title for the plot;
                                     if None, use default titles that will vary based on the # of reactions; EXAMPLES:
                                     "Changes in concentrations for 5 reactions"
@@ -1592,7 +1592,7 @@ class UniformCompartment:
         :return:                A plotly "Figure" object
         """
         if chemicals is None:
-            chemicals = self.chem_data.get_all_labels()      # List of the chemical names.  EXAMPLE: ["A", "B", "H"]
+            chemicals = self.chem_data.get_all_labels()      # List of the chemical labels.  EXAMPLE: ["A", "B", "H"]
 
         if title is None:   # If no title was specified, create a default one based on how many reactions are present
             number_of_rxns = self.chem_data.number_of_reactions()
@@ -1612,7 +1612,14 @@ class UniformCompartment:
             else:
                 y_label = "Concentration"
 
-        df = self.get_history()     # A Pandas dataframe that contains a column named "SYSTEM TIME"
+        df = self.get_history()         # A Pandas dataframe that contains a column named "SYSTEM TIME"
+
+        if colors is None:
+            registered_colors = []
+            for label in chemicals:
+                registered_colors.append(self.chem_data.get_plot_color(label))
+            colors = registered_colors
+
 
         return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=chemicals,
                                         colors=colors, title=title, title_prefix=title_prefix,

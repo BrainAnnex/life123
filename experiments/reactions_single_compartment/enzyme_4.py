@@ -25,7 +25,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "enzymes"
 
 # %%
-LAST_REVISED = "Nov. 27, 2024"
+LAST_REVISED = "Nov. 29, 2024"
 LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
 
 # %%
@@ -59,6 +59,12 @@ GraphicLog.config(filename=log_file,
 # %%
 # Initialize the system
 chem_data = ChemData()
+
+chem_data.add_chemical(name="S",  plot_color="cyan")
+chem_data.add_chemical(name="E",  plot_color="violet")
+chem_data.add_chemical(name="ES", plot_color="red")
+chem_data.add_chemical(name="P",  plot_color="green")
+
                                                      
 # Reaction S <-> P , with 1st-order kinetics, favorable thermodynamics in the forward direction, 
 # and a forward rate that is much slower than it would be with the enzyme - as seen in the next reaction, below
@@ -68,16 +74,13 @@ chem_data.add_reaction(reactants="S", products="P",
      
 # Reaction E + S <-> ES , with 1st-order kinetics, and a forward rate that is much faster than it was without the enzyme
 # Thermodynamically, the forward direction is at a disadvantage (higher energy state) because of the activation barrier in forming the transient state ES
-chem_data.add_reaction(reactants=["E", "S"], products=["ES"],
+chem_data.add_reaction(reactants=["E", "S"], products="ES",
                        forward_rate=100., delta_G=2000)                           
                                                       
 # Reaction ES <-> E + P , with 1st-order kinetics, and a forward rate that is much faster than it was without the enzyme
 # Thermodynamically, the total energy change of this reaction and the previous one adds up to the same value as the reaction without the enzyme (-3989.73)
-chem_data.add_reaction(reactants=["ES"], products=["E", "P"],
+chem_data.add_reaction(reactants="ES", products=["E", "P"],
                        forward_rate=200., delta_G=-5989.73)
-
-# NOTE: the forward_rate's of the last 2 reactions (the catalyzed ones) were tweaked, 
-#       to lead to a crossover point [S] = [P] at about the same time as in experiment `enzyme3`, in step 2 (when [E] = 0.2)
 
 chem_data.describe_reactions()
 
@@ -110,7 +113,7 @@ uc.single_compartment_react(duration=4.0,
                             initial_step=0.1)
 
 # %%
-uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, title_prefix="With ZERO enzyme")
+uc.plot_history(show_intervals=True, title_prefix="With ZERO enzyme")
 
 # %% [markdown]
 # ### The reactions, lacking enzyme, are proceeding slowly towards equilibrium, just like the reaction that was discussed in part 1 of the experiment "enzyme_1"
@@ -168,8 +171,7 @@ uc.curve_intersect("S", "P", t_start=0, t_end=1.0)
 
 # %%
 # Early part of the reaction
-uc.plot_history(colors=['cyan', 'green', 'violet', 'red'],
-                      title_prefix=f"Early times when E0 = {E_init}", range_x=[0, 0.4])
+uc.plot_history(title_prefix=f"Early times when E0 = {E_init}", range_x=[0, 0.4])
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
@@ -183,16 +185,16 @@ uc.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %%
 # The very early part of the reaction
-uc.plot_history(chemicals=['E', 'ES', 'P'], colors=['violet', 'red', 'green'],
-                      title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 0.2])
+uc.plot_history(chemicals=['E', 'ES', 'P'],
+                title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 0.2])
 
 # %% [markdown]
 # ### Notice how, with this small initial concentration of [E], the timescale of [E] and [ES] is vastly faster than that of [P] and [S]
 
 # %%
 # The full reaction of E and ES
-uc.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E and ES when E0 = {E_init}")
+uc.plot_history(chemicals=['E', 'ES'], show_intervals=True, 
+                title_prefix=f"E and ES when E0 = {E_init}")
 
 # %% [markdown]
 # Notice how at every onset of instability in [E] or [ES], the adaptive time steps shrink down
@@ -240,8 +242,8 @@ uc.single_compartment_react(duration=0.4,
 uc.is_in_equilibrium(verbose=False)
 
 # %%
-uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E0 = {E_init}")
+uc.plot_history(show_intervals=True, 
+                title_prefix=f"E0 = {E_init}")
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
@@ -252,13 +254,13 @@ uc.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %%
 # The very early part of the reactions
-uc.plot_history(chemicals=['E', 'ES', 'P'], colors=['violet', 'red', 'green'], 
-                      title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 1.])
+uc.plot_history(chemicals=['E', 'ES', 'P'], 
+                title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 1.])
 
 # %%
 # The full reaction of E and ES
-uc.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E and ES when E0 = {E_init}")
+uc.plot_history(chemicals=['E', 'ES'], show_intervals=True, 
+                title_prefix=f"E and ES when E0 = {E_init}")
 
 # %%
 uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
@@ -306,8 +308,8 @@ uc.single_compartment_react(duration=0.2,
 uc.is_in_equilibrium(verbose=False)
 
 # %%
-uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E0 = {E_init}")
+uc.plot_history(show_intervals=True, 
+                title_prefix=f"E0 = {E_init}")
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
@@ -318,13 +320,13 @@ uc.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %%
 #The very early part of the reaction
-uc.plot_history(chemicals=['E', 'ES', 'P'], colors=['violet', 'red', 'green'], 
-                      title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 2.])
+uc.plot_history(chemicals=['E', 'ES', 'P'],
+                title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 2.])
 
 # %%
 # Show the full reaction of E and ES
-uc.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E and ES when E0 = {E_init}")
+uc.plot_history(chemicals=['E', 'ES'], show_intervals=True, 
+                title_prefix=f"E and ES when E0 = {E_init}")
 
 # %%
 uc.get_history(columns=['SYSTEM TIME', 'E', 'ES', 'P'], tail=1)  # Last point in the simulation
@@ -372,8 +374,8 @@ uc.single_compartment_react(duration=0.05,
 uc.is_in_equilibrium(verbose=False)
 
 # %%
-uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E0 = {E_init}")
+uc.plot_history(show_intervals=True, 
+                title_prefix=f"E0 = {E_init}")
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
@@ -383,14 +385,14 @@ uc.curve_intersect("S", "P", t_start=0, t_end=0.05)
 # #### The timescale of [S] and [P] continues to become faster with a higher initial [E] -- **AND THEY'RE NOW APPROACHING THE TIMESCALES OF E AND ES**
 
 # %%
-#The very early part of the reaction
-uc.plot_history(chemicals=['E', 'ES', 'P'], colors=['violet', 'red', 'green'], 
-                      title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 10.])
+# The very early part of the reaction
+uc.plot_history(chemicals=['E', 'ES', 'P'], 
+                title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 10.])
 
 # %%
 # The full reaction of E and ES
-uc.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E and ES when E0 = {E_init}")
+uc.plot_history(chemicals=['E', 'ES'], show_intervals=True, 
+                title_prefix=f"E and ES when E0 = {E_init}")
 
 # %% [markdown]
 # #### Notice that at these higher initial concentrations of [E], we're now beginning to see overshoots in [E] and [ES]
@@ -441,8 +443,8 @@ uc.single_compartment_react(duration=0.02,
 uc.is_in_equilibrium(verbose=False)
 
 # %%
-uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E0 = {E_init}")
+uc.plot_history(show_intervals=True, 
+                title_prefix=f"E0 = {E_init}")
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
@@ -453,13 +455,12 @@ uc.curve_intersect("S", "P", t_start=0, t_end=0.02)
 
 # %%
 # The very early part of the reaction
-uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], 
-                title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 20.])
+uc.plot_history(title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 20.])
 
 # %%
 # The full reaction of E and ES
-uc.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E and ES when E0 = {E_init}")
+uc.plot_history(chemicals=['E', 'ES'], show_intervals=True, 
+                title_prefix=f"E and ES when E0 = {E_init}")
 
 # %% [markdown]
 # #### At these higher initial concentrations of [E], we're now beginning to see overshoots in [E] and [ES] that overlap less
@@ -510,8 +511,8 @@ uc.single_compartment_react(duration=0.01,
 uc.is_in_equilibrium(verbose=False)
 
 # %%
-uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E0 = {E_init}")
+uc.plot_history(show_intervals=True, 
+                title_prefix=f"E0 = {E_init}")
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
@@ -522,12 +523,11 @@ uc.curve_intersect("S", "P", t_start=0, t_end=0.01)
 
 # %%
 #The very early part of the reaction
-uc.plot_history(colors=['cyan', 'green', 'violet', 'red'],
-                title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.005], range_y=[0, 30.])
+uc.plot_history(title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.005], range_y=[0, 30.])
 
 # %%
 # The full reaction of E and ES
-uc.plot_history(chemicals=['E', 'ES'], colors=['violet', 'red'], show_intervals=True, 
+uc.plot_history(chemicals=['E', 'ES'], show_intervals=True, 
                 title_prefix=f"E and ES when E0 = {E_init}")
 
 # %% [markdown]
@@ -579,8 +579,8 @@ uc.single_compartment_react(duration=0.005,
 uc.is_in_equilibrium(verbose=False)
 
 # %%
-uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E0 = {E_init}")
+uc.plot_history(show_intervals=True, 
+                title_prefix=f"E0 = {E_init}")
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
@@ -638,8 +638,8 @@ uc.single_compartment_react(duration=0.003,
 uc.is_in_equilibrium(verbose=False)
 
 # %%
-uc.plot_history(colors=['cyan', 'green', 'violet', 'red'], show_intervals=True, 
-                      title_prefix=f"E0 = {E_init}")
+uc.plot_history(show_intervals=True, 
+                title_prefix=f"E0 = {E_init}")
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:

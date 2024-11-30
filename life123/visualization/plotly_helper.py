@@ -23,7 +23,7 @@ class PlotlyHelper:
         The choice of default colors is hardwired in this function.
 
         :param n:   Desired number of default colors
-        :return:
+        :return:    A list of n standard (CSS) color names
         """
         # TODO: provide multiple, user-selectable, harmonious assortments of default colors
 
@@ -93,8 +93,8 @@ class PlotlyHelper:
         :param legend_title:[OPTIONAL] String to show at the top of the legend box.
                                 Ignored if curve_labels wasn't set.
                                 If not provided, and the legend box is shown, it will appear as "variable"
-        :param colors:      [OPTIONAL] Either a single color (string with standard plotly name, such as "red"),
-                                or list of names to use, in order; if None, then use the hardwired defaults
+        :param colors:      [OPTIONAL] Either a single color (string with standard plotly CSS name, such as "red"),
+                                or list of names to use, in the same order as the y variables; if None, then use the hardwired defaults
         :param show:        If True, the plot will be shown
                                 Note: in JupyterLab, simply returning a plot object (without assigning it to a variable)
                                 leads to it being automatically shown
@@ -114,6 +114,7 @@ class PlotlyHelper:
             colors = cls.get_default_colors(number_of_curves)
         elif type(colors) == str:
             colors = [colors]
+        # TODO: if any color is missing, assign default ones
 
 
         fig = px.line(x=x, y=y, color_discrete_sequence=colors)     # y can be one array or a list
