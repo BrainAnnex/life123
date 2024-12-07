@@ -378,9 +378,9 @@ class UniformCompartment:
                 print(f"     {mm} || {state_str}")
 
         if self.chem_data.active_enzymes == set():    # If no enzymes were involved in any reaction
-            print(f"Set of chemicals involved in reactions: {self.chem_data.names_of_active_chemicals()}")
+            print(f"Set of chemicals involved in reactions: {self.chem_data.labels_of_active_chemicals()}")
         else:
-            print(f"Set of chemicals involved in reactions (not counting enzymes): {self.chem_data.names_of_active_chemicals()}")
+            print(f"Set of chemicals involved in reactions (not counting enzymes): {self.chem_data.labels_of_active_chemicals()}")
             print(f"Set of enzymes involved in reactions: {self.chem_data.names_of_enzymes()}")
 
 
@@ -941,7 +941,7 @@ class UniformCompartment:
 
                 if len(self.chem_data.active_chemicals) < self.chem_data.number_of_chemicals():
                     print(f"    Restricting adaptive time step analysis to {len(self.chem_data.active_chemicals)} "
-                    f"chemicals only: {self.chem_data.names_of_active_chemicals()} , with indexes: {self.chem_data.indexes_of_active_chemicals()}")
+                    f"chemicals only: {self.chem_data.labels_of_active_chemicals()} , with indexes: {self.chem_data.indexes_of_active_chemicals()}")
 
                 print("    Norms:    ", all_norms)
                 print("    Thresholds:    ")
@@ -1559,7 +1559,9 @@ class UniformCompartment:
         :param chemicals:       [OPTIONAL] Label, or list of labels, of the chemicals whose concentration changes are to be plotted;
                                     if None, then display all, in their index order
         :param colors:          [OPTIONAL] Either a single color (string with standard plotly name, such as "red"),
-                                    or list of names to use, in the same order as the chemicals; if None, then use the hardwired defaults
+                                    or list of names to use, in the same order as the chemicals;
+                                    if None, then use the registered colors (if specified),
+                                    or the hardwired defaults as a last resort
         :param title:           [OPTIONAL] Title for the plot;
                                     if None, use default titles that will vary based on the # of reactions; EXAMPLES:
                                     "Changes in concentrations for 5 reactions"

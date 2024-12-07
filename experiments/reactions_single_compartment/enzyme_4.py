@@ -25,7 +25,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "enzymes"
 
 # %%
-LAST_REVISED = "Nov. 29, 2024"
+LAST_REVISED = "Dec. 6, 2024"
 LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
 
 # %%

@@ -584,20 +584,20 @@ def test_single_reaction_describe():
 
 def test_names_of_active_chemicals():
     chem = ChemData(names=['A', 'B', 'C', 'X', 'Y'])
-    assert chem.names_of_active_chemicals() == set()    # No reactions yet
+    assert chem.labels_of_active_chemicals() == set()    # No reactions yet
 
     chem.add_reaction(reactants="A", products="B")
-    assert chem.names_of_active_chemicals() == {"A", "B"}
+    assert chem.labels_of_active_chemicals() == {"A", "B"}
 
     chem.add_reaction(reactants=["B", "X"], products=["C", "X"])
-    assert chem.names_of_active_chemicals() == {"A", "B", "C"}  # "X" is an enzyme
+    assert chem.labels_of_active_chemicals() == {"A", "B", "C"}  # "X" is an enzyme
 
     chem.add_reaction(reactants="X", products="Y")
-    assert chem.names_of_active_chemicals() == {"A", "B", "C", "X", "Y"}
+    assert chem.labels_of_active_chemicals() == {"A", "B", "C", "X", "Y"}
     # "X" is now involved in some reactions in a non-enzymatic role
 
     chem.add_reaction(reactants=["A", "B", "Z"], products=["C", "Z"])
-    assert chem.names_of_active_chemicals() == {"A", "B", "C", "X", "Y"}  # "Z" is an enzyme
+    assert chem.labels_of_active_chemicals() == {"A", "B", "C", "X", "Y"}  # "Z" is an enzyme
 
 
 

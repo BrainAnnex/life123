@@ -23,7 +23,7 @@ class ChemCore:
                                 # it may also contain other arbitrary other keys ("notes" is a commonly-used one)
                                 # EXAMPLE: [{"label": "A",   "name": "A"},
                                 #           {"label": "NAD", "name": "Nicotinamide adenine dinucleotide", "note": "some note"},
-                                #           {"label": "B",   "name": "B", "plot_color": "purple"]
+                                #           {"label": "B",   "name": "B"]
                                 # The position in this list is referred to as the "INDEX" of that chemical;
                                 #          in out example above, "A" has index 0, while "NAD" has index 1
                                 # Labels must be unique; likewise, names must be unique.
@@ -31,9 +31,15 @@ class ChemCore:
                                 # TODO: maybe use a Pandas dataframe
 
 
-        self.label_dict = {}    # To map assigned labels to their positional index (in the ordered list of chemicals, self.chemical_data);
+        self.label_dict = {}    # To map assigned chemical labels to their positional index
+                                # (in the ordered list of chemicals, self.chemical_data);
                                 # this is automatically set and maintained
                                 # EXAMPLE: {"A": 0, "B": 1, "C": 2}
+
+        self.color_dict = {}    # To map assigned chemical labels
+                                # to optionally specified color values to use in visualizations
+                                # EXAMPLE: {"A": "red", "B": "d07a19"}
+
 
 
 
@@ -152,7 +158,7 @@ class ChemCore:
 
 
 
-    def add_chemical(self, name :str, label=None, note=None, **kwargs) -> int:
+    def add_chemical(self, name :str, label=None, note=None, plot_color=None, **kwargs) -> int:
         """
         Register a new chemical species, with a name
         and (optionally) :
@@ -165,14 +171,15 @@ class ChemCore:
         Note: if also wanting to set the diffusion rate in a single function call,
               use ChemData.add_chemical_with_diffusion() instead
 
-        :param name:    Name of the new chemical species to register; names must be unique -
-                            an Exception will be raised if the name was already registered as a name or as a label
-        :param label:   [OPTIONAL] Typically, a short version of the name, or a stand-in for it.
-                            If provided, it must be unique, and cannot be identical to the name of another chemical;
-                            if not provided, the name will be used as a label
-        :param note:    [OPTIONAL] String with note to attach to the chemical
-        :param kwargs:  [OPTIONAL] Dictionary of named arguments (with any desired names)
-        :return:        The integer index assigned to the newly-added chemical
+        :param name:        Name of the new chemical species to register; names must be unique -
+                               an Exception will be raised if the name was already registered as a name or as a label
+        :param label:       [OPTIONAL] Typically, a short version of the name, or a stand-in for it.
+                                If provided, it must be unique, and cannot be identical to the name of another chemical;
+                                if not provided, the name will be used as a label
+        :param note:        [OPTIONAL] String with note to attach to the chemical
+        :param plot_color:  [OPTIONAL] String with color value to attach to the chemical for visualizations
+        :param kwargs:      [OPTIONAL] Dictionary of named arguments (with any desired names)
+        :return:            The integer index assigned to the newly-added chemical
         """
         # Validate
         assert type(name) == str, \
@@ -208,6 +215,9 @@ class ChemCore:
         # Prepare a dict with all the available data
         d = {"name": name, "label": label}
 
+        if plot_color is not None:
+            self.color_dict[label] = plot_color
+
         if note is not None:
             d["note"] = note
 
@@ -221,15 +231,13 @@ class ChemCore:
 
     def get_plot_color(self, label :str) -> Union[str, None]:
         """
+        Return the name of the plot color previously associated to the given chemical
 
-        :param label:
-        :return:
+        :param label:   A string to identify a particular chemical
+        :return:        The name of the associated plot color, or None if not found
         """
-        for chem in self.chemical_data:
-            if chem["label"] == label:
-                return chem["plot_color"]
+        return self.color_dict.get(label, None)
 
-        return None
 
 
 
@@ -313,7 +321,7 @@ class Diffusion(ChemCore):
         :return:        None
         """
         assert type(diff) == float or type(diff) == int, \
-            f"assert_valid_diffusion(): The value for the diffusion rate ({diff}) is not a number"
+            f"assert_valid_diffusion(): The value for the diffusion rate ({diff}) is not a valid number"
 
         assert diff >= 0., \
             f"assert_valid_diffusion(): the diffusion rate ({diff}) cannot be negative"
@@ -741,12 +749,24 @@ class AllReactions(Diffusion):
         for description in self.multiple_reactions_describe(concise=concise):
             print(description)
 
+        chem_labels = self.labels_of_active_chemicals()   # Set of labels
+
+        if self.color_dict != {}:   # If plot colors were registered, show them alongside the chem labels
+            chem_labels_with_colors = []
+            for label in chem_labels:
+                color = self.get_plot_color(label)
+                if color:
+                    chem_labels_with_colors.append(f'"{label}" ({color})')
+                else:
+                    chem_labels_with_colors.append(f'"{label}"')
+
+            chem_labels = "{" + ", ".join(chem_labels_with_colors) + "}"
+
+
         if self.active_enzymes == set():    # If no enzymes were involved in any reaction
-            print(f"Set of chemicals involved in the above reactions: "
-                  f"{self.names_of_active_chemicals()}")
+            print(f"Set of chemicals involved in the above reactions: {chem_labels}")
         else:
-            print(f"Set of chemicals involved in the above reactions (not counting enzymes): "
-                  f"{self.names_of_active_chemicals()}")
+            print(f"Set of chemicals involved in the above reactions (not counting enzymes): {chem_labels}")
             print(f"Set of enzymes involved in the above reactions: "
                   f"{self.names_of_enzymes()}")
 
@@ -793,13 +813,15 @@ class AllReactions(Diffusion):
 
 
 
-    def names_of_active_chemicals(self) -> Set[str]:
+    def labels_of_active_chemicals(self) -> Set[str]:
         """
-        Return the set of the names of all the chemicals
+        Return the set of the labels of all the chemicals
         involved in ANY of the registered reactions,
-        but NOT counting chemicals that always appear in a catalytic role in all the reactions they
-        participate in
+        but NOT counting chemicals that always appear
+        in a catalytic role in all the reactions they participate in
         (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here)
+
+        :return:    A set of chemical labels
         """
         return self.active_chemicals
 
@@ -809,8 +831,8 @@ class AllReactions(Diffusion):
         """
         Return the number of all the chemicals
         involved in ANY of the registered reactions,
-        but NOT counting chemicals that always appear in a catalytic role in all the reactions they
-        participate in
+        but NOT counting chemicals that always appear
+        in a catalytic role in all the reactions they participate in
         (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here)
         """
         return len(self.active_chemicals)
@@ -1268,12 +1290,18 @@ class ChemData(Macromolecules):
         Reactions, if applicable, need to be added later by means of calls to add_reaction()
         Macro-molecules, if applicable, need to be added later
 
-        :param names:           [OPTIONAL] A single name, or list or tuple of names, of the chemicals
+        :param names:           [OPTIONAL] A single name, or list or tuple of names, of the chemicals;
+                                    chemical "labels" are set to the same values as their names.
+                                    If any chemical has a label different from its full name (in many cases,
+                                    labels are simplified versions of the names) then do NOT use this argument;
+                                    use add_chemical() later
+
         :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals
                                            If diffusion rates are provided, but no names given, the names will be
                                            auto-assigned as "Chemical 1", "Chemical 2", ...
-        TODO: allow a way to optionally pass macromolecules as well
         """
+        # TODO: allow a way to optionally pass macromolecules as well
+
         super().__init__()       # Invoke the constructor of its parent class
 
         # Initialize with the passed data, if provided
