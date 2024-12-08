@@ -24,7 +24,7 @@
 # **Background**: please see experiments `cascade_1` and `mystery_reaction_1`
 
 # %%
-LAST_REVISED = "Dec. 7, 2024"
+LAST_REVISED = "Dec. 8, 2024"
 LIFE123_VERSION = "1.0-rc.1"     # Library version this experiment is based on
 
 # %%

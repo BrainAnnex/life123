@@ -153,12 +153,20 @@ class ChemCore:
         """
         Returns a Pandas dataframe with all the known information
         about all the registered chemicals (not counting macro-molecules),
-        in their index order
+        in their registration index order
 
         :return:    A Pandas dataframe
         """
-        # TODO: add a column for plot colors, if any were registered
-        return pd.DataFrame(self.chemical_data)
+        # TODO:
+        df = pd.DataFrame(self.chemical_data)
+
+        # Add a column for plot colors, if any were registered
+        if self.color_dict != {}:
+            color_df = pd.DataFrame(list(self.color_dict.items()), columns=["label", "plot_color"])
+            df = pd.merge(df, color_df, on="label", how="left") # All rows from df and matching rows from color_df
+            df["plot_color"] = df["plot_color"].fillna("")      # Turn any NaN in the 'plot_color' column into a blank
+
+        return df
 
 
 
@@ -321,13 +329,14 @@ class Diffusion(ChemCore):
 
     def assert_valid_diffusion(self, diff) -> None:
         """
-        Raise an Exception if the specified diffusion value isn't valid
+        Raise an Exception if the specified diffusion value isn't valid.
+        Valid values are non-negative numbers (integer, float or numpy integers/floats)
 
         :param diff:    Diffusion rate
         :return:        None
         """
-        assert type(diff) == float or type(diff) == int, \
-            f"assert_valid_diffusion(): The value for the diffusion rate ({diff}) is not a valid number"
+        assert isinstance(diff, (float, int, np.integer, np.floating)), \
+            f"assert_valid_diffusion(): The value for the diffusion rate ({diff}) is not a valid number; it is of type {type(diff)}"
 
         assert diff >= 0., \
             f"assert_valid_diffusion(): the diffusion rate ({diff}) cannot be negative"
@@ -1183,7 +1192,7 @@ class Macromolecules(AllReactions):
         If the requested macromolecule isn't registered, an Exception will be raised
 
         :param macromolecule:   The name of a macromolecule
-        :return:                A dict whose keys are binding-site numbers and values are their respetive ligands
+        :return:                A dict whose keys are binding-site numbers and values are their respective ligands
                                     EXAMPLE: {1: "A", 2: "C"}
         """
         binding_site_info = self.binding_sites.get(macromolecule)   # EXAMPLE: {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)}

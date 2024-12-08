@@ -785,11 +785,12 @@ def test_constructor():
     assert chem_data.diffusion_rates == {"L1": 10, "L2": 20}
 
 
-    chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2, 3.14])
+    chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=np.array([0.15, 2, 3.14]))
     assert len(chem_data.chemical_data) == 3
     assert chem_data.get_all_labels() == ['A', 'B', 'C']
     assert chem_data.label_dict == {'A': 0, 'B': 1, 'C': 2}
-    assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14])
+    assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 2, 3.14])
+
 
 
 
