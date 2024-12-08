@@ -25,7 +25,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "enzymes"
 
 # %%
-LAST_REVISED = "Dec. 6, 2024"
+LAST_REVISED = "Dec. 7, 2024"
 LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
 
 # %%
@@ -58,14 +58,11 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = ChemData()
+chem_data = ChemData(names=["S","E","ES","P"], plot_colors=["cyan","violet","red","green"])
 
-chem_data.add_chemical(name="S",  plot_color="cyan")
-chem_data.add_chemical(name="E",  plot_color="violet")
-chem_data.add_chemical(name="ES", plot_color="red")
-chem_data.add_chemical(name="P",  plot_color="green")
+chem_data.all_chemicals()
 
-                                                     
+# %%
 # Reaction S <-> P , with 1st-order kinetics, favorable thermodynamics in the forward direction, 
 # and a forward rate that is much slower than it would be with the enzyme - as seen in the next reaction, below
 chem_data.add_reaction(reactants="S", products="P",

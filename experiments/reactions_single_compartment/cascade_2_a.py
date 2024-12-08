@@ -24,7 +24,7 @@
 # **Background**: please see experiments `cascade_1` and `mystery_reaction_1`
 
 # %%
-LAST_REVISED = "Dec. 6, 2024"
+LAST_REVISED = "Dec. 7, 2024"
 LIFE123_VERSION = "1.0-rc.1"     # Library version this experiment is based on
 
 # %%
@@ -50,12 +50,9 @@ check_version(LIFE123_VERSION)
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
-chem_data = ChemData()
-#names=["A", "B", "C"], plot_colors=["darkturquoise", "orange", "green"]
+chem_data = ChemData(names=["A", "B", "C"], plot_colors=["darkturquoise", "orange", "green"])
 
-chem_data.add_chemical(name="A", plot_color="darkturquoise")
-chem_data.add_chemical(name="B", plot_color="orange")
-chem_data.add_chemical(name="C", plot_color="green");
+chem_data.all_chemicals()
 
 # %% tags=[]
 # Here we use the "mid" preset for the variable steps, a compromise between speed and accuracy

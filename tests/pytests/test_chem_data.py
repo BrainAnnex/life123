@@ -641,76 +641,155 @@ def test_names_of_enzymes():
 
 #############  ChemData  #############
 
-def test_initialize():
+def test_constructor():
     chem_data = ChemData()
-    assert chem_data.number_of_chemicals() == 0
-
-    chem_data = ChemData(names=['A', 'B', 'C'])
-    assert chem_data.number_of_chemicals() == 3
-    assert chem_data.get_all_labels() == ['A', 'B', 'C']
-    assert chem_data.label_dict == {'A': 0, 'B': 1, 'C': 2}
+    assert chem_data.chemical_data == []
+    assert chem_data.label_dict == {}
+    assert chem_data.color_dict == {}
     assert chem_data.diffusion_rates == {}
+    assert np.allclose(chem_data.temp, 298.15)      # The default temperature
+
 
     with pytest.raises(Exception):
         ChemData(names=123)     # Not a list/tuple/str
 
-    with pytest.raises(Exception):
-        ChemData(names=[1, 2])  # The names aren't strings
-
-    chem_data = ChemData(diffusion_rates=[0.15, 1.2])
-    assert chem_data.number_of_chemicals() == 2
-    assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2])
-    assert chem_data.get_all_labels() == ['Chemical 1', 'Chemical 2']
 
     with pytest.raises(Exception):
-        ChemData(diffusion_rates=123.456)   # Not a list/tuple
+        ChemData(names=["A", 2])    # Some of the names aren't strings
+
+
+    chem_data = ChemData(names='A')
+    assert chem_data.chemical_data == [{"label": "A", "name": "A"}]
+    assert chem_data.label_dict == {'A': 0}
+    assert chem_data.color_dict == {}
+    assert chem_data.diffusion_rates == {}
+
+    chem_data = ChemData(names=['A', 'B'])
+    assert chem_data.chemical_data == [{"label": "A", "name": "A"}, {"label": "B", "name": "B"}]
+    assert chem_data.label_dict == {'A': 0, 'B': 1}
+    assert chem_data.color_dict == {}
+    assert chem_data.diffusion_rates == {}
+
 
     with pytest.raises(Exception):
-        ChemData(diffusion_rates=[0.15, 1.2, "I'm not a number"])   # Bad value
+        ChemData(labels=True)     # Not a list/tuple/str
 
     with pytest.raises(Exception):
-        ChemData(diffusion_rates=[-6.66])   # Values cannot be negative
+        ChemData(labels=["L1", 2])    # Some of the labels aren't strings
 
     with pytest.raises(Exception):
-        ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2])  # mismatch in count
+        ChemData(names=["A", "B"], labels=["L1", 2])    # Some of the labels aren't strings
+
+    chem_data = ChemData(labels='A')
+    assert chem_data.chemical_data == [{"label": "A", "name": "A"}]
+    assert chem_data.label_dict == {'A': 0}
+    assert chem_data.color_dict == {}
+    assert chem_data.diffusion_rates == {}
+
+    chem_data = ChemData(labels=['A', 'B'])
+    assert chem_data.chemical_data == [{"label": "A", "name": "A"}, {"label": "B", "name": "B"}]
+    assert chem_data.label_dict == {'A': 0, 'B': 1}
+    assert chem_data.color_dict == {}
+    assert chem_data.diffusion_rates == {}
+
+
+    chem_data = ChemData(names=['name1', 'name2'], labels=['A', 'B'])
+    assert chem_data.chemical_data == [{"label": "A", "name": "name1"}, {"label": "B", "name": "name2"}]
+    assert chem_data.label_dict == {'A': 0, 'B': 1}
+    assert chem_data.color_dict == {}
+    assert chem_data.diffusion_rates == {}
+
+
+    with pytest.raises(Exception):
+        ChemData(diffusion_rates=False)     # Not a list/tuple/numpy array/number
+
+    with pytest.raises(Exception):
+        ChemData(diffusion_rates=[3.1, "I'm not a number"])     # One of the values isn't a number
+
+    with pytest.raises(Exception):
+        ChemData(diffusion_rates=[3.1, -6.66])                  # Values cannot be negative
+
+    chem_data = ChemData(diffusion_rates=33)
+    assert chem_data.chemical_data == [{"label": "Chemical 1", "name": "Chemical 1"}]
+    assert chem_data.label_dict == {"Chemical 1": 0}
+    assert chem_data.color_dict == {}
+    assert chem_data.diffusion_rates == {"Chemical 1": 33}
+
+    chem_data = ChemData(diffusion_rates=[0.15, 3.2])
+    assert chem_data.chemical_data == [{"label": "Chemical 1", "name": "Chemical 1"},
+                                       {"label": "Chemical 2", "name": "Chemical 2"}]
+    assert chem_data.label_dict == {"Chemical 1": 0, "Chemical 2": 1}
+    assert chem_data.color_dict == {}
+    assert len(chem_data.diffusion_rates) == 2
+    assert np.allclose(0.15, chem_data.diffusion_rates["Chemical 1"])
+    assert np.allclose(3.2, chem_data.diffusion_rates["Chemical 2"])
+
+
+    with pytest.raises(Exception):
+        ChemData(plot_colors=123)     # Not a list/tuple/str
+
+    with pytest.raises(Exception):
+        ChemData(plot_colors=["red", 22])    # Some of the colors aren't strings
+
+    chem_data = ChemData(plot_colors="red")
+    assert chem_data.chemical_data == [{"label": "Chemical 1", "name": "Chemical 1"}]
+    assert chem_data.label_dict == {"Chemical 1": 0}
+    assert chem_data.color_dict == {"Chemical 1": "red"}
+    assert chem_data.diffusion_rates == {}
+
+    chem_data = ChemData(plot_colors=["red", "blue"])
+    assert chem_data.chemical_data == [{"label": "Chemical 1", "name": "Chemical 1"},
+                                       {"label": "Chemical 2", "name": "Chemical 2"}]
+    assert chem_data.label_dict == {"Chemical 1": 0, "Chemical 2": 1}
+    assert chem_data.color_dict == {"Chemical 1": "red", "Chemical 2": "blue"}
+    assert chem_data.diffusion_rates == {}
+
+
+    # Various mismatch in counts
+    with pytest.raises(Exception):
+        ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2])
+
+    with pytest.raises(Exception):
+        ChemData(names=['A', 'B', 'C'], labels="L")
+
+    with pytest.raises(Exception):
+        ChemData(diffusion_rates=[0.15, 1.2], labels="L")
+
+    with pytest.raises(Exception):
+        ChemData(diffusion_rates=[0.15, 1.2], plot_colors="red")
+
+    with pytest.raises(Exception):
+        ChemData(names=["Name1"], plot_colors=["red", "blue"])
+
+
+    chem_data = ChemData(diffusion_rates=[10, 20], plot_colors=["red", "blue"])
+    assert chem_data.chemical_data == [{"label": "Chemical 1", "name": "Chemical 1"},
+                                       {"label": "Chemical 2", "name": "Chemical 2"}]
+    assert chem_data.label_dict == {"Chemical 1": 0, "Chemical 2": 1}
+    assert chem_data.color_dict == {"Chemical 1": "red", "Chemical 2": "blue"}
+    assert chem_data.diffusion_rates == {"Chemical 1": 10, "Chemical 2": 20}
+
+    chem_data = ChemData(names=["Name1", "Name2"], diffusion_rates=[10, 20], plot_colors=["red", "blue"])
+    assert chem_data.chemical_data == [{"label": "Name1", "name": "Name1"},
+                                       {"label": "Name2", "name": "Name2"}]
+    assert chem_data.label_dict == {"Name1": 0, "Name2": 1}
+    assert chem_data.color_dict == {"Name1": "red", "Name2": "blue"}
+    assert chem_data.diffusion_rates == {"Name1": 10, "Name2": 20}
+
+    chem_data = ChemData(names=["Name1", "Name2"], labels=["L1", "L2"],
+                         diffusion_rates=[10, 20], plot_colors=["red", "blue"])
+    assert chem_data.chemical_data == [{"label": "L1", "name": "Name1"},
+                                       {"label": "L2", "name": "Name2"}]
+    assert chem_data.label_dict == {"L1": 0, "L2": 1}
+    assert chem_data.color_dict == {"L1": "red", "L2": "blue"}
+    assert chem_data.diffusion_rates == {"L1": 10, "L2": 20}
+
 
     chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=[0.15, 1.2, 3.14])
-    assert chem_data.number_of_chemicals() == 3
+    assert len(chem_data.chemical_data) == 3
     assert chem_data.get_all_labels() == ['A', 'B', 'C']
     assert chem_data.label_dict == {'A': 0, 'B': 1, 'C': 2}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 1.2, 3.14])
-
-    assert np.allclose(chem_data.temp, 298.15)      # The default temperature
-
-
-
-def test_init_chemical_data():
-    chem_data = ChemData()
-    chem_data.init_chemical_data(names=["A", "B", "C", "D", "E", "F"])
-
-    assert chem_data.get_all_labels() == ["A", "B", "C", "D", "E", "F"]
-    assert chem_data.label_dict == {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5}
-
-    with pytest.raises(Exception):
-        chem_data = ChemData()
-        chem_data.init_chemical_data(names=123) # Not a list/tuple/str
-
-    with pytest.raises(Exception):
-        chem_data = ChemData(names=['A', 'B', 'C'])
-        chem_data.init_chemical_data(names=['X', 'Y', 'Z'])
-
-    with pytest.raises(Exception):
-        chem_data = ChemData()
-        chem_data.init_chemical_data(names=['A', 'B'], diffusion_rates=[1, 2, 3])
-
-    chem_data = ChemData()
-    chem_data.init_chemical_data(names=['A', 'B', 'C'], diffusion_rates=[1, 2, 3])
-    assert chem_data.number_of_chemicals() == 3
-    assert chem_data.get_all_labels() == ['A', 'B', 'C']
-    # Verify that the name index also got created successfully
-    assert chem_data.label_dict['A'] == 0
-    assert chem_data.label_dict['B'] == 1
-    assert chem_data.label_dict['C'] == 2
 
 
 

@@ -1,4 +1,7 @@
 from typing import Union, List, NamedTuple, Set
+
+import numpy as np
+
 from life123.reaction import Reaction
 from life123.visualization.py_graph_visual import PyGraphVisual
 from life123.html_log import HtmlLog as log
@@ -154,6 +157,7 @@ class ChemCore:
 
         :return:    A Pandas dataframe
         """
+        # TODO: add a column for plot colors, if any were registered
         return pd.DataFrame(self.chemical_data)
 
 
@@ -162,7 +166,9 @@ class ChemCore:
         """
         Register a new chemical species, with a name
         and (optionally) :
+            - a label (typically, a short version of the name, or a stand-in for it)
             - a note (will be stored in a "note" column)
+            - a color value used in visualizations
             - any other named argument(s) that the user wishes to store (i.e. arbitrary-named arguments)
 
         EXAMPLE:  add_chemical("Nicotinamide adenine dinucleotide",
@@ -1282,106 +1288,121 @@ class ChemData(Macromolecules):
               and ending in this user-facing class:
                     ChemCore <- Diffusion <- AllReactions <- Macromolecules <- ChemData
     """
-    def __init__(self, names=None, diffusion_rates=None):
+    def __init__(self, names=None, labels=None, diffusion_rates=None, plot_colors=None):
         """
-        If chemical names and their diffusion rates are both provided, they must have the same count,
-        and appear in the same order.
-        It's ok to avoid passing any data at instantiation, and later add it.
+        Any non-None arguments MUST all have the same length (and appear in the same order), or all be scalars.
+        It's ok to skip passing any data at instantiation, and later add it, with calls to add_chemical().
         Reactions, if applicable, need to be added later by means of calls to add_reaction()
-        Macro-molecules, if applicable, need to be added later
+        Macro-molecules, if applicable, need to be added later.
 
-        :param names:           [OPTIONAL] A single name, or list or tuple of names, of the chemicals;
-                                    chemical "labels" are set to the same values as their names.
-                                    If any chemical has a label different from its full name (in many cases,
-                                    labels are simplified versions of the names) then do NOT use this argument;
-                                    use add_chemical() later
+        If no names nor labels are provided, but diffusion rate or plot colors are given,
+        the strings "Chemical 1", "Chemical 2", ..., are used
 
-        :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals
-                                           If diffusion rates are provided, but no names given, the names will be
-                                           auto-assigned as "Chemical 1", "Chemical 2", ...
+        :param names:           [OPTIONAL] A single name, or list or tuple of names, of the chemicals.
+                                    If not provided, the names are made equal to the labels.
+                                    If neither names nor labels is provided, "Chemical 1", "Chemical 2", ..., are used
+                                    (as many as the diffusion rates or plot colors)
+
+        :param labels:          [OPTIONAL] A single label, or list or tuple of labels, of the chemicals,
+                                    in the same order as the names (if provided).
+                                    If not provided, the labels are made equal to the names.
+                                    If neither names nor labels is provided, "Chemical 1", "Chemical 2", ..., are used
+                                    (as many as the diffusion rates or plot colors)
+
+        :param diffusion_rates: [OPTIONAL] A non-negative number, or a list/tuple/Numpy array with the diffusion rates of the chemicals,
+                                    in the same order as the names/labels (if provided).
+
+        :param plot_colors:     [OPTIONAL] A single name, or list or tuple of names, of the plotting colors for the chemicals,
+                                    in the same order as the names/labels (if provided).
         """
         # TODO: allow a way to optionally pass macromolecules as well
 
         super().__init__()       # Invoke the constructor of its parent class
 
-        # Initialize with the passed data, if provided
-        if (names is not None) or (diffusion_rates is not None):
-            self.init_chemical_data(names, diffusion_rates)
+
+        non_none_args = [arg for arg in (names, labels, diffusion_rates, plot_colors) if arg is not None]
+
+        if len(non_none_args) == 0:
+            return      # All args are None; nothing else to do
 
 
-
-
-    def init_chemical_data(self, names=None, diffusion_rates=None)  -> None:
-        """
-        Initialize the names (if provided) and diffusion rates (if provided)
-        of all the chemical species, in the given order.
-        If no names are provided, the strings "Chemical 1", "Chemical 2", ..., are used
-
-        IMPORTANT: this function can be invoked only once, before any chemical data is set.
-                   To add new chemicals later, use add_chemical()
-
-        :param names:           [OPTIONAL] A single name, or list or tuple of names, of the chemicals
-        :param diffusion_rates: [OPTIONAL] A list or tuple with the diffusion rates of the chemicals,
-                                           in the same order as the names
-        :return:                None
-        """
-        n_species = self.number_of_chemicals()
-
-        # Validate
-        assert n_species == 0, \
-            f"ChemData.init_chemical_data(): this function can be invoked only once, before any chemical data is set"
-
-
-        if names:
-            arg_type = type(names)
-            if arg_type == str:
-                names = [names]     # Turn a single name into a list
+        if names is not None:
+            if (dt := type(names)) == str:
+                names = [names]
             else:
-                assert arg_type == list or arg_type == tuple, \
-                    f"ChemData.init_chemical_data(): the `names` argument must be a list or tuple, or a string for a single name.  " \
-                    f"What was passed was of type {arg_type}"
+                assert dt == list or dt == tuple, \
+                    f"ChemData instantiation: the `names` argument must be a list or tuple, or a string for a single chemical.  " \
+                    f"What was passed ({names}) was of type {dt}"
 
-            if n_species != 0:
-                assert len(names) == n_species, \
-                    f"ChemData.init_chemical_data(): the passed number of names ({len(names)}) " \
-                    f"doesn't match the previously-set number of chemical species (n_species)"
+        if labels is not None:
+            if (dt := type(labels)) == str:
+                labels = [labels]
+            else:
+                assert dt == list or dt == tuple, \
+                    f"ChemData instantiation: the `labels` argument must be a list or tuple, or a string for a single chemical.  " \
+                    f"What was passed ({labels}) was of type {dt}"
 
-        if diffusion_rates:
-            arg_type = type(diffusion_rates)
-            assert arg_type == list or arg_type == tuple, \
-                f"ChemData.init_chemical_data(): the diffusion_rates must be a list or tuple.  What was passed was of type {arg_type}"
-            if n_species != 0:
-                assert len(diffusion_rates) == n_species, \
-                    f"ChemData.init_chemical_data(): the passed number of diffusion rates ({len(diffusion_rates)}) " \
-                    f"doesn't match the previously-set number of chemical species ({n_species})"
+        if plot_colors is not None:
+            if (dt := type(plot_colors)) == str:
+                plot_colors = [plot_colors]
+            else:
+                assert dt == list or dt == tuple, \
+                    f"ChemData instantiation: the `plot_colors` argument must be a list or tuple, or a string for a single chemical.  " \
+                    f"What was passed ({plot_colors}) was of type {dt}"
 
-        if diffusion_rates and names:
-            assert len(names) == len(diffusion_rates), \
-                f"ChemData.init_chemical_data(): the supplied names and diffusion_rates " \
-                f"don't match in number ({len(names)} vs. {len(diffusion_rates)})"
+        if diffusion_rates is not None:
+            if (dt := type(diffusion_rates)) == int or dt == float:
+                diffusion_rates = [diffusion_rates]
+            else:
+                assert dt == list or dt == tuple  or dt == np.ndarray, \
+                    f"ChemData instantiation(): the `diffusion_rates` argument must be a list or tuple or Numpy array, or a number for a single chemical.  " \
+                    f"What was passed ({diffusion_rates}) was of type {dt}"
+
+
+        # Assert that all lengths are the same
+        if len(non_none_args) > 1:  # No need to check if only one or no argument is present
+            lengths = []
+            for arg in non_none_args:
+                    lengths.append(len(arg))
+
+            assert all(l == lengths[0] for l in lengths), \
+                "ChemData instantiation: all the non-None arguments must have the same length"
 
 
         # Populate the data structure
-        if names is None:
-            if diffusion_rates is None:   # The strings "Chemical 1", "Chemical 2", ..., will be used as names
-                for i in range(n_species):
-                    assigned_name = f"Chemical {i+1}"
-                    self.add_chemical(assigned_name)
+        if names is None and labels is None:
+            if diffusion_rates is not None:
+                n_species = len(diffusion_rates)
             else:
-                for i, diff in enumerate(diffusion_rates):
-                    assigned_name = f"Chemical {i+1}"
-                    self.assert_valid_diffusion(diff)
-                    self.add_chemical(assigned_name)
-                    self.set_diffusion_rate(label=assigned_name, diff_rate=diff)
+                n_species = len(plot_colors)        # plot_colors cannot be None, otherwise all args would be (already excluded)
 
-        else:   # names is not None
-            for i, chem_name in enumerate(names):
-                assert type(chem_name) == str, \
-                    f"ChemData.init_chemical_data(): all the names must be strings.  The passed value ({chem_name}) is of type {type(chem_name)}"
-                if diffusion_rates is None:
-                    self.add_chemical(chem_name)
-                else:
-                    diff = diffusion_rates[i]
-                    self.assert_valid_diffusion(diff)
-                    self.add_chemical(chem_name)
-                    self.set_diffusion_rate(label=chem_name, diff_rate=diff)
+            names = [f"Chemical {i+1}" for i in range(n_species)]   # The strings "Chemical 1", "Chemical 2", ..., will be used
+
+
+        if labels is None:
+            labels = names
+
+        if names is None:
+            names = labels
+
+        for i, chem_name in enumerate(names):
+            assert type(chem_name) == str, \
+                f"ChemData instantiation: all the names must be strings.  The passed value ({chem_name}) is of type {type(chem_name)}"
+
+            l = labels[i]
+            assert type(l) == str, \
+                f"ChemData instantiation: all the labels must be strings.  The passed value ({l}) is of type {type(l)}"
+
+            if diffusion_rates is None:
+                self.add_chemical(name=chem_name, label=l)
+            else:
+                diff = diffusion_rates[i]
+                self.assert_valid_diffusion(diff)
+                self.add_chemical(name=chem_name, label=l)
+                self.set_diffusion_rate(label=l, diff_rate=diff)
+
+            if plot_colors is not None:
+                color = plot_colors[i]
+                assert type(color) == str, \
+                    f"ChemData instantiation: all the colors must be strings.  The passed value ({color}) is of type {type(color)}"
+                self.color_dict[l] = color
