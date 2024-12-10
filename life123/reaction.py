@@ -78,7 +78,8 @@ class ReactionEnz:
         Based on the traditional Michaelis-Menten model.
         The argument may also be Numpy array.
 
-        :param S_conc:  The concentration [S] of the (free) Substrate
+        :param S_conc:  The concentration [S] of the (free) Substrate,
+                            or a Numpy array of concentrations
         :return:        The corresponding reaction rate, in terms of production of the product P
         """
         # TODO: possibly move to ReactionKinetics
@@ -113,6 +114,63 @@ class ReactionEnz:
 
 
 
+    def compute_k1_forward(self, kM, kcat, k1_reverse, verbose=False):
+        """
+        Compute and return the value for k1_forward, given kM, kcat and k1_reverse
+
+        :param kM:
+        :param kcat:
+        :param k1_reverse:
+        :param verbose:
+        :return:
+        """
+        k1_forward = (k1_reverse + kcat) / kM
+        if verbose:
+                K = k1_forward / k1_reverse
+                print(f"k1_forward: {k1_forward} , K (k1_f / k1_r) = {K}")
+
+        return k1_forward
+
+
+
+    def compute_k1_reverse(self, kM, kcat, k1_forward, verbose=False):
+        """
+        Compute and return the value for k1_reverse, given kM, kcat and k1_forward
+
+        :param kM:
+        :param kcat:
+        :param k1_forward:
+        :param verbose:
+        :return:
+        """
+        # Verify that the combination of given parameter is physically possible
+        min_value_k1_f = self.min_k1_forward(kM, kcat)
+        assert k1_forward >= min_value_k1_f, \
+            f"compute_k1_reverse(): the given values for kM ({kM}), kcat ({kcat}) and k1_forward ({k1_forward}) " \
+            f"are not physically meaningful, as they would lead to a negative value for k1_reverse!  " \
+            f"The minimum valid value for k1_forward is {min_value_k1_f}"
+
+        k1_reverse = kM * k1_forward - kcat
+        if verbose:
+            if np.allclose(k1_reverse, 0):
+                print (f"k1_reverse: {k1_reverse} , K (k1_f / k1_r) = INFINITE")
+            else:
+                K = k1_forward / k1_reverse
+                print(f"k1_reverse: {k1_reverse} , K (k1_f / k1_r) = {K}")
+
+        return k1_reverse
+
+
+    def min_k1_forward(self, kM, kcat):
+        """
+        Return the minimum physically-meaningful value for k1_forward,
+        for the given kinetic parameters kM and kcat
+
+        :param kM:
+        :param kcat:
+        :return:
+        """
+        return kcat / kM
 
 
 

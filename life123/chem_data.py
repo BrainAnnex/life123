@@ -157,7 +157,6 @@ class ChemCore:
 
         :return:    A Pandas dataframe
         """
-        # TODO:
         df = pd.DataFrame(self.chemical_data)
 
         # Add a column for plot colors, if any were registered
