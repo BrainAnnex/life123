@@ -12,12 +12,12 @@ class ReactionEnz:
     E + S <-> ES <-> E + P
     """
 
-    def __init__(self, enzyme, substrate, product,
+    def __init__(self, enzyme=None, substrate=None, product=None,
                  k1_F=None, k1_R=None, k2_F=None, k2_R=None,
                  kM=None, kcat=None):
         """
 
-        :param enzyme:
+        :param enzyme:      The label for the chemical acting as enzyme
         :param substrate:
         :param product:
         :param k1_F:
@@ -116,7 +116,8 @@ class ReactionEnz:
 
     def compute_k1_forward(self, kM, kcat, k1_reverse, verbose=False):
         """
-        Compute and return the value for k1_forward, given kM, kcat and k1_reverse
+        Compute and return the value for k1_forward, given kM, kcat and k1_reverse.
+        Note that this is a linear affine transformation : k1_forward = k1_reverse * (1 / kM) + (kcat / kM)
 
         :param kM:
         :param kcat:
@@ -133,9 +134,10 @@ class ReactionEnz:
 
 
 
-    def compute_k1_reverse(self, kM, kcat, k1_forward, verbose=False):
+    def compute_k1_reverse(self, kM, kcat, k1_forward: Union[float, np.ndarray], verbose=False):
         """
         Compute and return the value for k1_reverse, given kM, kcat and k1_forward
+        Note that this is a linear affine transformation : k1_reverse = k1_forward * kM  - kcat
 
         :param kM:
         :param kcat:
@@ -145,12 +147,18 @@ class ReactionEnz:
         """
         # Verify that the combination of given parameter is physically possible
         min_value_k1_f = self.min_k1_forward(kM, kcat)
-        assert k1_forward >= min_value_k1_f, \
-            f"compute_k1_reverse(): the given values for kM ({kM}), kcat ({kcat}) and k1_forward ({k1_forward}) " \
-            f"are not physically meaningful, as they would lead to a negative value for k1_reverse!  " \
-            f"The minimum valid value for k1_forward is {min_value_k1_f}"
+        if type(k1_forward) == np.ndarray:
+            assert (k1_forward >= min_value_k1_f).all(), \
+                f"compute_k1_reverse(): given the specified kM ({kM}) and kcat ({kcat}), some of the k1_forward values " \
+                f"are not physically meaningful, as they would lead to a negative value for k1_reverse!  " \
+                f"The minimum valid value for k1_forward is {min_value_k1_f}"
+        else:
+            assert k1_forward >= min_value_k1_f, \
+                f"compute_k1_reverse(): the given values for kM ({kM}), kcat ({kcat}) and k1_forward ({k1_forward}) " \
+                f"are not physically meaningful, as they would lead to a negative value for k1_reverse!  " \
+                f"The minimum valid value for k1_forward is {min_value_k1_f}"
 
-        k1_reverse = kM * k1_forward - kcat
+        k1_reverse = k1_forward * kM - kcat
         if verbose:
             if np.allclose(k1_reverse, 0):
                 print (f"k1_reverse: {k1_reverse} , K (k1_f / k1_r) = INFINITE")
