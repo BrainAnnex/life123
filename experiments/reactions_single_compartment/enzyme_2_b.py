@@ -39,7 +39,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Dec. 9, 2024"
+LAST_REVISED = "Dec. 11, 2024"
 LIFE123_VERSION = "1.0.0.rc.1"      # Library version this experiment is based on
 
 # %%
@@ -64,121 +64,8 @@ check_version(LIFE123_VERSION)
 
 # %% [markdown]
 # ## Assume we're only given values for kM and kcat
-# What values of k1_forward, k1_reverse and k2_forward are compatible with them?
-
-# %%
-# The following values are taken from experiment `enzyme_1`
-kM = 8.27777777777777
-kcat = 49
-
-# %%
-# k2_forward equals kcat ; not much to say here
-k2_forward = kcat
-
-# %% [markdown]
-# By contrast kM = (k2_forward + k1_reverse) / k1_forward  
-#
-# We are given kM and k2_forward, which is the same value as the given kcat.   
-#
-# But how to solve for k1_forward and k1_reverse??  We have just 1 equation and 2 variables!  The system of equations is "underdetermined" : what can we do?   
-#
-# We'll venture some guesses for k1_forward, and compute the corresponding k1_reverse that will satisfy the above equation.   
-#
-# **k1_reverse = kM * k1_forward - kcat**  (kcat has same value as k2_forward)
-
-# %%
-# Example, using the k1_forward=18. from experiment `enzyme_1`
-k1_forward = 18.
-k1_reverse = kM * k1_forward - kcat 
-k1_reverse
-
-# %% [markdown]
-# Naturally, we're getting the same value we had for k1_reverse in that experiment.  But what if k1_forward is quite different?
-
-# %%
-import numpy as np
-
-
-# %%
-def compute_k1_reverse(kM, kcat, k1_forward, verbose=True):
-    k1_reverse = kM * k1_forward - kcat 
-    if verbose:
-        if np.allclose(k1_reverse, 0):
-            print (f"k1_reverse: {k1_reverse} , K = INFINITE")
-        else:
-            K = k1_forward / k1_reverse
-            print(f"k1_reverse: {k1_reverse} , K = {K}")
-        
-    return k1_reverse
-
-
-# %%
-compute_k1_reverse(kM, kcat, k1_forward=18.)
-
-# %%
-compute_k1_reverse(kM, kcat, k1_forward=0.1)
-
-# %% [markdown]
-# #### The negative values aren't good!  We must add a constraint that:   
-# kM * k1_forward - kcat > 0  
-# i.e. k1_forward > kcat/kM
-#
-# In other words, `k1_forward_min = kcat/kM`
-
-# %%
-k1_forward_min = kcat / kM
-k1_forward_min
-
-# %%
-compute_k1_reverse(kM, kcat, k1_forward=k1_forward_min)
-
-# %%
-compute_k1_reverse(kM, kcat, k1_forward=6.)
-
-# %%
-compute_k1_reverse(kM, kcat, k1_forward=10.)
-
-# %%
-compute_k1_reverse(kM, kcat, k1_forward=40.)
-
-# %% [markdown]
-# The fixed point k1_forward = k1_reverse occurs when  k1_forward = kM * k1_forward - kcat , i.e.   
-# kM * k1_forward - k1_forward = kcat  
-# k1_forward * (kM - 1) = kcat  
-# k1_forward = kcat / (kM - 1)
-# Notice that the above makes sense only if kM > 1
-
-# %%
-# Our kM is indeed > 1, so all good:
-
-k1_forward_fixed_pnt = kcat / (kM - 1)
-k1_forward_fixed_pnt
-
-# %%
-compute_k1_reverse(kM, kcat, k1_forward=6.7328244274809235)
-
-# %% [markdown]
-# Indeed, a fixed point
-
-# %%
-k1_forward_choices = np.linspace(5.92, 40., 2000)    # Grid creation
-
-# %%
-k1_reverse_choices = compute_k1_reverse(kM, kcat, k1_forward=k1_forward_choices, verbose=False)
-
-# %%
-import plotly.express as px
-
-# %%
-px.line(x=k1_forward_choices, y=k1_reverse_choices, title="k1_forward vs. k1_reverse")
-
-# %%
-K_choices = k1_forward_choices / k1_reverse_choices
-
-# %%
-px.line(x=k1_forward_choices, y=np.log(K_choices), title="log(K) vs. k1_forward")
-
-# %%
+# What values of k1_forward, k1_reverse and k2_forward are compatible with them?  
+# That question was explored in experiment `enzyme2_a`.  Here we'll explore the dynamic consequences of selecting various combinations of values.
 
 # %% [markdown]
 # ## In the scenario we're exploring, there's LITTLE ENZYME relative to initial substrate concentration

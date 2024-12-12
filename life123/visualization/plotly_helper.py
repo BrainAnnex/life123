@@ -290,8 +290,9 @@ class PlotlyHelper:
                 # of a large number of vertical lines; so, we'll be directly modifying the data structure of the "fig" dictionary
                 #fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
             # END for
+
             fig['layout']['shapes'] = vline_list    # The vertical lines are regarded by Plotly Express as "shapes"
-            # that are stored in the figure's "layout"
+                                                    # that are stored in the figure's "layout"
         if show:
             fig.show()  # Actually display the plot
 
