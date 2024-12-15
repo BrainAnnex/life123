@@ -6,6 +6,7 @@ from scipy.stats import norm
 from typing import Union, List, Tuple
 from life123.collections import CollectionTabular
 from life123.uniform_compartment import UniformCompartment
+from life123.reactions import Reactions
 import plotly.express as px
 from life123.html_log import HtmlLog as log
 from life123.visualization.graphic_log import GraphicLog
@@ -19,13 +20,13 @@ class BioSim1D:
     """
 
 
-    def __init__(self, n_bins=None, chem_data=None, reactions=None):
+    def __init__(self, n_bins=None, chem_data=None, reaction_handler=None):
         """
 
         :param n_bins:      The number of compartments (bins) to use in the simulation
-        :param chem_data:   (OPTIONAL) Object of class "ReactionData";
+        :param chem_data:   (OPTIONAL) Object of class "ChemData";
                                 if not specified, it will get extracted from the "UniformCompartment" class
-        :param reactions:   (OPTIONAL) Object of class "UniformCompartment";
+        :param reaction_handler:   (OPTIONAL) Object of class "UniformCompartment";
                                 if not specified, it'll get instantiated here   TODO: maybe no longer necessary
         """
         self.debug = False
@@ -34,7 +35,9 @@ class BioSim1D:
 
         self.n_species = 1      # The number of (non-water) chemical species   TODO: phase out?
 
-        self.chem_data = None   # Object of type "ReactionData", with info on the individual chemicals and their reactions
+        self.chem_data = None   # Object of type "ChemData", with info on the individual chemicals
+
+        self.reactions = None   # Object of type "Reactions"
 
         self.system_length = None   # System extension, from the middle of the leftmost bin to the middle of the rightmost one.
                                     #  The de-facto default value, though not used, is (n_bins-1)
@@ -86,8 +89,8 @@ class BioSim1D:
 
         self.system_time = None             # Global time of the system, from initialization on
 
-        if (n_bins is not None) or (chem_data is not None) or (reactions is not None):
-            self.initialize_system(n_bins=n_bins, chem_data=chem_data, reactions=reactions)
+        if (n_bins is not None) or (chem_data is not None) or (reaction_handler is not None):
+            self.initialize_system(n_bins=n_bins, chem_data=chem_data, reaction_handler=reaction_handler)
 
 
 
@@ -98,7 +101,7 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    def initialize_system(self, n_bins: int, chem_data=None, reactions=None) -> None:
+    def initialize_system(self, n_bins: int, chem_data=None, reaction_handler=None) -> None:
         """
         Initialize all concentrations to zero.
         Membranes, if present, need to be set later.
@@ -109,25 +112,27 @@ class BioSim1D:
         :param n_bins:      The number of compartments (bins) to use in the simulation
         :param chem_data:   (OPTIONAL) Object of class "ReactionData";
                                 if not specified, it will get extracted from the "UniformCompartment" class
-        :param reactions:   (OPTIONAL) Object of class "UniformCompartment";
+        :param reaction_handler:   (OPTIONAL) Object of class "UniformCompartment";
                                 if not specified, it'll get instantiated here
         :return:            None
         """
         assert n_bins >= 1, "The number of bins must be at least 1"
 
-        assert chem_data is not None or reactions is not None, \
+        assert chem_data is not None or reaction_handler is not None, \
             "BioSim1D: at least one of the arguments `chem_data` and `reactions` must be set"
             # TODO: maybe drop this requirement?  And then set the system matrix later on?
 
         if chem_data:
             self.chem_data = chem_data
         else:
-            self.chem_data = reactions.chem_data
+            self.chem_data = reaction_handler.chem_data
 
-        if reactions:
-            self.reaction_dynamics = reactions
+        self.reactions = Reactions(chem_data=chem_data)
+
+        if reaction_handler:
+            self.reaction_dynamics = reaction_handler
         else:
-            self.reaction_dynamics = UniformCompartment(chem_data=chem_data)
+            self.reaction_dynamics = UniformCompartment(reactions=self.reactions)
 
         self.n_bins = n_bins
 

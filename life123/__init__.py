@@ -24,7 +24,7 @@ from life123.collections	import (
     Collection
 )
 from life123.numerical import Numerical
-from life123.reaction import Reaction, ReactionEnz
+from life123.reactions import ReactionGeneric, ReactionEnz, Reactions
 from life123.thermodynamics import ThermoDynamics
 from life123.uniform_compartment import UniformCompartment
 from life123.reaction_kinetics import (ReactionKinetics, VariableTimeSteps)
@@ -44,7 +44,8 @@ __all__ = [
     'CollectionArray',
     'Collection',
     'Numerical',
-    'Reaction',
+    'ReactionGeneric',
+    'Reactions',
     'ReactionEnz',
     'ReactionKinetics',
     'ThermoDynamics',

@@ -25,7 +25,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "enzymes"
 
 # %%
-LAST_REVISED = "Dec. 8, 2024"
+LAST_REVISED = "Dec. 14, 2024"
 LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
 
 # %%
@@ -38,7 +38,7 @@ LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import check_version, ChemData, UniformCompartment, CollectionTabular, GraphicLog
+from life123 import check_version, ChemData, Reactions, UniformCompartment, CollectionTabular, GraphicLog
 
 import pandas as pd
 
@@ -63,26 +63,29 @@ chem_data = ChemData(names=["S","E","ES","P"], plot_colors=["cyan","violet","red
 chem_data.all_chemicals()
 
 # %%
+rxns = Reactions(chem_data=chem_data)
+
+
 # Reaction S <-> P , with 1st-order kinetics, favorable thermodynamics in the forward direction, 
 # and a forward rate that is much slower than it would be with the enzyme - as seen in the next reaction, below
-chem_data.add_reaction(reactants="S", products="P",
-                       forward_rate=1., delta_G=-3989.73)
+rxns.add_reaction(reactants="S", products="P",
+                  forward_rate=1., delta_G=-3989.73)
 
      
 # Reaction E + S <-> ES , with 1st-order kinetics, and a forward rate that is much faster than it was without the enzyme
 # Thermodynamically, the forward direction is at a disadvantage (higher energy state) because of the activation barrier in forming the transient state ES
-chem_data.add_reaction(reactants=["E", "S"], products="ES",
-                       forward_rate=100., delta_G=2000)                           
+rxns.add_reaction(reactants=["E", "S"], products="ES",
+                  forward_rate=100., delta_G=2000)                           
                                                       
 # Reaction ES <-> E + P , with 1st-order kinetics, and a forward rate that is much faster than it was without the enzyme
 # Thermodynamically, the total energy change of this reaction and the previous one adds up to the same value as the reaction without the enzyme (-3989.73)
-chem_data.add_reaction(reactants="ES", products=["E", "P"],
-                       forward_rate=200., delta_G=-5989.73)
+rxns.add_reaction(reactants="ES", products=["E", "P"],
+                  forward_rate=200., delta_G=-5989.73)
 
-chem_data.describe_reactions()
+rxns.describe_reactions()
 
 # Send the plot of the reaction network to the HTML log file
-chem_data.plot_reaction_network("vue_cytoscape_2")
+rxns.plot_reaction_network("vue_cytoscape_2")
 
 # %% [markdown]
 # Note that `E` is not labeled as an "enzyme" because it doesn't appear as a catalyst in any of the registered reactions; it only becomes an enzyme in the context of the _compound_ reaction from (2) and (3)
@@ -95,7 +98,7 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # # 1. Set the initial concentrations of all the chemicals - starting with no enzyme
 
 # %%
-uc = UniformCompartment(chem_data=chem_data, preset="mid")
+uc = UniformCompartment(reactions=rxns, preset="mid")
 uc.set_conc(conc={"S": 20.})      # Initially, no enzyme `E`
 uc.describe_state()
 
@@ -148,7 +151,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 0.2     # A tiny bit of enzyme `E`: 1/100 of the initial [S]
 
 # %%
-uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})
 uc.describe_state()
@@ -224,7 +227,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 1.0
 
 # %%
-uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})     
 uc.describe_state()
@@ -290,7 +293,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 2.0      # 1/10 of the initial [S]
 
 # %%
-uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})     
 uc.describe_state()
@@ -356,7 +359,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 10.0      # 1/2 of the initial [S]
 
 # %%
-uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})     
 uc.describe_state()
@@ -425,7 +428,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 20.0      # Same as the initial [S]
 
 # %%
-uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})     
 uc.describe_state()
@@ -493,7 +496,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 30.0      # 50% higher than the initial [S]
 
 # %%
-uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})     
 uc.describe_state()
@@ -561,7 +564,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 60.0      # Triple the initial [S]
 
 # %%
-uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})     
 uc.describe_state()
@@ -620,7 +623,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 E_init = 100.0      # Quintuple the initial [S]
 
 # %%
-uc = UniformCompartment(chem_data=chem_data, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
+uc = UniformCompartment(reactions=rxns, preset="slower")      # A brand-new simulation, with the same chemicals and reactions as before
 
 uc.set_conc(conc={"S": 20., "E": E_init})     
 uc.describe_state()
@@ -703,7 +706,7 @@ delta_ES = 17.220901 - 0
 delta_ES
 
 # %%
-chem_data.describe_reactions()
+rxns.describe_reactions()
 
 # %%
 

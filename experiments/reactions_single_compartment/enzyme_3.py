@@ -34,7 +34,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Dec. 8, 2024"
+LAST_REVISED = "Dec. 14, 2024"
 LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
 
 # %%
@@ -83,16 +83,20 @@ chem_data.all_chemicals()
 # %% [markdown]
 # ### Notice that the reaction rate constants below DON'T satisfy the customary `k1_reverse >> k2_forward`
 
+# %%
+# Here we use the "slow" preset for the variable steps, a conservative option prioritizing accuracy over speed
+uc = UniformCompartment(chem_data=chem_data, preset="slow")
+
 # %% tags=[]
 # Reaction E + S <-> ES , with 1st-order kinetics, 
-chem_data.add_reaction(reactants=["E", "S"], products=["ES"],
-                       forward_rate=160., reverse_rate=0.089) 
+uc.add_reaction(reactants=["E", "S"], products="ES",
+                forward_rate=160., reverse_rate=0.089) 
 
 # Reaction ES <-> E + P , with 1st-order kinetics, ignoring the reverse reaction
-chem_data.add_reaction(reactants=["ES"], products=["E", "P"],
+uc.add_reaction(reactants="ES", products=["E", "P"],
                        forward_rate=0.58, reverse_rate=0)  
 
-chem_data.describe_reactions()
+uc.describe_reactions()
 
 # %%
 
@@ -106,12 +110,6 @@ chem_data.describe_reactions()
 # %%
 S0 = 20.
 E0 = 1.
-
-# %%
-
-# %%
-# Here we use the "slow" preset for the variable steps, a conservative option prioritizing accuracy over speed
-uc = UniformCompartment(chem_data=chem_data, preset="slow")
 
 # %%
 uc.set_conc(conc={"S": S0, "E": E0})      # Small ampount of enzyme `E`, relative to substrate `S`
@@ -205,9 +203,12 @@ PlotlyHelper.plot_pandas(df=rates,
 # for background reference, see:  https://vallance.chem.ox.ac.uk/pdfs/KineticsLectureNotes.pdf (p. 20)
 
 # %%
+reactions = uc.get_reactions()
+
+# %%
 rxn = ReactionEnz(enzyme="E", substrate="S", product="P",
-                  k1_F=chem_data.get_forward_rate(0), k1_R=chem_data.get_reverse_rate(0), 
-                  k2_F=chem_data.get_forward_rate(1))
+                  k1_F=reactions.get_forward_rate(0), k1_R=reactions.get_reverse_rate(0), 
+                  k2_F=reactions.get_forward_rate(1))
 
 # %%
 rxn.kM          #  For the data in this experiment, it comes out to (0.089 + 0.58) / 160.
@@ -259,7 +260,7 @@ PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["P_rate", "Michaelis_rate"],
 
 # %%
 PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["P_rate", "Michaelis_rate"],
-                         title="Reaction rate, dP/dt, as a function of Substrate concentration",
+                         title="EARLY DETAIL of Reaction rate, dP/dt, as a function of Substrate concentration",
                          y_label="dP/dt", legend_header="Rates",
                          vertical_lines_to_add=19, colors=["blue", "yellow"],
                          range_x=[0, .2])
@@ -296,7 +297,7 @@ PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["P_rate", "Michaelis_rate", "
 # %%
 # Detail at the very left
 PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["P_rate", "Michaelis_rate", "Morrison_rate"],
-                         title="Reaction rate, dP/dt, as a function of Substrate concentration",
+                         title="EARLY DETAIL of reaction rate, dP/dt, as a function of Substrate concentration",
                          y_label="dP/dt", legend_header="Rates",
                          vertical_lines_to_add=19,
                          colors=["blue", "yellow", "orange"],

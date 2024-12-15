@@ -11,7 +11,7 @@ def test_initialization():
     chem_data = ChemData(names=["A", "B", "C"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
-    chem_data.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=8., reverse_rate=2.)
+    bio.reactions.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=8., reverse_rate=2.)
 
     assert bio.reaction_dynamics.chem_data == chem_data
 
@@ -27,9 +27,9 @@ def test_reaction_step_1():
 
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
-    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    bio.reactions.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
-    assert chem_data.number_of_reactions() == 1
+    assert bio.reactions.number_of_reactions() == 1
     assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
 
     # Just the first reaction step, with the lower-level call to reaction_step()
@@ -48,10 +48,10 @@ def test_reaction_step_1b():
 
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
-    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    bio.reactions.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
 
-    assert chem_data.number_of_reactions() == 1
-    assert chem_data.multiple_reactions_describe() == ["0: A <-> B  (kF = 3 / kR = 2 / delta_G = -1,005.1 / K = 1.5) | 1st order in all reactants & products"]
+    assert bio.reactions.number_of_reactions() == 1
+    assert bio.reactions.multiple_reactions_describe() == ["0: A <-> B  (kF = 3 / kR = 2 / delta_G = -1,005.1 / K = 1.5) | 1st order in all reactants & products"]
     assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
 
     # First step
@@ -78,11 +78,11 @@ def test_react_1():
     # Based on experiment "reaction2"
     chem_data = ChemData(names=["A", "B"])
 
-    # Reaction A <-> 3B , with 1st-order kinetics in both directions
-    chem_data.add_reaction(reactants=["A"], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
-    assert chem_data.number_of_reactions() == 1
-
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
+
+    # Reaction A <-> 3B , with 1st-order kinetics in both directions
+    bio.reactions.add_reaction(reactants=["A"], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
+    assert bio.reactions.number_of_reactions() == 1
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
@@ -98,11 +98,11 @@ def test_react_2():
     # Based on experiment "reaction3"
     chem_data = ChemData(names=["A", "B"])
 
-    # Reaction 2A <-> 3B , with 1st-order kinetics in both directions
-    chem_data.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
-    assert chem_data.number_of_reactions() == 1
-
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
+
+    # Reaction 2A <-> 3B , with 1st-order kinetics in both directions
+    bio.reactions.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
+    assert bio.reactions.number_of_reactions() == 1
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
@@ -122,12 +122,12 @@ def test_react_3():
     # Based on experiment "reaction4"
     chem_data = ChemData(names=["A", "B", "C"])
 
-    # Reaction A + B <-> C , with 1st-order kinetics for each species
-    chem_data.add_reaction(reactants=[("A") , ("B")], products=[("C")],
-                     forward_rate=5., reverse_rate=2.)
-    assert chem_data.number_of_reactions() == 1
-
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
+
+    # Reaction A + B <-> C , with 1st-order kinetics for each species
+    bio.reactions.add_reaction(reactants=[("A") , ("B")], products=[("C")],
+                               forward_rate=5., reverse_rate=2.)
+    assert bio.reactions.number_of_reactions() == 1
 
     bio.set_uniform_concentration(species_index=0, conc=10.)
     bio.set_uniform_concentration(species_index=1, conc=50.)
@@ -148,12 +148,12 @@ def test_react_4():
     # Based on experiment "reaction5"
     chem_data = ChemData(names=["A", "C", "D"])
 
-    # Reaction A <-> 2C + D , with 1st-order kinetics for each species
-    chem_data.add_reaction(reactants=[("A")], products=[(2, "C",1) , ("D")],
-                           forward_rate=5., reverse_rate=2.)
-    assert chem_data.number_of_reactions() == 1
-
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
+
+    # Reaction A <-> 2C + D , with 1st-order kinetics for each species
+    bio.reactions.add_reaction(reactants=[("A")], products=[(2, "C",1) , ("D")],
+                           forward_rate=5., reverse_rate=2.)
+    assert bio.reactions.number_of_reactions() == 1
 
     bio.set_all_uniform_concentrations( [4., 7., 2.] )
 
@@ -172,12 +172,12 @@ def test_react_5():
     # Based on experiment "reaction6"
     chem_data = ChemData(names=["A", "B", "C", "D"])
 
-    # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
-    chem_data.add_reaction(reactants=[(2,"A",1) , (5,"B",1)], products=[(4,"C",1) , (3,"D",1)],
-                           forward_rate=5., reverse_rate=2.)
-    assert chem_data.number_of_reactions() == 1
-
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
+
+    # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
+    bio.reactions.add_reaction(reactants=[(2,"A",1) , (5,"B",1)], products=[(4,"C",1) , (3,"D",1)],
+                           forward_rate=5., reverse_rate=2.)
+    assert bio.reactions.number_of_reactions() == 1
 
     bio.set_all_uniform_concentrations( [4., 7., 5., 2.] )
 
@@ -202,11 +202,11 @@ def test_react_6():
     # Based on experiment "reaction7"
     chem_data = ChemData(names=["A", "B"])
 
-    # Reaction  2A <-> B , with 2nd-order kinetics in forward reaction, and 1st-order in reverse
-    chem_data.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
-    assert chem_data.number_of_reactions() == 1
-
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
+
+    # Reaction  2A <-> B , with 2nd-order kinetics in forward reaction, and 1st-order in reverse
+    bio.reactions.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
+    assert bio.reactions.number_of_reactions() == 1
 
     bio.set_all_uniform_concentrations( [3., 5.] )
 
@@ -227,12 +227,12 @@ def test_react_7():
     # Based on experiment "reaction8"
     chem_data = ChemData(names=["A", "B", "C", "D", "E"])
 
-    # Coupled reactions A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species
-    chem_data.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=5., reverse_rate=2.)
-    chem_data.add_reaction(reactants=["C", "D"], products=["E"], forward_rate=8., reverse_rate=4.)
-    assert chem_data.number_of_reactions() == 2
-
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
+
+    # Coupled reactions A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species
+    bio.reactions.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=5., reverse_rate=2.)
+    bio.reactions.add_reaction(reactants=["C", "D"], products=["E"], forward_rate=8., reverse_rate=4.)
+    assert bio.reactions.number_of_reactions() == 2
 
     bio.set_all_uniform_concentrations( [3., 5., 1., 0.4, 0.1] )
 
@@ -290,7 +290,7 @@ def test_react_with_membrane():
     assert np.allclose(bio.lookup_species(species_name="C", trans_membrane=True), [0, 30, 0, 0, 0])
 
     # Reaction A + B <-> C , with 1st-order kinetics in both directions, mostly forward
-    chem_data.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=8., reverse_rate=2.)
+    bio.reactions.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=8., reverse_rate=2.)
 
     bio.react(time_step=0.002, n_steps=1)
 
