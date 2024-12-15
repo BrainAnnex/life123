@@ -9,7 +9,7 @@ from life123.reactions import Reactions
 
 
 def test_explain_time_advance():
-    diag = Diagnostics(Reactions(None))   # Argument isn't actually used, but it's required
+    diag = Diagnostics(Reactions(ChemData()))   # Argument isn't actually used, but it's required
 
     # Start out with uniform steps
     diag.diagnostic_conc_data.store(par=20.,

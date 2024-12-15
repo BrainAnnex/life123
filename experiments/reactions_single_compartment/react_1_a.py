@@ -22,8 +22,8 @@
 # ### TAGS :   "quick-start", "uniform compartment"
 
 # %%
-LAST_REVISED = "Nov. 18, 2024"
-LIFE123_VERSION = "1.0.0.rc.0"      # Version this experiment is based on
+LAST_REVISED = "Dec. 14, 2024"
+LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
 
 # %%
 #import set_path            # Using MyBinder?  Uncomment this before running the next cell!

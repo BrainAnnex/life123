@@ -85,7 +85,7 @@ class UniformCompartment:
                     "UniformCompartment instantiation: Cannot pass both `chem_data` and `names` as arguments (the `chem_data` object contains the `names`)"
                 self.chem_data = chem_data
 
-            self.reactions = Reactions(chem_data=chem_data)
+            self.reactions = Reactions(chem_data=self.chem_data)
 
 
         self.system_time = 0.       # Global time of the system, from initialization on
@@ -1652,11 +1652,13 @@ class UniformCompartment:
         df = self.get_history()         # A Pandas dataframe that contains a column named "SYSTEM TIME"
 
         if colors is None:
+            # Attempt to use the colors registered for individual chemicals, if present
             registered_colors = []
             for label in chemicals:
-                registered_colors.append(self.chem_data.get_plot_color(label))
-            colors = registered_colors
-
+                stored_color = self.chem_data.get_plot_color(label)     # Will be None if no color was registered for this chemical
+                registered_colors.append(stored_color)
+            colors = registered_colors      # List of colors, with as many entries as the chemicals of interest;
+                                            # any of the entries might be None
 
         return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=chemicals,
                                         colors=colors, title=title, title_prefix=title_prefix,

@@ -899,6 +899,9 @@ class Reactions():
             chem_data = ChemData(labels=labels)
         '''
 
+        assert chem_data is not None, \
+            "Reactions() instantiation: the arguments `chem_data` must be provided, and cannot be None"
+
         self.chem_data = chem_data
 
         self.reaction_list = []     # List of objects of class "Reaction"
