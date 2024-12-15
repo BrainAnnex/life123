@@ -6,7 +6,6 @@ from scipy.stats import norm
 from typing import Union, List, Tuple
 from life123.collections import CollectionTabular
 from life123.uniform_compartment import UniformCompartment
-from life123.reactions import Reactions
 import plotly.express as px
 from life123.html_log import HtmlLog as log
 from life123.visualization.graphic_log import GraphicLog
@@ -37,7 +36,7 @@ class BioSim1D:
 
         self.chem_data = None   # Object of type "ChemData", with info on the individual chemicals
 
-        self.reactions = None   # Object of type "Reactions"
+        self.reactions = None   # Object of type "Reactions", with info on all the reactions
 
         self.system_length = None   # System extension, from the middle of the leftmost bin to the middle of the rightmost one.
                                     #  The de-facto default value, though not used, is (n_bins-1)
@@ -109,12 +108,12 @@ class BioSim1D:
         TODO?: maybe allow optionally passing n_species in lieu of chem_data,
               and let it create and return the "Chemicals" object in that case
 
-        :param n_bins:      The number of compartments (bins) to use in the simulation
-        :param chem_data:   (OPTIONAL) Object of class "ReactionData";
-                                if not specified, it will get extracted from the "UniformCompartment" class
-        :param reaction_handler:   (OPTIONAL) Object of class "UniformCompartment";
-                                if not specified, it'll get instantiated here
-        :return:            None
+        :param n_bins:          The number of compartments (bins) to use in the simulation
+        :param chem_data:       (OPTIONAL) Object of class "ReactionData";
+                                    if not specified, it will get extracted from the "UniformCompartment" class
+        :param reaction_handler:(OPTIONAL) Object of class "UniformCompartment";
+                                    if not specified, it'll get instantiated here
+        :return:                None
         """
         assert n_bins >= 1, "The number of bins must be at least 1"
 
@@ -127,12 +126,12 @@ class BioSim1D:
         else:
             self.chem_data = reaction_handler.chem_data
 
-        self.reactions = Reactions(chem_data=chem_data)
-
         if reaction_handler:
             self.reaction_dynamics = reaction_handler
         else:
-            self.reaction_dynamics = UniformCompartment(reactions=self.reactions)
+            self.reaction_dynamics = UniformCompartment(chem_data=chem_data)
+
+        self.reactions = self.reaction_dynamics.get_reactions()
 
         self.n_bins = n_bins
 

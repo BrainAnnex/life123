@@ -11,7 +11,7 @@ def test_initialization():
     chem_data = ChemData(names=["A", "B", "C"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
-    bio.reactions.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=8., reverse_rate=2.)
+    bio.reactions.add_reaction(reactants=["A", "B"], products="C", forward_rate=8., reverse_rate=2.)
 
     assert bio.reaction_dynamics.chem_data == chem_data
 

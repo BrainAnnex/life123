@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from typing import Union
-from life123.reactions import Reactions
 from life123.uniform_compartment import UniformCompartment
 
 
@@ -24,7 +23,9 @@ class BioSim2D:
 
         self.n_species = 1      # The number of (non-water) chemical species    TODO: phase out?
 
-        self.chem_data = None   # Object of type "ReactionData", with info on the individual chemicals and their reactions
+        self.chem_data = None   # Object of type "ChemData", with info on the individual chemicals and their reactions
+
+        self.reactions = None   # Object of type "Reactions", with info on all the reactions
 
         self.system = None      # Concentration data in the System we're simulating, for all the chemicals
                                 #   NumPy array of dimension (n_species x n_bins_x x n_bins_y)
@@ -83,17 +84,20 @@ class BioSim2D:
         else:
             self.chem_data = reaction_handler.chem_data
 
-        self.reactions = Reactions(chem_data=chem_data)
-
         if reaction_handler:
             self.reaction_dynamics = reaction_handler
         else:
-            self.reaction_dynamics = UniformCompartment(reactions=self.reactions)
+            self.reaction_dynamics = UniformCompartment(chem_data=chem_data)
+
+        self.reactions = self.reaction_dynamics.get_reactions()
 
         self.n_bins_x = n_cells_x
         self.n_bins_y = n_cells_y
 
         self.n_species = chem_data.number_of_chemicals()
+
+        assert self.n_species >= 1, \
+            "At least 1 chemical species must be declared prior to calling initialize_system()"
 
         # Initialize all concentrations to zero
         self.system = np.zeros((self.n_species, n_cells_x, n_cells_y), dtype=float)
