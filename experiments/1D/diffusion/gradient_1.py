@@ -20,11 +20,11 @@
 # Then identical concentrations are repeatedly *injected to the left* and *drained from the right*
 
 # %%
-LAST_REVISED = "Nov. 12, 2024"
-LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
+LAST_REVISED = "Dec. 15, 2024"
+LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
 
 # %%
-#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %%
 #import sys

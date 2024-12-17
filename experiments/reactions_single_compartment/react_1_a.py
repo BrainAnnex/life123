@@ -22,7 +22,7 @@
 # ### TAGS :   "quick-start", "uniform compartment"
 
 # %%
-LAST_REVISED = "Dec. 14, 2024"
+LAST_REVISED = "Dec. 15, 2024"
 LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
 
 # %%

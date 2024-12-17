@@ -22,13 +22,22 @@
 #     1 - A sine wave of frequency 1 (1 cycle across the system's length), of amplitude 10  
 #     2 - A sine wave of frequency 10 , of amplitude 4  
 #     3 - A sine wave of frequency 40 , of amplitude 2  
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+
+# %% [markdown]
+# ### TAGS :  "diffusion 1D"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Dec. 15, 2024"
+LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
 
 # %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
+
+# %%
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
 from experiments.get_notebook_info import get_notebook_basename
 
 from life123 import BioSim1D
@@ -130,6 +139,14 @@ fig.data[0].ygap=0
 
 fig.show()
 
+# %%
+# Output a heatmap to the log file
+bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, header=f"Low- and mid-frequency components of the Initial System State :\n", graphic_component="vue_heatmap_11")
+# Output a line plot the log file
+bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
+
+# %%
+
 # %% [markdown]
 # ## PART 3 (of 3) of Initial Preparation -
 # ### To complete the preparation of a 3-frequency component initial state, add another, even higher, frequency component 
@@ -159,6 +176,14 @@ fig.show()
 # %%
 # Take a look at the frequency domain of the concentration values
 bio.frequency_analysis(species_name="A")
+
+# %%
+# Output a heatmap to the log file
+bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, header=f"Initial System State with 3 superposed frequencies :\n", graphic_component="vue_heatmap_11")
+# Output a line plot the log file
+bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
+
+# %%
 
 # %% [markdown]
 # # Start the diffusion steps
@@ -317,6 +342,18 @@ fig = px.line(data_frame=bio.system_snapshot(), y=["A"],
           title= f"Diffusion. System snapshot at time t={bio.system_time}",
           color_discrete_sequence = ['red'],
           labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
+fig.show()
+
+
+# Show as heatmap
+fig = px.imshow(bio.system_snapshot().T, 
+                title= f"Diffusion. System snapshot at time t={bio.system_time}", 
+                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
+                text_auto=False, color_continuous_scale="gray_r") 
+
+fig.data[0].xgap=0
+fig.data[0].ygap=0
+
 fig.show()
 
 # %% [markdown]

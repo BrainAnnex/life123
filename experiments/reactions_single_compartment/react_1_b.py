@@ -22,8 +22,8 @@
 # ### TAGS :   "basic", "uniform compartment"
 
 # %%
-LAST_REVISED = "Nov. 18, 2024"
-LIFE123_VERSION = "1.0.0.rc.0"      # Version this experiment is based on
+LAST_REVISED = "Dec. 15, 2024"
+LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
 
 # %%
 #import set_path            # Using MyBinder?  Uncomment this before running the next cell!
@@ -104,7 +104,7 @@ initial_step = 0.013759414272    # We're choosing this value simply FOR DEMONSTR
                                  # to remain in exact lockstep with the time course of experiment `react_1_a`
 
 '''
-If you run experiment `react_1_a`, you can determine what the next time step would have been, had we not stopped early this time
+If you run experiment `react_1_a`, you can determine what the next time step would have been, had we not stopped early this time.
 
     In experiment `react_1_a`, after running the simulation, you can issue:
 
