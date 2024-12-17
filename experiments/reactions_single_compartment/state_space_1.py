@@ -13,12 +13,13 @@
 # ---
 
 # %% [markdown]
-# ### `A <-> 3B` reaction, taken to equilibrium.
+# ### `A <-> 3B` reaction, taken to equilibrium.  
+# #### A hypothetical scenario with 1st-order kinetics in both directions. 
 # ### Examine State Space trajectory, using [A] and [B] as state variables
 #
 # 1st-order kinetics in both directions
 #
-# See also the experiment "1D/reaction/reaction_2"
+# See also the experiment `1D/reaction/reaction_2`
 #
 # LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
 

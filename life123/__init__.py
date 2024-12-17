@@ -10,7 +10,7 @@
     :license: MIT, see LICENSE for more details.
 """
 
-__version__ = "1.0.0.rc.0"
+__version__ = "1.0-rc.1"
 
 
 from life123.bio_sim_1d import BioSim1D
@@ -24,7 +24,7 @@ from life123.collections	import (
     Collection
 )
 from life123.numerical import Numerical
-from life123.reaction import Reaction, ReactionEnz
+from life123.reactions import ReactionGeneric, ReactionEnz, Reactions
 from life123.thermodynamics import ThermoDynamics
 from life123.uniform_compartment import UniformCompartment
 from life123.reaction_kinetics import (ReactionKinetics, VariableTimeSteps)
@@ -44,7 +44,8 @@ __all__ = [
     'CollectionArray',
     'Collection',
     'Numerical',
-    'Reaction',
+    'ReactionGeneric',
+    'Reactions',
     'ReactionEnz',
     'ReactionKinetics',
     'ThermoDynamics',

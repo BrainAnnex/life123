@@ -23,7 +23,7 @@ class PlotlyHelper:
         The choice of default colors is hardwired in this function.
 
         :param n:   Desired number of default colors
-        :return:
+        :return:    A list of n standard (CSS) color names
         """
         # TODO: provide multiple, user-selectable, harmonious assortments of default colors
 
@@ -93,8 +93,8 @@ class PlotlyHelper:
         :param legend_title:[OPTIONAL] String to show at the top of the legend box.
                                 Ignored if curve_labels wasn't set.
                                 If not provided, and the legend box is shown, it will appear as "variable"
-        :param colors:      [OPTIONAL] Either a single color (string with standard plotly name, such as "red"),
-                                or list of names to use, in order; if None, then use the hardwired defaults
+        :param colors:      [OPTIONAL] Either a single color (string with standard plotly CSS name, such as "red"),
+                                or list of names to use, in the same order as the y variables; if None, then use the hardwired defaults
         :param show:        If True, the plot will be shown
                                 Note: in JupyterLab, simply returning a plot object (without assigning it to a variable)
                                 leads to it being automatically shown
@@ -114,6 +114,7 @@ class PlotlyHelper:
             colors = cls.get_default_colors(number_of_curves)
         elif type(colors) == str:
             colors = [colors]
+        # TODO: if any color is missing, assign default ones
 
 
         fig = px.line(x=x, y=y, color_discrete_sequence=colors)     # y can be one array or a list
@@ -166,6 +167,8 @@ class PlotlyHelper:
                     show_intervals=False, show=False) -> pgo.Figure:
         """
         Using plotly, draw line plots from the values in the given dataframe.
+        One column supplies the values for the x-axis,
+        and one or more other columns supply the y-axis values for one or more line plots.
 
         Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
 
@@ -175,7 +178,8 @@ class PlotlyHelper:
                                     if a list is passed, also display a figure legend;
                                     if None, then display all columns except the one that is declared as the independent variable
         :param colors:          (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
-                                    or list of names to use, in order; if None, then the hardwired default colors are used
+                                    or list of names to use, in order; some of the entries may be None.
+                                    If None, then the hardwired default colors are used
         :param title:           (OPTIONAL) Title for the plot
         :param title_prefix:    (OPTIONAL) Strint to prefixed (automatically followed by " <br>") to the title
         :param range_x:         (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
@@ -228,9 +232,26 @@ class PlotlyHelper:
             number_of_curves = len(fields)
 
         if colors is None:
+            # Entirely use default colors
             colors = PlotlyHelper.get_default_colors(number_of_curves)
         elif type(colors) == str:
+            # Turn colors into a list, if it was a single entry
             colors = [colors]
+        else:
+            # If we get here, we were given a list; replace any missing (None) entry with a default color
+            number_none = colors.count(None)    # Number of None entries
+            if number_none > 0:
+                replacement_colors = PlotlyHelper.get_default_colors(number_none)   # Get all the replacements in bulk
+                colors_adjusted = []
+                i = 0
+                for c in colors:
+                    if c is None:
+                        colors_adjusted.append(replacement_colors[i])
+                        i += 1
+                    else:
+                        colors_adjusted.append(c)
+
+                colors = colors_adjusted
 
 
         if title_prefix is not None:
@@ -289,8 +310,9 @@ class PlotlyHelper:
                 # of a large number of vertical lines; so, we'll be directly modifying the data structure of the "fig" dictionary
                 #fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
             # END for
+
             fig['layout']['shapes'] = vline_list    # The vertical lines are regarded by Plotly Express as "shapes"
-            # that are stored in the figure's "layout"
+                                                    # that are stored in the figure's "layout"
         if show:
             fig.show()  # Actually display the plot
 

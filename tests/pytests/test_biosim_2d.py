@@ -127,10 +127,11 @@ def test_set_species_conc():
 def test_react():
     chem_data = chem(names=["A", "B"])
 
-    # Reaction A <-> B , with 1st-order kinetics in both directions
-    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-
     bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
+
+    # Reaction A <-> B , with 1st-order kinetics in both directions
+    bio.reactions.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+
     bio.set_bin_conc_all_species(bin_x=0, bin_y=0, conc_list=[10.,50.])
     bio.set_bin_conc_all_species(bin_x=0, bin_y=1, conc_list=[20.,35.])
     bio.set_bin_conc_all_species(bin_x=2, bin_y=3, conc_list=[5.,100.])
@@ -155,10 +156,11 @@ def test_react():
 def test_reaction_step():
     chem_data = chem(names=["A", "B"])
 
-    # Reaction A <-> B , with 1st-order kinetics in both directions
-    chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-
     bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
+
+    # Reaction A <-> B , with 1st-order kinetics in both directions
+    bio.reactions.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+
     bio.set_bin_conc_all_species(bin_x=0, bin_y=0, conc_list=[10.,50.])
     bio.set_bin_conc_all_species(bin_x=0, bin_y=1, conc_list=[20.,35.])
     bio.set_bin_conc_all_species(bin_x=2, bin_y=3, conc_list=[5.,100.])

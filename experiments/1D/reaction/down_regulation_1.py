@@ -21,17 +21,25 @@
 # Single-bin reaction
 #
 # Based on experiment `reactions_single_compartment/down_regulate_2`
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+
+# %% [markdown]
+# ### TAGS :  "reactions 1D"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Dec. 16, 2024"
+LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
+
+# %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData as chem
-from life123 import BioSim1D
+from life123 import UniformCompartment, BioSim1D
 
 import plotly.express as px
 from life123 import GraphicLog
@@ -46,20 +54,21 @@ GraphicLog.config(filename=log_file,
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
-# Initialize the system
-chem_data = chem(names=["A", "B", "Y"])     # NOTE: Diffusion not applicable (just 1 bin)
+# Initialize the system.  NOTE: Diffusion not applicable (just 1 bin)
+uc = UniformCompartment(names=["A", "B", "Y"])
+
 
 # Reaction A + 2 B <-> Y , with 1st-order kinetics for all species
-chem_data.add_reaction(reactants=[("A") , (2, "B", 1)], products=[("Y")],
-                       forward_rate=8., reverse_rate=2.)
+uc.add_reaction(reactants=["A", (2, "B", 1)], products=["Y"],
+                  forward_rate=8., reverse_rate=2.)
 
-chem_data.describe_reactions()
+uc.describe_reactions()
 
 # Send the plot of the reaction network to the HTML log file
-chem_data.plot_reaction_network("vue_cytoscape_2")
+uc.plot_reaction_network("vue_cytoscape_2")
 
 # %%
-bio = BioSim1D(n_bins=1, chem_data=chem_data)
+bio = BioSim1D(n_bins=1, reaction_handler=uc)
 
 bio.set_uniform_concentration(species_name="A", conc=5.)     # Scarce
 bio.set_uniform_concentration(species_name="B", conc=100.)   # Plentiful

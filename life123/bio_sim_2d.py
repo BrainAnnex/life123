@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import Union, List, Tuple
-from life123.collections import CollectionTabular
+from typing import Union
 from life123.uniform_compartment import UniformCompartment
 
 
@@ -10,12 +9,12 @@ class BioSim2D:
     2D simulations of diffusion and reactions
     """
 
-    def __init__(self, n_bins=None, chem_data=None, reactions=None):
+    def __init__(self, n_bins=None, chem_data=None, reaction_handler=None):
         """
 
-        :param n_bins:      A pair with the bin size in the x- and y- coordinates
-        :param chem_data:
-        :param reactions:
+        :param n_bins:              A pair with the bin size in the x- and y- coordinates
+        :param chem_data:           (OPTIONAL) Object of class "ChemData"
+        :param reaction_handler:    (OPTIONAL) Object of class "UniformCompartment"
         """
         self.debug = False
 
@@ -24,7 +23,9 @@ class BioSim2D:
 
         self.n_species = 1      # The number of (non-water) chemical species    TODO: phase out?
 
-        self.chem_data = None   # Object of type "ReactionData", with info on the individual chemicals and their reactions
+        self.chem_data = None   # Object of type "ChemData", with info on the individual chemicals and their reactions
+
+        self.reactions = None   # Object of type "Reactions", with info on all the reactions
 
         self.system = None      # Concentration data in the System we're simulating, for all the chemicals
                                 #   NumPy array of dimension (n_species x n_bins_x x n_bins_y)
@@ -45,8 +46,8 @@ class BioSim2D:
 
         self.system_time = None              # Global time of the system, from initialization on
 
-        if (n_bins is not None) or (chem_data is not None) or (reactions is not None):
-            self.initialize_system(n_bins=n_bins, chem_data=chem_data, reactions=reactions)
+        if (n_bins is not None) or (chem_data is not None) or (reaction_handler is not None):
+            self.initialize_system(n_bins=n_bins, chem_data=chem_data, reaction_handler=reaction_handler)
 
 
 
@@ -57,7 +58,7 @@ class BioSim2D:
     #                                                                       #
     #########################################################################
     
-    def initialize_system(self, n_bins: (int, int), chem_data=None, reactions=None) -> None:
+    def initialize_system(self, n_bins: (int, int), chem_data=None, reaction_handler=None) -> None:
         """
         Initialize all concentrations to zero.
 
@@ -65,7 +66,7 @@ class BioSim2D:
                                 in the x- and y- dimensions, as a pair of integers
         :param chem_data:   (OPTIONAL) Object of class "Chemicals";
                                 if not specified, it will get extracted from the "Reactions" class
-        :param reactions:   (OPTIONAL) Object of class "Reactions";
+        :param reaction_handler:   (OPTIONAL) Object of class "Reactions";
                                 if not specified, it'll get instantiated here
 
         :return:            None
@@ -75,23 +76,28 @@ class BioSim2D:
         assert n_cells_x >= 1, "The number of bins must be at least 1 in each dimension"
         assert n_cells_y >= 1, "The number of bins must be at least 1 in each dimension"
 
-        assert chem_data is not None or reactions is not None, \
+        assert chem_data is not None or reaction_handler is not None, \
             "BioSim2D: at least one of the arguments `chem_data` and `reactions` must be set"
 
         if chem_data:
             self.chem_data = chem_data
         else:
-            self.chem_data = reactions.chem_data
+            self.chem_data = reaction_handler.chem_data
 
-        if reactions:
-            self.reaction_dynamics = reactions
+        if reaction_handler:
+            self.reaction_dynamics = reaction_handler
         else:
-            self.reaction_dynamics = UniformCompartment(chem_data=chem_data)
+            self.reaction_dynamics = UniformCompartment(chem_data=self.chem_data)
+
+        self.reactions = self.reaction_dynamics.get_reactions()
 
         self.n_bins_x = n_cells_x
         self.n_bins_y = n_cells_y
 
-        self.n_species = chem_data.number_of_chemicals()
+        self.n_species = self.chem_data.number_of_chemicals()
+
+        assert self.n_species >= 1, \
+            "At least 1 chemical species must be declared prior to calling initialize_system()"
 
         # Initialize all concentrations to zero
         self.system = np.zeros((self.n_species, n_cells_x, n_cells_y), dtype=float)

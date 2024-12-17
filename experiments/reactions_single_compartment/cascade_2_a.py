@@ -24,18 +24,18 @@
 # **Background**: please see experiments `cascade_1` and `mystery_reaction_1`
 
 # %%
-LAST_REVISED = "Nov. 12, 2024"
-LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
+LAST_REVISED = "Dec. 15, 2024"
+LIFE123_VERSION = "1.0-rc.1"     # Library version this experiment is based on
 
 # %%
-#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
+#import set_path                 # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import check_version, UniformCompartment, ReactionKinetics, PlotlyHelper
+from life123 import check_version, ChemData, UniformCompartment, ReactionKinetics, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
@@ -50,35 +50,39 @@ check_version(LIFE123_VERSION)
 
 # %% tags=[]
 # Instantiate the simulator and specify the chemicals
+chem_data = ChemData(names=["A", "B", "C"], plot_colors=["darkturquoise", "orange", "green"])
+
+chem_data.all_chemicals()
+
+# %% tags=[]
 # Here we use the "mid" preset for the variable steps, a compromise between speed and accuracy
-dynamics = UniformCompartment(preset="mid")
+uc = UniformCompartment(chem_data=chem_data, preset="mid")
 
 # Reaction A <-> B (slower, and with a smaller K)
-dynamics.add_reaction(reactants="A", products="B",
-                      forward_rate=8., reverse_rate=2.) 
+uc.add_reaction(reactants="A", products="B",
+                forward_rate=8., reverse_rate=2.) 
 
 # Reaction B <-> C (faster, and with a larger K)
-dynamics.add_reaction(reactants="B", products="C",
-                      forward_rate=12., reverse_rate=1.) 
+uc.add_reaction(reactants="B", products="C",
+                forward_rate=12., reverse_rate=1.) 
                                    
-dynamics.describe_reactions()
+uc.describe_reactions()
 
 # %% [markdown]
 # ### Run the simulation
 
 # %%
-dynamics.set_conc({"A": 50.})  # Set the initial concentrations
-dynamics.describe_state()
+uc.set_conc({"A": 50.})  # Set the initial concentrations
+uc.describe_state()
 
 # %%
-dynamics.single_compartment_react(initial_step=0.01, duration=0.8,
-                                  variable_steps=True)
+uc.single_compartment_react(initial_step=0.01, duration=0.8)
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], show_intervals=True)
+uc.plot_history(show_intervals=True)
 
 # %%
-dynamics.is_in_equilibrium(tolerance=12)
+uc.is_in_equilibrium(tolerance=12)
 
 # %%
 
@@ -93,7 +97,7 @@ dynamics.is_in_equilibrium(tolerance=12)
 
 # %%
 # For this analysis, we're NOT given the intermediary B
-df = dynamics.get_history(columns=["SYSTEM TIME", "A", "C", "caption"])
+df = uc.get_history(columns=["SYSTEM TIME", "A", "C", "caption"])
 df
 
 # %% [markdown]
@@ -130,14 +134,14 @@ ReactionKinetics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C
 # We'll pick time **t=0.1** as the divider between the 2 domains of the `A <-> C` time evolution that we want to model. 
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], range_x=[0, 0.4],
-                      vertical_lines_to_add=[0.1])
+uc.plot_history(range_x=[0, 0.4],
+                vertical_lines_to_add=[0.1])
 
 # %% [markdown]
 # #### Let's locate where the t = 0.1 point occurs in the data
 
 # %%
-dynamics.get_history(t=0.1)
+uc.get_history(t=0.1)
 
 # %% [markdown]
 # ### Let's split the `A_conc` and `C_conc` arrays we extracted earlier (with the entire time evolution of, respectively, [A] and [C]) into two parts:  
@@ -177,8 +181,8 @@ ReactionKinetics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_ear
 # It's no surprise that an elementary reaction is NOT a good fit, if one observes what happens to the time evolution of the concentrations.  Repeating the earlier plot, but only showing `A` and `C` (i.e. hiding the intermediary `B`):
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'green'], range_x=[0, 0.4], vertical_lines_to_add=[0.1],
-                      chemicals=['A', 'C'], title="Changes in concentration for `A <-> C`")
+uc.plot_history(range_x=[0, 0.4], vertical_lines_to_add=[0.1],
+                chemicals=['A', 'C'], title="Changes in concentration for `A <-> C`")
 
 # %% [markdown]
 # In the zone to the left of the vertical dashed line:  
@@ -202,8 +206,8 @@ ReactionKinetics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late
 # Let's see the graph again:
 
 # %%
-dynamics.plot_history(colors=['darkturquoise', 'orange', 'green'], range_x=[0, 0.4],
-                      vertical_lines_to_add=[0.1])
+uc.plot_history(range_x=[0, 0.4],
+                vertical_lines_to_add=[0.1])
 
 # %% [markdown]
 # A possible conclusion to draw is that, in this case:  

@@ -10,12 +10,15 @@ class Diagnostics:
     For the management of reaction diagnostic data
     """
 
-    def __init__(self, chem_data):
+    def __init__(self, reactions):
 
-        assert chem_data is not None, \
-            "Diagnostics class cannot be instantiated with a missing value for argument `chem_data`"
+        assert reactions is not None, \
+            "Diagnostics class cannot be instantiated with a missing value for the argument `reactions`"
 
-        self.chem_data = chem_data
+        self.reactions = reactions
+
+        self.chem_data = reactions.get_chem_data()
+
 
         # TODO: maybe drop the "diagnostic_" from the names, or rename it to "historic_"
         self.diagnostic_conc_data = CollectionTabular(parameter_name="TIME")
@@ -75,10 +78,10 @@ class Diagnostics:
         :return:                            None
         """
         # Validate the reaction index
-        self.chem_data.assert_valid_rxn_index(rxn_index)
+        self.reactions.assert_valid_rxn_index(rxn_index)
 
         # Sorted list of the indexes of all the chemicals participating in this reaction
-        indexes = self.chem_data.get_chemicals_indexes_in_reaction(rxn_index)
+        indexes = self.reactions.get_chemicals_indexes_in_reaction(rxn_index)
 
         # Validate increment_vector_single_rxn
         if increment_vector_single_rxn is not None:     # If the values are available (not the case in aborts)
@@ -119,7 +122,7 @@ class Diagnostics:
         :param caption:     [OPTIONAL] string to describe the snapshot
         :return:            None
         """
-        for rxn_index in range(self.chem_data.number_of_reactions()):
+        for rxn_index in range(self.reactions.number_of_reactions()):
             self.save_rxn_data(system_time=system_time, time_step=time_step,
                                increment_vector_single_rxn=None,
                                aborted=True,
@@ -249,10 +252,10 @@ class Diagnostics:
                                 If not present, return None
         """
         # Validate the reaction index
-        self.chem_data.assert_valid_rxn_index(rxn_index)
+        self.reactions.assert_valid_rxn_index(rxn_index)
 
         if print_reaction:
-            print("Reaction: ", self.chem_data.single_reaction_describe(rxn_index=rxn_index, concise=True))
+            print("Reaction: ", self.reactions.single_reaction_describe(rxn_index=rxn_index, concise=True))
 
         movie_obj = self.diagnostic_rxn_data.get(rxn_index)    # Object of type "MovieTabular"
 
@@ -583,7 +586,7 @@ class Diagnostics:
         :return:                True if the change in reactant/product concentrations is consistent with the
                                     reaction's stoichiometry, or False otherwise
         """
-        assert self.chem_data.number_of_reactions() == 1, \
+        assert self.reactions.number_of_reactions() == 1, \
             f"stoichiometry_checker() currently only works for 1-reaction simulations, but " \
             f"{self.chem_data.number_of_reactions()} reactions are present."
 
@@ -597,7 +600,7 @@ class Diagnostics:
             f"with as many elements as the number of registered chemicals ({self.chem_data.number_of_chemicals()}); " \
             f"instead, it has {len(conc_arr_after)}"
 
-        self.chem_data.assert_valid_rxn_index(rxn_index)
+        self.reactions.assert_valid_rxn_index(rxn_index)
 
         return self._stoichiometry_checker_from_deltas(rxn_index = rxn_index,
                                                        delta_arr = conc_arr_after-conc_arr_before)
@@ -631,9 +634,9 @@ class Diagnostics:
         if np.isnan(delta_arr).any():
             return True         # The presence of a NaN, anywhere in delta_arr, is indicative of an aborted step
 
-        rxn = self.chem_data.get_reaction(rxn_index)
-        reactants = self.chem_data.get_reactants(rxn_index)
-        products = self.chem_data.get_products(rxn_index)
+        rxn = self.reactions.get_reaction(rxn_index)
+        reactants = self.reactions.get_reactants(rxn_index)
+        products = self.reactions.get_products(rxn_index)
 
         # Pick (arbitrarily) the first reactant,
         # to establish a baseline change in concentration relative to its stoichiometric coefficient

@@ -3,7 +3,7 @@
 import math
 import cmath
 import numpy as np
-from life123.reaction import Reaction
+from life123.reactions import ReactionGeneric
 from life123.numerical import Numerical
 from life123.visualization.plotly_helper import PlotlyHelper
 
@@ -16,7 +16,7 @@ class ReactionKinetics:
 
 
     @classmethod
-    def solve_exactly(cls, rxn :Reaction, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
+    def solve_exactly(cls, rxn :ReactionGeneric, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
         """
         Return the exact solution of the given reaction,
         PROVIDED that it is a 1st Order Reaction of the type A <=> B.

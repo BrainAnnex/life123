@@ -13,8 +13,8 @@
 # ---
 
 # %% [markdown]
-# ## Diffusion of a bell-shaped initial concentration along an persistent gradient
-# Similar to the experiment *diffusion_along_gradient_1*, but now the gradient is NOT an initial condition; rather, it's a persistent dynamic condition (explored in experiment *gradient_1*).
+# ## Diffusion of a bell-shaped initial concentration along a persistent gradient
+# Similar to the experiment `diffusion_along_gradient_1`, but now the gradient is NOT an initial condition; rather, it's a persistent dynamic condition (explored in experiment *gradient_1*).
 #
 # The one-chemical system starts out with a uniform concentration. 
 # The persistent concentration gradient is attained by continuosly injecting and draining, at opposite ends.
@@ -22,15 +22,24 @@
 # After a stable gradient is established, a one-time injection is performed, to
 # add a bell-shape concentration near one end of the system, on the "uphill" side of the gradient.
 #
-# Just as seen in the case of *diffusion_along_gradient_1*, the concentration peak
+# Just as seen in the case of `diffusion_along_gradient_1`, the concentration peak
 # remains in place, and simply spreads out from there
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+
+# %% [markdown]
+# ### TAGS :  "diffusion 1D"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Dec. 16, 2024"
+LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
 
 # %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
+
+# %%
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
 from life123 import BioSim1D
 
 import plotly.express as px
@@ -38,7 +47,7 @@ from life123 import ChemData as chem
 
 # %%
 # Initialize the system with a uniform concentration (of the only species)
-chem_data = chem(names=["A"], diffusion_rates=[3.])
+chem_data = chem(names="A", diffusion_rates=3.)
 bio = BioSim1D(n_bins=200, chem_data=chem_data)
 
 bio.set_uniform_concentration(species_index=0, conc=150.)
@@ -90,8 +99,8 @@ for i in range(2001):
 
 
 # %%
-(bio.bin_concentration(bin_address=0, species_name="A") ,
- bio.bin_concentration(bin_address=rightmost_bin, species_name="A"))
+(bio.bin_concentration(bin_address=0, species_label="A") ,
+ bio.bin_concentration(bin_address=rightmost_bin, species_label="A"))
 
 # %% [markdown]
 # ### By now, the gradient has stabilized with  
@@ -142,11 +151,11 @@ for i in range(501):
         bio.visualize_system()
 
 # %%
-(bio.bin_concentration(bin_address=0, species_name="A") ,
- bio.bin_concentration(bin_address=rightmost_bin, species_name="A"))
+(bio.bin_concentration(bin_address=0, species_label="A") ,
+ bio.bin_concentration(bin_address=rightmost_bin, species_label="A"))
 
 # %% [markdown]
-# ### The one-time pulse injected into the system, gradually "melted into" the gradient.
+# ### The one-time pulse injected into the system, gradually "melted down into" the gradient.
 # The gradient finally re-stabilizes with   
 # [A] = 263 on the left and [A] = 95.89 on the right.   
 # Their average is about 179.4, which is equal to the initial uniform concentration of 150, plus most of the bell curve, which had amplitude=30. (i.e. total area under it of 30, minus a little that was clipped to the left.)

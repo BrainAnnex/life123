@@ -4,11 +4,12 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 from life123 import ChemData, CollectionTabular
 from life123.diagnostics import Diagnostics
+from life123.reactions import Reactions
 
 
 
 def test_explain_time_advance():
-    diag = Diagnostics(ChemData())   # Argument isn't actually used, but it's required
+    diag = Diagnostics(Reactions(ChemData()))   # Argument isn't actually used, but it's required
 
     # Start out with uniform steps
     diag.diagnostic_conc_data.store(par=20.,
@@ -73,7 +74,7 @@ def test_explain_time_advance():
 
 def test__delta_names():
     chem_data = ChemData(names=["A", "B", "X"])
-    diag = Diagnostics(chem_data)
+    diag = Diagnostics(Reactions(chem_data))
 
     assert diag._delta_names() == ["Delta A", "Delta B", "Delta X"]
 
@@ -81,7 +82,7 @@ def test__delta_names():
 
 def test__delta_conc_dict():
     chem_data = ChemData(names=["A", "B", "X"])
-    diag = Diagnostics(chem_data)
+    diag = Diagnostics(Reactions(chem_data))
 
     assert diag._delta_conc_dict(np.array([10, 20, 30])) == \
            {"Delta A": 10, "Delta B": 20, "Delta X": 30}
@@ -93,12 +94,14 @@ def test__delta_conc_dict():
 
 def test_save_diagnostic_rxn_data():
     chem_data = ChemData(names=["A", "B", "C", "X"])
-    # Add 3 reactions
-    chem_data.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)
-    chem_data.add_reaction(reactants="A", products="X", forward_rate=5., reverse_rate=2.)
-    chem_data.add_reaction(reactants=["A", "B"], products="X", forward_rate=5., reverse_rate=2.)
+    rxns = Reactions(chem_data=chem_data)
 
-    diag = Diagnostics(chem_data)
+    # Add 3 reactions
+    rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)
+    rxns.add_reaction(reactants="A", products="X", forward_rate=5., reverse_rate=2.)
+    rxns.add_reaction(reactants=["A", "B"], products="X", forward_rate=5., reverse_rate=2.)
+
+    diag = Diagnostics(reactions=rxns)
     assert len(diag.diagnostic_rxn_data) == 0
 
     with pytest.raises(Exception):
@@ -191,12 +194,14 @@ def test_save_diagnostic_rxn_data():
 
 def test_save_diagnostic_aborted_rxns():
     chem_data = ChemData(names=["A", "B", "C", "X"])
-    # Add 3 reactions
-    chem_data.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)
-    chem_data.add_reaction(reactants="A", products="X", forward_rate=5., reverse_rate=2.)
-    chem_data.add_reaction(reactants=["A", "B"], products="X", forward_rate=5., reverse_rate=2.)
+    rxns = Reactions(chem_data=chem_data)
 
-    diag = Diagnostics(chem_data)
+    # Add 3 reactions
+    rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)
+    rxns.add_reaction(reactants="A", products="X", forward_rate=5., reverse_rate=2.)
+    rxns.add_reaction(reactants=["A", "B"], products="X", forward_rate=5., reverse_rate=2.)
+
+    diag = Diagnostics(reactions=rxns)
 
     diag.save_diagnostic_aborted_rxns(system_time=100, time_step=40, caption="aborted step")
 
@@ -221,12 +226,14 @@ def test_save_diagnostic_aborted_rxns():
 
 def test_get_diagnostic_rxn_data():
     chem_data = ChemData(names=["A", "B", "C", "X"])
-    # Add 3 reactions
-    chem_data.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)
-    chem_data.add_reaction(reactants=["A"], products=["X"], forward_rate=5., reverse_rate=2.)
-    chem_data.add_reaction(reactants=["A", "B"], products=["X"], forward_rate=5., reverse_rate=2.)
+    rxns = Reactions(chem_data=chem_data)
 
-    diag = Diagnostics(chem_data)
+    # Add 3 reactions
+    rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)
+    rxns.add_reaction(reactants=["A"], products=["X"], forward_rate=5., reverse_rate=2.)
+    rxns.add_reaction(reactants=["A", "B"], products=["X"], forward_rate=5., reverse_rate=2.)
+
+    diag = Diagnostics(reactions=rxns)
 
 
     # Add data for reaction index 0
@@ -321,10 +328,12 @@ def test_get_diagnostic_rxn_data():
 
 
 def test_stoichiometry_checker():
-    chem = ChemData(names=["A", "B", "C", "D"])
-    diag = Diagnostics(chem)
+    chem_data = ChemData(names=["A", "B", "C", "D"])
+    rxns = Reactions(chem_data=chem_data)
 
-    chem.add_reaction(reactants="A", products="B")          # Reaction 0:   A <--> B
+    diag = Diagnostics(reactions=rxns)
+
+    rxns.add_reaction(reactants="A", products="B")                  # Reaction 0:   A <--> B
 
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 50, 0, 0]), conc_arr_after=np.array([10, 40, 0, 0]))
@@ -332,8 +341,8 @@ def test_stoichiometry_checker():
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([90, 10, 0, 0]))
 
 
-    chem.clear_reactions_data()
-    chem.add_reaction(reactants=[(2, "A")], products=["B"])         # Reaction 0:   2A <--> B
+    rxns.clear_reactions_data()
+    rxns.add_reaction(reactants=[(2, "A")], products=["B"])         # Reaction 0:   2A <--> B
 
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([80, 10, 0, 0]))
@@ -341,32 +350,32 @@ def test_stoichiometry_checker():
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 50, 0, 0]), conc_arr_after=np.array([10, 45, 0, 0]))
 
 
-    chem.clear_reactions_data()
-    chem.add_reaction(reactants=["A", "B"], products=["C"])         # Reaction 0:   A + B <--> C
+    rxns.clear_reactions_data()
+    rxns.add_reaction(reactants=["A", "B"], products=["C"])         # Reaction 0:   A + B <--> C
 
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 40, 10, 0]))
     assert not diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 40, 9.9, 0]))
 
 
-    chem.clear_reactions_data()
-    chem.add_reaction(reactants=["A", (3, "B")], products=["C"])     # Reaction 0:   A + 3B <--> C
+    rxns.clear_reactions_data()
+    rxns.add_reaction(reactants=["A", (3, "B")], products=["C"])     # Reaction 0:   A + 3B <--> C
 
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 10, 0]))
     assert not diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 9.9, 0]))
 
 
-    chem.clear_reactions_data()
-    chem.add_reaction(reactants=["A", (3, "B")], products=[(4, "C")])                   # Reaction 0:   A + 3B <--> 4C
+    rxns.clear_reactions_data()
+    rxns.add_reaction(reactants=["A", (3, "B")], products=[(4, "C")])                   # Reaction 0:   A + 3B <--> 4C
 
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 40, 0]))
     assert not diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 50, 0, 0]), conc_arr_after=np.array([90, 20, 39.9, 0]))
 
 
-    chem.clear_reactions_data()
-    chem.add_reaction(reactants=[(2, "A"), (3, "B")], products=[(4, "C"), (5, "D")])     # Reaction 0:   2A + 3B <--> 4C + 5D
+    rxns.clear_reactions_data()
+    rxns.add_reaction(reactants=[(2, "A"), (3, "B")], products=[(4, "C"), (5, "D")])     # Reaction 0:   2A + 3B <--> 4C + 5D
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([120, 130, 60, 50]))
     assert not diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 100, 100, 100]), conc_arr_after=np.array([120.1, 130, 60, 50]))
