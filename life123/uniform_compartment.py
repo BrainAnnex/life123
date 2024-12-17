@@ -68,7 +68,7 @@ class UniformCompartment:
 
         self.chem_data = None       # Object of type "ChemData" (with data about the chemicals and their reactions,
                                     #                            incl. macromolecules)
-        self.reactions = None
+        self.reactions = None       # Object ot type "Reactions" (with data about all the reactions)
 
         if reactions is not None:
             assert chem_data is None, \
@@ -336,17 +336,19 @@ class UniformCompartment:
 
     def get_reactions(self):
         """
+        Return all the reactions associated to this Uniform Compartment
 
-        :return:
+        :return:    Object ot type "Reactions" (with data about all the reactions)
         """
         return self.reactions
 
 
     def get_single_reaction(self, i :int):
         """
+        Return a single reaction, specified by its index
 
-        :param i:
-        :return:
+        :param i:   Integer index of the desired reaction
+        :return:    Object of type "ReactionGeneric"
         """
         return self.reactions.get_reaction(i)
 

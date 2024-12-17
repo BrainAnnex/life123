@@ -87,14 +87,14 @@ class BioSim2D:
         if reaction_handler:
             self.reaction_dynamics = reaction_handler
         else:
-            self.reaction_dynamics = UniformCompartment(chem_data=chem_data)
+            self.reaction_dynamics = UniformCompartment(chem_data=self.chem_data)
 
         self.reactions = self.reaction_dynamics.get_reactions()
 
         self.n_bins_x = n_cells_x
         self.n_bins_y = n_cells_y
 
-        self.n_species = chem_data.number_of_chemicals()
+        self.n_species = self.chem_data.number_of_chemicals()
 
         assert self.n_species >= 1, \
             "At least 1 chemical species must be declared prior to calling initialize_system()"

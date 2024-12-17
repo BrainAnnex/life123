@@ -20,12 +20,15 @@
 #
 # (Note: this is the 2D counterpart of the 1D experiment by the same name)
 
-# %%
-LAST_REVISED = "Nov. 13, 2024"
-LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
+# %% [markdown]
+# ### TAGS :  "diffusion 2D"
 
 # %%
-#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
+LAST_REVISED = "Dec. 16, 2024"
+LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
+
+# %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %%
 #import sys
@@ -38,7 +41,7 @@ import plotly.express as px
 
 # %%
 # Prepare the initial system, with a single non-zero bin, near the left edge of the system, positioned halfway vertically
-chem_data = ChemData(names=["A"], diffusion_rates=[0.02])
+chem_data = ChemData(names="A", diffusion_rates=0.02)
 bio = BioSim2D(n_bins=(5, 8), chem_data=chem_data)
 
 bio.inject_conc_to_bin(bin_address=(2, 1), species_index=0, delta_conc=10.)

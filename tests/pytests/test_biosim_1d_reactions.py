@@ -294,17 +294,17 @@ def test_react_with_membrane():
 
     bio.react(time_step=0.002, n_steps=1)
 
-    bin1_trans = bio.bin_concentration(bin_address=1, species_name="A", trans_membrane=True)
-    bin4 = bio.bin_concentration(bin_address=4, species_name="A")
+    bin1_trans = bio.bin_concentration(bin_address=1, species_label="A", trans_membrane=True)
+    bin4 = bio.bin_concentration(bin_address=4, species_label="A")
     assert np.allclose(bin1_trans, bin4)
     assert np.allclose(bin4, 48.08)
 
-    bin1_trans = bio.bin_concentration(bin_address=1, species_name="B", trans_membrane=True)
-    bin4 = bio.bin_concentration(bin_address=4, species_name="B")
+    bin1_trans = bio.bin_concentration(bin_address=1, species_label="B", trans_membrane=True)
+    bin4 = bio.bin_concentration(bin_address=4, species_label="B")
     assert np.allclose(bin1_trans, bin4)
     assert np.allclose(bin4, 1.08)
 
-    bin1_trans = bio.bin_concentration(bin_address=1, species_name="C", trans_membrane=True)
-    bin4 = bio.bin_concentration(bin_address=4, species_name="C")
+    bin1_trans = bio.bin_concentration(bin_address=1, species_label="C", trans_membrane=True)
+    bin4 = bio.bin_concentration(bin_address=4, species_label="C")
     assert np.allclose(bin1_trans, bin4)
     assert np.allclose(bin4, 36.92)

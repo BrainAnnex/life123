@@ -13,8 +13,7 @@
 # ---
 
 # %% [markdown]
-# ### Reaction  A + B <-> C, mostly forward and with 1st-order kinetics for each species,
-# ### taken to equilibrium
+# ### Reaction  A + B <-> C, mostly forward and with 1st-order kinetics for each species, taken to equilibrium
 #
 # Initial concentrations of A and B are spacially separated to the opposite ends of the system;
 # as a result, no C is being generated.
@@ -27,12 +26,15 @@
 # A LOT of plots are sent to the log file from this experiment; the reason is to compare two
 # graphic elements, "vue_curves_3" and "vue_curves_4"
 
-# %%
-LAST_REVISED = "Nov. 13, 2024"
-LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
+# %% [markdown]
+# ### TAGS :  "reactions 1D", "diffusion 1D"
 
 # %%
-#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
+LAST_REVISED = "Dec. 16, 2024"
+LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
+
+# %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %%
 #import sys
@@ -41,7 +43,7 @@ LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import BioSim1D, ChemData, GraphicLog, HtmlLog as log
+from life123 import BioSim1D, ChemData, UniformCompartment, GraphicLog, HtmlLog as log
 
 import plotly.express as px
 
@@ -58,36 +60,27 @@ GraphicLog.config(filename=log_file,
 # Initialize the system
 chem_data = ChemData(names=["A", "B", "C"], diffusion_rates=[50., 50., 1.])
 
-
+uc = UniformCompartment(chem_data=chem_data)
 
 # Reaction A + B <-> C , with 1st-order kinetics for each species; note that it's mostly in the forward direction
-chem_data.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=20., reverse_rate=2.)
-bio = BioSim1D(n_bins=7, chem_data=chem_data)
-
-# %%
-bio.show_system_snapshot()
-
-# %%
-chem_data.describe_reactions()
+uc.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=20., reverse_rate=2.)
+uc.describe_reactions()
 
 # %%
 # Send a header and a plot to the HTML log file
 log.write("Reaction:  A + B <-> C",
           style=log.h2)
-chem_data.plot_reaction_network("vue_cytoscape_2")
+uc.plot_reaction_network("vue_cytoscape_2")
 
 # %%
-# Set the heatmap parameters
-heatmap_pars = {"range": [0, 20],
-                "outer_width": 850, "outer_height": 100,
-                "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
-                }
 
-# Set the parameters of the line plots (for now, same for single-curve and multiple-curves)
-lineplot_pars = {"range": [0, 20],
-                "outer_width": 850, "outer_height": 200,
-                "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
-                }
+# %%
+bio = BioSim1D(n_bins=7, reaction_handler=uc)
+
+# %%
+bio.show_system_snapshot()   # No concentrations anywhere yet
+
+# %%
 
 # %% [markdown]
 # # Inject initial concentrations of A and B at opposite ends of the system
@@ -112,6 +105,19 @@ fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"],
               color_discrete_sequence = ['red', 'orange', 'green'],
               labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
 fig.show()
+
+# %%
+# Set the heatmap parameters
+heatmap_pars = {"range": [0, 20],
+                "outer_width": 850, "outer_height": 100,
+                "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
+                }
+
+# Set the parameters of the line plots (for now, same for single-curve and multiple-curves)
+lineplot_pars = {"range": [0, 20],
+                "outer_width": 850, "outer_height": 200,
+                "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
+                }
 
 # %%
 log.write(f"Initial system state at time t={bio.system_time}:", blanks_before=2, style=log.bold)
@@ -426,12 +432,12 @@ bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_m
 # ### <a name="sec_2_equilibrium"></a>Equilibrium
 
 # %%
-# Verify equilibrium concentrations (sampled in the 1st bin; at this point, all bins have equilibrated)
-A_eq = bio.bin_concentration(0, 0)
-B_eq = bio.bin_concentration(0, 1)
-C_eq = bio.bin_concentration(0, 2)
+# Verify equilibrium concentrations (sampled in the 0-th bin; at this point, all bins have equilibrated)
+A_eq = bio.bin_concentration(bin_address=0, species_label="A")
+B_eq = bio.bin_concentration(bin_address=0, species_label="B")
+C_eq = bio.bin_concentration(bin_address=0, species_label="C")
 print(f"\nRatio of equilibrium concentrations ((C_eq) / (A_eq * B_eq)) : {(C_eq) / (A_eq * B_eq)}")
-print(f"Ratio of forward/reverse rates: {chem_data.get_forward_rate(0) / chem_data.get_reverse_rate(0)}")
+print(f"Ratio of forward/reverse rates: {uc.get_single_reaction(0).extract_forward_rate() / uc.get_single_reaction(0).extract_forward_rate()}")
 # Both are essentially equal, as expected
 
 # %% [markdown] tags=[]

@@ -22,11 +22,11 @@ class BioSim1D:
     def __init__(self, n_bins=None, chem_data=None, reaction_handler=None):
         """
 
-        :param n_bins:      The number of compartments (bins) to use in the simulation
-        :param chem_data:   (OPTIONAL) Object of class "ChemData";
-                                if not specified, it will get extracted from the "UniformCompartment" class
-        :param reaction_handler:   (OPTIONAL) Object of class "UniformCompartment";
-                                if not specified, it'll get instantiated here   TODO: maybe no longer necessary
+        :param n_bins:          The number of compartments (bins) to use in the simulation
+        :param chem_data:       (OPTIONAL) Object of class "ChemData";
+                                    if not specified, it will get extracted from the "UniformCompartment" class
+        :param reaction_handler:(OPTIONAL) Object of class "UniformCompartment";
+                                if not specified, it'll get instantiated here
         """
         self.debug = False
 
@@ -129,13 +129,13 @@ class BioSim1D:
         if reaction_handler:
             self.reaction_dynamics = reaction_handler
         else:
-            self.reaction_dynamics = UniformCompartment(chem_data=chem_data)
+            self.reaction_dynamics = UniformCompartment(chem_data=self.chem_data)
 
         self.reactions = self.reaction_dynamics.get_reactions()
 
         self.n_bins = n_bins
 
-        self.n_species = chem_data.number_of_chemicals()
+        self.n_species = self.chem_data.number_of_chemicals()
 
         assert self.n_species >= 1, \
             "At least 1 chemical species must be declared prior to calling initialize_system()"
@@ -665,18 +665,18 @@ class BioSim1D:
 
 
     
-    def bin_concentration(self, bin_address: int, species_index=None, species_name=None, trans_membrane=False) -> float:
+    def bin_concentration(self, bin_address: int, species_index=None, species_label=None, trans_membrane=False) -> float:
         """
         Return the concentration at the requested bin of the specified species
 
         :param bin_address:     The bin number
         :param species_index:   The index order of the chemical species of interest
-        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
+        :param species_label:   [OPTIONAL] If provided, it over-rides the value for species_index
         :param trans_membrane:  If True, consider the "other side" of the bin, i.e. the portion across the membrane
         :return:                A concentration value at the indicated bin, for the requested species
         """
-        if species_name is not None:
-            species_index = self.chem_data.get_index(species_name)
+        if species_label is not None:
+            species_index = self.chem_data.get_index(species_label)
 
         self.chem_data.assert_valid_species_index(species_index)
 

@@ -16,17 +16,25 @@
 # ## `A <-> B` reaction, with 1st-order kinetics in both directions,
 # ### taken to equilibrium
 #
-# Diffusion not done
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
-# %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+# Diffusion NOT done
+# %% [markdown]
+# ### TAGS :  "reactions 2D"
 
 # %%
+LAST_REVISED = "Dec. 16, 2024"
+LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
+
+# %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
+
+# %%
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData as chem
-from life123 import BioSim2D, GraphicLog
+from life123 import UniformCompartment, BioSim2D, GraphicLog
 
 # %%
 # Initialize the HTML logging
@@ -37,15 +45,20 @@ GraphicLog.config(filename=log_file,
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
-# Initialize the system
-chem_data = chem(names=["A", "B"])     # NOTE: Diffusion not done
-
-
+# Initialize the system.  NOTE: Diffusion not done
+uc = UniformCompartment(names=["A", "B"])
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-chem_data.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+uc.add_reaction(reactants="A", products="B", forward_rate=3., reverse_rate=2.)
 
-bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
+uc.describe_reactions()
+
+# %%
+# Send the plot to the HTML log file
+uc.plot_reaction_network("vue_cytoscape_2")
+
+# %%
+bio = BioSim2D(n_bins=(3,4), reaction_handler=uc)
 
 bio.set_bin_conc_all_species(bin_x=0, bin_y=0, conc_list=[10.,50.])
 bio.set_bin_conc_all_species(bin_x=0, bin_y=1, conc_list=[20.,35.])
@@ -54,11 +67,6 @@ bio.set_bin_conc_all_species(bin_x=2, bin_y=3, conc_list=[5.,100.])
 bio.describe_state()
 
 # %%
-chem_data.describe_reactions()
-
-# %%
-# Send the plot to the HTML log file
-chem_data.plot_reaction_network("vue_cytoscape_2")
 
 # %% [markdown] tags=[]
 # ## First step

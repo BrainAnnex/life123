@@ -27,7 +27,7 @@
 # ### TAGS :  "diffusion 1D"
 
 # %%
-LAST_REVISED = "Dec. 15, 2024"
+LAST_REVISED = "Dec. 16, 2024"
 LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
 
 # %%
@@ -70,7 +70,7 @@ lineplot_pars = {"range": [10, 50],
 # %%
 # Initialize the system.  We use a RELATIVELY LARGE NUMBER OF BINS, 
 # to captures the many changes in the high-frequency component
-chem_data = chem(names=["A"], diffusion_rates=[0.5])
+chem_data = chem(names="A", diffusion_rates=0.5)
 bio = BioSim1D(n_bins=500, chem_data=chem_data)
 
 # %% [markdown]

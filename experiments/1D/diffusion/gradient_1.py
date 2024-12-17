@@ -20,7 +20,7 @@
 # Then identical concentrations are repeatedly *injected to the left* and *drained from the right*
 
 # %%
-LAST_REVISED = "Dec. 15, 2024"
+LAST_REVISED = "Dec. 16, 2024"
 LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
 
 # %%
@@ -58,7 +58,7 @@ lineplot_pars = {"range": [75, 125],
 
 # %%
 # Initialize the system with a uniform concentration (of the only species)
-chem_data = ChemData(names=["A"], diffusion_rates=[0.6])
+chem_data = ChemData(names="A", diffusion_rates=0.6)
 bio = BioSim1D(n_bins=9, chem_data=chem_data)
 
 bio.set_uniform_concentration(species_index=0, conc=100.)

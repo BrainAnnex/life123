@@ -758,6 +758,9 @@ class ChemData(Macromolecules):
                     f"What was passed ({diffusion_rates}) was of type {dt}"
 
 
+        # We need to re-compute non_none_args because some of the original arguments may have been modified by now
+        non_none_args = [arg for arg in (names, labels, diffusion_rates, plot_colors) if arg is not None]
+
         # Assert that all lengths are the same
         if len(non_none_args) > 1:  # No need to check if only one or no argument is present
             lengths = []
