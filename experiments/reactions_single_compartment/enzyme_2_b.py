@@ -23,7 +23,7 @@
 # In Part 2, we'll explore what happens if, lacking an actual value, we **under-estimate** _k1_forward_  
 # In Part 3, we'll explore what happens if we **over-estimate** _k1_forward_
 #
-# Background: please see experiment `enzyme_1_a`
+# BACKGROUND: please see experiments `enzyme_1_a` and `enzyme_2_a`
 
 # %% [markdown]
 # #### THE REACTION:  

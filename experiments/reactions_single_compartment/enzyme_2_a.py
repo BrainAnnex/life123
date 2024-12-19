@@ -17,9 +17,9 @@
 #
 # #### Our model: `E + S <-> ES` (with kinetic parameters _k1_forward_ and _k1_reverse_), and  `ES -> E + P`  (_k2_forward_)  
 #
-# #### In experiment `enzyme_1_a`, we were given `k1_forward`, `k1_reverse` and `k2_forward`...  But what to do if we're **just given `kM` and `kcat`** ?  
+# #### In experiment `enzyme_1_a`, we were given `k1_forward`, `k1_reverse` and `k2_forward`...  But what to do if we're **just given `kM` and `kcat`** ?   What unknown kinetic values of are compatible with the given ones?
 #
-# Background: please see experiment `enzyme_1_a`
+# BACKGROUND: please see experiment `enzyme_1_a`
 
 # %% [markdown]
 # #### THE REACTION:  
