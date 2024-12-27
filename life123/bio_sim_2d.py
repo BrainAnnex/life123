@@ -1,7 +1,10 @@
 import numpy as np
 import pandas as pd
 from typing import Union
+import plotly.express as px
+import plotly.graph_objects as pgo
 from life123.uniform_compartment import UniformCompartment
+from life123.visualization.plotly_helper import PlotlyHelper
 
 
 class BioSim2D:
@@ -9,12 +12,14 @@ class BioSim2D:
     2D simulations of diffusion and reactions
     """
 
-    def __init__(self, n_bins=None, chem_data=None, reaction_handler=None):
+    def __init__(self, n_bins :(int, int), chem_data=None, reaction_handler=None):
         """
-
-        :param n_bins:              A pair with the bin size in the x- and y- coordinates
-        :param chem_data:           (OPTIONAL) Object of class "ChemData"
-        :param reaction_handler:    (OPTIONAL) Object of class "UniformCompartment"
+        :param n_bins:          A pair with the bin size in the x- and y- coordinates
+        :param chem_data:       [OPTIONAL] Object of class "ChemData";
+                                    if not specified, it will get extracted
+                                    from the "UniformCompartment" class (if passed to the next argument)
+        :param reaction_handler:[OPTIONAL] Object of class "UniformCompartment";
+                                    if not specified, it'll get instantiated here
         """
         self.debug = False
 
@@ -27,9 +32,11 @@ class BioSim2D:
 
         self.reactions = None   # Object of type "Reactions", with info on all the reactions
 
+        self.reaction_dynamics = None   # Object of class "UniformCompartment"
+
         self.system = None      # Concentration data in the System we're simulating, for all the chemicals
                                 #   NumPy array of dimension (n_species x n_bins_x x n_bins_y)
-                                #   Each plane represents a species
+                                #   Each plane represents a chemical species
 
         # The following buffers are (n_species x n_bins_x x n_bins_y)
         self.delta_diffusion = None  # Buffer for the concentration changes from diffusion step
@@ -41,13 +48,9 @@ class BioSim2D:
         self.bath_concentrations = None      # A NumPy array for each species
         self.container_diffusion = None      # A NumPy array for each species: diffusion rate in/out of the container
 
-
-        self.reaction_dynamics = None        # Object of class "UniformCompartment"
-
         self.system_time = None              # Global time of the system, from initialization on
 
-        if (n_bins is not None) or (chem_data is not None) or (reaction_handler is not None):
-            self.initialize_system(n_bins=n_bins, chem_data=chem_data, reaction_handler=reaction_handler)
+        self._initialize_system(n_bins=n_bins, chem_data=chem_data, reaction_handler=reaction_handler)
 
 
 
@@ -57,8 +60,8 @@ class BioSim2D:
     #                           SYSTEM-WIDE                                 #
     #                                                                       #
     #########################################################################
-    
-    def initialize_system(self, n_bins: (int, int), chem_data=None, reaction_handler=None) -> None:
+
+    def _initialize_system(self, n_bins :(int, int), chem_data=None, reaction_handler=None) -> None:
         """
         Initialize all concentrations to zero.
 
@@ -71,13 +74,13 @@ class BioSim2D:
 
         :return:            None
         """
-        assert type(n_bins) == tuple, "BioSim2D: the argument `n_bins` must be a pair of integers"
+        assert type(n_bins) == tuple, "BioSim2D() instantiation: the argument `n_bins` must be a pair of integers"
         (n_cells_x, n_cells_y) = n_bins
-        assert n_cells_x >= 1, "The number of bins must be at least 1 in each dimension"
-        assert n_cells_y >= 1, "The number of bins must be at least 1 in each dimension"
+        assert n_cells_x >= 1, "BioSim2D() instantiation: The number of bins must be at least 1 in each dimension"
+        assert n_cells_y >= 1, "BioSim2D() instantiation: The number of bins must be at least 1 in each dimension"
 
         assert chem_data is not None or reaction_handler is not None, \
-            "BioSim2D: at least one of the arguments `chem_data` and `reactions` must be set"
+            "BioSim2D() instantiation: at least one of the arguments `chem_data` or `reaction_handler` must be set"
 
         if chem_data:
             self.chem_data = chem_data
@@ -97,9 +100,9 @@ class BioSim2D:
         self.n_species = self.chem_data.number_of_chemicals()
 
         assert self.n_species >= 1, \
-            "At least 1 chemical species must be declared prior to calling initialize_system()"
+            "BioSim2D() instantiation: At least 1 chemical species must be declared prior to instantiating class"
 
-        # Initialize all concentrations to zero
+        # Initialize all bin concentrations to zero
         self.system = np.zeros((self.n_species, n_cells_x, n_cells_y), dtype=float)
 
         self.system_time = 0             # "Start the clock"
@@ -117,17 +120,25 @@ class BioSim2D:
 
 
 
-    def system_snapshot(self, species_index=0) -> pd.DataFrame:
+    def system_snapshot(self, chem_index=None, chem_label=None) -> pd.DataFrame:
         """
         Return a snapshot of all the concentrations of the given species, across all bins,
         as a Pandas dataframe
 
-        :return:    A Pandas dataframe with the concentration data for the single specified chemical;
-                    rows and columns correspond to the system's rows and columns
+        :param chem_label:  String with the label to identify the chemical of interest
+        :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
+        :return:            A Pandas dataframe with the concentration data for the single specified chemical;
+                            rows and columns correspond to the system's rows and columns
         """
-        # TODO: validation for species_index
 
-        matrix = self.system[species_index]
+        if chem_label is not None:
+            assert chem_index is None, "system_snapshot(): cannot pass both arguments `chem_label` and `chem_index`"
+            chem_index = self.chem_data.get_index(chem_label)
+        else:
+            assert chem_index is not None, "system_snapshot(): must pass one of the arguments `chem_label` or `chem_index`"
+            # TODO: validation for chem_index
+
+        matrix = self.system[chem_index]
 
         df = pd.DataFrame(matrix)
 
@@ -142,31 +153,58 @@ class BioSim2D:
     #                                                                       #
     #########################################################################
 
-    def set_bin_conc(self, bin_x: int, bin_y: int, species_index: int, conc: float) -> None:
+    def set_bin_conc(self, bin_x: int, bin_y: int, chem_label :str, conc: float) -> None:
         """
-        Assign the requested concentration value to the cell with the given index, for the specified species
+        Assign the requested concentration value to the cell with the given index,
+        for the specified chemical species
 
         :param bin_x:           The zero-based bin number of the desired cell
         :param bin_y:           The zero-based bin number of the desired cell
-        :param species_index:   Zero-based index to identify a specific chemical species
+        :param chem_label:      String with the label to identify the chemical of interest
         :param conc:            The desired concentration value to assign to the specified location
         :return:                None
         """
-        #assert bin < self.n_bins, f"The requested cell index ({bin}) must be in the range [0 - {self.n_bins - 1}]"
-        assert species_index < self.n_species, \
-            f"The requested species index ({bin}) must be in the range [0 - {self.n_species - 1}]"
+        #self.assert_valid_bin(bin_address)     #TODO: define
 
-        assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
+        assert conc >= 0., f"set_bin_conc(): The concentration must be a positive number or zero (the requested value was {conc})"
 
+        species_index = self.chem_data.get_index(chem_label)
         self.system[species_index, bin_x, bin_y] = conc
 
 
 
-    
+    def inject_conc_to_bin(self, bin_address: (int, int), chem_index: int, delta_conc: float, zero_clip = False) -> None:
+        """
+        Add the requested concentration to the cell with the given address, for the specified chemical species
+
+        :param bin_address:     A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
+        :param chem_index:   Zero-based index to identify a specific chemical species
+        :param delta_conc:      The concentration to add to the specified location
+        :param zero_clip:       If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
+                                otherwise, an Exception will be raised
+        :return:                None
+        """
+        #self.assert_valid_bin(bin_address)     #TODO: define
+
+        bin_x, bin_y = bin_address  # Unpack the bin address
+
+        if (self.system[chem_index, bin_x, bin_y] + delta_conc) < 0. :
+            # Take special action if the requested change would make the bin concentration negative
+            if zero_clip:
+                self.system[chem_index, bin_x, bin_y] = 0
+                return
+            else:
+                raise Exception("inject_conc_to_bin(): The requested concentration change would result in a negative final value")
+
+        # Normal scenario, not leading to negative values for the final concentration
+        self.system[chem_index, bin_x, bin_y] += delta_conc
+
+
+
     def set_bin_conc_all_species(self, bin_x: int, bin_y: int, conc_list: [float]) -> None:
         """
         Assign the requested concentration values to the cell with the given index,
-        for all the species in their index order
+        for all the chemical species in their index order
 
         :param bin_x:       The zero-based bin number of the desired cell
         :param bin_y:       The zero-based bin number of the desired cell
@@ -183,7 +221,7 @@ class BioSim2D:
 
     def set_species_conc(self, conc_data: Union[list, tuple, np.ndarray], species_index=None, species_name=None) -> None:
         """
-        For the single specified species, assign the requested list of concentration values to all the bins,
+        For the single specified chemical species, assign the requested list of concentration values to all the bins,
         in row order first (top to bottom) and then in column order.
 
         EXAMPLE:  set_species_conc([[1, 2, 3], [4, 5, 6]], species_index=0)
@@ -233,41 +271,13 @@ class BioSim2D:
 
 
 
-    def inject_conc_to_bin(self, bin_address: (int, int), species_index: int, delta_conc: float, zero_clip = False) -> None:
-        """
-        Add the requested concentration to the cell with the given address, for the specified chem species
-
-        :param bin_address:     A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
-        :param species_index:   Zero-based index to identify a specific chemical species
-        :param delta_conc:      The concentration to add to the specified location
-        :param zero_clip:       If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
-                                otherwise, an Exception will be raised
-        :return:                None
-        """
-        #self.assert_valid_bin(bin_address)     #TODO: define
-
-        bin_x, bin_y = bin_address  # Unpack the bin address
-
-        if (self.system[species_index, bin_x, bin_y] + delta_conc) < 0. :
-            # Take special action if the requested change would make the bin concentration negative
-            if zero_clip:
-                self.system[species_index, bin_x, bin_y] = 0
-                return
-            else:
-                raise Exception("inject_conc_to_bin(): The requested concentration change would result in a negative final value")
-
-        # Normal scenario, not leading to negative values for the final concentration
-        self.system[species_index, bin_x, bin_y] += delta_conc
-
-
-
 
     #########################################################################
     #                                                                       #
     #                              TO VIEW                                  #
     #                                                                       #
     #########################################################################
-    
+
     def describe_state(self, concise=False) -> None:
         """
         For each chemical species, show its name (or index, if name is missing),
@@ -286,7 +296,7 @@ class BioSim2D:
                 print(f"Species `{chem_name}`:")
 
             #print(self.system[species_index])
-            print(self.system_snapshot(species_index))
+            print(self.system_snapshot(chem_index=species_index))
 
 
 
@@ -521,7 +531,7 @@ class BioSim2D:
     #                                                                       #
     #########################################################################
 
-    
+
     def react(self, total_duration=None, time_step=None, n_steps=None, snapshots=None) -> None:
         """
         Update the system concentrations as a result of all the reactions in all bins.
@@ -609,3 +619,95 @@ class BioSim2D:
 
                 if self.debug:
                     print(self.delta_reactions)
+
+
+
+
+
+    #####################################################################################################
+
+    '''                                    ~   VISUALIZATION   ~                                           '''
+
+    def ________VISUALIZATION________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def heatmap_single_chem(self, chem_label :str, title_prefix = "", height=550) -> pgo.Figure:
+        """
+        Create and return a 2D greyscale heatmap for the specified single chemical,
+        using the current system data
+
+        :param chem_label:  String with the label to identify the chemical of interest
+        :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated Heatmap title
+        :param height:
+        :return:            A plotly "Figure" object
+        """
+        title = f"System state at time t={self.system_time:.5g} for `{chem_label}`"
+        if title_prefix:
+            title = f"{title_prefix}.  {title}"
+
+        fig = px.imshow(self.system_snapshot(chem_label=chem_label),
+                        title=title,
+                        labels={"x": "x bin", "y": "y bin", "color": "Conc."},
+                        text_auto=".2f", color_continuous_scale="gray_r",
+                        height=height)
+
+         # Spacing between adjacent cells
+        fig.update_traces(xgap=2)
+        fig.update_traces(ygap=2)
+        #fig.data[0].xgap=2
+        #fig.data[0].ygap=2
+
+        return fig
+
+
+
+    def heatmap(self, chem_label :str, title_prefix = "", height=550, width=None, color_name=None) -> pgo.Figure:
+        """
+        Create and return a heatmap for the specified single chemical,
+        using the current system data.
+        At present, shades of yellow are being used
+
+        :param chem_label:  String with the label to identify the chemical of interest
+        :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated Heatmap title
+        :param height:
+        :param width:       [OPTIONAL] If not specified, all the available space width is used
+        :param color_name:  [OPTIONAL] If not specified, a grayscale is used
+        :return:            A plotly "Figure" object
+        """
+        title = f"System state at time t={self.system_time:.5g} for `{chem_label}`"
+        if title_prefix:
+            title = f"{title_prefix}.  {title}"
+
+        if color_name is None:
+            color_scale = "gray_r"
+        else:
+            lighter_color = PlotlyHelper.lighten_color(color_name, factor=.96)
+            color_scale = [
+                [0.0, lighter_color],   # Light tint
+                [1.0, color_name],      # Full color
+            ]
+
+        # Create the Heatmap object
+        hm = pgo.Heatmap(z=self.system_snapshot(chem_label=chem_label),
+                         colorscale=color_scale,
+                         xgap=2, ygap=2,
+                         hovertemplate='Conc.: %{z}<br>x bin: %{x}<br>y bin: %{y}<extra>A</extra>',
+                         texttemplate = '%{z:.2f}',
+                         colorbar_title="Concentration"
+                         )
+
+        # Create the Figure object
+        fig = pgo.Figure(data=hm)
+
+        # Update layout
+        fig.update_layout(
+            title=title,
+            height=height,
+            width=width,
+            xaxis_title='x bin',
+            yaxis_title='y bin',
+            yaxis_autorange="reversed"
+        )
+
+        return fig

@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## An initial concentration pulse (near the left edge of the system, and halfway vertically) moving towards equilibrium
+# ## An initial concentration pulse of a single chemical (near the left edge of the system, and halfway vertically), diffusing towards equilibrium
 #
 # The system starts out with a "concentration pulse" in just one bin - i.e. that bin is initially the only one with a non-zero concentration of the only chemical species.
 # Then the system is left undisturbed, and followed to equilibrium.
@@ -24,8 +24,8 @@
 # ### TAGS :  "diffusion 2D"
 
 # %%
-LAST_REVISED = "Dec. 16, 2024"
-LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
+LAST_REVISED = "Dec. 26, 2024"
+LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -35,32 +35,29 @@ LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import BioSim2D, ChemData
+from life123 import BioSim2D, ChemData, check_version
 
-import plotly.express as px
+# %%
+check_version(LIFE123_VERSION)
+
+# %%
 
 # %%
 # Prepare the initial system, with a single non-zero bin, near the left edge of the system, positioned halfway vertically
 chem_data = ChemData(names="A", diffusion_rates=0.02)
 bio = BioSim2D(n_bins=(5, 8), chem_data=chem_data)
 
-bio.inject_conc_to_bin(bin_address=(2, 1), species_index=0, delta_conc=10.)
+bio.set_bin_conc(bin_x = 2, bin_y = 1, chem_label="A", conc=10.)
 
 bio.describe_state()
 
 # %%
-bio.system_snapshot()
+bio.system_snapshot(chem_label="A")
 
 # %%
-fig = px.imshow(bio.system_snapshot(), 
-                title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
-                labels=dict(x="x (col. number)", y="y (row number)", color="Concentration"),
-                text_auto=True, color_continuous_scale="gray_r")         # text_auto=’.2f’
+bio.heatmap_single_chem(chem_label="A", title_prefix="Diffusion")
 
-fig.data[0].xgap=2
-fig.data[0].ygap=2
-
-fig.show()
+# %%
 
 # %% [markdown]
 # # Initial Diffusion Step
@@ -74,15 +71,7 @@ print("\n", status)
 bio.describe_state()
 
 # %%
-fig = px.imshow(bio.system_snapshot(), 
-                title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
-                labels=dict(x="x (col. number)", y="y (row number)", color="Concentration"),
-                text_auto='.2f', color_continuous_scale="gray_r")
-
-fig.data[0].xgap=2
-fig.data[0].ygap=2
-
-fig.show()
+bio.heatmap_single_chem(chem_label="A", title_prefix="Diffusion")
 
 # %% [markdown]
 # ## This is still an early stage in the diffusion process; let's advance it more... (Visualization from results shown at selected times)
@@ -93,23 +82,16 @@ for i in range(200):
 
     if i<2 or i==6 or i>=199:
         bio.describe_state()
-        fig = px.imshow(bio.system_snapshot(), 
-                title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
-                labels=dict(x="x (col. number)", y="y (row number)", color="Concentration"),
-                text_auto='.2f', color_continuous_scale="gray_r")
-
-        fig.data[0].xgap=2
-        fig.data[0].ygap=2
-
+        fig = bio.heatmap_single_chem(chem_label="A", title_prefix="Diffusion", height=400)
         fig.show()
 
 
 # %% [markdown]
-# ## All bins now have essentially uniform concentration
+# # All bins now have essentially uniform concentration. The diffusion has reached equilibrium
 #
-# Notice the continued symmetry across the mid-row.
+# Notice, throughout the simulation, the continued symmetry across the mid-row (ybin 2).
 #
-# **Mass conservations**: the "10. units of concentration" are now uniformly spread across the 40 bins, leading to a near-constant concentration of 10./40
+# **Mass conservations**: the initial "10. units of concentration" are now uniformly spread across the 40 (5x8) bins, leading to a near-constant concentration of 10./40
 
 # %%
 10./40

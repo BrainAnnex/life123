@@ -1,31 +1,79 @@
 import pytest
 import numpy as np
-from life123 import BioSim2D
-from life123 import ChemData as chem
+from life123 import BioSim2D, Reactions, UniformCompartment, ChemData
 
 
 
 #########   TESTS OF INITIALIZATION, SETTING AND VIEWING    #########
 
-def test_initialize_system():
-    chem_data = chem(names=["A", "B"])
-    bio = BioSim2D(n_bins=(3,5), chem_data=chem_data)
+def test_constructor():
+    with pytest.raises(Exception):
+        BioSim2D()              # Missing required arguments
 
+    with pytest.raises(Exception):
+        BioSim2D(n_bins=666)    # Wrong data type
+
+    with pytest.raises(Exception):
+        BioSim2D(n_bins=(0, 4))      # Must be at least 1 in each dimension
+
+    with pytest.raises(Exception):
+        BioSim2D(n_bins=(4, 0))      # Must be at least 1 in each dimension
+
+    with pytest.raises(Exception):
+        BioSim2D(n_bins=(3,5))      # At least one more arg is needed
+
+
+    chem_data = ChemData(names="A")
+    bio = BioSim2D(n_bins=(3,5), chem_data=chem_data)
+    #bio.describe_state()
     assert bio.n_bins_x == 3
     assert bio.n_bins_y == 5
-
-    bio.describe_state()
-
-    expected = np.zeros((2, 3, 5), dtype=float)
+    assert bio.n_species == 1
+    assert bio.chem_data == chem_data
+    expected = np.zeros((1, 3, 5), dtype=float)
     assert np.allclose(bio.system, expected)
+
+
+    # New test
+    chem_data = ChemData(names=["A", "B", "C", "D"])
+    bio = BioSim2D(n_bins=(3,5), chem_data=chem_data)
+    #bio.describe_state()
+    assert bio.n_bins_x == 3
+    assert bio.n_bins_y == 5
+    assert bio.n_species == 4
+    assert bio.chem_data == chem_data
+    expected = np.zeros((4, 3, 5), dtype=float)
+    assert np.allclose(bio.system, expected)
+    assert type(bio.reactions) == Reactions
+    assert type(bio.reaction_dynamics) == UniformCompartment
+
+
+    # New test
+    rxn = UniformCompartment()
+    with pytest.raises(Exception):
+        BioSim2D(n_bins=(4,2), reaction_handler=rxn)    # No chemicals yet registered
+
+
+    # New test
+    rxn = UniformCompartment(names=["A", "B", "C"])
+    bio = BioSim2D(n_bins=(4,2), reaction_handler=rxn)
+    #bio.describe_state()
+    assert bio.n_bins_x == 4
+    assert bio.n_bins_y == 2
+    assert bio.n_species == 3
+    expected = np.zeros((3, 4, 2), dtype=float)
+    assert np.allclose(bio.system, expected)
+    assert type(bio.reactions) == Reactions
+    assert type(bio.reaction_dynamics) == UniformCompartment
+    assert type(bio.chem_data) == ChemData
 
 
 
 def test_set_bin_conc():
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
 
-    bio.set_bin_conc(bin_x=0, bin_y=2, species_index=0, conc=0.2)
+    bio.set_bin_conc(bin_x=0, bin_y=2, chem_label="A", conc=0.2)
     bio.describe_state()
 
     expected_0 = np.array([
@@ -40,7 +88,7 @@ def test_set_bin_conc():
     assert np.allclose(bio.system[1], expected_1)
 
 
-    bio.set_bin_conc(bin_x=2, bin_y=3, species_index=1, conc=1.23)
+    bio.set_bin_conc(bin_x=2, bin_y=3, chem_label="B", conc=1.23)
     bio.describe_state()
 
     expected_1 = np.array([
@@ -54,7 +102,7 @@ def test_set_bin_conc():
 
 
 def test_set_bin_conc_all_species():
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
 
     bio.set_bin_conc_all_species(bin_x=0, bin_y=2, conc_list=[0.02, 1.02])
@@ -78,7 +126,7 @@ def test_set_bin_conc_all_species():
 
 
 def test_set_species_conc():
-    chem_data = chem(names=["A"])
+    chem_data = ChemData(names=["A"])
     bio = BioSim2D(n_bins=(2,3), chem_data=chem_data)   # 2 rows and 3 columns
     conc_matrix = [[50, 80, 20], [10, 60, 0]]
 
@@ -125,7 +173,7 @@ def test_set_species_conc():
 #########################################################################
 
 def test_react():
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
 
     bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
 
@@ -154,7 +202,7 @@ def test_react():
 
 
 def test_reaction_step():
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
 
     bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
 
