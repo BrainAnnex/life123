@@ -13,14 +13,14 @@
 # ---
 
 # %% [markdown]
-# ### Reaction  A + B <-> C, mostly forward and with 1st-order kinetics for each species, taken to equilibrium
+# ### Reaction  `A + B <-> C`, mostly forward and with 1st-order kinetics for each species, taken to equilibrium
 #
-# Initial concentrations of A and B are spacially separated to the opposite ends of the system;
-# as a result, no C is being generated.
+# Initial concentrations of `A` and `B` are spacially separated to the opposite ends of the system;
+# as a result, no `C` is being generated.
 #
-# But, as soon as A and B, from their respective distant originating points at the edges, 
+# But, as soon as `A` and `B`, from their respective distant originating points at the edges, 
 # diffuse into the middle - and into each other - the reaction starts,
-# consuming both A and B (the forward reaction is much more substantial than the reverse one),
+# consuming both `A` and `B` (the forward reaction is much more substantial than the reverse one),
 # until an equilibrium is reached in both diffusion and reactions.
 #
 # A LOT of plots are sent to the log file from this experiment; the reason is to compare two
@@ -30,8 +30,8 @@
 # ### TAGS :  "reactions 1D", "diffusion 1D"
 
 # %%
-LAST_REVISED = "Dec. 16, 2024"
-LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
+LAST_REVISED = "Dec. 27, 2024"
+LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -39,13 +39,18 @@ LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based o
 # %%
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
-# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import BioSim1D, ChemData, UniformCompartment, GraphicLog, HtmlLog as log
+from life123 import check_version, BioSim1D, ChemData, UniformCompartment, GraphicLog, HtmlLog as log
 
 import plotly.express as px
+
+# %%
+check_version(LIFE123_VERSION)
+
+# %%
 
 # %%
 # Initialize the HTML logging
@@ -58,12 +63,13 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = ChemData(names=["A", "B", "C"], diffusion_rates=[50., 50., 1.])
+chem_data = ChemData(names=["A", "B", "C"], diffusion_rates=[50., 50., 1.],
+                     plot_colors=['red', 'orange', 'green'])
 
 uc = UniformCompartment(chem_data=chem_data)
 
 # Reaction A + B <-> C , with 1st-order kinetics for each species; note that it's mostly in the forward direction
-uc.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=20., reverse_rate=2.)
+uc.add_reaction(reactants=["A", "B"], products="C", forward_rate=20., reverse_rate=2.)
 uc.describe_reactions()
 
 # %%
@@ -78,12 +84,12 @@ uc.plot_reaction_network("vue_cytoscape_2")
 bio = BioSim1D(n_bins=7, reaction_handler=uc)
 
 # %%
-bio.show_system_snapshot()   # No concentrations anywhere yet
+bio.show_system_snapshot()   # No concentrations set anywhere yet
 
 # %%
 
 # %% [markdown]
-# # Inject initial concentrations of A and B at opposite ends of the system
+# # TIME 0 : Inject initial concentrations of `A` and `B` at opposite ends of the system
 
 # %%
 bio.set_bin_conc(bin_address=0, species_name="A", conc=20.)
@@ -100,9 +106,9 @@ bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"],
               title= f"A + B <-> C . System snapshot at time t={bio.system_time}",
-              color_discrete_sequence = ['red', 'orange', 'green'],
+              color_discrete_sequence = bio.get_chem_data().get_all_colors(),
               labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
 fig.show()
 
@@ -133,10 +139,12 @@ for i in range(bio.n_species):
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
 
 # %% [markdown] tags=[]
-# ### <a name="sec_2_first_step"></a>First step
+# ### <a name="sec_2_first_step"></a>First step : advance to time t=0.002
 
 # %%
 delta_t = 0.002   # This will be our time "quantum" for this experiment
@@ -150,9 +158,9 @@ bio.describe_state()
 # _After the first delta_t time step_:
 #
 #   Species 0 (A). Diff rate: 50.0. Conc:  [18.  2.  0.  0.  0.  0.  0.]
-#   
+#
 #   Species 1 (B). Diff rate: 50.0. Conc:  [ 0.  0.  0.  0.  0.  2. 18.]
-#   
+#
 #   Species 2 (C). Diff rate: 1.0. Conc:  [0. 0. 0. 0. 0. 0. 0.]
 #
 
@@ -165,9 +173,9 @@ bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"],
               title= f"A + B <-> C . System snapshot at time t={bio.system_time}",
-              color_discrete_sequence = ['red', 'orange', 'green'],
+              color_discrete_sequence = bio.get_chem_data().get_all_colors(),
               labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
 fig.show()
 
@@ -185,10 +193,12 @@ for i in range(bio.n_species):
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
 
 # %% [markdown]
-# ### <a name="sec_2"></a>Several more steps
+# ### <a name="sec_2"></a>Several more steps : advance to time t=0.016
 
 # %%
 # Continue with several delta_t steps
@@ -205,17 +215,17 @@ bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"],
               title= f"A + B <-> C . System snapshot (interpolated) at time t={bio.system_time}",
-              color_discrete_sequence = ['red', 'orange', 'green'],
+              color_discrete_sequence = bio.get_chem_data().get_all_colors(),
               labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"},
               line_shape="spline")
 fig.show()
 
 # %% [markdown]
-# A is continuing to diffuse from the left.  
-# B is continuing to diffuse from the right.  
-# They're finally beginning to overlap in the middle bin
+# `A` is continuing to diffuse from the left.
+# `B` is continuing to diffuse from the right.
+# They're finally beginning to overlap in the middle bin.
 
 # %%
 log.write(f"System state at time t={bio.system_time}:", blanks_before=2, style=log.bold)
@@ -231,10 +241,12 @@ for i in range(bio.n_species):
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
 
 # %% [markdown]
-# ### <a name="sec_2"></a>Several group of longer runs
+# ### <a name="sec_3"></a>Several groups of longer runs : advance to time t=0.096
 
 # %%
 # Now, do several group of longer runs
@@ -252,17 +264,17 @@ bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"],
               title= f"A + B <-> C . System snapshot at time t={bio.system_time}",
-              color_discrete_sequence = ['red', 'orange', 'green'],
+              color_discrete_sequence = bio.get_chem_data().get_all_colors(),
               labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"},
               line_shape="spline")
 fig.show()
 
 # %% [markdown]
-# A is continuing to diffuse from the left.  
-# B is continuing to diffuse from the right.  
-# By now, they're overlapping in the middle bin sufficiently to react and generate C
+# `A` is continuing to diffuse from the left.
+# `B` is continuing to diffuse from the right.
+# By now, they're overlapping in the middle bin sufficiently to react and generate `C`
 
 # %%
 log.write(f"System state at time t={bio.system_time}:", blanks_before=2, style=log.bold)
@@ -278,7 +290,12 @@ for i in range(bio.n_species):
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
+
+# %% [markdown]
+# ### <a name="sec_4"></a>Advance to time t=0.336
 
 # %%
 # Continue the simulation
@@ -296,9 +313,9 @@ bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"],
               title= f"A + B <-> C . System snapshot at time t={bio.system_time}",
-              color_discrete_sequence = ['red', 'orange', 'green'],
+              color_discrete_sequence = bio.get_chem_data().get_all_colors(),
               labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"},
               line_shape="spline")
 fig.show()
@@ -315,7 +332,12 @@ for i in range(3):
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
+
+# %% [markdown]
+# ### <a name="sec_5"></a>Advance to time t=0.736
 
 # %%
 # Continue the simulation
@@ -333,9 +355,9 @@ bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"],
               title= f"A + B <-> C . System snapshot at time t={bio.system_time}",
-              color_discrete_sequence = ['red', 'orange', 'green'],
+              color_discrete_sequence = bio.get_chem_data().get_all_colors(),
               labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"},
               line_shape="spline")
 fig.show()
@@ -352,7 +374,12 @@ for i in range(3):
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
+
+# %% [markdown]
+# ### <a name="sec_6"></a>Advance to time t=1.936
 
 # %%
 # Continue the simulation
@@ -370,9 +397,9 @@ bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"],
               title= f"A + B <-> C . System snapshot at time t={bio.system_time}",
-              color_discrete_sequence = ['red', 'orange', 'green'],
+              color_discrete_sequence = bio.get_chem_data().get_all_colors(),
               labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"},
               line_shape="spline")
 fig.show()
@@ -389,7 +416,12 @@ for i in range(3):
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
+
+# %% [markdown]
+# ### <a name="sec_7"></a>Advance to time t=5.936
 
 # %%
 # Continue the simulation
@@ -407,9 +439,9 @@ bio.add_snapshot(bio.bin_snapshot(bin_address = 3))
 bio.get_history()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"], 
+fig = px.line(data_frame=bio.system_snapshot(), y=["A", "B", "C"],
               title= f"A + B <-> C . System snapshot at time t={bio.system_time}",
-              color_discrete_sequence = ['red', 'orange', 'green'],
+              color_discrete_sequence = bio.get_chem_data().get_all_colors(),
               labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"},
               line_shape="spline")
 fig.show()
@@ -426,7 +458,9 @@ for i in range(3):
     bio.single_species_line_plot(species_index=i, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # Output to the log file a line plot for ALL the chemicals together (same color as used for plotly elsewhere)
-bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4", color_mapping={0: 'red', 1: 'orange', 2: 'green'})
+bio.line_plot(plot_pars=lineplot_pars, graphic_component="vue_curves_4")
+
+# %%
 
 # %% [markdown] tags=[]
 # ### <a name="sec_2_equilibrium"></a>Equilibrium
@@ -444,15 +478,15 @@ print(f"Ratio of forward/reverse rates: {uc.get_single_reaction(0).extract_forwa
 # # Plots of changes of concentration with time
 
 # %% tags=[]
-fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "C"], 
-              title="Reactions:  A + B <-> C . Changes in concentrations in the MIDDLE bin",
-              color_discrete_sequence = ['navy', 'cyan', 'red'],
+fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "C"],
+              title="Reaction:  A + B <-> C . Changes in concentrations over time in the MIDDLE bin",
+              color_discrete_sequence = bio.get_chem_data().get_all_colors(),
               labels={"value":"concentration", "variable":"Chemical"})
 fig.show()
 
 # %% [markdown]
-# A and B overlap on the plot, due to the symmetry of the system.  
-# Initially, in the middle bin, neither A nor B are present; over time they diffuse there... but then they react and get consumed (producing C), to an equilibrium value.
-# C gradually diffuses away.
+# `A` and `B` overlap on the plot, due to the symmetry of the system.
+# Initially, in the middle bin, neither `A` nor `B` are present; over time they diffuse there... but then they react and get consumed (producing `C`), to an equilibrium value.
+# `C` gradually diffuses to uniformity.
 
 # %%
