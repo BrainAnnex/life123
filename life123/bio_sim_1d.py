@@ -14,19 +14,19 @@ from life123.visualization.graphic_log import GraphicLog
 
 class BioSim1D:
     """
-    1D simulations of diffusion and reactions, 
+    1D simulations of diffusion and reactions,
     with an early partial implementation of membranes
     """
 
 
-    def __init__(self, n_bins=None, chem_data=None, reaction_handler=None):
+    def __init__(self, n_bins :int, chem_data=None, reaction_handler=None):
         """
-
         :param n_bins:          The number of compartments (bins) to use in the simulation
-        :param chem_data:       (OPTIONAL) Object of class "ChemData";
-                                    if not specified, it will get extracted from the "UniformCompartment" class
-        :param reaction_handler:(OPTIONAL) Object of class "UniformCompartment";
-                                if not specified, it'll get instantiated here
+        :param chem_data:       [OPTIONAL] Object of class "ChemData";
+                                    if not specified, it will get extracted
+                                    from the "UniformCompartment" class (if passed to the next argument)
+        :param reaction_handler:[OPTIONAL] Object of class "UniformCompartment";
+                                    if not specified, it'll get instantiated here
         """
         self.debug = False
 
@@ -38,10 +38,13 @@ class BioSim1D:
 
         self.reactions = None   # Object of type "Reactions", with info on all the reactions
 
-        self.system_length = None   # System extension, from the middle of the leftmost bin to the middle of the rightmost one.
-                                    #  The de-facto default value, though not used, is (n_bins-1)
+        self.reaction_dynamics = None   # Object of class "UniformCompartment"
 
-        self.global_Dx = 1      # Used in cases when not using ad-hoc local changes in x-scale resolution
+        self.system_length = None       # The linear extension of the system,
+                                        # from the middle of the leftmost bin to the middle of the rightmost one.
+                                        #  The de-facto default value, though not used, is (n_bins-1)
+
+        self.global_Dx = 1              # Used in cases when not using ad-hoc local changes in x-scale resolution
 
         self.system = None      # Concentration data in the System we're simulating, for all the chemicals
                                 #   NumPy array of floats, of dimension: (n_species x n_bins).
@@ -71,7 +74,7 @@ class BioSim1D:
                                         # TODO: explore sparse-matrix representations
 
         self.sealed = True           # If True, no exchange with the outside; if False, immersed in a "bath"
-    
+
         # Only applicable if "sealed" is False:
         self.bath_concentrations = None      # A NumPy array for each species
         self.container_diffusion = None      # A NumPy array for each species: diffusion rate in/out of the container
@@ -80,16 +83,14 @@ class BioSim1D:
                                             #   in the diffusion process.
                                             #   See explanation in file overly_large_single_timesteps.py
 
-        self.reaction_dynamics = None       # Object of class "UniformCompartment"
-
-        self.history = CollectionTabular()       # To store user-selected snapshots of (parts of) the system,
+        self.history = CollectionTabular()  # To store user-selected snapshots of (parts of) the system,
                                             #   whenever requested by the user.
                                             #   Note that we're using the "tabular" format - friendly to Pandas
 
         self.system_time = None             # Global time of the system, from initialization on
 
-        if (n_bins is not None) or (chem_data is not None) or (reaction_handler is not None):
-            self.initialize_system(n_bins=n_bins, chem_data=chem_data, reaction_handler=reaction_handler)
+
+        self._initialize_system(n_bins=n_bins, chem_data=chem_data, reaction_handler=reaction_handler)
 
 
 
@@ -100,13 +101,10 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    def initialize_system(self, n_bins: int, chem_data=None, reaction_handler=None) -> None:
+    def _initialize_system(self, n_bins: int, chem_data=None, reaction_handler=None) -> None:
         """
         Initialize all concentrations to zero.
         Membranes, if present, need to be set later.
-
-        TODO?: maybe allow optionally passing n_species in lieu of chem_data,
-              and let it create and return the "Chemicals" object in that case
 
         :param n_bins:          The number of compartments (bins) to use in the simulation
         :param chem_data:       (OPTIONAL) Object of class "ReactionData";
@@ -115,10 +113,14 @@ class BioSim1D:
                                     if not specified, it'll get instantiated here
         :return:                None
         """
-        assert n_bins >= 1, "The number of bins must be at least 1"
+        #TODO?: maybe allow optionally passing n_species in lieu of chem_data,
+        #       and let it create and return the "Chemicals" object in that case
+
+        assert type(n_bins) == int, "BioSim1D() instantiation: the argument `n_bins` must be an integer"
+        assert n_bins >= 1, "BioSim1D() instantiation: the number of bins must be at least 1"
 
         assert chem_data is not None or reaction_handler is not None, \
-            "BioSim1D: at least one of the arguments `chem_data` and `reactions` must be set"
+            "BioSim1D() instantiation: at least one of the arguments `chem_data` or `reaction_handler` must be set"
             # TODO: maybe drop this requirement?  And then set the system matrix later on?
 
         if chem_data:
@@ -138,9 +140,9 @@ class BioSim1D:
         self.n_species = self.chem_data.number_of_chemicals()
 
         assert self.n_species >= 1, \
-            "At least 1 chemical species must be declared prior to calling initialize_system()"
+            "BioSim1D() instantiation: At least 1 chemical species must be declared prior to instantiating class"
 
-        # Initialize all concentrations to zero
+        # Initialize all bin concentrations to zero
         self.system = np.zeros((self.n_species, n_bins), dtype=float)
 
         self.system_time = 0             # "Start the clock"
@@ -180,28 +182,29 @@ class BioSim1D:
 
 
 
-    
     def save_system(self) -> dict:
         """
         For now, just return a copy of self.system, with a "frozen" snapshot of the current system state
-        TODO: deal with membranes, and anything else needed to later restore the complete system state
 
         :return:    A dict of (for now a part of) the elements needed to later restore the complete system state
         """
+        # TODO: deal with membranes, and anything else needed to later restore the complete system state
+
         return {"system": self.system.copy(), "system_time": self.system_time}
 
 
 
-    
+
     def restore_system(self, new_state: dict) -> None:
         """
         Replace (some, for now, of) the various parts the System's internal state.
         For details of the data structure, see the class variable "system"
-        TODO: membranes aren't yet managed. System length and global_Dx are currently not modified
 
         :param new_state:   Numpy array containing the desired new System's internal state
         :return:
         """
+        #TODO: membranes aren't yet managed. System length and global_Dx are currently not modified
+
         self.system = new_state["system"]
         self.n_species, self.n_bins = self.system.shape     # Extract from the new state
         assert self.n_species == self.chem_data.number_of_chemicals(), \
@@ -212,7 +215,7 @@ class BioSim1D:
 
 
 
-    
+
     def replace_system(self, new_state: np.array) -> None:
         """
         Replace the System's internal state.
@@ -229,16 +232,15 @@ class BioSim1D:
 
 
 
-    
     def system_snapshot(self) -> pd.DataFrame:
         """
         Return a snapshot of all the concentrations of all the species, across all bins
         as a Pandas dataframe
-        TODO: make allowance for membranes
 
         :return:    A Pandas dataframe: each row is a bin,
                         and each column a chemical species
         """
+        #TODO: make allowance for membranes
         all_chem_names = self.chem_data.get_all_labels()
         if self.system is None:
             return pd.DataFrame(columns = all_chem_names)   # Empty dataframe
@@ -286,7 +288,7 @@ class BioSim1D:
 
 
 
-    
+
     def set_all_uniform_concentrations(self, conc_list: Union[list, tuple]) -> None:
         """
         Set the concentrations of all species at once, uniformly across all bins
@@ -301,7 +303,7 @@ class BioSim1D:
 
 
 
-    
+
     def set_bin_conc(self, bin_address: int, conc: float, species_index=None, species_name=None,
                      across_membrane=False, both_sides=False) -> None:
         """
@@ -316,16 +318,17 @@ class BioSim1D:
         :param both_sides:      If True, set the "regular" bin and the "other side" as well
         :return:                None
         """
+        self.assert_valid_bin(bin_address)
+
+        assert conc >= 0., \
+            f"set_bin_conc(): the concentration must be a positive number or zero (the requested value was {conc})"
+
+
         if species_name is not None:
             species_index = self.chem_data.get_index(species_name)
         else:
             self.chem_data.assert_valid_species_index(species_index)
 
-        self.assert_valid_bin(bin_address)
-
-
-        assert conc >= 0., \
-            f"set_bin_conc(): the concentration must be a positive number or zero (the requested value was {conc})"
 
         if across_membrane or both_sides:
             assert self.system_B is not None, \
@@ -372,7 +375,7 @@ class BioSim1D:
         self.system[species_index] = conc_list
 
 
-    
+
     def inject_conc_to_bin(self, bin_address: int, species_index: int, delta_conc: float, zero_clip = False) -> None:
         """
         Add the requested concentration to the cell with the given address, for the specified chem species
@@ -503,7 +506,7 @@ class BioSim1D:
 
 
     ########  DIMENSION-RELATED  ################
-    
+
     def set_dimensions(self, length) -> None:
         """
         Set the overall length of the system.
@@ -519,7 +522,7 @@ class BioSim1D:
         self.global_Dx = length / (self.n_bins-1)
 
 
-    
+
     def x_coord(self, bin_address):
         """
         Return the x coordinate of the middle of the specified bin.
@@ -535,7 +538,7 @@ class BioSim1D:
 
     ########  MEMBRANE-RELATED  ################
 
-    
+
     def uses_membranes(self) -> bool:
         """
         Return True if membranes are part of the system
@@ -545,7 +548,7 @@ class BioSim1D:
         return self.membranes is not None
 
 
-    
+
     def bins_with_membranes(self) -> [int]:
         """
 
@@ -557,7 +560,7 @@ class BioSim1D:
 
 
 
-    
+
     def set_membranes(self, membrane_pos: Union[List, Tuple]) -> None:
         """
         Set the presence of all membranes in the system,
@@ -633,7 +636,7 @@ class BioSim1D:
                             f"allowed range is [0-{self.n_bins-1}], inclusive")
 
 
-    
+
     def lookup_species(self, species_index=None, species_name=None, trans_membrane=False, copy=False) -> np.array:
         """
         Return the NumPy array of concentration values across the all bins (from left to right)
@@ -664,7 +667,7 @@ class BioSim1D:
             return species_conc
 
 
-    
+
     def bin_concentration(self, bin_address: int, species_index=None, species_label=None, trans_membrane=False) -> float:
         """
         Return the concentration at the requested bin of the specified species
@@ -727,31 +730,41 @@ class BioSim1D:
 
 
 
-    def show_system_snapshot(self) -> None:
+    def show_system_snapshot(self) -> pd.DataFrame:
         """
+        Print a header, and return a dataframe
 
-        :return:    None
+        :return:    A Pandas dataframe
         """
         print(f"SYSTEM SNAPSHOT at time {self.system_time}:")
-        print(self.system_snapshot())
+        return self.system_snapshot()
 
 
 
-    
-    def describe_state(self, concise=False) -> None:
+
+    def describe_state(self, concise=False) -> Union[pd.DataFrame, None]:
         """
-        A simple printout of the state of the system, for now useful only for small systems
+        A simple printout of the state of the system, for now useful only for small systems.
 
-        TODO: The goal for ASCII-based printouts involving membranes is something like.  Maybe use Pandas?
+        EXAMPLE (concise):
+            SYSTEM STATE at Time t = 0:
+            [[0. 0. 0. 0.]
+             [0. 0. 0. 0.]]
 
-           _____________________
-        A: |20|18|12|8( )  2| 6|    Diff rate: 0.2 (M: 0.01)
-        B: |30| 2|56|4( )3.5|12|    Diff rate: 0.8 (M: 0.3)
-           ---------------------
-             0  1  2       3  4
+        EXAMPLE (not concise):
+            SYSTEM STATE at Time t = 0:
+            4 bins and 2 chemical species:
+               <PANDAS data frame returned>
+
+        TODO: The goal for ASCII-based printouts involving membranes is something like.
+           ____________________
+        A: |20|18|12|8()  2| 6|    Diff rate: 0.2 (M: 0.01)
+        B: |30| 2|56|4()3.5|12|    Diff rate: 0.8 (M: 0.3)
+           --------------------
+             0  1  2      3  4
 
         :param concise: If True, only produce a minimalist printout with just the concentration values
-        :return:        None
+        :return:        None, if membranes are present, or a Pandas dataframe otherwise
         """
         print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
 
@@ -764,32 +777,43 @@ class BioSim1D:
 
         # If we get thus far, it's a FULL printout
 
-        print(f"{self.n_bins} bins and {self.n_species} species:")
+        print(f"{self.n_bins} bins and {self.n_species} chemical species:")
 
-        # Show a line of line of data for each chemical species in turn
-        for species_index in range(self.n_species):
-            name = self.chem_data.get_label(species_index)
-            if name:    # If a name was provided, show it
-                name = f" ({name})"
-            else:
-                name = ""
+        if self.uses_membranes():
+            # Show a line of line of data for each chemical species in turn
+            for species_index in range(self.n_species):
+                name = self.chem_data.get_label(species_index)
+                if name:    # If a name was provided, show it
+                    name = f" ({name})"
+                else:
+                    name = ""
 
-            if self.membranes is None:
-                all_conc = self.system[species_index]
-            else:
-                all_conc = "|"
-                for bin_no in range(self.n_bins):
-                    all_conc += str(self.bin_concentration(bin_no, species_index=species_index))
-                    if self.membranes[bin_no]:
-                        # Add a symbol for the membrane, and the additional membrane concentration data (on the "other side")
-                        all_conc += "()"    # To indicate a membrane
-                        all_conc += str(self.bin_concentration(bin_no, species_index=species_index, trans_membrane=True))
-                    all_conc += "|"
+                if self.membranes is None:
+                    all_conc = self.system[species_index]
+                else:
+                    all_conc = "|"
+                    for bin_no in range(self.n_bins):
+                        all_conc += str(self.bin_concentration(bin_no, species_index=species_index))
+                        if self.membranes[bin_no]:
+                            # Add a symbol for the membrane, and the additional membrane concentration data (on the "other side")
+                            all_conc += "()"    # To indicate a membrane
+                            all_conc += str(self.bin_concentration(bin_no, species_index=species_index, trans_membrane=True))
+                        all_conc += "|"
 
-            if not self.chem_data.get_all_diffusion_rates():
-                print(f"  Species {species_index}{name}. Diff rate: NOT SET. Conc: {all_conc}")
-            else:
-                print(f"  Species {species_index}{name}. Diff rate: {self.chem_data.get_diffusion_rate(species_index=species_index)}. Conc: {all_conc}")
+                if not self.chem_data.get_all_diffusion_rates():
+                    print(f"  Species {species_index}{name}. Diff rate: NOT SET. Conc: {all_conc}")
+                else:
+                    print(f"  Species {species_index}{name}. Diff rate: {self.chem_data.get_diffusion_rate(species_index=species_index)}. Conc: {all_conc}")
+
+        else:   # This alternate view, using Pandas, currently only usable whene there are no membranes
+            df = pd.DataFrame(self.system, columns=[f"{i}" for i in range(self.n_bins)])
+
+            df.insert(0, "Species", self.chem_data.get_all_labels())
+            df.insert(1, "Diff rate", self.chem_data.get_all_diffusion_rates()) # Unset values will show up as None
+
+            return df
+
+
 
 
 
@@ -839,7 +863,7 @@ class BioSim1D:
     #                        CHANGE RESOLUTIONS                             #
     #                                                                       #
     #########################################################################
-    
+
     def increase_spatial_resolution(self, factor:int) -> None:
         """
         Increase the spatial resolution of the system by cloning and repeating
@@ -901,7 +925,7 @@ class BioSim1D:
         self.replace_system(new_state)
 
 
-    
+
     def decrease_spatial_resolution(self, factor:int) -> None:
         """
 
@@ -935,7 +959,7 @@ class BioSim1D:
 
 
 
-    
+
     def smooth_spatial_resolution(self) -> None:
         """
         EXAMPLE: if the system is
@@ -973,7 +997,7 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    
+
     def is_excessive(self, time_step, diff_rate, delta_x) -> bool:
         """
         Use a loose heuristic to determine if the requested time step is too long,
@@ -992,7 +1016,7 @@ class BioSim1D:
             return False
 
 
-    
+
     def max_time_step(self, diff_rate, delta_x) -> float:
         """
         Determine a reasonable upper bound on the time step, for the given diffusion rate and delta_x
@@ -1007,7 +1031,7 @@ class BioSim1D:
 
 
 
-    
+
     def diffuse(self, total_duration=None, time_step=None, n_steps=None, delta_x=1, algorithm=None) -> dict:
         """
         Uniform-step diffusion, with 2 out of 3 criteria specified:
@@ -1047,7 +1071,7 @@ class BioSim1D:
         return status
 
 
-    
+
     def diffuse_step(self, time_step, delta_x=1, algorithm=None) -> None:
         """
         Diffuse all the species for the given time step, across all bins;
@@ -1373,6 +1397,16 @@ class BioSim1D:
 
 
 
+    def get_chem_data(self):
+        """
+
+        :return:
+        """
+        return self.chem_data
+
+
+
+
 
     #########################################################################
     #                                                                       #
@@ -1559,16 +1593,18 @@ class BioSim1D:
         """
         Send to the HTML log, a line plot representation of the concentrations of
         all the chemical species species.
-        TODO: offer an option to limit which chemical species to display
 
         IMPORTANT: must first call GraphicLog.config(), or an Exception will be raised
 
         :param plot_pars:           A dictionary of parameters (such as "outer_width") for the plot
         :param graphic_component:   A string with the name of the graphic module to use.  EXAMPLE: "vue_curves_4"
-        :param header:              OPTIONAL string to display just above the plot
-        :param color_mapping:       OPTIONAL dict mapping index numbers to color names or RBG hex values
+        :param header:              [OPTIONAL] String to display just above the plot
+        :param color_mapping:       [OPTIONAL] Dict mapping index numbers to color names or RBG hex values.
+                                        If not provided, the colors associated to the chemicals are used, if any
         :return:                    None
         """
+        #TODO: offer an option to limit which chemical species to display
+
         if not GraphicLog.is_initialized():
             raise Exception("Prior to calling line_plot(), "
                             "need to initialize the graphics module with a call to GraphicLog.config()")
@@ -1607,6 +1643,8 @@ class BioSim1D:
         # If a color mapping was provided, add it to the data
         if color_mapping:
             all_data["color_mapping"] = color_mapping
+        elif col_map := self.chem_data.get_color_mapping_by_index():
+            all_data["color_mapping"] = col_map
 
 
         # Send the plot to the HTML log file.
@@ -1622,7 +1660,7 @@ class BioSim1D:
     #                              HISTORY                                  #
     #                                                                       #
     #########################################################################
-    
+
     def add_snapshot(self, data_snapshot: dict, caption ="") -> None:
         """
         Preserve some data value (passed as dictionary) in the history, linked to the
@@ -1643,7 +1681,7 @@ class BioSim1D:
 
 
 
-    
+
     def get_history(self) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved

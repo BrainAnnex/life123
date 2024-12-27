@@ -121,10 +121,12 @@ def test_diffuse_step_single_species_2b():
 
 
 def test_diffuse_step_single_species_3():
-    bio = BioSim1D()
-    bio.system = None
+    chem_data = chem(names=["A"])
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
+
     with pytest.raises(Exception):
         bio.diffuse_step_single_species(time_step=.001)    # Must first initialize the system
+
 
     chem_data = chem(diffusion_rates=[2.78, 3.14])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
@@ -132,7 +134,7 @@ def test_diffuse_step_single_species_3():
     bio.set_uniform_concentration(species_index=0, conc=22.2)
     bio.set_uniform_concentration(species_index=1, conc=66.6)
 
-    bio.describe_state()
+    #bio.describe_state()
     """
     5 bins and 2 species:
     Species 0. Diff rate: 2.78. Conc:  [22.2 22.2 22.2 22.2 22.2]
