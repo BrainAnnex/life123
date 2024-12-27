@@ -1,8 +1,10 @@
-import plotly.express as px
-import plotly.graph_objects as pgo
 import numpy as np
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as pgo
 from plotly.subplots import make_subplots
+import colorsys
+import matplotlib.colors as mcolors
 from typing import Union
 
 
@@ -12,7 +14,9 @@ class PlotlyHelper:
     Static class to assist in the use of the plotly library
 
     TODO: improve consistency in argument names; also across UniformCompartment
+    TODO: rename as "VisualizationHelper" or "GraphicsHelper"
     """
+
 
     @classmethod
     def get_default_colors(cls, n :int) -> [int]:
@@ -68,9 +72,37 @@ class PlotlyHelper:
                 violet, wheat, white, whitesmoke, yellow,
                 yellowgreen
         '''
-        colors = default_colors[:n]      # Pick the first default colors; TODO: rotate if needing more
+        colors = default_colors[:n]      # Pick the first n default colors; TODO: rotate if needing more
 
         return colors
+
+
+
+    @classmethod
+    def lighten_color(cls, color_name :str, factor=0.85) -> str:
+        """
+        Lightens a CSS color by blending it with white; i.e., generate a return a lighter, paler tint
+        of the given color
+
+        :param color_name:  The CSS color name (e.g., "yellow")
+        :param factor:      How much to lighten the color (0.0 = no change, 1.0 = white)
+        :return:            The resulting color in RGB format, as a string.  EXAMPLE:  "rgb(255,255,200)"
+        """
+        # Convert CSS color name to RGB (0-1 range)
+        rgb = mcolors.to_rgb(color_name)
+
+        # Convert RGB to HLS (Hue, Lightness, Saturation)
+        h, l, s = colorsys.rgb_to_hls(*rgb)
+
+        # Increase lightness toward 1.0 (white) by the specified factor
+        l = l + factor * (1.0 - l)
+
+        # Convert back to RGB
+        lightened_rgb = colorsys.hls_to_rgb(h, l, s)
+
+        # Scale RGB values to 0-255 and format as an "rgb(r, g, b)" string
+        lightened_rgb_255 = [int(channel * 255) for channel in lightened_rgb]
+        return f"rgb({lightened_rgb_255[0]},{lightened_rgb_255[1]},{lightened_rgb_255[2]})"
 
 
 
