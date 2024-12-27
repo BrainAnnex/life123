@@ -97,8 +97,8 @@ class ReactionEnz:
         """
         Based on the Morrison model.
         The arguments may also be Numpy arrays.
-        
-        Reference: eqn 7.32 on page 124 of "Analysis of Enzyme Reaction Kinetics, Vol. 1", 
+
+        Reference: eqn 7.32 on page 124 of "Analysis of Enzyme Reaction Kinetics, Vol. 1",
                    by F. Xavier Malcata, Wiley, 2023
 
         :param S_tot:   The total concentration of free Substrate and Substrate bound to Enzyme
@@ -254,7 +254,7 @@ class ReactionGeneric:
                                 and unvarying (or very slowly varying)
         """
         self.active = True          # TODO: EXPERIMENTAL!
-        
+
         self.reactants = None
         self.products = None
         self.kF = kF
@@ -881,14 +881,22 @@ class ReactionGeneric:
 
 ###################################################################################################################
 
-class Reactions():
+class Reactions:
+    """
+    Manage reaction-related data
+
+    (this class was formerly called "AllReactions")
     """
 
-    """
+    def __init__(self, chem_data):
 
-    def __init__(self, chem_data):      # =None, labels=None
+        """
 
-        '''
+        :param chem_data:   Object of type "ChemData"
+        """
+
+        # TODO: consider adding arguments   =None, labels=None
+        """
         assert (chem_data is not None) or (labels is not None), \
             "Reactions() instantiation: exactly one of the arguments `chem_data` or `labels` must be provided"
 
@@ -897,7 +905,7 @@ class Reactions():
 
         if labels is not None:
             chem_data = ChemData(labels=labels)
-        '''
+        """
 
         assert chem_data is not None, \
             "Reactions() instantiation: the arguments `chem_data` must be provided, and cannot be None"

@@ -1,11 +1,6 @@
 from typing import Union, List, NamedTuple, Set
 
 import numpy as np
-
-#from life123.reaction import Reaction
-from life123.visualization.py_graph_visual import PyGraphVisual
-from life123.html_log import HtmlLog as log
-from life123.visualization.graphic_log import GraphicLog
 import pandas as pd
 
 
@@ -86,6 +81,8 @@ class ChemCore:
     def get_index(self, label :str) -> int:
         """
         Return the index of the chemical species with the given label.
+        Indexes are the integers assigned, in autoincrement order,
+        at the time each chemical is first registered.
         If not found, an Exception is raised
 
         :param label:   Label of the chemical species of interest
@@ -134,18 +131,20 @@ class ChemCore:
     def get_all_labels(self) -> [str]:
         """
         Return a list with the names of all the chemical species, in their index order.
-        If any is missing or blank, an Exception instead
+        If any is missing or blank, an Exception is raised
 
         :return:    A list of strings with the chemical names,
                         in their registered index order
         """
-        all_names = []
+        all_labels = []
         for i, c in enumerate(self.chemical_data):
-            name = c.get("label", None)
-            assert name, f"get_all_labels(): missing or blank chemical name in index position {i}"
-            all_names.append(name)
+            label = c.get("label", None)
+            assert label is not None, \
+                f"get_all_labels(): missing or blank chemical name in index position {i}"
 
-        return all_names
+            all_labels.append(label)
+
+        return all_labels
 
 
 
@@ -250,6 +249,33 @@ class ChemCore:
         :return:        The name of the associated plot color, or None if not found
         """
         return self.color_dict.get(label, None)
+
+
+
+    def get_color_mapping_by_label(self) -> dict:
+        """
+        EXAMPLE: {"A": "red", "B": "orange", "C": "green"}
+
+        :return:    A dict of plot colors, indexed by chemical labels
+        """
+        return self.color_dict
+
+
+    def get_color_mapping_by_index(self) -> dict:
+        """
+        EXAMPLE: {0: 'red', 1: 'orange', 2: 'green'}
+
+        :return:    A dict of plot colors, indexed by chemical index
+        """
+        return   {self.label_dict[k]: v for k, v in self.color_dict.items()}
+
+
+    def get_all_colors(self) -> list:
+        """
+
+        :return:    A list of all colors, in the index position of their respective chemicals
+        """
+        return list(self.color_dict.values())
 
 
 
@@ -678,14 +704,13 @@ class ChemData(Macromolecules):
         - names
         - diffusion rates
         - macro-molecules Binding Site Affinities (for Transcription Factors)
-        - reaction data (see also class "Reaction", in "reaction_data.py")
 
 
     Notes:  - for now, the temperature is assumed constant everywhere, and unvarying (or very slowly varying)
 
             - we're using a "daisy chain" of classes extending the previous one, starting from ChemCore
               and ending in this user-facing class:
-                    ChemCore <- Diffusion <- AllReactions <- Macromolecules <- ChemData
+                    ChemCore <- Diffusion <- Macromolecules <- ChemData
     """
     def __init__(self, names=None, labels=None, diffusion_rates=None, plot_colors=None):
         """

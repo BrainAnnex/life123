@@ -5,7 +5,7 @@ import time
 import os
 import csv
 import plotly.express as px
-import plotly.graph_objects as go
+import plotly.graph_objects as pgo
 from typing import Union
 from life123.chem_data import ChemData
 from life123.diagnostics import Diagnostics
@@ -47,16 +47,17 @@ class UniformCompartment:
         Note: AT MOST 1 of the following 3 arguments can be passed
 
         :param reactions:   [OPTIONAL 1] Object of type "Reactions", with data about the reactions and the chemicals.
-                                If passed, cannot pass either `chem_data` nor `names` (those are both part of the "Reactions" object);
+                                If passed, cannot pass either of the args `chem_data` nor `names` (those are both part of the "Reactions" object);
                                 if not passed, the reactions can be added later, with calls to add_reaction()
 
         :param chem_data:   [OPTIONAL 2] Object of type "ChemData" (with data about the chemicals and their reactions).
-                                If passed, cannot pass either `reactions` (an object that contains `chem_data`) nor `names`
+                                If passed, cannot pass either of the args  `reactions` (an object that contains `chem_data`) nor `names`
                                 (names are contained in the `chem_data` object)
 
         :param names:       [OPTIONAL 3] A single name, or list or tuple of names, of the chemicals;
                                 providing a list can be used to make the chemicals appear in a particular desired order.
-                                If passed, cannot pass either `reactions` nor `chem_data` (both those object contain the chemical names)
+                                If passed, cannot pass either of the args `reactions` nor `chem_data` (both those object contain the chemical names)
+
 
         :param preset:      [OPTIONAL] String with code that can be adjusted make the time resolution finer or coarser;
                                 it will stay in effect from now on, unless explicitly changed later
@@ -127,7 +128,7 @@ class UniformCompartment:
         self.log_file = None
 
 
-        # FOR AUTOMATED ADAPTIVE TIME STEP SIZES 
+        # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
         self.adaptive_steps = VariableTimeSteps()
 
         if preset:
@@ -653,7 +654,7 @@ class UniformCompartment:
         self.number_neg_concs = 0
         self.number_soft_aborts = 0
         self.adaptive_steps.reset_norm_usage_stats()
-        
+
         # Time-related
         t_start = time.perf_counter()
         t_report = t_start
@@ -1581,7 +1582,7 @@ class UniformCompartment:
     def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None,
                      range_x=None, range_y=None,
                      y_label=None,
-                     vertical_lines_to_add=None, show_intervals=False, show=False) -> go.Figure:
+                     vertical_lines_to_add=None, show_intervals=False, show=False) -> pgo.Figure:
         """
         Using plotly, draw the plots of chemical concentration values over time, based on historical data that gets
         automatically saved when running reactions.
