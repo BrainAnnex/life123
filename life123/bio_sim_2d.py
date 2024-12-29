@@ -666,7 +666,6 @@ class BioSim2D:
         """
         Create and return a heatmap for the specified single chemical,
         using the current system data.
-        At present, shades of yellow are being used
 
         :param chem_label:  String with the label to identify the chemical of interest
         :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated Heatmap title
