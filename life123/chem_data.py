@@ -130,8 +130,9 @@ class ChemCore:
 
     def get_all_labels(self) -> [str]:
         """
-        Return a list with the names of all the chemical species, in their index order.
-        If any is missing or blank, an Exception is raised
+        Return a list with the labels of all the chemical species,
+        in their index order of registration.
+        If any label is missing or blank, an Exception is raised
 
         :return:    A list of strings with the chemical names,
                         in their registered index order

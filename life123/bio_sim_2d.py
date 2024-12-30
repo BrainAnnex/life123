@@ -7,6 +7,7 @@ from life123.uniform_compartment import UniformCompartment
 from life123.visualization.plotly_helper import PlotlyHelper
 
 
+
 class BioSim2D:
     """
     2D simulations of diffusion and reactions
@@ -130,6 +131,7 @@ class BioSim2D:
         :return:            A Pandas dataframe with the concentration data for the single specified chemical;
                             rows and columns correspond to the system's rows and columns
         """
+        # TODO: offer the option to pass multiple labels
 
         if chem_label is not None:
             assert chem_index is None, "system_snapshot(): cannot pass both arguments `chem_label` and `chem_index`"
@@ -143,6 +145,7 @@ class BioSim2D:
         df = pd.DataFrame(matrix)
 
         return df
+
 
 
 
@@ -632,15 +635,17 @@ class BioSim2D:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def heatmap_single_chem(self, chem_label :str, title_prefix = "", height=550) -> pgo.Figure:
+    def heatmap_single_chem_greyscale(self, chem_label :str, title_prefix = "", width=None, height=550) -> pgo.Figure:
         """
-        Create and return a 2D greyscale heatmap for the specified single chemical,
-        using the current system data
+        Create and return a greyscale heatmap (a Plotly Figure object) of the 2D concentration
+        of the specified single chemical, using the current system data.
 
-        :param chem_label:  String with the label to identify the chemical of interest
+        :param chem_label:  Label to identify the chemical of interest
         :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated Heatmap title
-        :param height:
-        :return:            A plotly "Figure" object
+        :param width:       [OPTIONAL] If not specified, all the available space width is used
+        :param height:      [OPTIONAL] Height of the heatmap graphics
+
+        :return:            A Plotly "Figure" object
         """
         title = f"System state at time t={self.system_time:.5g} for `{chem_label}`"
         if title_prefix:
@@ -650,29 +655,28 @@ class BioSim2D:
                         title=title,
                         labels={"x": "x bin", "y": "y bin", "color": "Conc."},
                         text_auto=".2f", color_continuous_scale="gray_r",
-                        height=height)
+                        width=width, height=height)
 
          # Spacing between adjacent cells
-        fig.update_traces(xgap=2)
+        fig.update_traces(xgap=2)       #Alt way to specify it: fig.data[0].xgap=2
         fig.update_traces(ygap=2)
-        #fig.data[0].xgap=2
-        #fig.data[0].ygap=2
 
         return fig
 
 
 
-    def heatmap(self, chem_label :str, title_prefix = "", height=550, width=None, color_name=None) -> pgo.Figure:
+    def heatmap_single_chem(self, chem_label :str, title_prefix = "", width=None, height=550, color_name=None) -> pgo.Figure:
         """
-        Create and return a heatmap for the specified single chemical,
-        using the current system data.
+        Create and return a heatmap (a Plotly Figure object) of the 2D concentration
+        of the specified single chemical, using the current system data.
+        A gradient of the specified color is used.
 
-        :param chem_label:  String with the label to identify the chemical of interest
+        :param chem_label:  Label to identify the chemical of interest
         :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated Heatmap title
-        :param height:
+        :param height:      [OPTIONAL] Height of the heatmap graphics
         :param width:       [OPTIONAL] If not specified, all the available space width is used
         :param color_name:  [OPTIONAL] If not specified, a grayscale is used
-        :return:            A plotly "Figure" object
+        :return:            A Plotly "Figure" object
         """
         title = f"System state at time t={self.system_time:.5g} for `{chem_label}`"
         if title_prefix:
@@ -693,7 +697,7 @@ class BioSim2D:
                          xgap=2, ygap=2,
                          hovertemplate='Conc.: %{z}<br>x bin: %{x}<br>y bin: %{y}<extra>A</extra>',
                          texttemplate = '%{z:.2f}',
-                         colorbar_title="Concentration"
+                         colorbar_title="Conc."
                          )
 
         # Create the Figure object
@@ -710,3 +714,34 @@ class BioSim2D:
         )
 
         return fig
+
+
+
+    def system_heatmaps(self, chem_labels=None, title_prefix = "", height=None, colors=None) -> pgo.Figure:
+        """
+        Prepare and return a Plotly Figure object containing a grid of heatmaps (up to a max of 12)
+
+        :param chem_labels: [OPTIONAL] List of Labels to identify the chemicals of interest;
+                                if not specified, it means ALL chemicals.
+                                The max number of heatmaps that can be shown together is 12
+        :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title for the grid of heatmaps
+        :param height:      [OPTIONAL] Height of the overall grid of heatmaps
+        :param colors:      [OPTIONAL] List of CSS color names for each of the heatmaps.
+                                If provided, its length must match that of the data; otherwise, default colors are used
+        :return:            A Plotly "Figure" object
+        """
+        if chem_labels is None:
+            chem_labels = self.chem_data.get_all_labels()
+
+        data = [self.system_snapshot(chem_label=chem) for chem in chem_labels]
+
+        if (n_chem := len(chem_labels)) == 1:
+            title = f"System state at time t={self.system_time:.5g} for `{chem_labels[0]}`"
+        else:
+            title = f"System state at time t={self.system_time:.5g} for {n_chem} chemicals:"
+
+        if title_prefix:
+            title = f"{title_prefix}.  {title}"
+
+        return PlotlyHelper.heatmap_grid(array_list=data, labels=chem_labels, title=title,
+                                         height=height, colors=colors, z_name="Conc.", max_n_cols=4)
