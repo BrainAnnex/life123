@@ -24,7 +24,7 @@
 # ### TAGS :  "diffusion 2D"
 
 # %%
-LAST_REVISED = "Dec. 26, 2024"
+LAST_REVISED = "Dec. 31, 2024"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
@@ -73,6 +73,14 @@ bio.describe_state()
 # %%
 bio.heatmap_single_chem(chem_label="A", title_prefix="Diffusion")
 
+# %%
+# MASS-CONSERVATION CHECK. Verify that that sum of all the entries in the above matrix is still the initial 10.
+bio.check_mass_conservation(chem_label="A", expected=10.)
+
+# %%
+
+# %%
+
 # %% [markdown]
 # ## This is still an early stage in the diffusion process; let's advance it more... (Visualization from results shown at selected times)
 
@@ -90,10 +98,13 @@ for i in range(200):
 # # All bins now have essentially uniform concentration. The diffusion has reached equilibrium
 #
 # Notice, throughout the simulation, the continued symmetry across the mid-row (ybin 2).
-#
+
+# %% [markdown]
 # **Mass conservations**: the initial "10. units of concentration" are now uniformly spread across the 40 (5x8) bins, leading to a near-constant concentration of 10./40
 
 # %%
 10./40
 
 # %%
+# Mass conservation can also be verified as follows:
+bio.check_mass_conservation(chem_label="A", expected=10.)

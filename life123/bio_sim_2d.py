@@ -121,9 +121,35 @@ class BioSim2D:
 
 
 
-    def system_snapshot(self, chem_index=None, chem_label=None) -> pd.DataFrame:
+    def system_snapshot_array(self, chem_label=None, chem_index=None) -> np.ndarray:
         """
-        Return a snapshot of all the concentrations of the given species, across all bins,
+        Return a snapshot of all the concentrations of the given chemical species, or all of them,
+        across all bins, as a Numpy array.
+        If a Pandas dataframe is desired, for a single chemical, use system_snapshot()
+
+        :param chem_label:  String with the label to identify the chemical of interest
+        :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
+        :return:            A 2-D (if a chemical was specified) or 3-D Numpy array (for all chemicals)
+        """
+        if (chem_label is None) and (chem_index is None):
+            return self.system
+
+        if chem_label is not None:
+            assert chem_index is None, "system_snapshot_array(): cannot pass both arguments `chem_label` and `chem_index`"
+            chem_index = self.chem_data.get_index(chem_label)
+        else:
+            assert chem_index is not None, "system_snapshot_array(): must pass one of the arguments `chem_label` or `chem_index`"
+            self.chem_data.assert_valid_species_index(chem_index)
+
+        matrix = self.system[chem_index]    # A 2-D subarray with the chemical data for the single requested chemical
+
+        return matrix
+
+
+
+    def system_snapshot(self, chem_label=None, chem_index=None) -> pd.DataFrame:
+        """
+        Return a snapshot of all the concentrations of the given chemical species, across all bins,
         as a Pandas dataframe
 
         :param chem_label:  String with the label to identify the chemical of interest
@@ -132,19 +158,34 @@ class BioSim2D:
                             rows and columns correspond to the system's rows and columns
         """
         # TODO: offer the option to pass multiple labels
+        # TODO: fix inconsistency vs. 1D case (single chem vs. all)
 
         if chem_label is not None:
             assert chem_index is None, "system_snapshot(): cannot pass both arguments `chem_label` and `chem_index`"
             chem_index = self.chem_data.get_index(chem_label)
         else:
             assert chem_index is not None, "system_snapshot(): must pass one of the arguments `chem_label` or `chem_index`"
-            # TODO: validation for chem_index
+            self.chem_data.assert_valid_species_index(chem_index)
 
         matrix = self.system[chem_index]
 
         df = pd.DataFrame(matrix)
 
         return df
+
+
+
+    def check_mass_conservation(self, expected :float, chem_label=None, chem_index=None) -> bool:
+        """
+
+        :param expected:
+        :param chem_label:
+        :param chem_index:
+        :return:
+        """
+        arr = self.system_snapshot_array(chem_label=chem_label, chem_index=chem_index)
+        total = np.sum(arr)
+        return np.allclose(expected, total)
 
 
 
@@ -290,7 +331,7 @@ class BioSim2D:
         :return:            None
         """
         #np.set_printoptions(linewidth=125)
-        print(f"SYSTEM STATE at Time t = {self.system_time}:")
+        print(f"SYSTEM STATE at Time t = {self.system_time:.8g}:")
         for species_index in range(self.n_species):
             chem_name = self.chem_data.get_label(species_index)
             if chem_name is None:

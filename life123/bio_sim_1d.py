@@ -194,7 +194,6 @@ class BioSim1D:
 
 
 
-
     def restore_system(self, new_state: dict) -> None:
         """
         Replace (some, for now, of) the various parts the System's internal state.

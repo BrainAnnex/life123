@@ -13,10 +13,9 @@
 # ---
 
 # %% [markdown]
-# # IN-PROGRESS
-
-# %% [markdown]
-# ## An initial concentration pulse of 2 chemicals, starting near diametrically-opposite ends of the system, diffusing towards equilibrium with different rates.
+# ## Initial indentical concentration pulses of 2 chemicals (starting at symmetric, almost-opposite ends of the system), diffusing towards equilibrium with identical rates.
+#
+# Symmetry and mass conservation is observed throughout.
 #
 # No reaction takes place; the system is left undisturbed, and followed to equilibrium.
 
@@ -24,7 +23,7 @@
 # ### TAGS :  "diffusion 2D"
 
 # %%
-LAST_REVISED = "Dec. 27, 2024"
+LAST_REVISED = "Dec. 31, 2024"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
@@ -42,11 +41,11 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Prepare the initial system, with a single non-zero bin, near the left edge of the system, positioned halfway vertically
-chem_data = ChemData(names=["A", "B"], diffusion_rates=[0.02, 0.01])
+chem_data = ChemData(names=["A", "B"], diffusion_rates=[0.05, 0.05])
 bio = BioSim2D(n_bins=(6, 10), chem_data=chem_data)
 
 bio.set_bin_conc(bin_x = 1, bin_y = 1, chem_label="A", conc=10.)
-bio.set_bin_conc(bin_x = 4, bin_y = 8, chem_label="B", conc=20.)
+bio.set_bin_conc(bin_x = 1, bin_y = 8, chem_label="B", conc=10.)
 
 bio.describe_state()
 
@@ -61,45 +60,63 @@ bio.system_heatmaps()
 
 # %%
 
-# %%
-
-# %%
-
 # %% [markdown]
-# # Initial Diffusion Step -------------- STOPPED HERE : TO BE CONTINUED!
+# # Initial Diffusion Step
 
 # %%
-delta_time = 10.
+delta_time = 2.5
 
+# %%
 status = bio.diffuse(total_duration=delta_time, time_step=0.1)
 print("\n", status)
 
-bio.describe_state()
+bio.system_heatmaps(title_prefix="Diffusion")
 
 # %%
-bio.heatmap_single_chem(chem_label="A", title_prefix="Diffusion")
+# MASS-CONSERVATION CHECK. Verify that that sum of all the entries in each of the above matrices is still the initial 10.
+bio.check_mass_conservation(chem_label="A", expected=10.) \
+and \
+bio.check_mass_conservation(chem_label="B", expected=10.)
+
+# %% [markdown]
+# # A second step
+
+# %%
+status = bio.diffuse(total_duration=delta_time, time_step=0.1)
+print("\n", status)
+
+bio.system_heatmaps(title_prefix="Diffusion")
+
+# %%
 
 # %% [markdown]
 # ## This is still an early stage in the diffusion process; let's advance it more... (Visualization from results shown at selected times)
 
 # %% tags=[]
-for i in range(200):
-    status = bio.diffuse(total_duration=delta_time, time_step=0.1)
+for i in range(500):
+    status = bio.diffuse(total_duration=delta_time, time_step=0.2)
 
-    if i<2 or i==6 or i>=199:
-        bio.describe_state()
-        fig = bio.heatmap_single_chem(chem_label="A", title_prefix="Diffusion", height=400)
+    if i==5 or i==50 or i==100 or i==300 or i>=499:
+        fig = bio.system_heatmaps(title_prefix="Diffusion")
         fig.show()
 
 
 # %% [markdown]
 # # All bins now have essentially uniform concentration. The diffusion has reached equilibrium
 #
-# Notice, throughout the simulation, the continued symmetry across the mid-row (ybin 2).
-#
-# **Mass conservations**: the initial "10. units of concentration" are now uniformly spread across the 40 (5x8) bins, leading to a near-constant concentration of 10./40
+# Notice, throughout the simulation, the continued symmetry of `A` and `B` across the vertical axis
+
+# %% [markdown]
+# **Mass conservations**: the initial "10. units of concentration" are now uniformly spread across the 60 (10x6) bins, leading to a near-constant concentration of 10./60
 
 # %%
-10./40
+10./60
+
+# %%
+# Mass conservation for both `A` and `B` can also be verified as follows:
+bio.check_mass_conservation(chem_label="A", expected=10.)
+
+# %%
+bio.check_mass_conservation(chem_label="B", expected=10.)
 
 # %%
