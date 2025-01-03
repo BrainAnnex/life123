@@ -110,14 +110,32 @@ class BioSim2D:
 
 
 
+
+    #####################################################################################################
+
+    '''                                    ~   VIEW/UPDATE SYSTEM   ~                                           '''
+
+    def ________VIEW_UPDATE_SYSTEM________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
     def system_size(self) -> (int, int):
         """
         Return a pair of integers with the system size in the x- and y-dimensions
-        Note: the bin numbers will range between 0 and system_size - 1
+        Note: the bin numbers will range between 0 and (system_size - 1)
 
         :return:    The pair (x-dimension, y-dimension)
         """
         return (self.n_bins_x, self.n_bins_y)
+
+
+
+    def get_chem_data(self):
+        """
+
+        :return:    An Object of type "ChemData"
+        """
+        return self.chem_data
 
 
 
@@ -131,6 +149,7 @@ class BioSim2D:
         :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
         :return:            A 2-D (if a chemical was specified) or 3-D Numpy array (for all chemicals)
         """
+        #TODO: add a version of this to the Bio1D
         if (chem_label is None) and (chem_index is None):
             return self.system
 
@@ -177,10 +196,13 @@ class BioSim2D:
 
     def check_mass_conservation(self, expected :float, chem_label=None, chem_index=None) -> bool:
         """
+        Check whether the sum of all the concentrations of the specified chemical,
+        across all bins, adds up to the passed value
 
         :param expected:
-        :param chem_label:
-        :param chem_index:
+        :param chem_label:  String with the label to identify the chemical of interest
+        :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
+
         :return:
         """
         arr = self.system_snapshot_array(chem_label=chem_label, chem_index=chem_index)
@@ -389,12 +411,13 @@ class BioSim2D:
 
 
 
-    #########################################################################
-    #                                                                       #
-    #                               DIFFUSION                               #
-    #                                                                       #
-    #########################################################################
+    #####################################################################################################
 
+    '''                                    ~   SIMULATIONS   ~                                           '''
+
+    def ________SIMULATIONS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
     def diffuse(self, total_duration=None, time_step=None, n_steps=None, h=1, algorithm="5_point") -> dict:
         """

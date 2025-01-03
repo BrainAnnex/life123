@@ -149,12 +149,33 @@ class BioSim1D:
 
 
 
+
+
+    #####################################################################################################
+
+    '''                                    ~   VIEW/UPDATE SYSTEM   ~                                           '''
+
+    def ________VIEW_UPDATE_SYSTEM________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
     def system_size(self) -> int:
         """
-        Note: the bin numbers will range between 0 and system_size - 1
+        Return the number of bins in the system
+        Note: the bin numbers will range between 0 and (system_size - 1)
+
         :return:    The number of bins in the system
         """
         return self.n_bins
+
+
+
+    def get_chem_data(self):
+        """
+
+        :return:    An Object of type "ChemData"
+        """
+        return self.chem_data
 
 
 
@@ -504,36 +525,6 @@ class BioSim1D:
 
 
 
-    ########  DIMENSION-RELATED  ################
-
-    def set_dimensions(self, length) -> None:
-        """
-        Set the overall length of the system.
-        Doing so, will permit to convert bin numbers to positional values
-
-        :param length:
-        :return:
-        """
-        assert (type(length) == float) or (type(length) == int), "set_dimensions(): length must be a number"
-        assert length > 0, "set_dimensions(): length must be positive"
-
-        self.system_length = length
-        self.global_Dx = length / (self.n_bins-1)
-
-
-
-    def x_coord(self, bin_address):
-        """
-        Return the x coordinate of the middle of the specified bin.
-        By convention, for the leftmost bin, it's zero,
-        and for the rightmost, it's the overall length of the system
-        """
-        assert self.system_length, "x_coord(): must first call set_dimensions()"
-
-        return bin_address * self.global_Dx
-
-
-
 
     ########  MEMBRANE-RELATED  ################
 
@@ -612,13 +603,6 @@ class BioSim1D:
                     self.set_bin_conc(bin_address=bin_number, species_index=chem_index, conc=conc, across_membrane=True)
 
 
-
-
-    #########################################################################
-    #                                                                       #
-    #                              TO VIEW                                  #
-    #                                                                       #
-    #########################################################################
 
     def assert_valid_bin(self, bin_address: int) -> None:
         """
@@ -857,11 +841,41 @@ class BioSim1D:
 
 
 
-    #########################################################################
-    #                                                                       #
-    #                        CHANGE RESOLUTIONS                             #
-    #                                                                       #
-    #########################################################################
+    #####################################################################################################
+
+    '''                                    ~   SPATIAL ELEMENTS   ~                                           '''
+
+    def ________SPACIAL_ELEMENTS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def set_dimensions(self, length) -> None:
+        """
+        Set the overall length of the system.
+        Doing so, will permit to convert bin numbers to positional values
+
+        :param length:
+        :return:
+        """
+        assert (type(length) == float) or (type(length) == int), "set_dimensions(): length must be a number"
+        assert length > 0, "set_dimensions(): length must be positive"
+
+        self.system_length = length
+        self.global_Dx = length / (self.n_bins-1)
+
+
+
+    def x_coord(self, bin_address):
+        """
+        Return the x coordinate of the middle of the specified bin.
+        By convention, for the leftmost bin, it's zero,
+        and for the rightmost, it's the overall length of the system
+        """
+        assert self.system_length, "x_coord(): must first call set_dimensions()"
+
+        return bin_address * self.global_Dx
+
+
 
     def increase_spatial_resolution(self, factor:int) -> None:
         """
@@ -958,7 +972,6 @@ class BioSim1D:
 
 
 
-
     def smooth_spatial_resolution(self) -> None:
         """
         EXAMPLE: if the system is
@@ -990,45 +1003,13 @@ class BioSim1D:
 
 
 
-    #########################################################################
-    #                                                                       #
-    #                               DIFFUSION                               #
-    #                                                                       #
-    #########################################################################
+    #####################################################################################################
 
+    '''                                    ~   SIMULATIONS   ~                                           '''
 
-    def is_excessive(self, time_step, diff_rate, delta_x) -> bool:
-        """
-        Use a loose heuristic to determine if the requested time step is too long,
-        given the diffusion rate and delta_x.
-        This is also based on the "Von Neumann stability analysis"
-        (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
-
-        :param time_step:
-        :param diff_rate:
-        :param delta_x:
-        :return:
-        """
-        if time_step > self.max_time_step(diff_rate, delta_x):
-            return True
-        else:
-            return False
-
-
-
-    def max_time_step(self, diff_rate, delta_x) -> float:
-        """
-        Determine a reasonable upper bound on the time step, for the given diffusion rate and delta_x
-        This is also based on the "Von Neumann stability analysis"
-        (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
-
-        :param diff_rate:
-        :param delta_x:
-        :return:
-        """
-        return delta_x**2 * self.time_step_threshold/diff_rate
-
-
+    def ________SIMULATIONS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
 
     def diffuse(self, total_duration=None, time_step=None, n_steps=None, delta_x=1, algorithm=None) -> dict:
@@ -1262,6 +1243,40 @@ class BioSim1D:
 
 
 
+    def is_excessive(self, time_step, diff_rate, delta_x) -> bool:
+        """
+        Use a loose heuristic to determine if the requested time step is too long,
+        given the diffusion rate and delta_x.
+        This is also based on the "Von Neumann stability analysis"
+        (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
+
+        :param time_step:
+        :param diff_rate:
+        :param delta_x:
+        :return:
+        """
+        if time_step > self.max_time_step(diff_rate, delta_x):
+            return True
+        else:
+            return False
+
+
+
+    def max_time_step(self, diff_rate, delta_x) -> float:
+        """
+        Determine a reasonable upper bound on the time step, for the given diffusion rate and delta_x
+        This is also based on the "Von Neumann stability analysis"
+        (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
+
+        :param diff_rate:
+        :param delta_x:
+        :return:
+        """
+        return delta_x**2 * self.time_step_threshold/diff_rate
+
+
+
+
     #########################################################################
     #                                                                       #
     #                               REACTIONS                               #
@@ -1396,31 +1411,14 @@ class BioSim1D:
 
 
 
-    def get_chem_data(self):
-        """
-
-        :return:
-        """
-        return self.chem_data
-
-
-
-
-
-    #########################################################################
-    #                                                                       #
-    #                         REACTION-DIFFUSION                            #
-    #                                                                       #
-    #########################################################################
-
     def react_diffuse(self, total_duration=None, time_step=None, n_steps=None, delta_x = 1) -> None:
         """
-        It expects 2 of the arguments:  total_duration, time_step, n_steps
-        Perform a series of reaction and diffusion time steps.
+        It expects 2 out of the following 3 arguments:  total_duration, time_step, n_steps
+        Perform a series of reaction and diffusion (constant) time steps.
 
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
-        :param time_step:       The size of each time step
-        :param n_steps:         The desired number of steps
+        :param time_step:       The size of each constant time step
+        :param n_steps:         The desired number of constant steps
         :param delta_x:         Distance between consecutive bins
         :return:                None
         """
@@ -1429,7 +1427,7 @@ class BioSim1D:
                                                              n_steps=n_steps)
 
         for i in range(n_steps):
-            # TODO: split off the reaction step and the diffusion step to 2 different computing cores
+            # TODO: split off the diffusion step and the reaction steps to different computing cores
             self.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
             self.diffuse_step(time_step, delta_x=delta_x)
             # Merge into the concentrations of the various bins/chemical species pairs,
@@ -1439,6 +1437,7 @@ class BioSim1D:
             self.system += self.delta_diffusion     # Matrix operation to update all the concentrations
                                                     #   from the diffusion
             self.system_time += time_step
+
 
 
 
