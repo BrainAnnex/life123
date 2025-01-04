@@ -1414,7 +1414,7 @@ class BioSim1D:
     def react_diffuse(self, total_duration=None, time_step=None, n_steps=None, delta_x = 1) -> None:
         """
         It expects 2 out of the following 3 arguments:  total_duration, time_step, n_steps
-        Perform a series of reaction and diffusion (constant) time steps.
+        Perform a series of reaction and diffusion constant time steps.
 
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
         :param time_step:       The size of each constant time step

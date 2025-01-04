@@ -67,6 +67,15 @@ def test_constructor():
 
 
 
+def test_system_size():
+    bio = BioSim1D(n_bins=8 , chem_data=ChemData(names="A"))
+    assert bio.system_size() == 8
+
+    bio = BioSim1D(n_bins=1 , chem_data=ChemData(names=["A", "B"]))
+    assert bio.system_size() == 1
+
+
+
 def test_reset_system():
     pass
 

@@ -8,10 +8,10 @@ from life123 import BioSim2D, Reactions, UniformCompartment, ChemData
 
 def test_constructor():
     with pytest.raises(Exception):
-        BioSim2D()              # Missing required arguments
+        BioSim2D()                  # Missing required arguments
 
     with pytest.raises(Exception):
-        BioSim2D(n_bins=666)    # Wrong data type
+        BioSim2D(n_bins=666)        # Wrong data type
 
     with pytest.raises(Exception):
         BioSim2D(n_bins=(0, 4))      # Must be at least 1 in each dimension
@@ -66,6 +66,15 @@ def test_constructor():
     assert type(bio.reactions) == Reactions
     assert type(bio.reaction_dynamics) == UniformCompartment
     assert type(bio.chem_data) == ChemData
+
+
+
+def test_system_size():
+    bio = BioSim2D(n_bins=(3,5) , chem_data=ChemData(names="A"))
+    assert bio.system_size() == (3,5)
+
+    bio = BioSim2D(n_bins=(9,9) , chem_data=ChemData(names=["A", "B"]))
+    assert bio.system_size() == (9,9)
 
 
 

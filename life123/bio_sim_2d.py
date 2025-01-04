@@ -39,7 +39,7 @@ class BioSim2D:
                                 #   NumPy array of dimension (n_species x n_bins_x x n_bins_y)
                                 #   Each plane represents a chemical species
 
-        # The following buffers are (n_species x n_bins_x x n_bins_y)
+        # The following buffers are of size (n_species x n_bins_x x n_bins_y)
         self.delta_diffusion = None  # Buffer for the concentration changes from diffusion step
         self.delta_reactions = None  # Buffer for the concentration changes from reactions step
 
@@ -121,8 +121,8 @@ class BioSim2D:
 
     def system_size(self) -> (int, int):
         """
-        Return a pair of integers with the system size in the x- and y-dimensions
-        Note: the bin numbers will range between 0 and (system_size - 1)
+        Return a pair of integers with the system sizes in the x- and y-dimensions
+        Note: the bin numbers start with 0
 
         :return:    The pair (x-dimension, y-dimension)
         """
@@ -470,7 +470,7 @@ class BioSim2D:
         :param time_step:   Time step over which to carry out the diffusion
                             If too large - as determined by the method is_excessive() - an Exception will be raised
         :param h:           Distance between consecutive bins in both the x- and y-directions
-                                (For now, they must be equal)
+                                (for now, they must be equal)
         :param algorithm:   String with a name specifying the method to use to solve the diffusion equation.
                                 Currently available options: "5_point"
         :return:            None (the array in the class variable "delta_diffusion" gets set)
@@ -547,14 +547,14 @@ class BioSim2D:
         Carry out a 2-D convolution operation on increment_matrix,
         with a tile of size 3 that implements a 5-point stencil
 
-        TODO: maybe pass self.system[species_index] as argument
-        TODO: move the x effective_diff to the calling function
-
-        :param increment_matrix:
-        :param species_index:
+        :param increment_matrix:A Numpy matrix of the correct size
+        :param species_index:   Integer to identify the chemical of interest
         :param effective_diff:
         :return:                None (increment_matrix gets modified)
         """
+        #TODO: maybe pass self.system[species_index] as argument
+        #TODO: move the multiplication by effective_diff to the calling function
+
         max_bin_x = self.n_bins_x - 1    # Bin numbers range from 0 to max_bin_x, inclusive (in x-direction)
         max_bin_y = self.n_bins_y - 1    # Bin numbers range from 0 to max_bin_y, inclusive (in y-direction)
 
@@ -562,7 +562,9 @@ class BioSim2D:
             for j in range(self.n_bins_y):      # From 0 to max_bin_y, inclusive
                 C_ij = self.system[species_index, i, j]     # Concentration in the center of the convolution tile
 
-                # The boundary conditions state that the flux is zero across boundaries
+                # The boundary conditions state that the flux is zero across boundaries;
+                # we can attain that by giving identical concentrations to the hypothetical neighboring bins
+                # across boundaries, both up/down and left/right (diagonals values are not used in this algorithm)
                 if i == 0:
                     C_left = self.system[species_index, 0, j]
                 else:
@@ -686,6 +688,37 @@ class BioSim2D:
 
                 if self.debug:
                     print(self.delta_reactions)
+
+
+
+    def react_diffuse(self, total_duration=None, time_step=None, n_steps=None, h = 1) -> None:
+        """
+        It expects 2 out of the following 3 arguments:  total_duration, time_step, n_steps
+        Perform a series of reaction and diffusion constant time steps.
+
+        :param total_duration:  The overall time advance (i.e. time_step * n_steps)
+        :param time_step:       The size of each constant time step
+        :param n_steps:         The desired number of constant steps
+        :param h:               Distance between consecutive bins in both the x- and y-directions
+                                    (for now, they must be equal)
+        :return:                None
+        """
+        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
+                                                             time_step=time_step,
+                                                             n_steps=n_steps)
+
+        for i in range(n_steps):
+            # TODO: split off the diffusion step and the reaction steps to different computing cores
+            self.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
+            self.diffuse_step(time_step, h=h)
+            # Merge into the concentrations of the various bins/chemical species pairs,
+            # the increments concentrations computed separately by the reaction and the diffusion steps
+            self.system += self.delta_reactions     # Matrix operation to update all the concentrations
+                                                    #   from the reactions
+            self.system += self.delta_diffusion     # Matrix operation to update all the concentrations
+                                                    #   from the diffusion
+            self.system_time += time_step
+
 
 
 
