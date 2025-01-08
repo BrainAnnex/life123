@@ -325,8 +325,8 @@ es_over = PlotlyHelper.plot_pandas(df=history_overest,
                          x_var="SYSTEM TIME", fields="ES", 
                          x_label="time", y_label="ES", colors = "purple")
 
- # %%
- PlotlyHelper.combine_plots([es_under, es_exact, es_over], 
+# %%
+PlotlyHelper.combine_plots([es_under, es_exact, es_over],
                             title="ES")
 
 # %% [markdown]
@@ -350,8 +350,8 @@ p_over = PlotlyHelper.plot_pandas(df=history_overest,
                          x_var="SYSTEM TIME", fields="P", 
                          x_label="time", y_label="P", colors = "purple")
 
- # %%
- PlotlyHelper.combine_plots([p_under, p_exact, p_over], 
+# %%
+PlotlyHelper.combine_plots([p_under, p_exact, p_over],
                             title="P")
 
 # %%
@@ -377,8 +377,8 @@ r1_over = PlotlyHelper.plot_pandas(df=rates_overest,
                          x_var="SYSTEM TIME", fields="rxn1_rate", 
                          x_label="time", y_label="dP/dt", colors = "purple")
 
- # %%
- PlotlyHelper.combine_plots([r1_under, r1_exact, r1_over], 
+# %%
+PlotlyHelper.combine_plots([r1_under, r1_exact, r1_over],
                             title="Reaction Rate")
 
 # %%

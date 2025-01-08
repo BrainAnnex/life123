@@ -492,7 +492,7 @@ def test_diffuse_4():
     f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
     assert f_at_t2.shape == (n_bins, )
 
-    # Computer the second spacial derivative, using 5-point stencils
+    # Computer the second spatial derivative, using 5-point stencils
     gradient_x_at_t2 = num.gradient_order4_1d(arr=f_at_t2, dx=delta_x)
     second_gradient_x_at_t2 = num.gradient_order4_1d(arr=gradient_x_at_t2, dx=delta_x)
     assert second_gradient_x_at_t2.shape == (n_bins, )
@@ -551,7 +551,7 @@ def test_diffuse_5():
     f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
     assert f_at_t2.shape == (n_bins, )
 
-    # Computer the second spacial derivative, using 5-point stencils
+    # Computer the second spatial derivative, using 5-point stencils
     gradient_x_at_t2 = num.gradient_order4_1d(arr=f_at_t2, dx=delta_x)
     second_gradient_x_at_t2 = num.gradient_order4_1d(arr=gradient_x_at_t2, dx=delta_x)
     assert second_gradient_x_at_t2.shape == (n_bins, )

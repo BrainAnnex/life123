@@ -601,7 +601,7 @@ def test_varying_spacial_resolution():
 
 
 
-def test_smooth_spacial_resolution():
+def test_smooth_spatial_resolution():
     chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_species_conc(species_name="A", conc_list=[10., 20., 30.])

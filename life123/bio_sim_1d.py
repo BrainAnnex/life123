@@ -653,7 +653,7 @@ class BioSim1D:
 
     def bin_concentration(self, bin_address: int, species_index=None, species_label=None, trans_membrane=False) -> float:
         """
-        Return the concentration at the requested bin of the specified species
+        Return the concentration at the requested bin of the specified chemical species
 
         :param bin_address:     The bin number
         :param species_index:   The index order of the chemical species of interest

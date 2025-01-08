@@ -16,7 +16,7 @@
 # # IN-PROGRESS
 
 # %% [markdown]
-# ### Reaction  `A + B <-> C`, mostly forward and with 1st-order kinetics for each species, taken to equilibrium
+# ### Reaction  `A + B <-> C` in 1-D, mostly forward and with 1st-order kinetics for each species, taken to equilibrium
 #
 # Initial concentrations of `A` and `B` are spacially separated to the opposite ends of the system;
 # as a result, no `C` is being generated.

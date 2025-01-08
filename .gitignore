@@ -132,3 +132,4 @@ dmypy.json
 
 # Project-specific
 /experiments/PRIVATE/
+/UNUSED.py

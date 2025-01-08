@@ -150,7 +150,7 @@ class PlotlyHelper:
     def plot_curves(cls, x, y, title="", range_x=None, x_label="", y_label="", curve_labels=None, legend_title=None,
                     colors=None, show=False) -> pgo.Figure:
         """
-        Plot one or more 2D curves
+        Plot one or more 2D curves.  If your data is a in a Pandas dataframe, consider using plot_pandas()
 
         :param x:           A Numpy array, with the (common) x-axis values
         :param y:           Either a Numpy array, or a list/tuple of them, with the y-axis values of the curve(s)
@@ -245,37 +245,37 @@ class PlotlyHelper:
         Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
 
         :param df:              Pandas dataframe with the data for the plot
-        :param x_var:           Name of column with independent variable for the x-axis
+        :param x_var:           Name of column with the independent variable for the x-axis
         :param fields:          Name, or list of names, of the dataframe columns whose values are to be plotted;
                                     if a list is passed, also display a figure legend;
-                                    if None, then display all columns except the one that is declared as the independent variable
-        :param colors:          (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
+                                    if None, then display all columns except the one that was declared as the independent variable
+        :param colors:          [OPTIONAL] Either a single color (string with standard plotly name, such as "red"),
                                     or list of names to use, in order; some of the entries may be None.
                                     If None, then the hardwired default colors are used
-        :param title:           (OPTIONAL) Title for the plot
-        :param title_prefix:    (OPTIONAL) Strint to prefixed (automatically followed by " <br>") to the title
-        :param range_x:         (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
+        :param title:           [OPTIONAL] Title for the plot
+        :param title_prefix:    [OPTIONAL] String to prefix (automatically followed by " <br>") to the title
+        :param range_x:         [OPTIONAL] list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param range_y:         (OPTIONAL) list of the form [y_min, y_max], to initially show only a part of the y values.
+        :param range_y:         [OPTIONAL] list of the form [y_min, y_max], to initially show only a part of the y values.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param x_label:         (OPTIONAL) Caption to use for the x-axis
-        :param y_label:         (OPTIONAL) Caption to use for the y-axis.  Default: "Y"
-        :param legend_header:   (OPTIONAL) Caption to use at the top of the legend box.
+        :param x_label:         [OPTIONAL] Caption to use for the x-axis
+        :param y_label:         [OPTIONAL] Caption to use for the y-axis.  Default: "Y"
+        :param legend_header:   [OPTIONAL] Caption to use at the top of the legend box.
                                             Only applicable if more than 1 curve is being shown.
-        :param vertical_lines_to_add:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
+        :param vertical_lines_to_add:  [OPTIONAL] Ignored if the argument `show_intervals` is specified.
                                     Value, or list, or tuple, or Numpy array, or Pandas series,
                                     of x-coordinate(s) at which to draw thin vertical dotted gray lines.
                                     If the number of vertical line is so large as to overwhelm the plot,
                                     only a sample of them is shown.
                                     Note that vertical lines, if requested, go into the plot's "layout";
                                     as a result they might not appear if this plot is later combined with another one.
-        :param show_intervals:  (OPTIONAL) If True, it over-rides any value passed to the `vertical_lines` argument,
+        :param show_intervals:  [OPTIONAL] If True, it over-rides any value passed to the `vertical_lines` argument,
                                     and draws thin vertical dotted gray lines at all the x-coords
                                     of the data points in the saved history data;
                                     also, it adds a comment to the title.
         :param show:            If True, the plot will be shown
                                     Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
-                                          leads to it being automatically shown
+                                          gets it automatically shown
 
         :return:                A plotly "Figure" object
         """

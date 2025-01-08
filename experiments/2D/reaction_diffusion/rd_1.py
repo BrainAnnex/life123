@@ -26,13 +26,13 @@
 # Note: This is a 2D version of the 1D experiment by the same name.
 
 # %% [markdown]
-# # TODO: 1) respect declared plot colors in the heatmaps  ; 2) show plots of varying concentrations at individual bins
+# # TODO: 1) respect declared plot colors in the heatmaps
 
 # %% [markdown]
 # ### TAGS :  "reactions 2D", "diffusion 2D"
 
 # %%
-LAST_REVISED = "Jan. 3, 2025"
+LAST_REVISED = "Jan. 7, 2025"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
@@ -43,7 +43,7 @@ LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
-from life123 import check_version, BioSim2D, ChemData, UniformCompartment
+from life123 import check_version, BioSim2D, ChemData, UniformCompartment, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
@@ -78,6 +78,27 @@ bio.describe_state()
 # %%
 bio.system_heatmaps()
 
+# %% [markdown]
+# ## Enable History
+
+# %%
+
+# %%
+# Let's take a peek at the current concentrations of all chemicals in the bin with the initial concentration injections, as well as at the bin in the very center
+bio.selected_concentrations(bins=[(0,0), (6,6), (3,3)])
+
+# %%
+
+# %%
+# Let's enable history for those 3 bins
+bio.enable_history(bins=[(0,0), (6,6), (3,3)])
+
+# %%
+# Enabling history has the effect of taking a snapshot; let's take a look at it
+bio.conc_history.history.get_collection()
+
+# %%
+
 # %%
 
 # %% [markdown] tags=[]
@@ -91,9 +112,24 @@ bio.describe_state()
 bio.system_heatmaps()
 
 # %%
+# Let's take a peek at the history saved so far; we'll plot it at the end
+# Each list entry is a triplet of the form (time, data, caption)     Note: this is a low-level data structure, typically not directly interacted with by the end user
+bio.conc_history.history.get_collection()
+
+# %%
+# A more readable extraction of the historical data in one of the corner bins
+bio.conc_history.bin_history(bin_address = (0,0))
+
+# %%
+# And in the central bin
+bio.conc_history.bin_history(bin_address = (3,3))
+
+# %%
+
+# %%
 
 # %% [markdown]
-# ### Part 2 : continue advancing the simulation, with occasional visualization of system snapsthots
+# ### Part 2 : continue advancing the simulation, with occasional visualization of system snapshots as heatmaps
 
 # %%
 # Continue with a few larger steps
@@ -104,8 +140,10 @@ for _ in range(5):
 
 # %%
 
+# %%
+
 # %% [markdown]
-# ### Part 3 : advance to equilibrium
+# ### Part 3 : advance the diffusion/reaction to equilibrium
 
 # %%
 # Continue with a more even larger steps steps
@@ -113,5 +151,29 @@ for _ in range(5):
     bio.react_diffuse(total_duration=0.3, n_steps=500)
     fig = bio.system_heatmaps()
     fig.show()
+
+# %%
+
+# %%
+# The number of historical snapshots we have accumulated
+len(bio.conc_history.history)
+
+# %%
+
+# %%
+# Let's plot the concentration histories of all chemicals in the central bin
+df = bio.conc_history.bin_history(bin_address = (3,3))
+df
+
+# %%
+PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME")
+
+# %%
+# And in one of the corner bins
+df = bio.conc_history.bin_history(bin_address = (0,0))
+df
+
+# %%
+PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME")
 
 # %%

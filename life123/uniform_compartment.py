@@ -13,6 +13,7 @@ from life123.collections import CollectionTabular
 from life123.numerical import Numerical
 from life123.reactions import Reactions
 from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
+from life123.history import HistoryManagerUniformConcentration
 from life123.visualization.plotly_helper import PlotlyHelper
 
 
@@ -120,10 +121,13 @@ class UniformCompartment:
                                         #   Format: a Pandas data frame, with columns: 'SYSTEM TIME', 'A', 'B', ..., 'caption'
                                         #           where 'A', 'B', ... are all the registered chemical labels
 
+        #self.conc_history = HistoryManagerUniformConcentration(active=True)
+
         self.system_rxn_rates = {}      # Keys are the reaction indexes.  Reaction rates for the last (current) step of all reactions
                                         # EXAMPLE: {0: 0.42, 1: 4.26}
 
         self.rate_history = CollectionTabular()  # Format: a Pandas data frame, with columns: 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
+        #self.rate_history = HistoryManagerReactionRate(active=True)
 
         self.log_file = None
 
@@ -567,6 +571,7 @@ class UniformCompartment:
                                     Take a snapshot of the system state after running a multiple
                                     of "frequency" reaction steps
                                     EXAMPLE: snapshots={"frequency": 2, "species": ["A", "H"]}
+                                    Note: Currently, there's no way to completely disable snapshots, other than to request a very high value for "frequency"
 
         :param silent:              If True, less output is generated
 
@@ -641,6 +646,7 @@ class UniformCompartment:
 
         if snapshots:
             # If any value is missing, use its default one
+            # TODO: currently, there's no way to completely disable snapshots, other than request a very high value for "frequency"
             capture_frequency = snapshots.get("frequency", capture_frequency)
             capture_species = snapshots.get("species", capture_species)
             capture_initial_caption = snapshots.get("initial_caption", capture_initial_caption)
@@ -716,11 +722,15 @@ class UniformCompartment:
             # Preserve the RATES data, as requested (part1, BEFORE updating the System Time, because reaction rates are
             # based on the start time of the simulation step)
             #if (capture_frequency == 1) or first_snapshot or ((step_count+1)%capture_frequency == 1):
+
+            # TODO: try the new History method, below
+            #self.rate_history.to_capture(step_count=step_count)
             if (step_count == 0) or (step_count == step_of_last_snapshot + 1):
                 rxn_rates_snapshot = {}
                 for k, v in self.system_rxn_rates.items():
                     rxn_rates_snapshot[f"rxn{k}_rate"] = v      # EXAMPLE:  "rxn4_rate" = 18.2
 
+                # TODO: currently, there's no way to disable this snapshot, even if snapshots aren't desired
                 self.rate_history.store(par=self.system_time, data_snapshot=rxn_rates_snapshot, caption=None)
 
 
@@ -730,6 +740,11 @@ class UniformCompartment:
 
             # Preserve the CONCENTRATION data, as requested (part2, AFTER updating the System Time, because current concentrations
             # refer to the System Time, just updated at the end of the simulation step)
+
+            # TODO: try the new History method, below
+            # Save historical values (if enabled)
+            #self.conc_history.capture_snapshot(step_count=step_count, capture_initial_caption=capture_initial_caption)
+
             if (step_count+1)%capture_frequency == 0:
                 if first_snapshot and capture_initial_caption and (step_count == 0):
                     self.add_snapshot(species=capture_species, caption=capture_initial_caption)
@@ -737,6 +752,7 @@ class UniformCompartment:
                 else:
                     self.add_snapshot(species=capture_species)
                 step_of_last_snapshot = step_count
+            # TODO: end of part to change
 
 
             step_count += 1
@@ -794,12 +810,18 @@ class UniformCompartment:
                 print(f"System Time is now: {self.system_time:,.5g}")
 
 
-        # One final snapshot, unless already taken for the current step
+        # One final snapshot, unless already taken for the last step done
+        # TODO: try the new History method, below
+        #self.conc_history.capture_snapshot(step_count=step_count-1)
+        # Add a caption to the very last entry in the system history
+        #self.conc_history.add_caption_to_last_snapshot(capture_final_caption)
+
         if step_count != step_of_last_snapshot + 1:
             self.add_snapshot(species=capture_species)
 
         if capture_final_caption:
             self.history.set_caption_last_snapshot(capture_final_caption)   # Add a caption to the very last entry in the system history
+        # TODO: end of part to change
 
 
 
@@ -1747,6 +1769,10 @@ class UniformCompartment:
                                 index of the chemical species; by default, use the SYSTEM DATA
         :return:            None
         """
+        #TODO: the main responsibility of this function is being shifted to the new History module
+        #self.conc_history(species=species, caption=caption, system_data=system_data)
+        #return
+
         data_snapshot = self.get_conc_dict(species=species, system_data=system_data)    # This will be a dict
                                                                                         # EXAMPLE : {"A": 1.3, "B": 4.9}
 
@@ -1823,7 +1849,9 @@ class UniformCompartment:
         """
         #TODO: allow searches also for columns other than "SYSTEM TIME"
 
-        # Note self.history is an object of class MovieTabular
+        # Note self.history is an object of class CollectionTabular
+
+        # TODO: replace self.history.get_dataframe() with self.conc_history.history.get_dataframe()
         df = self.history.get_dataframe(head=head, tail=tail, search_val=t,
                                         search_col="SYSTEM TIME", val_start=t_start, val_end=t_end)
 

@@ -4,6 +4,7 @@ from typing import Union
 import plotly.express as px
 import plotly.graph_objects as pgo
 from life123.uniform_compartment import UniformCompartment
+from life123.history import HistoryManagerBinConcentration
 from life123.visualization.plotly_helper import PlotlyHelper
 
 
@@ -52,6 +53,8 @@ class BioSim2D:
         self.system_time = None              # Global time of the system, from initialization on
 
         self._initialize_system(n_bins=n_bins, chem_data=chem_data, reaction_handler=reaction_handler)
+
+        self.conc_history = HistoryManagerBinConcentration(active=False)
 
 
 
@@ -115,7 +118,7 @@ class BioSim2D:
 
     '''                                    ~   VIEW/UPDATE SYSTEM   ~                                           '''
 
-    def ________VIEW_UPDATE_SYSTEM________(DIVIDER):
+    def ________VIEW_SYSTEM________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
@@ -127,6 +130,11 @@ class BioSim2D:
         :return:    The pair (x-dimension, y-dimension)
         """
         return (self.n_bins_x, self.n_bins_y)
+
+
+
+    def get_system_time(self):
+        return self.system_time
 
 
 
@@ -142,7 +150,7 @@ class BioSim2D:
     def system_snapshot_array(self, chem_label=None, chem_index=None) -> np.ndarray:
         """
         Return a snapshot of all the concentrations of the given chemical species, or all of them,
-        across all bins, as a Numpy array.
+        across ALL BINS, as a Numpy array.
         If a Pandas dataframe is desired, for a single chemical, use system_snapshot()
 
         :param chem_label:  String with the label to identify the chemical of interest
@@ -168,7 +176,7 @@ class BioSim2D:
 
     def system_snapshot(self, chem_label=None, chem_index=None) -> pd.DataFrame:
         """
-        Return a snapshot of all the concentrations of the given chemical species, across all bins,
+        Return a snapshot of all the concentrations of the given chemical species, across ALL BINS,
         as a Pandas dataframe
 
         :param chem_label:  String with the label to identify the chemical of interest
@@ -194,30 +202,147 @@ class BioSim2D:
 
 
 
-    def check_mass_conservation(self, expected :float, chem_label=None, chem_index=None) -> bool:
+    def bin_concentration(self, bin_address: (int, int), species_index=None, species_label=None) -> float:
         """
-        Check whether the sum of all the concentrations of the specified chemical,
-        across all bins, adds up to the passed value
+        Return the concentration at the requested bin of the specified chemical species
 
-        :param expected:
-        :param chem_label:  String with the label to identify the chemical of interest
-        :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
-
-        :return:
+        :param bin_address:     A pair of integers identifying the bin of interest
+        :param species_index:   The index order of the chemical species of interest
+        :param species_label:   [OPTIONAL] If provided, it over-rides the value for species_index
+        :return:                A concentration value at the indicated bin, for the requested species
         """
-        arr = self.system_snapshot_array(chem_label=chem_label, chem_index=chem_index)
-        total = np.sum(arr)
-        return np.allclose(expected, total)
+        if species_label is not None:
+            species_index = self.chem_data.get_index(species_label)
+
+        self.chem_data.assert_valid_species_index(species_index)
+
+        xbin, ybin = bin_address
+
+        return self.system[species_index, xbin, ybin]
+
+
+
+    def describe_state(self, concise=False) -> None:
+        """
+        For each chemical species, show its name (or index, if name is missing),
+        followed by the matrix of concentrations values for that chemical
+
+        :param concise:     Not yet used
+        :return:            None
+        """
+        #np.set_printoptions(linewidth=125)
+        print(f"SYSTEM STATE at Time t = {self.system_time:.8g}:")
+        for species_index in range(self.n_species):
+            chem_name = self.chem_data.get_label(species_index)
+            if chem_name is None:
+                print(f"Species {species_index}:")      # Use the index, if the name isn't available
+            else:
+                print(f"Species `{chem_name}`:")
+
+            #print(self.system[species_index])
+            print(self.system_snapshot(chem_index=species_index))
+
+
+
+    def lookup_species(self, species_index=None, species_name=None, copy=False) -> np.array:
+        """
+        Return the NumPy array of concentration values across ALL THE BINS
+        (from top to bottom, and then left to right),
+        for the single specified chemical species.
+        NOTE: what is being returned NOT a copy, unless specifically requested
+
+        :param species_index:   The index order of the chemical species of interest
+        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
+        :param copy:            If True, an independent numpy array will be returned: a *copy* rather than a view
+        :return:                A NumPy 2-D array of concentration values across the bins
+                                    (from top to bottom, and then left to right);
+                                    the size of the array is (n_bins_y x n_bins_x)
+        """
+        if species_name is not None:
+            species_index = self.chem_data.get_index(species_name)
+        else:
+            self.chem_data.assert_valid_species_index(species_index)
+
+        species_conc = self.system[species_index]
+
+        if copy:
+            return species_conc.copy()
+        else:
+            return species_conc
+
+
+
+    def bin_snapshot_array(self, bin_address: (int, int)) -> np.array:
+        """
+        Extract the concentrations of all the chemical species at the specified bin,
+        as a Numpy array in the index order of the species
+        EXAMPLE: np.array([10., 50.)]
+
+        :param bin_address:     A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
+        :return:                A Numpy array  of concentration values, in the index order of the species
+        """
+        bin_x, bin_y = bin_address      # Unpack the bin address
+
+        return self.system[:, bin_x, bin_y]
+
+
+
+    def selected_concentrations(self, bins, labels=None) -> dict:
+        """
+        Extract and return the concentration values of one or more (use None for all) chemicals,
+        in one or more bins.
+        The value is returned as a dictionary where the keys are bin addresses, and the values are dicts of
+        concentration values for the various chemicals (identified by their labels)
+            EXAMPLE:
+                    {   (0,0): {"A": 1.3, "B": 3.9},
+                        (3,5): {"A": 4.6, "B": 2.7}
+                    }
+
+            TODO: alternate returned structure - a Pandas dataframe such as
+                    BIN ADDRESS      A       B
+                        (0,0)       1.3     3.9
+                        (3,5)       4.6     2.7
+
+        :param bins:    Bin address (pair of integers), or list of bin addresses
+        :param labels:  Chemical label, or list of labels.  If None then it's all of them
+        :return:        A dict indexed by bin address
+        """
+        if type(bins) != list:
+            bins = [bins]
+
+        if labels is None:
+            labels = self.chem_data.get_all_labels()
+        elif type(labels) != list:
+            labels = [labels]
+
+        result = {}
+        for bin_address in bins:
+            bin_values = {}
+            for chem_label in labels:
+                conc = self.bin_concentration(bin_address=bin_address, species_label=chem_label)
+                bin_values[chem_label] = conc
+
+            result[bin_address] = bin_values
+
+        return result
 
 
 
 
 
-    #########################################################################
-    #                                                                       #
-    #                     SET/MODIFY CONCENTRATIONS                         #
-    #                                                                       #
-    #########################################################################
+    #####################################################################################################
+
+    '''                                    ~   VIEW/UPDATE SYSTEM   ~                                           '''
+
+    def ________UPDATE_SYSTEM________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
+
+
+
+
 
     def set_bin_conc(self, bin_x: int, bin_y: int, chem_label :str, conc: float) -> None:
         """
@@ -338,75 +463,67 @@ class BioSim2D:
 
 
 
-    #########################################################################
-    #                                                                       #
-    #                              TO VIEW                                  #
-    #                                                                       #
-    #########################################################################
+    #####################################################################################################
 
-    def describe_state(self, concise=False) -> None:
+    '''                                    ~   VIEW/UPDATE SYSTEM   ~                                           '''
+
+    def ________UTILITIES________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def check_mass_conservation(self, expected :float, chem_label=None, chem_index=None) -> bool:
         """
-        For each chemical species, show its name (or index, if name is missing),
-        followed by the matrix of concentrations values for that chemical
+        Check whether the sum of all the concentrations of the specified chemical,
+        across all bins, adds up to the passed value
 
-        :param concise:     Not yet used
+        :param expected:
+        :param chem_label:  String with the label to identify the chemical of interest
+        :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
+
+        :return:
+        """
+        arr = self.system_snapshot_array(chem_label=chem_label, chem_index=chem_index)
+        total = np.sum(arr)
+        return np.allclose(expected, total)
+
+
+
+    def enable_history(self, bins=None, frequency=1, labels=None, take_snapshot=True) -> None:
+        """
+
+        :param bins:
+        :param frequency:
+        :param labels:
+        :param take_snapshot:   If True, a snapshot of the system's current configuration is added to the history
+
+        :return:
+        """
+        self.conc_history.enable_history(frequency=frequency, chem_labels=labels, bins=bins)
+        if take_snapshot:
+            self.capture_snapshot()
+
+
+
+    def capture_snapshot(self, step_count=None) -> None:
+        """
+
+        :param step_count:
         :return:            None
         """
-        #np.set_printoptions(linewidth=125)
-        print(f"SYSTEM STATE at Time t = {self.system_time:.8g}:")
-        for species_index in range(self.n_species):
-            chem_name = self.chem_data.get_label(species_index)
-            if chem_name is None:
-                print(f"Species {species_index}:")      # Use the index, if the name isn't available
-            else:
-                print(f"Species `{chem_name}`:")
+        if not self.conc_history.to_capture(step_count):
+            return
 
-            #print(self.system[species_index])
-            print(self.system_snapshot(chem_index=species_index))
+        data_snapshot = self.selected_concentrations(bins=self.conc_history.restrict_bins,
+                                                     labels=self.conc_history.restrict_chemicals)
+        '''
+           EXAMPLE of data_snapshot:
+                { (0,0): {"A": 1.3, "B": 3.9},
+                  (3,5): {"A": 4.6, "B": 2.7}
+                }        
+        '''
+        self.conc_history.save_snapshot(step_count=step_count, system_time=self.system_time,
+                                        data_snapshot=data_snapshot)
 
-
-
-    def lookup_species(self, species_index=None, species_name=None, copy=False) -> np.array:
-        """
-        Return the NumPy array of concentration values across the all bins
-        (from top to bottom, and then left to right),
-        for the single specified chemical species.
-        NOTE: what is being returned NOT a copy, unless specifically requested
-
-        :param species_index:   The index order of the chemical species of interest
-        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
-        :param copy:            If True, an independent numpy array will be returned: a *copy* rather than a view
-        :return:                A NumPy 2-D array of concentration values across the bins
-                                    (from top to bottom, and then left to right);
-                                    the size of the array is (n_bins_y x n_bins_x)
-        """
-        if species_name is not None:
-            species_index = self.chem_data.get_index(species_name)
-        else:
-            self.chem_data.assert_valid_species_index(species_index)
-
-        species_conc = self.system[species_index]
-
-        if copy:
-            return species_conc.copy()
-        else:
-            return species_conc
-
-
-
-    def bin_snapshot_array(self, bin_address: (int, int)) -> np.array:
-        """
-        Extract the concentrations of all the chemical species at the specified bin,
-        as a Numpy array in the index order of the species
-        EXAMPLE: np.array([10., 50.)]
-
-        :param bin_address:     A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
-        :return:                A Numpy array  of concentration values, in the index order of the species
-        """
-        bin_x, bin_y = bin_address      # Unpack the bin address
-
-
-        return self.system[:, bin_x, bin_y]
 
 
 
@@ -719,6 +836,7 @@ class BioSim2D:
                                                     #   from the diffusion
             self.system_time += time_step
 
+            self.capture_snapshot(step_count=i)     # Save historical values (if enabled)
 
 
 
