@@ -116,20 +116,15 @@ class UniformCompartment:
 
                                     # For background, see: https://www.annualreviews.org/doi/10.1146/annurev-cellbio-100617-062719
 
-        #self.history = CollectionTabular()   # To store user-selected snapshots of (some of) the chemical concentrations,
-                                        #   whenever requested by the user
-                                        #   Format: a Pandas data frame, with columns: 'SYSTEM TIME', 'A', 'B', ..., 'caption'
-                                        #           where 'A', 'B', ... are all the registered chemical labels
 
-        self.conc_history = HistoryUniformConcentration(active=True)    # To store user-selected snapshots of (some of) the chemical concentrations
+        self.conc_history = HistoryUniformConcentration(active=True)    # Object used to store user-selected snapshots
+                                                                        # of (some of) the chemical concentrations
 
         self.system_rxn_rates = {}      # Keys are the reaction indexes.  Reaction rates for the last (current) step of all reactions
                                         # EXAMPLE: {0: 0.42, 1: 4.26}
 
         self.rate_history = CollectionTabular()  # Format: a Pandas data frame, with columns: 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
-        #self.rate_history = HistoryManagerReactionRate(active=True)
-
-        self.log_file = None
+        #self.rate_history = HistoryManagerReactionRate(active=True)    # TODO
 
 
         # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
@@ -219,7 +214,6 @@ class UniformCompartment:
                 self.set_single_conc(conc=conc_value, species_name=name, snapshot=False)
 
         if snapshot:
-            #self.add_snapshot(caption="Set concentration")      # TODO: take out
             self.capture_snapshot(caption="Set concentration")  # Save this operation in the history (if enabled)
 
         if self.diagnostics_enabled:
@@ -266,7 +260,6 @@ class UniformCompartment:
 
         if snapshot:
             # Save this operation in the history (if enabled)
-            #self.add_snapshot(caption=f"Set concentration of `{self.chem_data.get_label(species_index)}`")  # TODO: take out
             self.capture_snapshot(caption=f"Set concentration of `{self.chem_data.get_label(species_index)}`")
 
 
@@ -338,45 +331,6 @@ class UniformCompartment:
 
 
 
-    '''
-    ***  Management of reactions  ***
-    '''
-
-    def get_reactions(self):
-        """
-        Return all the reactions associated to this Uniform Compartment
-
-        :return:    Object ot type "Reactions" (with data about all the reactions)
-        """
-        return self.reactions
-
-
-    def get_single_reaction(self, i :int):
-        """
-        Return a single reaction, specified by its index
-
-        :param i:   Integer index of the desired reaction
-        :return:    Object of type "ReactionGeneric"
-        """
-        return self.reactions.get_reaction(i)
-
-
-
-    def clear_reactions(self) -> None:
-        """
-        Get rid of all reactions; start again with "an empty slate" (but still with reference
-        to the same data object about the chemicals)
-
-        # TODO: maybe offer an option to clear just one reaction, or a list of them
-        # TODO: provide support for "inactivating" reactions
-
-        :return:    None
-        """
-        self.reactions.clear_reactions_data()
-
-
-
-
 
     #####################################################################################################
 
@@ -431,11 +385,46 @@ class UniformCompartment:
 
     #####################################################################################################
 
-    '''                          ~  TO SET/DESCRIBE THE REACTIONS  ~                                  '''
+    '''                             ~  MANAGEMENT OF REACTIONS  ~                                     '''
 
-    def ________TO_SET_AND_DESCRIBE_REACTIONS________(DIVIDER):
+    def ________MANAGE_REACTIONS________(DIVIDER):
         pass         # Used to get a better structure view in IDEs such asPycharm
     #####################################################################################################
+
+
+    def get_reactions(self):
+        """
+        Return all the reactions associated to this Uniform Compartment
+
+        :return:    Object ot type "Reactions" (with data about all the reactions)
+        """
+        return self.reactions
+
+
+
+    def get_single_reaction(self, i :int):
+        """
+        Return a single reaction, specified by its index
+
+        :param i:   Integer index of the desired reaction
+        :return:    Object of type "ReactionGeneric"
+        """
+        return self.reactions.get_reaction(i)
+
+
+
+    def clear_reactions(self) -> None:
+        """
+        Get rid of all reactions; start again with "an empty slate" (but still with reference
+        to the same data object about the chemicals)
+
+        # TODO: maybe offer an option to clear just one reaction, or a list of them
+        # TODO: provide support for "inactivating" reactions
+
+        :return:    None
+        """
+        self.reactions.clear_reactions_data()
+
 
 
     def add_reaction(self, **kwargs) -> int:
@@ -535,7 +524,7 @@ class UniformCompartment:
 
     def single_compartment_react(self, duration=None, target_end_time=None, stop=None,
                                  initial_step=None, n_steps=None, max_steps=None,
-                                 snapshots=None, silent=False,
+                                 silent=False,
                                  variable_steps=True, explain_variable_steps=None, report_interval=0.5) -> None:
         """
         Perform ALL the (previously-registered) reactions in the single compartment -
@@ -566,27 +555,21 @@ class UniformCompartment:
 
         :param max_steps:       [OPTIONAL] Max numbers of steps; if reached, it'll terminate regardless of any other criteria
 
-        :param snapshots:       [OPTIONAL] Dict that may contain any the following keys:
-                                        -"frequency" (default 1, meaning at every step)
-                                        -"species" (default None, meaning all species; optionally, provide a list of chemical labels)
-                                        -"initial_caption" (default: "1st reaction step")
-                                        -"final_caption" (default: "last reaction step")
-                                    Take a snapshot of the system state after running a multiple
-                                    of "frequency" reaction steps
-                                    EXAMPLE: snapshots={"frequency": 2, "species": ["A", "H"]}
-                                    Note: Currently, there's no way to completely disable snapshots, other than to request a very high value for "frequency"
-
-        :param silent:              If True, less output is generated
+        :param silent:                  If True, less output is generated
 
         :param variable_steps:          [OPTIONAL] If True (default), the steps sizes will get automatically adjusted, based on thresholds
         :param explain_variable_steps:  [OPTIONAL] If not None, a brief explanation is printed about how the variable step sizes were chosen,
                                             when the System time inside that range;
                                             only applicable if variable_steps is True
-        :param report_interval:     [OPTIONAL] How frequently, in terms of elapsed running time, in minutes,
-                                        to inform the user of the current status
+        :param report_interval:         [OPTIONAL] How frequently, in terms of elapsed running time, in minutes,
+                                            to inform the user of the current status
 
         :return:                None.   The object attributes self.system and self.system_time get updated
         """
+
+        # Default values
+        capture_initial_caption = "1st reaction step"
+        capture_final_caption = "last reaction step"
 
         # Validation
         assert self.system is not None, "UniformCompartment.single_compartment_react(): " \
@@ -638,22 +621,6 @@ class UniformCompartment:
                     target_end_time = self.system_time + duration
                 else:
                     target_end_time = self.system_time + time_step * n_steps
-
-        first_snapshot = True
-
-        # Default values
-        capture_frequency = 1
-        capture_species = None
-        capture_initial_caption = "1st reaction step"
-        capture_final_caption = "last reaction step"
-
-        if snapshots:
-            # If any value is missing, use its default one
-            # TODO: currently, there's no way to completely disable snapshots, other than request a very high value for "frequency"
-            capture_frequency = snapshots.get("frequency", capture_frequency)
-            capture_species = snapshots.get("species", capture_species)
-            capture_initial_caption = snapshots.get("initial_caption", capture_initial_caption)
-            capture_final_caption = snapshots.get("final_caption", capture_final_caption)
 
 
         step_count = 0
@@ -724,7 +691,6 @@ class UniformCompartment:
 
             # Preserve the RATES data, as requested (part1, BEFORE updating the System Time, because reaction rates are
             # based on the start time of the simulation step)
-            #if (capture_frequency == 1) or first_snapshot or ((step_count+1)%capture_frequency == 1):
 
             # TODO: try the new History method, below
             #self.rate_history.to_capture(step_count=step_count)
@@ -744,21 +710,8 @@ class UniformCompartment:
             # Preserve the CONCENTRATION data, as requested (part2, AFTER updating the System Time, because current concentrations
             # refer to the System Time, just updated at the end of the simulation step)
 
-            # TODO: try the new History method, below
             # Save historical values (if enabled)
-            self.capture_snapshot(step_count=step_count, initial_caption=capture_initial_caption)     # TODO: new method, to supplant old one
-
-            # TODO: start of part to ditch
-            '''
-            if (step_count+1)%capture_frequency == 0:
-                if first_snapshot and capture_initial_caption and (step_count == 0):
-                    self.add_snapshot(species=capture_species, caption=capture_initial_caption)
-                    first_snapshot = False
-                else:
-                    self.add_snapshot(species=capture_species)
-                step_of_last_snapshot = step_count
-            '''
-            # TODO: end of part to ditch
+            self.capture_snapshot(step_count=step_count, initial_caption=capture_initial_caption)
 
 
             step_count += 1
@@ -817,19 +770,10 @@ class UniformCompartment:
 
 
         # One final snapshot, unless already taken for the last step done
-        self.capture_snapshot(step_count=step_count-1, caption=capture_final_caption)     # TODO: new method, to supplant old one
-
-        # TODO: ditch
-        #if step_count != step_of_last_snapshot + 1:
-            #self.add_snapshot(species=capture_species)
+        self.capture_snapshot(step_count=step_count-1, caption=capture_final_caption)
 
         # Add a caption to the very last entry in the system history
         self.conc_history.set_caption_last_snapshot(capture_final_caption)
-
-        # TODO: ditch
-        #if capture_final_caption:
-            #self.history.set_caption_last_snapshot(capture_final_caption)   # Add a caption to the very last entry in the system history
-        # TODO: end of part to change
 
 
 
@@ -1783,59 +1727,6 @@ class UniformCompartment:
 
 
 
-    def add_snapshot_OBSOLETE(self, species=None, caption="", system_data=None) -> None:
-        """
-        Preserve some or all the chemical concentrations into the system history,
-        linked to the current System Time,
-        with an optional caption.
-
-        EXAMPLES:   add_snapshot()
-                    add_snapshot(species=['A', 'B']), caption="Just prior to infusion")
-
-        :param species:     [OPTIONAL] list of name of the chemical species whose concentrations we want to preserve for later use.
-                                If not specified, save all
-        :param caption:     [OPTIONAL] caption to attach to this preserved data
-        :param system_data: [OPTIONAL] a Numpy array of concentration values, in the same order as the
-                                index of the chemical species; by default, use the SYSTEM DATA
-        :return:            None
-        """
-        #TODO: the main responsibility of this function is being shifted to the new History module
-        #self.conc_history(species=species, caption=caption, system_data=system_data)
-        #return
-
-        data_snapshot = self.get_conc_dict(species=species, system_data=system_data)    # This will be a dict
-                                                                                        # EXAMPLE : {"A": 1.3, "B": 4.9}
-
-        self.history.store(par=self.system_time,
-                           data_snapshot=data_snapshot, caption=caption)
-
-        if self.log_file is None:
-            return
-
-
-        # If we get thus far, we have a log file to manage
-        if os.path.exists(self.log_file):
-            new_file = False
-        else:
-            new_file = True
-
-        # Open a CSV file in write mode
-        with open(self.log_file, mode="a", newline="") as fh:
-            fieldnames = ["SYSTEM TIME"] + list(data_snapshot.keys()) + ["caption"]
-            writer = csv.DictWriter(fh, fieldnames = fieldnames)
-
-            data_snapshot["SYSTEM TIME"] = self.system_time
-            data_snapshot["caption"] = caption
-
-            # Write the header (only of a newly-created file)
-            if new_file:
-                writer.writeheader()
-
-            # Write the dictionary as a row
-            writer.writerow(data_snapshot)
-
-
-
     def start_csv_log(self, log_file :str) -> None:
         """
         Register the specified filename for all future CSV logs.
@@ -1844,14 +1735,7 @@ class UniformCompartment:
         :param log_file:Name of a file to use for the CSV logs
         :return:        None
         """
-        # TODO: validate log_file
-        self.log_file = log_file
-
-        if os.path.exists(log_file):
-            os.remove(log_file)
-            print(f"-> CSV-format output will be LOGGED into the file '{log_file}' . An existing file by that name was over-written")
-        else:
-            print(f"-> CSV-format output will be LOGGED into the file '{log_file}'")
+        self.conc_history.start_csv_log(log_file)
 
 
 

@@ -7,7 +7,7 @@ from life123.collections import CollectionTabular, Collection
 
 class History:
 
-    def __init__(self, active=False, chem_labels=None, frequency=1):      # obj
+    def __init__(self, active=False, chem_labels=None, frequency=1):
         """
         For the management of historical data
 
@@ -96,13 +96,39 @@ class History:
 
 
 
+    def save_snapshot_common(self, system_time, data_snapshot, step_count=None, caption="", initial_caption="") -> str:
+        """
+
+        :param system_time:
+        :param data_snapshot:   EXAMPLE: {"A": 1.3, "B": 4.9}
+        :param step_count:
+        :param caption:         [OPTIONAL] String to save alongside this snapshot
+        :param initial_caption:
+        :return:                The caption that was actually used
+        """
+        if not self.to_capture(step_count):
+            return ""
+
+        if (not caption) and initial_caption and (step_count == 0):
+            caption = initial_caption
+
+        self.history.store(par=system_time,
+                           data_snapshot=data_snapshot, caption=caption)
+
+        if step_count is not None:
+            self.step_of_last_snapshot = step_count
+
+        return caption
+
+
+
     def set_caption_last_snapshot(self, caption) -> None:
         """
         Add a caption to the very last entry in the system history.
         No action taken is caption is None
 
         :param caption:
-        :return:
+        :return:        None
         """
         if caption is not None:
             self.history.set_caption_last_snapshot(caption)
@@ -142,22 +168,13 @@ class HistoryUniformConcentration(History):
         :param data_snapshot:   EXAMPLE: {"A": 1.3, "B": 4.9}
         :param step_count:
         :param caption:         [OPTIONAL] String to save alongside this snapshot
+        :param initial_caption:
         :return:                None
         """
-        if not self.to_capture(step_count):
-            return
+        caption = self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
+                                            caption=caption, initial_caption=initial_caption)
 
-        if (not caption) and initial_caption and (step_count == 0):
-            caption = initial_caption
-
-        self.history.store(par=system_time,
-                           data_snapshot=data_snapshot, caption=caption)
-
-        if step_count is not None:
-            self.step_of_last_snapshot = step_count
-
-
-        if self.log_file is None:
+        if (self.log_file is None) or (not self.to_capture(step_count)):
             return
 
         # If we get thus far, we have a log file to manage
@@ -209,7 +226,7 @@ class HistoryBinConcentration(History):
 
 
 
-    def save_snapshot(self, system_time, data_snapshot, step_count=None) -> None:
+    def save_snapshot(self, system_time, data_snapshot, step_count=None, caption="", initial_caption="") -> None:
         """
 
            EXAMPLE of data_snapshot:
@@ -219,16 +236,12 @@ class HistoryBinConcentration(History):
         :param system_time:
         :param data_snapshot:
         :param step_count:
-        :return:            None
+        :param caption:         [OPTIONAL] String to save alongside this snapshot
+        :param initial_caption:
+        :return:                None
         """
-        if not self.to_capture(step_count):
-            return
-
-        self.history.store(par=system_time,
-                           data_snapshot=data_snapshot)
-
-        if step_count is not None:
-            self.step_of_last_snapshot = step_count
+        self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
+                                  caption=caption, initial_caption=initial_caption)
 
 
 
@@ -297,6 +310,24 @@ class HistoryReactionRate(History):
 
 
 
+    def save_snapshot(self, system_time, data_snapshot, step_count=None, caption="", initial_caption="") -> None:
+        """
+
+           EXAMPLE of data_snapshot:
+                TBA
+
+        :param system_time:
+        :param data_snapshot:
+        :param step_count:
+        :param caption:         [OPTIONAL] String to save alongside this snapshot
+        :param initial_caption:
+        :return:                None
+        """
+        self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
+                                  caption=caption, initial_caption=initial_caption)
+
+
+
     def capture_snapshot(self, step_count=None, capture_initial_caption=None) -> None:
         """
 
@@ -317,16 +348,3 @@ class HistoryReactionRate(History):
             self.history.store(par=system_time, data_snapshot=data_snapshot)
 
         self.step_of_last_snapshot = step_count
-
-
-
-    def add_caption_to_last_snapshot(self, caption) -> None:
-        """
-        Add a caption to the very last entry in the system history.
-        No action take if the caption is blank or None
-
-        :param caption:
-        :return:        None
-        """
-        if caption:
-            self.history.set_caption_last_snapshot(caption)
