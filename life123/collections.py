@@ -61,7 +61,8 @@ class CollectionTabular:
                                     it's acceptable to contain new fields not used in previous calls
                                     (in that case, the dataframe will add new columns automatically - and NaN values
                                      will appear in earlier rows)
-        :param caption:         [OPTIONAL] String to describe the snapshot.  Use None to avoid including that column
+        :param caption:         [OPTIONAL] String to describe the snapshot.
+                                    Use None to avoid including that column (if it already exists in the dataframe, it'll appear as NaN)
         :return:                None (the object variable "self.collection_df" will get updated)
         """
         assert type(data_snapshot) == dict, \

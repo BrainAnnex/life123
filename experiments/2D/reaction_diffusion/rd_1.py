@@ -32,7 +32,7 @@
 # ### TAGS :  "reactions 2D", "diffusion 2D"
 
 # %%
-LAST_REVISED = "Jan. 7, 2025"
+LAST_REVISED = "Jan. 8, 2025"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
@@ -43,7 +43,7 @@ LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
-from life123 import check_version, BioSim2D, ChemData, UniformCompartment, PlotlyHelper
+from life123 import check_version, BioSim2D, ChemData, UniformCompartment
 
 # %%
 check_version(LIFE123_VERSION)
@@ -166,7 +166,7 @@ df = bio.conc_history.bin_history(bin_address = (3,3))
 df
 
 # %%
-PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME")
+bio.plot_history_single_bin(bin_address = (3,3))
 
 # %%
 # And in one of the corner bins
@@ -174,6 +174,6 @@ df = bio.conc_history.bin_history(bin_address = (0,0))
 df
 
 # %%
-PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME")
+bio.plot_history_single_bin(bin_address = (0,0))
 
 # %%

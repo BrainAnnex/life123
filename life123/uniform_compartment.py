@@ -13,7 +13,7 @@ from life123.collections import CollectionTabular
 from life123.numerical import Numerical
 from life123.reactions import Reactions
 from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
-from life123.history import HistoryManagerUniformConcentration
+from life123.history import HistoryUniformConcentration
 from life123.visualization.plotly_helper import PlotlyHelper
 
 
@@ -116,12 +116,12 @@ class UniformCompartment:
 
                                     # For background, see: https://www.annualreviews.org/doi/10.1146/annurev-cellbio-100617-062719
 
-        self.history = CollectionTabular()   # To store user-selected snapshots of (some of) the chemical concentrations,
+        #self.history = CollectionTabular()   # To store user-selected snapshots of (some of) the chemical concentrations,
                                         #   whenever requested by the user
                                         #   Format: a Pandas data frame, with columns: 'SYSTEM TIME', 'A', 'B', ..., 'caption'
                                         #           where 'A', 'B', ... are all the registered chemical labels
 
-        #self.conc_history = HistoryManagerUniformConcentration(active=True)
+        self.conc_history = HistoryUniformConcentration(active=True)    # To store user-selected snapshots of (some of) the chemical concentrations
 
         self.system_rxn_rates = {}      # Keys are the reaction indexes.  Reaction rates for the last (current) step of all reactions
                                         # EXAMPLE: {0: 0.42, 1: 4.26}
@@ -219,7 +219,8 @@ class UniformCompartment:
                 self.set_single_conc(conc=conc_value, species_name=name, snapshot=False)
 
         if snapshot:
-            self.add_snapshot(caption="Set concentration")      # "Initialized state"
+            #self.add_snapshot(caption="Set concentration")      # TODO: take out
+            self.capture_snapshot(caption="Set concentration")  # Save this operation in the history (if enabled)
 
         if self.diagnostics_enabled:
             # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
@@ -264,7 +265,9 @@ class UniformCompartment:
         self.system[species_index] = conc
 
         if snapshot:
-            self.add_snapshot(caption=f"Set concentration of `{self.chem_data.get_label(species_index)}`")
+            # Save this operation in the history (if enabled)
+            #self.add_snapshot(caption=f"Set concentration of `{self.chem_data.get_label(species_index)}`")  # TODO: take out
+            self.capture_snapshot(caption=f"Set concentration of `{self.chem_data.get_label(species_index)}`")
 
 
 
@@ -743,8 +746,10 @@ class UniformCompartment:
 
             # TODO: try the new History method, below
             # Save historical values (if enabled)
-            #self.conc_history.capture_snapshot(step_count=step_count, capture_initial_caption=capture_initial_caption)
+            self.capture_snapshot(step_count=step_count, initial_caption=capture_initial_caption)     # TODO: new method, to supplant old one
 
+            # TODO: start of part to ditch
+            '''
             if (step_count+1)%capture_frequency == 0:
                 if first_snapshot and capture_initial_caption and (step_count == 0):
                     self.add_snapshot(species=capture_species, caption=capture_initial_caption)
@@ -752,7 +757,8 @@ class UniformCompartment:
                 else:
                     self.add_snapshot(species=capture_species)
                 step_of_last_snapshot = step_count
-            # TODO: end of part to change
+            '''
+            # TODO: end of part to ditch
 
 
             step_count += 1
@@ -811,16 +817,18 @@ class UniformCompartment:
 
 
         # One final snapshot, unless already taken for the last step done
-        # TODO: try the new History method, below
-        #self.conc_history.capture_snapshot(step_count=step_count-1)
+        self.capture_snapshot(step_count=step_count-1, caption=capture_final_caption)     # TODO: new method, to supplant old one
+
+        # TODO: ditch
+        #if step_count != step_of_last_snapshot + 1:
+            #self.add_snapshot(species=capture_species)
+
         # Add a caption to the very last entry in the system history
-        #self.conc_history.add_caption_to_last_snapshot(capture_final_caption)
+        self.conc_history.set_caption_last_snapshot(capture_final_caption)
 
-        if step_count != step_of_last_snapshot + 1:
-            self.add_snapshot(species=capture_species)
-
-        if capture_final_caption:
-            self.history.set_caption_last_snapshot(capture_final_caption)   # Add a caption to the very last entry in the system history
+        # TODO: ditch
+        #if capture_final_caption:
+            #self.history.set_caption_last_snapshot(capture_final_caption)   # Add a caption to the very last entry in the system history
         # TODO: end of part to change
 
 
@@ -1753,7 +1761,29 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def add_snapshot(self, species=None, caption="", system_data=None) -> None:
+    def capture_snapshot(self, step_count=None, caption="", initial_caption="") -> None:
+        """
+
+        :param step_count:
+        :param caption:
+        :param initial_caption:
+        :return:                None
+        """
+        if not self.conc_history.to_capture(step_count):
+            return
+
+        data_snapshot = self.get_conc_dict(species=self.conc_history.restrict_chemicals)
+        '''
+           EXAMPLE of data_snapshot:
+                {"A": 1.3, "B": 4.9}        
+        '''
+        self.conc_history.save_snapshot(step_count=step_count, system_time=self.system_time,
+                                        data_snapshot=data_snapshot,
+                                        caption=caption, initial_caption=initial_caption)
+
+
+
+    def add_snapshot_OBSOLETE(self, species=None, caption="", system_data=None) -> None:
         """
         Preserve some or all the chemical concentrations into the system history,
         linked to the current System Time,
@@ -1828,7 +1858,7 @@ class UniformCompartment:
     def get_history(self, t_start=None, t_end=None, head=None, tail=None, t=None, columns=None) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
-        using add_snapshot().
+        using capture_snapshot().
         Optionally, restrict the result with a start and/or end times,
         or by limiting to a specified numbers of rows at the end
 
@@ -1849,11 +1879,11 @@ class UniformCompartment:
         """
         #TODO: allow searches also for columns other than "SYSTEM TIME"
 
-        # Note self.history is an object of class CollectionTabular
+        # Note: the history is an object of class CollectionTabular
 
-        # TODO: replace self.history.get_dataframe() with self.conc_history.history.get_dataframe()
-        df = self.history.get_dataframe(head=head, tail=tail, search_val=t,
-                                        search_col="SYSTEM TIME", val_start=t_start, val_end=t_end)
+        df = self.conc_history.get_history().get_dataframe(head=head, tail=tail, search_val=t,
+                                                           search_col="SYSTEM TIME",
+                                                           val_start=t_start, val_end=t_end)
 
         if columns:
             assert (type(columns) == list) or (type(columns) == str), \

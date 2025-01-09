@@ -4,7 +4,7 @@ from typing import Union
 import plotly.express as px
 import plotly.graph_objects as pgo
 from life123.uniform_compartment import UniformCompartment
-from life123.history import HistoryManagerBinConcentration
+from life123.history import HistoryBinConcentration
 from life123.visualization.plotly_helper import PlotlyHelper
 
 
@@ -54,7 +54,7 @@ class BioSim2D:
 
         self._initialize_system(n_bins=n_bins, chem_data=chem_data, reaction_handler=reaction_handler)
 
-        self.conc_history = HistoryManagerBinConcentration(active=False)
+        self.conc_history = HistoryBinConcentration(active=False)
 
 
 
@@ -960,3 +960,25 @@ class BioSim2D:
 
         return PlotlyHelper.heatmap_grid(array_list=data, labels=chem_labels, title=title,
                                          height=height, colors=colors, z_name="Conc.", max_n_cols=4)
+
+
+
+    def plot_history_single_bin(self, bin_address) -> pgo.Figure:
+        """
+        Using plotly, draw the plots of chemical concentration values over time at the specified bin,
+        based on historical data that was saved when running simulations.
+
+        Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
+              EXAMPLE:
+                    from life123 import PlotlyHelper
+                    p1 = plot_history(various args, show=False)
+                    p2 = plot_history(various args, show=False)
+                    PlotlyHelper.combine_plots([p1, p2], other optional args)
+        """
+        # TODO: add more options
+
+        assert type(bin_address) == tuple, \
+            "plot_history_sing_bin(): bin_address must be a tuple"
+
+        df = self.conc_history.bin_history(bin_address = bin_address)
+        return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration")

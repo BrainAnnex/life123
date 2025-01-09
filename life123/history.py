@@ -5,7 +5,7 @@ from life123.collections import CollectionTabular, Collection
 
 
 
-class HistoryManager:
+class History:
 
     def __init__(self, active=False, chem_labels=None, frequency=1):      # obj
         """
@@ -15,7 +15,7 @@ class HistoryManager:
         :param active:
         :param frequency:
         """
-        #self.obj = obj
+        self.history = None                 # Object set by the children classes
         self.active = active
         self.capture_frequency = frequency
 
@@ -24,6 +24,11 @@ class HistoryManager:
         self.step_of_last_snapshot = -1     # An out-of-range value
 
         self.log_file = None
+
+
+
+    def get_history(self):
+        return self.history
 
 
 
@@ -91,10 +96,23 @@ class HistoryManager:
 
 
 
+    def set_caption_last_snapshot(self, caption) -> None:
+        """
+        Add a caption to the very last entry in the system history.
+        No action taken is caption is None
+
+        :param caption:
+        :return:
+        """
+        if caption is not None:
+            self.history.set_caption_last_snapshot(caption)
+
+
+
 
 ##########################################################################################################################
 
-class HistoryManagerUniformConcentration(HistoryManager):
+class HistoryUniformConcentration(History):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
@@ -107,69 +125,40 @@ class HistoryManagerUniformConcentration(HistoryManager):
 
         :param frequency:
         :param chem_labels:
-        :param bins:
         :param take_snapshot:   If True, a snapshot of the system's current configuration is added to the history
         :return:
         """
         self.enable_history_common(frequency=frequency, chem_labels=chem_labels)
 
-        if take_snapshot:
-            self.capture_snapshot()
+        #if take_snapshot:
+            #self.capture_snapshot()
 
 
 
-    def capture_snapshot(self, step_count=None, capture_initial_caption=None) -> None:
+    def save_snapshot(self, system_time, data_snapshot, step_count=None, caption="", initial_caption="") -> None:
         """
+
+        :param system_time:
+        :param data_snapshot:   EXAMPLE: {"A": 1.3, "B": 4.9}
         :param step_count:
-        :param capture_initial_caption: [OPTIONAL]
-        :return:                        None
+        :param caption:         [OPTIONAL] String to save alongside this snapshot
+        :return:                None
         """
         if not self.to_capture(step_count):
             return
 
-        system_time = self.obj.get_system_time()
-
-        #self.obj.add_snapshot(species=self.restrict_chemicals)
-        data_snapshot = self.obj.get_conc_dict(species=self.restrict_chemicals)
-        # EXAMPLE of data_snapshot: {"A": 1.3, "B": 4.9}
-
-        if capture_initial_caption and (step_count == 0):
-            caption = capture_initial_caption
-        else:
-            caption = None
+        if (not caption) and initial_caption and (step_count == 0):
+            caption = initial_caption
 
         self.history.store(par=system_time,
                            data_snapshot=data_snapshot, caption=caption)
 
-        self.step_of_last_snapshot = step_count
+        if step_count is not None:
+            self.step_of_last_snapshot = step_count
 
-
-
-    def add_snapshot(self, species=None, caption="", system_data=None) -> None:
-        """
-        Preserve some or all the chemical concentrations into the system history,
-        linked to the current System Time,
-        with an optional caption.
-
-        EXAMPLES:   add_snapshot()
-                    add_snapshot(species=['A', 'B']), caption="Just prior to infusion")
-
-        :param species:     [OPTIONAL] list of name of the chemical species whose concentrations we want to preserve for later use.
-                                If not specified, save all
-        :param caption:     [OPTIONAL] caption to attach to this preserved data
-        :param system_data: [OPTIONAL] a Numpy array of concentration values, in the same order as the
-                                index of the chemical species; by default, use the SYSTEM DATA
-        :return:            None
-        """
-        data_snapshot = self.obj.get_conc_dict(species=species, system_data=system_data)    # This will be a dict
-                                                                                            # EXAMPLE : {"A": 1.3, "B": 4.9}
-
-        self.history.store(par=self.obj.system_time,
-                           data_snapshot=data_snapshot, caption=caption)
 
         if self.log_file is None:
             return
-
 
         # If we get thus far, we have a log file to manage
         if os.path.exists(self.log_file):
@@ -182,7 +171,7 @@ class HistoryManagerUniformConcentration(HistoryManager):
             fieldnames = ["SYSTEM TIME"] + list(data_snapshot.keys()) + ["caption"]
             writer = csv.DictWriter(fh, fieldnames = fieldnames)
 
-            data_snapshot["SYSTEM TIME"] = self.obj.system_time
+            data_snapshot["SYSTEM TIME"] = system_time
             data_snapshot["caption"] = caption
 
             # Write the header (only of a newly-created file)
@@ -198,7 +187,7 @@ class HistoryManagerUniformConcentration(HistoryManager):
 
 ##########################################################################################################################
 
-class HistoryManagerBinConcentration(HistoryManager):
+class HistoryBinConcentration(History):
 
     def __init__(self, bins=None, *args, **kwargs):
         super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
@@ -283,7 +272,7 @@ class HistoryManagerBinConcentration(HistoryManager):
 
 ##########################################################################################################################
 
-class HistoryManagerReactionRate(HistoryManager):
+class HistoryReactionRate(History):
 
     def __init__(self, rxns=None, *args, **kwargs):
         super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
