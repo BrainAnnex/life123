@@ -9,13 +9,18 @@ class History:
 
     def __init__(self, active=False, chem_labels=None, frequency=1):
         """
-        For the management of historical data
+        For the management of historical data of various types,
+        each of which relies on a child class.
+        This parent class - which should NOT be directly instantiated -
+        provides common properties and methods.
 
-        :param chem_labels:
         :param active:
+        :param chem_labels:
         :param frequency:
         """
         self.history = None                 # Object set by the children classes
+                                            # The type, depending on the child class, will be one of:
+                                            # CollectionTabular, CollectionArray, Collection
         self.active = active
         self.capture_frequency = frequency
 
@@ -28,6 +33,11 @@ class History:
 
 
     def get_history(self):
+        """
+
+        :return:    Object of one of the following types:
+                        CollectionTabular, CollectionArray, Collection
+        """
         return self.history
 
 
@@ -96,18 +106,19 @@ class History:
 
 
 
-    def save_snapshot_common(self, system_time, data_snapshot, step_count=None, caption="", initial_caption="") -> str:
+    def save_snapshot_common(self, system_time, data_snapshot, step_count=None, caption="", initial_caption="") -> (bool, str):
         """
 
         :param system_time:
-        :param data_snapshot:   EXAMPLE: {"A": 1.3, "B": 4.9}
+        :param data_snapshot:   Data format will vary in different child classes
         :param step_count:
         :param caption:         [OPTIONAL] String to save alongside this snapshot
         :param initial_caption:
-        :return:                The caption that was actually used
+        :return:                The pair (Boolean about whether the operation was actually performed,
+                                          The caption that was actually used)
         """
         if not self.to_capture(step_count):
-            return ""
+            return (False, "")
 
         if (not caption) and initial_caption and (step_count == 0):
             caption = initial_caption
@@ -118,7 +129,7 @@ class History:
         if step_count is not None:
             self.step_of_last_snapshot = step_count
 
-        return caption
+        return (True, caption)
 
 
 
@@ -171,10 +182,10 @@ class HistoryUniformConcentration(History):
         :param initial_caption:
         :return:                None
         """
-        caption = self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
-                                            caption=caption, initial_caption=initial_caption)
+        (saved, caption) = self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
+                                                      caption=caption, initial_caption=initial_caption)
 
-        if (self.log_file is None) or (not self.to_capture(step_count)):
+        if (self.log_file is None) or (not saved):
             return
 
         # If we get thus far, we have a log file to manage
@@ -314,7 +325,7 @@ class HistoryReactionRate(History):
         """
 
            EXAMPLE of data_snapshot:
-                TBA
+                {"rxn1_rate": 6.3, "rxn2_rate": 14.3}
 
         :param system_time:
         :param data_snapshot:
@@ -325,26 +336,3 @@ class HistoryReactionRate(History):
         """
         self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
                                   caption=caption, initial_caption=initial_caption)
-
-
-
-    def capture_snapshot(self, step_count=None, capture_initial_caption=None) -> None:
-        """
-
-        :param step_count:
-        :param capture_initial_caption: [OPTIONAL]
-        :return:                        None
-        """
-        if not self.to_capture(step_count):
-            return
-
-        system_time = self.obj.get_system_time()
-
-        if (step_count == 0) or (step_count == self.step_of_last_snapshot + 1):
-            data_snapshot = {}     # Reaction-rates snapshot
-            for k, v in self.obj.system_rxn_rates.items():
-                data_snapshot[f"rxn{k}_rate"] = v      # EXAMPLE:  "rxn4_rate" = 18.2
-
-            self.history.store(par=system_time, data_snapshot=data_snapshot)
-
-        self.step_of_last_snapshot = step_count

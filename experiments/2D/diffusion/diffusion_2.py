@@ -20,7 +20,7 @@
 # No reaction takes place; the system is left undisturbed, and followed to equilibrium.
 
 # %% [markdown]
-# ### TAGS :  "diffusion 2D"
+# ### TAGS :  "diffusion 2D", "quick-start"
 
 # %%
 LAST_REVISED = "Dec. 31, 2024"

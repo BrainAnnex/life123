@@ -2,18 +2,15 @@ import math
 import numpy as np
 import pandas as pd
 import time
-import os
-import csv
 import plotly.express as px
 import plotly.graph_objects as pgo
 from typing import Union
 from life123.chem_data import ChemData
 from life123.diagnostics import Diagnostics
-from life123.collections import CollectionTabular
 from life123.numerical import Numerical
 from life123.reactions import Reactions
 from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
-from life123.history import HistoryUniformConcentration
+from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
 
 
@@ -117,14 +114,16 @@ class UniformCompartment:
                                     # For background, see: https://www.annualreviews.org/doi/10.1146/annurev-cellbio-100617-062719
 
 
-        self.conc_history = HistoryUniformConcentration(active=True)    # Object used to store user-selected snapshots
-                                                                        # of (some of) the chemical concentrations
+        self.conc_history = HistoryUniformConcentration(active=True)    # Object used to store user-requested snapshots
+                                                                        # of (some of) the chemical concentrations:
+                                                                        # 'SYSTEM TIME', 'A', 'B', ..., 'comments'
 
         self.system_rxn_rates = {}      # Keys are the reaction indexes.  Reaction rates for the last (current) step of all reactions
                                         # EXAMPLE: {0: 0.42, 1: 4.26}
 
-        self.rate_history = CollectionTabular()  # Format: a Pandas data frame, with columns: 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
-        #self.rate_history = HistoryManagerReactionRate(active=True)    # TODO
+        self.rate_history = HistoryReactionRate(active=True)        # Object used to store user-requested snapshots
+                                                                    # of (some of) the chemical reaction rates:
+                                                                    # 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
 
 
         # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
@@ -404,7 +403,7 @@ class UniformCompartment:
 
     def get_single_reaction(self, i :int):
         """
-        Return a single reaction, specified by its index
+        Return a single reaction, specified by its index, associated to this Uniform Compartment
 
         :param i:   Integer index of the desired reaction
         :return:    Object of type "ReactionGeneric"
@@ -691,16 +690,7 @@ class UniformCompartment:
 
             # Preserve the RATES data, as requested (part1, BEFORE updating the System Time, because reaction rates are
             # based on the start time of the simulation step)
-
-            # TODO: try the new History method, below
-            #self.rate_history.to_capture(step_count=step_count)
-            if (step_count == 0) or (step_count == step_of_last_snapshot + 1):
-                rxn_rates_snapshot = {}
-                for k, v in self.system_rxn_rates.items():
-                    rxn_rates_snapshot[f"rxn{k}_rate"] = v      # EXAMPLE:  "rxn4_rate" = 18.2
-
-                # TODO: currently, there's no way to disable this snapshot, even if snapshots aren't desired
-                self.rate_history.store(par=self.system_time, data_snapshot=rxn_rates_snapshot, caption=None)
+            self.capture_rate_snapshot(step_count=step_count)
 
 
             # UPDATE THE SYSTEM TIME (now we're at the END of the current time step)
@@ -1705,6 +1695,30 @@ class UniformCompartment:
     #####################################################################################################
 
 
+    def capture_rate_snapshot(self, step_count=None, caption=None, initial_caption=None) -> None:
+        """
+
+        :param step_count:
+        :param caption:
+        :param initial_caption:
+        :return:                None
+        """
+        if not self.conc_history.to_capture(step_count):
+            return
+
+        data_snapshot = {}     # rxn_rates_snapshot
+        for k, v in self.system_rxn_rates.items():
+            data_snapshot[f"rxn{k}_rate"] = v      # EXAMPLE:  "rxn4_rate" = 18.2
+        '''
+           EXAMPLE of data_snapshot:
+                {"rxn1_rate": 6.3, "rxn2_rate": 14.3}        
+        '''
+        self.rate_history.save_snapshot(step_count=step_count, system_time=self.system_time,
+                                        data_snapshot=data_snapshot,
+                                        caption=caption, initial_caption=initial_caption)
+
+
+
     def capture_snapshot(self, step_count=None, caption="", initial_caption="") -> None:
         """
 
@@ -1826,7 +1840,7 @@ class UniformCompartment:
                         'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
         """
         # TODO: add the option to select a subset of the reactions
-        return self.rate_history.get_dataframe()
+        return self.rate_history.get_history().get_dataframe()
 
 
 

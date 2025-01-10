@@ -1,8 +1,7 @@
-# 3 classes: "ReactionEnz", "ReactionGeneric" and "Reaction"
+# 3 classes: "ReactionEnz", "ReactionGeneric" and "Reactions"
 
 from typing import Union, Set, Tuple
 import numpy as np
-from life123.chem_data import ChemData
 from life123.thermodynamics import ThermoDynamics
 from life123.visualization.py_graph_visual import PyGraphVisual
 from life123.visualization.graphic_log import GraphicLog

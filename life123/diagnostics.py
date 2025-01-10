@@ -15,9 +15,9 @@ class Diagnostics:
         assert reactions is not None, \
             "Diagnostics class cannot be instantiated with a missing value for the argument `reactions`"
 
-        self.reactions = reactions
+        self.reactions = reactions                  # Object of type "Reactions"
 
-        self.chem_data = reactions.get_chem_data()
+        self.chem_data = reactions.get_chem_data()  # Object of type "ChemData"
 
 
         # TODO: maybe drop the "diagnostic_" from the names, or rename it to "historic_"
@@ -139,7 +139,7 @@ class Diagnostics:
         :param msg: Value to set the comment field to
         :return:    None
         """
-        for rxn_index in range(self.chem_data.number_of_reactions()):
+        for rxn_index in range(self.reactions.number_of_reactions()):
             self.diagnostic_rxn_data[rxn_index].set_caption_last_snapshot(msg)
             self.diagnostic_rxn_data[rxn_index].set_field_last_snapshot(field_name="aborted", field_value="True")
             # TODO: investigate why using "True" rather then True
@@ -160,7 +160,8 @@ class Diagnostics:
                                 "caption"
                                 "rate"
         """
-        # TODO: probably ditch, because no longer needed.  (Also, the dataframe merge might not always work...)
+        # TODO: probably ditch in favor of UniformCompartment.add_rate_to_conc_history(),
+        #       because no longer needed.  (Also, the dataframe merge might not always work...)
         # TODO: the times had better match up!  Currently not validated
 
         rates = self.get_rxn_rates(rxn_index=rxn_index)     # A Pandas dataframe with 2 columns: "START_TIME" and "rate"
@@ -357,7 +358,7 @@ class Diagnostics:
         :return:    True if the diagnostic data is consistent for all the steps of all the reactions,
                     or False otherwise
         """
-        number_reactions = self.chem_data.number_of_reactions()
+        number_reactions = self.reactions.number_of_reactions()
 
         assert number_reactions == 2, \
             "explain_reactions() currently ONLY works when exactly 2 reactions are present. " \
@@ -419,7 +420,7 @@ class Diagnostics:
                                     dtype=float)  # One element per chemical species
 
         # For each reaction
-        for rxn_index in range(self.chem_data.number_of_reactions()):
+        for rxn_index in range(self.reactions.number_of_reactions()):
             if (rxn_index in active_list):  # If reaction is tagged as "fast"
                 row = row_list[rxn_index]   # Row in the data frame for the diagnostic data on this reaction
                 delta_rxn = self.get_rxn_data(rxn_index=rxn_index).loc[row][chemical_delta_list].to_numpy(dtype='float16')
@@ -588,7 +589,7 @@ class Diagnostics:
         """
         assert self.reactions.number_of_reactions() == 1, \
             f"stoichiometry_checker() currently only works for 1-reaction simulations, but " \
-            f"{self.chem_data.number_of_reactions()} reactions are present."
+            f"{self.reactions.number_of_reactions()} reactions are present."
 
         assert len(conc_arr_before) == self.chem_data.number_of_chemicals(), \
             f"stoichiometry_checker() : the argument `conc_arr_before` must be a Numpy array " \
@@ -685,7 +686,7 @@ class Diagnostics:
                   "the diagnostics must be turned enabled prior to the simulation run!")
             return False
 
-        number_rxns = self.chem_data.number_of_reactions()
+        number_rxns = self.reactions.number_of_reactions()
         assert number_rxns == 1, \
             f"stoichiometry_checker_entire_run(): this function is currently designed for just 1 reaction " \
             f"(whereas {number_rxns} are present)"
