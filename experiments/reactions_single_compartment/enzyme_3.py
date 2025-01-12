@@ -34,7 +34,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Jan. 10, 2025"
+LAST_REVISED = "Jan. 12, 2025"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
@@ -121,7 +121,8 @@ uc.describe_state()
 # #### Simulate the very early part of the reaction
 
 # %%
-# Perform the reactions
+# Perform the reactions  
+# (Note: by default, concentration and rate history is kept for each step; we'll later reduce this frequency)
 uc.single_compartment_react(duration=0.0015, initial_step=0.00001)
 
 # %%
@@ -136,24 +137,17 @@ uc.plot_history(title_prefix="DETAIL at early times",
 # %% [markdown]
 # ### Notice the EXTREMELY fast kinetics involving the production of the intermediate `ES`
 
+# %% [markdown]
+# If one wishes to exam the history (of concentration or reaction-rate data) in tabular form, it can be done as follows:
+
 # %%
 uc.get_history()
 
 # %%
-uc.get_history()[170:175]
-
-# %%
-uc.get_rate_history()[170:175]
-
-# %%
 uc.get_rate_history()
 
-# %%
-uc.add_rate_to_conc_history()
-
-# %%
-
-# %%
+# %% [markdown]
+# Note that rates are associated with the START times of the intervals.  So, at the end time of the simulation, there's no rate.
 
 # %%
 
@@ -163,7 +157,8 @@ uc.add_rate_to_conc_history()
 # #### Advance the reactions to equilibrium
 
 # %%
-# From now on, 1 of every 10 computation steps will be saved in the history (for later use in plots, etc).  Until this point, we've used the default of 1
+# From now on, the data from 1 of every 10 computation steps will be saved in the history (for later use in plots, etc). 
+# Until this point, we've used the default of 1
 uc.enable_history(frequency=10)
 
 # Continue the reactions
@@ -184,16 +179,14 @@ uc.plot_history(title_prefix="DETAIL of ES and E",
 
 # %% [markdown] tags=[]
 # ### What is the initial rate of production of the final reaction product `P`?   
-# One could take the numerical derivative (gradient) of the time values of [P] - but no need to!  **Reaction rates are computed in the course of the simulation, and stored in a rate-history dataframe**
+# One could take the numerical derivative (gradient) of the time values of [P] - but no need to!  **Reaction rates are computed in the course of the simulation, and stored in a rate-history dataframe** (as we also saw earlier)
 
 # %%
 rates = uc.get_rate_history()
 rates
 
-# %%
-uc.get_history()
-
-# %%
+# %% [markdown]
+# Note that initially we were saving historical data at every simulation step, but later switched to every 10 steps
 
 # %%
 # Let's take a look at how the reaction rate varies with time

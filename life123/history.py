@@ -121,6 +121,12 @@ class History:
         if (not caption) and initial_caption and (step_count == 0):
             caption = initial_caption
 
+        # The following is to avoid unsightly NaN's and floating-point numbers
+        if step_count is None:
+            data_snapshot["step"] = ""
+        else:
+            data_snapshot["step"] = str(step_count)
+
         self.history.store(par=system_time,
                            data_snapshot=data_snapshot, caption=caption)
 

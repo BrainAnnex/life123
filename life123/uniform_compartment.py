@@ -689,9 +689,8 @@ class UniformCompartment:
 
             # Preserve the RATES data, as requested (part1, BEFORE updating the System Time, because reaction rates are
             # based on the *start* time of the simulation step)
-            #if np.allclose(self.system_time, 0):
             if step_count == 0:
-                self.capture_rate_snapshot(force=True)                  # Always save the initial rate
+                self.capture_rate_snapshot(force=True, step_count=0)    # Always save the initial rate
             else:
                 self.capture_rate_snapshot(step_count=step_count)       # Save historical rate values (if enabled)
 
@@ -1917,7 +1916,8 @@ class UniformCompartment:
 
         # Filter to remove rows where the right DataFrame values are NaN (indicating no match)
         # This has the overall effect of producing an inner join of the two original dataframes
-        inner_join_df = merged_df.dropna()
+        # Note: the names "step_x" and "step_y" are automatically assigned by merge_asof() because of a repeated "step" column
+        inner_join_df = merged_df.dropna().rename(columns={"step_x": "step_conc", "step_y": "step_rate"})
 
         return inner_join_df
 
