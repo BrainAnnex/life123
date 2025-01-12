@@ -34,8 +34,8 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Dec. 15, 2024"
-LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
+LAST_REVISED = "Jan. 10, 2025"
+LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -122,8 +122,7 @@ uc.describe_state()
 
 # %%
 # Perform the reactions
-uc.single_compartment_react(duration=0.0015, initial_step=0.00001,
-                           snapshots={"frequency": 10})
+uc.single_compartment_react(duration=0.0015, initial_step=0.00001)
 
 # %%
 uc.plot_history(show_intervals=True, 
@@ -138,6 +137,25 @@ uc.plot_history(title_prefix="DETAIL at early times",
 # ### Notice the EXTREMELY fast kinetics involving the production of the intermediate `ES`
 
 # %%
+uc.get_history()
+
+# %%
+uc.get_history()[170:175]
+
+# %%
+uc.get_rate_history()[170:175]
+
+# %%
+uc.get_rate_history()
+
+# %%
+uc.add_rate_to_conc_history()
+
+# %%
+
+# %%
+
+# %%
 
 # %%
 
@@ -145,9 +163,11 @@ uc.plot_history(title_prefix="DETAIL at early times",
 # #### Advance the reactions to equilibrium
 
 # %%
+# From now on, 1 of every 10 computation steps will be saved in the history (for later use in plots, etc).  Until this point, we've used the default of 1
+uc.enable_history(frequency=10)
+
 # Continue the reactions
-uc.single_compartment_react(duration=40., initial_step=0.00001, 
-                            snapshots={"frequency": 10})
+uc.single_compartment_react(duration=40., initial_step=0.00001)
 
 # %%
 uc.plot_history(title_prefix="Small amout of E relative to S(0)")
@@ -169,6 +189,11 @@ uc.plot_history(title_prefix="DETAIL of ES and E",
 # %%
 rates = uc.get_rate_history()
 rates
+
+# %%
+uc.get_history()
+
+# %%
 
 # %%
 # Let's take a look at how the reaction rate varies with time

@@ -488,17 +488,19 @@ class BioSim2D:
 
 
 
-    def enable_history(self, bins=None, frequency=1, labels=None, take_snapshot=True) -> None:
+    def enable_history(self, bins=None, frequency=1, chem_labels=None, take_snapshot=True) -> None:
         """
-
+        Request history capture, with the specified parameters.
+        If history was already enabled, this function can be used to alter its capture parameters.
         :param bins:
         :param frequency:
-        :param labels:
+        :param chem_labels:     [OPTIONAL] List of chemicals to include in the history;
+                                    if None (default), include them all.
         :param take_snapshot:   If True, a snapshot of the system's current configuration is added to the history
 
         :return:
         """
-        self.conc_history.enable_history(frequency=frequency, chem_labels=labels, bins=bins)
+        self.conc_history.enable_history(frequency=frequency, chem_labels=chem_labels, bins=bins)
         if take_snapshot:
             self.capture_snapshot()
 

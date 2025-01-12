@@ -146,42 +146,6 @@ class Diagnostics:
 
 
 
-    def get_system_history_with_rxn_rates(self, rxn_index :int) -> pd.DataFrame:
-        """
-        Return a Pandas dataframe containing the saved System History,
-        plus an extra column named "rate", for the reaction rates of the specified reaction.
-        Notice: the last row of the System History does NOT get included,
-                because no rate information is known about the next simulation step not taken
-
-        :param rxn_index:   The integer index (0-based) to identify the reaction of interest
-        :return:            A Pandas data frame with the following columns:
-                                "TIME"
-                                A series of columns for each of the registered chemicals
-                                "caption"
-                                "rate"
-        """
-        # TODO: probably ditch in favor of UniformCompartment.add_rate_to_conc_history(),
-        #       because no longer needed.  (Also, the dataframe merge might not always work...)
-        # TODO: the times had better match up!  Currently not validated
-
-        rates = self.get_rxn_rates(rxn_index=rxn_index)     # A Pandas dataframe with 2 columns: "START_TIME" and "rate"
-        system_history = self.get_diagnostic_conc_data()    # Note that is a copy of the dataframe; so, no harm in changing it, below
-        # Dropping the last row, because no rate information is known about the next simulation step not taken!
-        system_history = system_history[:-1]
-
-        # They'd better match up!
-        assert len(system_history) == len(rates), \
-            f"get_system_history_with_rxn_rates() : unable to reconcile " \
-            f"the system history data with the reaction data for the requested reaction (index {rxn_index}). " \
-            f"The diagnostic concentration data (excluding the last entry, which can't have a rate value) contains {len(system_history)} records, " \
-            f"while the diagnostic rates data contains {len(rates)} values"
-
-        system_history["rate"] =  rates["rate"]
-
-        return system_history
-
-
-
     def get_rxn_rates(self, rxn_index :int) -> Union[pd.DataFrame, None]:
         """
         Return a Pandas dataframe with 2 columns: "START_TIME" and "rate",

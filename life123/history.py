@@ -60,10 +60,12 @@ class History:
 
 
 
-    def to_capture(self, step_count=None) -> bool:
+    def to_capture(self, step_count=None, disregard_frequency=False) -> bool:
         """
         Return True if various criteria indicate that a snapshot should be taken at the give step_count;
         False otherwise
+
+        Note that when step_count is 0 there's no capture, unless the frequency is 1
 
         :param step_count:  None means always recapture
         :return:
@@ -77,7 +79,7 @@ class History:
         if step_count == self.step_of_last_snapshot:
             return False     # Don't re-take snapshot, if still at the same step count
 
-        if self.capture_frequency == 1:
+        if (self.capture_frequency == 1) or disregard_frequency:
             return True
 
         if (step_count+1) % self.capture_frequency == 0:
@@ -106,7 +108,7 @@ class History:
 
 
 
-    def save_snapshot_common(self, system_time, data_snapshot, step_count=None, caption="", initial_caption="") -> (bool, str):
+    def save_snapshot_common(self, system_time, data_snapshot, step_count=None, caption="", initial_caption="") -> str:
         """
 
         :param system_time:
@@ -114,12 +116,8 @@ class History:
         :param step_count:
         :param caption:         [OPTIONAL] String to save alongside this snapshot
         :param initial_caption:
-        :return:                The pair (Boolean about whether the operation was actually performed,
-                                          The caption that was actually used)
+        :return:                The caption that was actually used
         """
-        if not self.to_capture(step_count):
-            return (False, "")
-
         if (not caption) and initial_caption and (step_count == 0):
             caption = initial_caption
 
@@ -129,7 +127,7 @@ class History:
         if step_count is not None:
             self.step_of_last_snapshot = step_count
 
-        return (True, caption)
+        return caption
 
 
 
@@ -157,18 +155,17 @@ class HistoryUniformConcentration(History):
 
 
 
-    def enable_history(self, take_snapshot=True, frequency=1, chem_labels=None):
+    def enable_history(self, frequency=1, chem_labels=None) -> None:
         """
+        Request history capture, with the specified parameters.
+        If history was already enabled, this function can be used to alter its capture parameters.
 
         :param frequency:
-        :param chem_labels:
-        :param take_snapshot:   If True, a snapshot of the system's current configuration is added to the history
-        :return:
+        :param chem_labels: [OPTIONAL] List of chemicals to include in the history;
+                                if None (default), include them all.
+        :return:            None
         """
         self.enable_history_common(frequency=frequency, chem_labels=chem_labels)
-
-        #if take_snapshot:
-            #self.capture_snapshot()
 
 
 
@@ -182,10 +179,10 @@ class HistoryUniformConcentration(History):
         :param initial_caption:
         :return:                None
         """
-        (saved, caption) = self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
+        caption = self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
                                                       caption=caption, initial_caption=initial_caption)
 
-        if (self.log_file is None) or (not saved):
+        if self.log_file is None:
             return
 
         # If we get thus far, we have a log file to manage
@@ -224,13 +221,16 @@ class HistoryBinConcentration(History):
 
 
 
-    def enable_history(self, frequency=1, chem_labels=None, bins=None):
+    def enable_history(self, frequency=1, chem_labels=None, bins=None) -> None:
         """
+        Request history capture, with the specified parameters.
+        If history was already enabled, this function can be used to alter its capture parameters.
 
         :param frequency:
-        :param chem_labels:
+        :param chem_labels: [OPTIONAL] List of chemicals to include in the history;
+                                if None (default), include them all.
         :param bins:
-        :return:
+        :return:            None
         """
         self.enable_history_common(frequency=frequency, chem_labels=chem_labels)
         self.restrict_bins = bins
@@ -305,19 +305,19 @@ class HistoryReactionRate(History):
 
 
 
-    def enable_history(self, take_snapshot=True, frequency=1, chem_labels=None, rxns=None):
+    def enable_history(self, frequency=1, chem_labels=None, rxns=None) -> None:
         """
+        Request history capture, with the specified parameters.
+        If history was already enabled, this function can be used to alter its capture parameters.
 
         :param frequency:
-        :param chem_labels:
+        :param chem_labels: [OPTIONAL] List of chemicals to include in the history;
+                                if None (default), include them all.
         :param rxns:
-        :param take_snapshot:   If True, a snapshot of the system's current configuration is added to the history
-        :return:
+        :return:            None
         """
         self.enable_history_common(frequency=frequency, chem_labels=chem_labels)
         self.restrict_rxns = rxns
-        if take_snapshot:
-            self.capture_snapshot()
 
 
 

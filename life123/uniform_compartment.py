@@ -213,7 +213,7 @@ class UniformCompartment:
                 self.set_single_conc(conc=conc_value, species_name=name, snapshot=False)
 
         if snapshot:
-            self.capture_snapshot(caption="Set concentration")  # Save this operation in the history (if enabled)
+            self.capture_conc_snapshot(caption="Set concentration")  # Save this operation in the history (if enabled)
 
         if self.diagnostics_enabled:
             # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
@@ -259,7 +259,7 @@ class UniformCompartment:
 
         if snapshot:
             # Save this operation in the history (if enabled)
-            self.capture_snapshot(caption=f"Set concentration of `{self.chem_data.get_label(species_index)}`")
+            self.capture_conc_snapshot(caption=f"Set concentration of `{self.chem_data.get_label(species_index)}`")
 
 
 
@@ -523,8 +523,8 @@ class UniformCompartment:
 
     def single_compartment_react(self, duration=None, target_end_time=None, stop=None,
                                  initial_step=None, n_steps=None, max_steps=None,
-                                 silent=False,
-                                 variable_steps=True, explain_variable_steps=None, report_interval=0.5) -> None:
+                                 variable_steps=True, explain_variable_steps=None,
+                                 silent=False, report_interval=0.5) -> None:
         """
         Perform ALL the (previously-registered) reactions in the single compartment -
         based on the INITIAL concentrations stored in self.system
@@ -554,16 +554,16 @@ class UniformCompartment:
 
         :param max_steps:       [OPTIONAL] Max numbers of steps; if reached, it'll terminate regardless of any other criteria
 
-        :param silent:                  If True, less output is generated
-
         :param variable_steps:          [OPTIONAL] If True (default), the steps sizes will get automatically adjusted, based on thresholds
         :param explain_variable_steps:  [OPTIONAL] If not None, a brief explanation is printed about how the variable step sizes were chosen,
                                             when the System time inside that range;
                                             only applicable if variable_steps is True
+
+        :param silent:                  [OPTIONAL] If True, less output is generated
         :param report_interval:         [OPTIONAL] How frequently, in terms of elapsed running time, in minutes,
                                             to inform the user of the current status
 
-        :return:                None.   The object attributes self.system and self.system_time get updated
+        :return:                        None.   The object attributes self.system and self.system_time get updated
         """
 
         # Default values
@@ -623,7 +623,6 @@ class UniformCompartment:
 
 
         step_count = 0
-        step_of_last_snapshot = -1
 
         # Reset some diagnostic variables
         self.number_neg_concs = 0
@@ -689,9 +688,12 @@ class UniformCompartment:
 
 
             # Preserve the RATES data, as requested (part1, BEFORE updating the System Time, because reaction rates are
-            # based on the start time of the simulation step)
-            self.capture_rate_snapshot(step_count=step_count)
-
+            # based on the *start* time of the simulation step)
+            #if np.allclose(self.system_time, 0):
+            if step_count == 0:
+                self.capture_rate_snapshot(force=True)                  # Always save the initial rate
+            else:
+                self.capture_rate_snapshot(step_count=step_count)       # Save historical rate values (if enabled)
 
             # UPDATE THE SYSTEM TIME (now we're at the END of the current time step)
             self.system_time += step_actually_taken
@@ -699,9 +701,7 @@ class UniformCompartment:
 
             # Preserve the CONCENTRATION data, as requested (part2, AFTER updating the System Time, because current concentrations
             # refer to the System Time, just updated at the end of the simulation step)
-
-            # Save historical values (if enabled)
-            self.capture_snapshot(step_count=step_count, initial_caption=capture_initial_caption)
+            self.capture_conc_snapshot(step_count=step_count+1, initial_caption=capture_initial_caption)   # Save historical concentration values (if enabled)
 
 
             step_count += 1
@@ -760,7 +760,7 @@ class UniformCompartment:
 
 
         # One final snapshot, unless already taken for the last step done
-        self.capture_snapshot(step_count=step_count-1, caption=capture_final_caption)
+        self.capture_conc_snapshot(step_count=step_count, caption=capture_final_caption, disregard_frequency=True)
 
         # Add a caption to the very last entry in the system history
         self.conc_history.set_caption_last_snapshot(capture_final_caption)
@@ -1695,16 +1695,50 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def capture_rate_snapshot(self, step_count=None, caption=None, initial_caption=None) -> None:
+    def enable_history(self, kind="all", frequency=1, chem_labels=None, take_snapshot=False) -> None:
+        """
+        Request history capture, with the specified parameters.
+        If history was already enabled, this function can be used to alter its capture parameters.
+
+        :param kind:            Allowed values are "all" (default), "conc", and "rate"
+        :param frequency:
+        :param chem_labels:     [OPTIONAL] List of chemicals to include in the history;
+                                    if None (default), include them all.
+        :param take_snapshot:   If True, a snapshot of the system's current configuration is added to the history
+
+        :return:
+        """
+        assert kind in ["all", "conc", "rate"], \
+            "enable_history(): argument `kind` must be either 'all' or 'conc' or 'rate'"
+
+        if kind in ["all", "conc"]:
+            self.conc_history.enable_history(frequency=frequency, chem_labels=chem_labels)
+            if take_snapshot:
+                self.capture_conc_snapshot()
+
+        if kind in ["all", "rate"]:
+            self.rate_history.enable_history(frequency=frequency, chem_labels=chem_labels)
+            if take_snapshot:
+                self.capture_rate_snapshot()
+
+
+
+    def capture_rate_snapshot(self, step_count=None, caption=None, initial_caption=None,
+                             force=False, system_time=None) -> None:
         """
 
         :param step_count:
         :param caption:
         :param initial_caption:
+        :param force:           [OPTIONAL] If True, take a snapshot regardless of step_count; default is False
+        :param system_time:
         :return:                None
         """
-        if not self.conc_history.to_capture(step_count):
+        if not force and not self.rate_history.to_capture(step_count):
             return
+
+        if system_time is None:
+            system_time = self.system_time
 
         data_snapshot = {}     # rxn_rates_snapshot
         for k, v in self.system_rxn_rates.items():
@@ -1713,13 +1747,13 @@ class UniformCompartment:
            EXAMPLE of data_snapshot:
                 {"rxn1_rate": 6.3, "rxn2_rate": 14.3}        
         '''
-        self.rate_history.save_snapshot(step_count=step_count, system_time=self.system_time,
+        self.rate_history.save_snapshot(step_count=step_count, system_time=system_time,
                                         data_snapshot=data_snapshot,
                                         caption=caption, initial_caption=initial_caption)
 
 
 
-    def capture_snapshot(self, step_count=None, caption="", initial_caption="") -> None:
+    def capture_conc_snapshot(self, step_count=None, caption="", initial_caption="", disregard_frequency=False) -> None:
         """
 
         :param step_count:
@@ -1727,7 +1761,7 @@ class UniformCompartment:
         :param initial_caption:
         :return:                None
         """
-        if not self.conc_history.to_capture(step_count):
+        if not self.conc_history.to_capture(step_count, disregard_frequency=disregard_frequency):
             return
 
         data_snapshot = self.get_conc_dict(species=self.conc_history.restrict_chemicals)
@@ -1844,7 +1878,52 @@ class UniformCompartment:
 
 
 
-    def add_rate_to_conc_history(self, rate_name :str, new_rate_name=None):
+
+    def add_rate_to_conc_history(self, rate_name=None, new_rate_name=None):
+        """
+        Merge together the concentration history and a column from the reaction rate history,
+        into a new dataframe.
+        The original histories aren't affected.
+
+        :param rate_name:       [OPTIONAL] Name of a single desired column from the reaction rate history
+                                    EXAMPLE: "rxn4_rate"
+                                    If not specified, all rates are included
+        :param new_rate_name:   [OPTIONAL] New name to assign to the rate_name column above;
+                                    only applicable if rate_name is specified
+        :return:                A Pandas dataframe with all the concentration history,
+                                    and extra columns from the reaction rate history,
+                                    merged by their match of SYSTEM TIME.
+                                    If either history is missing, raise an Exception
+        """
+        # TODO: perhaps make obsolete, by storing both histories together??
+
+        history = self.get_history()
+        rates = self.get_rate_history()
+
+        assert (not history.empty) and (not rates.empty), \
+            "add_rate_to_conc_history(): One or both the histories are missing"
+
+        if rate_name is not None:
+            rates = rates[["SYSTEM TIME", rate_name]]
+            if new_rate_name:
+                rates = rates.rename(columns={rate_name: new_rate_name})
+
+        # Set the tolerance for the merges based on the size of the time values
+        last_time = history["SYSTEM TIME"].iat[-1]
+        tolerance = last_time * 0.000001 + 0.000001     # We use a relative and an absolute tolerance
+
+        # Create a "left join" from the two dataframes, based on the colum 'SYSTEM TIME'
+        merged_df = pd.merge_asof(history, rates, on='SYSTEM TIME', direction='nearest', tolerance=tolerance)
+
+        # Filter to remove rows where the right DataFrame values are NaN (indicating no match)
+        # This has the overall effect of producing an inner join of the two original dataframes
+        inner_join_df = merged_df.dropna()
+
+        return inner_join_df
+
+
+
+    def add_rate_to_conc_history_OLD(self, rate_name :str, new_rate_name=None):
         """
         Merge together the concentration history and a column from the reaction rate history
 
@@ -1858,12 +1937,11 @@ class UniformCompartment:
 
         history = self.get_history()
         rates = self.get_rate_history()
-        assert len(history) == len(rates)+1, \
-            "add_rate_to_conc_history(): unable to reconcile the system history data " \
-            "with the reaction data - mismatched number of rows"
+        assert len(history) == len(rates), \
+            f"add_rate_to_conc_history(): unable to reconcile the system history data ({len(history)} rows)" \
+            f"with the reaction data ({len(rates)} rows) - mismatched number of rows"
 
-        df = history[:-1].copy()    # Drop the last row, because no rate information is known about the next simulation step not taken!
-                                    # Also, duplicate the dataframe, to avoid messing up the concentration history
+        df = history.copy()    # Duplicate the dataframe, to avoid messing up the concentration history
 
         if new_rate_name is None:
             new_rate_name = rate_name   # Rename column, if requested
