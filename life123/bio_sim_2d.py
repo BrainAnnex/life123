@@ -96,7 +96,7 @@ class BioSim2D:
         else:
             self.reaction_dynamics = UniformCompartment(chem_data=self.chem_data)
 
-        self.reactions = self.reaction_dynamics.get_reactions()
+        self.reactions = self.reaction_dynamics.get_reactions()     # TODO: Maybe use self.get_reactions()
 
         self.n_bins_x = n_cells_x
         self.n_bins_y = n_cells_y
@@ -144,6 +144,16 @@ class BioSim2D:
         :return:    An Object of type "ChemData"
         """
         return self.chem_data
+
+
+
+    def get_reactions(self):
+        """
+        Return all the associated reactions
+
+        :return:    Object ot type "Reactions" (with data about all the reactions)
+        """
+        return self.reactions
 
 
 
@@ -993,7 +1003,7 @@ class BioSim2D:
 
 
 
-    def plot_history_single_bin(self, bin_address :(int,int), colors=None, title=None) -> pgo.Figure:
+    def plot_history_single_bin(self, bin_address :(int,int), colors=None, title=None, smoothed=False) -> pgo.Figure:
         """
         Using plotly, draw the plots of chemical concentration values over time at the specified bin,
         based on historical data that was saved when running simulations.
@@ -1008,6 +1018,8 @@ class BioSim2D:
         :param bin_address: A single bin address (a pair of integers)
         :param colors:
         :param title:       [OPTIONAL] Label for the top of the plot
+        :param smoothed:    [OPTIONAL] If True, a spline is used to smooth the lines;
+                                otherwise (default), line segments are used
         :return:            A plotly "Figure" object
         """
         # TODO: add more options
@@ -1017,4 +1029,5 @@ class BioSim2D:
 
         df = self.conc_history.bin_history(bin_address = bin_address)
         return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
-                                        colors=colors, legend_header="Chemical", title=title)
+                                        colors=colors, legend_header="Chemical", title=title,
+                                        smoothed=smoothed)

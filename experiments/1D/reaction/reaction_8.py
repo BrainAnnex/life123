@@ -20,6 +20,9 @@
 #
 # Diffusion not applicable (just 1 bin)
 
+# %% [markdown]
+# ### TAGS :  "reactions 1D"
+
 # %%
 LAST_REVISED = "Jan. 12, 2025"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
@@ -83,7 +86,7 @@ bio.enable_history()
 # ### Set the initial state
 
 # %%
-bio.set_all_uniform_concentrations( [3., 5., 1., 0.4, 0.1] )
+bio.set_all_uniform_concentrations( [3., 5., 1., 0.4, 0.1] )  # In the order the chemicals were added
 
 bio.describe_state()
 

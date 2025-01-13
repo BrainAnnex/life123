@@ -11,14 +11,14 @@ class History:
         """
         For the management of historical data of various types,
         each of which relies on a child class.
-        This parent class - which should NOT be directly instantiated -
+        This base (parent) class - which should NOT be directly instantiated -
         provides common properties and methods.
 
         :param active:
         :param chem_labels:
         :param frequency:
         """
-        self.history = None                 # Object set by the children classes
+        self.history = None                 # Object set by the children classes.
                                             # The type, depending on the child class, will be one of:
                                             # CollectionTabular, CollectionArray, Collection
         self.active = active
@@ -57,7 +57,15 @@ class History:
 
 
 
-    def disable_history(self):
+    def disable_history(self) -> None:
+        """
+        Inactivate any further captures related to this history.
+        Nothing is deleted: neither the history nor its parameters;
+        this history-keeping may later be resumed (possibly with different parameters)
+        by a call to enable_history()
+
+        :return:    None
+        """
         self.active = False
 
 
@@ -69,7 +77,7 @@ class History:
 
         Note that when step_count is 0 there's no capture, unless the frequency is 1
 
-        :param step_count:  None means always recapture
+        :param step_count:  None means always capture
         :param extra:       [OPTIONAL] If True, it means that this is a special extra capture;
                                 the capture frequency will NOT considered in the
                                 decision about saving it, but an extra check will be performed

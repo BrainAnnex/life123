@@ -184,6 +184,16 @@ class BioSim1D:
 
 
 
+    def get_reactions(self):
+        """
+        Return all the associated reactions
+
+        :return:    Object ot type "Reactions" (with data about all the reactions)
+        """
+        return self.reactions
+
+
+
     def reset_system(self) -> None:
         """
         WARNING - THIS IS VERY PARTIAL.  TODO: expand, or drop (not sure if really needed anymore)
@@ -1815,7 +1825,7 @@ class BioSim1D:
 
 
 
-    def plot_history_single_bin(self, bin_address :int, colors=None, title=None) -> pgo.Figure:
+    def plot_history_single_bin(self, bin_address :int, colors=None, title=None, smoothed=False) -> pgo.Figure:
         """
         Using plotly, draw the plots of chemical concentration values over time at the specified bin,
         based on historical data that was saved when running simulations.
@@ -1830,15 +1840,20 @@ class BioSim1D:
         :param bin_address: A single bin address (an integer)
         :param colors:
         :param title:       [OPTIONAL] Label for the top of the plot
+        :param smoothed:    [OPTIONAL] If True, a spline is used to smooth the lines;
+                                otherwise (default), line segments are used
         :return:            A plotly "Figure" object
         """
         # TODO: add more options
 
         self.assert_valid_bin(bin_address)
 
+        # Retrieve the historical data
         df = self.conc_history.bin_history(bin_address = bin_address)
+
         return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
-                                        colors=colors, legend_header="Chemical", title=title)
+                                        colors=colors, legend_header="Chemical", title=title,
+                                        smoothed=smoothed)
 
 
 

@@ -235,8 +235,8 @@ class PlotlyHelper:
                     colors=None, title=None, title_prefix=None,
                     range_x=None, range_y=None,
                     x_label=None, y_label="Y", legend_header="Plot",
-                    vertical_lines_to_add=None,
-                    show_intervals=False, show=False) -> pgo.Figure:
+                    vertical_lines_to_add=None, show_intervals=False,
+                    smoothed=False, show=False) -> pgo.Figure:
         """
         Using plotly, draw line plots from the values in the given dataframe.
         One column supplies the values for the x-axis,
@@ -273,6 +273,8 @@ class PlotlyHelper:
                                     and draws thin vertical dotted gray lines at all the x-coords
                                     of the data points in the saved history data;
                                     also, it adds a comment to the title.
+        :param smoothed:        [OPTIONAL] If True, a spline is used to smooth the lines;
+                                    otherwise (default), line segments are used
         :param show:            If True, the plot will be shown
                                     Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
                                           gets it automatically shown
@@ -335,10 +337,13 @@ class PlotlyHelper:
 
 
         # Create the main plot
+        line_shape = "spline" if smoothed else "linear"
+
         fig = px.line(data_frame=df, x=x_var, y=fields,
                       title=title, range_x=range_x, range_y=range_y,
                       color_discrete_sequence = colors,
-                      labels={"value": y_label, "variable": legend_header})
+                      labels={"value": y_label, "variable": legend_header},
+                      line_shape=line_shape)
 
         if type(fields) == str:     # Somehow, the `labels` argument in px.line, above, is ignored when `fields` is just a string
             fig.update_layout(yaxis_title=y_label)   # This line will remedy the above issue
