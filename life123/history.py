@@ -28,6 +28,8 @@ class History:
 
         self.step_of_last_snapshot = -1     # An out-of-range value
 
+        self.initial_caption = None
+
         self.log_file = None
 
 
@@ -67,7 +69,9 @@ class History:
 
         Note that when step_count is 0 there's no capture, unless the frequency is 1
 
-        :param step_count:  None means always recapture
+        :param step_count:          None means always recapture
+        :param disregard_frequency: [OPTIONAL] If True, the capture frequency is NOT considered in the
+                                        decision about saving this historical data point
         :return:
         """
         if step_count is None:
@@ -108,18 +112,19 @@ class History:
 
 
 
-    def save_snapshot_common(self, system_time, data_snapshot, step_count=None, caption="", initial_caption="") -> str:
+    def save_snapshot_common(self, system_time, data_snapshot, step_count=None, caption="") -> str:
         """
 
         :param system_time:
         :param data_snapshot:   Data format will vary in different child classes
         :param step_count:
-        :param caption:         [OPTIONAL] String to save alongside this snapshot
-        :param initial_caption:
+        :param caption:         [OPTIONAL] String to save alongside this snapshot; if not provided,
+                                    the object property self.initial_caption is used, if set
         :return:                The caption that was actually used
         """
-        if (not caption) and initial_caption and (step_count == 0):
-            caption = initial_caption
+        if (not caption) and self.initial_caption:
+            caption = self.initial_caption
+            self.initial_caption = None             # Reset value
 
         # The following is to avoid unsightly NaN's and floating-point numbers
         if step_count is None:
@@ -175,18 +180,17 @@ class HistoryUniformConcentration(History):
 
 
 
-    def save_snapshot(self, system_time, data_snapshot, step_count=None, caption="", initial_caption="") -> None:
+    def save_snapshot(self, system_time, data_snapshot, step_count=None, caption="") -> None:
         """
 
         :param system_time:
         :param data_snapshot:   EXAMPLE: {"A": 1.3, "B": 4.9}
         :param step_count:
         :param caption:         [OPTIONAL] String to save alongside this snapshot
-        :param initial_caption:
         :return:                None
         """
         caption = self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
-                                                      caption=caption, initial_caption=initial_caption)
+                                                      caption=caption)
 
         if self.log_file is None:
             return
@@ -222,8 +226,8 @@ class HistoryBinConcentration(History):
 
     def __init__(self, bins=None, *args, **kwargs):
         super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
-        self.restrict_bins = bins
-        self.history = Collection(parameter_name="SYSTEM TIME")  # To store user-selected snapshots of quantities of interest
+        self.restrict_bins = bins                               # Bin address, or list of them, or None
+        self.history = Collection(parameter_name="SYSTEM TIME") # To store user-selected snapshots of quantities of interest
 
 
 
@@ -235,7 +239,8 @@ class HistoryBinConcentration(History):
         :param frequency:
         :param chem_labels: [OPTIONAL] List of chemicals to include in the history;
                                 if None (default), include them all.
-        :param bins:
+        :param bins:        [OPTIONAL] Bin address, or list of them;
+                                if None (default), include them all.
         :return:            None
         """
         self.enable_history_common(frequency=frequency, chem_labels=chem_labels)
@@ -243,10 +248,15 @@ class HistoryBinConcentration(History):
 
 
 
-    def save_snapshot(self, system_time, data_snapshot, step_count=None, caption="", initial_caption="") -> None:
+    def save_snapshot(self, system_time, data_snapshot, step_count=None, caption="") -> None:
         """
 
-           EXAMPLE of data_snapshot:
+           EXAMPLE of data_snapshot (for 1D) systems:
+                { 6: {"A": 1.3, "B": 3.9},
+                  8: {"A": 4.6, "B": 2.7}
+                }
+
+           EXAMPLE of data_snapshot (for 2D) systems:
                 { (0,0): {"A": 1.3, "B": 3.9},
                   (3,5): {"A": 4.6, "B": 2.7}
                 }
@@ -254,28 +264,35 @@ class HistoryBinConcentration(History):
         :param data_snapshot:
         :param step_count:
         :param caption:         [OPTIONAL] String to save alongside this snapshot
-        :param initial_caption:
         :return:                None
         """
         self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
-                                  caption=caption, initial_caption=initial_caption)
+                                  caption=caption)
 
 
 
     def bin_history(self, bin_address, include_captions=False):
         """
         Return the history at the given bin, as a Pandas dataframe.
-        The first column is "SYSTEM TIME" and the other ones are the various chemicals for which
+        The first column is "SYSTEM TIME", and the other ones are the various chemicals for which
         history had been enabled.
+        If no historical data is located, an informational string is returned
 
-        :param bin_address:         EXAMPLE, in 2D : (3,3)
+        :param bin_address:         A single bin address.  EXAMPLE, in 2D : (3,3)
         :param include_captions:    If True, the captions are returned as an extra "caption" column at the end
-        :return:                    A Pandas data frame
+        :return:                    A Pandas data frame, or a string if no historical data is present
         """
-        first_snapshot = self.history.get_data()[0]         # EXAMPLE: {(3, 3): {'A': 0.0, 'B': 0.0, 'C': 0.0}}
+        assert type(bin_address) == int or type(bin_address) == tuple, \
+            "bin_history(): Argument `bin_address` must be an integer (for 1D) of a tuple (2+ D)"
+
+        snapshot_list = self.history.get_data()
+        if snapshot_list == []:
+            return f"No concentration historical data available for bin {bin_address}"
+
+        first_snapshot = snapshot_list[0]         # EXAMPLE: {(3, 3): {'A': 0.0, 'B': 0.0, 'C': 0.0}}
         first_conc_data = first_snapshot.get(bin_address)   # EXAMPLE: {'A': 0.0, 'B': 0.0, 'C': 0.0}
-        assert first_conc_data is not None, \
-            f"bin_history(): no concentration historical data available for bin {bin_address}"
+        if first_conc_data is None: \
+            return f"No concentration historical data available for bin {bin_address}"
 
         chem_labels = list(first_conc_data)                 # Turn the dict's keys into list.  EXAMPLE: ['A', 'B', 'C']
 
@@ -327,7 +344,7 @@ class HistoryReactionRate(History):
 
 
 
-    def save_snapshot(self, system_time, data_snapshot, step_count=None, caption="", initial_caption="") -> None:
+    def save_snapshot(self, system_time, data_snapshot, step_count=None, caption="") -> None:
         """
 
            EXAMPLE of data_snapshot:
@@ -337,8 +354,7 @@ class HistoryReactionRate(History):
         :param data_snapshot:
         :param step_count:
         :param caption:         [OPTIONAL] String to save alongside this snapshot
-        :param initial_caption:
         :return:                None
         """
         self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
-                                  caption=caption, initial_caption=initial_caption)
+                                  caption=caption)

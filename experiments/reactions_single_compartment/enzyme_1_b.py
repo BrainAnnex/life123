@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## **Enzyme Kinetics** : 
+# # **Enzyme Kinetics** : 
 # #### _Accurate numerical solution_ - compared to the **Michaelis-Menten** model approximation and to the alternative **Morrison** model.
 #
 # #### Same as experiment `enzyme_1_a` but with _much-larger amounts of Enzyme_ relative to the initial Substrate concentration.
@@ -35,7 +35,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Jan. 9, 2025"
+LAST_REVISED = "Jan. 12, 2025"
 LIFE123_VERSION = "1.0.0rc2"         # Library version this experiment is based on
 
 # %%
@@ -62,16 +62,15 @@ check_version(LIFE123_VERSION)
 # # 1. Accurate numerical solution
 
 # %%
-chem_data = ChemData(names=["P", "ES"])
+chem_data = ChemData(names=["P", "ES"], plot_colors=["green", "red"])
 
 # %%
 # Our Enzyme
-chem_data.add_chemical(name="Adenosine deaminase", label="E") 
+chem_data.add_chemical(name="Adenosine deaminase", label="E", plot_color="violet") 
 
 # Our Substrate
-chem_data.add_chemical(name="2,6-Diamino-9-β-D-deoxyribofuranosyl-9-H-purine", label="S");
+chem_data.add_chemical(name="2,6-Diamino-9-β-D-deoxyribofuranosyl-9-H-purine", label="S", plot_color="darkturquoise")
 
-# %%
 chem_data.all_chemicals()
 
 # %% [markdown]
@@ -120,7 +119,7 @@ uc.describe_state()
 uc.single_compartment_react(duration=0.2, initial_step=0.05)  # A much-shorter duration than the 1.5 of experiment `enzyme_1`
 
 # %%
-uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'], show_intervals=True, 
+uc.plot_history(show_intervals=True, 
                 title_prefix="Almost as much E as S(0)")
 
 # %% [markdown]

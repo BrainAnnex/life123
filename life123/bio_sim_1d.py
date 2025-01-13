@@ -6,9 +6,12 @@ from scipy.stats import norm
 from typing import Union, List, Tuple
 from life123.collections import CollectionTabular
 from life123.uniform_compartment import UniformCompartment
+from life123.history import HistoryBinConcentration
 import plotly.express as px
+import plotly.graph_objects as pgo
 from life123.html_log import HtmlLog as log
 from life123.visualization.graphic_log import GraphicLog
+from life123.visualization.plotly_helper import PlotlyHelper
 
 
 
@@ -17,7 +20,6 @@ class BioSim1D:
     1D simulations of diffusion and reactions,
     with an early partial implementation of membranes
     """
-
 
     def __init__(self, n_bins :int, chem_data=None, reaction_handler=None):
         """
@@ -83,9 +85,12 @@ class BioSim1D:
                                             #   in the diffusion process.
                                             #   See explanation in file overly_large_single_timesteps.py
 
-        self.history = CollectionTabular()  # To store user-selected snapshots of (parts of) the system,
+        self.history = CollectionTabular()  # TODO: phase out in favor of the new self.conc_history
+                                            # To store user-selected snapshots of (parts of) the system,
                                             #   whenever requested by the user.
                                             #   Note that we're using the "tabular" format - friendly to Pandas
+
+        self.conc_history = HistoryBinConcentration(active=False)
 
         self.system_time = None             # Global time of the system, from initialization on
 
@@ -309,10 +314,13 @@ class BioSim1D:
 
 
 
-    def set_all_uniform_concentrations(self, conc_list: Union[list, tuple]) -> None:
+    def set_all_uniform_concentrations(self, conc_list: Union[list, tuple], snapshot=True) -> None:
         """
-        Set the concentrations of all species at once, uniformly across all bins
+        Set the concentrations of all chemical species at once, uniformly across all bins
+
         :param conc_list:   List or tuple of concentration values for each of the chemical species
+        :param snapshot:    [OPTIONAL] If True (default), add to the history
+                                a snapshot of this state being set
         :return:            None
         """
         assert len(conc_list) == self.chem_data.number_of_chemicals(), \
@@ -320,6 +328,9 @@ class BioSim1D:
 
         for i, conc in enumerate(conc_list):
             self.set_uniform_concentration(species_index=i, conc=conc)
+
+        if snapshot:
+            self.capture_snapshot(caption="Set concentration")  # Save this operation in the history (if enabled)
 
 
 
@@ -724,6 +735,48 @@ class BioSim1D:
 
 
 
+    def selected_concentrations(self, bins=None, chem_labels=None) -> dict:
+        """
+        Extract and return the concentration values of one or more (use None for all) chemicals,
+        in one or more bins.
+        The value is returned as a dictionary where the keys are bin addresses, and the values are dicts of
+        concentration values for the various chemicals (identified by their labels)
+            EXAMPLE:
+                    {   5: {"A": 1.3, "B": 3.9},
+                        8: {"A": 4.6, "B": 2.7}
+                    }
+
+            TODO: alternate returned structure - a Pandas dataframe such as
+                    BIN ADDRESS      A       B
+                        5           1.3     3.9
+                        8           4.6     2.7
+
+        :param bins:        Bin address (integer), or list of bin addresses. Use None to indicate all
+        :param chem_labels: Chemical label, or list of labels. Use None to indicate all
+        :return:            A dict indexed by bin address
+        """
+        if bins is None:
+            bins = list(range(self.n_bins))  # All bins
+        elif type(bins) != list:
+            bins = [bins]
+
+        if chem_labels is None:
+            chem_labels = self.chem_data.get_all_labels()
+        elif type(chem_labels) != list:
+            chem_labels = [chem_labels]
+
+        result = {}
+        for bin_address in bins:
+            bin_values = {}
+            for chem_label in chem_labels:
+                conc = self.bin_concentration(bin_address=bin_address, species_label=chem_label)
+                bin_values[chem_label] = conc
+
+            result[bin_address] = bin_values
+
+        return result
+
+
 
     def describe_state(self, concise=False) -> Union[pd.DataFrame, None]:
         """
@@ -788,8 +841,8 @@ class BioSim1D:
                 else:
                     print(f"  Species {species_index}{name}. Diff rate: {self.chem_data.get_diffusion_rate(species_index=species_index)}. Conc: {all_conc}")
 
-        else:   # This alternate view, using Pandas, currently only usable whene there are no membranes
-            df = pd.DataFrame(self.system, columns=[f"{i}" for i in range(self.n_bins)])
+        else:   # This alternate view, using Pandas, currently only usable when there are no membranes
+            df = pd.DataFrame(self.system, columns=[f"Bin {i}" for i in range(self.n_bins)])
 
             df.insert(0, "Species", self.chem_data.get_all_labels())
             df.insert(1, "Diff rate", self.chem_data.get_all_diffusion_rates()) # Unset values will show up as None
@@ -845,7 +898,7 @@ class BioSim1D:
 
     '''                                    ~   SPATIAL ELEMENTS   ~                                           '''
 
-    def ________SPACIAL_ELEMENTS________(DIVIDER):
+    def ________SPATIAL_ELEMENTS________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
@@ -999,6 +1052,108 @@ class BioSim1D:
         new_state[ : , -1:] = self.system[ : , -1:]                 # Set the last column of result to the last column of self.system
 
         self.replace_system(new_state)
+
+
+
+
+    #####################################################################################################
+
+    '''                                      ~   HISTORY   ~                                          '''
+
+    def ________HISTORY________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
+    def enable_history(self, bins=None, frequency=1, chem_labels=None, take_snapshot=False) -> None:
+        """
+        Request history capture, with the specified parameters.
+        If history was already enabled, this function can be used to alter its capture parameters.
+
+        :param bins:            Bin address (integer), or list of bin addresses. Use None to indicate all
+        :param frequency:
+        :param chem_labels:     [OPTIONAL] List of chemicals to include in the history;
+                                    if None (default), include them all.
+        :param take_snapshot:   If True, a snapshot of the system's current configuration is added to the history
+
+        :return:                None
+        """
+        self.conc_history.enable_history(frequency=frequency, chem_labels=chem_labels, bins=bins)
+        if take_snapshot:
+            self.capture_snapshot()
+
+        print(f"History enabled for bins {bins} and chemicals {chem_labels} (None means 'all')")
+
+
+
+    def capture_snapshot(self, step_count=None, caption="") -> None:
+        """
+
+        :param step_count:
+        :param caption:
+        :return:            None
+        """
+        print(f"***** Snapshot request at step_count={step_count}.  system_time={self.system_time}")
+        if not self.conc_history.to_capture(step_count):
+            return
+
+        data_snapshot = self.selected_concentrations(bins=self.conc_history.restrict_bins,
+                                                     chem_labels=self.conc_history.restrict_chemicals)
+        '''
+           EXAMPLE of data_snapshot:
+                { 5: {"A": 1.3, "B": 3.9},
+                  8: {"A": 4.6, "B": 2.7}
+                }        
+        '''
+        self.conc_history.save_snapshot(step_count=step_count, system_time=self.system_time,
+                                        data_snapshot=data_snapshot,
+                                        caption=caption)
+
+
+
+    def get_bin_history(self, bin_address :int) -> pd.DataFrame:
+        """
+        Get the concentration history at the given bin(s) of all the chemicals
+        whose history was requested by a call of enable_history()
+
+        :param bin_address: A single bin address (an integer)
+        :return:            A Pandas data frame
+        """
+        return self.conc_history.bin_history(bin_address = bin_address)
+
+
+
+    def add_snapshot(self, data_snapshot: dict, caption ="") -> None:
+        """
+        TODO: being phased out
+        Preserve some data value (passed as dictionary) in the history, linked to the
+        current System Time.
+
+        EXAMPLE:  add_snapshot(data_snapshot = {"concentration_A": 12.5, "concentration_B": 3.7},
+                                caption="Just prior to infusion")
+
+        IMPORTANT: if the data is not immutable, then it ought to be cloned first,
+                   to preserve it from possible later modifications
+
+        :param data_snapshot:   A dictionary of data to preserve for later use
+        :param caption:         Optional caption to attach to this preserved data
+        :return:                None
+        """
+        self.history.store(par=self.system_time,
+                           data_snapshot = data_snapshot, caption=caption)
+
+
+
+    def get_history(self) -> pd.DataFrame:
+        """
+        TODO: being phased out
+        Retrieve and return a Pandas dataframe with the system history that had been saved
+        using add_snapshot()
+
+        :return:        a Pandas dataframe
+        """
+        return self.history.get_dataframe()
+
 
 
 
@@ -1283,7 +1438,7 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    def react(self, total_duration=None, time_step=None, n_steps=None, snapshots=None) -> None:
+    def react(self, total_duration=None, time_step=None, n_steps=None, snapshots=None, silent=False) -> None:
         """
         Update the system concentrations as a result of all the reactions in all bins - taking
         the presence of membranes into account, if applicable.
@@ -1339,9 +1494,16 @@ class BioSim1D:
                 self.system_B += self.delta_reactions_B   # Matrix operation to update all the concentrations
 
             self.system_time += time_step
-            # Preserve some of the data, as requested
+
+            self.capture_snapshot(step_count=i+1)     # Save historical values (if enabled)
+
+            # Preserve some of the data, as requested  TODO: this is an old system being phased out
             if snapshots and ((i+1)%frequency == 0) and (sample_bin is not None):
                 self.add_snapshot(self.bin_snapshot(bin_address = snapshots["sample_bin"]))
+
+        if not silent:
+            # Print out a summary, at the termination of the run
+            print(f"System Time is now: {self.system_time:,.5g}")
 
 
 
@@ -1652,42 +1814,32 @@ class BioSim1D:
 
 
 
-
-    #########################################################################
-    #                                                                       #
-    #                              HISTORY                                  #
-    #                                                                       #
-    #########################################################################
-
-    def add_snapshot(self, data_snapshot: dict, caption ="") -> None:
+    def plot_history_single_bin(self, bin_address :int, colors=None, title=None) -> pgo.Figure:
         """
-        Preserve some data value (passed as dictionary) in the history, linked to the
-        current System Time.
+        Using plotly, draw the plots of chemical concentration values over time at the specified bin,
+        based on historical data that was saved when running simulations.
 
-        EXAMPLE:  add_snapshot(data_snapshot = {"concentration_A": 12.5, "concentration_B": 3.7},
-                                caption="Just prior to infusion")
+        Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
+              EXAMPLE:
+                    from life123 import PlotlyHelper
+                    p1 = plot_history(various args, show=False)
+                    p2 = plot_history(various args, show=False)
+                    PlotlyHelper.combine_plots([p1, p2], other optional args)
 
-        IMPORTANT: if the data is not immutable, then it ought to be cloned first,
-                   to preserve it from possible later modifications
-
-        :param data_snapshot:   A dictionary of data to preserve for later use
-        :param caption:         Optional caption to attach to this preserved data
-        :return:                None
+        :param bin_address: A single bin address (an integer)
+        :param colors:
+        :param title:       [OPTIONAL] Label for the top of the plot
+        :return:            A plotly "Figure" object
         """
-        self.history.store(par=self.system_time,
-                           data_snapshot = data_snapshot, caption=caption)
+        # TODO: add more options
+
+        self.assert_valid_bin(bin_address)
+
+        df = self.conc_history.bin_history(bin_address = bin_address)
+        return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
+                                        colors=colors, legend_header="Chemical", title=title)
 
 
-
-
-    def get_history(self) -> pd.DataFrame:
-        """
-        Retrieve and return a Pandas dataframe with the system history that had been saved
-        using add_snapshot()
-
-        :return:        a Pandas dataframe
-        """
-        return self.history.get_dataframe()
 
 
 

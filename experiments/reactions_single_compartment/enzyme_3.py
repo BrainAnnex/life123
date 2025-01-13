@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## **Enzyme Kinetics** : 
+# # **Enzyme Kinetics** : 
 # #### _Accurate numerical solution_ - compared to the **Michaelis-Menten** model approximation and to the alternative **Morrison** model.
 #
 # #### Two Coupled Reactions: `E + S <-> ES`, and  `ES -> E + P` , using real-life kinetic parameters.  

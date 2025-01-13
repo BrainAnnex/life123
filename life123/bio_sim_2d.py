@@ -287,7 +287,7 @@ class BioSim2D:
 
 
 
-    def selected_concentrations(self, bins, labels=None) -> dict:
+    def selected_concentrations(self, bins, chem_labels=None) -> dict:
         """
         Extract and return the concentration values of one or more (use None for all) chemicals,
         in one or more bins.
@@ -303,22 +303,24 @@ class BioSim2D:
                         (0,0)       1.3     3.9
                         (3,5)       4.6     2.7
 
-        :param bins:    Bin address (pair of integers), or list of bin addresses
-        :param labels:  Chemical label, or list of labels.  If None then it's all of them
+        :param bins:    Bin address (pair of integers), or list of bin addresses. Use None to indicate all
+        :param chem_labels:  Chemical label, or list of labels. Use None to indicate all
         :return:        A dict indexed by bin address
         """
-        if type(bins) != list:
+        if bins is None:
+            bins = [(x,y) for x in range(self.n_bins_x) for y in range(self.n_bins_y)]  # All bins
+        elif type(bins) != list:
             bins = [bins]
 
-        if labels is None:
-            labels = self.chem_data.get_all_labels()
-        elif type(labels) != list:
-            labels = [labels]
+        if chem_labels is None:
+            chem_labels = self.chem_data.get_all_labels()
+        elif type(chem_labels) != list:
+            chem_labels = [chem_labels]
 
         result = {}
         for bin_address in bins:
             bin_values = {}
-            for chem_label in labels:
+            for chem_label in chem_labels:
                 conc = self.bin_concentration(bin_address=bin_address, species_label=chem_label)
                 bin_values[chem_label] = conc
 
@@ -465,7 +467,7 @@ class BioSim2D:
 
     #####################################################################################################
 
-    '''                                    ~   VIEW/UPDATE SYSTEM   ~                                           '''
+    '''                                    ~   UTILITIES   ~                                          '''
 
     def ________UTILITIES________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
@@ -488,21 +490,47 @@ class BioSim2D:
 
 
 
-    def enable_history(self, bins=None, frequency=1, chem_labels=None, take_snapshot=True) -> None:
+
+
+    #####################################################################################################
+
+    '''                                      ~   HISTORY   ~                                          '''
+
+    def ________HISTORY________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
+    def enable_history(self, bins=None, frequency=1, chem_labels=None, take_snapshot=False) -> None:
         """
         Request history capture, with the specified parameters.
         If history was already enabled, this function can be used to alter its capture parameters.
-        :param bins:
+
+        :param bins:            Bin address (pair of integers), or list of bin addresses. Use None to indicate all
         :param frequency:
         :param chem_labels:     [OPTIONAL] List of chemicals to include in the history;
                                     if None (default), include them all.
         :param take_snapshot:   If True, a snapshot of the system's current configuration is added to the history
 
-        :return:
+        :return:                None
         """
         self.conc_history.enable_history(frequency=frequency, chem_labels=chem_labels, bins=bins)
         if take_snapshot:
             self.capture_snapshot()
+
+        print(f"History enabled for bins {bins} and chemicals {chem_labels} (None means 'all')")
+
+
+
+    def get_bin_history(self, bin_address :(int,int)) -> pd.DataFrame:
+        """
+        Get the concentration history at the given bin(s) of all the chemicals
+        whose history was requested by a call of enable_history()
+
+        :param bin_address: A single bin address (a pair of integers)
+        :return:            A Pandas data frame
+        """
+        return self.conc_history.bin_history(bin_address = bin_address)
 
 
 
@@ -516,7 +544,7 @@ class BioSim2D:
             return
 
         data_snapshot = self.selected_concentrations(bins=self.conc_history.restrict_bins,
-                                                     labels=self.conc_history.restrict_chemicals)
+                                                     chem_labels=self.conc_history.restrict_chemicals)
         '''
            EXAMPLE of data_snapshot:
                 { (0,0): {"A": 1.3, "B": 3.9},
@@ -965,7 +993,7 @@ class BioSim2D:
 
 
 
-    def plot_history_single_bin(self, bin_address) -> pgo.Figure:
+    def plot_history_single_bin(self, bin_address :(int,int), colors=None, title=None) -> pgo.Figure:
         """
         Using plotly, draw the plots of chemical concentration values over time at the specified bin,
         based on historical data that was saved when running simulations.
@@ -976,11 +1004,17 @@ class BioSim2D:
                     p1 = plot_history(various args, show=False)
                     p2 = plot_history(various args, show=False)
                     PlotlyHelper.combine_plots([p1, p2], other optional args)
+
+        :param bin_address: A single bin address (a pair of integers)
+        :param colors:
+        :param title:       [OPTIONAL] Label for the top of the plot
+        :return:            A plotly "Figure" object
         """
         # TODO: add more options
 
         assert type(bin_address) == tuple, \
-            "plot_history_sing_bin(): bin_address must be a tuple"
+            "plot_history_sing_bin(): bin_address must be a tuple"  # TODO: switch to a validation function
 
         df = self.conc_history.bin_history(bin_address = bin_address)
-        return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration")
+        return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
+                                        colors=colors, legend_header="Chemical", title=title)

@@ -586,6 +586,9 @@ class UniformCompartment:
             f"UniformCompartment.single_compartment_react(): no reactions are present.  Make sure to first add them with add_reaction()"
 
 
+        self.conc_history.initial_caption = capture_initial_caption     # TODO: turn into method
+
+
         """
         Determine all the various time parameters that were not explicitly provided
         """
@@ -700,7 +703,7 @@ class UniformCompartment:
 
             # Preserve the CONCENTRATION data, as requested (part2, AFTER updating the System Time, because current concentrations
             # refer to the System Time, just updated at the end of the simulation step)
-            self.capture_conc_snapshot(step_count=step_count+1, initial_caption=capture_initial_caption)   # Save historical concentration values (if enabled)
+            self.capture_conc_snapshot(step_count=step_count+1)   # Save historical concentration values (if enabled)
 
 
             step_count += 1
@@ -1528,6 +1531,9 @@ class UniformCompartment:
 
         :return:    Object of type life123.diagnostics.Diagnostics
         """
+        assert self.diagnostics is not None, \
+            "get_diagnostics(): no diagnostics data is available.  Did you call enable_diagnostics() prior to running the simulation?"
+
         return self.diagnostics
 
 
@@ -1536,9 +1542,9 @@ class UniformCompartment:
 
     #####################################################################################################
 
-    '''                                    ~   GRAPHICS   ~                                           '''
+    '''                                    ~   VISUALIZATION   ~                                           '''
 
-    def ________GRAPHICS________(DIVIDER):
+    def ________VISUALIZATION________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
@@ -1722,13 +1728,12 @@ class UniformCompartment:
 
 
 
-    def capture_rate_snapshot(self, step_count=None, caption=None, initial_caption=None,
+    def capture_rate_snapshot(self, step_count=None, caption=None,
                              force=False, system_time=None) -> None:
         """
 
         :param step_count:
         :param caption:
-        :param initial_caption:
         :param force:           [OPTIONAL] If True, take a snapshot regardless of step_count; default is False
         :param system_time:
         :return:                None
@@ -1748,17 +1753,18 @@ class UniformCompartment:
         '''
         self.rate_history.save_snapshot(step_count=step_count, system_time=system_time,
                                         data_snapshot=data_snapshot,
-                                        caption=caption, initial_caption=initial_caption)
+                                        caption=caption)
 
 
 
-    def capture_conc_snapshot(self, step_count=None, caption="", initial_caption="", disregard_frequency=False) -> None:
+    def capture_conc_snapshot(self, step_count=None, caption="", disregard_frequency=False) -> None:
         """
 
         :param step_count:
         :param caption:
-        :param initial_caption:
-        :return:                None
+        :param disregard_frequency: [OPTIONAL] If True, the capture frequency is NOT considered in the
+                                        decision about saving this historical data point
+        :return:                    None
         """
         if not self.conc_history.to_capture(step_count, disregard_frequency=disregard_frequency):
             return
@@ -1770,7 +1776,7 @@ class UniformCompartment:
         '''
         self.conc_history.save_snapshot(step_count=step_count, system_time=self.system_time,
                                         data_snapshot=data_snapshot,
-                                        caption=caption, initial_caption=initial_caption)
+                                        caption=caption)
 
 
 

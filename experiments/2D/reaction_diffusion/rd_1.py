@@ -82,8 +82,6 @@ bio.system_heatmaps()
 # ## Enable History
 
 # %%
-
-# %%
 # Let's take a peek at the current concentrations of all chemicals in the bin with the initial concentration injections, as well as at the bin in the very center
 bio.selected_concentrations(bins=[(0,0), (6,6), (3,3)])
 

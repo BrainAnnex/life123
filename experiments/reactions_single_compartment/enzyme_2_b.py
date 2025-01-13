@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## **Enzyme Kinetics** : 
+# # **Enzyme Kinetics** : 
 #
 # #### Our model: `E + S <-> ES` (with kinetic parameters _k1_forward_ and _k1_reverse_), and  `ES -> E + P`  (_k2_forward_)  
 #
@@ -37,8 +37,8 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Dec. 15, 2024"
-LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
+LAST_REVISED = "Jan. 12, 2025"
+LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
