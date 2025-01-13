@@ -65,7 +65,7 @@ uc.describe_reactions()
 # %%
 
 # %%
-#Set up the 1-D system
+# Set up the 1-D system
 bio = BioSim1D(n_bins=1, reaction_handler=uc)
 
 # %%
@@ -110,7 +110,7 @@ uc.plot_reaction_network("vue_cytoscape_2")
 
 # %%
 # First step
-bio.react(time_step=0.01, n_steps=1, snapshots={"sample_bin": 0})
+bio.react(time_step=0.01, n_steps=1)
 
 # %%
 bio.describe_state()
@@ -122,21 +122,13 @@ bio.get_bin_history(bin_address=0)
 
 # %%
 # Identical 2nd step
-bio.react(time_step=0.01, n_steps=1, snapshots={"sample_bin": 0})
+bio.react(time_step=0.01, n_steps=1)
 
 # %%
 bio.describe_state()
 
 # %%
 bio.get_bin_history(bin_address=0)
-
-# %%
-len(bio.conc_history.history)
-
-# %%
-bio.system_time
-
-# %%
 
 # %%
 
@@ -147,8 +139,12 @@ bio.system_time
 
 # %%
 # Numerous more identical steps, to equilibrium
-bio.react(time_step=0.01, n_steps=200, snapshots={"sample_bin": 0, "frequency": 10})
+bio.react(time_step=0.01, n_steps=200)
+
+# %%
 bio.describe_state()
+
+# %%
 
 # %% [markdown] tags=[]
 # ### <a name="sec_2_equilibrium"></a>Equilibrium
@@ -190,7 +186,8 @@ bio.get_bin_history(bin_address=0)
 # # Plots of changes of concentration with time
 
 # %%
-bio.plot_history_single_bin(bin_address=0, title="2 COUPLED reactions:  A + B <-> C  and  C + D <-> E . Concentrations at bin 0")
+bio.plot_history_single_bin(bin_address=0, 
+                            title="2 COUPLED reactions:  A + B <-> C  and  C + D <-> E . Concentrations at bin 0")
 
 # %% [markdown]
 # A and B get consumed.  

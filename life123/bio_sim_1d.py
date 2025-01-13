@@ -1093,7 +1093,6 @@ class BioSim1D:
         :param caption:
         :return:            None
         """
-        print(f"***** Snapshot request at step_count={step_count}.  system_time={self.system_time}")
         if not self.conc_history.to_capture(step_count):
             return
 
@@ -1495,11 +1494,13 @@ class BioSim1D:
 
             self.system_time += time_step
 
-            self.capture_snapshot(step_count=i+1)     # Save historical values (if enabled)
+            self.capture_snapshot(step_count=i+1)       # Save historical values (if enabled)
+                                                        # It's i+1 because we save the conc. values at the END of the step
 
             # Preserve some of the data, as requested  TODO: this is an old system being phased out
             if snapshots and ((i+1)%frequency == 0) and (sample_bin is not None):
                 self.add_snapshot(self.bin_snapshot(bin_address = snapshots["sample_bin"]))
+
 
         if not silent:
             # Print out a summary, at the termination of the run

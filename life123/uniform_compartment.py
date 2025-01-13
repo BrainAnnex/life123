@@ -703,7 +703,8 @@ class UniformCompartment:
 
             # Preserve the CONCENTRATION data, as requested (part2, AFTER updating the System Time, because current concentrations
             # refer to the System Time, just updated at the end of the simulation step)
-            self.capture_conc_snapshot(step_count=step_count+1)   # Save historical concentration values (if enabled)
+            self.capture_conc_snapshot(step_count=step_count+1) # Save historical concentration values (if enabled)
+                                                                # It's +1 because we save the conc. values at the END of the step
 
 
             step_count += 1
@@ -762,7 +763,7 @@ class UniformCompartment:
 
 
         # One final snapshot, unless already taken for the last step done
-        self.capture_conc_snapshot(step_count=step_count, caption=capture_final_caption, disregard_frequency=True)
+        self.capture_conc_snapshot(step_count=step_count, caption=capture_final_caption, extra=True)
 
         # Add a caption to the very last entry in the system history
         self.conc_history.set_caption_last_snapshot(capture_final_caption)
@@ -1757,16 +1758,19 @@ class UniformCompartment:
 
 
 
-    def capture_conc_snapshot(self, step_count=None, caption="", disregard_frequency=False) -> None:
+    def capture_conc_snapshot(self, step_count=None, caption="", extra=False) -> None:
         """
 
         :param step_count:
         :param caption:
-        :param disregard_frequency: [OPTIONAL] If True, the capture frequency is NOT considered in the
-                                        decision about saving this historical data point
+        :param extra:       [OPTIONAL] If True, it means that this is a special extra capture;
+                                the capture frequency will NOT considered in the
+                                decision about saving it, but an extra check will be performed
+                                to make sure it's not a duplicate of the earlier capture
+
         :return:                    None
         """
-        if not self.conc_history.to_capture(step_count, disregard_frequency=disregard_frequency):
+        if not self.conc_history.to_capture(step_count, extra=extra):
             return
 
         data_snapshot = self.get_conc_dict(species=self.conc_history.restrict_chemicals)
@@ -1795,7 +1799,7 @@ class UniformCompartment:
     def get_history(self, t_start=None, t_end=None, head=None, tail=None, t=None, columns=None) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
-        using capture_snapshot().
+        using capture_conc_snapshot().
         Optionally, restrict the result with a start and/or end times,
         or by limiting to a specified numbers of rows at the end
 

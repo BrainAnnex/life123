@@ -62,16 +62,18 @@ class History:
 
 
 
-    def to_capture(self, step_count=None, disregard_frequency=False) -> bool:
+    def to_capture(self, step_count=None, extra=False) -> bool:
         """
         Return True if various criteria indicate that a snapshot should be taken at the give step_count;
         False otherwise
 
         Note that when step_count is 0 there's no capture, unless the frequency is 1
 
-        :param step_count:          None means always recapture
-        :param disregard_frequency: [OPTIONAL] If True, the capture frequency is NOT considered in the
-                                        decision about saving this historical data point
+        :param step_count:  None means always recapture
+        :param extra:       [OPTIONAL] If True, it means that this is a special extra capture;
+                                the capture frequency will NOT considered in the
+                                decision about saving it, but an extra check will be performed
+                                to make sure it's not a duplicate of the earlier capture
         :return:
         """
         if step_count is None:
@@ -80,10 +82,10 @@ class History:
         if not self.active:
             return False
 
-        if step_count == self.step_of_last_snapshot:
-            return False     # Don't re-take snapshot, if still at the same step count
+        if extra and (step_count == self.step_of_last_snapshot):
+            return False     # In the case of special extra snapshots, make sure we didn't already take it
 
-        if (self.capture_frequency == 1) or disregard_frequency:
+        if (self.capture_frequency == 1) or extra:
             return True
 
         if (step_count+1) % self.capture_frequency == 0:
