@@ -16,7 +16,7 @@
 # ## 2 COUPLED reactions:  `A + B <-> C`  and  `C + D <-> E` , 
 # ### with 1st-order kinetics for each species, taken to equilibrium
 #
-# Both reactions are stronger in their respective forward rates.  For the most part, "C" is produced by the 1st reaction, and consumed by the 2nd one
+# Both reactions are stronger in their respective forward rates.  For the most part, "C" is produced by the 1st reaction, and consumed by the 2nd one.
 #
 # Diffusion not applicable (just 1 bin)
 
@@ -24,7 +24,7 @@
 # ### TAGS :  "reactions 1D"
 
 # %%
-LAST_REVISED = "Jan. 12, 2025"
+LAST_REVISED = "Jan. 13, 2025"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
@@ -37,11 +37,9 @@ LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData, UniformCompartment, BioSim1D
+from life123 import ChemData, BioSim1D
 
-import plotly.express as px
-from life123 import HtmlLog as log
-from life123 import GraphicLog
+from life123 import GraphicLog, HtmlLog as log
 
 # %%
 # Initialize the HTML logging
@@ -53,23 +51,33 @@ GraphicLog.config(filename=log_file,
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
+
+# %% [markdown]
+# # Initialize the System
+
+# %%
 # Initialize the system
 chem_data = ChemData(names=["A", "B", "C", "D", "E"])     # NOTE: Diffusion not applicable (just 1 bin)
+bio = BioSim1D(n_bins=1, chem_data=chem_data)  
 
-uc = UniformCompartment(chem_data=chem_data)
-
+# %%
 # Specify the reactions
+reactions = bio.get_reactions()
 
 # Reactions A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species
-uc.add_reaction(reactants=["A", "B"], products="C", forward_rate=5., reverse_rate=2.)
-uc.add_reaction(reactants=["C", "D"], products="E", forward_rate=8., reverse_rate=4.)
-uc.describe_reactions()
+reactions.add_reaction(reactants=["A", "B"], products="C", forward_rate=5., reverse_rate=2.)
+reactions.add_reaction(reactants=["C", "D"], products="E", forward_rate=8., reverse_rate=4.)
+reactions.describe_reactions()
 
 # %%
+# Send a header and a plot to the HTML log file
+log.write("2 COUPLED reactions:  A + B <-> C  and  C + D <-> E",
+          style=log.h2)
+
+# Send the plot to the HTML log file
+reactions.plot_reaction_network("vue_cytoscape_2")
 
 # %%
-# Set up the 1-D system
-bio = BioSim1D(n_bins=1, reaction_handler=uc)
 
 # %%
 
@@ -92,17 +100,6 @@ bio.describe_state()
 
 # %%
 bio.get_bin_history(bin_address=0)
-
-# %%
-uc.describe_reactions()
-
-# %%
-# Send a header and a plot to the HTML log file
-log.write("2 COUPLED reactions:  A + B <-> C  and  C + D <-> E",
-          style=log.h2)
-
-# Send the plot to the HTML log file
-uc.plot_reaction_network("vue_cytoscape_2")
 
 # %%
 
@@ -154,10 +151,10 @@ bio.describe_state()
 
 # %%
 # Verify that each reaction has reached equilibrium
-uc.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
-uc.is_in_equilibrium(rxn_index=1, conc=bio.bin_snapshot(bin_address = 0))
+bio.reaction_dynamics.is_in_equilibrium(rxn_index=1, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
 # Do a consistent check with the equilibrium concentrations:
@@ -168,11 +165,11 @@ C_eq = bio.bin_concentration(0, 2)
 D_eq = bio.bin_concentration(0, 3)
 E_eq = bio.bin_concentration(0, 4)
 
-Rf0 = uc.get_reactions().get_forward_rate(0)
-Rb0 = uc.get_reactions().get_reverse_rate(0)
+Rf0 = reactions.get_forward_rate(0)
+Rb0 = reactions.get_reverse_rate(0)
 
-Rf1 = uc.get_reactions().get_forward_rate(1)
-Rb1 = uc.get_reactions().get_reverse_rate(1)
+Rf1 = reactions.get_forward_rate(1)
+Rb1 = reactions.get_reverse_rate(1)
 
 equil = -(Rf0 * A_eq * B_eq - Rf1 * C_eq * D_eq) + (Rb0 * C_eq - Rb1 * E_eq)
 
