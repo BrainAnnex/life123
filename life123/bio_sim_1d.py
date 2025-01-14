@@ -61,12 +61,14 @@ class BioSim1D:
                                 #   TODO - explore possible alternative: list of bin addresses the contains a membrane,
                                 #          or other sparse-matrix representation
 
-        self.A_fraction = None  # NumPy array of floats, of dimension n_bins;
+        self.A_fraction = None  # TODO - DEPRECATED
+                                # NumPy array of floats, of dimension n_bins;
                                 #   each value records the fraction (between 0. and 1.) of the LEFT one
                                 #   of the 2 parts into which the membrane splits the bin.
                                 #   0. if N/A
 
-        self.system_B = None    # Just like "system", but only for the "A" fractions of the bin, where applicable;
+        self.system_B = None    # TODO - DEPRECATED
+                                # Just like "system", but only for the "A" fractions of the bin, where applicable;
                                 #   0. if N/A
 
         self.delta_diffusion = None  # Buffer for the concentration changes from diffusion step (n_species x n_bins)
@@ -196,9 +198,11 @@ class BioSim1D:
 
     def reset_system(self) -> None:
         """
-        WARNING - THIS IS VERY PARTIAL.  TODO: expand, or drop (not sure if really needed anymore)
-        :return:
+        WARNING - THIS IS VERY PARTIAL.
+
+        :return:    None
         """
+        # TODO: expand, or drop (not sure if really needed anymore)
         self.system = None
         self.system_earlier = None
         self.system_B = None
@@ -571,9 +575,10 @@ class BioSim1D:
 
 
 
-
     def set_membranes(self, membrane_pos: Union[List, Tuple]) -> None:
         """
+        DEPRECATED!
+
         Set the presence of all membranes in the system,
         and optionally specify the fraction of the "A" part of the bin (by default 0.5)
 
@@ -589,6 +594,8 @@ class BioSim1D:
                                     2) OR pairs of bins numbers and fractional values
         :return:                None
         """
+        print("**** DEPRECATED, and expected to be removed soon")
+
         self.membranes = np.zeros(self.n_bins, dtype=bool)
         self.A_fraction = np.zeros(self.n_bins, dtype=float)
         if self.system_B is None:
@@ -865,6 +872,8 @@ class BioSim1D:
 
     def show_membranes(self, n_decimals=1) -> str:
         """
+        DEPRECATED!
+
         A simple-minded early method to visualize where the membranes are.
         Print, and return, a string with a diagram to visualize membranes and the fractions
         of their "left" sides
@@ -878,6 +887,8 @@ class BioSim1D:
         :return:            A string with the character-based diagram;
                             if no membranes were defined, return an empty string
         """
+        print("**** DEPRECATED; a completely-new system is expected")
+
         if self.membranes is None:
             print("No membranes present.  Call set_membranes() to set them")
             return ""
