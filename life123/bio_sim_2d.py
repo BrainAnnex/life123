@@ -329,6 +329,7 @@ class BioSim2D:
 
         result = {}
         for bin_address in bins:
+            self.assert_valid_bin(bin_address)
             bin_values = {}
             for chem_label in chem_labels:
                 conc = self.bin_concentration(bin_address=bin_address, species_label=chem_label)
@@ -344,15 +345,43 @@ class BioSim2D:
 
     #####################################################################################################
 
-    '''                                    ~   VIEW/UPDATE SYSTEM   ~                                           '''
+    '''                                    ~   UPDATE SYSTEM   ~                                           '''
 
     def ________UPDATE_SYSTEM________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
 
+    def assert_valid_bin(self, bin_address: (int,int)) -> None:
+        """
+        Raise an Exception if the given bin address isn't valid
 
+        :param bin_address: A pair of integers identifying a bin in the 2D system
+        :return:            None
+        """
+        assert type(bin_address) == tuple, \
+            f"BioSim2D: the requested bin address `{bin_address}` is not a pair of integers; its type is {type(bin_address)}"
 
+        assert len(bin_address) == 2, \
+            f"BioSim2D: the requested bin address {bin_address} is not a pair of integers; it has length {len(bin_address)}"
+
+        bin_x, bin_y =  bin_address
+
+        assert type(bin_x) == int, \
+            f"BioSim2D: the requested bin address {bin_address} isn't composed of integers; " \
+            f"the types in the pair are ({type(bin_x)}, {type(bin_y)})"
+
+        assert type(bin_y) == int, \
+            f"BioSim2D: the requested bin address {bin_address} isn't composed of integers; " \
+            f"the types in the pair are ({type(bin_x)}, {type(bin_y)})"
+
+        assert (bin_x >= 0) and (bin_x < self.n_bins_x),\
+            f"BioSim2D: the requested bin address {bin_address} is out of bounds for the system size; " \
+            f"allowed range for the x-bin is [0-{self.n_bins_x-1}], inclusive"
+
+        assert (bin_y >= 0) and (bin_y < self.n_bins_y),\
+            f"BioSim2D: the requested bin address {bin_address} is out of bounds for the system size; " \
+            f"allowed range for the y-bin is [0-{self.n_bins_y-1}], inclusive"
 
 
 
@@ -367,7 +396,7 @@ class BioSim2D:
         :param conc:            The desired concentration value to assign to the specified location
         :return:                None
         """
-        #self.assert_valid_bin(bin_address)     #TODO: define
+        self.assert_valid_bin(bin_address=(bin_x, bin_y))
 
         assert conc >= 0., f"set_bin_conc(): The concentration must be a positive number or zero (the requested value was {conc})"
 
@@ -387,7 +416,7 @@ class BioSim2D:
                                 otherwise, an Exception will be raised
         :return:                None
         """
-        #self.assert_valid_bin(bin_address)     #TODO: define
+        self.assert_valid_bin(bin_address)
 
         bin_x, bin_y = bin_address  # Unpack the bin address
 
@@ -524,6 +553,12 @@ class BioSim2D:
 
         :return:                None
         """
+        # Make sure that all bin addresses, if specified, are valid
+        if bins:
+            for b in bins:
+                self.assert_valid_bin(b)
+
+
         self.conc_history.enable_history(frequency=frequency, chem_labels=chem_labels, bins=bins)
         if take_snapshot:
             self.capture_snapshot()
