@@ -51,6 +51,7 @@ class BioSim1D:
         self.system = None      # Concentration data in the System we're simulating, for all the chemicals
                                 #   NumPy array of floats, of dimension: (n_species x n_bins).
                                 #   Each row represents a species
+                                # For example, self.system[0] is the linear sequence for the 0-th chemical
 
         self.system_earlier = None  # NOT IN CURRENT USE.  Envisioned for simulations where the past 2 time states are used
                                     # to compute the state at the next time step
@@ -784,6 +785,7 @@ class BioSim1D:
 
         result = {}
         for bin_address in bins:
+            self.assert_valid_bin(bin_address)
             bin_values = {}
             for chem_label in chem_labels:
                 conc = self.bin_concentration(bin_address=bin_address, species_label=chem_label)
@@ -1099,6 +1101,11 @@ class BioSim1D:
 
         :return:                None
         """
+        # Make sure that all bin addresses, if specified, are valid
+        if bins:
+            for b in bins:
+                self.assert_valid_bin(b)
+
         self.conc_history.enable_history(frequency=frequency, chem_labels=chem_labels, bins=bins)
         if take_snapshot:
             self.capture_snapshot()

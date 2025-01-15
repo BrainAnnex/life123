@@ -23,7 +23,7 @@
 # ### TAGS :  "diffusion 2D", "quick-start"
 
 # %%
-LAST_REVISED = "Dec. 31, 2024"
+LAST_REVISED = "Jan. 14, 2025"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%

@@ -13,6 +13,8 @@
 # ---
 
 # %% [markdown]
+# # Diffusion of 1 chemical
+#
 # ## An initial concentration pulse of a single chemical (near the left edge of the system, and halfway vertically), diffusing towards equilibrium
 #
 # The system starts out with a "concentration pulse" in just one bin - i.e. that bin is initially the only one with a non-zero concentration of the only chemical species.
@@ -21,10 +23,10 @@
 # (Note: this is the 2D counterpart of the 1D experiment by the same name)
 
 # %% [markdown]
-# ### TAGS :  "diffusion 2D"
+# ### TAGS :  "diffusion 2D", "quick-start"
 
 # %%
-LAST_REVISED = "Dec. 31, 2024"
+LAST_REVISED = "Jan. 14, 2025"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
@@ -45,9 +47,20 @@ check_version(LIFE123_VERSION)
 # %%
 # Prepare the initial system, with a single non-zero bin, near the left edge of the system, positioned halfway vertically
 chem_data = ChemData(names="A", diffusion_rates=0.02)
-bio = BioSim2D(n_bins=(5, 8), chem_data=chem_data)
 
-bio.set_bin_conc(bin_x = 2, bin_y = 1, chem_label="A", conc=10.)
+bio = BioSim2D(x_bins=5, y_bins=8, chem_data=chem_data)
+
+# %%
+bio.describe_state()
+
+# %%
+
+# %%
+bio.enable_history(bins=[(1,2), (4,7)], frequency=2)    # Request to save the concentration history at those bins 
+                                                        # (the one with the initial injection, and one far away in a corner)
+
+# %%
+bio.set_bin_conc(bin_x = 1, bin_y = 2, chem_label="A", conc=10.)
 
 bio.describe_state()
 
@@ -85,10 +98,10 @@ bio.check_mass_conservation(chem_label="A", expected=10.)
 # ## This is still an early stage in the diffusion process; let's advance it more... (Visualization from results shown at selected times)
 
 # %% tags=[]
-for i in range(200):
+for i in range(180):
     status = bio.diffuse(total_duration=delta_time, time_step=0.1)
 
-    if i<2 or i==6 or i>=199:
+    if i<2 or i==6 or i>=179:
         bio.describe_state()
         fig = bio.heatmap_single_chem(chem_label="A", title_prefix="Diffusion", height=400)
         fig.show()
@@ -108,3 +121,19 @@ for i in range(200):
 # %%
 # Mass conservation can also be verified as follows:
 bio.check_mass_conservation(chem_label="A", expected=10.)
+
+# %%
+
+# %% [markdown]
+# #### Instead of visualizing the entire system at a moment of time, like in the previous heatmaps, let's now look at the time evolution of the (only) chemical `A` at either of the bins whose history we requested prior to running the simulation
+
+# %%
+bio.conc_history.bin_history(bin_address=(2, 1))
+
+# %%
+bio.plot_history_single_bin(bin_address=(2, 1))
+
+# %%
+bio.plot_history_single_bin(bin_address=(4,7))
+
+# %%
