@@ -62,7 +62,7 @@ uc.add_reaction(reactants=["A", "B"], products="C", forward_rate=20., reverse_ra
 uc.describe_reactions()
 
 # %%
-bio = BioSim2D(n_bins=(7, 7), reaction_handler=uc)
+bio = BioSim2D(x_bins=7, y_bins=7, reaction_handler=uc)
 
 # %%
 

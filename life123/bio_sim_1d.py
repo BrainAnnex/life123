@@ -48,10 +48,10 @@ class BioSim1D:
 
         self.global_Dx = 1              # Used in cases when not using ad-hoc local changes in x-scale resolution
 
-        self.system = None      # Concentration data in the System we're simulating, for all the chemicals
-                                #   NumPy array of floats, of dimension: (n_species x n_bins).
-                                #   Each row represents a species
-                                # For example, self.system[0] is the linear sequence for the 0-th chemical
+        self.system = None      # Concentration data in the System we're simulating, for all the chemicals:
+                                #   NumPy array of floats, of dimension: (n_species) x (n_bins)
+                                #   Each row represents a species;
+                                #   e.g, self.system[0] is the linear sequence for the 0-th chemical
 
         self.system_earlier = None  # NOT IN CURRENT USE.  Envisioned for simulations where the past 2 time states are used
                                     # to compute the state at the next time step
@@ -637,7 +637,7 @@ class BioSim1D:
         """
         Raise an Exception if the given bin number isn't valid
 
-        :param bin_address:  An integer that ought to be between 0 and (self.n_bins-1), inclusive
+        :param bin_address: An integer that ought to be between 0 and (self.n_bins-1), inclusive
         :return:            None
         """
         assert type(bin_address) == int, \

@@ -42,7 +42,7 @@ check_version(LIFE123_VERSION)
 # %%
 # Prepare the initial system, with a single non-zero bin, near the left edge of the system, positioned halfway vertically
 chem_data = ChemData(names=["A", "B"], diffusion_rates=[0.05, 0.05])
-bio = BioSim2D(n_bins=(6, 10), chem_data=chem_data)
+bio = BioSim2D(x_bins=6, y_bins=10, chem_data=chem_data)
 
 bio.set_bin_conc(bin_x = 1, bin_y = 1, chem_label="A", conc=10.)
 bio.set_bin_conc(bin_x = 1, bin_y = 8, chem_label="B", conc=10.)

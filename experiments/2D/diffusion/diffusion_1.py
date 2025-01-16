@@ -48,7 +48,7 @@ check_version(LIFE123_VERSION)
 # Prepare the initial system, with a single non-zero bin, near the left edge of the system, positioned halfway vertically
 chem_data = ChemData(names="A", diffusion_rates=0.02)
 
-bio = BioSim2D(x_bins=5, y_bins=8, chem_data=chem_data)
+bio = BioSim2D(x_bins=8, y_bins=5, chem_data=chem_data)
 
 # %%
 bio.describe_state()
@@ -56,7 +56,12 @@ bio.describe_state()
 # %%
 
 # %%
-bio.enable_history(bins=[(1,2), (4,7)], frequency=2)    # Request to save the concentration history at those bins 
+
+# %% [markdown]
+# ## Request history-keeping for some bins
+
+# %%
+bio.enable_history(bins=[(1,2), (7,4)], frequency=3)    # Request to save the concentration history at those bins 
                                                         # (the one with the initial injection, and one far away in a corner)
 
 # %%
@@ -92,8 +97,6 @@ bio.check_mass_conservation(chem_label="A", expected=10.)
 
 # %%
 
-# %%
-
 # %% [markdown]
 # ## This is still an early stage in the diffusion process; let's advance it more... (Visualization from results shown at selected times)
 
@@ -125,15 +128,18 @@ bio.check_mass_conservation(chem_label="A", expected=10.)
 # %%
 
 # %% [markdown]
+# ## Visualization of time changes at particular bins
+
+# %% [markdown]
 # #### Instead of visualizing the entire system at a moment of time, like in the previous heatmaps, let's now look at the time evolution of the (only) chemical `A` at either of the bins whose history we requested prior to running the simulation
 
 # %%
-bio.conc_history.bin_history(bin_address=(2, 1))
+bio.conc_history.bin_history(bin_address=(1,2))   # The bin where the initial concentration was applied
 
 # %%
-bio.plot_history_single_bin(bin_address=(2, 1))
+bio.plot_history_single_bin(bin_address=(1,2))
 
 # %%
-bio.plot_history_single_bin(bin_address=(4,7))
+bio.plot_history_single_bin(bin_address=(7,4))   # A bin in a far-away corner from the initial concentration injection
 
 # %%

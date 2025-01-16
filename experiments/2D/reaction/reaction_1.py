@@ -58,7 +58,7 @@ uc.describe_reactions()
 uc.plot_reaction_network("vue_cytoscape_2")
 
 # %%
-bio = BioSim2D(n_bins=(3,4), reaction_handler=uc)
+bio = BioSim2D(x_bins=3, y_bins=4, reaction_handler=uc)
 
 bio.set_bin_conc_all_species(bin_x=0, bin_y=0, conc_list=[10.,50.])
 bio.set_bin_conc_all_species(bin_x=0, bin_y=1, conc_list=[20.,35.])

@@ -14,9 +14,10 @@ class BioSim2D:
     2D simulations of diffusion and reactions
     """
 
-    def __init__(self, n_bins :(int, int), chem_data=None, reaction_handler=None):
+    def __init__(self, x_bins :int, y_bins: int, chem_data=None, reaction_handler=None):
         """
-        :param n_bins:          A pair with the bin size in the x- and y- coordinates
+        :param x_bins:          The bin size in the x-coordinates.  Notice that this is the number of COLUMNS in the data matrix
+        :param y_bins:          The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
         :param chem_data:       [OPTIONAL] Object of class "ChemData";
                                     if not specified, it will get extracted
                                     from the "UniformCompartment" class (if passed to the next argument)
@@ -36,9 +37,14 @@ class BioSim2D:
 
         self.reaction_dynamics = None   # Object of class "UniformCompartment"
 
-        self.system = None      # Concentration data in the System we're simulating, for all the chemicals
-                                #   NumPy array of dimension (n_species x n_bins_x x n_bins_y)
-                                #   Each plane represents a chemical species
+        self.system = None      # Concentration data in the System we're simulating, for all the chemicals:
+                                #   NumPy array of dimension (n_species) x (n_bins_x) x (n_bins_y)
+                                #   Each plane (sub-array along the 0-th axis) represents a chemical species;
+                                #   e.g, self.system[0] is the matrix for the 0-th chemical.
+                                #   IMPORTANT: the x-dimension and y-dimension values are stored as, respectively,
+                                #              rows and columns in that matrix.  That means that the matrix is the TRANSPOSE
+                                #              of the xy grid layout.  Visualization methods will need to make the transformation!
+                                #              See: https://github.com/BrainAnnex/life123/discussions/75
 
         # The following buffers are of size (n_species x n_bins_x x n_bins_y)
         self.delta_diffusion = None  # Buffer for the concentration changes from diffusion step
@@ -52,7 +58,7 @@ class BioSim2D:
 
         self.system_time = None              # Global time of the system, from initialization on
 
-        self._initialize_system(n_bins=n_bins, chem_data=chem_data, reaction_handler=reaction_handler)
+        self._initialize_system(x_bins=x_bins, y_bins=y_bins, chem_data=chem_data, reaction_handler=reaction_handler)
 
         self.conc_history = HistoryBinConcentration(active=False)
 
@@ -65,12 +71,12 @@ class BioSim2D:
     #                                                                       #
     #########################################################################
 
-    def _initialize_system(self, n_bins :(int, int), chem_data=None, reaction_handler=None) -> None:
+    def _initialize_system(self, x_bins :int, y_bins: int, chem_data=None, reaction_handler=None) -> None:
         """
         Initialize all concentrations to zero.
 
-        :param n_bins:     The number of compartments (bins) to use in the simulation,
-                                in the x- and y- dimensions, as a pair of integers
+        :param x_bins:      The bin size in the x-coordinates.  Notice that this is the number of COLUMNS in the data matrix
+        :param y_bins:      The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
         :param chem_data:   (OPTIONAL) Object of class "Chemicals";
                                 if not specified, it will get extracted from the "Reactions" class
         :param reaction_handler:   (OPTIONAL) Object of class "Reactions";
@@ -78,10 +84,11 @@ class BioSim2D:
 
         :return:            None
         """
-        assert type(n_bins) == tuple, "BioSim2D() instantiation: the argument `n_bins` must be a pair of integers"
-        (n_cells_x, n_cells_y) = n_bins
-        assert n_cells_x >= 1, "BioSim2D() instantiation: The number of bins must be at least 1 in each dimension"
-        assert n_cells_y >= 1, "BioSim2D() instantiation: The number of bins must be at least 1 in each dimension"
+        assert type(x_bins) == int, "BioSim2D() instantiation: the argument `x_bins` must be an integer"
+        assert type(y_bins) == int, "BioSim2D() instantiation: the argument `y_bins` must be an integer"
+
+        assert x_bins >= 1 and y_bins >= 1, \
+            "BioSim2D() instantiation: The number of bins must be at least 1 in each dimension"
 
         assert chem_data is not None or reaction_handler is not None, \
             "BioSim2D() instantiation: at least one of the arguments `chem_data` or `reaction_handler` must be set"
@@ -98,8 +105,8 @@ class BioSim2D:
 
         self.reactions = self.reaction_dynamics.get_reactions()     # TODO: Maybe use self.get_reactions()
 
-        self.n_bins_x = n_cells_x
-        self.n_bins_y = n_cells_y
+        self.n_bins_x = x_bins
+        self.n_bins_y = y_bins
 
         self.n_species = self.chem_data.number_of_chemicals()
 
@@ -107,7 +114,7 @@ class BioSim2D:
             "BioSim2D() instantiation: At least 1 chemical species must be declared prior to instantiating class"
 
         # Initialize all bin concentrations to zero
-        self.system = np.zeros((self.n_species, n_cells_x, n_cells_y), dtype=float)
+        self.system = np.zeros((self.n_species, x_bins, y_bins), dtype=float)
 
         self.system_time = 0             # "Start the clock"
 
@@ -157,28 +164,31 @@ class BioSim2D:
 
 
 
-    def system_snapshot_array(self, chem_label=None, chem_index=None) -> np.ndarray:
+    def system_snapshot_arr_xy(self, chem_label=None, chem_index=None) -> np.ndarray:
         """
         Return a snapshot of all the concentrations of the given chemical species, or all of them,
-        across ALL BINS, as a Numpy array.
+        across ALL BINS, as a Numpy array in XY coordinates.
+        IMPORTANT: the rows of the matrix store the x-coordinates, and the columns store the y-coordinates;
+                   so, this matrix is the TRANSPOSE of the X-Y cartesian representation
         If a Pandas dataframe is desired, for a single chemical, use system_snapshot()
 
         :param chem_label:  String with the label to identify the chemical of interest
         :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
-        :return:            A 2-D (if a chemical was specified) or 3-D Numpy array (for all chemicals)
+        :return:            A 2-D array of concentration values in XY coordinates
         """
         #TODO: add a version of this to the Bio1D
-        if (chem_label is None) and (chem_index is None):
-            return self.system
+
+        assert (chem_label is not None) or (chem_index is not None), \
+            "system_snapshot_xy(): at least one of the args `chem_label` or `chem_index` must be provided"
 
         if chem_label is not None:
-            assert chem_index is None, "system_snapshot_array(): cannot pass both arguments `chem_label` and `chem_index`"
+            assert chem_index is None, "system_snapshot_xy(): cannot pass both arguments `chem_label` and `chem_index`"
             chem_index = self.chem_data.get_index(chem_label)
         else:
-            assert chem_index is not None, "system_snapshot_array(): must pass one of the arguments `chem_label` or `chem_index`"
+            assert chem_index is not None, "system_snapshot_xy(): must pass one of the arguments `chem_label` or `chem_index`"
             self.chem_data.assert_valid_species_index(chem_index)
 
-        matrix = self.system[chem_index]    # A 2-D subarray with the chemical data for the single requested chemical
+        matrix = self.system[chem_index].T    # A 2-D Numpy array with the chemical data in XY dimensions (notice the transpose)
 
         return matrix
 
@@ -186,8 +196,8 @@ class BioSim2D:
 
     def system_snapshot(self, chem_label=None, chem_index=None) -> pd.DataFrame:
         """
-        Return a snapshot of all the concentrations of the given chemical species, across ALL BINS,
-        as a Pandas dataframe
+        Return a snapshot of all the concentrations of the given chemical species,
+        across ALL BINS, in the XY coordinate system, as a Pandas dataframe
 
         :param chem_label:  String with the label to identify the chemical of interest
         :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
@@ -197,14 +207,7 @@ class BioSim2D:
         # TODO: offer the option to pass multiple labels
         # TODO: fix inconsistency vs. 1D case (single chem vs. all)
 
-        if chem_label is not None:
-            assert chem_index is None, "system_snapshot(): cannot pass both arguments `chem_label` and `chem_index`"
-            chem_index = self.chem_data.get_index(chem_label)
-        else:
-            assert chem_index is not None, "system_snapshot(): must pass one of the arguments `chem_label` or `chem_index`"
-            self.chem_data.assert_valid_species_index(chem_index)
-
-        matrix = self.system[chem_index]
+        matrix = self.system_snapshot_arr_xy(chem_label=chem_label, chem_index=chem_index)  # In XY coordinates
 
         df = pd.DataFrame(matrix)
 
@@ -523,7 +526,7 @@ class BioSim2D:
 
         :return:
         """
-        arr = self.system_snapshot_array(chem_label=chem_label, chem_index=chem_index)
+        arr = self.system_snapshot_arr_xy(chem_label=chem_label, chem_index=chem_index)
         total = np.sum(arr)
         return np.allclose(expected, total)
 
@@ -641,6 +644,7 @@ class BioSim2D:
             self.diffuse_step(time_step, h=h, algorithm=algorithm)
             self.system += self.delta_diffusion     # Array operation to update all the concentrations
             self.system_time += time_step
+            self.capture_snapshot(step_count=i)     # Save historical values (if enabled)
 
         if self.debug:
             print(f"\nSystem after Delta time {total_duration}, at end of {n_steps} steps of size {time_step}:")
@@ -1052,17 +1056,22 @@ class BioSim2D:
 
         :param bin_address: A single bin address (a pair of integers)
         :param colors:
-        :param title:       [OPTIONAL] Label for the top of the plot
+        :param title:       [OPTIONAL] Label for the top of the plot.  If not passed, a default is used
         :param smoothed:    [OPTIONAL] If True, a spline is used to smooth the lines;
                                 otherwise (default), line segments are used
-        :return:            A plotly "Figure" object
+        :return:            A plotly "Figure" object, or a string with error message
         """
         # TODO: add more options
 
-        assert type(bin_address) == tuple, \
-            "plot_history_sing_bin(): bin_address must be a tuple"  # TODO: switch to a validation function
+        self.assert_valid_bin(bin_address)
+
+        if title is None:
+            title = f"Concentration changes with time of all chemicals at bin (x={bin_address[0]}, y={bin_address[1]})"
 
         df = self.conc_history.bin_history(bin_address = bin_address)
+        if type(df) == str:
+            return df
+
         return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
                                         colors=colors, legend_header="Chemical", title=title,
                                         smoothed=smoothed)

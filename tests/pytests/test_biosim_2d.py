@@ -11,20 +11,20 @@ def test_constructor():
         BioSim2D()                  # Missing required arguments
 
     with pytest.raises(Exception):
-        BioSim2D(n_bins=666)        # Wrong data type
+        BioSim2D(x_bins=666, y_bins=3.14)        # Wrong data type
 
     with pytest.raises(Exception):
-        BioSim2D(n_bins=(0, 4))      # Must be at least 1 in each dimension
+        BioSim2D(x_bins=0, y_bins=4)      # Must be at least 1 in each dimension
 
     with pytest.raises(Exception):
-        BioSim2D(n_bins=(4, 0))      # Must be at least 1 in each dimension
+        BioSim2D(x_bins=4, y_bins=0)      # Must be at least 1 in each dimension
 
     with pytest.raises(Exception):
-        BioSim2D(n_bins=(3,5))      # At least one more arg is needed
+        BioSim2D(x_bins=3, y_bins=5)      # At least one more arg is needed
 
 
     chem_data = ChemData(names="A")
-    bio = BioSim2D(n_bins=(3,5), chem_data=chem_data)
+    bio = BioSim2D(x_bins=3, y_bins=5, chem_data=chem_data)
     #bio.describe_state()
     assert bio.n_bins_x == 3
     assert bio.n_bins_y == 5
@@ -36,7 +36,7 @@ def test_constructor():
 
     # New test
     chem_data = ChemData(names=["A", "B", "C", "D"])
-    bio = BioSim2D(n_bins=(3,5), chem_data=chem_data)
+    bio = BioSim2D(x_bins=3, y_bins=5, chem_data=chem_data)
     #bio.describe_state()
     assert bio.n_bins_x == 3
     assert bio.n_bins_y == 5
@@ -51,12 +51,12 @@ def test_constructor():
     # New test
     rxn = UniformCompartment()
     with pytest.raises(Exception):
-        BioSim2D(n_bins=(4,2), reaction_handler=rxn)    # No chemicals yet registered
+        BioSim2D(x_bins=4, y_bins=2, reaction_handler=rxn)    # No chemicals yet registered
 
 
     # New test
     rxn = UniformCompartment(names=["A", "B", "C"])
-    bio = BioSim2D(n_bins=(4,2), reaction_handler=rxn)
+    bio = BioSim2D(x_bins=4, y_bins=2, reaction_handler=rxn)
     #bio.describe_state()
     assert bio.n_bins_x == 4
     assert bio.n_bins_y == 2
@@ -70,17 +70,17 @@ def test_constructor():
 
 
 def test_system_size():
-    bio = BioSim2D(n_bins=(3,5) , chem_data=ChemData(names="A"))
+    bio = BioSim2D(x_bins=3, y_bins=5 , chem_data=ChemData(names="A"))
     assert bio.system_size() == (3,5)
 
-    bio = BioSim2D(n_bins=(9,9) , chem_data=ChemData(names=["A", "B"]))
+    bio = BioSim2D(x_bins=9, y_bins=9 , chem_data=ChemData(names=["A", "B"]))
     assert bio.system_size() == (9,9)
 
 
 
 def test_set_bin_conc():
     chem_data = ChemData(names=["A", "B"])
-    bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
+    bio = BioSim2D(x_bins=3, y_bins=4, chem_data=chem_data)
 
     bio.set_bin_conc(bin_x=0, bin_y=2, chem_label="A", conc=0.2)
     bio.describe_state()
@@ -112,7 +112,7 @@ def test_set_bin_conc():
 
 def test_set_bin_conc_all_species():
     chem_data = ChemData(names=["A", "B"])
-    bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
+    bio = BioSim2D(x_bins=3, y_bins=4, chem_data=chem_data)
 
     bio.set_bin_conc_all_species(bin_x=0, bin_y=2, conc_list=[0.02, 1.02])
     bio.describe_state()
@@ -136,7 +136,7 @@ def test_set_bin_conc_all_species():
 
 def test_set_species_conc():
     chem_data = ChemData(names=["A"])
-    bio = BioSim2D(n_bins=(2,3), chem_data=chem_data)   # 2 rows and 3 columns
+    bio = BioSim2D(x_bins=2, y_bins=3, chem_data=chem_data)   # 2 rows and 3 columns
     conc_matrix = [[50, 80, 20], [10, 60, 0]]
 
     bio.set_species_conc(conc_data=conc_matrix, species_index=0)
@@ -184,7 +184,7 @@ def test_set_species_conc():
 def test_react():
     chem_data = ChemData(names=["A", "B"])
 
-    bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
+    bio = BioSim2D(x_bins=3, y_bins=4, chem_data=chem_data)
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
     bio.reactions.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
@@ -213,7 +213,7 @@ def test_react():
 def test_reaction_step():
     chem_data = ChemData(names=["A", "B"])
 
-    bio = BioSim2D(n_bins=(3,4), chem_data=chem_data)
+    bio = BioSim2D(x_bins=3, y_bins=4, chem_data=chem_data)
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
     bio.reactions.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
