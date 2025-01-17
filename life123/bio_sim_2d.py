@@ -194,13 +194,16 @@ class BioSim2D:
 
 
 
-    def system_snapshot(self, chem_label=None, chem_index=None) -> pd.DataFrame:
+    def system_snapshot(self, chem_label=None, chem_index=None, cartesian=True) -> pd.DataFrame:
         """
         Return a snapshot of all the concentrations of the given chemical species,
-        across ALL BINS, in the XY coordinate system, as a Pandas dataframe
+        across ALL BINS, in a grid XY coordinate system, as a Pandas dataframe.
+        The columns of the dataframe are the x-coordinates, increasing to the right.
+        The rows of the the dataframe are the y-coordinates, by default increasing in the up direction (earlier rows)
 
         :param chem_label:  String with the label to identify the chemical of interest
         :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
+        :param cartesian:   If True (default) a Cartesian grid coordinate is used, with y-bin numbers increasing up
         :return:            A Pandas dataframe with the concentration data for the single specified chemical;
                             rows and columns correspond to the system's rows and columns
         """
@@ -210,6 +213,9 @@ class BioSim2D:
         matrix = self.system_snapshot_arr_xy(chem_label=chem_label, chem_index=chem_index)  # In XY coordinates
 
         df = pd.DataFrame(matrix)
+
+        if cartesian:
+            return df[::-1]     # For other ways to do this: https://www.geeksforgeeks.org/how-to-reverse-row-in-pandas-dataframe/
 
         return df
 
@@ -235,12 +241,12 @@ class BioSim2D:
 
 
 
-    def describe_state(self, concise=False) -> None:
+    def describe_state(self, cartesian=True) -> None:
         """
         For each chemical species, show its name (or index, if name is missing),
         followed by the matrix of concentrations values for that chemical
 
-        :param concise:     Not yet used
+        :param cartesian:   If True (default) a Cartesian grid coordinate is used, with y-bin numbers increasing up
         :return:            None
         """
         #np.set_printoptions(linewidth=125)
@@ -252,8 +258,7 @@ class BioSim2D:
             else:
                 print(f"Species `{chem_name}`:")
 
-            #print(self.system[species_index])
-            print(self.system_snapshot(chem_index=species_index))
+            print(self.system_snapshot(chem_index=species_index, cartesian=cartesian))
 
 
 
@@ -929,64 +934,81 @@ class BioSim2D:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def heatmap_single_chem_greyscale(self, chem_label :str, title_prefix = "", width=None, height=550) -> pgo.Figure:
+    def heatmap_single_chem_greyscale(self, chem_label :str, title_prefix = "",
+                                      width=None, height=550, cartesian=True) -> pgo.Figure:
         """
-        Create and return a greyscale heatmap (a Plotly Figure object) of the 2D concentration
+        Create and return a greyscale heatmap (a Plotly Figure object) of the 2D concentrations
         of the specified single chemical, using the current system data.
 
         :param chem_label:  Label to identify the chemical of interest
         :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated Heatmap title
         :param width:       [OPTIONAL] If not specified, all the available space width is used
         :param height:      [OPTIONAL] Height of the heatmap graphics
-
+        :param cartesian:   If True (default) a Cartesian grid coordinate is used, with y-bin numbers increasing up
         :return:            A Plotly "Figure" object
         """
         title = f"System state at time t={self.system_time:.5g} for `{chem_label}`"
         if title_prefix:
             title = f"{title_prefix}.  {title}"
 
-        fig = px.imshow(self.system_snapshot(chem_label=chem_label),
+        # Get the concentration data for the requested chemical
+        df = self.system_snapshot(chem_label=chem_label, cartesian=False)   # Note: no need to reverse the rows in the dataframe;
+                                                                            #       the heatmap will take care of that if requested
+
+        origin = "lower" if cartesian else "upper"      # Position of the [0, 0] bin, in the upper left or lower left corner
+        # Create the plotly heatmap
+        fig = px.imshow(img=df,
                         title=title,
                         labels={"x": "x bin", "y": "y bin", "color": "Conc."},
                         text_auto=".2f", color_continuous_scale="gray_r",
-                        width=width, height=height)
+                        width=width, height=height, origin=origin)
 
-         # Spacing between adjacent cells
-        fig.update_traces(xgap=2)       #Alt way to specify it: fig.data[0].xgap=2
+        # Insert a little spacing between adjacent cells
+        fig.update_traces(xgap=2)       # Alt way to specify it: fig.data[0].xgap=2
         fig.update_traces(ygap=2)
 
         return fig
 
 
 
-    def heatmap_single_chem(self, chem_label :str, title_prefix = "", width=None, height=550, color_name=None) -> pgo.Figure:
+    def heatmap_single_chem(self, chem_label :str, title_prefix = "", width=None, height=550,
+                            color=None, cartesian=True) -> pgo.Figure:
         """
         Create and return a heatmap (a Plotly Figure object) of the 2D concentration
         of the specified single chemical, using the current system data.
-        A gradient of the specified color is used.
+        A gradient of the specified color is used (grayscale if not color specified.)
+
+        Note: if requesting a greyscale, this function is almost identical to heatmap_single_chem_greyscale(),
+              but shows a little more info when the mouse hovers over the heatmap bins
 
         :param chem_label:  Label to identify the chemical of interest
         :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated Heatmap title
         :param height:      [OPTIONAL] Height of the heatmap graphics
         :param width:       [OPTIONAL] If not specified, all the available space width is used
-        :param color_name:  [OPTIONAL] If not specified, a grayscale is used
+        :param color:       [OPTIONAL] The standard (CSS) name of the color to use for the gradient;
+                                if not specified, a grayscale is used
+        :param cartesian:   If True (default) a Cartesian grid coordinate is used, with y-bin numbers increasing up
         :return:            A Plotly "Figure" object
         """
         title = f"System state at time t={self.system_time:.5g} for `{chem_label}`"
         if title_prefix:
             title = f"{title_prefix}.  {title}"
 
-        if color_name is None:
+        if color is None:
             color_scale = "gray_r"
         else:
-            lighter_color = PlotlyHelper.lighten_color(color_name, factor=.96)
+            lighter_color = PlotlyHelper.lighten_color(color, factor=.96)
             color_scale = [
                 [0.0, lighter_color],   # Light tint
-                [1.0, color_name],      # Full color
+                [1.0, color],      # Full color
             ]
 
-        # Create the Heatmap object
-        hm = pgo.Heatmap(z=self.system_snapshot(chem_label=chem_label),
+        # Get the concentration data for the requested chemical
+        df = self.system_snapshot(chem_label=chem_label, cartesian=False)   # Note: no need to reverse the rows in the dataframe;
+                                                                            #       the heatmap will take care of that if requested
+
+        # Create the Heatmap plotly object
+        hm = pgo.Heatmap(z=df,
                          colorscale=color_scale,
                          xgap=2, ygap=2,
                          hovertemplate='Conc.: %{z}<br>x bin: %{x}<br>y bin: %{y}<extra>A</extra>',
@@ -1003,15 +1025,20 @@ class BioSim2D:
             height=height,
             width=width,
             xaxis_title='x bin',
-            yaxis_title='y bin',
-            yaxis_autorange="reversed"
+            yaxis_title='y bin'
         )
+
+        if not cartesian:
+            # Invert the y-axis for the heatmap (the default is the y-axis increasing down)
+            fig.update_layout(
+                yaxis_autorange="reversed"
+            )
 
         return fig
 
 
 
-    def system_heatmaps(self, chem_labels=None, title_prefix = "", height=None, colors=None) -> pgo.Figure:
+    def system_heatmaps(self, chem_labels=None, title_prefix = "", height=None, colors=None, cartesian=True) -> pgo.Figure:
         """
         Prepare and return a Plotly Figure object containing a grid of heatmaps (up to a max of 12)
 
@@ -1022,12 +1049,16 @@ class BioSim2D:
         :param height:      [OPTIONAL] Height of the overall grid of heatmaps
         :param colors:      [OPTIONAL] List of CSS color names for each of the heatmaps.
                                 If provided, its length must match that of the data; otherwise, default colors are used
+        :param cartesian:   If True (default) a Cartesian grid coordinate is used, with y-bin numbers increasing up
         :return:            A Plotly "Figure" object
         """
         if chem_labels is None:
             chem_labels = self.chem_data.get_all_labels()
 
-        data = [self.system_snapshot(chem_label=chem) for chem in chem_labels]
+        # Get the concentration data for all the requested chemicals
+        data = [self.system_snapshot(chem_label=chem, cartesian=False)
+                    for chem in chem_labels]
+        # Note: no need to reverse the rows in the dataframes; the heatmaps will take care of that, if requested
 
         if (n_chem := len(chem_labels)) == 1:
             title = f"System state at time t={self.system_time:.5g} for `{chem_labels[0]}`"
@@ -1038,7 +1069,8 @@ class BioSim2D:
             title = f"{title_prefix}.  {title}"
 
         return PlotlyHelper.heatmap_grid(array_list=data, labels=chem_labels, title=title,
-                                         height=height, colors=colors, z_name="Conc.", max_n_cols=4)
+                                         height=height, colors=colors, z_name="Conc.", max_n_cols=4,
+                                         cartesian=cartesian)
 
 
 

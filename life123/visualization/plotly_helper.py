@@ -566,7 +566,7 @@ class PlotlyHelper:
 
     @classmethod
     def heatmap_grid(cls, array_list :list, labels :[str], title ="Grid of Heatmaps",
-                     height=None, colors=None, z_name="z", max_n_cols=4) -> pgo.Figure:
+                     height=None, colors=None, z_name="z", max_n_cols=4, cartesian=True) -> pgo.Figure:
         """
         Prepare and return a Plotly Figure object containing a grid of heatmaps (up to a max of 12)
 
@@ -579,6 +579,7 @@ class PlotlyHelper:
                                 If provided, its length must match that of the data; otherwise, default colors are used
         :param z_name:      [OPTIONAL] Name of the quantity being visualized in the heatmaps; e.g. "Conc." or "Temp."
         :param max_n_cols:  [OPTIONAL] The maximum number of columns to use in the grip (at most 4)
+        :param cartesian:   If True (default) a Cartesian grid coordinate is used, with y-bin numbers increasing up
         :return:            A Plotly "Figure" object
         """
 
@@ -598,7 +599,7 @@ class PlotlyHelper:
 
         nrows, ncols = cls._optimal_subplot_grid_size(ncells=n_cells, max_n_cols = max_n_cols) # Number of rows/columns in subplot grid
 
-        grid_hor_spacing = 0.15
+        grid_hor_spacing = 0.15     # TODO: would probably be good to increase this a tad
         grid_vert_spacing = 0.15 if nrows < 3 else 0.12  # A little more spacious vertically if few rows
 
         if ncols == 1:
@@ -674,9 +675,9 @@ class PlotlyHelper:
                              colorscale=color_scale,
                              colorbar=dict(
                                         title=z_name,
-                                        len=ln,  # Length of the colorbar
-                                        y = y0 - (row - 1) * y1,     # Adjust vertical position
-                                        x = x0 + x1 *(col-1),         # Adjust horizontal position
+                                        len=ln,                     # Length of the colorbar
+                                        y = y0 - (row - 1) * y1,    # Adjust vertical position in subplot
+                                        x = x0 + x1 *(col-1)        # Adjust horizontal position
                                     )
                              )
 
@@ -695,12 +696,13 @@ class PlotlyHelper:
                                 col=col
                             )
 
-            # Invert the y-axis for this subplot
-            fig.update_yaxes(
-                                autorange="reversed",
-                                row=row,
-                                col=col
-                            )
+            if not cartesian:
+                # Invert the y-axis for this subplot
+                fig.update_yaxes(
+                                    autorange="reversed",
+                                    row=row,
+                                    col=col
+                                )
 
             col += 1
             if col > ncols:

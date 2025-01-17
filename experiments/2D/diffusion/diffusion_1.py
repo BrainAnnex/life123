@@ -26,7 +26,7 @@
 # ### TAGS :  "diffusion 2D", "quick-start"
 
 # %%
-LAST_REVISED = "Jan. 14, 2025"
+LAST_REVISED = "Jan. 16, 2025"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
@@ -65,6 +65,11 @@ bio.enable_history(bins=[(1,2), (7,4)], frequency=3)    # Request to save the co
                                                         # (the one with the initial injection, and one far away in a corner)
 
 # %%
+
+# %% [markdown]
+# ## Apply the initial concentration pulse
+
+# %%
 bio.set_bin_conc(bin_x = 1, bin_y = 2, chem_label="A", conc=10.)
 
 bio.describe_state()
@@ -74,6 +79,8 @@ bio.system_snapshot(chem_label="A")
 
 # %%
 bio.heatmap_single_chem(chem_label="A", title_prefix="Diffusion")
+
+# %%
 
 # %%
 
