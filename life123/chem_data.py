@@ -319,7 +319,7 @@ class Diffusion(ChemCore):
 
         :param name:       Label of the new chemical species to register;
                                 an Exception will be raised if the name was already registered
-        :param diff_rate:   Floating-point number with the diffusion rate (in water) of this chemical
+        :param diff_rate:   Floating-point number with the diffusion rate coefficient (in water) of this chemical
         :param label:       [OPTIONAL] Typically, a short version of the name, or a stand-in for it;
                                 if not provided, the name will be used as a label
         :param note:        [OPTIONAL] String with note to attach to the chemical

@@ -406,7 +406,8 @@ class BioSim2D:
         """
         self.assert_valid_bin(bin_address=(bin_x, bin_y))
 
-        assert conc >= 0., f"set_bin_conc(): The concentration must be a positive number or zero (the requested value was {conc})"
+        assert conc >= 0., \
+            f"set_bin_conc(): The concentration must be a positive number or zero (the provided value was {conc})"
 
         species_index = self.chem_data.get_index(chem_label)
         self.system[species_index, bin_x, bin_y] = conc
