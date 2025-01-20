@@ -243,13 +243,16 @@ class BioSim2D:
 
     def describe_state(self, cartesian=True) -> None:
         """
+        A minimalist view of all the chemical concentrations across the 2D system.
         For each chemical species, show its name (or index, if name is missing),
-        followed by the matrix of concentrations values for that chemical
+        followed by the matrix of its concentrations values
 
         :param cartesian:   If True (default) a Cartesian grid coordinate is used, with y-bin numbers increasing up
         :return:            None
         """
-        #np.set_printoptions(linewidth=125)
+        # Set the maximum width of each row, when printing a Pandas dataframe, to fit more content
+        pd.set_option('display.width', 150)
+
         print(f"SYSTEM STATE at Time t = {self.system_time:.8g}:")
         for species_index in range(self.n_species):
             chem_name = self.chem_data.get_label(species_index)
@@ -1049,7 +1052,9 @@ class BioSim2D:
         :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title for the grid of heatmaps
         :param height:      [OPTIONAL] Height of the overall grid of heatmaps
         :param colors:      [OPTIONAL] List of CSS color names for each of the heatmaps.
-                                If provided, its length must match that of the data; otherwise, default colors are used
+                                If provided, its length must match that of the data;
+                                    if None, then use the registered colors (if specified),
+                                    or the hardwired defaults as a last resort
         :param cartesian:   If True (default) a Cartesian grid coordinate is used, with y-bin numbers increasing up
         :return:            A Plotly "Figure" object
         """
@@ -1068,6 +1073,9 @@ class BioSim2D:
 
         if title_prefix:
             title = f"{title_prefix}.  {title}"
+
+        if colors is None:
+            colors = self.chem_data.get_registered_colors(chem_labels)
 
         return PlotlyHelper.heatmap_grid(array_list=data, labels=chem_labels, title=title,
                                          height=height, colors=colors, z_name="Conc.", max_n_cols=4,

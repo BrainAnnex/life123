@@ -1567,7 +1567,7 @@ class UniformCompartment:
         :param chemicals:       [OPTIONAL] Label, or list of labels, of the chemicals whose concentration changes are to be plotted;
                                     if None, then display all, in their index order
         :param colors:          [OPTIONAL] Either a single color (string with standard plotly name, such as "red"),
-                                    or list of names to use, in the same order as the chemicals;
+                                    or list of names to use, in the same order as the chemicals of the previous argument;
                                     if None, then use the registered colors (if specified),
                                     or the hardwired defaults as a last resort
         :param title:           [OPTIONAL] Title for the plot;
@@ -1625,6 +1625,7 @@ class UniformCompartment:
         df = self.get_history()         # A Pandas dataframe that contains a column named "SYSTEM TIME"
 
         if colors is None:
+            # TODO: switch to  colors = self.chem_data.get_registered_colors(chemicals)
             # Attempt to use the colors registered for individual chemicals, if present
             registered_colors = []
             for label in chemicals:

@@ -144,7 +144,7 @@ bio.check_mass_conservation(chem_label="B", expected=10.)
 # %%
 
 # %% [markdown]
-# ## Visualization of time changes at particular bins
+# ## Visualization of concentration changes with time at particular bins
 
 # %%
 bio.plot_history_single_bin(bin_address=(1,1))    # The bin with the initial pulse of `A`

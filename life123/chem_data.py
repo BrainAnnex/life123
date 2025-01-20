@@ -253,6 +253,25 @@ class ChemCore:
 
 
 
+    def get_registered_colors(self, chem_labels) -> [str]:
+        """
+        Return a list of the colors registered for the specified chemicals
+
+        :param chem_labels: List of chemical labels
+        :return:            List of color names, with as many entries as the chemicals of interest;
+                                any of the entries might be None
+        """
+        # Attempt to use the colors registered for individual chemicals, if present
+        registered_colors = []
+        for label in chem_labels:
+            stored_color = self.get_plot_color(label)     # Will be None if no color was registered for this chemical
+            registered_colors.append(stored_color)
+
+        return registered_colors        # List of color names, with as many entries as the chemicals of interest;
+                                        # any of the entries might be None
+
+
+
     def get_color_mapping_by_label(self) -> dict:
         """
         EXAMPLE: {"A": "red", "B": "orange", "C": "green"}
