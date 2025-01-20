@@ -1074,7 +1074,7 @@ class BioSim2D:
         if title_prefix:
             title = f"{title_prefix}.  {title}"
 
-        if colors is None:
+        if colors is None:  # Attempt to make sure of the previously-registered colors, if available
             colors = self.chem_data.get_registered_colors(chem_labels)
 
         return PlotlyHelper.heatmap_grid(array_list=data, labels=chem_labels, title=title,
@@ -1087,6 +1087,7 @@ class BioSim2D:
         """
         Using plotly, draw the plots of chemical concentration values over time at the specified bin,
         based on historical data that was saved when running simulations.
+        The plotting will involve the chemicals for which history-keeping was requested for this given bin.
 
         Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
               EXAMPLE:
@@ -1096,7 +1097,10 @@ class BioSim2D:
                     PlotlyHelper.combine_plots([p1, p2], other optional args)
 
         :param bin_address: A single bin address (a pair of integers)
-        :param colors:
+        :param colors:      [OPTIONAL] List of CSS color names for each of the heatmaps.
+                                If provided, its length must match that of the data;
+                                    if None, then use the registered colors (if specified),
+                                    or the hardwired defaults as a last resort
         :param title:       [OPTIONAL] Label for the top of the plot.  If not passed, a default is used
         :param smoothed:    [OPTIONAL] If True, a spline is used to smooth the lines;
                                 otherwise (default), line segments are used
@@ -1112,6 +1116,9 @@ class BioSim2D:
         df = self.conc_history.bin_history(bin_address = bin_address)
         if type(df) == str:
             return df
+
+        if colors is None:  # Attempt to make sure of the previously-registered colors, if available
+            colors = self.chem_data.get_registered_colors(self.conc_history.restrict_chemicals)
 
         return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
                                         colors=colors, legend_header="Chemical", title=title,

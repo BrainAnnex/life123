@@ -27,13 +27,10 @@
 # Note: This is a 2D version of the 1D experiment by the same name.
 
 # %% [markdown]
-# # TODO: 1) respect declared plot colors in the heatmaps
-
-# %% [markdown]
 # ### TAGS :  "reactions 2D", "diffusion 2D", "quick-start"
 
 # %%
-LAST_REVISED = "Jan. 18, 2025"
+LAST_REVISED = "Jan. 19, 2025"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
@@ -163,12 +160,26 @@ for _ in range(4):
 # ## Visualization of concentration changes with time at particular bins
 
 # %%
-bio.plot_history_single_bin(bin_address = (0,0))
+bio.plot_history_single_bin(bin_address = (0,0))    # The bin with the initial injection of 'A'
+
+# %% [markdown]
+# To separate the curves for `B` and `C`, one needs to substantially magnify the y-axis, because their concentrations at that bin are very similar throughout
 
 # %%
-bio.plot_history_single_bin(bin_address = (6,6))
 
 # %%
-bio.plot_history_single_bin(bin_address = (3,3))
+bio.plot_history_single_bin(bin_address = (6,6))    # The bin with the initial injection of 'B'
+
+# %% [markdown]
+# To separate the curves for `A` and `C`, one needs to substantially magnify the y-axis, because their concentrations at that bin are very similar throughout
+
+# %% [markdown]
+#
+
+# %%
+bio.plot_history_single_bin(bin_address = (3,3))      # The midpoint bin
+
+# %% [markdown]
+# `A` and `B` are completely superposed, from the perfect symmetry
 
 # %%
