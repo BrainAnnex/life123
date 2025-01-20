@@ -253,22 +253,27 @@ class ChemCore:
 
 
 
-    def get_registered_colors(self, chem_labels :Union[None, list[str]]) -> [str]:
+    def get_registered_colors(self, chem_labels :Union[None, list[str]]) -> Union[None, list[str]]:
         """
-        Return a list of the colors registered for the specified chemicals or, if not specified, for all chemicals
+        Return a list of the colors registered for the specified chemicals or, if not specified, for all chemicals.
+        If not a single color is registered, return None
 
         :param chem_labels: List of chemical labels; use None to mean ALL chemicals
         :return:            List of color names, with as many entries as the chemicals of interest;
-                                any of the entries might be None
+                                any of the entries might be None.
+                                However, if zero colors are found, return None
         """
         if chem_labels is None:
             chem_labels = self.get_all_labels()
-            
+
         # Attempt to use the colors registered for individual chemicals, if present
         registered_colors = []
         for label in chem_labels:
             stored_color = self.get_plot_color(label)     # Will be None if no color was registered for this chemical
             registered_colors.append(stored_color)
+
+        if set(registered_colors) == {None}:    #  If all elements of the list registered_colors are None
+            return None
 
         return registered_colors        # List of color names, with as many entries as the chemicals of interest;
                                         # any of the entries might be None

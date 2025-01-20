@@ -166,7 +166,7 @@ class BioSim2D:
 
     def system_snapshot_arr_xy(self, chem_label=None, chem_index=None) -> np.ndarray:
         """
-        Return a snapshot of all the concentrations of the given chemical species, or all of them,
+        Return a snapshot of all the concentrations of the given chemical species,
         across ALL BINS, as a Numpy array in XY coordinates.
         IMPORTANT: the rows of the matrix store the x-coordinates, and the columns store the y-coordinates;
                    so, this matrix is the TRANSPOSE of the X-Y cartesian representation
@@ -174,10 +174,8 @@ class BioSim2D:
 
         :param chem_label:  String with the label to identify the chemical of interest
         :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
-        :return:            A 2-D array of concentration values in XY coordinates
+        :return:            A 2-D Numpy array of concentration values in XY coordinates
         """
-        #TODO: add a version of this to the Bio1D
-
         assert (chem_label is not None) or (chem_index is not None), \
             "system_snapshot_xy(): at least one of the args `chem_label` or `chem_index` must be provided"
 
@@ -396,18 +394,19 @@ class BioSim2D:
 
 
 
-    def set_bin_conc(self, bin_x: int, bin_y: int, chem_label :str, conc: float) -> None:
+    def set_bin_conc(self, bin_address: (int, int), chem_label :str, conc: float) -> None:
         """
-        Assign the requested concentration value to the cell with the given index,
+        Assign the requested concentration value to the bin with the given address,
         for the specified chemical species
 
-        :param bin_x:           The zero-based bin number of the desired cell
-        :param bin_y:           The zero-based bin number of the desired cell
-        :param chem_label:      String with the label to identify the chemical of interest
-        :param conc:            The desired concentration value to assign to the specified location
-        :return:                None
+        :param bin_address: A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
+        :param chem_label:  String with the label to identify the chemical of interest
+        :param conc:        The desired concentration value to assign to the specified location
+        :return:            None
         """
-        self.assert_valid_bin(bin_address=(bin_x, bin_y))
+        self.assert_valid_bin(bin_address)
+
+        bin_x, bin_y = bin_address  # Unpack the bin address
 
         assert conc >= 0., \
             f"set_bin_conc(): The concentration must be a positive number or zero (the provided value was {conc})"
@@ -421,13 +420,14 @@ class BioSim2D:
         """
         Add the requested concentration to the cell with the given address, for the specified chemical species
 
-        :param bin_address:     A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
-        :param chem_index:   Zero-based index to identify a specific chemical species
-        :param delta_conc:      The concentration to add to the specified location
-        :param zero_clip:       If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
+        :param bin_address: A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
+        :param chem_index:  Zero-based index to identify a specific chemical species
+        :param delta_conc:  The concentration to add to the specified location
+        :param zero_clip:   If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
                                 otherwise, an Exception will be raised
         :return:                None
         """
+        #TODO: also allow chem label, as done in 1D
         self.assert_valid_bin(bin_address)
 
         bin_x, bin_y = bin_address  # Unpack the bin address
@@ -445,17 +445,18 @@ class BioSim2D:
 
 
 
-    def set_bin_conc_all_species(self, bin_x: int, bin_y: int, conc_list: [float]) -> None:
+    def set_bin_conc_all_species(self, bin_address: (int, int), conc_list: [float]) -> None:
         """
         Assign the requested concentration values to the cell with the given index,
         for all the chemical species in their index order
 
-        :param bin_x:       The zero-based bin number of the desired cell
-        :param bin_y:       The zero-based bin number of the desired cell
+        :param bin_address: A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
         :param conc_list:   A list with the desired concentration values to assign to the specified location
         :return:            None
         """
-        #assert bin < self.n_bins, f"The requested cell index ({bin}) must be in the range [0 - {self.n_bins - 1}]"
+        self.assert_valid_bin(bin_address)
+
+        bin_x, bin_y = bin_address  # Unpack the bin address
 
         for i, conc in enumerate(conc_list):
             assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
@@ -593,6 +594,7 @@ class BioSim2D:
 
     def capture_snapshot(self, step_count=None) -> None:
         """
+        Add to the system history (if enabled) a snapshot of (part of) the current data
 
         :param step_count:
         :return:            None
@@ -657,7 +659,7 @@ class BioSim2D:
 
         if self.debug:
             print(f"\nSystem after Delta time {total_duration}, at end of {n_steps} steps of size {time_step}:")
-            self.describe_state(concise=True)
+            self.describe_state()
             print()
 
         status = {"steps": n_steps}
@@ -1104,18 +1106,23 @@ class BioSim2D:
         :param title:       [OPTIONAL] Label for the top of the plot.  If not passed, a default is used
         :param smoothed:    [OPTIONAL] If True, a spline is used to smooth the lines;
                                 otherwise (default), line segments are used
-        :return:            A plotly "Figure" object, or a string with error message
+        :return:            A plotly "Figure" object; an Exception is raised if no historical data is found
         """
         # TODO: add more options
 
         self.assert_valid_bin(bin_address)
 
         if title is None:
-            title = f"Concentration changes with time of all chemicals at bin (x={bin_address[0]}, y={bin_address[1]})"
+            if self.chem_data.number_of_chemicals() == 1:
+                chem_label = f"chemical `{self.chem_data.get_label(0)}`"    # The label of the only chemical in the system
+            else:
+                chem_label = "all chemicals"
+
+            title = f"Concentration changes with time of {chem_label} at bin (x={bin_address[0]}, y={bin_address[1]})"
 
         df = self.conc_history.bin_history(bin_address = bin_address)
-        if type(df) == str:
-            return df
+        if type(df) == str:         # No data was found
+            raise Exception(df)
 
         if colors is None:  # Attempt to make sure of the previously-registered colors, if available
             colors = self.chem_data.get_registered_colors(self.conc_history.restrict_chemicals)

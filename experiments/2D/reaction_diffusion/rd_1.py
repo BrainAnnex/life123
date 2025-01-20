@@ -30,7 +30,7 @@
 # ### TAGS :  "reactions 2D", "diffusion 2D", "quick-start"
 
 # %%
-LAST_REVISED = "Jan. 19, 2025"
+LAST_REVISED = "Jan. 20, 2025"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
@@ -69,8 +69,8 @@ reactions.describe_reactions()
 # # TIME 0 : Inject initial concentrations of `A` and `B` at opposite ends of the system
 
 # %%
-bio.set_bin_conc(bin_x = 0, bin_y = 0, chem_label="A", conc=20.)
-bio.set_bin_conc(bin_x = 6, bin_y = 6, chem_label="B", conc=20.)
+bio.set_bin_conc(bin_address = (0,0), chem_label="A", conc=20.)
+bio.set_bin_conc(bin_address = (6,6), chem_label="B", conc=20.)
 
 bio.describe_state()   # A minimalist view of all the chemical concentrations
 
@@ -173,8 +173,7 @@ bio.plot_history_single_bin(bin_address = (6,6))    # The bin with the initial i
 # %% [markdown]
 # To separate the curves for `A` and `C`, one needs to substantially magnify the y-axis, because their concentrations at that bin are very similar throughout
 
-# %% [markdown]
-#
+# %%
 
 # %%
 bio.plot_history_single_bin(bin_address = (3,3))      # The midpoint bin

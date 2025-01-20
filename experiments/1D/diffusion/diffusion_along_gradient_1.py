@@ -44,7 +44,7 @@ bio.inject_bell_curve(species_name="A", mean=0.25, sd=0.1, amplitude=20., bias=0
 
 # %%
 # Visualize the system state so far
-bio.visualize_system(caption="Preparations in progress")
+bio.visualize_system(title_prefix="Preparations in progress")
 
 # %%
 # Complete the initial-system preparation by adding a gradient slanting to the right

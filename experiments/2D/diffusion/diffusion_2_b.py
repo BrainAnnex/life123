@@ -21,7 +21,7 @@
 # ### TAGS :  "diffusion 2D", "basic"
 
 # %%
-LAST_REVISED = "Jan. 17, 2025"
+LAST_REVISED = "Jan. 20, 2025"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
@@ -45,8 +45,8 @@ chem_data = ChemData(names=["A", "B"], diffusion_rates=[0.05, 0.05])
 
 bio = BioSim2D(x_bins=7, y_bins=10, chem_data=chem_data)  # 3 more rows, compared to experiment `diffusion_2_a` 
 
-bio.set_bin_conc(bin_x = 1, bin_y = 1, chem_label="A", conc=10.)
-bio.set_bin_conc(bin_x = 5, bin_y = 5, chem_label="B", conc=10.)
+bio.set_bin_conc(bin_address = (1,1), chem_label="A", conc=10.)
+bio.set_bin_conc(bin_address = (5,5), chem_label="B", conc=10.)
 
 # %% [markdown]
 # ### Different ways to visualize the system   

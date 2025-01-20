@@ -272,6 +272,32 @@ class BioSim1D:
 
 
 
+    def system_snapshot_arr(self, chem_label=None, chem_index=None) -> np.ndarray:
+        """
+        Return a snapshot of all the concentrations of the given chemical species,
+        across ALL BINS, as a 1D Numpy array.
+        If a Pandas dataframe is desired, use system_snapshot()
+
+        :param chem_label:  String with the label to identify the chemical of interest
+        :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
+        :return:            A 1-D Numpy array of concentration values along bin coordinates
+        """
+        assert (chem_label is not None) or (chem_index is not None), \
+            "system_snapshot_arr(): at least one of the args `chem_label` or `chem_index` must be provided"
+
+        if chem_label is not None:
+            assert chem_index is None, "system_snapshot_arr(): cannot pass both arguments `chem_label` and `chem_index`"
+            chem_index = self.chem_data.get_index(chem_label)
+        else:
+            assert chem_index is not None, "system_snapshot_arr(): must pass one of the arguments `chem_label` or `chem_index`"
+            self.chem_data.assert_valid_species_index(chem_index)
+
+        arr = self.system[chem_index]    # A 1-D Numpy array with the chemical data along bin coordinates
+
+        return arr
+
+
+
     def system_snapshot(self) -> pd.DataFrame:
         """
         Return a snapshot of all the concentrations of all the species, across all bins
@@ -422,12 +448,13 @@ class BioSim1D:
 
 
 
-    def inject_conc_to_bin(self, bin_address: int, species_index: int, delta_conc: float, zero_clip = False) -> None:
+    def inject_conc_to_bin(self, bin_address: int, delta_conc: float, chem_label=None, chem_index=None, zero_clip = False) -> None:
         """
         Add the requested concentration to the cell with the given address, for the specified chem species
 
         :param bin_address:     The zero-based bin number of the desired cell
-        :param species_index:   Zero-based index to identify a specific chemical species
+        :param chem_label:
+        :param chem_index:      Zero-based index to identify a specific chemical species
         :param delta_conc:      The concentration to add to the specified location
         :param zero_clip:       If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
                                 otherwise, an Exception will be raised
@@ -435,17 +462,27 @@ class BioSim1D:
         """
         self.assert_valid_bin(bin_address)
 
-        if (self.system[species_index, bin_address] + delta_conc) < 0. :
+        # TODO: turn into a utility private method
+        assert (chem_label is not None) or (chem_index is not None), \
+            "inject_conc_to_bin(): at least one of the args `chem_label` or `chem_index` must be provided"
+        if chem_label is not None:
+            assert chem_index is None, "inject_conc_to_bin(): cannot pass both arguments `chem_label` and `chem_index`"
+            chem_index = self.chem_data.get_index(chem_label)
+        else:
+            assert chem_index is not None, "inject_conc_to_bin(): must pass one of the arguments `chem_label` or `chem_index`"
+            self.chem_data.assert_valid_species_index(chem_index)
+
+
+        if (self.system[chem_index, bin_address] + delta_conc) < 0. :
             # Take special action if the requested change would make the bin concentration negative
             if zero_clip:
-                self.system[species_index, bin_address] = 0
+                self.system[chem_index, bin_address] = 0
                 return
             else:
                 raise Exception("inject_conc_to_bin(): The requested concentration change would result in a negative final value")
 
         # Normal scenario, not leading to negative values for the final concentration
-        self.system[species_index, bin_address] += delta_conc
-
+        self.system[chem_index, bin_address] += delta_conc
 
 
 
@@ -1081,6 +1118,33 @@ class BioSim1D:
 
     #####################################################################################################
 
+    '''                                    ~   UTILITIES   ~                                          '''
+
+    def ________UTILITIES________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def check_mass_conservation(self, expected :float, chem_label=None, chem_index=None) -> bool:
+        """
+        Check whether the sum of all the concentrations of the specified chemical,
+        across all bins, adds up to the passed value
+
+        :param expected:
+        :param chem_label:  String with the label to identify the chemical of interest
+        :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
+
+        :return:
+        """
+        arr = self.system_snapshot_arr(chem_label=chem_label, chem_index=chem_index)
+        total = np.sum(arr)
+        return np.allclose(expected, total)
+
+
+
+
+
+    #####################################################################################################
+
     '''                                      ~   HISTORY   ~                                          '''
 
     def ________HISTORY________(DIVIDER):
@@ -1223,6 +1287,7 @@ class BioSim1D:
             self.diffuse_step(time_step, delta_x=delta_x, algorithm=algorithm)
             self.system += self.delta_diffusion     # Matrix operation to update all the concentrations
             self.system_time += time_step
+            self.capture_snapshot(step_count=i)     # Save historical values (if enabled)
 
         if self.debug:
             print(f"\nSystem after Delta time {total_duration}, at end of {n_steps} steps of size {time_step}:")
@@ -1641,18 +1706,18 @@ class BioSim1D:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def visualize_system(self, caption=None, colors=None) -> None:
+    def visualize_system(self, title_prefix=None, colors=None) -> pgo.Figure:
         """
-        Visualize the current state of the system as a line plot,
+        Visualize the current state of the system of all the chemicals as a combined line plot,
         using plotly
 
-        :param caption: Optional caption to prefix to the default one
-        :param colors:  [Not yet used]
-        :return:        None
+        :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
+        :param colors:
+        :return:            A Plotly "Figure" object
         """
-        title = f"System snapshot at time t={self.system_time}"
-        if caption:
-            title = caption + ".  " + title
+        title = f"System snapshot at time t={self.system_time:.8g}"
+        if title_prefix:
+            title = title_prefix + ".  " + title
 
         if self.n_species == 1:
             chem_name = self.chem_data.get_label(species_index=0)      # The only chemical in the system
@@ -1660,17 +1725,60 @@ class BioSim1D:
             fig = px.line(y=self.lookup_species(species_name=chem_name),
                           title= title,
                           labels={"y": f"[{chem_name}]", "x":"Bin number"},)
-            fig.show()
         else:
-            print("NOT YET IMPLEMENTED")
-            '''
-            #TODO: generalize
-            fig = px.line(data_frame=self.system_snapshot(), y=["A"],
-                          title= f"Diffusion. System snapshot at time t={self.system_time}",
-                          color_discrete_sequence = ['red'],
+            if colors is None:
+                colors = PlotlyHelper.assign_default_heatmap_colors(self.n_species)
+
+            chem_labels = self.chem_data.get_all_labels()
+            fig = px.line(data_frame=self.system_snapshot(), y=chem_labels,
+                          title= title,
+                          color_discrete_sequence = colors,
                           labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})                        
-            fig.show()
-            '''
+
+        return fig
+
+
+
+    def heatmap_single_chem(self, chem_label=None, title_prefix = "", width=None, height=550,
+                            color=None) -> pgo.Figure:
+        """
+
+        :param chem_label:
+        :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
+        :param width:
+        :param height:
+        :param color:
+        :return:
+        """
+        # TODO: test/generalize to multiple chemicals
+        title = f"System snapshot at time t={self.system_time:.8g}"
+        if title_prefix:
+            title = title_prefix + ".  " + title
+
+        fig = px.imshow(self.system_snapshot().T,
+                title= title,
+                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
+                text_auto='.2f', color_continuous_scale="gray_r")         # text_auto=’auto’
+
+        # Insert a little spacing between adjacent cells
+        fig.update_traces(xgap=3)       # Alt way to specify it: fig.data[0].xgap=3
+        fig.update_traces(ygap=3)
+
+        '''
+        # ANOTHER APPROACH TO CREATE A PLOTLY HEATMAP, using Heatmap() from plotly.graph_objects
+        data = go.Heatmap(z=bio.system_snapshot().T,
+                            y=['A'],
+                            colorscale='gray_r', colorbar={'title': 'Concentration'},
+                            xgap=3, ygap=3, texttemplate = '%{z}', hovertemplate= 'Bin number: %{x}<br>Chem. species: %{y}<br>Concentration: %{z}<extra></extra>')
+        
+        fig = go.Figure(data,
+                        layout=go.Layout(title=f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}",
+                                         xaxis={'title': 'Bin number'}, yaxis={'title': 'Chem. species'}
+                                        )
+                       )
+        '''
+
+        return fig
 
 
 
@@ -1857,17 +1965,27 @@ class BioSim1D:
 
         :param bin_address: A single bin address (an integer)
         :param colors:
-        :param title:       [OPTIONAL] Label for the top of the plot
+        :param title:       [OPTIONAL] Label for the top of the plot.  If not passed, a default is used
         :param smoothed:    [OPTIONAL] If True, a spline is used to smooth the lines;
                                 otherwise (default), line segments are used
-        :return:            A plotly "Figure" object
+        :return:            A plotly "Figure" object; an Exception is raised if no historical data is found
         """
         # TODO: add more options
 
         self.assert_valid_bin(bin_address)
 
+        if title is None:
+            if self.chem_data.number_of_chemicals() == 1:
+                chem_label = f"chemical `{self.chem_data.get_label(0)}`"    # The label of the only chemical in the system
+            else:
+                chem_label = "all chemicals"
+
+            title = f"Concentration changes with time of {chem_label} at bin {bin_address}"
+
         # Retrieve the historical data
         df = self.conc_history.bin_history(bin_address = bin_address)
+        if type(df) == str:         # No data was found
+            raise Exception(df)
 
         return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
                                         colors=colors, legend_header="Chemical", title=title,

@@ -28,10 +28,10 @@ class PlotlyHelper:
     #####################################################################################################
 
     @classmethod
-    def get_default_colors(cls, n :int) -> [int]:
+    def assign_default_colors(cls, n :int) -> [int]:
         """
         Return a list of n colors, specified by their standard plotly names;
-        meant for situations when 1 or more default colors are needed.
+        meant for situations when 1 or more default colors are needed for line plots.
 
         The choice of default colors is hardwired in this function.
 
@@ -43,44 +43,7 @@ class PlotlyHelper:
         default_colors = ['darkturquoise', 'green', 'brown', 'red', 'gray', 'blue',
                           'orange', 'purple', 'cyan', 'darkorange', 'navy',
                           'darkred', 'black', 'mediumspringgreen']
-        '''
-        # Available color names:
-                aliceblue, antiquewhite, aqua, aquamarine, azure,
-                beige, bisque, black, blanchedalmond, blue,
-                blueviolet, brown, burlywood, cadetblue,
-                chartreuse, chocolate, coral, cornflowerblue,
-                cornsilk, crimson, cyan, darkblue, darkcyan,
-                darkgoldenrod, darkgray, darkgrey, darkgreen,
-                darkkhaki, darkmagenta, darkolivegreen, darkorange,
-                darkorchid, darkred, darksalmon, darkseagreen,
-                darkslateblue, darkslategray, darkslategrey,
-                darkturquoise, darkviolet, deeppink, deepskyblue,
-                dimgray, dimgrey, dodgerblue, firebrick,
-                floralwhite, forestgreen, fuchsia, gainsboro,
-                ghostwhite, gold, goldenrod, gray, grey, green,
-                greenyellow, honeydew, hotpink, indianred, indigo,
-                ivory, khaki, lavender, lavenderblush, lawngreen,
-                lemonchiffon, lightblue, lightcoral, lightcyan,
-                lightgoldenrodyellow, lightgray, lightgrey,
-                lightgreen, lightpink, lightsalmon, lightseagreen,
-                lightskyblue, lightslategray, lightslategrey,
-                lightsteelblue, lightyellow, lime, limegreen,
-                linen, magenta, maroon, mediumaquamarine,
-                mediumblue, mediumorchid, mediumpurple,
-                mediumseagreen, mediumslateblue, mediumspringgreen,
-                mediumturquoise, mediumvioletred, midnightblue,
-                mintcream, mistyrose, moccasin, navajowhite, navy,
-                oldlace, olive, olivedrab, orange, orangered,
-                orchid, palegoldenrod, palegreen, paleturquoise,
-                palevioletred, papayawhip, peachpuff, peru, pink,
-                plum, powderblue, purple, red, rosybrown,
-                royalblue, saddlebrown, salmon, sandybrown,
-                seagreen, seashell, sienna, silver, skyblue,
-                slateblue, slategray, slategrey, snow, springgreen,
-                steelblue, tan, teal, thistle, tomato, turquoise,
-                violet, wheat, white, whitesmoke, yellow,
-                yellowgreen
-        '''
+
         colors = default_colors[:n]      # Pick the first n default colors; TODO: rotate if needing more
 
         return colors
@@ -88,16 +51,17 @@ class PlotlyHelper:
 
 
     @classmethod
-    def get_default_heatmaps_colors(cls, n :int) -> [int]:
+    def assign_default_heatmap_colors(cls, n :int) -> [int]:
         """
         Return a list of n colors, specified by their standard plotly names;
-        meant for situations when 1 or more default colors are needed.
+        meant for situations when 1 or more default colors are needed for a heatmap.
 
         The choice of default colors is hardwired in this function.
 
         :param n:   Desired number of default colors
         :return:    A list of n standard (CSS) color names
         """
+        # TODO: merge with assign_default_colors(), and move to Colors class
         default_colors = ["yellow", "green", "blue", "red",
                           "purple", "teal", "black", "brown",
                           "deeppink", "midnightblue", "darkolivegreen", "darkorange"]
@@ -156,7 +120,7 @@ class PlotlyHelper:
                     curve_labels = [curve_labels]
 
         if colors is None:
-            colors = cls.get_default_colors(number_of_curves)
+            colors = cls.assign_default_colors(number_of_curves)
         elif type(colors) == str:
             colors = [colors]
         # TODO: if any color is missing, assign default ones
@@ -280,7 +244,7 @@ class PlotlyHelper:
 
         if colors is None:
             # Entirely use default colors
-            colors = PlotlyHelper.get_default_colors(number_of_curves)
+            colors = PlotlyHelper.assign_default_colors(number_of_curves)
         elif type(colors) == str:
             # Turn colors into a list, if it was a single entry
             colors = [colors]
@@ -288,7 +252,7 @@ class PlotlyHelper:
             # If we get here, we were given a list; replace any missing (None) entry with a default color
             number_none = colors.count(None)    # Number of None entries
             if number_none > 0:
-                replacement_colors = PlotlyHelper.get_default_colors(number_none)   # Get all the replacements in bulk
+                replacement_colors = PlotlyHelper.assign_default_colors(number_none)   # Get all the replacements in bulk
                 colors_adjusted = []
                 i = 0
                 for c in colors:
@@ -563,7 +527,7 @@ class PlotlyHelper:
         assert n_cells == len(labels), "The number of heatmaps and labels must match"
 
         if colors is None:
-            colors = cls.get_default_heatmaps_colors(n_cells)
+            colors = cls.assign_default_heatmap_colors(n_cells)
         else:
             assert n_cells == len(colors), "The number of labels and colors must match"
 

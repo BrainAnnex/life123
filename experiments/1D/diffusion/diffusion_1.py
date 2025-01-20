@@ -13,17 +13,19 @@
 # ---
 
 # %% [markdown]
-# # An initial concentration pulse (near the left edge of the system) moving towards equilibrium
+# # Diffusion of 1 chemical in 1D
+#
+# ## An initial concentration pulse (near the left edge of the system) diffusing out towards equilibrium
 #
 # The system starts out with a "concentration pulse" in bin 2 (the 3rd bin from the left) - i.e. that bin is initially the only one with a non-zero concentration of the only chemical species.
 # Then the system is left undisturbed, and followed to equilibrium.
 
 # %% [markdown]
-# ### TAGS :  "diffusion 1D", "basic"
+# ### TAGS :  "diffusion 1D", "quick-start"
 
 # %%
-LAST_REVISED = "Oct. 6, 2024"
-LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based on
+LAST_REVISED = "Jan. 20, 2025"
+LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -33,44 +35,24 @@ LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from experiments.get_notebook_info import get_notebook_basename
-
-from life123 import BioSim1D
-
-import plotly.express as px
-import plotly.graph_objects as go
-
-from life123 import ChemData as chem
-from life123 import HtmlLog as log
-from life123 import GraphicLog
+from life123 import BioSim1D, ChemData, check_version
 
 # %%
-# Initialize the HTML logging
-log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
-
-# Set up the use of some specified graphic (Vue) components
-GraphicLog.config(filename=log_file,
-                  components=["vue_heatmap_11", "vue_curves_3"])
+check_version(LIFE123_VERSION)
 
 # %%
-# Set the heatmap parameters (for the log file)
-heatmap_pars = {"range": [0, 2.5],
-                "outer_width": 850, "outer_height": 150,
-                "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
-                }
 
-# Set the parameters of the line plots
-lineplot_pars = {"range": [0, 10],
-                "outer_width": 850, "outer_height": 250,
-                "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
-                }
+# %% [markdown]
+# ## Prepare the initial system
+# with a single non-zero bin concentration of the single chemical `A`, near the left edge of the system
 
 # %%
-# Prepare the initial system, with a single non-zero bin, near the left edge of the system
-chem_data = chem(names=["A"], diffusion_rates=[0.1])
+chem_data = ChemData(names="A", diffusion_rates=0.1)
+
 bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
-bio.inject_conc_to_bin(bin_address=2, species_index=0, delta_conc=10.)
+# %%
+bio.inject_conc_to_bin(bin_address=2, chem_label="A", delta_conc=10.)
 
 bio.describe_state()
 
@@ -78,128 +60,96 @@ bio.describe_state()
 bio.system_snapshot()
 
 # %%
-# Line curve view
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= f"Diffusion. System snapshot at time t={bio.system_time}",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Diffusion")   # Line curve view
 
 # %%
-# ONE APPROACH TO CREATE A PLOTLY HEATMAP, using imshow() from plotly.express
-fig = px.imshow(bio.system_snapshot().T, 
-                title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto=True, color_continuous_scale="gray_r")         # text_auto=’.2f’
-
-fig.data[0].xgap=4
-fig.data[0].ygap=4
-
-fig.show()
+bio.heatmap_single_chem(title_prefix="Diffusion")
 
 # %%
-# ANOTHER APPROACH TO CREATE A PLOTLY HEATMAP, using Heatmap() from plotly.graph_objects
-data = go.Heatmap(z=bio.system_snapshot().T,
-                    y=['A'],
-                    colorscale='gray_r', colorbar={'title': 'Concentration'},
-                    xgap=4, ygap=4, texttemplate = '%{z}', hovertemplate= 'Bin number: %{x}<br>Chem. species: %{y}<br>Concentration: %{z}<extra></extra>')
-
-fig = go.Figure(data,
-                layout=go.Layout(title=f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}",
-                                 xaxis={'title': 'Bin number'}, yaxis={'title': 'Chem. species'}
-                                )
-               )
-fig.show()
 
 # %%
-log.write("1-D diffusion to equilibrium of a single species, with Diffusion rate 0.1",
-          style=log.h2)
-log.write("Initial system state at time t=0:", blanks_before=2, style=log.bold)
 
-# Output a heatmap to the log file
-bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
+# %% [markdown]
+# ## Request history-keeping for some bins
 
-# Output a line plot the log file
-bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
+# %%
+# Request to save the concentration history at the bin with the initial concentration injection, 
+# and the bins at the ends of the system
+bio.enable_history(bins=[0, 2, 9], frequency=4, take_snapshot=True)    
+
+# %%
+
+# %%
 
 # %% [markdown]
 # # Initial Diffusion Step
 
 # %%
-log.write("Advancing to time t=10, with time steps of 0.1 ... ", blanks_before=2, newline=False)
-
-# %%
+#Advancing to time t=10, with time steps of 0.1 ...
 delta_time = 10.
 
 status = bio.diffuse(total_duration=delta_time, time_step=0.1)
-print("\n", status)
+print(status)
 
-log.write(f"After delta time {delta_time}.  TOTAL TIME {bio.system_time}  ({status['steps']} steps taken):")
 bio.describe_state(concise=True)
 
 # %%
-# Line curve view
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= f"Diffusion. System snapshot at time t={bio.system_time}",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Diffusion")   # Line curve view
 
 # %%
-# Heatmap view
-fig = px.imshow(bio.system_snapshot().T, 
-                title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto='.3f', color_continuous_scale="gray_r")
-
-fig.data[0].xgap=4
-fig.data[0].ygap=4
-
-fig.show()
+bio.heatmap_single_chem(title_prefix="Diffusion")
 
 # %%
-# Output a heatmap into the log file
-bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
-
-# Output a line plot the log file
-bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # %% [markdown]
-# ## This is still an early stage in the diffusion process; let's advance it more... (Visualization from results shown at selected times)
+# ## This is still an early stage in the diffusion process; let's advance it more...  
+# (Visualization from results shown at selected times)
 
 # %% tags=[]
 for i in range(50):
     status = bio.diffuse(total_duration=delta_time, time_step=0.1)
 
-    print(f"\nAfter Delta time {delta_time}.  TOTAL TIME {bio.system_time}  ({status['steps']} steps taken):")
-    bio.describe_state(concise=True)
-
     if i<2 or i==6 or i>=49:
+        bio.describe_state(concise=True)
+    
         # Line curve view
-        fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= f"Diffusion. System snapshot at time t={bio.system_time}",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
+        fig = bio.visualize_system(title_prefix="Diffusion")   # Line curve view
         fig.show()
         
         # Heatmap view
-        fig = px.imshow(bio.system_snapshot().T, 
-                        title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
-                        labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                        text_auto='.2f', color_continuous_scale="gray_r")
-        fig.data[0].xgap=4
-        fig.data[0].ygap=4
+        fig = bio.heatmap_single_chem()
         fig.show()
-        
-        # Output a heatmap to the log file
-        bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, header=f"Time {bio.system_time} :\n", graphic_component="vue_heatmap_11")
-        # Output a line plot the log file
-        bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 
 # %% [markdown]
 # ## All bins now have essentially uniform concentration
 #
-# **Mass conservations**: The "10 units of concentration" are now uniformly spread across the 10 bins, leading to a near-constant concentration of 10/10 = **1.0**
+# **Mass conservations**: The initial "10 units of concentration" are now uniformly spread across the 10 bins, leading to a near-constant concentration of 10/10 = **1.0**
+
+# %%
+# Mass conservation can also be verified as follows:
+bio.check_mass_conservation(chem_label="A", expected=10.)
+
+# %%
+
+# %%
+
+# %% [markdown]
+# ## Visualization of time changes at particular bins
+
+# %% [markdown]
+# #### Instead of visualizing the entire system at a moment of time, like in the previous heatmaps, let's now look at the time evolution of the (only) chemical `A` at either of the bins whose history we requested prior to running the simulation
+
+# %%
+bio.conc_history.bin_history(bin_address=2)   # The bin where the initial concentration was applied
+
+# %%
+bio.plot_history_single_bin(bin_address=2)
+
+# %%
+bio.plot_history_single_bin(bin_address=0)   # Left "edge" of the 1D system
+
+# %%
+bio.plot_history_single_bin(bin_address=9)   # Right "edge" of the 1D system
 
 # %%

@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# # Diffusion of 1 chemical
+# # Diffusion of 1 chemical in 2D
 #
 # ## An initial concentration pulse of a single chemical (near the left edge of the system, and halfway vertically), diffusing towards equilibrium
 #
@@ -26,7 +26,7 @@
 # ### TAGS :  "diffusion 2D", "quick-start"
 
 # %%
-LAST_REVISED = "Jan. 16, 2025"
+LAST_REVISED = "Jan. 20, 2025"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
@@ -70,7 +70,7 @@ bio.enable_history(bins=[(1,2), (7,4)], frequency=3)    # Request to save the co
 # ## Apply the initial concentration pulse
 
 # %%
-bio.set_bin_conc(bin_x = 1, bin_y = 2, chem_label="A", conc=10.)
+bio.set_bin_conc(bin_address = (1,2), chem_label="A", conc=10.)
 
 bio.describe_state()
 

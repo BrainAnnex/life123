@@ -70,7 +70,7 @@ bio.show_system_snapshot()
 
 # %%
 # Visualize the system's initial state
-bio.visualize_system(caption="Diffusion")
+bio.visualize_system(title_prefix="Diffusion")
 
 # %%
 # Show as heatmap
@@ -120,7 +120,7 @@ for i in range(501):
         bio.describe_state(concise=True)
         
         # Show the system state as a line plot
-        bio.visualize_system(caption="Diffusion")
+        bio.visualize_system(title_prefix="Diffusion")
         
         # Show as heatmap
         fig = px.imshow(bio.system_snapshot().T, 

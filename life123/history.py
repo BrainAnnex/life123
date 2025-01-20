@@ -24,7 +24,7 @@ class History:
         self.active = active
         self.capture_frequency = frequency
 
-        self.restrict_chemicals = chem_labels
+        self.restrict_chemicals = chem_labels   # None means "no restriction" (i.e. ALL chemicals)
 
         self.step_of_last_snapshot = -1     # An out-of-range value
 
@@ -236,7 +236,7 @@ class HistoryBinConcentration(History):
 
     def __init__(self, bins=None, *args, **kwargs):
         super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
-        self.restrict_bins = bins                               # Bin address, or list of them, or None
+        self.restrict_bins = bins                               # Bin address, or list of them, or None (meaning ALL bins, with no restriction)
         self.history = Collection(parameter_name="SYSTEM TIME") # To store user-selected snapshots of quantities of interest
 
 
@@ -281,6 +281,25 @@ class HistoryBinConcentration(History):
 
 
 
+    def _diagnose_history_problem(self, bin_address) -> str:
+        """
+        Return an error message elaborating on the problem, and possible causes,
+        of lacking historical concentration data for the given bin
+
+        :param bin_address:
+        :return:
+        """
+        msg = f"No historical concentration data available for bin {bin_address}. "
+
+        if bin_address in self.restrict_bins:
+            msg += f"History collecting IS indeed enabled for this bin - but was it enabled PRIOR to running the simulation?"
+        else:
+            msg += f"History recording is NOT currently enabled for this bin; it is only enabled for bins {self.restrict_bins}"
+
+        return  msg
+
+
+
     def bin_history(self, bin_address, include_captions=False):
         """
         Return the history at the given bin, as a Pandas dataframe.
@@ -288,7 +307,7 @@ class HistoryBinConcentration(History):
         history had been enabled.
         If no historical data is located, an informational string is returned
 
-        :param bin_address:         A single bin address.  EXAMPLE, in 2D : (3,3)
+        :param bin_address:         A single bin address.  EXAMPLES, in 1D: 8   In 2D : (3,3)
         :param include_captions:    If True, the captions are returned as an extra "caption" column at the end
         :return:                    A Pandas data frame, or a string if no historical data is present
         """
@@ -297,12 +316,12 @@ class HistoryBinConcentration(History):
 
         snapshot_list = self.history.get_data()
         if snapshot_list == []:
-            return f"No concentration historical data available for bin {bin_address}"
+            return self._diagnose_history_problem(bin_address)
 
-        first_snapshot = snapshot_list[0]         # EXAMPLE: {(3, 3): {'A': 0.0, 'B': 0.0, 'C': 0.0}}
+        first_snapshot = snapshot_list[0]          # EXAMPLE: {(3, 3): {'A': 0.0, 'B': 0.0, 'C': 0.0}}
         first_conc_data = first_snapshot.get(bin_address)   # EXAMPLE: {'A': 0.0, 'B': 0.0, 'C': 0.0}
-        if first_conc_data is None: \
-            return f"No concentration historical data available for bin {bin_address}"
+        if first_conc_data is None:
+            return self._diagnose_history_problem(bin_address)
 
         chem_labels = list(first_conc_data)                 # Turn the dict's keys into list.  EXAMPLE: ['A', 'B', 'C']
 

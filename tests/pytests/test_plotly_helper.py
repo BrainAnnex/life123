@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 from life123 import PlotlyHelper
 from life123.visualization.colors import Colors
-import matplotlib.colors as mcolors
 
 
 def test_colors_class():
@@ -30,8 +29,8 @@ def test_colors_class():
 
 
 def test_get_default_colors():
-    assert PlotlyHelper.get_default_colors(1) == ['darkturquoise']
-    assert PlotlyHelper.get_default_colors(2) == ['darkturquoise', 'green']
+    assert PlotlyHelper.assign_default_colors(1) == ['darkturquoise']
+    assert PlotlyHelper.assign_default_colors(2) == ['darkturquoise', 'green']
 
 
 
