@@ -6,6 +6,7 @@ import plotly.graph_objects as pgo
 from life123.uniform_compartment import UniformCompartment
 from life123.history import HistoryBinConcentration
 from life123.visualization.plotly_helper import PlotlyHelper
+from life123.visualization.colors import Colors
 
 
 
@@ -1003,10 +1004,10 @@ class BioSim2D:
         if color is None:
             color_scale = "gray_r"
         else:
-            lighter_color = PlotlyHelper.lighten_color(color, factor=.96)
+            lighter_color = Colors.lighten_color(color, factor=.96)
             color_scale = [
                 [0.0, lighter_color],   # Light tint
-                [1.0, color],      # Full color
+                [1.0, color],           # Full color
             ]
 
         # Get the concentration data for the requested chemical
@@ -1055,8 +1056,8 @@ class BioSim2D:
         :param height:      [OPTIONAL] Height of the overall grid of heatmaps
         :param colors:      [OPTIONAL] List of CSS color names for each of the heatmaps.
                                 If provided, its length must match that of the data;
-                                    if None, then use the registered colors (if specified),
-                                    or the hardwired defaults as a last resort
+                                if None, then use the registered colors (if specified),
+                                or the hardwired defaults as a last resort
         :param cartesian:   If True (default) a Cartesian grid coordinate is used, with y-bin numbers increasing up
         :return:            A Plotly "Figure" object
         """
@@ -1076,7 +1077,7 @@ class BioSim2D:
         if title_prefix:
             title = f"{title_prefix}.  {title}"
 
-        if colors is None:  # Attempt to make sure of the previously-registered colors, if available
+        if colors is None:  # Attempt to make use of the previously-registered colors, if available
             colors = self.chem_data.get_registered_colors(chem_labels)
 
         return PlotlyHelper.heatmap_grid(array_list=data, labels=chem_labels, title=title,

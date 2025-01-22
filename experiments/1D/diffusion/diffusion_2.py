@@ -12,8 +12,8 @@
 #     name: python3
 # ---
 
-# %%
-# TODO: color assignment is not yet respected; vertically space the heatmaps
+# %% [markdown]
+# # TODO: vertically space the heatmaps, and use colors
 
 # %% [markdown]
 # # Diffusion of 2 chemicals in 1D
@@ -46,7 +46,7 @@ check_version(LIFE123_VERSION)
 
 # %% [markdown]
 # ## Prepare the initial system
-# with a non-zero bin concentration of the chemical `A`, near the left edge of the system  
+# with a non-zero bin concentration of the chemical `A`, near the left edge of the system,   
 # and an identical bin concentration of the chemical `B`, near the left edge
 
 # %%

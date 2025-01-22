@@ -6,7 +6,7 @@ class Colors:
     """
     For color-related matters.
 
-    Parts of this class were adapted from matplotlib.colors (version 3.6.3)
+    The name-to-rgb mapping was adapted from matplotlib.colors (version 3.6.3)
     """
 
     BASE_COLORS = {
@@ -1231,3 +1231,46 @@ class Colors:
         return f"rgb({lightened_rgb_255[0]},{lightened_rgb_255[1]},{lightened_rgb_255[2]})"
 
 
+
+    @classmethod
+    def assign_default_colors(cls, n :int) -> [int]:
+        """
+        Return a list of n colors, specified by their standard plotly names;
+        meant for situations when 1 or more default colors are needed for line plots.
+
+        The choice of default colors is hardwired in this function.
+
+        :param n:   Desired number of default colors
+        :return:    A list of n standard (CSS) color names
+        """
+        # TODO: provide multiple, user-selectable, harmonious assortments of default colors
+
+        default_colors = ['darkturquoise', 'green', 'brown', 'red', 'gray', 'blue',
+                          'orange', 'purple', 'cyan', 'darkorange', 'navy',
+                          'darkred', 'black', 'mediumspringgreen']
+
+        colors = default_colors[:n]      # Pick the first n default colors; TODO: rotate if needing more
+
+        return colors
+
+
+
+    @classmethod
+    def assign_default_heatmap_colors(cls, n :int) -> [int]:
+        """
+        Return a list of n colors, specified by their standard plotly names;
+        meant for situations when 1 or more default colors are needed for a heatmap.
+
+        The choice of default colors is hardwired in this function.
+
+        :param n:   Desired number of default colors
+        :return:    A list of n standard (CSS) color names
+        """
+        # TODO: merge with assign_default_colors(), and move to Colors class
+        default_colors = ["yellow", "green", "blue", "red",
+                          "purple", "teal", "black", "brown",
+                          "deeppink", "midnightblue", "darkolivegreen", "darkorange"]
+
+        colors = default_colors[:n]      # Pick the first n default colors; TODO: rotate if needing more
+
+        return colors

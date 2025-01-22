@@ -55,7 +55,7 @@ def test_diffuse_step_single_species_1a():
 
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
 
-    bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=100.)
+    bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=100.)
     bio.describe_state()
 
     with pytest.raises(Exception):
@@ -74,7 +74,7 @@ def test_diffuse_step_single_species_1b():
 
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
 
-    bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=100.)
+    bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=100.)
     bio.describe_state()
 
     # Diffuse by a single step
@@ -154,7 +154,7 @@ def test_diffuse_step_4():
     chem_data = chem(diffusion_rates=[1.])
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
 
-    bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=10.)
+    bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=10.)
     bio.describe_state()
     """
     2 bins and 1 species:
@@ -176,7 +176,7 @@ def test_diffuse_step_5():
     chem_data = chem(diffusion_rates=[.5])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
-    bio.inject_conc_to_bin(bin_address=1, species_index=0, delta_conc=10.)
+    bio.inject_conc_to_bin(bin_address=1, chem_index=0, delta_conc=10.)
     bio.describe_state()
 
     # The time step is so large that the system immediately equilibrates
@@ -196,7 +196,7 @@ def test_diffuse_step_6():
     chem_data = chem(diffusion_rates=[.5])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
-    bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=10.)
+    bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=10.)
     bio.describe_state()
 
     print("The default max allowed time step is: ", bio.max_time_step(.5, delta_x=1))
@@ -216,7 +216,7 @@ def test_diffuse_step_7():
     chem_data = chem(diffusion_rates=[.5])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
-    bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=10.)
+    bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=10.)
     bio.describe_state()
 
     for i in range(20*2):
@@ -409,7 +409,7 @@ def test_diffuse_2():
     bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
     bio.set_uniform_concentration(species_index=0, conc=0.)
-    bio.inject_conc_to_bin(species_index=0, bin_address=2, delta_conc=10.)
+    bio.inject_conc_to_bin(chem_index=0, bin_address=2, delta_conc=10.)
 
     status = bio.diffuse(total_duration=800, time_step=0.1)
     assert status['steps'] == 8000

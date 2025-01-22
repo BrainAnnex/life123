@@ -83,10 +83,10 @@ print(f"Repeatedly injecting {delta_injection} at bin {leftmost_bin} and drainin
 
 for i in range(2001):
     # Inject to the leftmost bin
-    bio.inject_conc_to_bin(bin_address=leftmost_bin, species_index=0, delta_conc=delta_injection, zero_clip = False)
+    bio.inject_conc_to_bin(bin_address=leftmost_bin, chem_index=0, delta_conc=delta_injection, zero_clip = False)
     
     # Drain from the rightmost bin
-    bio.inject_conc_to_bin(bin_address=rightmost_bin, species_index=0, delta_conc=-delta_injection, zero_clip = False)
+    bio.inject_conc_to_bin(bin_address=rightmost_bin, chem_index=0, delta_conc=-delta_injection, zero_clip = False)
     
     # Note: the NET GAIN of moles of A in the system is zero!
     
@@ -136,10 +136,10 @@ print(f"Resuming repeatedly injecting {delta_injection} at bin {leftmost_bin} an
 
 for i in range(501):
     # Inject to the leftmost bin
-    bio.inject_conc_to_bin(bin_address=leftmost_bin, species_index=0, delta_conc=delta_injection, zero_clip = False)
+    bio.inject_conc_to_bin(bin_address=leftmost_bin, chem_index=0, delta_conc=delta_injection, zero_clip = False)
     
     # Drain from the rightmost bin
-    bio.inject_conc_to_bin(bin_address=rightmost_bin, species_index=0, delta_conc=-delta_injection, zero_clip = False)
+    bio.inject_conc_to_bin(bin_address=rightmost_bin, chem_index=0, delta_conc=-delta_injection, zero_clip = False)
     
     # Note: the NET GAIN of moles of A in the system is zero!
     

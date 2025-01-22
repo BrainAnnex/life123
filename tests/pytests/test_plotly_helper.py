@@ -29,8 +29,8 @@ def test_colors_class():
 
 
 def test_get_default_colors():
-    assert PlotlyHelper.assign_default_colors(1) == ['darkturquoise']
-    assert PlotlyHelper.assign_default_colors(2) == ['darkturquoise', 'green']
+    assert Colors.assign_default_colors(1) == ['darkturquoise']
+    assert Colors.assign_default_colors(2) == ['darkturquoise', 'green']
 
 
 

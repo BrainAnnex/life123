@@ -38,7 +38,7 @@ chem_data = chem(diffusion_rates=[0.1])
 bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
 bio.set_uniform_concentration(species_index=0, conc=0.)
-bio.inject_conc_to_bin(species_index=0, bin_address=2, delta_conc=10.)
+bio.inject_conc_to_bin(chem_index=0, bin_address=2, delta_conc=10.)
 
 bio.describe_state()
 
@@ -61,7 +61,7 @@ print("\n\nREPEATING to LONGER time scales.  Dtime=100, again with time steps of
 
 # Reset the concentrations
 bio.set_uniform_concentration(species_index=0, conc=0.)
-bio.inject_conc_to_bin(species_index=0, bin_address=2, delta_conc=10.)
+bio.inject_conc_to_bin(chem_index=0, bin_address=2, delta_conc=10.)
 
 #total_time = 0.
 for i in range(20):

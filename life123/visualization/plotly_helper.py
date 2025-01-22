@@ -11,68 +11,12 @@ from typing import Union
 
 class PlotlyHelper:
     """
-    Static class to assist in the use of the plotly library
+    Static class to assist in the use of the plotly library.
+    For color management, see the separate class "Colors"
 
     TODO: improve consistency in argument names; also across UniformCompartment
     TODO: rename as "VisualizationHelper" or "GraphicsHelper"
     """
-
-
-
-    #####################################################################################################
-
-    '''                                    ~   COLORS   ~                                           '''
-
-    def ________COLORS________(DIVIDER):
-        pass        # Used to get a better structure view in IDEs
-    #####################################################################################################
-
-    @classmethod
-    def assign_default_colors(cls, n :int) -> [int]:
-        """
-        Return a list of n colors, specified by their standard plotly names;
-        meant for situations when 1 or more default colors are needed for line plots.
-
-        The choice of default colors is hardwired in this function.
-
-        :param n:   Desired number of default colors
-        :return:    A list of n standard (CSS) color names
-        """
-        # TODO: provide multiple, user-selectable, harmonious assortments of default colors
-
-        default_colors = ['darkturquoise', 'green', 'brown', 'red', 'gray', 'blue',
-                          'orange', 'purple', 'cyan', 'darkorange', 'navy',
-                          'darkred', 'black', 'mediumspringgreen']
-
-        colors = default_colors[:n]      # Pick the first n default colors; TODO: rotate if needing more
-
-        return colors
-
-
-
-    @classmethod
-    def assign_default_heatmap_colors(cls, n :int) -> [int]:
-        """
-        Return a list of n colors, specified by their standard plotly names;
-        meant for situations when 1 or more default colors are needed for a heatmap.
-
-        The choice of default colors is hardwired in this function.
-
-        :param n:   Desired number of default colors
-        :return:    A list of n standard (CSS) color names
-        """
-        # TODO: merge with assign_default_colors(), and move to Colors class
-        default_colors = ["yellow", "green", "blue", "red",
-                          "purple", "teal", "black", "brown",
-                          "deeppink", "midnightblue", "darkolivegreen", "darkorange"]
-
-        colors = default_colors[:n]      # Pick the first n default colors; TODO: rotate if needing more
-
-        return colors
-
-
-
-
 
 
     #####################################################################################################
@@ -120,7 +64,7 @@ class PlotlyHelper:
                     curve_labels = [curve_labels]
 
         if colors is None:
-            colors = cls.assign_default_colors(number_of_curves)
+            colors = Colors.assign_default_colors(number_of_curves)
         elif type(colors) == str:
             colors = [colors]
         # TODO: if any color is missing, assign default ones
@@ -244,7 +188,7 @@ class PlotlyHelper:
 
         if colors is None:
             # Entirely use default colors
-            colors = PlotlyHelper.assign_default_colors(number_of_curves)
+            colors = Colors.assign_default_colors(number_of_curves)
         elif type(colors) == str:
             # Turn colors into a list, if it was a single entry
             colors = [colors]
@@ -252,7 +196,7 @@ class PlotlyHelper:
             # If we get here, we were given a list; replace any missing (None) entry with a default color
             number_none = colors.count(None)    # Number of None entries
             if number_none > 0:
-                replacement_colors = PlotlyHelper.assign_default_colors(number_none)   # Get all the replacements in bulk
+                replacement_colors = Colors.assign_default_colors(number_none)   # Get all the replacements in bulk
                 colors_adjusted = []
                 i = 0
                 for c in colors:
@@ -527,7 +471,7 @@ class PlotlyHelper:
         assert n_cells == len(labels), "The number of heatmaps and labels must match"
 
         if colors is None:
-            colors = cls.assign_default_heatmap_colors(n_cells)
+            colors = Colors.assign_default_heatmap_colors(n_cells)
         else:
             assert n_cells == len(colors), "The number of labels and colors must match"
 

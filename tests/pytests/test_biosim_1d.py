@@ -186,13 +186,13 @@ def test_inject_conc_to_bin():
 
     with pytest.raises(Exception):
         # cell_index out of bounds
-        bio.inject_conc_to_bin(bin_address=5, species_index=0, delta_conc=10.)
+        bio.inject_conc_to_bin(bin_address=5, chem_index=0, delta_conc=10.)
 
     with pytest.raises(Exception):
         # species_index out of bounds
-        bio.inject_conc_to_bin(bin_address=5, species_index=1, delta_conc=10.)
+        bio.inject_conc_to_bin(bin_address=5, chem_index=1, delta_conc=10.)
 
-    bio.inject_conc_to_bin(bin_address=1, species_index=0, delta_conc=10.)
+    bio.inject_conc_to_bin(bin_address=1, chem_index=0, delta_conc=10.)
 
     bio.describe_state()
 

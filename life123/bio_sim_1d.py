@@ -12,6 +12,7 @@ import plotly.graph_objects as pgo
 from life123.html_log import HtmlLog as log
 from life123.visualization.graphic_log import GraphicLog
 from life123.visualization.plotly_helper import PlotlyHelper
+from life123.visualization.colors import Colors
 
 
 
@@ -546,7 +547,7 @@ class BioSim1D:
         for x in range(self.n_bins):
             # Update each bin concentration in turn
             conc = amplitude * math.sin(B*x - phase_radians) + bias
-            self.inject_conc_to_bin(bin_address = x, species_index = species_index,
+            self.inject_conc_to_bin(bin_address = x, chem_index = species_index,
                                    delta_conc = conc, zero_clip = zero_clip)
 
 
@@ -1712,7 +1713,8 @@ class BioSim1D:
         using plotly
 
         :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
-        :param colors:
+        :param colors:      If None, then use the registered colors (if specified),
+                                or the hardwired defaults as a last resort
         :return:            A Plotly "Figure" object
         """
         title = f"System snapshot at time t={self.system_time:.8g}"
@@ -1726,10 +1728,15 @@ class BioSim1D:
                           title= title,
                           labels={"y": f"[{chem_name}]", "x":"Bin number"},)
         else:
-            if colors is None:
-                colors = PlotlyHelper.assign_default_heatmap_colors(self.n_species)
-
             chem_labels = self.chem_data.get_all_labels()
+
+            if colors is None:
+                # Attempt to make use of the previously-registered colors, if available
+                colors = self.chem_data.get_registered_colors(chem_labels)
+                if colors is None:
+                    # Fall back to default colors
+                    colors = Colors.assign_default_colors(self.n_species)
+
             fig = px.line(data_frame=self.system_snapshot(), y=chem_labels,
                           title= title,
                           color_discrete_sequence = colors,
@@ -1954,17 +1961,15 @@ class BioSim1D:
     def plot_history_single_bin(self, bin_address :int, colors=None, title=None, smoothed=False) -> pgo.Figure:
         """
         Using plotly, draw the plots of chemical concentration values over time at the specified bin,
-        based on historical data that was saved when running simulations.
+        based on the historical data that was saved when running simulations.
 
         Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
-              EXAMPLE:
-                    from life123 import PlotlyHelper
-                    p1 = plot_history(various args, show=False)
-                    p2 = plot_history(various args, show=False)
-                    PlotlyHelper.combine_plots([p1, p2], other optional args)
 
         :param bin_address: A single bin address (an integer)
-        :param colors:
+        :param colors:      [OPTIONAL] List of CSS color names for each of the heatmaps.
+                                If provided, its length must match that of the data;
+                                if None, then use the registered colors (if specified),
+                                or the hardwired defaults as a last resort
         :param title:       [OPTIONAL] Label for the top of the plot.  If not passed, a default is used
         :param smoothed:    [OPTIONAL] If True, a spline is used to smooth the lines;
                                 otherwise (default), line segments are used
@@ -1976,16 +1981,22 @@ class BioSim1D:
 
         if title is None:
             if self.chem_data.number_of_chemicals() == 1:
-                chem_label = f"chemical `{self.chem_data.get_label(0)}`"    # The label of the only chemical in the system
+                chem_title = f"chemical `{self.chem_data.get_label(0)}`"    # The label of the only chemical in the system
             else:
-                chem_label = "all chemicals"
+                chem_title = "all chemicals"
 
-            title = f"Concentration changes with time of {chem_label} at bin {bin_address}"
+            title = f"Concentration changes with time of {chem_title} at bin {bin_address}"
 
         # Retrieve the historical data
         df = self.conc_history.bin_history(bin_address = bin_address)
         if type(df) == str:         # No data was found
             raise Exception(df)
+
+        #chem_labels = list(df.columns).remove("SYSTEM TIME")  # All the column names, except the independent var
+        chem_labels = self.conc_history.restrict_chemicals  # The chemicals for which history was kept
+
+        if colors is None:  # Attempt to make use of the previously-registered colors, if available
+            colors = self.chem_data.get_registered_colors(chem_labels)
 
         return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
                                         colors=colors, legend_header="Chemical", title=title,
