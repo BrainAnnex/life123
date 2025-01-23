@@ -1713,7 +1713,7 @@ class BioSim1D:
         using plotly
 
         :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
-        :param colors:      If None, then use the registered colors (if specified),
+        :param colors:      [OPTIONAL] If None, then use the registered colors (if specified),
                                 or the hardwired defaults as a last resort
         :return:            A Plotly "Figure" object
         """
@@ -1746,18 +1746,19 @@ class BioSim1D:
 
 
 
-    def heatmap_single_chem(self, chem_label=None, title_prefix = "", width=None, height=550,
-                            color=None) -> pgo.Figure:
+    def system_heatmap_OLD(self, chem_label=None, title_prefix ="", width=None, row_height=350,
+                       color=None) -> pgo.Figure:
         """
+        Produce a heatmap, and return it as a plotly Figure object
 
-        :param chem_label:
+        :param chem_label:  [OPTIONAL] NOT YET USED
         :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
         :param width:
         :param height:
         :param color:
         :return:
         """
-        # TODO: test/generalize to multiple chemicals
+        # TODO: generalize to sub-selection of chemicals
         title = f"System snapshot at time t={self.system_time:.8g}"
         if title_prefix:
             title = title_prefix + ".  " + title
@@ -1767,9 +1768,9 @@ class BioSim1D:
                 labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
                 text_auto='.2f', color_continuous_scale="gray_r")         # text_auto=’auto’
 
-        # Insert a little spacing between adjacent cells
+        # Insert a little spacing between adjacent cells horizontally, and substantially more vertical
         fig.update_traces(xgap=3)       # Alt way to specify it: fig.data[0].xgap=3
-        fig.update_traces(ygap=3)
+        fig.update_traces(ygap=8)       # Vertical separation is larger because individual rows belong to different chemicals
 
         '''
         # ANOTHER APPROACH TO CREATE A PLOTLY HEATMAP, using Heatmap() from plotly.graph_objects
@@ -1789,10 +1790,101 @@ class BioSim1D:
 
 
 
+    def system_heatmap(self, chem_labels=None, title_prefix ="", row_height=150,
+                           colors=None) -> pgo.Figure:
+        """
+        Produce a heatmap, and return it as a plotly Figure object
+
+        :param chem_labels: [OPTIONAL] NOT YET USED.  For now, ALL chemicals get shown
+        :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
+        :param row_height:  [OPTIONAL] Height of each of the heatmap rows;
+                                if too small to fit the heatmap, an error will be raised
+        :param colors:      [OPTIONAL] If None, then use the registered colors (if specified),
+                                or the hardwired defaults as a last resort
+        :return:            A Plotly "Figure" object with a Heatmap
+        """
+        # TODO: generalize to sub-selection of chemicals
+        title = f"System snapshot at time t={self.system_time:.8g}"
+        if title_prefix:
+            title = title_prefix + ".  " + title
+
+        '''
+        # ANOTHER APPROACH TO CREATE A PLOTLY HEATMAP, using imshow()
+        fig = px.imshow(self.system_snapshot().T,
+                title= title,
+                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
+                text_auto='.2f', color_continuous_scale="gray_r")         # text_auto=’auto’
+
+        # Insert a little spacing between adjacent cells horizontally, and substantially more vertical
+        fig.update_traces(xgap=3)       # Alt way to specify it: fig.data[0].xgap=3
+        fig.update_traces(ygap=8)       # Vertical separation is larger because individual rows belong to different chemicals
+        '''
+
+        if chem_labels is None:
+            chem_labels = self.chem_data.get_all_labels()
+
+        conc_matrix = self.system_snapshot().T
+        hm = pgo.Heatmap(z=conc_matrix,
+                            y=chem_labels,
+                            colorscale='gray_r', colorbar={'title': 'Concentration'},
+                            xgap=3, ygap=8, texttemplate = '%{z:.2f}',
+                            hovertemplate= 'Conc.: %{z}<br>Bin number: %{x}<br>Chem: %{y}<extra>%{y}</extra>')
+
+        # Create the Figure object
+        fig = pgo.Figure(data=hm)
+
+
+        if colors is None:
+            # Attempt to make use of the previously-registered colors, if available
+            colors = self.chem_data.get_registered_colors(chem_labels)
+            if colors is None:
+                # Fall back to default colors
+                colors = Colors.assign_default_colors(len(chem_labels))
+
+
+        # "delta" affect the vertical extension of the color-coded edges; fine-tune for visual esthetics
+        if row_height <= 200:
+            delta = 0.46
+        elif row_height <= 350:
+            delta = 0.48
+        else:
+            delta = 0.49
+
+        # Add color-coded edges using shapes
+        for i, col in enumerate(colors):
+            for j in range(self.n_bins):
+                fig.add_shape(
+                    type="rect",
+                    x0=j - 0.5,   x1=j + 0.5,         # Make x0  more neg to extend to left; make x1 more pos to extend to right
+                    y0=i - delta, y1=i + delta,       # Make y0  more neg to extend to bottom; make y1 more pos to extend to top
+                    line=dict(color=col, width=3),    # Edge color and width
+                    xref="x", yref="y"
+                )
+
+        # Add annotations for row color-coding
+        for i, col in enumerate(colors):
+            fig.add_shape(
+                type="rect",
+                x0 = -0.5,     x1 = -0.4,       # Slightly outside the heatmap
+                y0 = i - delta, y1 = i + delta,
+                xref="x", yref="y",
+                line=dict(width=0),
+                fillcolor=col
+            )
+
+        fig.update_layout(title=title,
+                          xaxis={'title': 'Bin number'}, yaxis={'title': 'Chem. species'},
+                          yaxis_autorange="reversed",
+                          height=row_height * len(chem_labels))
+
+        return fig
+
+
+
     def single_species_heatmap(self, species_index: int, heatmap_pars: dict, graphic_component, header=None) -> None:
         """
         Send to the HTML log, a heatmap representation of the concentrations of
-        the single requested species.
+        the single requested species.  Note: if using in Jupyterlab, this image will NOT be displayed there
 
         IMPORTANT: must first call GraphicLog.config(), or an Exception will be raised
 

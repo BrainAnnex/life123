@@ -1018,7 +1018,7 @@ class BioSim2D:
         hm = pgo.Heatmap(z=df,
                          colorscale=color_scale,
                          xgap=2, ygap=2,
-                         hovertemplate='Conc.: %{z}<br>x bin: %{x}<br>y bin: %{y}<extra>A</extra>',
+                         hovertemplate='Conc.: %{z}<br>x bin: %{x}<br>y bin: %{y}<extra>' + chem_label + '</extra>',
                          texttemplate = '%{z:.2f}',
                          colorbar_title="Conc."
                          )

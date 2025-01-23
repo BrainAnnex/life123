@@ -13,9 +13,6 @@
 # ---
 
 # %% [markdown]
-# # TODO: vertically space the heatmaps, and use colors
-
-# %% [markdown]
 # # Diffusion of 2 chemicals in 1D
 #
 # ## Two symmetric initial concentration pulses (near the opposite edges of the system) diffusing out towards equilibrium
@@ -26,7 +23,7 @@
 # ### TAGS :  "diffusion 1D", "basic"
 
 # %%
-LAST_REVISED = "Jan. 20, 2025"
+LAST_REVISED = "Jan. 22, 2025"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
@@ -67,9 +64,7 @@ bio.system_snapshot()
 bio.visualize_system(title_prefix="Diffusion")   # Line curve view
 
 # %%
-bio.heatmap_single_chem(title_prefix="Diffusion")
-
-# %%
+bio.system_heatmap(title_prefix="Diffusion")
 
 # %%
 
@@ -101,7 +96,7 @@ bio.describe_state(concise=True)
 bio.visualize_system(title_prefix="Diffusion")   # Line curve view
 
 # %%
-bio.heatmap_single_chem(title_prefix="Diffusion")
+bio.system_heatmap(title_prefix="Diffusion")
 
 # %%
 
@@ -121,7 +116,7 @@ for i in range(50):
         fig.show()
         
         # Heatmap view
-        fig = bio.heatmap_single_chem()
+        fig = bio.system_heatmap()
         fig.show()
 
 
