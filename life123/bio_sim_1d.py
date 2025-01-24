@@ -1721,70 +1721,29 @@ class BioSim1D:
         if title_prefix:
             title = title_prefix + ".  " + title
 
-        if self.n_species == 1:
-            chem_name = self.chem_data.get_label(species_index=0)      # The only chemical in the system
+        chem_labels = self.chem_data.get_all_labels()
+        n_chem = len(chem_labels)
+
+        if colors is None:
+            # Attempt to make use of the previously-registered colors, if available
+            colors = self.chem_data.get_registered_colors(chem_labels)
+            if colors is None:
+                # Fall back to default colors
+                colors = Colors.assign_default_colors(n_chem)
+
+
+        if n_chem == 1:
+            chem_name = chem_labels[0]      # The only chemical
 
             fig = px.line(y=self.lookup_species(species_name=chem_name),
                           title= title,
+                          color_discrete_sequence = colors,
                           labels={"y": f"[{chem_name}]", "x":"Bin number"},)
         else:
-            chem_labels = self.chem_data.get_all_labels()
-
-            if colors is None:
-                # Attempt to make use of the previously-registered colors, if available
-                colors = self.chem_data.get_registered_colors(chem_labels)
-                if colors is None:
-                    # Fall back to default colors
-                    colors = Colors.assign_default_colors(self.n_species)
-
             fig = px.line(data_frame=self.system_snapshot(), y=chem_labels,
                           title= title,
                           color_discrete_sequence = colors,
                           labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})                        
-
-        return fig
-
-
-
-    def system_heatmap_OLD(self, chem_label=None, title_prefix ="", width=None, row_height=350,
-                       color=None) -> pgo.Figure:
-        """
-        Produce a heatmap, and return it as a plotly Figure object
-
-        :param chem_label:  [OPTIONAL] NOT YET USED
-        :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
-        :param width:
-        :param height:
-        :param color:
-        :return:
-        """
-        # TODO: generalize to sub-selection of chemicals
-        title = f"System snapshot at time t={self.system_time:.8g}"
-        if title_prefix:
-            title = title_prefix + ".  " + title
-
-        fig = px.imshow(self.system_snapshot().T,
-                title= title,
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto='.2f', color_continuous_scale="gray_r")         # text_auto=’auto’
-
-        # Insert a little spacing between adjacent cells horizontally, and substantially more vertical
-        fig.update_traces(xgap=3)       # Alt way to specify it: fig.data[0].xgap=3
-        fig.update_traces(ygap=8)       # Vertical separation is larger because individual rows belong to different chemicals
-
-        '''
-        # ANOTHER APPROACH TO CREATE A PLOTLY HEATMAP, using Heatmap() from plotly.graph_objects
-        data = go.Heatmap(z=bio.system_snapshot().T,
-                            y=['A'],
-                            colorscale='gray_r', colorbar={'title': 'Concentration'},
-                            xgap=3, ygap=3, texttemplate = '%{z}', hovertemplate= 'Bin number: %{x}<br>Chem. species: %{y}<br>Concentration: %{z}<extra></extra>')
-        
-        fig = go.Figure(data,
-                        layout=go.Layout(title=f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}",
-                                         xaxis={'title': 'Bin number'}, yaxis={'title': 'Chem. species'}
-                                        )
-                       )
-        '''
 
         return fig
 
@@ -1798,9 +1757,10 @@ class BioSim1D:
         :param chem_labels: [OPTIONAL] NOT YET USED.  For now, ALL chemicals get shown
         :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
         :param row_height:  [OPTIONAL] Height of each of the heatmap rows;
-                                if too small to fit the heatmap, an error will be raised
-        :param colors:      [OPTIONAL] If None, then use the registered colors (if specified),
-                                or the hardwired defaults as a last resort
+                                if too small to fit the heatmap, it will automatically be made larger
+        :param colors:      [OPTIONAL] If None, then use the registered colors (if specified);
+                                in case of absence of registered colors, use black if just 1 chemical,
+                                or the hardwired default colors otherwise
         :return:            A Plotly "Figure" object with a Heatmap
         """
         # TODO: generalize to sub-selection of chemicals
@@ -1837,45 +1797,52 @@ class BioSim1D:
         if colors is None:
             # Attempt to make use of the previously-registered colors, if available
             colors = self.chem_data.get_registered_colors(chem_labels)
-            if colors is None:
-                # Fall back to default colors
+            if (colors is None) and len(chem_labels) > 1:
+                # Fall back to default colors (but don't bother if just 1 chemical)
                 colors = Colors.assign_default_colors(len(chem_labels))
 
+        min_height = 235        # Too small leads to an obscure JS error message
+        if len(chem_labels) == 1:
+            row_height = min_height
 
-        # "delta" affect the vertical extension of the color-coded edges; fine-tune for visual esthetics
-        if row_height <= 200:
-            delta = 0.46
-        elif row_height <= 350:
-            delta = 0.48
-        else:
-            delta = 0.49
+        if colors:
+            # "delta" affect the vertical extension of the color-coded edges; fine-tune for visual esthetics
+            if row_height <= 200:
+                delta = 0.46
+            elif row_height <= 350:
+                delta = 0.48
+            else:
+                delta = 0.49
 
-        # Add color-coded edges using shapes
-        for i, col in enumerate(colors):
-            for j in range(self.n_bins):
+            # Add color-coded edges using shapes
+            for i, col in enumerate(colors):
+                for j in range(self.n_bins):
+                    fig.add_shape(
+                        type="rect",
+                        x0=j - 0.5,   x1=j + 0.5,         # Make x0  more neg to extend to left; make x1 more pos to extend to right
+                        y0=i - delta, y1=i + delta,       # Make y0  more neg to extend to bottom; make y1 more pos to extend to top
+                        line=dict(color=col, width=3),    # Edge color and width
+                        xref="x", yref="y"
+                    )
+
+            # Add annotations for row color-coding
+            for i, col in enumerate(colors):
                 fig.add_shape(
                     type="rect",
-                    x0=j - 0.5,   x1=j + 0.5,         # Make x0  more neg to extend to left; make x1 more pos to extend to right
-                    y0=i - delta, y1=i + delta,       # Make y0  more neg to extend to bottom; make y1 more pos to extend to top
-                    line=dict(color=col, width=3),    # Edge color and width
-                    xref="x", yref="y"
+                    x0 = -0.5,     x1 = -0.4,       # Slightly outside the heatmap
+                    y0 = i - delta, y1 = i + delta,
+                    xref="x", yref="y",
+                    line=dict(width=0),
+                    fillcolor=col
                 )
 
-        # Add annotations for row color-coding
-        for i, col in enumerate(colors):
-            fig.add_shape(
-                type="rect",
-                x0 = -0.5,     x1 = -0.4,       # Slightly outside the heatmap
-                y0 = i - delta, y1 = i + delta,
-                xref="x", yref="y",
-                line=dict(width=0),
-                fillcolor=col
-            )
+
+        height = max(min_height, row_height * len(chem_labels))
 
         fig.update_layout(title=title,
                           xaxis={'title': 'Bin number'}, yaxis={'title': 'Chem. species'},
                           yaxis_autorange="reversed",
-                          height=row_height * len(chem_labels))
+                          height=height * len(chem_labels))
 
         return fig
 

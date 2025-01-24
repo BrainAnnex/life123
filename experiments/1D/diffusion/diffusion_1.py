@@ -24,7 +24,7 @@
 # ### TAGS :  "diffusion 1D", "quick-start"
 
 # %%
-LAST_REVISED = "Jan. 22, 2025"
+LAST_REVISED = "Jan. 23, 2025"
 LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
 
 # %%
@@ -47,7 +47,7 @@ check_version(LIFE123_VERSION)
 # with a single non-zero bin concentration of the single chemical `A`, near the left edge of the system
 
 # %%
-chem_data = ChemData(names="A", diffusion_rates=0.1)
+chem_data = ChemData(names="A", diffusion_rates=0.1)     # If you want to assign a default color, pass arg:  plot_colors=["SOME_COLOR_NAME"]
 
 bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
@@ -67,7 +67,7 @@ bio.system_heatmap(title_prefix="Diffusion")
 
 # %%
 
-# %%
+
 
 # %% [markdown]
 # ## Request history-keeping for some bins
