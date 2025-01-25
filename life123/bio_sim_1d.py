@@ -42,6 +42,8 @@ class BioSim1D:
         self.reactions = None   # Object of type "Reactions", with info on all the reactions
 
         self.reaction_dynamics = None   # Object of class "UniformCompartment"
+                                        # TODO: for now just 1 object is instantiated;
+                                        #       in the future, it might be 1 per bin (or bin cluster)
 
         self.system_length = None       # The linear extension of the system,
                                         # from the middle of the leftmost bin to the middle of the rightmost one.
@@ -181,6 +183,8 @@ class BioSim1D:
 
     def get_chem_data(self):
         """
+        Return all the associated chemical data,
+        incl. diffusion rate constants (but EXCLUSIVE of reactions)
 
         :return:    An Object of type "ChemData"
         """
@@ -195,6 +199,19 @@ class BioSim1D:
         :return:    Object ot type "Reactions" (with data about all the reactions)
         """
         return self.reactions
+
+
+
+    def get_reaction_handler(self, bin_address=0):
+        """
+        Return the object that manages the reactions.
+        Note that for now just 1 object is present;
+        in the future, it might be 1 per bin (or per bin cluster)
+
+        :param bin_address: CURRENTLY NOT USED
+        :return:            Object ot type "UniformCompartment"
+        """
+        return self.reaction_dynamics
 
 
 
@@ -1142,6 +1159,34 @@ class BioSim1D:
 
 
 
+    def reaction_in_equilibrium(self, bin_address: int, rxn_index :int, tolerance=1, explain=True) -> bool:
+        """
+        Ascertain whether the given system concentrations are in equilibrium at the given bin,
+        for the specified reactions (by default, check all reactions)
+
+        :param bin_address: The zero-based bin number of the desired compartment
+        :param rxn_index:   The integer index (0-based) to identify the reaction of interest;
+                                if None, then check all the reactions
+        :param tolerance:   Allowable relative tolerance, as a PERCENTAGE,
+                                to establish satisfactory match with expected values
+        :param explain:     If True, print out details about the analysis,
+                                incl. the formula(s) being used to check the equilibrium
+                                EXAMPLES:   "([C][D]) / ([A][B])"
+                                            "[B] / [A]^2"
+
+        :return:            Return True if ALL the reactions are close enough to an equilibrium,
+                                as allowed by the requested tolerance;
+                                otherwise, return a dict of the form {False: [list of reaction indexes]}
+                                for all the reactions that failed the criterion
+                                EXAMPLE:  {False: [3, 6]}
+        """
+        #TODO: put together a version for 2D
+        return self.get_reaction_handler().is_in_equilibrium(conc=self.bin_snapshot(bin_address),
+                                                             rxn_index=rxn_index, tolerance=tolerance, explain=explain)
+
+
+
+
 
 
     #####################################################################################################
@@ -1651,6 +1696,7 @@ class BioSim1D:
 
 
         # Now process the "other side" of membrane-containing bins, if applicable
+        # TODO: the implementation of this part is expected to change soon!
         if self.uses_membranes():
             for bin_n in self.bins_with_membranes():
                 # Obtain the Delta-concentration for each species, for this bin

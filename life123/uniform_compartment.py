@@ -786,8 +786,6 @@ class UniformCompartment:
 
         Return the increment vector for all the chemical species concentrations in the compartment
 
-        TODO: no longer pass conc_array .  Use the object variable self.system instead
-
         NOTES:  * the actual system concentrations are NOT changed
                 * this method doesn't decide on step sizes - except in case of ("hard" or "soft") aborts, which are
                     followed by repeats with a smaller step.  Also, it makes suggestions
@@ -802,7 +800,7 @@ class UniformCompartment:
         :param explain_variable_steps:  If not None, a brief explanation is printed about how the variable step sizes were chosen,
                                             when the System time inside that range;
                                             only applicable if variable_steps is True
-        :param step_counter:
+        :param step_counter:    [OPTIONAL] Integer currently only used for diagnostics
 
         :return:                The triplet:
                                     1) increment vector for the concentrations of ALL the chemical species,
@@ -814,8 +812,12 @@ class UniformCompartment:
                                     3) recommended_next_step : a suggestions to the calling module
                                        about the next step to best take
         """
+        # TODO: no longer pass conc_array .  Use the object variable self.system instead
+        #       Determine whether 1 or multiple UC objects are to be used by Bio1D, etc.
+
         if conc_array is not None:
             self.system = conc_array    # For historical reasons, as a convenience to Bio1D, etc.
+                                        # TODO: maybe it ought to be kept separate in separate instances of the UC object
 
         # Validate arguments
         assert self.system is not None, "UniformCompartment.reaction_step_common(): " \
@@ -1978,7 +1980,7 @@ class UniformCompartment:
     def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True, verbose=None) -> Union[bool, dict]:
         """
         Ascertain whether the given concentrations (by default the current System concentrations)
-        are in equilibrium for the specified reactions (by default, for all reactions)
+        are in equilibrium for the specified reactions (by default, check all reactions)
 
         :param rxn_index:   The integer index (0-based) to identify the reaction of interest;
                                 if None, then check all the reactions
@@ -1992,7 +1994,7 @@ class UniformCompartment:
                                 incl. the formula(s) being used to check the equilibrium
                                 EXAMPLES:   "([C][D]) / ([A][B])"
                                             "[B] / [A]^2"
-        :param verbose:     Alternate name for argument `explain`
+        :param verbose:     Alternate name for argument `explain`   TODO: DEPRECATED in favor of "explain"
 
         :return:            Return True if ALL the reactions are close enough to an equilibrium,
                                 as allowed by the requested tolerance;
@@ -2001,9 +2003,10 @@ class UniformCompartment:
                                 EXAMPLE:  {False: [3, 6]}
         """
         # TODO: optionally display last lines in diagnostic data, if available
-        # TODO: phase out "explain" in favour of "verbose"
+        # TODO: phase out "verbose" in favour of "explain"
 
         if verbose is not None:
+            print("*** INFO: argument `verbose` is deprecated; use `explain` instead")
             explain = verbose
 
         if conc is None:
@@ -2108,14 +2111,14 @@ class UniformCompartment:
         # Handle the special case of zero concentration in some of the reactants AND in some of the products
         if np.isnan(rxn_quotient):
             if explain:
-                print(f"Final concentrations: {all_applicable_concs_str}")
+                print(f"Current concentrations: {all_applicable_concs_str}")
                 print("Reaction IS in equilibrium because it can't proceed in either direction "
                       "due to zero concentrations in both some reactants and products!\n")
             return True
 
         if np.isinf(rxn_quotient):      # If only the denominator is 0
             if explain:
-                print(f"Final concentrations: {all_applicable_concs_str}")
+                print(f"Current concentrations: {all_applicable_concs_str}")
                 print("Reaction is NOT in equilibrium because either the products contain a zero concentration\n")
             return False
 
@@ -2124,7 +2127,7 @@ class UniformCompartment:
         status = np.allclose(rxn_quotient, rate_ratio, rtol=tolerance/100., atol=0)
 
         if explain:
-            print(f"Final concentrations: {all_applicable_concs_str}")
+            print(f"Current concentrations: {all_applicable_concs_str}")
             print(f"1. Ratio of reactant/product concentrations, adjusted for reaction orders: {rxn_quotient:,.6g}")
             print(f"    Formula used:  {formula}")
             print(f"2. Ratio of forward/reverse reaction rates: {rate_ratio:,.6g}")
