@@ -13,17 +13,17 @@
 # ---
 
 # %% [markdown]
-# ### A MINIMALIST, "get-started", demonstration for the reaction `A <-> B`,
+# ### A MINIMALIST, "get-started", demonstration of the reaction `A <-> B`,
 # with 1st-order kinetics in both directions, taken to equilibrium.
 #
-# **"No frills!"**  For advanced graphics, analysis, diagnostics, fine-tuning, etc, please see other experiments.
+# **"No frills!"**  Please see other experiments for advanced graphics, analysis, diagnostics, fine-tuning, etc.
 
 # %% [markdown]
 # ### TAGS :   "quick-start", "uniform compartment"
 
 # %%
-LAST_REVISED = "Dec. 15, 2024"
-LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
+LAST_REVISED = "Jan. 9, 2025"
+LIFE123_VERSION = "1.0.0rc2"         # Library version this experiment is based on
 
 # %%
 #import set_path            # Using MyBinder?  Uncomment this before running the next cell!
@@ -66,6 +66,8 @@ uc.single_compartment_react(initial_step=0.1, target_end_time=1.)   # Using defa
 
 # %%
 uc.get_history()   # The system's history, saved during the run of single_compartment_react()
+
+# %%
 
 # %% [markdown] tags=[]
 # ## Plots changes of concentration with time  

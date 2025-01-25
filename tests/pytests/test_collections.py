@@ -6,7 +6,7 @@ from life123 import CollectionTabular, CollectionArray, Collection
 
 
 
-###############  For class MovieTabular  ###############
+###############  For class CollectionTabular  ###############
 
 def test_store():
     m = CollectionTabular()
@@ -16,13 +16,13 @@ def test_store():
     m.store(par=10, data_snapshot=d, caption="first entry")  # Add a snapshot
     assert d == d_original
     assert len(m) == 1
-    assert str(m) == "`MovieTabular` object with 1 snapshot(s) parametrized by `SYSTEM TIME`"
+    assert str(m) == "`CollectionTabular` object with 1 snapshot(s) parametrized by `SYSTEM TIME`"
     row = list(m.collection_df.iloc[0])                 # By row index
     assert row == [10, 1, 2, 3, 'first entry']
 
     m.store(par=20, data_snapshot={"A": 10, "B": 20, "C": 30}, caption="second entry")  # Add a snapshot
     assert len(m) == 2
-    assert str(m) == "`MovieTabular` object with 2 snapshot(s) parametrized by `SYSTEM TIME`"
+    assert str(m) == "`CollectionTabular` object with 2 snapshot(s) parametrized by `SYSTEM TIME`"
     row = list(m.collection_df.iloc[0])                 # By row index
     assert row == [10, 1, 2, 3, 'first entry']
     row = list(m.collection_df.iloc[1])                 # By row index
@@ -30,7 +30,7 @@ def test_store():
 
     m.store(par=30, data_snapshot={"A": -1, "B": -2, "C": -3})      # Add a snapshot
     assert len(m) == 3
-    assert str(m) == "`MovieTabular` object with 3 snapshot(s) parametrized by `SYSTEM TIME`"
+    assert str(m) == "`CollectionTabular` object with 3 snapshot(s) parametrized by `SYSTEM TIME`"
     row = list(m.collection_df.iloc[0])                 # By row index
     assert row == [10, 1, 2, 3, 'first entry']
     row = list(m.collection_df.iloc[1])                 # By row index
@@ -40,7 +40,7 @@ def test_store():
 
     m.store(par=40, data_snapshot={"A": 111, "B": 222}, caption="notice that C is missing")  # Add a snapshot
     assert len(m) == 4
-    assert str(m) == "`MovieTabular` object with 4 snapshot(s) parametrized by `SYSTEM TIME`"
+    assert str(m) == "`CollectionTabular` object with 4 snapshot(s) parametrized by `SYSTEM TIME`"
     df = m.collection_df
     data_values = [{"SYSTEM TIME": 10, "A": 1,   "B": 2,  "C": 3,  "caption": "first entry"},
                    {"SYSTEM TIME": 20, "A": 10,  "B": 20, "C": 30, "caption": "second entry"},
@@ -52,7 +52,7 @@ def test_store():
 
     m.store(par=50, data_snapshot={"A": 8, "B": 88, "C": 888, "D": 1}, caption="notice the newly-appeared D")  # Add a snapshot
     assert len(m) == 5
-    assert str(m) == "`MovieTabular` object with 5 snapshot(s) parametrized by `SYSTEM TIME`"
+    assert str(m) == "`CollectionTabular` object with 5 snapshot(s) parametrized by `SYSTEM TIME`"
     df = m.collection_df
 
     data_values.append({"SYSTEM TIME": 50, "A": 8, "B": 88, "C": 888, "D": 1, "caption": "notice the newly-appeared D"})
@@ -73,7 +73,7 @@ def test_store():
 def test_get_dataframe():
     m = CollectionTabular()
 
-    # Same data as used in test_MovieTabular(), except that the `SYSTEM TIME` parameter now has floats values
+    # Same data as used in test_CollectionTabular(), except that the `SYSTEM TIME` parameter now has floats values
     m.store(par=10,   data_snapshot={"A": 1, "B": 2, "C": 3}, caption="first entry")
     m.store(par=12.4, data_snapshot={"A": 10, "B": 20, "C": 30}, caption="second entry")
     m.store(par=33.1, data_snapshot={"A": -1, "B": -2, "C": -3})
@@ -236,9 +236,9 @@ def test_update_last_snapshot():
 
 
 
-###############  For class MovieArray  ###############
+###############  For class CollectionArray  ###############
 
-def test_MovieArray():
+def test_CollectionArray():
     m = CollectionArray()
 
     m.store(par=10, data_snapshot=np.array([1., 2., 3.]), caption="first entry")
@@ -247,7 +247,7 @@ def test_MovieArray():
     assert m.snapshot_shape == (3,)
     assert np.allclose(m.data_arr, [[1., 2., 3.]])
     assert len(m) == 1
-    assert str(m) == "MovieArray object with 1 snapshot(s) parametrized by `SYSTEM TIME`"
+    assert str(m) == "CollectionArray object with 1 snapshot(s) parametrized by `SYSTEM TIME`"
 
     m.store(par=20, data_snapshot=np.array([10., 11., 12.]), caption="second entry")
     assert m.parameters == [10, 20]
@@ -256,7 +256,7 @@ def test_MovieArray():
     assert np.allclose(m.data_arr, [[1., 2., 3.],
                                     [10., 11., 12.]])
     assert len(m) == 2
-    assert str(m) == "MovieArray object with 2 snapshot(s) parametrized by `SYSTEM TIME`"
+    assert str(m) == "CollectionArray object with 2 snapshot(s) parametrized by `SYSTEM TIME`"
 
     m.store(par=30, data_snapshot=np.array([-10., -11., -12.]))
     assert m.parameters == [10, 20, 30]
@@ -266,7 +266,7 @@ def test_MovieArray():
                                     [10., 11., 12.],
                                     [-10., -11., -12.]])
     assert len(m) == 3
-    assert str(m) == "MovieArray object with 3 snapshot(s) parametrized by `SYSTEM TIME`"
+    assert str(m) == "CollectionArray object with 3 snapshot(s) parametrized by `SYSTEM TIME`"
 
     with pytest.raises(Exception):
         m.store(par=666, data_snapshot=np.array([1., 2., 3., 4., 5.]),
@@ -285,7 +285,7 @@ def test_MovieArray():
     assert np.allclose(m_2D.data_arr, [[1., 2., 3.],
                                        [10., 11., 12.]])
     assert len(m_2D) == 1
-    assert str(m_2D) == "MovieArray object with 1 snapshot(s) parametrized by `a,b values`"
+    assert str(m_2D) == "CollectionArray object with 1 snapshot(s) parametrized by `a,b values`"
 
     m_2D.store(par={"a": 400., "b": 123},
                data_snapshot=np.array([[-1., -2., -3.],
@@ -304,7 +304,7 @@ def test_MovieArray():
                         ])
     assert np.allclose(m_2D.data_arr, expected)
     assert len(m_2D) == 2
-    assert str(m_2D) == "MovieArray object with 2 snapshot(s) parametrized by `a,b values`"
+    assert str(m_2D) == "CollectionArray object with 2 snapshot(s) parametrized by `a,b values`"
 
     with pytest.raises(Exception):
         m_2D.store(par=666, data_snapshot=np.array([10., 11., 12.]), caption="wrong shape for the data!")
@@ -312,7 +312,7 @@ def test_MovieArray():
 
 
 
-###############  For class MovieGeneral  ###############
+###############  For class CollectionGeneral  ###############
 
 def test_Collection():
     m = Collection()

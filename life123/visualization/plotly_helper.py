@@ -1,84 +1,37 @@
-import plotly.express as px
-import plotly.graph_objects as pgo
 import numpy as np
 import pandas as pd
-from plotly.subplots import make_subplots
+import math
+import plotly.express as px
+import plotly.graph_objects as pgo
+import plotly.subplots as sp
+from life123.visualization.colors import Colors
 from typing import Union
 
 
 
 class PlotlyHelper:
     """
-    Static class to assist in the use of the plotly library
+    Static class to assist in the use of the plotly library.
+    For color management, see the separate class "Colors"
 
     TODO: improve consistency in argument names; also across UniformCompartment
+    TODO: rename as "VisualizationHelper" or "GraphicsHelper"
     """
 
-    @classmethod
-    def get_default_colors(cls, n :int) -> [int]:
-        """
-        Return a list of n colors, specified by their standard plotly names;
-        meant for situations when 1 or more default colors are needed.
 
-        The choice of default colors is hardwired in this function.
+    #####################################################################################################
 
-        :param n:   Desired number of default colors
-        :return:    A list of n standard (CSS) color names
-        """
-        # TODO: provide multiple, user-selectable, harmonious assortments of default colors
+    '''                                    ~   PLOTS   ~                                           '''
 
-        default_colors = ['darkturquoise', 'green', 'brown', 'red', 'gray', 'blue',
-                          'orange', 'purple', 'cyan', 'darkorange', 'navy',
-                          'darkred', 'black', 'mediumspringgreen']
-        '''
-        # Available color names:
-                aliceblue, antiquewhite, aqua, aquamarine, azure,
-                beige, bisque, black, blanchedalmond, blue,
-                blueviolet, brown, burlywood, cadetblue,
-                chartreuse, chocolate, coral, cornflowerblue,
-                cornsilk, crimson, cyan, darkblue, darkcyan,
-                darkgoldenrod, darkgray, darkgrey, darkgreen,
-                darkkhaki, darkmagenta, darkolivegreen, darkorange,
-                darkorchid, darkred, darksalmon, darkseagreen,
-                darkslateblue, darkslategray, darkslategrey,
-                darkturquoise, darkviolet, deeppink, deepskyblue,
-                dimgray, dimgrey, dodgerblue, firebrick,
-                floralwhite, forestgreen, fuchsia, gainsboro,
-                ghostwhite, gold, goldenrod, gray, grey, green,
-                greenyellow, honeydew, hotpink, indianred, indigo,
-                ivory, khaki, lavender, lavenderblush, lawngreen,
-                lemonchiffon, lightblue, lightcoral, lightcyan,
-                lightgoldenrodyellow, lightgray, lightgrey,
-                lightgreen, lightpink, lightsalmon, lightseagreen,
-                lightskyblue, lightslategray, lightslategrey,
-                lightsteelblue, lightyellow, lime, limegreen,
-                linen, magenta, maroon, mediumaquamarine,
-                mediumblue, mediumorchid, mediumpurple,
-                mediumseagreen, mediumslateblue, mediumspringgreen,
-                mediumturquoise, mediumvioletred, midnightblue,
-                mintcream, mistyrose, moccasin, navajowhite, navy,
-                oldlace, olive, olivedrab, orange, orangered,
-                orchid, palegoldenrod, palegreen, paleturquoise,
-                palevioletred, papayawhip, peachpuff, peru, pink,
-                plum, powderblue, purple, red, rosybrown,
-                royalblue, saddlebrown, salmon, sandybrown,
-                seagreen, seashell, sienna, silver, skyblue,
-                slateblue, slategray, slategrey, snow, springgreen,
-                steelblue, tan, teal, thistle, tomato, turquoise,
-                violet, wheat, white, whitesmoke, yellow,
-                yellowgreen
-        '''
-        colors = default_colors[:n]      # Pick the first default colors; TODO: rotate if needing more
-
-        return colors
-
-
+    def ________PLOTS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
     @classmethod
     def plot_curves(cls, x, y, title="", range_x=None, x_label="", y_label="", curve_labels=None, legend_title=None,
                     colors=None, show=False) -> pgo.Figure:
         """
-        Plot one or more 2D curves
+        Plot one or more 2D curves.  If your data is a in a Pandas dataframe, consider using plot_pandas()
 
         :param x:           A Numpy array, with the (common) x-axis values
         :param y:           Either a Numpy array, or a list/tuple of them, with the y-axis values of the curve(s)
@@ -111,7 +64,7 @@ class PlotlyHelper:
                     curve_labels = [curve_labels]
 
         if colors is None:
-            colors = cls.get_default_colors(number_of_curves)
+            colors = Colors.assign_default_colors(number_of_curves)
         elif type(colors) == str:
             colors = [colors]
         # TODO: if any color is missing, assign default ones
@@ -163,8 +116,8 @@ class PlotlyHelper:
                     colors=None, title=None, title_prefix=None,
                     range_x=None, range_y=None,
                     x_label=None, y_label="Y", legend_header="Plot",
-                    vertical_lines_to_add=None,
-                    show_intervals=False, show=False) -> pgo.Figure:
+                    vertical_lines_to_add=None, show_intervals=False,
+                    smoothed=False, show=False) -> pgo.Figure:
         """
         Using plotly, draw line plots from the values in the given dataframe.
         One column supplies the values for the x-axis,
@@ -173,37 +126,39 @@ class PlotlyHelper:
         Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
 
         :param df:              Pandas dataframe with the data for the plot
-        :param x_var:           Name of column with independent variable for the x-axis
+        :param x_var:           Name of column with the independent variable for the x-axis
         :param fields:          Name, or list of names, of the dataframe columns whose values are to be plotted;
                                     if a list is passed, also display a figure legend;
-                                    if None, then display all columns except the one that is declared as the independent variable
-        :param colors:          (OPTIONAL) Either a single color (string with standard plotly name, such as "red"),
+                                    if None, then display all columns except the one that was declared as the independent variable
+        :param colors:          [OPTIONAL] Either a single color (string with standard plotly name, such as "red"),
                                     or list of names to use, in order; some of the entries may be None.
                                     If None, then the hardwired default colors are used
-        :param title:           (OPTIONAL) Title for the plot
-        :param title_prefix:    (OPTIONAL) Strint to prefixed (automatically followed by " <br>") to the title
-        :param range_x:         (OPTIONAL) list of the form [t_start, t_end], to initially show only a part of the timeline.
+        :param title:           [OPTIONAL] Title for the plot
+        :param title_prefix:    [OPTIONAL] String to prefix (automatically followed by " <br>") to the title
+        :param range_x:         [OPTIONAL] list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param range_y:         (OPTIONAL) list of the form [y_min, y_max], to initially show only a part of the y values.
+        :param range_y:         [OPTIONAL] list of the form [y_min, y_max], to initially show only a part of the y values.
                                     Note: it's still possible to zoom out, and see the excluded portion
-        :param x_label:         (OPTIONAL) Caption to use for the x-axis
-        :param y_label:         (OPTIONAL) Caption to use for the y-axis.  Default: "Y"
-        :param legend_header:   (OPTIONAL) Caption to use at the top of the legend box.
+        :param x_label:         [OPTIONAL] Caption to use for the x-axis
+        :param y_label:         [OPTIONAL] Caption to use for the y-axis.  Default: "Y"
+        :param legend_header:   [OPTIONAL] Caption to use at the top of the legend box.
                                             Only applicable if more than 1 curve is being shown.
-        :param vertical_lines_to_add:  (OPTIONAL) Ignored if the argument `show_intervals` is specified.
+        :param vertical_lines_to_add:  [OPTIONAL] Ignored if the argument `show_intervals` is specified.
                                     Value, or list, or tuple, or Numpy array, or Pandas series,
                                     of x-coordinate(s) at which to draw thin vertical dotted gray lines.
                                     If the number of vertical line is so large as to overwhelm the plot,
                                     only a sample of them is shown.
                                     Note that vertical lines, if requested, go into the plot's "layout";
                                     as a result they might not appear if this plot is later combined with another one.
-        :param show_intervals:  (OPTIONAL) If True, it over-rides any value passed to the `vertical_lines` argument,
+        :param show_intervals:  [OPTIONAL] If True, it over-rides any value passed to the `vertical_lines` argument,
                                     and draws thin vertical dotted gray lines at all the x-coords
                                     of the data points in the saved history data;
                                     also, it adds a comment to the title.
+        :param smoothed:        [OPTIONAL] If True, a spline is used to smooth the lines;
+                                    otherwise (default), line segments are used
         :param show:            If True, the plot will be shown
                                     Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
-                                          leads to it being automatically shown
+                                          gets it automatically shown
 
         :return:                A plotly "Figure" object
         """
@@ -233,7 +188,7 @@ class PlotlyHelper:
 
         if colors is None:
             # Entirely use default colors
-            colors = PlotlyHelper.get_default_colors(number_of_curves)
+            colors = Colors.assign_default_colors(number_of_curves)
         elif type(colors) == str:
             # Turn colors into a list, if it was a single entry
             colors = [colors]
@@ -241,7 +196,7 @@ class PlotlyHelper:
             # If we get here, we were given a list; replace any missing (None) entry with a default color
             number_none = colors.count(None)    # Number of None entries
             if number_none > 0:
-                replacement_colors = PlotlyHelper.get_default_colors(number_none)   # Get all the replacements in bulk
+                replacement_colors = Colors.assign_default_colors(number_none)   # Get all the replacements in bulk
                 colors_adjusted = []
                 i = 0
                 for c in colors:
@@ -263,10 +218,13 @@ class PlotlyHelper:
 
 
         # Create the main plot
+        line_shape = "spline" if smoothed else "linear"
+
         fig = px.line(data_frame=df, x=x_var, y=fields,
                       title=title, range_x=range_x, range_y=range_y,
                       color_discrete_sequence = colors,
-                      labels={"value": y_label, "variable": legend_header})
+                      labels={"value": y_label, "variable": legend_header},
+                      line_shape=line_shape)
 
         if type(fields) == str:     # Somehow, the `labels` argument in px.line, above, is ignored when `fields` is just a string
             fig.update_layout(yaxis_title=y_label)   # This line will remedy the above issue
@@ -393,6 +351,16 @@ class PlotlyHelper:
 
 
 
+
+
+    #####################################################################################################
+
+    '''                                    ~   SUBPLOTS   ~                                           '''
+
+    def ________SUBPLOTS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
     @classmethod
     def combine_in_vertical_grid(cls, fig1, fig2, title1 :str, title2 :str,
                                  title_combined :str, height=900) -> pgo.Figure:
@@ -409,9 +377,9 @@ class PlotlyHelper:
         """
 
         # Make a visual grid with 2 rows and 1 column; adequate vertical spacing is used to clearly shows axes labels
-        combined_fig = make_subplots(rows=2, cols=1,
-                                     subplot_titles=(title1, title2),
-                                     vertical_spacing=0.15)  # Increase vertical spacing (as a fraction of the plot height)
+        combined_fig = sp.make_subplots(rows=2, cols=1,
+                                        subplot_titles=(title1, title2),
+                                        vertical_spacing=0.15)  # Increase vertical spacing (as a fraction of the plot height)
 
         # Populate the grid with all the inner parts ("traces") of each individual plot ("figure" object)
         for trace in fig1.data:
@@ -430,3 +398,204 @@ class PlotlyHelper:
         combined_fig.update_layout(title=title_combined, height=height)    # height controls the total height of the entire figure
 
         return combined_fig
+
+
+
+    @classmethod
+    def _optimal_subplot_grid_size(cls, ncells :int, max_n_cols = 4) -> (int, int):
+        """
+        Given the specified number of "cells" (graphic elements) to combine into a subplot grid,
+        and given the desired max number of columns to use,
+        suggest a visually-pleasing, least crowded, number of rows and columns to use.
+        For the needed number of rows, attempt to use fewer columns if possible.
+        Note: NO graphic elements are actually produced; this is a helper function
+
+        EXAMPLES, with max_n_cols = 4 :
+            3 cells -> 1 row, 3 cols
+            4 cells -> 1 row, 4 cols
+            5 cells -> 2 rows, 3 cols   (grid of 3 + 2, rather than 4 + 1)
+            7 cells -> 2 rows, 4 cols   (grid of 4 + 3)
+
+        :param ncells:      The number of graphic elements intended to being assembled into a subplot grid
+        :param max_n_cols:
+        :return:            A pair with the recommended number of rows and columns to use
+        """
+
+        assert max_n_cols >= 1, \
+            "optimal_subplot_grid(): the number of maximum columns must be at least 1" \
+
+        assert ncells >= 1, \
+            "optimal_subplot_grid(): the number of cells must be at least 1" \
+
+        ncols = min(ncells, max_n_cols)     # Tentative number of columns to use (no more than ncells nor max_n_cols)
+        nrows = math.ceil(ncells / ncols)   # Number of rows needed for the above number of columns
+        ncols_revised = math.ceil(ncells / nrows)   # Now that the number of rows has been fixed, attempt to use the least number of columns
+        #print(f"{ncols} columns [Revised to {ncols_revised}], over {nrows} rows")
+
+        return nrows, ncols_revised
+
+
+
+
+    #####################################################################################################
+
+    '''                                    ~   HEATMAPS   ~                                           '''
+
+    def ________HEATMAPS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    @classmethod
+    def heatmap_grid(cls, array_list :list, labels :[str], title ="Grid of Heatmaps",
+                     height=None, colors=None, z_name="z", max_n_cols=4, cartesian=True) -> pgo.Figure:
+        """
+        Prepare and return a Plotly Figure object containing a grid of heatmaps (up to a max of 12)
+
+        :param array_list:  List of 2-D Numpy arrays, up to a maximum of 12,
+                                containing the data for each of the heatmaps
+        :param labels:      List of labels for each of the heatmaps; its length must match that of the data
+        :param title:       [OPTIONAL] Overall title to show at the top of the grid of heatmaps
+        :param height:      [OPTIONAL] Height of the overall grid of heatmaps
+        :param colors:      [OPTIONAL] List of CSS color names for each of the heatmaps.
+                                If provided, its length must match that of the data; otherwise, default colors are used
+        :param z_name:      [OPTIONAL] Name of the quantity being visualized in the heatmaps; e.g. "Conc." or "Temp."
+        :param max_n_cols:  [OPTIONAL] The maximum number of columns to use in the grip (at most 4)
+        :param cartesian:   If True (default) a Cartesian grid coordinate is used, with y-bin numbers increasing up
+        :return:            A Plotly "Figure" object
+        """
+
+        assert max_n_cols <= 4, "heatmap_grid(): Can only handle up to 4 columns"
+
+        n_cells=len(array_list)
+        assert n_cells <= 12, "Can only handle up to 12 heatmaps"
+        assert n_cells == len(labels), "The number of heatmaps and labels must match"
+
+        if colors is None:
+            colors = Colors.assign_default_heatmap_colors(n_cells)
+        else:
+            assert n_cells == len(colors), "The number of labels and colors must match"
+
+
+        # Create subplots for all the individual heatmaps
+
+        nrows, ncols = cls._optimal_subplot_grid_size(ncells=n_cells, max_n_cols = max_n_cols) # Number of rows/columns in subplot grid
+
+        grid_hor_spacing = 0.15     # TODO: would probably be good to increase this a tad
+        grid_vert_spacing = 0.15 if nrows < 3 else 0.12  # A little more spacious vertically if few rows
+
+        if ncols == 1:
+            x0=1.0
+            x1=0    # N/A in this case
+        elif ncols == 2:
+            x0=0.43
+            x1=0.5745
+        elif ncols == 3:
+            x0=0.235
+            x1=0.3834
+        elif ncols == 4:
+            x0=0.14
+            x1=0.2875
+        else:
+            raise Exception(f"Cannot handle this {ncols} columns")
+
+        if nrows == 1:
+            ln=1.2
+            y0=0.505
+            y1=0    # N/A in this case
+            recommended_height=500
+        elif nrows == 2:
+            ln=0.52
+            y0=0.792
+            y1=0.573
+            recommended_height=850
+        elif nrows == 3:
+            ln=0.3
+            y0=0.895
+            y1=0.373   # 0.383
+            recommended_height=950
+        else:
+            raise Exception(f"Cannot handle this {nrows} rows")
+
+
+        if height is None:
+            height = recommended_height
+
+        if nrows == 1:
+            assert height >= 250, f"Overall height cannot be less than 250 for {n_cells} heatmaps"
+        elif nrows == 2:
+            assert height >= 600, f"Overall height cannot be less than 600 for {n_cells} heatmaps"
+        elif nrows == 3:
+            assert height >= 750, f"Overall height cannot be less than 750 for {n_cells} heatmaps"
+
+        fig = sp.make_subplots(rows=nrows, cols=ncols, subplot_titles=[f'{c}' for c in labels],
+                               horizontal_spacing=grid_hor_spacing, vertical_spacing=grid_vert_spacing)
+
+        row = 1
+        col = 1
+        for i, hm_label in enumerate(labels):
+            #print("************* row, col : ", row, col)
+            color_name = colors[i]
+            if color_name is None:
+                color_scale = "gray_r"
+            else:
+                #lighter_color = Colors.lighten_color(color_name, factor=.96)
+                lighter_color = "white"
+                color_scale = [
+                    [0.0, lighter_color],   # Light tint
+                    [1.0, color_name],      # Full color
+                ]
+
+            # Create the Heatmap object
+            hovertemplate=f"{z_name}: %{{z}}<br>x bin: %{{x}}<br>y bin: %{{y}}<extra>{hm_label}</extra>"
+            # EXAMPLE of hovertemplate: "Conc.: %{z}<br>x bin: %{x}<br>y bin: %{y}<extra>Enzyme X</extra>"
+
+            hm = pgo.Heatmap(z=array_list[i],
+                             xgap=2, ygap=2,
+                             hovertemplate=hovertemplate,
+                             texttemplate = '%{z:.2f}',
+                             colorscale=color_scale,
+                             colorbar=dict(
+                                        title=z_name,
+                                        len=ln,                     # Length of the colorbar
+                                        y = y0 - (row - 1) * y1,    # Adjust vertical position in subplot
+                                        x = x0 + x1 *(col-1)        # Adjust horizontal position
+                                    )
+                             )
+
+            fig.add_trace(hm, row=row, col=col)   # row and col values start at 1
+
+            # Add x-axis and y-axis titles for this subplot
+            fig.update_xaxes(
+                                title_text=f"x bin",
+                                row=row,
+                                col=col
+                            )
+
+            fig.update_yaxes(
+                                title_text=f"y bin",
+                                row=row,
+                                col=col
+                            )
+
+            if not cartesian:
+                # Invert the y-axis for this subplot
+                fig.update_yaxes(
+                                    autorange="reversed",
+                                    row=row,
+                                    col=col
+                                )
+
+            col += 1
+            if col > ncols:
+                col = 1
+                row += 1
+
+
+        # Update layout
+        fig.update_layout(
+            title=title,
+            height=height,
+            showlegend=False
+        )
+
+        return fig

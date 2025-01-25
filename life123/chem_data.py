@@ -1,11 +1,6 @@
 from typing import Union, List, NamedTuple, Set
 
 import numpy as np
-
-#from life123.reaction import Reaction
-from life123.visualization.py_graph_visual import PyGraphVisual
-from life123.html_log import HtmlLog as log
-from life123.visualization.graphic_log import GraphicLog
 import pandas as pd
 
 
@@ -86,6 +81,8 @@ class ChemCore:
     def get_index(self, label :str) -> int:
         """
         Return the index of the chemical species with the given label.
+        Indexes are the integers assigned, in autoincrement order,
+        at the time each chemical is first registered.
         If not found, an Exception is raised
 
         :param label:   Label of the chemical species of interest
@@ -133,19 +130,22 @@ class ChemCore:
 
     def get_all_labels(self) -> [str]:
         """
-        Return a list with the names of all the chemical species, in their index order.
-        If any is missing or blank, an Exception instead
+        Return a list with the labels of all the chemical species,
+        in their index order of registration.
+        If any label is missing or blank, an Exception is raised
 
         :return:    A list of strings with the chemical names,
                         in their registered index order
         """
-        all_names = []
+        all_labels = []
         for i, c in enumerate(self.chemical_data):
-            name = c.get("label", None)
-            assert name, f"get_all_labels(): missing or blank chemical name in index position {i}"
-            all_names.append(name)
+            label = c.get("label", None)
+            assert label is not None, \
+                f"get_all_labels(): missing or blank chemical name in index position {i}"
 
-        return all_names
+            all_labels.append(label)
+
+        return all_labels
 
 
 
@@ -253,6 +253,60 @@ class ChemCore:
 
 
 
+    def get_registered_colors(self, chem_labels :Union[None, list[str]]) -> Union[None, list[str]]:
+        """
+        Return a list of the colors registered for the specified chemicals or, if not specified, for all chemicals.
+        If not a single color is registered, return None
+
+        :param chem_labels: List of chemical labels; use None to mean ALL chemicals
+        :return:            List of color names, with as many entries as the chemicals of interest;
+                                any of the entries might be None.
+                                However, if zero colors are found, return None
+        """
+        if chem_labels is None:
+            chem_labels = self.get_all_labels()
+
+        # Attempt to use the colors registered for individual chemicals, if present
+        registered_colors = []
+        for label in chem_labels:
+            stored_color = self.get_plot_color(label)     # Will be None if no color was registered for this chemical
+            registered_colors.append(stored_color)
+
+        if set(registered_colors) == {None}:    #  If all elements of the list registered_colors are None
+            return None
+
+        return registered_colors        # List of color names, with as many entries as the chemicals of interest;
+                                        # any of the entries might be None
+
+
+
+    def get_color_mapping_by_label(self) -> dict:
+        """
+        EXAMPLE: {"A": "red", "B": "orange", "C": "green"}
+
+        :return:    A dict of plot colors, indexed by chemical labels
+        """
+        return self.color_dict
+
+
+    def get_color_mapping_by_index(self) -> dict:
+        """
+        EXAMPLE: {0: 'red', 1: 'orange', 2: 'green'}
+
+        :return:    A dict of plot colors, indexed by chemical index
+        """
+        return   {self.label_dict[k]: v for k, v in self.color_dict.items()}
+
+
+    def get_all_colors(self) -> list:
+        """
+
+        :return:    A list of all colors, in the index position of their respective chemicals
+        """
+        return list(self.color_dict.values())
+
+
+
 
 
 
@@ -292,7 +346,7 @@ class Diffusion(ChemCore):
 
         :param name:       Label of the new chemical species to register;
                                 an Exception will be raised if the name was already registered
-        :param diff_rate:   Floating-point number with the diffusion rate (in water) of this chemical
+        :param diff_rate:   Floating-point number with the diffusion rate coefficient (in water) of this chemical
         :param label:       [OPTIONAL] Typically, a short version of the name, or a stand-in for it;
                                 if not provided, the name will be used as a label
         :param note:        [OPTIONAL] String with note to attach to the chemical
@@ -678,14 +732,13 @@ class ChemData(Macromolecules):
         - names
         - diffusion rates
         - macro-molecules Binding Site Affinities (for Transcription Factors)
-        - reaction data (see also class "Reaction", in "reaction_data.py")
 
 
     Notes:  - for now, the temperature is assumed constant everywhere, and unvarying (or very slowly varying)
 
             - we're using a "daisy chain" of classes extending the previous one, starting from ChemCore
               and ending in this user-facing class:
-                    ChemCore <- Diffusion <- AllReactions <- Macromolecules <- ChemData
+                    ChemCore <- Diffusion <- Macromolecules <- ChemData
     """
     def __init__(self, names=None, labels=None, diffusion_rates=None, plot_colors=None):
         """

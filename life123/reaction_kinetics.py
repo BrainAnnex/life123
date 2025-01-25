@@ -3,6 +3,7 @@
 import math
 import cmath
 import numpy as np
+import plotly.graph_objects as pgo
 from life123.reactions import ReactionGeneric
 from life123.numerical import Numerical
 from life123.visualization.plotly_helper import PlotlyHelper
@@ -282,7 +283,7 @@ class ReactionKinetics:
     @classmethod
     def estimate_rate_constants_synthesis(cls, t :np.ndarray,
                                           A_conc :np.ndarray, B_conc :np.ndarray, C_conc :np.ndarray,
-                                          reactants :[str, str], product :str):
+                                          reactants :[str, str], product :str) -> pgo.Figure:
         """
         Estimate the rate constants for a 1-st order association (synthesis) reaction of the type A + B <-> C,
         given time evolution of [A], [B] and [C] on a grid of time points (don't need to be equally spaced)

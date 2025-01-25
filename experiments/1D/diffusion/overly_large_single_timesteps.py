@@ -48,7 +48,7 @@ chem_data = chem(diffusion_rates=[10.])
 
 # %%
 bio = BioSim1D(n_bins=2, chem_data=chem_data)
-bio.inject_conc_to_bin(bin_address=0, delta_conc=100., species_index=0)
+bio.inject_conc_to_bin(bin_address=0, delta_conc=100., chem_index=0)
 bio.describe_state()
 
 # %%
@@ -108,7 +108,7 @@ print(bio.system)
 
 # %%
 bio = BioSim1D(n_bins=3, chem_data=chem_data)
-bio.inject_conc_to_bin(bin_address=1, delta_conc=100., species_index=0)
+bio.inject_conc_to_bin(bin_address=1, delta_conc=100., chem_index=0)
 bio.describe_state()
 
 # %%

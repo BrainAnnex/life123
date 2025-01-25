@@ -55,7 +55,7 @@ def test_diffuse_step_single_species_1a():
 
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
 
-    bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=100.)
+    bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=100.)
     bio.describe_state()
 
     with pytest.raises(Exception):
@@ -74,7 +74,7 @@ def test_diffuse_step_single_species_1b():
 
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
 
-    bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=100.)
+    bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=100.)
     bio.describe_state()
 
     # Diffuse by a single step
@@ -121,10 +121,12 @@ def test_diffuse_step_single_species_2b():
 
 
 def test_diffuse_step_single_species_3():
-    bio = BioSim1D()
-    bio.system = None
+    chem_data = chem(names=["A"])
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
+
     with pytest.raises(Exception):
         bio.diffuse_step_single_species(time_step=.001)    # Must first initialize the system
+
 
     chem_data = chem(diffusion_rates=[2.78, 3.14])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
@@ -132,7 +134,7 @@ def test_diffuse_step_single_species_3():
     bio.set_uniform_concentration(species_index=0, conc=22.2)
     bio.set_uniform_concentration(species_index=1, conc=66.6)
 
-    bio.describe_state()
+    #bio.describe_state()
     """
     5 bins and 2 species:
     Species 0. Diff rate: 2.78. Conc:  [22.2 22.2 22.2 22.2 22.2]
@@ -152,7 +154,7 @@ def test_diffuse_step_4():
     chem_data = chem(diffusion_rates=[1.])
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
 
-    bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=10.)
+    bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=10.)
     bio.describe_state()
     """
     2 bins and 1 species:
@@ -174,7 +176,7 @@ def test_diffuse_step_5():
     chem_data = chem(diffusion_rates=[.5])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
-    bio.inject_conc_to_bin(bin_address=1, species_index=0, delta_conc=10.)
+    bio.inject_conc_to_bin(bin_address=1, chem_index=0, delta_conc=10.)
     bio.describe_state()
 
     # The time step is so large that the system immediately equilibrates
@@ -194,7 +196,7 @@ def test_diffuse_step_6():
     chem_data = chem(diffusion_rates=[.5])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
-    bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=10.)
+    bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=10.)
     bio.describe_state()
 
     print("The default max allowed time step is: ", bio.max_time_step(.5, delta_x=1))
@@ -214,7 +216,7 @@ def test_diffuse_step_7():
     chem_data = chem(diffusion_rates=[.5])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
-    bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=10.)
+    bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=10.)
     bio.describe_state()
 
     for i in range(20*2):
@@ -407,7 +409,7 @@ def test_diffuse_2():
     bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
     bio.set_uniform_concentration(species_index=0, conc=0.)
-    bio.inject_conc_to_bin(species_index=0, bin_address=2, delta_conc=10.)
+    bio.inject_conc_to_bin(chem_index=0, bin_address=2, delta_conc=10.)
 
     status = bio.diffuse(total_duration=800, time_step=0.1)
     assert status['steps'] == 8000
@@ -490,7 +492,7 @@ def test_diffuse_4():
     f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
     assert f_at_t2.shape == (n_bins, )
 
-    # Computer the second spacial derivative, using 5-point stencils
+    # Computer the second spatial derivative, using 5-point stencils
     gradient_x_at_t2 = num.gradient_order4_1d(arr=f_at_t2, dx=delta_x)
     second_gradient_x_at_t2 = num.gradient_order4_1d(arr=gradient_x_at_t2, dx=delta_x)
     assert second_gradient_x_at_t2.shape == (n_bins, )
@@ -549,7 +551,7 @@ def test_diffuse_5():
     f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
     assert f_at_t2.shape == (n_bins, )
 
-    # Computer the second spacial derivative, using 5-point stencils
+    # Computer the second spatial derivative, using 5-point stencils
     gradient_x_at_t2 = num.gradient_order4_1d(arr=f_at_t2, dx=delta_x)
     second_gradient_x_at_t2 = num.gradient_order4_1d(arr=gradient_x_at_t2, dx=delta_x)
     assert second_gradient_x_at_t2.shape == (n_bins, )

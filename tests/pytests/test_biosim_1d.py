@@ -2,32 +2,77 @@ import pytest
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
-from life123 import BioSim1D
-from life123 import ChemData as chem
+from life123 import BioSim1D, Reactions, UniformCompartment, ChemData
 
 
 
 #########   TESTS OF INITIALIZATION, SETTING AND VIEWING    #########
 
-def test_initialize_system():
-    chem_data = chem(names=["A"])
+def test_constructor():
+    with pytest.raises(Exception):
+        BioSim1D()              # Missing required arguments
 
-    bio = BioSim1D(n_bins=10, chem_data=chem_data)
+    with pytest.raises(Exception):
+        BioSim1D(n_bins="I'm not an integer")
 
-    assert bio.n_bins == 10
+    with pytest.raises(Exception):
+        BioSim1D(n_bins=0)      # Must be at least 1
+
+    with pytest.raises(Exception):
+        BioSim1D(n_bins=3)      # At least one more arg is needed
+
+
+    chem_data = ChemData(names="A")
+
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
+    #bio.describe_state()
+
+    assert bio.n_bins == 5
     assert bio.n_species == 1
-
-    bio.describe_state()
-
-    expected = np.zeros((1, 10), dtype=float)
+    assert bio.chem_data == chem_data
+    expected = np.zeros((1, 5), dtype=float)
     assert np.allclose(bio.system, expected)
+
 
     # New test
-    chem_data = chem(names=["A", "B", "C"])
+    chem_data = ChemData(names=["A", "B", "C"])
     bio = BioSim1D(n_bins=15, chem_data=chem_data)
-    bio.describe_state()
+    #bio.describe_state()
+    assert bio.n_bins == 15
+    assert bio.n_species == 3
+    assert bio.chem_data == chem_data
     expected = np.zeros((3,15), dtype=float)
     assert np.allclose(bio.system, expected)
+    assert type(bio.reactions) == Reactions
+    assert type(bio.reaction_dynamics) == UniformCompartment
+
+
+    # New test
+    rxn = UniformCompartment()
+    with pytest.raises(Exception):
+        BioSim1D(n_bins=5, reaction_handler=rxn)    # No chemicals yet registered
+
+
+    # New test
+    rxn = UniformCompartment(names=["A", "B", "C"])
+    bio = BioSim1D(n_bins=5, reaction_handler=rxn)
+    bio.describe_state()
+    assert bio.n_bins == 5
+    assert bio.n_species == 3
+    expected = np.zeros((3, 5), dtype=float)
+    assert np.allclose(bio.system, expected)
+    assert type(bio.reactions) == Reactions
+    assert type(bio.reaction_dynamics) == UniformCompartment
+    assert type(bio.chem_data) == ChemData
+
+
+
+def test_system_size():
+    bio = BioSim1D(n_bins=8 , chem_data=ChemData(names="A"))
+    assert bio.system_size() == 8
+
+    bio = BioSim1D(n_bins=1 , chem_data=ChemData(names=["A", "B"]))
+    assert bio.system_size() == 1
 
 
 
@@ -40,7 +85,7 @@ def test_replace_system():
 
 
 def test_set_uniform_concentration():
-    chem_data = chem(names=["A"])
+    chem_data = ChemData(names=["A"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.set_uniform_concentration(species_index=0, conc=0.3)
@@ -49,7 +94,7 @@ def test_set_uniform_concentration():
 
     # New test
     bio.reset_system()
-    chem_data = chem(names=["A", "B", "C"])
+    chem_data = ChemData(names=["A", "B", "C"])
     bio = BioSim1D(n_bins=15, chem_data=chem_data)
     bio.set_uniform_concentration(species_name="A", conc=10.)
     bio.set_uniform_concentration(species_name="B", conc=11.)
@@ -61,7 +106,7 @@ def test_set_uniform_concentration():
 
     # New test, with membranes
     bio.reset_system()
-    chem_data = chem(names=["A"])
+    chem_data = ChemData(names=["A"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
     bio.set_membranes(membrane_pos=[1])   # A single membrane, passing thru bin 1
 
@@ -76,7 +121,7 @@ def test_set_uniform_concentration():
 
 
 def test_set_all_uniform_concentrations():
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.set_all_uniform_concentrations(conc_list=[3., 7.])
@@ -88,7 +133,7 @@ def test_set_all_uniform_concentrations():
 
 
 def test_set_bin_conc():
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.set_bin_conc(bin_address=2, conc=3.14, species_name="A")
@@ -101,7 +146,7 @@ def test_set_bin_conc():
 
 
 def test_set_species_conc():
-    chem_data = chem(names=["A"])
+    chem_data = ChemData(names=["A"])
     bio = BioSim1D(n_bins=4, chem_data=chem_data)
     bio.set_species_conc(conc_list=[1., 2., 3., 4.], species_index=0)
     assert np.allclose(bio.lookup_species(species_name="A") , [1., 2., 3., 4.])
@@ -117,34 +162,44 @@ def test_set_species_conc():
 
     with pytest.raises(Exception):
         bio.set_species_conc(conc_list=[1., 2., 3., 4.])     # Missing chemical species
+
+    with pytest.raises(Exception):
         bio.set_species_conc(conc_list="Do I look like a list??", species_name="A")
+
+    with pytest.raises(Exception):
         bio.set_species_conc(conc_list=[1., 2., 3.], species_name="A")                  # Wrong size
+
+    with pytest.raises(Exception):
         bio.set_species_conc(conc_list=np.array([1., 2.]), species_name="A")            # Wrong size
+
+    with pytest.raises(Exception):
         bio.set_species_conc(conc_list=[1., -0.09, 3., 4.], species_name="A")           # Negative concentrations
+
+    with pytest.raises(Exception):
         bio.set_species_conc(conc_list=np.array([1., -0.08, 3., 4.]), species_name="A") # Negative concentrations
 
 
 
 def test_inject_conc_to_bin():
-    chem_data = chem(names=["A"])
+    chem_data = ChemData(names=["A"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     with pytest.raises(Exception):
         # cell_index out of bounds
-        bio.inject_conc_to_bin(bin_address=5, species_index=0, delta_conc=10.)
+        bio.inject_conc_to_bin(bin_address=5, chem_index=0, delta_conc=10.)
 
     with pytest.raises(Exception):
         # species_index out of bounds
-        bio.inject_conc_to_bin(bin_address=5, species_index=1, delta_conc=10.)
+        bio.inject_conc_to_bin(bin_address=5, chem_index=1, delta_conc=10.)
 
-    bio.inject_conc_to_bin(bin_address=1, species_index=0, delta_conc=10.)
+    bio.inject_conc_to_bin(bin_address=1, chem_index=0, delta_conc=10.)
 
     bio.describe_state()
 
 
 
 def test_inject_gradient():
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=8, chem_data=chem_data)
 
     with pytest.raises(Exception):
@@ -172,7 +227,7 @@ def test_inject_gradient():
 
 
 def test_inject_sine_conc():
-    chem_data = chem(names=["A"])
+    chem_data = ChemData(names=["A"])
     bio = BioSim1D(n_bins=8, chem_data=chem_data)
 
     bio.inject_sine_conc(species_name="A", amplitude=5, bias=20, frequency=1, phase=0)
@@ -246,7 +301,7 @@ def test_inject_sine_conc():
 
 
 def test_inject_bell_curve():
-    chem_data = chem(names=["A"])
+    chem_data = ChemData(names=["A"])
 
     bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
@@ -281,7 +336,7 @@ def test_inject_bell_curve():
 
 
 def test_frequency_analysis():
-    chem_data = chem(names=["A"])
+    chem_data = ChemData(names=["A"])
     bio = BioSim1D(n_bins=100, chem_data=chem_data)
 
     bio.inject_sine_conc(species_name="A", frequency=2, amplitude=1, bias=3)
@@ -314,7 +369,7 @@ def test_frequency_analysis():
 ########  DIMENSION-RELATED  ################
 
 def test_set_dimensions():
-    chem_data = chem(names=["A"])
+    chem_data = ChemData(names=["A"])
     bio = BioSim1D(n_bins=4, chem_data=chem_data)
     bio.set_dimensions(21.)
     assert np.allclose(bio.system_length, 21.)
@@ -326,7 +381,7 @@ def test_set_dimensions():
 
 
 def test_x_coord():
-    chem_data = chem(names=["A"])
+    chem_data = ChemData(names=["A"])
     bio = BioSim1D(n_bins=4, chem_data=chem_data)
 
     with pytest.raises(Exception):
@@ -343,7 +398,7 @@ def test_x_coord():
 ########  MEMBRANE-RELATED  ################
 
 def test_uses_membranes():
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     assert not bio.uses_membranes()
@@ -353,7 +408,7 @@ def test_uses_membranes():
 
 
 def test_bins_with_membranes():
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.set_membranes(membrane_pos=[2, 4])
@@ -362,7 +417,7 @@ def test_bins_with_membranes():
 
 
 def test_set_membranes():
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.set_membranes(membrane_pos=[2, 4])
@@ -419,7 +474,7 @@ def test_set_membranes():
 
 
 def test_assert_valid_bin():
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     with pytest.raises(Exception):
         bio.assert_valid_bin(-1)
@@ -450,9 +505,7 @@ def test_system_snapshot():
 
 
 def test_show_membranes():
-    bio = BioSim1D()
-    print("cls.membranes: ", bio.membranes)
-    chem_data = chem(names=["A"])
+    chem_data = ChemData(names="A")
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     result = bio.show_membranes()
@@ -472,7 +525,7 @@ def test_show_membranes():
 #######  CHANGE RESOLUTIONS #########
 
 def test_increase_spacial_resolution():
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_species_conc(species_index=0, conc_list=[11., 12., 13.])
     bio.set_species_conc(species_index=1, conc_list=[5., 15., 25.])
@@ -485,13 +538,13 @@ def test_increase_spacial_resolution():
 
 
 def test_double_spacial_resolution_linear_inter():
-    chem_data = chem(names=["A"])
+    chem_data = ChemData(names=["A"])
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
     bio.set_species_conc(species_index=0, conc_list=[1., 2.])
     bio.double_spatial_resolution_linear()
     assert np.allclose(bio.system, [[1., 1.5, 2.]])
 
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_species_conc(species_index=0, conc_list=[11., 12., 13.])
     bio.set_species_conc(species_index=1, conc_list=[5., 15., 25.])
@@ -507,7 +560,7 @@ def test_double_spacial_resolution_linear_inter():
 
 
 def test_decrease_spacial_resolution():
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=6, chem_data=chem_data)
     bio.set_species_conc(species_index=0, conc_list=[10., 20., 30., 40., 50., 60.])
     bio.set_species_conc(species_index=1, conc_list=[ 2., 8.,   5., 15., 4.,   2.])
@@ -533,7 +586,7 @@ def test_decrease_spacial_resolution():
 
 
 def test_varying_spacial_resolution():
-    chem_data = chem(names=["A", "B"])
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_species_conc(species_name="A", conc_list=[11., 12., 13.])
     bio.set_species_conc(species_name="B", conc_list=[5., 15., 25.])
@@ -548,8 +601,8 @@ def test_varying_spacial_resolution():
 
 
 
-def test_smooth_spacial_resolution():
-    chem_data = chem(names=["A", "B"])
+def test_smooth_spatial_resolution():
+    chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_species_conc(species_name="A", conc_list=[10., 20., 30.])
     bio.set_species_conc(species_name="B", conc_list=[2.,   8., 4.])

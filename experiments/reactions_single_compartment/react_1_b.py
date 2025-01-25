@@ -13,17 +13,17 @@
 # ---
 
 # %% [markdown]
-# ### Demonstration of file storage of system history, and stop-restart of simulation, for the reaction `A <-> B`,
+# ### Demonstration of file storage of system concentration history, and stop-restart of simulation, for the reaction `A <-> B`,
 # with 1st-order kinetics in both directions, taken to equilibrium.
 #
-# Same as experiment `react_1_a`, but with file storage of system history, and reaction stop-restart.
+# Same as experiment `react_1_a`, but with file storage of the concentration history, and reaction stop-restart.
 
 # %% [markdown]
 # ### TAGS :   "basic", "uniform compartment"
 
 # %%
-LAST_REVISED = "Dec. 15, 2024"
-LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
+LAST_REVISED = "Jan. 9, 2025"
+LIFE123_VERSION = "1.0.0rc2"         # Library version this experiment is based on
 
 # %%
 #import set_path            # Using MyBinder?  Uncomment this before running the next cell!

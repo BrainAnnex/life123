@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## **Enzyme Kinetics** : 
+# # **Enzyme Kinetics** : 
 # #### _Accurate numerical solution_ - compared to the **Michaelis-Menten** model approximation and to the alternative **Morrison** model.
 #
 # #### Same as experiments `enzyme_1_a` and `enzyme_1_b` but with _a lavish amount of Enzyme_ relative to the initial Substrate concentration.  
@@ -36,11 +36,11 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Nov. 4, 2024"
-LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
+LAST_REVISED = "Jan. 12, 2025"
+LIFE123_VERSION = "1.0.0rc2"         # Library version this experiment is based on
 
 # %%
-#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
+#import set_path                     # Using MyBinder?  Uncomment this before running the next cell!
 
 # %% tags=[]
 #import sys
@@ -63,16 +63,15 @@ check_version(LIFE123_VERSION)
 # # 1. Accurate numerical solution
 
 # %%
-chem_data = ChemData(names=["P", "ES"])
+chem_data = ChemData(names=["P", "ES"], plot_colors=["green", "red"])
 
 # %%
 # Our Enzyme
-chem_data.add_chemical(name="Adenosine deaminase", label="E") 
+chem_data.add_chemical(name="Adenosine deaminase", label="E", plot_color="violet") 
 
 # Our Substrate
-chem_data.add_chemical(name="2,6-Diamino-9-β-D-deoxyribofuranosyl-9-H-purine", label="S");
+chem_data.add_chemical(name="2,6-Diamino-9-β-D-deoxyribofuranosyl-9-H-purine", label="S", plot_color="darkturquoise")
 
-# %%
 chem_data.all_chemicals()
 
 # %% [markdown]
@@ -82,16 +81,20 @@ chem_data.all_chemicals()
 # %% [markdown]
 # Source: *page 16 of "Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023*
 
+# %%
+# Here we use the "slower" preset for the variable steps, a conservative option prioritizing accuracy over speed
+uc = UniformCompartment(chem_data=chem_data, preset="slower")
+
 # %% tags=[]
 # Reaction E + S <-> ES , with 1st-order kinetics, 
-chem_data.add_reaction(reactants=["E", "S"], products=["ES"],
-                       forward_rate=18., reverse_rate=100.) 
+uc.add_reaction(reactants=["E", "S"], products="ES",
+                forward_rate=18., reverse_rate=100.) 
 
 # Reaction ES <-> E + P , with 1st-order kinetics, ignoring the reverse reaction
-chem_data.add_reaction(reactants=["ES"], products=["E", "P"],
-                       forward_rate=49., reverse_rate=0)
+uc.add_reaction(reactants="ES", products=["E", "P"],
+                forward_rate=49., reverse_rate=0)
 
-chem_data.describe_reactions()
+uc.describe_reactions()
 
 # %%
 
@@ -106,13 +109,8 @@ S0 = 20.
 E0 = 100.        # A LAVISH AMOUNT!  10 times more than in experiment `enzyme_2` - and x100 as much as experiment`enzyme_1`
 
 # %%
-# Here we use the "slower" preset for the variable steps, a conservative option prioritizing accuracy over speed
-uc = UniformCompartment(chem_data=chem_data, preset="slower")
 uc.set_conc(conc={"S": S0, "E": E0})      # Small ampount of enzyme `E`, relative to substrate `S`
 uc.describe_state()
-
-# %%
-uc.enable_diagnostics()   # To save diagnostic information about the simulation - in particular, the REACTION RATES
 
 # %% [markdown] tags=[]
 # #### Advance the reactions to equilibrium
@@ -122,7 +120,7 @@ uc.enable_diagnostics()   # To save diagnostic information about the simulation 
 uc.single_compartment_react(duration=0.05, initial_step=0.01)  # A much-shorter duration than in previous experiments in the series
 
 # %%
-uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'], show_intervals=True, 
+uc.plot_history(show_intervals=True, 
                 title_prefix="Almost as much E as S(0)")
 
 # %% [markdown]
@@ -140,14 +138,15 @@ uc.plot_history(colors=['green', 'red', 'violet', 'darkturquoise'], show_interva
 # ### What is the rate of production of the final reaction product `P`?   
 
 # %%
-rates = uc.get_diagnostics().get_system_history_with_rxn_rates(rxn_index=1)   # We specify the reaction that involves `P`
+# We specify the reaction that involves `P`
+rates = uc.add_rate_to_conc_history(rate_name="rxn1_rate")
 rates
 
 # %%
 # Let's take a look at how the reaction rate varies with time
 PlotlyHelper.plot_pandas(df=rates, 
                          title="Reaction rate, dP/dt, over time",
-                         x_var="TIME", fields="rate", 
+                         x_var="SYSTEM TIME", fields="rxn1_rate", 
                          x_label="time", y_label="dP/dt")
 
 # %% [markdown]
@@ -166,8 +165,8 @@ PlotlyHelper.plot_pandas(df=rates,
 
 # %%
 rxn = ReactionEnz(enzyme="E", substrate="S", product="P",
-                  k1_F=chem_data.get_forward_rate(0), k1_R=chem_data.get_reverse_rate(0), 
-                  k2_F=chem_data.get_forward_rate(1))
+                  k1_F=uc.get_reactions().get_forward_rate(0), k1_R=uc.get_reactions().get_reverse_rate(0),
+                  k2_F=uc.get_reactions().get_forward_rate(1))
 
 # %%
 rxn.kM          #  For the data in this experiment, it comes out to (49. + 100.) / 18.
@@ -198,7 +197,7 @@ rates
 
 # %%
 # Let's see how our computed rate compares with the approximations from the Michaelis-Menten model
-PlotlyHelper.plot_pandas(df=rates, x_var="S", fields=["rate", "Michaelis_rate"],
+PlotlyHelper.plot_pandas(df=rates, x_var="S", fields=["rxn1_rate", "Michaelis_rate"],
                          title="Reaction rate, dP/dt, as a function of Substrate concentration",
                          y_label="dP/dt", legend_header="Rates",
                          vertical_lines_to_add=1.65,
@@ -207,7 +206,7 @@ PlotlyHelper.plot_pandas(df=rates, x_var="S", fields=["rate", "Michaelis_rate"],
 # %% [markdown]
 # Let's recall that our reactions started out with [S]=20  
 # The curve overlap is still passable at later times (left part of graph, when [S] drops below about 12), but is rather bad at earlier times (when [S] > 12)  
-# **We no longer have the striking overlap we had in experiment `enzyme_1`**
+# ### We no longer have the striking overlap we had in experiment `enzyme_1`
 
 # %% [markdown]
 # ## In this scenario, with a lot more initial enzyme `E` than in experiment `enzyme_1`, the Michaelis-Menten model suffers from poor accuracy for an non-trivial early time, because the transient early phase (when `ES` builds up from zero) is no longer very brief
@@ -231,13 +230,13 @@ rates["Morrison_rate"] = rxn.compute_rate_morrison(E_tot=E0,
 rates
 
 # %%
-PlotlyHelper.plot_pandas(df=rates, x_var="S", fields=["rate", "Michaelis_rate", "Morrison_rate"],
+PlotlyHelper.plot_pandas(df=rates, x_var="S", fields=["rxn1_rate", "Michaelis_rate", "Morrison_rate"],
                          title="Reaction rate, dP/dt, as a function of Substrate concentration",
                          y_label="dP/dt", legend_header="Rates",
                          vertical_lines_to_add=1.65,
                          colors=["blue", "yellow", "orange"])
 
 # %% [markdown]
-# ## The Morrison model is **VASTLY better** than the Michaelis-Menten one in this high-enzyme scenario!
+# ## The Morrison model is **VASTLY better** than the Michaelis-Menten one in this *high-enzyme scenario*!
 
 # %%

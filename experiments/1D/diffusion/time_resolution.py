@@ -34,7 +34,7 @@ from life123 import BioSim1D
 def set_initial_condition():
     # Set or reset the initial concentrations
     bio.set_uniform_concentration(species_index=0, conc=0.)
-    bio.inject_conc_to_bin(bin_address=2, species_index=0, delta_conc=10.)
+    bio.inject_conc_to_bin(bin_address=2, chem_index=0, delta_conc=10.)
 
 
 # %%

@@ -2,17 +2,15 @@ import math
 import numpy as np
 import pandas as pd
 import time
-import os
-import csv
 import plotly.express as px
-import plotly.graph_objects as go
+import plotly.graph_objects as pgo
 from typing import Union
 from life123.chem_data import ChemData
 from life123.diagnostics import Diagnostics
-from life123.collections import CollectionTabular
 from life123.numerical import Numerical
 from life123.reactions import Reactions
 from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
+from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
 
 
@@ -47,16 +45,17 @@ class UniformCompartment:
         Note: AT MOST 1 of the following 3 arguments can be passed
 
         :param reactions:   [OPTIONAL 1] Object of type "Reactions", with data about the reactions and the chemicals.
-                                If passed, cannot pass either `chem_data` nor `names` (those are both part of the "Reactions" object);
+                                If passed, cannot pass either of the args `chem_data` nor `names` (those are both part of the "Reactions" object);
                                 if not passed, the reactions can be added later, with calls to add_reaction()
 
         :param chem_data:   [OPTIONAL 2] Object of type "ChemData" (with data about the chemicals and their reactions).
-                                If passed, cannot pass either `reactions` (an object that contains `chem_data`) nor `names`
+                                If passed, cannot pass either of the args  `reactions` (an object that contains `chem_data`) nor `names`
                                 (names are contained in the `chem_data` object)
 
         :param names:       [OPTIONAL 3] A single name, or list or tuple of names, of the chemicals;
                                 providing a list can be used to make the chemicals appear in a particular desired order.
-                                If passed, cannot pass either `reactions` nor `chem_data` (both those object contain the chemical names)
+                                If passed, cannot pass either of the args `reactions` nor `chem_data` (both those object contain the chemical names)
+
 
         :param preset:      [OPTIONAL] String with code that can be adjusted make the time resolution finer or coarser;
                                 it will stay in effect from now on, unless explicitly changed later
@@ -114,20 +113,20 @@ class UniformCompartment:
 
                                     # For background, see: https://www.annualreviews.org/doi/10.1146/annurev-cellbio-100617-062719
 
-        self.history = CollectionTabular()   # To store user-selected snapshots of (some of) the chemical concentrations,
-                                        #   whenever requested by the user
-                                        #   Format: a Pandas data frame, with columns: 'SYSTEM TIME', 'A', 'B', ..., 'caption'
-                                        #           where 'A', 'B', ... are all the registered chemical labels
+
+        self.conc_history = HistoryUniformConcentration(active=True)    # Object used to store user-requested snapshots
+                                                                        # of (some of) the chemical concentrations:
+                                                                        # 'SYSTEM TIME', 'A', 'B', ..., 'comments'
 
         self.system_rxn_rates = {}      # Keys are the reaction indexes.  Reaction rates for the last (current) step of all reactions
                                         # EXAMPLE: {0: 0.42, 1: 4.26}
 
-        self.rate_history = CollectionTabular()  # Format: a Pandas data frame, with columns: 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
+        self.rate_history = HistoryReactionRate(active=True)        # Object used to store user-requested snapshots
+                                                                    # of (some of) the chemical reaction rates:
+                                                                    # 'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
 
-        self.log_file = None
 
-
-        # FOR AUTOMATED ADAPTIVE TIME STEP SIZES 
+        # FOR AUTOMATED ADAPTIVE TIME STEP SIZES
         self.adaptive_steps = VariableTimeSteps()
 
         if preset:
@@ -214,7 +213,7 @@ class UniformCompartment:
                 self.set_single_conc(conc=conc_value, species_name=name, snapshot=False)
 
         if snapshot:
-            self.add_snapshot(caption="Set concentration")      # "Initialized state"
+            self.capture_conc_snapshot(caption="Set concentration")  # Save this operation in the history (if enabled)
 
         if self.diagnostics_enabled:
             # Save up the current System State, with some extra info, as "diagnostic 'concentration' data"
@@ -259,7 +258,8 @@ class UniformCompartment:
         self.system[species_index] = conc
 
         if snapshot:
-            self.add_snapshot(caption=f"Set concentration of `{self.chem_data.get_label(species_index)}`")
+            # Save this operation in the history (if enabled)
+            self.capture_conc_snapshot(caption=f"Set concentration of `{self.chem_data.get_label(species_index)}`")
 
 
 
@@ -330,45 +330,6 @@ class UniformCompartment:
 
 
 
-    '''
-    ***  Management of reactions  ***
-    '''
-
-    def get_reactions(self):
-        """
-        Return all the reactions associated to this Uniform Compartment
-
-        :return:    Object ot type "Reactions" (with data about all the reactions)
-        """
-        return self.reactions
-
-
-    def get_single_reaction(self, i :int):
-        """
-        Return a single reaction, specified by its index
-
-        :param i:   Integer index of the desired reaction
-        :return:    Object of type "ReactionGeneric"
-        """
-        return self.reactions.get_reaction(i)
-
-
-
-    def clear_reactions(self) -> None:
-        """
-        Get rid of all reactions; start again with "an empty slate" (but still with reference
-        to the same data object about the chemicals)
-
-        # TODO: maybe offer an option to clear just one reaction, or a list of them
-        # TODO: provide support for "inactivating" reactions
-
-        :return:    None
-        """
-        self.reactions.clear_reactions_data()
-
-
-
-
 
     #####################################################################################################
 
@@ -423,11 +384,46 @@ class UniformCompartment:
 
     #####################################################################################################
 
-    '''                          ~  TO SET/DESCRIBE THE REACTIONS  ~                                  '''
+    '''                             ~  MANAGEMENT OF REACTIONS  ~                                     '''
 
-    def ________TO_SET_AND_DESCRIBE_REACTIONS________(DIVIDER):
+    def ________MANAGE_REACTIONS________(DIVIDER):
         pass         # Used to get a better structure view in IDEs such asPycharm
     #####################################################################################################
+
+
+    def get_reactions(self):
+        """
+        Return all the reactions associated to this Uniform Compartment
+
+        :return:    Object ot type "Reactions" (with data about all the reactions)
+        """
+        return self.reactions
+
+
+
+    def get_single_reaction(self, i :int):
+        """
+        Return a single reaction, specified by its index, associated to this Uniform Compartment
+
+        :param i:   Integer index of the desired reaction
+        :return:    Object of type "ReactionGeneric"
+        """
+        return self.reactions.get_reaction(i)
+
+
+
+    def clear_reactions(self) -> None:
+        """
+        Get rid of all reactions; start again with "an empty slate" (but still with reference
+        to the same data object about the chemicals)
+
+        # TODO: maybe offer an option to clear just one reaction, or a list of them
+        # TODO: provide support for "inactivating" reactions
+
+        :return:    None
+        """
+        self.reactions.clear_reactions_data()
+
 
 
     def add_reaction(self, **kwargs) -> int:
@@ -527,8 +523,8 @@ class UniformCompartment:
 
     def single_compartment_react(self, duration=None, target_end_time=None, stop=None,
                                  initial_step=None, n_steps=None, max_steps=None,
-                                 snapshots=None, silent=False,
-                                 variable_steps=True, explain_variable_steps=None, report_interval=0.5) -> None:
+                                 variable_steps=True, explain_variable_steps=None,
+                                 silent=False, report_interval=0.5) -> None:
         """
         Perform ALL the (previously-registered) reactions in the single compartment -
         based on the INITIAL concentrations stored in self.system
@@ -558,26 +554,21 @@ class UniformCompartment:
 
         :param max_steps:       [OPTIONAL] Max numbers of steps; if reached, it'll terminate regardless of any other criteria
 
-        :param snapshots:       [OPTIONAL] Dict that may contain any the following keys:
-                                        -"frequency" (default 1, meaning at every step)
-                                        -"species" (default None, meaning all species; optionally, provide a list of chemical labels)
-                                        -"initial_caption" (default: "1st reaction step")
-                                        -"final_caption" (default: "last reaction step")
-                                    Take a snapshot of the system state after running a multiple
-                                    of "frequency" reaction steps
-                                    EXAMPLE: snapshots={"frequency": 2, "species": ["A", "H"]}
-
-        :param silent:              If True, less output is generated
-
         :param variable_steps:          [OPTIONAL] If True (default), the steps sizes will get automatically adjusted, based on thresholds
         :param explain_variable_steps:  [OPTIONAL] If not None, a brief explanation is printed about how the variable step sizes were chosen,
                                             when the System time inside that range;
                                             only applicable if variable_steps is True
-        :param report_interval:     [OPTIONAL] How frequently, in terms of elapsed running time, in minutes,
-                                        to inform the user of the current status
 
-        :return:                None.   The object attributes self.system and self.system_time get updated
+        :param silent:                  [OPTIONAL] If True, less output is generated
+        :param report_interval:         [OPTIONAL] How frequently, in terms of elapsed running time, in minutes,
+                                            to inform the user of the current status
+
+        :return:                        None.   The object attributes self.system and self.system_time get updated
         """
+
+        # Default values
+        capture_initial_caption = "1st reaction step"
+        capture_final_caption = "last reaction step"
 
         # Validation
         assert self.system is not None, "UniformCompartment.single_compartment_react(): " \
@@ -593,6 +584,9 @@ class UniformCompartment:
 
         assert self.reactions.number_of_reactions() > 0, \
             f"UniformCompartment.single_compartment_react(): no reactions are present.  Make sure to first add them with add_reaction()"
+
+
+        self.conc_history.initial_caption = capture_initial_caption     # TODO: turn into method
 
 
         """
@@ -630,30 +624,14 @@ class UniformCompartment:
                 else:
                     target_end_time = self.system_time + time_step * n_steps
 
-        first_snapshot = True
-
-        # Default values
-        capture_frequency = 1
-        capture_species = None
-        capture_initial_caption = "1st reaction step"
-        capture_final_caption = "last reaction step"
-
-        if snapshots:
-            # If any value is missing, use its default one
-            capture_frequency = snapshots.get("frequency", capture_frequency)
-            capture_species = snapshots.get("species", capture_species)
-            capture_initial_caption = snapshots.get("initial_caption", capture_initial_caption)
-            capture_final_caption = snapshots.get("final_caption", capture_final_caption)
-
 
         step_count = 0
-        step_of_last_snapshot = -1
 
         # Reset some diagnostic variables
         self.number_neg_concs = 0
         self.number_soft_aborts = 0
         self.adaptive_steps.reset_norm_usage_stats()
-        
+
         # Time-related
         t_start = time.perf_counter()
         t_report = t_start
@@ -713,15 +691,11 @@ class UniformCompartment:
 
 
             # Preserve the RATES data, as requested (part1, BEFORE updating the System Time, because reaction rates are
-            # based on the start time of the simulation step)
-            #if (capture_frequency == 1) or first_snapshot or ((step_count+1)%capture_frequency == 1):
-            if (step_count == 0) or (step_count == step_of_last_snapshot + 1):
-                rxn_rates_snapshot = {}
-                for k, v in self.system_rxn_rates.items():
-                    rxn_rates_snapshot[f"rxn{k}_rate"] = v      # EXAMPLE:  "rxn4_rate" = 18.2
-
-                self.rate_history.store(par=self.system_time, data_snapshot=rxn_rates_snapshot, caption=None)
-
+            # based on the *start* time of the simulation step)
+            if step_count == 0:
+                self.capture_rate_snapshot(force=True, step_count=0)    # Always save the initial rate
+            else:
+                self.capture_rate_snapshot(step_count=step_count)       # Save historical rate values (if enabled)
 
             # UPDATE THE SYSTEM TIME (now we're at the END of the current time step)
             self.system_time += step_actually_taken
@@ -729,13 +703,8 @@ class UniformCompartment:
 
             # Preserve the CONCENTRATION data, as requested (part2, AFTER updating the System Time, because current concentrations
             # refer to the System Time, just updated at the end of the simulation step)
-            if (step_count+1)%capture_frequency == 0:
-                if first_snapshot and capture_initial_caption and (step_count == 0):
-                    self.add_snapshot(species=capture_species, caption=capture_initial_caption)
-                    first_snapshot = False
-                else:
-                    self.add_snapshot(species=capture_species)
-                step_of_last_snapshot = step_count
+            self.capture_conc_snapshot(step_count=step_count+1) # Save historical concentration values (if enabled)
+                                                                # It's +1 because we save the conc. values at the END of the step
 
 
             step_count += 1
@@ -793,12 +762,11 @@ class UniformCompartment:
                 print(f"System Time is now: {self.system_time:,.5g}")
 
 
-        # One final snapshot, unless already taken for the current step
-        if step_count != step_of_last_snapshot + 1:
-            self.add_snapshot(species=capture_species)
+        # One final snapshot, unless already taken for the last step done
+        self.capture_conc_snapshot(step_count=step_count, caption=capture_final_caption, extra=True)
 
-        if capture_final_caption:
-            self.history.set_caption_last_snapshot(capture_final_caption)   # Add a caption to the very last entry in the system history
+        # Add a caption to the very last entry in the system history
+        self.conc_history.set_caption_last_snapshot(capture_final_caption)
 
 
 
@@ -818,8 +786,6 @@ class UniformCompartment:
 
         Return the increment vector for all the chemical species concentrations in the compartment
 
-        TODO: no longer pass conc_array .  Use the object variable self.system instead
-
         NOTES:  * the actual system concentrations are NOT changed
                 * this method doesn't decide on step sizes - except in case of ("hard" or "soft") aborts, which are
                     followed by repeats with a smaller step.  Also, it makes suggestions
@@ -834,7 +800,7 @@ class UniformCompartment:
         :param explain_variable_steps:  If not None, a brief explanation is printed about how the variable step sizes were chosen,
                                             when the System time inside that range;
                                             only applicable if variable_steps is True
-        :param step_counter:
+        :param step_counter:    [OPTIONAL] Integer currently only used for diagnostics
 
         :return:                The triplet:
                                     1) increment vector for the concentrations of ALL the chemical species,
@@ -846,8 +812,12 @@ class UniformCompartment:
                                     3) recommended_next_step : a suggestions to the calling module
                                        about the next step to best take
         """
+        # TODO: no longer pass conc_array .  Use the object variable self.system instead
+        #       Determine whether 1 or multiple UC objects are to be used by Bio1D, etc.
+
         if conc_array is not None:
             self.system = conc_array    # For historical reasons, as a convenience to Bio1D, etc.
+                                        # TODO: maybe it ought to be kept separate in separate instances of the UC object
 
         # Validate arguments
         assert self.system is not None, "UniformCompartment.reaction_step_common(): " \
@@ -1564,6 +1534,9 @@ class UniformCompartment:
 
         :return:    Object of type life123.diagnostics.Diagnostics
         """
+        assert self.diagnostics is not None, \
+            "get_diagnostics(): no diagnostics data is available.  Did you call enable_diagnostics() prior to running the simulation?"
+
         return self.diagnostics
 
 
@@ -1572,16 +1545,16 @@ class UniformCompartment:
 
     #####################################################################################################
 
-    '''                                    ~   GRAPHICS   ~                                           '''
+    '''                                    ~   VISUALIZATION   ~                                           '''
 
-    def ________GRAPHICS________(DIVIDER):
+    def ________VISUALIZATION________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
     def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None,
                      range_x=None, range_y=None,
                      y_label=None,
-                     vertical_lines_to_add=None, show_intervals=False, show=False) -> go.Figure:
+                     vertical_lines_to_add=None, show_intervals=False, show=False) -> pgo.Figure:
         """
         Using plotly, draw the plots of chemical concentration values over time, based on historical data that gets
         automatically saved when running reactions.
@@ -1596,7 +1569,7 @@ class UniformCompartment:
         :param chemicals:       [OPTIONAL] Label, or list of labels, of the chemicals whose concentration changes are to be plotted;
                                     if None, then display all, in their index order
         :param colors:          [OPTIONAL] Either a single color (string with standard plotly name, such as "red"),
-                                    or list of names to use, in the same order as the chemicals;
+                                    or list of names to use, in the same order as the chemicals of the previous argument;
                                     if None, then use the registered colors (if specified),
                                     or the hardwired defaults as a last resort
         :param title:           [OPTIONAL] Title for the plot;
@@ -1654,6 +1627,7 @@ class UniformCompartment:
         df = self.get_history()         # A Pandas dataframe that contains a column named "SYSTEM TIME"
 
         if colors is None:
+            # TODO: switch to  colors = self.chem_data.get_registered_colors(chemicals)
             # Attempt to use the colors registered for individual chemicals, if present
             registered_colors = []
             for label in chemicals:
@@ -1730,52 +1704,86 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def add_snapshot(self, species=None, caption="", system_data=None) -> None:
+    def enable_history(self, kind="all", frequency=1, chem_labels=None, take_snapshot=False) -> None:
         """
-        Preserve some or all the chemical concentrations into the system history,
-        linked to the current System Time,
-        with an optional caption.
+        Request history capture, with the specified parameters.
+        If history was already enabled, this function can be used to alter its capture parameters.
 
-        EXAMPLES:   add_snapshot()
-                    add_snapshot(species=['A', 'B']), caption="Just prior to infusion")
+        :param kind:            Allowed values are "all" (default), "conc", and "rate"
+        :param frequency:
+        :param chem_labels:     [OPTIONAL] List of chemicals to include in the history;
+                                    if None (default), include them all.
+        :param take_snapshot:   If True, a snapshot of the system's current configuration is added to the history
 
-        :param species:     [OPTIONAL] list of name of the chemical species whose concentrations we want to preserve for later use.
-                                If not specified, save all
-        :param caption:     [OPTIONAL] caption to attach to this preserved data
-        :param system_data: [OPTIONAL] a Numpy array of concentration values, in the same order as the
-                                index of the chemical species; by default, use the SYSTEM DATA
-        :return:            None
+        :return:
         """
-        data_snapshot = self.get_conc_dict(species=species, system_data=system_data)    # This will be a dict
-                                                                                        # EXAMPLE : {"A": 1.3, "B": 4.9}
+        assert kind in ["all", "conc", "rate"], \
+            "enable_history(): argument `kind` must be either 'all' or 'conc' or 'rate'"
 
-        self.history.store(par=self.system_time,
-                           data_snapshot=data_snapshot, caption=caption)
+        if kind in ["all", "conc"]:
+            self.conc_history.enable_history(frequency=frequency, chem_labels=chem_labels)
+            if take_snapshot:
+                self.capture_conc_snapshot()
 
-        if self.log_file is None:
+        if kind in ["all", "rate"]:
+            self.rate_history.enable_history(frequency=frequency, chem_labels=chem_labels)
+            if take_snapshot:
+                self.capture_rate_snapshot()
+
+
+
+    def capture_rate_snapshot(self, step_count=None, caption=None,
+                             force=False, system_time=None) -> None:
+        """
+
+        :param step_count:
+        :param caption:
+        :param force:           [OPTIONAL] If True, take a snapshot regardless of step_count; default is False
+        :param system_time:
+        :return:                None
+        """
+        if not force and not self.rate_history.to_capture(step_count):
             return
 
+        if system_time is None:
+            system_time = self.system_time
 
-        # If we get thus far, we have a log file to manage
-        if os.path.exists(self.log_file):
-            new_file = False
-        else:
-            new_file = True
+        data_snapshot = {}     # rxn_rates_snapshot
+        for k, v in self.system_rxn_rates.items():
+            data_snapshot[f"rxn{k}_rate"] = v      # EXAMPLE:  "rxn4_rate" = 18.2
+        '''
+           EXAMPLE of data_snapshot:
+                {"rxn1_rate": 6.3, "rxn2_rate": 14.3}        
+        '''
+        self.rate_history.save_snapshot(step_count=step_count, system_time=system_time,
+                                        data_snapshot=data_snapshot,
+                                        caption=caption)
 
-        # Open a CSV file in write mode
-        with open(self.log_file, mode="a", newline="") as fh:
-            fieldnames = ["SYSTEM TIME"] + list(data_snapshot.keys()) + ["caption"]
-            writer = csv.DictWriter(fh, fieldnames = fieldnames)
 
-            data_snapshot["SYSTEM TIME"] = self.system_time
-            data_snapshot["caption"] = caption
 
-            # Write the header (only of a newly-created file)
-            if new_file:
-                writer.writeheader()
+    def capture_conc_snapshot(self, step_count=None, caption="", extra=False) -> None:
+        """
 
-            # Write the dictionary as a row
-            writer.writerow(data_snapshot)
+        :param step_count:
+        :param caption:
+        :param extra:       [OPTIONAL] If True, it means that this is a special extra capture;
+                                the capture frequency will NOT considered in the
+                                decision about saving it, but an extra check will be performed
+                                to make sure it's not a duplicate of the earlier capture
+
+        :return:                    None
+        """
+        if not self.conc_history.to_capture(step_count, extra=extra):
+            return
+
+        data_snapshot = self.get_conc_dict(species=self.conc_history.restrict_chemicals)
+        '''
+           EXAMPLE of data_snapshot:
+                {"A": 1.3, "B": 4.9}        
+        '''
+        self.conc_history.save_snapshot(step_count=step_count, system_time=self.system_time,
+                                        data_snapshot=data_snapshot,
+                                        caption=caption)
 
 
 
@@ -1787,21 +1795,14 @@ class UniformCompartment:
         :param log_file:Name of a file to use for the CSV logs
         :return:        None
         """
-        # TODO: validate log_file
-        self.log_file = log_file
-
-        if os.path.exists(log_file):
-            os.remove(log_file)
-            print(f"-> CSV-format output will be LOGGED into the file '{log_file}' . An existing file by that name was over-written")
-        else:
-            print(f"-> CSV-format output will be LOGGED into the file '{log_file}'")
+        self.conc_history.start_csv_log(log_file)
 
 
 
     def get_history(self, t_start=None, t_end=None, head=None, tail=None, t=None, columns=None) -> pd.DataFrame:
         """
         Retrieve and return a Pandas dataframe with the system history that had been saved
-        using add_snapshot().
+        using capture_conc_snapshot().
         Optionally, restrict the result with a start and/or end times,
         or by limiting to a specified numbers of rows at the end
 
@@ -1822,9 +1823,11 @@ class UniformCompartment:
         """
         #TODO: allow searches also for columns other than "SYSTEM TIME"
 
-        # Note self.history is an object of class MovieTabular
-        df = self.history.get_dataframe(head=head, tail=tail, search_val=t,
-                                        search_col="SYSTEM TIME", val_start=t_start, val_end=t_end)
+        # Note: the history is an object of class CollectionTabular
+
+        df = self.conc_history.get_history().get_dataframe(head=head, tail=tail, search_val=t,
+                                                           search_col="SYSTEM TIME",
+                                                           val_start=t_start, val_end=t_end)
 
         if columns:
             assert (type(columns) == list) or (type(columns) == str), \
@@ -1883,11 +1886,57 @@ class UniformCompartment:
                         'SYSTEM TIME', 'rxn0_rate', 'rxn1_rate', ...
         """
         # TODO: add the option to select a subset of the reactions
-        return self.rate_history.get_dataframe()
+        return self.rate_history.get_history().get_dataframe()
 
 
 
-    def add_rate_to_conc_history(self, rate_name :str, new_rate_name=None):
+
+    def add_rate_to_conc_history(self, rate_name=None, new_rate_name=None):
+        """
+        Merge together the concentration history and a column from the reaction rate history,
+        into a new dataframe.
+        The original histories aren't affected.
+
+        :param rate_name:       [OPTIONAL] Name of a single desired column from the reaction rate history
+                                    EXAMPLE: "rxn4_rate"
+                                    If not specified, all rates are included
+        :param new_rate_name:   [OPTIONAL] New name to assign to the rate_name column above;
+                                    only applicable if rate_name is specified
+        :return:                A Pandas dataframe with all the concentration history,
+                                    and extra columns from the reaction rate history,
+                                    merged by their match of SYSTEM TIME.
+                                    If either history is missing, raise an Exception
+        """
+        # TODO: perhaps make obsolete, by storing both histories together??
+
+        history = self.get_history()
+        rates = self.get_rate_history()
+
+        assert (not history.empty) and (not rates.empty), \
+            "add_rate_to_conc_history(): One or both the histories are missing"
+
+        if rate_name is not None:
+            rates = rates[["SYSTEM TIME", rate_name]]
+            if new_rate_name:
+                rates = rates.rename(columns={rate_name: new_rate_name})
+
+        # Set the tolerance for the merges based on the size of the time values
+        last_time = history["SYSTEM TIME"].iat[-1]
+        tolerance = last_time * 0.000001 + 0.000001     # We use a relative and an absolute tolerance
+
+        # Create a "left join" from the two dataframes, based on the colum 'SYSTEM TIME'
+        merged_df = pd.merge_asof(history, rates, on='SYSTEM TIME', direction='nearest', tolerance=tolerance)
+
+        # Filter to remove rows where the right DataFrame values are NaN (indicating no match)
+        # This has the overall effect of producing an inner join of the two original dataframes
+        # Note: the names "step_x" and "step_y" are automatically assigned by merge_asof() because of a repeated "step" column
+        inner_join_df = merged_df.dropna().rename(columns={"step_x": "step_conc", "step_y": "step_rate"})
+
+        return inner_join_df
+
+
+
+    def add_rate_to_conc_history_OLD(self, rate_name :str, new_rate_name=None):
         """
         Merge together the concentration history and a column from the reaction rate history
 
@@ -1901,12 +1950,11 @@ class UniformCompartment:
 
         history = self.get_history()
         rates = self.get_rate_history()
-        assert len(history) == len(rates)+1, \
-            "add_rate_to_conc_history(): unable to reconcile the system history data " \
-            "with the reaction data - mismatched number of rows"
+        assert len(history) == len(rates), \
+            f"add_rate_to_conc_history(): unable to reconcile the system history data ({len(history)} rows)" \
+            f"with the reaction data ({len(rates)} rows) - mismatched number of rows"
 
-        df = history[:-1].copy()    # Drop the last row, because no rate information is known about the next simulation step not taken!
-                                    # Also, duplicate the dataframe, to avoid messing up the concentration history
+        df = history.copy()    # Duplicate the dataframe, to avoid messing up the concentration history
 
         if new_rate_name is None:
             new_rate_name = rate_name   # Rename column, if requested
@@ -1932,7 +1980,7 @@ class UniformCompartment:
     def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True, verbose=None) -> Union[bool, dict]:
         """
         Ascertain whether the given concentrations (by default the current System concentrations)
-        are in equilibrium for the specified reactions (by default, for all reactions)
+        are in equilibrium for the specified reactions (by default, check all reactions)
 
         :param rxn_index:   The integer index (0-based) to identify the reaction of interest;
                                 if None, then check all the reactions
@@ -1946,7 +1994,7 @@ class UniformCompartment:
                                 incl. the formula(s) being used to check the equilibrium
                                 EXAMPLES:   "([C][D]) / ([A][B])"
                                             "[B] / [A]^2"
-        :param verbose:     Alternate name for argument `explain`
+        :param verbose:     Alternate name for argument `explain`   TODO: DEPRECATED in favor of "explain"
 
         :return:            Return True if ALL the reactions are close enough to an equilibrium,
                                 as allowed by the requested tolerance;
@@ -1955,9 +2003,10 @@ class UniformCompartment:
                                 EXAMPLE:  {False: [3, 6]}
         """
         # TODO: optionally display last lines in diagnostic data, if available
-        # TODO: phase out "explain" in favour of "verbose"
+        # TODO: phase out "verbose" in favour of "explain"
 
         if verbose is not None:
+            print("*** INFO: argument `verbose` is deprecated; use `explain` instead")
             explain = verbose
 
         if conc is None:
@@ -2062,14 +2111,14 @@ class UniformCompartment:
         # Handle the special case of zero concentration in some of the reactants AND in some of the products
         if np.isnan(rxn_quotient):
             if explain:
-                print(f"Final concentrations: {all_applicable_concs_str}")
+                print(f"Current concentrations: {all_applicable_concs_str}")
                 print("Reaction IS in equilibrium because it can't proceed in either direction "
                       "due to zero concentrations in both some reactants and products!\n")
             return True
 
         if np.isinf(rxn_quotient):      # If only the denominator is 0
             if explain:
-                print(f"Final concentrations: {all_applicable_concs_str}")
+                print(f"Current concentrations: {all_applicable_concs_str}")
                 print("Reaction is NOT in equilibrium because either the products contain a zero concentration\n")
             return False
 
@@ -2078,7 +2127,7 @@ class UniformCompartment:
         status = np.allclose(rxn_quotient, rate_ratio, rtol=tolerance/100., atol=0)
 
         if explain:
-            print(f"Final concentrations: {all_applicable_concs_str}")
+            print(f"Current concentrations: {all_applicable_concs_str}")
             print(f"1. Ratio of reactant/product concentrations, adjusted for reaction orders: {rxn_quotient:,.6g}")
             print(f"    Formula used:  {formula}")
             print(f"2. Ratio of forward/reverse reaction rates: {rate_ratio:,.6g}")

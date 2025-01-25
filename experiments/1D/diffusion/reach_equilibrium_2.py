@@ -61,8 +61,8 @@ bio.set_uniform_concentration(species_index=0, conc=0.)
 
 # Start out with a pulse in bins near the *left* and the *right* endpoints.  
 # A total of 20 "units of concentration" is injected
-bio.inject_conc_to_bin(species_index=0, bin_address=2, delta_conc=10.)
-bio.inject_conc_to_bin(species_index=0, bin_address=6, delta_conc=10.)
+bio.inject_conc_to_bin(chem_index=0, bin_address=2, delta_conc=10.)
+bio.inject_conc_to_bin(chem_index=0, bin_address=6, delta_conc=10.)
 
 bio.describe_state()
 

@@ -70,7 +70,7 @@ bio.show_system_snapshot()
 
 # %%
 # Visualize the system's initial state
-bio.visualize_system(caption="Diffusion")
+bio.visualize_system(title_prefix="Diffusion")
 
 # %%
 # Show as heatmap
@@ -104,10 +104,10 @@ delta_time = 1.
 # %% tags=[]
 for i in range(501):
     # Inject to the leftmost bin
-    bio.inject_conc_to_bin(bin_address=0, species_index=0, delta_conc=4, zero_clip = False)
+    bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=4, zero_clip = False)
     
     # Drain from the rightmost bin
-    bio.inject_conc_to_bin(bin_address=8, species_index=0, delta_conc=-4, zero_clip = False)
+    bio.inject_conc_to_bin(bin_address=8, chem_index=0, delta_conc=-4, zero_clip = False)
     
     # Note: the NET GAIN of moles of A in the system is zero!
     
@@ -120,7 +120,7 @@ for i in range(501):
         bio.describe_state(concise=True)
         
         # Show the system state as a line plot
-        bio.visualize_system(caption="Diffusion")
+        bio.visualize_system(title_prefix="Diffusion")
         
         # Show as heatmap
         fig = px.imshow(bio.system_snapshot().T, 

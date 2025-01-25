@@ -36,7 +36,8 @@ class CollectionTabular:
 
     def __len__(self) -> int:
         """
-        Return the number of snapshots comprising the movie
+        Return the number of snapshots in the collection
+
         :return:    An integer
         """
         return len(self.collection_df)
@@ -44,7 +45,7 @@ class CollectionTabular:
 
 
     def __str__(self):
-        return f"`MovieTabular` object with {len(self.collection_df)} snapshot(s) parametrized by `{self.parameter_name}`"
+        return f"`CollectionTabular` object with {len(self.collection_df)} snapshot(s) parametrized by `{self.parameter_name}`"
 
 
 
@@ -60,11 +61,12 @@ class CollectionTabular:
                                     it's acceptable to contain new fields not used in previous calls
                                     (in that case, the dataframe will add new columns automatically - and NaN values
                                      will appear in earlier rows)
-        :param caption:         [OPTIONAL] String to describe the snapshot.  Use None to avoid including that column
-        :return:                None (the object variable "self.movie" will get updated)
+        :param caption:         [OPTIONAL] String to describe the snapshot.
+                                    Use None to avoid including that column (if it already exists in the dataframe, it'll appear as NaN)
+        :return:                None (the object variable "self.collection_df" will get updated)
         """
         assert type(data_snapshot) == dict, \
-            "MovieTabular.store(): The argument `data_snapshot` must be a python dictionary"
+            "CollectionTabular.store(): The argument `data_snapshot` must be a python dictionary"
 
         if self.collection_df.empty:            # No Pandas dataframe was yet started
             self.collection_df = pd.DataFrame(data_snapshot, index=[0])     # Form the initial Pandas dataframe (zero refers to the initial row)
@@ -123,7 +125,7 @@ class CollectionTabular:
                                 that were stored in the main data structure.
                                 If a search was requested, insert a column named "search_value" to the left
         """
-        # The main data structure (a Pandas dataframe), with the "saved snapshots", is available as self.movie
+        # The main data structure (a Pandas dataframe), with the "saved snapshots", is available as self.collection_df
         if return_copy:
             df = self.collection_df.copy()  # Note: some of the operations below also make a copy
         else:
@@ -244,12 +246,12 @@ class CollectionArray:
     Use this structure if your "snapshots" (data to add to the cumulative collection) are Numpy arrays,
     of any dimension - but always retaining that same dimension.
 
-    Usually, the snapshots will be dump of the entire system state, or parts thereof, but could be anything.
+    Usually, the snapshots will be dumps of the entire system state, or parts thereof, but could be anything.
     Typically, each snapshot is taken at a different time (for example, to create a history), but could also
     be the result of varying some parameter(s)
 
     DATA STRUCTURE:
-        A Numpy array of 1 dimension larger than that of the snapshots
+        A Numpy array 1 dimension larger than that of the snapshots
 
         EXAMPLE: if the snapshots are the 1-d numpy arrays [1., 2., 3.] and [10., 20., 30.]
                         then the internal structure will be the matrix
@@ -273,14 +275,15 @@ class CollectionArray:
 
     def __len__(self) -> int:
         """
-        Return the number of snapshots comprising the movie
+        Return the number of snapshots in the collection
+
         :return:    An integer
         """
         return self.data_arr.shape[0]
 
 
     def __str__(self):
-        return f"MovieArray object with {self.__len__()} snapshot(s) parametrized by `{self.parameter_name}`"
+        return f"CollectionArray object with {self.__len__()} snapshot(s) parametrized by `{self.parameter_name}`"
 
 
 
@@ -289,7 +292,7 @@ class CollectionArray:
         Save up the given data snapshot, and its associated parameters and optional caption
 
         EXAMPLES:
-                store(par = 8., data_snapshot = np.array([1., 2., 3.]), caption = "State after injection of 2nd reagent")
+                store(par = 8., data_snapshot = np.array([1., 2., 3.]), caption = "State after injection of 2nd reactant")
                 store(par = {"a": 4., "b": 12.3}, data_snapshot = np.array([1., 2., 3.]))
 
         :param par:             Typically, the System Time - but could be anything that parametrizes the snapshots
@@ -300,15 +303,15 @@ class CollectionArray:
         :return:                None
         """
         assert type(data_snapshot) == np.ndarray, \
-            "MovieArray.store(): The argument `data_snapshot` must be a dictionary whenever a 'tabular' movie is created"
+            "CollectionArray.store(): The argument `data_snapshot` must be a dictionary whenever a 'tabular' collection is created"
 
 
-        if self.data_arr is None:    # If this is the first call to this function
+        if self.data_arr is None:   # If this is the first call to this function
             self.data_arr = np.array([data_snapshot])
             self.snapshot_shape = data_snapshot.shape
-        else:                   # this is a later call, to expand existing stored data
+        else:                       # this is a later call, to expand existing stored data
             assert data_snapshot.shape == self.snapshot_shape, \
-                f"MovieArray.store(): The argument `data_snapshot` must have the same shape across calls, namely {self.snapshot_shape}"
+                f"CollectionArray.store(): The argument `data_snapshot` must have the same shape across calls, namely {self.snapshot_shape}"
             new_arr = [data_snapshot]
             self.data_arr = np.concatenate((self.data_arr, new_arr), axis=0)    # "Stack up" along the first axis
 
@@ -363,7 +366,8 @@ class Collection:
     either taken at different times,
     or resulting from varying some parameter(s)
 
-    This class accept data in arbitrary formats.
+    This class accept data in ARBITRARY formats.
+    If your data is Numpy arrays, you may use the more specialized class "CollectionArray"
 
     MAIN DATA STRUCTURE:
         A list of triplets.
@@ -378,7 +382,7 @@ class Collection:
         EXAMPLE:
             [
                 (0., DATA_STRUCTURE_1, "Initial state"),
-                (8., DATA_STRUCTURE_2, "State immediately after injection of 2nd reagent")
+                (8., DATA_STRUCTURE_2, "State immediately after injection of 2nd reactant")
             ]
     """
 
@@ -394,6 +398,11 @@ class Collection:
 
 
     def __len__(self):
+        """
+        Return the number of snapshots in the collection
+
+        :return:    An integer
+        """
         return len(self.data)
 
 
@@ -410,7 +419,7 @@ class Collection:
         EXAMPLE:
                 store(par = 8.,
                       data_snapshot = {"c1": 10., "c2": 20.},
-                      caption = "State immediately before injection of 2nd reagent")
+                      caption = "State immediately before injection of 2nd reactant")
 
                 store(par = {"a": 4., "b": 12.3},
                      data_snapshot = [999., 111.],
@@ -442,10 +451,11 @@ class Collection:
 
     def get_data(self) -> list:
         """
-        Return a list of all the snapshots
+        Return a list of all the data snapshots
 
         :return:    A list of all the snapshots
         """
+        #TODO: maybe offer a way to only extract a portion
         return [triplet[1] for triplet in self.data]
 
 
