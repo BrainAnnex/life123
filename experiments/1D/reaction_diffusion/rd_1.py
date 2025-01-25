@@ -13,6 +13,9 @@
 # ---
 
 # %% [markdown]
+# # OLD : BEING PHASED OUT!
+
+# %% [markdown]
 # ### Reaction  `A + B <-> C` in 1-D, mostly forward and with 1st-order kinetics for each species, taken to equilibrium
 #
 # Initial concentrations of `A` and `B` are spacially separated to the opposite ends of the system;
@@ -25,6 +28,8 @@
 #
 # A LOT of plots are sent to the log file from this experiment; the reason is to compare two
 # graphic elements, "vue_curves_3" and "vue_curves_4"
+
+# %%
 
 # %% [markdown]
 # ### TAGS :  "reactions 1D", "diffusion 1D"

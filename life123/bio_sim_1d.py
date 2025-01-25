@@ -786,7 +786,7 @@ class BioSim1D:
 
         :return:    A Pandas dataframe
         """
-        print(f"SYSTEM SNAPSHOT at time {self.system_time}:")
+        print(f"SYSTEM SNAPSHOT at time {self.system_time:,.8g}:")
         return self.system_snapshot()
 
 
@@ -1627,8 +1627,6 @@ class BioSim1D:
         assert self.reaction_dynamics is not None, \
             "reaction_step(): must first set the Reactions object"
 
-        #number_reactions = self.reaction_dynamics.number_of_reactions()
-
         self.delta_reactions = np.zeros((self.n_species, self.n_bins), dtype=float)
         if self.uses_membranes():
             self.delta_reactions_B = np.zeros((self.n_species, self.n_bins), dtype=float)
@@ -1694,6 +1692,9 @@ class BioSim1D:
             self.system += self.delta_diffusion     # Matrix operation to update all the concentrations
                                                     #   from the diffusion
             self.system_time += time_step
+
+            self.capture_snapshot(step_count=i)     # Save historical values (if enabled)
+
 
 
 
@@ -1842,7 +1843,7 @@ class BioSim1D:
         fig.update_layout(title=title,
                           xaxis={'title': 'Bin number'}, yaxis={'title': 'Chem. species'},
                           yaxis_autorange="reversed",
-                          height=height * len(chem_labels))
+                          height=height)
 
         return fig
 
