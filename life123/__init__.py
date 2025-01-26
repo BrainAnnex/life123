@@ -6,7 +6,7 @@
 
 	https://Life123.science
 
-    :copyright:     (c) 2022-2024 by Julian West and the Life123 project.
+    :copyright:     (c) 2022-2025 by Julian West and the Life123 project.
     :license:       MIT.  See LICENSE file for more details.
 """
 
