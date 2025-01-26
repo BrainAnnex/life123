@@ -1134,6 +1134,7 @@ class BioSim1D:
 
 
 
+
     #####################################################################################################
 
     '''                                    ~   UTILITIES   ~                                          '''
@@ -1569,13 +1570,6 @@ class BioSim1D:
 
 
 
-
-    #########################################################################
-    #                                                                       #
-    #                               REACTIONS                               #
-    #                                                                       #
-    #########################################################################
-
     def react(self, total_duration=None, time_step=None, n_steps=None, snapshots=None, silent=False) -> None:
         """
         Update the system concentrations as a result of all the reactions in all bins - taking
@@ -1614,8 +1608,7 @@ class BioSim1D:
                                                              time_step=time_step,
                                                              n_steps=n_steps)
 
-        # TODO: validation; also, implement "species" option for snapshots
-        first_snapshot = True
+        # TODO: this is an old system being phased out
         if snapshots:
             frequency = snapshots.get("frequency", 1)         # If not present, it will be 1
             sample_bin = snapshots.get("sample_bin", None)    # If not present, it will be None

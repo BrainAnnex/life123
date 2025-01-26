@@ -800,16 +800,7 @@ class BioSim2D:
 
 
 
-
-
-    #########################################################################
-    #                                                                       #
-    #                               REACTIONS                               #
-    #                                                                       #
-    #########################################################################
-
-
-    def react(self, total_duration=None, time_step=None, n_steps=None, snapshots=None) -> None:
+    def react(self, total_duration=None, time_step=None, n_steps=None) -> None:
         """
         Update the system concentrations as a result of all the reactions in all bins.
         CAUTION : NO diffusion is taken into account.
@@ -821,31 +812,23 @@ class BioSim2D:
         the INITIAL concentrations (prior to this reaction step),
         which are used as the basis for all the reactions.
 
-        TODO: in case of any Exception, the state of the system is still valid, as of the time before this call
-
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
-        :param snapshots:       NOT YET USED
-                                OPTIONAL dict with the keys: "frequency", "sample_bin", "sample_species"
-                                    If provided, take a system snapshot after running a multiple of "frequency" runs
         :return:                None
         """
+        # TODO: in case of any Exception, the state of the system is still valid, as of the time before this call
 
         time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
                                                              time_step=time_step,
                                                              n_steps=n_steps)
-        #if snapshots is None:
-            #frequency = None
-        #else:
-            #frequency = snapshots.get("frequency", 1)
 
         for i in range(n_steps):
             self.reaction_step(time_step)         # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
             self.system += self.delta_reactions   # Matrix operation to update all the concentrations
             self.system_time += time_step
-            #if (frequency is not None) and ((i+1)%frequency == 0):
-                #self.save_snapshot(self.bin_snapshot(bin_address = snapshots["sample_bin"]))
+
+            self.capture_snapshot(step_count=i)     # Save historical values (if enabled)
 
 
 
