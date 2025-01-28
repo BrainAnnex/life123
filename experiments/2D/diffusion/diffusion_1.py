@@ -18,7 +18,7 @@
 # ## An initial concentration pulse of a single chemical (near the left edge of the system, and halfway vertically), diffusing towards equilibrium
 #
 # The system starts out with a "concentration pulse" in just one bin - i.e. that bin is initially the only one with a non-zero concentration of the only chemical species.
-# Then the system is left undisturbed, and followed to equilibrium.
+# Then the system is left undisturbed, and followed to diffusive equilibrium.
 #
 # (Note: this is the 2D counterpart of the 1D experiment by the same name)
 

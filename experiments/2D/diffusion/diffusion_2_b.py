@@ -17,7 +17,7 @@
 #
 # ### Identical to experiment `diffusion_2_a` EXCEPT for some extra rows of bins at the top of the system (high y-bin values), which breaks the previously-perfect symmetry of the 2 chemicals: now, one of them (`A`) is more "hemmed in by the walls", compared to the other one
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true tags=[]
 # ### TAGS :  "diffusion 2D", "basic"
 
 # %%

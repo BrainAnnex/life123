@@ -16,7 +16,7 @@
 # ### Demonstration of file storage of system concentration history, and stop-restart of simulation, for the reaction `A <-> B`,
 # with 1st-order kinetics in both directions, taken to equilibrium.
 #
-# Same as experiment `react_1_a`, but with file storage of the concentration history, and reaction stop-restart.
+# Same as experiment `react_1_a`, but with CSV file storage of the concentration history, and reaction stop-restart.
 
 # %% [markdown]
 # ### TAGS :   "basic", "uniform compartment"
