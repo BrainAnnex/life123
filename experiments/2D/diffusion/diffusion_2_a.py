@@ -13,9 +13,9 @@
 # ---
 
 # %% [markdown]
-# # Diffusion of 2 chemicals
+# # Diffusion of 2 chemicals in 2D, in a very symmetric system
 #
-# ## Initial indentical concentration pulses of 2 chemicals (starting at symmetric, almost-opposite, ends of the system), diffusing towards equilibrium with identical rates coefficients.
+# ## Initial identical concentration pulses of 2 chemicals (starting at symmetric, almost-opposite, ends of the system), diffusing towards equilibrium with identical rate coefficients.
 #
 # Symmetry and mass conservation is observed throughout.
 #

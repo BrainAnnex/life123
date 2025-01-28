@@ -141,7 +141,11 @@ class BioSim2D:
 
 
 
-    def get_system_time(self):
+    def get_system_time(self) -> float:
+        """
+        Return the current system time
+        :return:
+        """
         return self.system_time
 
 
