@@ -25,6 +25,8 @@ class BioSim1D:
     def __init__(self, n_bins :int, chem_data=None, reaction_handler=None):
         """
         :param n_bins:          The number of compartments (bins) to use in the simulation
+
+        [At least one of the 2 following arguments must be provided]
         :param chem_data:       [OPTIONAL] Object of class "ChemData";
                                     if not specified, it will get extracted
                                     from the "UniformCompartment" class (if passed to the next argument)
@@ -59,7 +61,13 @@ class BioSim1D:
         self.system_earlier = None  # NOT IN CURRENT USE.  Envisioned for simulations where the past 2 time states are used
                                     # to compute the state at the next time step
 
-        self.membranes = None   # NumPy boolean array of dimension n_bins;
+
+        self.membranes = []     # Sorted list of bin numbers that have a membrane to their LEFT side;
+                                #   it can contains integers between 0 and self.n_bins, both inclusive
+
+        self.permeability = None
+
+        self.membranes_OLD = None   # NumPy boolean array of dimension n_bins;   TODO - DEPRECATED
                                 #   each boolean value marks the presence of a membrane in that bin.
                                 #   Any given bin is expected to either contain, or not contain, a single membrane passing thru it
                                 #   TODO - explore possible alternative: list of bin addresses the contains a membrane,
@@ -112,15 +120,16 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    def _initialize_system(self, n_bins: int, chem_data=None, reaction_handler=None) -> None:
+    def _initialize_system(self, n_bins :int, chem_data=None, reaction_handler=None) -> None:
         """
         Initialize all concentrations to zero.
         Membranes, if present, need to be set later.
 
         :param n_bins:          The number of compartments (bins) to use in the simulation
-        :param chem_data:       (OPTIONAL) Object of class "ReactionData";
-                                    if not specified, it will get extracted from the "UniformCompartment" class
-        :param reaction_handler:(OPTIONAL) Object of class "UniformCompartment";
+        :param chem_data:       [OPTIONAL] Object of class "ChemData";
+                                    if not specified, it will get extracted
+                                    from the "UniformCompartment" class (if passed to the next argument)
+        :param reaction_handler:[OPTIONAL] Object of class "UniformCompartment";
                                     if not specified, it'll get instantiated here
         :return:                None
         """
@@ -132,7 +141,7 @@ class BioSim1D:
 
         assert chem_data is not None or reaction_handler is not None, \
             "BioSim1D() instantiation: at least one of the arguments `chem_data` or `reaction_handler` must be set"
-            # TODO: maybe drop this requirement?  And then set the system matrix later on?
+            # TODO: maybe drop this requirement?  And then set it later on?
 
         if chem_data:
             self.chem_data = chem_data
@@ -225,7 +234,7 @@ class BioSim1D:
         self.system = None
         self.system_earlier = None
         self.system_B = None
-        self.membranes = None
+        self.membranes_OLD = None
         self.A_fraction = None
         self.chem_data = None
         self.reaction_dynamics = None
@@ -340,7 +349,7 @@ class BioSim1D:
 
     #########################################################################
     #                                                                       #
-    #                SET/MODIFY CONCENTRATIONS (or membranes)               #
+    #                       SET/MODIFY CONCENTRATIONS                       #
     #                                                                       #
     #########################################################################
 
@@ -362,14 +371,6 @@ class BioSim1D:
         assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
 
         self.system[species_index] = np.full(self.n_bins, conc, dtype=float)
-
-        if self.uses_membranes():
-            # If membranes are present, also set "side B" of the bins with membranes, to the same concentration
-            # TODO: see if it can be done as vector operation
-            for bin_address in self.bins_with_membranes():
-                if self.membranes[bin_address]:
-                    self.system_B[species_index, bin_address] = conc
-
 
 
 
@@ -606,88 +607,6 @@ class BioSim1D:
 
 
 
-
-    ########  MEMBRANE-RELATED  ################
-
-
-    def uses_membranes(self) -> bool:
-        """
-        Return True if membranes are part of the system
-
-        :return:
-        """
-        return self.membranes is not None
-
-
-
-    def bins_with_membranes(self) -> [int]:
-        """
-
-        :return:
-        """
-        # Create and return a list of bin numbers whose entry in self.membranes is True
-        return [bin_number for bin_number in range(self.n_bins)
-                if self.membranes[bin_number]]
-
-
-
-    def set_membranes(self, membrane_pos: Union[List, Tuple]) -> None:
-        """
-        DEPRECATED!
-
-        Set the presence of all membranes in the system,
-        and optionally specify the fraction of the "A" part of the bin (by default 0.5)
-
-        Initialize the class variables "membranes" and "A_fraction"
-
-        EXAMPLES:   set_membranes([4, 20, 23])
-                    set_membranes([4, (20, 0.7), 23])
-
-        IMPORTANT: any previously-set membrane information is lost.
-
-        :param membrane_pos:    A list or tuple of:
-                                    1) EITHER indexes of bins that contain membranes
-                                    2) OR pairs of bins numbers and fractional values
-        :return:                None
-        """
-        print("**** DEPRECATED, and expected to be removed soon")
-
-        self.membranes = np.zeros(self.n_bins, dtype=bool)
-        self.A_fraction = np.zeros(self.n_bins, dtype=float)
-        if self.system_B is None:
-            self.system_B = np.zeros((self.n_species, self.n_bins), dtype=float)
-
-
-        # Loop over all the values passed as a list or tuple
-        for bin_info in membrane_pos:
-            if type(bin_info) == int:
-                bin_number = bin_info
-                fraction = 0.5
-            elif (type(bin_info) == tuple) or (type(bin_info) == list):
-                assert len(bin_info) == 2, \
-                    "set_membranes(): tuples or lists must contain exactly 2 elements"
-                bin_number, fraction = bin_info
-
-                assert (type(fraction) == float) or (type(fraction) == int), \
-                    "set_membranes(): requested fractions must be floats or integers"
-                assert 0. <= fraction <= 1., \
-                    "set_membranes(): requested fractions must be in the [0.-1.0] range, inclusive"
-            else:
-                raise Exception("set_membranes(): the elements of the argument `membrane_pos` must be tuples or lists")
-
-            self.assert_valid_bin(bin_number)
-            self.membranes[bin_number] = True
-            self.A_fraction[bin_number] = fraction
-
-            # Equalize all the concentrations across the compartments on both sides of the membrane
-            if self.chem_data:
-                for chem_index in range(self.chem_data.number_of_chemicals()):
-                    # TODO: do as vector operation
-                    conc = self.bin_concentration(bin_address=bin_number, species_index=chem_index)
-                    self.set_bin_conc(bin_address=bin_number, species_index=chem_index, conc=conc, across_membrane=True)
-
-
-
     def assert_valid_bin(self, bin_address: int) -> None:
         """
         Raise an Exception if the given bin number isn't valid
@@ -898,13 +817,13 @@ class BioSim1D:
                 else:
                     name = ""
 
-                if self.membranes is None:
+                if self.membranes_OLD is None:
                     all_conc = self.system[species_index]
                 else:
                     all_conc = "|"
                     for bin_no in range(self.n_bins):
                         all_conc += str(self.bin_concentration(bin_no, species_index=species_index))
-                        if self.membranes[bin_no]:
+                        if self.membranes_OLD[bin_no]:
                             # Add a symbol for the membrane, and the additional membrane concentration data (on the "other side")
                             all_conc += "()"    # To indicate a membrane
                             all_conc += str(self.bin_concentration(bin_no, species_index=species_index, trans_membrane=True))
@@ -927,7 +846,61 @@ class BioSim1D:
 
 
 
-    def show_membranes(self, n_decimals=1) -> str:
+    #####################################################################################################
+
+    '''                                    ~   MEMBRANES   ~                                          '''
+
+    def ________MEMBRANES________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def uses_membranes(self) -> bool:
+        """
+        Return True if membranes are part of the system
+
+        :return:    True if any membrane was defined as being in the system;
+                        False otherwise
+        """
+        return self.membranes != []
+
+
+
+    def set_membranes(self, membrane_pos: Union[List, Tuple], permeability=None, presorted=False) -> None:
+        """
+        Set the presence of all membranes in the system.
+
+        Initialize the class variables "membranes" and "permeability"
+
+        IMPORTANT: any previously-set membrane information is lost.
+
+        :param membrane_pos:    List or tuple of bin numbers that have a membrane to their LEFT side;
+                                it can contains integers between 0 and the number of bins in the system, both inclusive
+        :param permeability:    [OPTIONAL] TODO: an optional value for each of the affected chemicals
+        :param presorted:       [OPTIONAL] If the list or tuple passed by "membrane_pos" is already sorted,
+                                    save time by not re-sorting it
+        :return:                None
+        """
+        if type(membrane_pos) == tuple:
+            membrane_pos = list(membrane_pos)
+        else:
+            assert type(membrane_pos) == list, "set_membranes(): argument `membrane_pos` must be a list or tuple"
+
+        if not presorted:
+            membrane_pos.sort()
+
+        assert len(membrane_pos) > 0,  "set_membranes(): argument `membrane_pos` cannot be empty"
+
+        assert (membrane_pos[0] >= 0) and (membrane_pos[-1] <= self.n_bins), \
+            f"set_membranes(): argument `membrane_pos` must contain integers between 0 and {self.n_bins}"
+
+        self.membranes = membrane_pos
+
+        if permeability is not None:
+            self.permeability = permeability
+
+
+
+    def show_membranes(self) -> str:
         """
         DEPRECATED!
 
@@ -935,24 +908,23 @@ class BioSim1D:
         Print, and return, a string with a diagram to visualize membranes and the fractions
         of their "left" sides
 
-        EXAMPLE (with 2 membranes on the right part of a 5-bin system):
-                _____________________
-                |   |   |0.8|   |0.3|
-                ---------------------
+        EXAMPLE (with 2 membranes as part of a 6-bin system):
+                _____________________________
+                | 0 | 1 |x| 2 | 3 | 4 |x| 5 |
+                -----------------------------
 
-        :param n_decimals:  Number of decimal places to show in the fractions
         :return:            A string with the character-based diagram;
                             if no membranes were defined, return an empty string
         """
         print("**** DEPRECATED; a completely-new system is expected")
 
-        if self.membranes is None:
+        if self.membranes_OLD is None:
             print("No membranes present.  Call set_membranes() to set them")
             return ""
 
         # Prepare the middle line
         box_contents = "|"
-        for bin_no, val in enumerate(self.membranes):
+        for bin_no, val in enumerate(self.membranes_OLD):
             if val:
                 fraction = round(self.A_fraction[bin_no], n_decimals)
                 box_contents += str(fraction) + "|"
@@ -968,6 +940,7 @@ class BioSim1D:
 
         print(box)
         return box
+
 
 
 
@@ -1684,24 +1657,7 @@ class BioSim1D:
 
             # Replace the "bin_n" column of the self.delta_reactions matrix with the contents of the vector increment_vector
             self.delta_reactions[:, bin_n] = np.array([increment_vector])
-
             #print(self.delta_reactions)
-
-
-        # Now process the "other side" of membrane-containing bins, if applicable
-        # TODO: the implementation of this part is expected to change soon!
-        if self.uses_membranes():
-            for bin_n in self.bins_with_membranes():
-                # Obtain the Delta-concentration for each species, for this bin
-                conc_array = self.bin_snapshot_array(bin_address=bin_n, trans_membrane=True)
-                #print(f"\n Post-membrane side conc_dict in bin {bin_n}: ", conc_dict)
-
-                # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-                increment_vector, _, _ = self.reaction_dynamics.reaction_step_common(delta_time=delta_time, conc_array=conc_array,
-                                                                                     variable_steps=False)  # Using fixed time steps
-
-                # Replace the "bin_n" column of the self.delta_reactions_B matrix with the contents of the vector increment_vector
-                self.delta_reactions_B[:, bin_n] = np.array([increment_vector])
 
 
 

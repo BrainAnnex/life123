@@ -15,10 +15,12 @@ class BioSim2D:
     2D simulations of diffusion and reactions
     """
 
-    def __init__(self, x_bins :int, y_bins: int, chem_data=None, reaction_handler=None):
+    def __init__(self, x_bins :int, y_bins :int, chem_data=None, reaction_handler=None):
         """
         :param x_bins:          The bin size in the x-coordinates.  Notice that this is the number of COLUMNS in the data matrix
         :param y_bins:          The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
+
+        [At least one of the 2 following arguments must be provided]
         :param chem_data:       [OPTIONAL] Object of class "ChemData";
                                     if not specified, it will get extracted
                                     from the "UniformCompartment" class (if passed to the next argument)
@@ -78,7 +80,7 @@ class BioSim2D:
 
         :param x_bins:      The bin size in the x-coordinates.  Notice that this is the number of COLUMNS in the data matrix
         :param y_bins:      The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
-        :param chem_data:   (OPTIONAL) Object of class "Chemicals";
+        :param chem_data:   (OPTIONAL) Object of class "ChemData";
                                 if not specified, it will get extracted from the "Reactions" class
         :param reaction_handler:   (OPTIONAL) Object of class "Reactions";
                                 if not specified, it'll get instantiated here

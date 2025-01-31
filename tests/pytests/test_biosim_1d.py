@@ -407,79 +407,19 @@ def test_uses_membranes():
 
 
 
-def test_bins_with_membranes():
-    chem_data = ChemData(names=["A", "B"])
-    bio = BioSim1D(n_bins=5, chem_data=chem_data)
-
-    bio.set_membranes(membrane_pos=[2, 4])
-    assert bio.bins_with_membranes() == [2, 4]
-
-
-
-def test_set_membranes():
-    chem_data = ChemData(names=["A", "B"])
-    bio = BioSim1D(n_bins=5, chem_data=chem_data)
-
-    bio.set_membranes(membrane_pos=[2, 4])
-    expected = np.array([False, False, True, False, True])
-    assert (bio.membranes == expected).all()
-    assert np.allclose(bio.A_fraction, [0, 0, 0.5, 0, 0.5])
-
-    bio.set_membranes(membrane_pos=(0,2))
-    expected = np.array([True, False, True, False, False])
-    assert (bio.membranes == expected).all()
-    assert np.allclose(bio.A_fraction, [0.5, 0, 0.5, 0, 0])
-
-    with pytest.raises(Exception):  # Invalid bin numbers
-        bio.set_membranes(membrane_pos=[5])
-        bio.set_membranes(membrane_pos=[-1])
-        bio.set_membranes(membrane_pos=[2, 4, 6])
-
-
-    # Now, specify the "A fraction" of (some of) the membrane-containing bins
-    bio.set_membranes(membrane_pos=[1, [2, .8], (4, .3)])
-    expected = np.array([False, True, True, False, True])
-    assert (bio.membranes == expected).all()
-    assert np.allclose(bio.A_fraction, [0, 0.5, 0.8, 0, 0.3])
-
-    # Re-do the last setting of membrane, this time to a system that has concentration values set
-    bio.reset_system()
-    bio = BioSim1D(n_bins=5, chem_data=chem_data)
-
-    bio.set_uniform_concentration(conc=8., species_name="A")
-    bio.set_uniform_concentration(conc=5., species_name="B")
-    assert np.allclose(bio.lookup_species(species_name="A"), [8, 8, 8, 8, 8])
-    assert np.allclose(bio.lookup_species(species_name="B"), [5, 5, 5, 5, 5])
-    assert bio.membranes is None
-
-    bio.set_membranes(membrane_pos=[1, [2, .8], (4, .3)])
-    expected = np.array([False, True, True, False, True])
-    assert (bio.membranes == expected).all()
-    assert np.allclose(bio.A_fraction, [0, 0.5, 0.8, 0, 0.3])
-    assert np.allclose(bio.lookup_species(species_name="A"), [8, 8, 8, 8, 8])
-    assert np.allclose(bio.lookup_species(species_name="B"), [5, 5, 5, 5, 5])
-    assert np.allclose(bio.lookup_species(species_name="A", trans_membrane=True), [0, 8, 8, 0, 8])
-    assert np.allclose(bio.lookup_species(species_name="B", trans_membrane=True), [0, 5, 5, 0, 5])
-
-    #bio.show_membranes()
-
-
-
-
-    #########################################################################
-    #                                                                       #
-    #                              TO VIEW                                  #
-    #                                                                       #
-    #########################################################################
-
-
 def test_assert_valid_bin():
     chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
     with pytest.raises(Exception):
         bio.assert_valid_bin(-1)
+
+    with pytest.raises(Exception):
         bio.assert_valid_bin(3)
+
+    with pytest.raises(Exception):
         bio.assert_valid_bin("2")
+
+    with pytest.raises(Exception):
         bio.assert_valid_bin((0, 2))
 
     bio.assert_valid_bin(0)
@@ -504,6 +444,45 @@ def test_system_snapshot():
 
 
 
+
+
+##################  MEMBRANES  ##################
+
+
+def test_set_membranes():
+    bio = BioSim1D(n_bins=10, chem_data=ChemData("A"))
+
+    with pytest.raises(Exception):
+        bio.set_membranes()     # Missing required arg
+
+    with pytest.raises(Exception):
+        bio.set_membranes(membrane_pos=123)     # Wrong arg type
+
+    with pytest.raises(Exception):
+        bio.set_membranes(membrane_pos=[])      # Empty arg
+
+    with pytest.raises(Exception):
+        bio.set_membranes(membrane_pos=())      # Empty arg
+
+
+    bio.set_membranes(membrane_pos=[10, 4, 5])
+    assert bio.membranes == [4, 5, 10]
+
+    bio.set_membranes(membrane_pos=(5, 10, 4, 0))
+    assert bio.membranes == [0, 4, 5, 10]
+
+    with pytest.raises(Exception):
+        bio.set_membranes(membrane_pos=[11, 4, 5])      # Arg out of range [0-10]
+
+    with pytest.raises(Exception):
+        bio.set_membranes(membrane_pos=(5, 10, 4, -1))  # Arg out of range [0-10]
+
+
+    bio.set_membranes(membrane_pos=[0, 10], presorted=True)
+    assert bio.membranes == [0, 10]
+
+
+
 def test_show_membranes():
     chem_data = ChemData(names="A")
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
@@ -522,7 +501,7 @@ def test_show_membranes():
 
 
 
-#######  CHANGE RESOLUTIONS #########
+##################  CHANGE RESOLUTIONS  ##################
 
 def test_increase_spacial_resolution():
     chem_data = ChemData(names=["A", "B"])
