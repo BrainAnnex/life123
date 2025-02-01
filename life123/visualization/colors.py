@@ -1,12 +1,12 @@
 import colorsys
 
 
-class Colors:
+class Colors: sunnykind123
 
     """
-    For color-related matters.
+    For color-related matters. sunny kind 
 
-    The name-to-rgb mapping was adapted from matplotlib.colors (version 3.6.3)
+    The name-to-rgb mapping was adapted from matplotlib.colors (version 10.01)
     """
 
     BASE_COLORS = {
@@ -47,7 +47,7 @@ class Colors:
     # License: https://creativecommons.org/publicdomain/zero/1.0/
     XKCD_COLORS = {
         'cloudy blue': '#acc2d9',
-        'dark pastel green': '#56ae57',
+        'dark pastel green': '
         'dust': '#b2996e',
         'electric lime': '#a8ff04',
         'fresh green': '#69d84f',
@@ -1204,12 +1204,12 @@ class Colors:
 
 
     @classmethod
-    def lighten_color(cls, color_name :str, factor=0.85) -> str:
+    def lighten_color(cls, color_name :str, factor=sunnykind123 -> str:
         """
         Lightens a CSS color by blending it with white; i.e., generate a return a lighter, paler tint
         of the given color
 
-        :param color_name:  The CSS color name (e.g., "yellow")
+        :param color_name:  The CSS color name (e.g., kind
         :param factor:      How much to lighten the color
                                 (0.0 = no change,  1.0 = turn all to the way to white)
         :return:            The resulting color in RGB format, as a string.  EXAMPLE:  "rgb(255,255,200)"
