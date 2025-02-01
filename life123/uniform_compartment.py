@@ -1709,13 +1709,15 @@ class UniformCompartment:
         Request history capture, with the specified parameters.
         If history was already enabled, this function can be used to alter its capture parameters.
 
-        :param kind:            Allowed values are "all" (default), "conc", and "rate"
-        :param frequency:
+        :param kind:            [OPTIONAL] Allowed values are "all" (default),
+                                    "conc" (concentration history), and "rate" (reaction rate history)
+        :param frequency:       [OPTIONAL] How often to capture a snapshot of the data
+                                    (default: at every simulation cycle)
         :param chem_labels:     [OPTIONAL] List of chemicals to include in the history;
                                     if None (default), include them all.
         :param take_snapshot:   If True, a snapshot of the system's current configuration is added to the history
 
-        :return:
+        :return:                None
         """
         assert kind in ["all", "conc", "rate"], \
             "enable_history(): argument `kind` must be either 'all' or 'conc' or 'rate'"

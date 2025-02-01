@@ -54,7 +54,7 @@ See the [Life123 Guide](https://life123.science/guide)
 * "tests" folder (top-level)
 
 ## How to Use
-See this [short video](https://www.youtube.com/watch?v=TCvQUKPVimE)
+See this [short video](https://www.youtube.com/watch?v=FOhQgPZaEsA)
 
 ## How to Run Locally
 `pip install life123`

@@ -1760,6 +1760,11 @@ class BioSim1D:
         :return:            A Plotly "Figure" object with a Heatmap
         """
         # TODO: generalize to sub-selection of chemicals
+
+        MIN_ROW_HEIGHT_SINGLE_CHEM = 250    # For the case there's only 1 chem (i.e. 1 row in the heatmap)
+        MIN_TOT_HEIGHT = 300                # Note: if overall height is too small, it leads to an obscure JS error message
+
+
         title = f"System snapshot at time t={self.system_time:.8g}"
         if title_prefix:
             title = title_prefix + ".  " + title
@@ -1797,9 +1802,13 @@ class BioSim1D:
                 # Fall back to default colors (but don't bother if just 1 chemical)
                 colors = Colors.assign_default_colors(len(chem_labels))
 
-        min_height = 235        # Too small leads to an obscure JS error message
+
         if len(chem_labels) == 1:
-            row_height = min_height
+            row_height = max(MIN_ROW_HEIGHT_SINGLE_CHEM, row_height)
+            height = max(MIN_TOT_HEIGHT, row_height)
+        else:
+            height = max(MIN_TOT_HEIGHT, row_height * len(chem_labels))
+
 
         if colors:
             # "delta" affect the vertical extension of the color-coded edges; fine-tune for visual esthetics
@@ -1825,7 +1834,7 @@ class BioSim1D:
             for i, col in enumerate(colors):
                 fig.add_shape(
                     type="rect",
-                    x0 = -0.5,     x1 = -0.4,       # Slightly outside the heatmap
+                    x0 = -0.5,      x1 = -0.4,       # Slightly outside the heatmap
                     y0 = i - delta, y1 = i + delta,
                     xref="x", yref="y",
                     line=dict(width=0),
@@ -1833,7 +1842,9 @@ class BioSim1D:
                 )
 
 
-        height = max(min_height, row_height * len(chem_labels))
+        #height = max(MIN_HEIGHT, row_height * len(chem_labels))
+
+        #print("*** height: ", height)
 
         fig.update_layout(title=title,
                           xaxis={'title': 'Bin number'}, yaxis={'title': 'Chem. species'},
