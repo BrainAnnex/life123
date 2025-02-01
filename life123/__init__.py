@@ -18,10 +18,15 @@ from life123.bio_sim_2d import BioSim2D
 from life123.bio_sim_3d import BioSim3D
 from life123.chem_data import ChemData
 from life123.html_log import HtmlLog
-from life123.collections	import (
+from life123.collections import (
     CollectionTabular,
     CollectionArray,
     Collection
+)
+from life123.history import (
+    HistoryBinConcentration,
+    HistoryUniformConcentration,
+    HistoryReactionRate
 )
 from life123.numerical import Numerical
 from life123.reactions import ReactionGeneric, ReactionEnz, Reactions
@@ -32,6 +37,7 @@ from life123.reaction_kinetics import (ReactionKinetics, VariableTimeSteps)
 from life123.visualization.graphic_log import GraphicLog
 from life123.visualization.plotly_helper import PlotlyHelper
 from life123.visualization.py_graph_visual import PyGraphVisual
+from life123.visualization.colors import Colors
 
 
 __all__ = [
@@ -43,6 +49,10 @@ __all__ = [
     'CollectionTabular',
     'CollectionArray',
     'Collection',
+    'Colors',
+    'HistoryBinConcentration',
+    'HistoryUniformConcentration',
+    'HistoryReactionRate',
     'Numerical',
     'ReactionGeneric',
     'Reactions',
