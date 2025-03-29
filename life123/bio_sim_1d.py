@@ -875,6 +875,7 @@ class BioSim1D:
 
         :param membrane_pos:    List or tuple of bin numbers that have a membrane to their LEFT side;
                                 it can contains integers between 0 and the number of bins in the system, both inclusive
+                                TODO: maybe rename to "coords" ??
         :param permeability:    [OPTIONAL] TODO: an optional value for each of the affected chemicals
         :param presorted:       [OPTIONAL] If the list or tuple passed by "membrane_pos" is already sorted,
                                     save time by not re-sorting it
@@ -1746,7 +1747,7 @@ class BioSim1D:
 
 
     def system_heatmap(self, chem_labels=None, title_prefix ="", row_height=150,
-                           colors=None) -> pgo.Figure:
+                       colors=None) -> pgo.Figure:
         """
         Produce a heatmap, and return it as a plotly Figure object
 
@@ -1820,25 +1821,26 @@ class BioSim1D:
                 delta = 0.49
 
             # Add color-coded edges using shapes
+            # Note: x and y coord's are relative to the CENTER of the bins.  1 unit = bin dimension (horiz. or vert.)
             for i, col in enumerate(colors):
                 for j in range(self.n_bins):
                     fig.add_shape(
                         type="rect",
-                        x0=j - 0.5,   x1=j + 0.5,         # Make x0  more neg to extend to left; make x1 more pos to extend to right
-                        y0=i - delta, y1=i + delta,       # Make y0  more neg to extend to bottom; make y1 more pos to extend to top
-                        line=dict(color=col, width=3),    # Edge color and width
+                        x0=j - 0.5,   x1=j + 0.5,         # Reduce x0 to extend to left; increase x1 to extend to right
+                        y0=i - delta, y1=i + delta,       # Reduce y0 to extend to bottom; increase y1 to extend to top
+                        line=dict(color=col, width=3),    # Edge color and width (note there's NO fill color)
                         xref="x", yref="y"
                     )
 
-            # Add annotations for row color-coding
+            # Add annotations (small rectangles to the left of the heatmap) for row color-coding
             for i, col in enumerate(colors):
                 fig.add_shape(
                     type="rect",
-                    x0 = -0.5,      x1 = -0.4,       # Slightly outside the heatmap
+                    x0 = -0.5,      x1 = -0.4,       # Slightly outside the heatmap (to the left of the 1st bin)
                     y0 = i - delta, y1 = i + delta,
-                    xref="x", yref="y",
                     line=dict(width=0),
-                    fillcolor=col
+                    fillcolor=col,
+                    xref="x", yref="y"
                 )
 
 

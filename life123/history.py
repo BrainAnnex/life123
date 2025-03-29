@@ -11,12 +11,13 @@ class History:
         """
         For the management of historical data of various types,
         each of which relies on a child class.
-        This base (parent) class - which should NOT be directly instantiated -
-        provides common properties and methods.
+        This base (parent) class is NOT meant for the end user
+        - and should NOT be directly instantiated;
+        it provides common properties and methods.
 
-        :param active:
-        :param chem_labels:
-        :param frequency:
+        :param active:      Flag indicating whether the history is enabled
+        :param chem_labels: List of chemicals for which history is to be kept; use None to mean all
+        :param frequency:   How many simulation cycles to wait until taking another data snapshoot
         """
         self.history = None                 # Object set by the children classes.
                                             # The type, depending on the child class, will be one of:
@@ -46,6 +47,8 @@ class History:
 
     def enable_history_common(self, frequency=1, chem_labels=None) -> None:
         """
+        Activate the keeping of historical data (the specifics
+        will depend on the child class)
 
         :param frequency:
         :param chem_labels:
@@ -168,73 +171,18 @@ class History:
 
 ##########################################################################################################################
 
-class HistoryUniformConcentration(History):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
-        self.history = CollectionTabular(parameter_name="SYSTEM TIME")  # To store user-selected snapshots of quantities of interest
-
-
-
-    def enable_history(self, frequency=1, chem_labels=None) -> None:
-        """
-        Request history capture, with the specified parameters.
-        If history was already enabled, this function can be used to alter its capture parameters.
-
-        :param frequency:
-        :param chem_labels: [OPTIONAL] List of chemicals to include in the history;
-                                if None (default), include them all.
-        :return:            None
-        """
-        self.enable_history_common(frequency=frequency, chem_labels=chem_labels)
-
-
-
-    def save_snapshot(self, system_time, data_snapshot, step_count=None, caption="") -> None:
-        """
-
-        :param system_time:
-        :param data_snapshot:   EXAMPLE: {"A": 1.3, "B": 4.9}
-        :param step_count:
-        :param caption:         [OPTIONAL] String to save alongside this snapshot
-        :return:                None
-        """
-        caption = self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
-                                                      caption=caption)
-
-        if self.log_file is None:
-            return
-
-        # If we get thus far, we have a log file to manage
-        if os.path.exists(self.log_file):
-            new_file = False
-        else:
-            new_file = True
-
-        # Open a CSV file in write mode
-        with open(self.log_file, mode="a", newline="") as fh:
-            fieldnames = ["SYSTEM TIME"] + list(data_snapshot.keys()) + ["caption"]
-            writer = csv.DictWriter(fh, fieldnames = fieldnames)
-
-            data_snapshot["SYSTEM TIME"] = system_time
-            data_snapshot["caption"] = caption
-
-            # Write the header (only of a newly-created file)
-            if new_file:
-                writer.writeheader()
-
-            # Write the dictionary as a row
-            writer.writerow(data_snapshot)
-
-
-
-
-
-##########################################################################################################################
-
 class HistoryBinConcentration(History):
+    """
+    For the management of historical data for bin concentrations
+    """
 
     def __init__(self, bins=None, *args, **kwargs):
+        """
+
+        :param bins:    List of bin addresses for which history is to be kept; use None to mean all
+        :param args:
+        :param kwargs:
+        """
         super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
         self.restrict_bins = bins                               # Bin address, or list of them, or None (meaning ALL bins, with no restriction)
         self.history = Collection(parameter_name="SYSTEM TIME") # To store user-selected snapshots of quantities of interest
@@ -349,8 +297,18 @@ class HistoryBinConcentration(History):
 ##########################################################################################################################
 
 class HistoryReactionRate(History):
+    """
+    For the management of historical reaction-rate data for Uniform Compartments
+    """
 
     def __init__(self, rxns=None, *args, **kwargs):
+        """
+
+        :param rxns:    List of reactions (identified by their index) for which history is to be kept;
+                            use None to mean all
+        :param args:
+        :param kwargs:
+        """
         super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
         self.restrict_rxns = rxns
         self.history = CollectionTabular(parameter_name="SYSTEM TIME")  # To store user-selected snapshots of quantities of interest
@@ -387,3 +345,74 @@ class HistoryReactionRate(History):
         """
         self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
                                   caption=caption)
+
+
+
+
+##########################################################################################################################
+
+class HistoryUniformConcentration(History):
+    """
+    For the management of historical concentration data for Uniform Compartments
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+
+        :param args:
+        :param kwargs:
+        """
+        super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
+        self.history = CollectionTabular(parameter_name="SYSTEM TIME")  # To store user-selected snapshots of quantities of interest
+
+
+
+    def enable_history(self, frequency=1, chem_labels=None) -> None:
+        """
+        Request history capture, with the specified parameters.
+        If history was already enabled, this function can be used to alter its capture parameters.
+
+        :param frequency:
+        :param chem_labels: [OPTIONAL] List of chemicals to include in the history;
+                                if None (default), include them all.
+        :return:            None
+        """
+        self.enable_history_common(frequency=frequency, chem_labels=chem_labels)
+
+
+
+    def save_snapshot(self, system_time, data_snapshot, step_count=None, caption="") -> None:
+        """
+
+        :param system_time:
+        :param data_snapshot:   EXAMPLE: {"A": 1.3, "B": 4.9}
+        :param step_count:
+        :param caption:         [OPTIONAL] String to save alongside this snapshot
+        :return:                None
+        """
+        caption = self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
+                                                      caption=caption)
+
+        if self.log_file is None:
+            return
+
+        # If we get thus far, we have a log file to manage
+        if os.path.exists(self.log_file):
+            new_file = False
+        else:
+            new_file = True
+
+        # Open a CSV file in write mode
+        with open(self.log_file, mode="a", newline="") as fh:
+            fieldnames = ["SYSTEM TIME"] + list(data_snapshot.keys()) + ["caption"]
+            writer = csv.DictWriter(fh, fieldnames = fieldnames)
+
+            data_snapshot["SYSTEM TIME"] = system_time
+            data_snapshot["caption"] = caption
+
+            # Write the header (only of a newly-created file)
+            if new_file:
+                writer.writeheader()
+
+            # Write the dictionary as a row
+            writer.writerow(data_snapshot)

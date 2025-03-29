@@ -15,7 +15,7 @@ class PlotlyHelper:
     For color management, see the separate class "Colors"
 
     TODO: improve consistency in argument names; also across UniformCompartment
-    TODO: rename as "VisualizationHelper" or "GraphicsHelper"
+    TODO: maybe rename to "VisualizationHelper" or "GraphicsHelper"
     """
 
 

@@ -13,6 +13,8 @@ from life123.visualization.plotly_helper import PlotlyHelper
 class ReactionKinetics:
     """
     Static methods about reactions kinetics
+
+    TODO: change @classmethod to @staticmethod , and ditch the cls's
     """
 
 

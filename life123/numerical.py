@@ -9,6 +9,8 @@ import math
 class Numerical:
     """
     Assorted, general numerical methods
+
+    TODO: change @classmethod to @staticmethod , and ditch the cls's
     """
 
 
