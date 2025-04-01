@@ -450,36 +450,51 @@ def test_system_snapshot():
 
 
 def test_set_membranes():
-    bio = BioSim1D(n_bins=10, chem_data=ChemData("A"))
+    bio = BioSim1D(n_bins=10, chem_data=ChemData("A")) # 10 bins, numbered 0 thru 9
 
     with pytest.raises(Exception):
         bio.set_membranes()     # Missing required arg
 
     with pytest.raises(Exception):
-        bio.set_membranes(membrane_pos=123)     # Wrong arg type
+        bio.set_membranes(membranes=123)     # Wrong arg type
 
     with pytest.raises(Exception):
-        bio.set_membranes(membrane_pos=[])      # Empty arg
+        bio.set_membranes(membranes=[])      # Empty arg
 
     with pytest.raises(Exception):
-        bio.set_membranes(membrane_pos=())      # Empty arg
-
-
-    bio.set_membranes(membrane_pos=[10, 4, 5])
-    assert bio.membranes == [4, 5, 10]
-
-    bio.set_membranes(membrane_pos=(5, 10, 4, 0))
-    assert bio.membranes == [0, 4, 5, 10]
+        bio.set_membranes(membranes=[8])    # Element isn't a pair
 
     with pytest.raises(Exception):
-        bio.set_membranes(membrane_pos=[11, 4, 5])      # Arg out of range [0-10]
+        bio.set_membranes(membranes=[(1,2,3)])  # Element isn't a pair
 
     with pytest.raises(Exception):
-        bio.set_membranes(membrane_pos=(5, 10, 4, -1))  # Arg out of range [0-10]
+        bio.set_membranes(membranes=[(1,"x")])  # Element isn't a pair of integers
 
+    with pytest.raises(Exception):
+        bio.set_membranes(membranes=[(8,3)])    # Value not in sorted order
 
-    bio.set_membranes(membrane_pos=[0, 10], presorted=True)
-    assert bio.membranes == [0, 10]
+    with pytest.raises(Exception):
+        bio.set_membranes(membranes=[(-1,3)])   # Bad left value
+
+    with pytest.raises(Exception):
+        bio.set_membranes(membranes=[(2,11)])   # Bad right value
+
+    with pytest.raises(Exception):
+        bio.set_membranes(membranes=[(2,4) , (4,9)])    # Touching
+
+    with pytest.raises(Exception):
+        bio.set_membranes(membranes=[(2,7) , (3,9)])    # Overlapping
+
+    bio.set_membranes(membranes=[(2,4) , (5,9)])
+    assert bio.membranes == [(2,4) , (5,9)]
+    assert bio.permeability is None
+
+    with pytest.raises(Exception):
+        bio.set_membranes(membranes=[(5,9), (2,4)])     # Not in sorted order
+
+    bio.set_membranes(membranes=[(0,3) , (4,6), (8,10)] , permeability=123)
+    assert bio.membranes == [(0,3) , (4,6), (8,10)]
+    assert bio.permeability == 123
 
 
 
@@ -490,11 +505,11 @@ def test_show_membranes():
     result = bio.show_membranes()
     assert result == ""
 
-    bio.set_membranes(membrane_pos=[2, 4])
+    bio.set_membranes(membranes=[2, 4])
     result = bio.show_membranes()
     assert result == "\n_____________________\n|   |   |0.5|   |0.5|\n---------------------"
 
-    bio.set_membranes(membrane_pos=[1, [2, .8], (4, .3)])
+    bio.set_membranes(membranes=[1, [2, .8], (4, .3)])
     result = bio.show_membranes()
     assert result == "\n_____________________\n|   |0.5|0.8|   |0.3|\n---------------------"
 

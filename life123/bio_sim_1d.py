@@ -62,8 +62,32 @@ class BioSim1D:
                                     # to compute the state at the next time step
 
 
-        self.membranes = []     # Sorted list of bin numbers that have a membrane to their LEFT side;
-                                #   it can contains integers between 0 and self.n_bins, both inclusive
+        """
+        HOW MEMBRANES ARE MODELED.
+        
+        Only CLOSED membranes are modeled.
+        Membrane exist at the boundary between System bins.
+        A membrane is an ordered list of adjacent "sides".   The "sides" collectively encompass and encircle 
+        a portion of the System space.  
+        In 1D, the "sides" are points; in 2D, they are adjacent segments, and in 3D, adjacent rectangles.
+        The "sides" cannot lie diagonally (slanted) across the System space; they all must follow 
+        the directions of the axes (grid) of the System.
+        The "sides" cannot intersect, or even touch, with any other "side" of the same membrane or of any other membrane.
+        
+        In 1D, a membrane "side" is a point, identified by the coordinate of bin immediately to the right of it 
+        (or, if at the rightmost edge of the System, by the next integer of the bin to its left.)
+        In 2D, a membrane "side" is a segment, defined by its endpoint.  Each endpoint is identified by the 
+        coordinates of bin immediately to the right and above (in xy-coordinates)
+        In 3D, a membrane "side" is a rectangle, defined by 3 consecutive points.  Each point is identified by the 
+        coordinates of bin immediately past it (in xyz-coordinates)
+        """
+
+        self.membranes = []     # List of (closed) membranes in the system.
+                                # In 1D, a membrane is a pair of points,
+                                # identified by the index of the bin to their RIGHT side,
+                                # in sorted order.
+                                # EXAMPLE:  [ (0, 8) , (17, 31) ]
+                                # All integers must be between 0 and self.n_bins, both inclusive
 
         self.permeability = None
 
@@ -858,14 +882,73 @@ class BioSim1D:
         """
         Return True if membranes are part of the system
 
-        :return:    True if any membrane was defined as being in the system;
-                        False otherwise
+        :return:    True if any membrane was created in the system; False otherwise
         """
         return self.membranes != []
 
 
 
-    def set_membranes(self, membrane_pos: Union[List, Tuple], permeability=None, presorted=False) -> None:
+    def set_membranes(self, membranes: List, permeability=None) -> None:
+        """
+        Define the position and permeability of all membranes in the system.
+
+        Initialize the class variables "membranes" and "permeability"
+
+        IMPORTANT: any previously-set membrane information is lost.
+
+        :param membranes:       List of pairs of bin coordinates.
+                                    All integer values must be between 0 and self.n_bins, both inclusive,
+                                    and be sorted in sorted order.
+                                    Membranes cannot intersect, nor touch!
+                                    EXAMPLE: if the system contains bins 0 thru 30 (i.e 31 bins),
+                                             then a possible list of membranes is  [ (0, 8) , (17, 31) ]
+
+        :param permeability:    [OPTIONAL] TODO: an optional value for each of the affected chemicals
+
+        :return:                None
+        """
+        assert type(membranes) == list, "set_membranes(): argument `membranes` must be a list"
+
+        assert len(membranes) > 0,  "set_membranes(): argument `membranes` cannot be empty"
+
+        # Validate the user data for each membrane
+        prev_right = -1
+        for i, m in enumerate(membranes):
+            # Verify that each element in the list is a pair of values
+            assert type(m) == tuple, \
+                f"set_membranes(): argument `membranes` must be a list of pairs of values. `{m}` is not a pair"
+            assert len(m) == 2, \
+                f"set_membranes(): argument `membranes` must be a list of pairs of values. `{m}` contains {len(m)} values"
+
+            # The following part is specific to 1D
+            left, right = m
+            assert type(left) == int, \
+                f"set_membranes(): argument `membranes` must be a list of pairs of integers.  `{left}` is of type {type(left)}"
+            assert type(right) == int, \
+                f"set_membranes(): argument `membranes` must be a list of pairs of integers.  `{right}` is of type {type(right)}"
+            assert left < right, \
+                f"set_membranes(): the integers in each pair in the argument `membranes` must be in sorted order. `{m}` is not in sorted order"
+            assert (left >= 0) and (left < self.n_bins), \
+                f"set_membranes(): the left side of the membrane must be an integer between 0 and {self.n_bins - 1}, inclusive. The given value was {left}"
+            assert (right <= self.n_bins), \
+                f"set_membranes(): the right side of the membrane must be an integer between 1 and {self.n_bins}, inclusive. The given value was {right}"
+
+            if i > 0:
+                assert left > prev_right, \
+                    f"set_membranes(): membrane endpoint coordinates must be in sorted order, and membranes cannot overlap nor touch. " \
+                    f"The left endpoint in {m} should be > {prev_right}"
+
+            prev_right = right
+
+
+        self.membranes = membranes
+
+        if permeability is not None:
+            self.permeability = permeability
+
+
+
+    def set_membranes_OLD(self, membrane_pos: Union[List, Tuple], permeability=None, presorted=False) -> None:
         """
         Set the presence of all membranes in the system.
 
