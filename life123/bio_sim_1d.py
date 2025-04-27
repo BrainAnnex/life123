@@ -357,7 +357,6 @@ class BioSim1D:
         :return:    A Pandas dataframe: each row is a bin,
                         and each column a chemical species
         """
-        #TODO: make allowance for membranes
         all_chem_names = self.chem_data.get_all_labels()
         if self.system is None:
             return pd.DataFrame(columns = all_chem_names)   # Empty dataframe
@@ -529,15 +528,15 @@ class BioSim1D:
 
 
 
-    def inject_gradient(self, species_name, conc_left = 0., conc_right = 0.) -> None:
+    def inject_gradient(self, chem_name, conc_left = 0., conc_right = 0.) -> None:
         """
         Add to the concentrations of the specified chemical species a linear gradient spanning across all bins,
         with the indicated values at the endpoints of the system.
 
-        :param species_name:    The name of the chemical species whose concentration we're modifying
-        :param conc_left:       The desired amount of concentration to add to the leftmost bin (the start of the gradient)
-        :param conc_right:      The desired amount of concentration to add to the rightmost bin (the end of the gradient)
-        :return:                None
+        :param chem_name:   The name of the chemical species whose concentration we're modifying
+        :param conc_left:   The desired amount of concentration to add to the leftmost bin (the start of the gradient)
+        :param conc_right:  The desired amount of concentration to add to the rightmost bin (the end of the gradient)
+        :return:            None
         """
         assert conc_left >= 0. and conc_right >= 0., \
                     f"BioSim1D.inject_gradient(): the concentration values cannot be negative"
@@ -545,7 +544,7 @@ class BioSim1D:
         assert self.n_bins > 1, \
                     f"BioSim1D.inject_gradient(): minimum system size must be 2 bins"
 
-        species_index = self.chem_data.get_index(species_name)
+        species_index = self.chem_data.get_index(chem_name)
 
         # Create an array of equally-spaced values from conc_left to conc_right
         # Size of array is same as the number of bins in the system
@@ -1790,7 +1789,8 @@ class BioSim1D:
     def visualize_system(self, title_prefix=None, colors=None) -> pgo.Figure:
         """
         Visualize the current state of the system of all the chemicals as a combined line plot,
-        using plotly
+        using plotly.
+        The x-axis is the bin coordinate, and the y-axis are the concentrations of each of the chemicals.
 
         :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
         :param colors:      [OPTIONAL] If None, then use the registered colors (if specified),
@@ -1832,7 +1832,8 @@ class BioSim1D:
     def system_heatmap(self, chem_labels=None, title_prefix ="", row_height=150,
                        colors=None) -> pgo.Figure:
         """
-        Produce a heatmap, and return it as a plotly Figure object
+        Produce a heatmap, and return it as a plotly Figure object.
+        Each chemical gets shown on a row, displaying the concentrations of the 1D system.
 
         :param chem_labels: [OPTIONAL] NOT YET USED.  For now, ALL chemicals get shown
         :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
@@ -1869,6 +1870,7 @@ class BioSim1D:
             chem_labels = self.chem_data.get_all_labels()
 
         conc_matrix = self.system_snapshot().T
+        # Create a "Heatmap" plotly object
         hm = pgo.Heatmap(z=conc_matrix,
                             y=chem_labels,
                             colorscale='gray_r', colorbar={'title': 'Concentration'},

@@ -14,6 +14,7 @@ class PlotlyHelper:
     Static class to assist in the use of the plotly library.
     For color management, see the separate class "Colors"
 
+    TODO: turn the class methods into static methods?
     TODO: improve consistency in argument names; also across UniformCompartment
     TODO: maybe rename to "VisualizationHelper" or "GraphicsHelper"
     """
@@ -446,13 +447,268 @@ class PlotlyHelper:
     #####################################################################################################
 
     @classmethod
+    def heatmap_stack_1D(cls, data_matrix, labels :[str],
+                        title="", data_name="value", entity_name="SAMPLE",
+                        colors=None, color_borders=True,
+                        height=None, grid_vert_spacing=None, colorbar_extend=1.2,
+                        barriers=None, barrier_color="red") -> pgo.Figure:
+        """
+        Prepare and return a Plotly Figure object containing a series of vertically-stacked 1-D heatmaps,
+        each with its own colorbar, with data from a separate variable.
+        All variables share the same number of bins.
+        Optional barriers can be places between bins, consistently across all the heatmaps.
+
+        :param data_matrix:     NumPy 2-D array of floats, of dimension: (n_variables) x (n_bins)
+                                    Each row represents a different variable, and contains its bin data
+        :param labels:          List of names for the variables, in the same order as they appear in argument `data_matrix`.
+                                    The number of labels must match the number of rows of `data_matrix`.
+                                    Labels will be shown to the left of their respective heatmaps,
+                                    and will also appear when the mouse hovers over heatmap cells
+                                    EXAMPLE: ['A', 'B']
+        :param title:           [OPTIONAL] Caption to place at the top of the overall plot
+
+        :param data_name:       [OPTIONAL] The name of the numerical quantity to visualize as heatmaps.
+                                    It will appear in the colorbars, and in the hover boxes.
+                                    EXAMPLES: "value" (default), "Concentration", "Temperature", "Pressure"
+        :param entity_name:     [OPTIONAL] To specify what data_name is referring to.
+                                    This will appear in the hover boxes.
+                                    EXAMPLES: "SAMPLE" (default), "Chemical", "Gas"
+
+        :param height:          [OPTIONAL] Height, in pixels, for the overall plot.  If the requested value is considered
+                                    too small to fit the plot, it will be automatically increased
+                                    (and a message to this effect will be displayed)
+
+        :param grid_vert_spacing: [OPTIONAL] Only applicable if more than 1 heatmap.
+                                    Fractional (relative to overall plot height of 1.0) spacing between grid rows;
+                                    increase to make the overall plot more spacious vertically.
+                                    Note that grid_vert_spacing cannot be greater than (1 / (rows - 1))
+
+        :param colorbar_extend: [OPTIONAL] Multiplicative factor to expand or shrink the colorbar by (Default 1.2)
+
+        :param colors:          [OPTIONAL] List of standard color names : one for each of the variables being included, in order.
+                                    Colors, if specified, are used to draw a segment to the left of each heatmap,
+                                    as well as (if `color_borders` is True) to draw borders around the bins
+                                    EXAMPLE: ['turquoise', 'red']
+        :param color_borders:   [OPTIONAL] Only applicable if `colors` is set.
+                                    Boolean indicating whether to draw colored borders around the bins.  (Default, True)
+
+        :param barriers:        [OPTIONAL] List of integers, in any order,
+                                    specifying the positions of vertical barriers between heatmap bins.
+                                    Use the bin number of the bin to the RIGHT of the desired barrier
+                                    (or 1 + the last bin number if at the far right)
+                                    The values must be between 0 and n_bins, both inclusive, where n_bins is the number of bins.
+                                    EXAMPLE: [0, 12, 3, 15]
+        :param barrier_color:   [OPTIONAL] Only applicable if `barriers` is set.
+                                    Standard color name to use for the barriers (default, 'red')
+
+        :return:                A Plotly "Figure" object
+        """
+        color_scale = "gray_r"
+
+        assert type(labels) == list, \
+            "The argument `labels` must be a list"
+
+
+        if barriers is not None:
+            assert type(barriers) == list, "The argument `barriers`, if specified, must be a list of integers"
+
+        nrows, n_bins = data_matrix.shape
+        #print("nrows: ", nrows)
+        #print("n_bins: ", n_bins)
+
+        assert len(labels) == nrows, \
+            f"The length of the list passed to argument `labels` must be {nrows} (same as number of rows in `data_matrix`)"
+
+
+        # Enforce a minimum plot height based on the number of rows (if too small, besides looking terrible,
+        # if can produce an obscure Plotly error)
+        requested_height = height
+
+        MIN_ROW_HEIGHT = 250
+
+        min_plot_height = max(MIN_ROW_HEIGHT, (nrows+1)*100)
+
+        if height is None:
+            height = 1.5 * min_plot_height       # If not specified by user,
+                                                 # use a somewhat bigger value than the minimum height
+        else:
+            height = max(height, min_plot_height)
+
+        if (requested_height is not None) and (height > requested_height):
+            print(f"Height increased to {height} because the requested value of {requested_height} is insufficient to fit the plot")
+
+
+        if (nrows > 1) and (grid_vert_spacing is None):
+            grid_vert_spacing = .135 / (nrows - 1)              # Empirical choice for "compact" but not "squished vertically"
+            #print("grid_vert_spacing: ", grid_vert_spacing)
+
+        if nrows == 1:
+            row_height = height
+        else:
+            row_height = height * ( 1 - grid_vert_spacing * (nrows - 1) ) / nrows
+
+        #print("Height of each graphic row: ", row_height)
+
+
+        delta_border = 0.5          # This value affects the vertical extension
+                                    # of the color-coded edges to add to the heatmap cells
+        if colors is not None:
+            # For smaller plots, it esthetically looks better to make these boxes a tad smaller
+            if row_height <= 200:
+                delta_border = 0.485
+            elif row_height <= 300:
+                delta_border = 0.49
+            elif row_height <= 750:
+                delta_border = 0.495
+
+
+        delta_barrier = 0.5         # This value affects the vertical extension
+                                    # of the color-coded edges to add to the heatmap cells
+        if barriers is not None:
+            # For smaller plots, it esthetically looks better to make these edges a tad smaller
+            if row_height <= 200:
+                delta_barrier = 0.48
+            elif row_height <= 250:
+                delta_barrier = 0.485
+            elif row_height <= 750:
+                delta_barrier = 0.495
+
+
+        # Prepare the blank grid for the subplots
+        # Note that the first subplot (row=1, col=1) appears at the top of the stack
+        # No titles are used for the subplots, in the interest of compactness, and to avoid intrusion into other subplots
+        fig = sp.make_subplots(rows=nrows, cols=1,
+                               horizontal_spacing=0, vertical_spacing=grid_vert_spacing)
+
+        # Show less cell text if there's a large number of bins
+        if n_bins <= 5:
+            texttemplate = "%{z:.3g}"
+        elif n_bins <= 10:
+            texttemplate = "%{z:.2g}"
+        elif n_bins <= 20:
+            texttemplate = "%{z:.1g}"
+        else:
+            texttemplate = None
+
+        for i, hm_label in enumerate(labels):
+            row = i + 1   # row values start at 1
+
+            # Get the subplot domain in figure coordinates
+            layout_XAxis, layout_YAxis = fig.get_subplot(row=row, col=1)
+            #x_domain = layout_XAxis.domain   # EXAMPLE: [0.55, 1.0]
+            y_domain = layout_YAxis.domain    # EXAMPLE: [0.0, 0.425]
+            domain_height = y_domain[1] - y_domain[0]      # vertical height of subplot row (as a fraction of all plot)
+            #print("domain_height: ", domain_height)       # Should be same as (row_height / height)
+            #print("domain_height double check: ", row_height / height)
+
+
+            # Compute colorbar position to the right of the subplot
+            cb_y = (y_domain[0] + y_domain[1]) / 2      # Center vertically
+            cb_len = domain_height * colorbar_extend    # Empirically, a value of about 1.2 for colorbar_extend
+                                                        #   makes the colorbars tall, but unlikely to run into those of other rows
+
+
+            # Prepare the plotly Heatmap object
+            data_row = data_matrix[i]          # A 1-D array
+            hm_matrix = np.array([data_row])   # Turn into a 1-row matrix
+
+            hovertemplate = f"{data_name}: %{{z}}<br>Bin #: %{{x}}<br>{entity_name}: %{{y}}<extra>{hm_label}</extra>"
+
+            hm = pgo.Heatmap(z=hm_matrix,
+                             y = [hm_label],
+                             xgap=2, ygap=2,
+                             hovertemplate=hovertemplate,
+                             texttemplate = texttemplate,
+                             colorscale=color_scale,
+                             colorbar=dict(
+                                            title=data_name,
+                                            y=cb_y,
+                                            len=cb_len
+                                        )
+                            )
+
+            # Add the newly-created Heatmap object to the grid of subplots
+            fig.add_trace(hm, row=row, col=1)   # row and col values start at 1
+
+            if row == nrows:
+                # Add x-axis title for this subplot (identified by row and col numbers)
+                fig.update_xaxes(
+                                    title_text="Bin number",
+                                    row=row,
+                                    col=1
+                                )
+
+
+            if colors:
+                # Add color elements to this heatmap row, using plotly "shapes" elements
+                row_color = colors[i]
+
+
+                # Add annotations for row color-coding, as a vertical bar to the left of the individual heatmap
+                fig.add_shape(
+                    type="rect",
+                    x0 = -0.7,      x1 = -0.6,       # Slightly outside the heatmap
+                    #y0 = i - delta_border, y1 = i + delta_border ,
+                    y0 = - delta_border, y1 = delta_border ,
+                    xref="x", yref="y",
+                    line=dict(width=0),
+                    fillcolor=row_color,
+                    row=row, col=1
+                )
+
+
+                if color_borders:
+                    # Add color-coded edges around all heatmap cells
+                    for j in range(n_bins):
+                        fig.add_shape(
+                            type="rect",
+                            x0=j - 0.5,   x1=j + 0.5,                  # Reduce x0 to extend to left; increase x1 to extend to right
+                            #y0=i - delta_border, y1=i + delta_border,  # Reduce y0 to extend to bottom; increase y1 to extend to top
+                            y0 = - delta_border, y1 = delta_border,
+                            xref="x", yref="y",
+                            line=dict(color=row_color, width=3),        # Edge color and width (note there's NO fill color)
+                            row=row, col=1
+                        )
+
+
+            if barriers is not None:
+                # Add barriers (if applicable): red separator bars to the right of the specified cells, using plotly "shapes"
+                # Barriers are painted last, to appear at the top
+                for separator_bin in barriers:   # separator_bin is the index of the bin to the RIGHT of the barrier
+                    assert 0 <= separator_bin <= n_bins, \
+                        f"All elements of the list passed to argument `barriers` must be integers between 0 and {n_bins}, inclusive.  " \
+                        f"{separator_bin} falls outside of this range"
+
+                    m = separator_bin-1
+                    fig.add_shape(
+                            type="rect",
+                            x0 = m + 0.43,  x1 = m + 0.57,     # Reduce x0 to extend bar's left edge to left;
+                                                               #    increase x1 to extend bar's right edge to right
+                            y0 = -delta_barrier, y1 = delta_barrier,    # Reduce y0 to extend to bottom; increase y1 to extend to top
+                            xref="x", yref="y",
+                            line = dict(width=0),
+                            fillcolor = barrier_color,
+                            row=row, col=1
+                        )
+
+            # END of addition of individual heatmaps to the grid of subplots
+
+
+        fig.update_layout(title=title,
+                          height=height)
+
+        return fig
+
+
+
+    @classmethod
     def heatmap_grid(cls, array_list :list, labels :[str], title ="Grid of Heatmaps",
                      height=None, colors=None, z_name="z", max_n_cols=4, cartesian=True) -> pgo.Figure:
         """
         Prepare and return a Plotly Figure object containing a grid of heatmaps (up to a max of 12)
 
-        :param array_list:  List of 2-D Numpy arrays, up to a maximum of 12,
-                                containing the data for each of the heatmaps
+        :param array_list:  List of 2-D Numpy arrays, up to a maximum of 12;
+                                each element contains the data for one of the heatmaps
         :param labels:      List of labels for each of the heatmaps; its length must match that of the data
         :param title:       [OPTIONAL] Overall title to show at the top of the grid of heatmaps
         :param height:      [OPTIONAL] Height of the overall grid of heatmaps
@@ -483,6 +739,7 @@ class PlotlyHelper:
         grid_hor_spacing = 0.15     # TODO: would probably be good to increase this a tad
         grid_vert_spacing = 0.15 if nrows < 3 else 0.12  # A little more spacious vertically if few rows
 
+        # Pick esthetically-pleasing values for x0 and x1, used for horizontal positioning of the subplots
         if ncols == 1:
             x0=1.0
             x1=0    # N/A in this case
@@ -498,6 +755,8 @@ class PlotlyHelper:
         else:
             raise Exception(f"Cannot handle this {ncols} columns")
 
+        # Pick esthetically-pleasing values for ln (Length of the colorbars) and
+        # y0, y1, and recommended_height (used for vertical positioning of the subplots)
         if nrows == 1:
             ln=1.2
             y0=0.505
@@ -545,8 +804,8 @@ class PlotlyHelper:
                     [1.0, color_name],      # Full color
                 ]
 
-            # Create the Heatmap object
-            hovertemplate=f"{z_name}: %{{z}}<br>x bin: %{{x}}<br>y bin: %{{y}}<extra>{hm_label}</extra>"
+            # Create the Heatmap plotly object
+            hovertemplate = f"{z_name}: %{{z}}<br>x bin: %{{x}}<br>y bin: %{{y}}<extra>{hm_label}</extra>"
             # EXAMPLE of hovertemplate: "Conc.: %{z}<br>x bin: %{x}<br>y bin: %{y}<extra>Enzyme X</extra>"
 
             hm = pgo.Heatmap(z=array_list[i],
@@ -562,17 +821,18 @@ class PlotlyHelper:
                                     )
                              )
 
+            # Add the newly-created Heatmap to the grid of subplots
             fig.add_trace(hm, row=row, col=col)   # row and col values start at 1
 
-            # Add x-axis and y-axis titles for this subplot
+            # Add x-axis and y-axis titles for this subplot (identified by row and col numbers)
             fig.update_xaxes(
-                                title_text=f"x bin",
+                                title_text="x bin",
                                 row=row,
                                 col=col
                             )
 
             fig.update_yaxes(
-                                title_text=f"y bin",
+                                title_text="y bin",
                                 row=row,
                                 col=col
                             )
@@ -590,8 +850,10 @@ class PlotlyHelper:
                 col = 1
                 row += 1
 
+        # END of addition of individual heatmaps to the grid of subplots
 
-        # Update layout
+
+        # Update layout, with the title, and height adjustment
         fig.update_layout(
             title=title,
             height=height,

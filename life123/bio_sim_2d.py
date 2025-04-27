@@ -1037,6 +1037,7 @@ class BioSim2D:
     def system_heatmaps(self, chem_labels=None, title_prefix = "", height=None, colors=None, cartesian=True) -> pgo.Figure:
         """
         Prepare and return a Plotly Figure object containing a grid of heatmaps (up to a max of 12)
+        Each heatmap contains the 2D concentrations of one of the chemicals of interest.
 
         :param chem_labels: [OPTIONAL] List of Labels to identify the chemicals of interest;
                                 if not specified, it means ALL chemicals.
@@ -1059,9 +1060,9 @@ class BioSim2D:
         # Note: no need to reverse the rows in the dataframes; the heatmaps will take care of that, if requested
 
         if (n_chem := len(chem_labels)) == 1:
-            title = f"System state at time t={self.system_time:.5g} for `{chem_labels[0]}`"
+            title = f"System state at time t={self.system_time:.5g} for `{chem_labels[0]}`"     # Single chemical
         else:
-            title = f"System state at time t={self.system_time:.5g} for {n_chem} chemicals:"
+            title = f"System state at time t={self.system_time:.5g} for {n_chem} chemicals:"    # Multiple chemicals
 
         if title_prefix:
             title = f"{title_prefix}.  {title}"
