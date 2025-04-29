@@ -448,10 +448,10 @@ class PlotlyHelper:
 
     @classmethod
     def heatmap_stack_1D(cls, data_matrix, labels :[str],
-                        title="", data_name="value", entity_name="SAMPLE",
-                        colors=None, color_borders=True,
-                        height=None, grid_vert_spacing=None, colorbar_extend=1.2,
-                        barriers=None, barrier_color="red") -> pgo.Figure:
+                         title="", data_name="value", entity_name="SAMPLE",
+                         colors=None, color_borders=False, monochromatic=False,
+                         height=None, grid_vert_spacing=None, colorbar_extend=1.2,
+                         barriers=None, barrier_color="brown") -> pgo.Figure:
         """
         Prepare and return a Plotly Figure object containing a series of vertically-stacked 1-D heatmaps,
         each with its own colorbar, with data from a separate variable.
@@ -490,7 +490,11 @@ class PlotlyHelper:
                                     as well as (if `color_borders` is True) to draw borders around the bins
                                     EXAMPLE: ['turquoise', 'red']
         :param color_borders:   [OPTIONAL] Only applicable if `colors` is set.
-                                    Boolean indicating whether to draw colored borders around the bins.  (Default, True)
+                                    Boolean indicating whether to draw colored borders around the bins.  (Default, False)
+        :param monochromatic:     [OPTIONAL] Only applicable if `colors` is set.
+                                     Boolean (default False) indicating whether all the heatmap values should use a gray scale
+                                     (smallest value = black; highest = white) rather than have each row use
+                                     a scale based on its corresponding value in argument `colors`
 
         :param barriers:        [OPTIONAL] List of integers, in any order,
                                     specifying the positions of vertical barriers between heatmap bins.
@@ -499,12 +503,10 @@ class PlotlyHelper:
                                     The values must be between 0 and n_bins, both inclusive, where n_bins is the number of bins.
                                     EXAMPLE: [0, 12, 3, 15]
         :param barrier_color:   [OPTIONAL] Only applicable if `barriers` is set.
-                                    Standard color name to use for the barriers (default, 'red')
+                                    Standard color name to use for the barriers (default, 'brown')
 
         :return:                A Plotly "Figure" object
         """
-        color_scale = "gray_r"
-
         assert type(labels) == list, \
             "The argument `labels` must be a list"
 
@@ -590,7 +592,7 @@ class PlotlyHelper:
         else:
             texttemplate = None
 
-        for i, hm_label in enumerate(labels):
+        for i, hm_label in enumerate(labels):   # For each row of stacked heatmaps (starting at the top)
             row = i + 1   # row values start at 1
 
             # Get the subplot domain in figure coordinates
@@ -613,6 +615,20 @@ class PlotlyHelper:
             hm_matrix = np.array([data_row])   # Turn into a 1-row matrix
 
             hovertemplate = f"{data_name}: %{{z}}<br>Bin #: %{{x}}<br>{entity_name}: %{{y}}<extra>{hm_label}</extra>"
+
+            if colors is not None:
+                row_color = colors[i]   # Color assigned to this row of stacked heatmaps
+            else:
+                row_color = None
+
+            if monochromatic or (row_color is None):
+                color_scale = "gray_r"
+            else:
+                lighter_color = "white"
+                color_scale = [
+                    [0.0, lighter_color],   # Lighter tint (possibly white)
+                    [1.0, row_color],       # Full color
+                ]
 
             hm = pgo.Heatmap(z=hm_matrix,
                              y = [hm_label],
@@ -639,10 +655,8 @@ class PlotlyHelper:
                                 )
 
 
-            if colors:
+            if row_color is not None:
                 # Add color elements to this heatmap row, using plotly "shapes" elements
-                row_color = colors[i]
-
 
                 # Add annotations for row color-coding, as a vertical bar to the left of the individual heatmap
                 fig.add_shape(
@@ -656,7 +670,6 @@ class PlotlyHelper:
                     row=row, col=1
                 )
 
-
                 if color_borders:
                     # Add color-coded edges around all heatmap cells
                     for j in range(n_bins):
@@ -669,6 +682,7 @@ class PlotlyHelper:
                             line=dict(color=row_color, width=3),        # Edge color and width (note there's NO fill color)
                             row=row, col=1
                         )
+            # END "if row_color is not None"
 
 
             if barriers is not None:
@@ -713,7 +727,8 @@ class PlotlyHelper:
         :param title:       [OPTIONAL] Overall title to show at the top of the grid of heatmaps
         :param height:      [OPTIONAL] Height of the overall grid of heatmaps
         :param colors:      [OPTIONAL] List of CSS color names for each of the heatmaps.
-                                If provided, its length must match that of the data; otherwise, default colors are used
+                                If provided, its length must match that of the data;
+                                if not provided, default colors are used
         :param z_name:      [OPTIONAL] Name of the quantity being visualized in the heatmaps; e.g. "Conc." or "Temp."
         :param max_n_cols:  [OPTIONAL] The maximum number of columns to use in the grip (at most 4)
         :param cartesian:   If True (default) a Cartesian grid coordinate is used, with y-bin numbers increasing up
@@ -729,7 +744,7 @@ class PlotlyHelper:
         if colors is None:
             colors = Colors.assign_default_heatmap_colors(n_cells)
         else:
-            assert n_cells == len(colors), "The number of labels and colors must match"
+            assert n_cells == len(colors), "heatmap_grid(): The number of labels and colors must match"
 
 
         # Create subplots for all the individual heatmaps
