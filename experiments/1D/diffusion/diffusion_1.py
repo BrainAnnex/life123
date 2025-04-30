@@ -24,7 +24,7 @@
 # ### TAGS :  "diffusion 1D", "quick-start"
 
 # %%
-LAST_REVISED = "Jan. 31, 2025"
+LAST_REVISED = "Apr. 28, 2025"
 LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
@@ -64,7 +64,10 @@ bio.system_snapshot()
 bio.visualize_system(title_prefix="Diffusion")   # Line curve view
 
 # %%
-bio.system_heatmap(title_prefix="Diffusion")
+bio.system
+
+# %%
+bio.system_heatmaps(title_prefix="Diffusion")
 
 # %%
 
@@ -76,7 +79,7 @@ bio.system_heatmap(title_prefix="Diffusion")
 # %%
 # Request to save the concentration history at the bin with the initial concentration injection, 
 # and the bins at the ends of the system
-bio.enable_history(bins=[0, 2, 9], frequency=4, take_snapshot=True)    
+bio.enable_history(bins=[0, 2, 9], frequency=4, take_snapshot=True)
 
 # %%
 
@@ -98,7 +101,7 @@ bio.describe_state(concise=True)
 bio.visualize_system(title_prefix="Diffusion")   # Line curve view
 
 # %%
-bio.system_heatmap(title_prefix="Diffusion")
+bio.system_heatmaps(title_prefix="Diffusion")
 
 # %%
 
@@ -118,7 +121,7 @@ for i in range(50):
         fig.show()
         
         # Heatmap view
-        fig = bio.system_heatmap()
+        fig = bio.system_heatmaps()
         fig.show()
 
 

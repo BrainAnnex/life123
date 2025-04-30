@@ -1829,8 +1829,47 @@ class BioSim1D:
 
 
 
-    def system_heatmap(self, chem_labels=None, title_prefix ="", row_height=150,
-                       colors=None) -> pgo.Figure:
+    def system_heatmaps(self, chem_labels=None, colors=None,
+                        title_prefix ="", membranes=None) -> pgo.Figure:
+        """
+
+        :param chem_labels: [OPTIONAL] NOT YET USED.  For now, ALL chemicals get shown
+        :param colors:      [OPTIONAL] If None, then use the registered colors (if specified),
+                                or the hardwired defaults as a last resort
+                                (but only if more than 1 chemical; if only 1, go monochromatic)
+        :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
+        :param membranes:
+
+        :return:            A Plotly "Figure" object containing a stack of Heatmaps
+        """
+        title = f"System snapshot at time t={self.system_time:.8g}"
+        if title_prefix:
+            title = title_prefix + ".  " + title
+
+
+        if chem_labels is None:
+            chem_labels = self.chem_data.get_all_labels()
+
+
+        if colors is None:
+            # Attempt to make use of the previously-registered colors, if available
+            colors = self.chem_data.get_registered_colors(chem_labels)
+            if (colors is None) and len(chem_labels) > 1:
+                # Fall back to default colors (but don't bother if just 1 chemical)
+                colors = Colors.assign_default_colors(len(chem_labels))
+
+
+        conc_matrix = self.system
+
+        return PlotlyHelper.heatmap_stack_1D(data_matrix=conc_matrix, labels=chem_labels,
+                                             title=title, data_name="Conc.", entity_name="CHEM",
+                                             colors=colors,
+                                             barriers=membranes)
+
+
+
+    def system_heatmap_OLD(self, chem_labels=None, title_prefix ="", row_height=150,
+                           colors=None) -> pgo.Figure:
         """
         Produce a heatmap, and return it as a plotly Figure object.
         Each chemical gets shown on a row, displaying the concentrations of the 1D system.

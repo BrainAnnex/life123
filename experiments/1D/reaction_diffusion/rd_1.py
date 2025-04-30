@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -28,8 +28,8 @@
 # ### TAGS :  "reactions 1D", "diffusion 1D", "quick-start"
 
 # %%
-LAST_REVISED = "Jan. 24, 2024"
-LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
+LAST_REVISED = "Apr. 29, 2025"
+LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -79,7 +79,7 @@ bio.show_system_snapshot()     # A more streamlined alternate view
 bio.visualize_system(title_prefix="Reaction-Diffusion A + B <-> C")   # Line curve view
 
 # %%
-bio.system_heatmap(title_prefix="Reaction-Diffusion A + B <-> C")
+bio.system_heatmaps(title_prefix="Reaction-Diffusion A + B <-> C")
 
 # %%
 
@@ -99,7 +99,7 @@ bio.enable_history(bins=[0, 6, 3], frequency=2, take_snapshot=True)     # Taking
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ### <a name="sec_2_first_step"></a>First step : advance to time t=0.002
 
 # %%
@@ -117,7 +117,7 @@ bio.show_system_snapshot()
 bio.visualize_system(title_prefix="Reaction-Diffusion A + B <-> C")   # Line curve view
 
 # %%
-bio.system_heatmap(title_prefix="Reaction-Diffusion A + B <-> C")
+bio.system_heatmaps(title_prefix="Reaction-Diffusion A + B <-> C")
 
 # %%
 
@@ -142,7 +142,7 @@ bio.visualize_system(title_prefix="Reaction-Diffusion A + B <-> C")   # Line cur
 # They're finally beginning to overlap in the middle bins!
 
 # %%
-bio.system_heatmap(title_prefix="Reaction-Diffusion A + B <-> C")
+bio.system_heatmaps(title_prefix="Reaction-Diffusion A + B <-> C")
 
 # %%
 
@@ -169,7 +169,7 @@ bio.visualize_system(title_prefix="Reaction-Diffusion A + B <-> C")   # Line cur
 # Notice the continue symmetry about the center of the system
 
 # %%
-bio.system_heatmap(title_prefix="Reaction-Diffusion A + B <-> C")
+bio.system_heatmaps(title_prefix="Reaction-Diffusion A + B <-> C")
 
 # %%
 
@@ -190,7 +190,7 @@ bio.show_system_snapshot()
 bio.visualize_system(title_prefix="Reaction-Diffusion A + B <-> C")   # Line curve view
 
 # %%
-bio.system_heatmap(title_prefix="Reaction-Diffusion A + B <-> C")
+bio.system_heatmaps(title_prefix="Reaction-Diffusion A + B <-> C")
 
 # %%
 
@@ -211,7 +211,7 @@ bio.show_system_snapshot()
 bio.visualize_system(title_prefix="Reaction-Diffusion A + B <-> C")   # Line curve view
 
 # %%
-bio.system_heatmap(title_prefix="Reaction-Diffusion A + B <-> C")
+bio.system_heatmaps(title_prefix="Reaction-Diffusion A + B <-> C")
 
 # %%
 
@@ -232,7 +232,7 @@ bio.show_system_snapshot()
 bio.visualize_system(title_prefix="Reaction-Diffusion A + B <-> C")   # Line curve view
 
 # %%
-bio.system_heatmap(title_prefix="Reaction-Diffusion A + B <-> C")
+bio.system_heatmaps(title_prefix="Reaction-Diffusion A + B <-> C")
 
 # %%
 
@@ -253,13 +253,13 @@ bio.show_system_snapshot()
 bio.visualize_system(title_prefix="Reaction-Diffusion A + B <-> C")   # Line curve view
 
 # %%
-bio.system_heatmap(title_prefix="Reaction-Diffusion A + B <-> C")
+bio.system_heatmaps(title_prefix="Reaction-Diffusion A + B <-> C")
 
 # %%
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ## Equilibrium in both diffusion and reaction  
 # All bins now have essentially uniform concentration, for each of the chemicals
 
@@ -272,7 +272,7 @@ bio.reaction_in_equilibrium(bin_address=0, rxn_index=0, explain=True)  # Choice 
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # **Mass conservation**: The initial "**40** units of concentration" (20 from `A` and 20 from `B`) can be located by adding up the final concentrations in the 7 bins.  
 # Notice that the concentration of `C` needs to be multiplied by 2, because the production of each molecule of `C` consumed 2 of the original molecules (one `A` and one `B`)
 
@@ -283,7 +283,7 @@ bio.reaction_in_equilibrium(bin_address=0, rxn_index=0, explain=True)  # Choice 
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # # Plots of changes of concentration with time
 
 # %%

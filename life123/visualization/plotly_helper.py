@@ -505,7 +505,7 @@ class PlotlyHelper:
         :param barrier_color:   [OPTIONAL] Only applicable if `barriers` is set.
                                     Standard color name to use for the barriers (default, 'brown')
 
-        :return:                A Plotly "Figure" object
+        :return:                A Plotly "Figure" object containing a stack of Heatmaps
         """
         assert type(labels) == list, \
             "The argument `labels` must be a list"
