@@ -1,4 +1,4 @@
-from typing import Union, List, NamedTuple, Set
+from typing import Union, List, NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -51,19 +51,19 @@ class ChemCore:
 
 
 
-    def assert_valid_species_index(self, species_index: int) -> None:
+    def assert_valid_chem_index(self, chem_index: int) -> None:
         """
         Raise an Exception if the specified species_index (meant to identify a chemical) isn't valid
 
-        :param species_index:   An integer that indexes the chemical of interest (numbering starts at 0)
+        :param chem_index:   An integer that indexes the chemical of interest (numbering starts at 0)
         :return:                None
         """
         n_species = self.number_of_chemicals()
-        assert type(species_index) == int,  f"The specified species index ({species_index}) must be an integer: " \
-                                            f"instead, it has type {type(species_index)}"
+        assert type(chem_index) == int, f"The specified chemical index ({chem_index}) must be an integer: " \
+                                            f"instead, it has type {type(chem_index)}"
 
-        assert 0 <= species_index < n_species, \
-            f"The specified species index ({species_index}) is not in the expected range [0 - {n_species - 1}], inclusive.  " \
+        assert 0 <= chem_index < n_species, \
+            f"The specified chemical index ({chem_index}) is not in the expected range [0 - {n_species - 1}], inclusive.  " \
             f"I.e., there is no chemical species assigned to this index"
 
 
@@ -117,7 +117,7 @@ class ChemCore:
         :return:                The name of the species with the given index.
                                     If missing or blank, an Exception is raised
         """
-        self.assert_valid_species_index(species_index)
+        self.assert_valid_chem_index(species_index)
 
         name = self.chemical_data[species_index].get("label")    # If "label" is not present, None will be returned
 

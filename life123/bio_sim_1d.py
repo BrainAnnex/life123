@@ -128,7 +128,7 @@ class BioSim1D:
                                             #   whenever requested by the user.
                                             #   Note that we're using the "tabular" format - friendly to Pandas
 
-        self.conc_history = HistoryBinConcentration(active=False)
+        self.conc_history = HistoryBinConcentration(active=False)   # Note: this is the newer history-keeping approach
 
         self.system_time = None             # Global time of the system, from initialization on
 
@@ -341,7 +341,7 @@ class BioSim1D:
             chem_index = self.chem_data.get_index(chem_label)
         else:
             assert chem_index is not None, "system_snapshot_arr(): must pass one of the arguments `chem_label` or `chem_index`"
-            self.chem_data.assert_valid_species_index(chem_index)
+            self.chem_data.assert_valid_chem_index(chem_index)
 
         arr = self.system[chem_index]    # A 1-D Numpy array with the chemical data along bin coordinates
 
@@ -376,24 +376,24 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    def set_uniform_concentration(self, conc: float, species_index=None, species_name=None) -> None:
+    def set_uniform_concentration(self, conc: float, chem_index=None, chem_label=None) -> None:
         """
-        Assign the given concentration to all the bins of the specified species (identified by its index or name.)
+        Assign the given concentration to all the bins of the specified chemical (identified by its index or name.)
         Any previous values get over-written
 
-        :param conc:            The desired value of chemical concentration for the above species
-        :param species_index:   Zero-based index to identify a specific chemical species
-        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
-        :return:                None
+        :param conc:        The desired value of chemical concentration for the above species
+        :param chem_index:  [OPTIONAL] Zero-based index to identify a specific chemical
+        :param chem_label:  [OPTIONAL] If provided, it over-rides the value for chem_index
+        :return:            None
         """
-        if species_name is not None:
-            species_index = self.chem_data.get_index(species_name)
+        if chem_label is not None:
+            chem_index = self.chem_data.get_index(chem_label)
         else:
-            self.chem_data.assert_valid_species_index(species_index)
+            self.chem_data.assert_valid_chem_index(chem_index)
 
         assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
 
-        self.system[species_index] = np.full(self.n_bins, conc, dtype=float)
+        self.system[chem_index] = np.full(self.n_bins, conc, dtype=float)
 
 
 
@@ -410,7 +410,7 @@ class BioSim1D:
             f"set_all_uniform_concentrations(): the argument must be a list or tuple of size {self.chem_data.number_of_chemicals()}"
 
         for i, conc in enumerate(conc_list):
-            self.set_uniform_concentration(species_index=i, conc=conc)
+            self.set_uniform_concentration(chem_index=i, conc=conc)
 
         if snapshot:
             self.capture_snapshot(caption="Set concentration")  # Save this operation in the history (if enabled)
@@ -418,7 +418,7 @@ class BioSim1D:
 
 
 
-    def set_bin_conc(self, bin_address: int, conc: float, species_index=None, species_name=None,
+    def set_bin_conc(self, bin_address: int, conc: float, chem_index=None, chem_label=None,
                      across_membrane=False, both_sides=False) -> None:
         """
         Assign the requested concentration value to the given bin, for the specified chemical species.
@@ -426,8 +426,8 @@ class BioSim1D:
 
         :param bin_address:     The zero-based bin number of the desired compartment
         :param conc:            The desired concentration value to assign to the specified location
-        :param species_index:   Zero-based index to identify a specific chemical species
-        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
+        :param chem_index:      Zero-based index to identify a specific chemical species
+        :param chem_label:      [OPTIONAL] If provided, it over-rides the value for chem_index
         :param across_membrane: It True, consider the "other side" of the bin, i.e. the portion across the membrane
         :param both_sides:      If True, set the "regular" bin and the "other side" as well
         :return:                None
@@ -438,40 +438,40 @@ class BioSim1D:
             f"set_bin_conc(): the concentration must be a positive number or zero (the requested value was {conc})"
 
 
-        if species_name is not None:
-            species_index = self.chem_data.get_index(species_name)
+        if chem_label is not None:
+            chem_index = self.chem_data.get_index(chem_label)
         else:
-            self.chem_data.assert_valid_species_index(species_index)
+            self.chem_data.assert_valid_chem_index(chem_index)
 
 
         if across_membrane or both_sides:
             assert self.system_B is not None, \
                 "set_bin_conc(): the `other_side` option cannot be used unless membranes are first set"
-            self.system_B[species_index, bin_address] = conc
+            self.system_B[chem_index, bin_address] = conc
 
         if both_sides or (not across_membrane):
-            self.system[species_index, bin_address] = conc
+            self.system[chem_index, bin_address] = conc
 
 
 
-    def set_species_conc(self, conc_list: Union[list, tuple, np.ndarray], species_index=None, species_name=None) -> None:
+    def set_species_conc(self, conc_list: Union[list, tuple, np.ndarray], chem_index=None, chem_label=None) -> None:
         """
         Assign the requested list of concentration values to all the bins, in bin order, for the single specified species.
 
-        :param conc_list:       A list, tuple or Numpy array with the desired concentration values
-                                    to assign to all the bins.
-                                    The dimensions must match the system's dimensions.
-        :param species_index:   Zero-based index to identify a specific chemical species
-        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
-        :return:                None
+        :param conc_list:   A list, tuple or Numpy array with the desired concentration values
+                                to assign to all the bins.
+                                The dimensions must match the system's dimensions.
+        :param chem_index:  Zero-based index to identify a specific chemical species
+        :param chem_label:  (OPTIONAL) If provided, it over-rides the value for chem_index
+        :return:            None
         """
-        if species_name is not None:
+        if chem_label is not None:
             # If the chemical is being identified by name, look up its index
-            species_index = self.chem_data.get_index(species_name)
-        elif species_index is None:
-            raise Exception("BioSim1D.set_species_conc(): must provide a `species_name` or `species_index`")
+            chem_index = self.chem_data.get_index(chem_label)
+        elif chem_index is None:
+            raise Exception("BioSim1D.set_species_conc(): must provide a `chem_label` or `chem_index`")
         else:
-            self.chem_data.assert_valid_species_index(species_index)
+            self.chem_data.assert_valid_chem_index(chem_index)
 
         assert (type(conc_list) == list) or (type(conc_list) == tuple) or (type(conc_list) == np.ndarray), \
             f"BioSim1D.set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
@@ -486,7 +486,7 @@ class BioSim1D:
             f"BioSim1D.set_species_conc(): concentrations cannot be negative (values like {min(conc_list)} aren't permissible)"
 
         # Update the system state
-        self.system[species_index] = conc_list
+        self.system[chem_index] = conc_list
 
 
 
@@ -494,11 +494,11 @@ class BioSim1D:
         """
         Add the requested concentration to the cell with the given address, for the specified chem species
 
-        :param bin_address:     The zero-based bin number of the desired cell
-        :param chem_label:
-        :param chem_index:      Zero-based index to identify a specific chemical species
-        :param delta_conc:      The concentration to add to the specified location
-        :param zero_clip:       If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
+        :param bin_address: The zero-based bin number of the desired cell
+        :param chem_label:  String to identify the chemical of interest
+        :param chem_index:  Alternate way to identify the chemical of interest, with a zero-based index
+        :param delta_conc:  The concentration to add to the specified location
+        :param zero_clip:   If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
                                 otherwise, an Exception will be raised
         :return:                None
         """
@@ -512,7 +512,7 @@ class BioSim1D:
             chem_index = self.chem_data.get_index(chem_label)
         else:
             assert chem_index is not None, "inject_conc_to_bin(): must pass one of the arguments `chem_label` or `chem_index`"
-            self.chem_data.assert_valid_species_index(chem_index)
+            self.chem_data.assert_valid_chem_index(chem_index)
 
 
         if (self.system[chem_index, bin_address] + delta_conc) < 0. :
@@ -528,12 +528,12 @@ class BioSim1D:
 
 
 
-    def inject_gradient(self, chem_name, conc_left = 0., conc_right = 0.) -> None:
+    def inject_gradient(self, chem_label, conc_left = 0., conc_right = 0.) -> None:
         """
         Add to the concentrations of the specified chemical species a linear gradient spanning across all bins,
         with the indicated values at the endpoints of the system.
 
-        :param chem_name:   The name of the chemical species whose concentration we're modifying
+        :param chem_label:  The name of the chemical whose concentration we're modifying
         :param conc_left:   The desired amount of concentration to add to the leftmost bin (the start of the gradient)
         :param conc_right:  The desired amount of concentration to add to the rightmost bin (the end of the gradient)
         :return:            None
@@ -544,7 +544,7 @@ class BioSim1D:
         assert self.n_bins > 1, \
                     f"BioSim1D.inject_gradient(): minimum system size must be 2 bins"
 
-        species_index = self.chem_data.get_index(chem_name)
+        species_index = self.chem_data.get_index(chem_label)
 
         # Create an array of equally-spaced values from conc_left to conc_right
         # Size of array is same as the number of bins in the system
@@ -556,7 +556,7 @@ class BioSim1D:
 
 
 
-    def inject_sine_conc(self, species_name, frequency, amplitude, bias=0, phase=0, zero_clip = False) -> None:
+    def inject_sine_conc(self, chem_label, number_cycles, amplitude, bias=0, phase=0, zero_clip = False) -> None:
         """
         Add to the concentrations of the specified chemical species a sinusoidal signal across all bins.
 
@@ -565,19 +565,19 @@ class BioSim1D:
 
         In Mathematica:  Plot[Sin[B x - C] /. {B -> 2 Pi, C -> 0} , {x, 0, 1}, GridLines -> Automatic]
 
-        :param species_name:    The name of the chemical species whose concentration we're modifying
-        :param frequency:       Number of waves along the length of the system
+        :param chem_label:       The name of the chemical whose concentration we're modifying
+        :param number_cycles:   Number of full waves along the length of the system
         :param amplitude:       Amplitude of the Sine wave.  Note that peak-to-peak values are double the amplitude
         :param bias:            Amount to be added to all values (akin to "DC bias" in electrical circuits)
         :param phase:           In degrees: phase shift to the RIGHT.  EXAMPLE: 180 to flip the Sine curve
         :param zero_clip:       If True, any requested change causing a concentration dip below zero,
-                                will make the concentration zero;
-                                otherwise, an Exception will be raised
+                                    will make the concentration zero;
+                                    otherwise, an Exception will be raised
         :return:                None
         """
-        species_index = self.chem_data.get_index(species_name)
+        species_index = self.chem_data.get_index(chem_label)
 
-        period = self.n_bins / frequency
+        period = self.n_bins / number_cycles
         #print("period: ", period)
 
         phase_radians = phase * math.pi / 180
@@ -593,13 +593,13 @@ class BioSim1D:
 
 
 
-    def inject_bell_curve(self, species_name, mean=0.5, sd=0.15, amplitude=1., bias=0) -> None:
+    def inject_bell_curve(self, chem_label, mean=0.5, sd=0.15, amplitude=1., bias=0) -> None:
         """
         Add to the concentrations of the specified chemical species a signal across all bins in the shape of a Bell curve.
         The default values provide bell shape centered in the middle of the system, and fairly spread out
         (but pretty close to zero at the endpoints)
 
-        :param species_name:    The name of the chemical species whose concentration we're modifying
+        :param chem_label:      The name of the chemical species whose concentration we're modifying
         :param mean:            A value, generally between 0 and 1, indication the position of the mean relative to the system;
                                     if less than 0 or greater than 1, only one tail of the curve will be seen
         :param sd:              Standard deviation, in units of the system length
@@ -613,7 +613,7 @@ class BioSim1D:
         assert amplitude >= 0, \
             f"BioSim1D.inject_bell_curve(): the value for the `amplitude` ({amplitude}) cannot be negative"
 
-        species_index = self.chem_data.get_index(species_name)
+        species_index = self.chem_data.get_index(chem_label)
 
         # Create an array of equally-spaced values from 0. to 1.
         # Size of array is same as the number of bins in the system
@@ -646,29 +646,29 @@ class BioSim1D:
 
 
 
-    def lookup_species(self, species_index=None, species_name=None, trans_membrane=False, copy=False) -> np.array:
+    def lookup_species(self, chem_index=None, chem_label=None, trans_membrane=False, copy=False) -> np.array:
         """
         Return the NumPy array of concentration values across the all bins (from left to right)
         for the single specified chemical species.
         NOTE: what is being returned NOT a copy, unless specifically requested
 
-        :param species_index:   The index order of the chemical species of interest
-        :param species_name:    (OPTIONAL) If provided, it over-rides the value for species_index
+        :param chem_index:   The index order of the chemical species of interest
+        :param chem_label:    (OPTIONAL) If provided, it over-rides the value for chem_index
         :param trans_membrane:  If True, consider only the "other side" of the bins, i.e. the portion across the membrane
                                     (it will be zero for bins without membrane)
         :param copy:            If True, an independent numpy array will be returned: a *copy* rather than a view
         :return:                A NumPy 1-D array of concentration values across the bins (from left to right);
                                     the size of the array is the number of bins
         """
-        if species_name is not None:
-            species_index = self.chem_data.get_index(species_name)
+        if chem_label is not None:
+            chem_index = self.chem_data.get_index(chem_label)
         else:
-            self.chem_data.assert_valid_species_index(species_index)
+            self.chem_data.assert_valid_chem_index(chem_index)
 
         if trans_membrane:
-            species_conc =  self.system_B[species_index]
+            species_conc =  self.system_B[chem_index]
         else:
-            species_conc = self.system[species_index]
+            species_conc = self.system[chem_index]
 
         if copy:
             return species_conc.copy()
@@ -677,25 +677,25 @@ class BioSim1D:
 
 
 
-    def bin_concentration(self, bin_address: int, species_index=None, species_label=None, trans_membrane=False) -> float:
+    def bin_concentration(self, bin_address: int, chem_index=None, species_label=None, trans_membrane=False) -> float:
         """
         Return the concentration at the requested bin of the specified chemical species
 
         :param bin_address:     The bin number
-        :param species_index:   The index order of the chemical species of interest
-        :param species_label:   [OPTIONAL] If provided, it over-rides the value for species_index
+        :param chem_index:   The index order of the chemical species of interest
+        :param species_label:   [OPTIONAL] If provided, it over-rides the value for chem_index
         :param trans_membrane:  If True, consider the "other side" of the bin, i.e. the portion across the membrane
         :return:                A concentration value at the indicated bin, for the requested species
         """
         if species_label is not None:
-            species_index = self.chem_data.get_index(species_label)
+            chem_index = self.chem_data.get_index(species_label)
 
-        self.chem_data.assert_valid_species_index(species_index)
+        self.chem_data.assert_valid_chem_index(chem_index)
 
         if trans_membrane:
-            return self.system_B[species_index, bin_address]
+            return self.system_B[chem_index, bin_address]
         else:
-            return self.system[species_index, bin_address]
+            return self.system[chem_index, bin_address]
 
 
 
@@ -845,11 +845,11 @@ class BioSim1D:
                 else:
                     all_conc = "|"
                     for bin_no in range(self.n_bins):
-                        all_conc += str(self.bin_concentration(bin_no, species_index=species_index))
+                        all_conc += str(self.bin_concentration(bin_no, chem_index=species_index))
                         if self.membranes_OLD[bin_no]:
                             # Add a symbol for the membrane, and the additional membrane concentration data (on the "other side")
                             all_conc += "()"    # To indicate a membrane
-                            all_conc += str(self.bin_concentration(bin_no, species_index=species_index, trans_membrane=True))
+                            all_conc += str(self.bin_concentration(bin_no, chem_index=species_index, trans_membrane=True))
                         all_conc += "|"
 
                 if not self.chem_data.get_all_diffusion_rates():
@@ -897,7 +897,8 @@ class BioSim1D:
 
         :param membranes:       List of pairs of bin coordinates.
                                     All integer values must be between 0 and self.n_bins, both inclusive,
-                                    and be sorted in sorted order.
+                                    and be sorted in increasing order order.
+                                    Membrane positions are identified by the index of the bin to their RIGHT side.
                                     Membranes cannot intersect, nor touch!
                                     EXAMPLE: if the system contains bins 0 thru 30 (i.e 31 bins),
                                              then a possible list of membranes is  [ (0, 8) , (17, 31) ]
@@ -944,85 +945,6 @@ class BioSim1D:
 
         if permeability is not None:
             self.permeability = permeability
-
-
-
-    def set_membranes_OLD(self, membrane_pos: Union[List, Tuple], permeability=None, presorted=False) -> None:
-        """
-        Set the presence of all membranes in the system.
-
-        Initialize the class variables "membranes" and "permeability"
-
-        IMPORTANT: any previously-set membrane information is lost.
-
-        :param membrane_pos:    List or tuple of bin numbers that have a membrane to their LEFT side;
-                                it can contains integers between 0 and the number of bins in the system, both inclusive
-                                TODO: maybe rename to "coords" ??
-        :param permeability:    [OPTIONAL] TODO: an optional value for each of the affected chemicals
-        :param presorted:       [OPTIONAL] If the list or tuple passed by "membrane_pos" is already sorted,
-                                    save time by not re-sorting it
-        :return:                None
-        """
-        if type(membrane_pos) == tuple:
-            membrane_pos = list(membrane_pos)
-        else:
-            assert type(membrane_pos) == list, "set_membranes(): argument `membrane_pos` must be a list or tuple"
-
-        if not presorted:
-            membrane_pos.sort()
-
-        assert len(membrane_pos) > 0,  "set_membranes(): argument `membrane_pos` cannot be empty"
-
-        assert (membrane_pos[0] >= 0) and (membrane_pos[-1] <= self.n_bins), \
-            f"set_membranes(): argument `membrane_pos` must contain integers between 0 and {self.n_bins}"
-
-        self.membranes = membrane_pos
-
-        if permeability is not None:
-            self.permeability = permeability
-
-
-
-    def show_membranes(self) -> str:
-        """
-        DEPRECATED!
-
-        A simple-minded early method to visualize where the membranes are.
-        Print, and return, a string with a diagram to visualize membranes and the fractions
-        of their "left" sides
-
-        EXAMPLE (with 2 membranes as part of a 6-bin system):
-                _____________________________
-                | 0 | 1 |x| 2 | 3 | 4 |x| 5 |
-                -----------------------------
-
-        :return:            A string with the character-based diagram;
-                            if no membranes were defined, return an empty string
-        """
-        print("**** DEPRECATED; a completely-new system is expected")
-
-        if self.membranes_OLD is None:
-            print("No membranes present.  Call set_membranes() to set them")
-            return ""
-
-        # Prepare the middle line
-        box_contents = "|"
-        for bin_no, val in enumerate(self.membranes_OLD):
-            if val:
-                fraction = round(self.A_fraction[bin_no], n_decimals)
-                box_contents += str(fraction) + "|"
-            else:
-                box_contents += "   |"
-
-        box_width = len(box_contents)
-
-        box = "\n"
-        box += "_" * box_width + "\n"   # The top of the box
-        box += box_contents + "\n"
-        box += "-" * box_width          # The bottom of the box
-
-        print(box)
-        return box
 
 
 
@@ -1204,9 +1126,10 @@ class BioSim1D:
         Check whether the sum of all the concentrations of the specified chemical,
         across all bins, adds up to the passed value
 
-        :param expected:
+        :param expected:    Value that the sum of all the bin concentrations of the specified chemical should add up tp
         :param chem_label:  String with the label to identify the chemical of interest
-        :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
+        :param chem_index:  Integer to identify the chemical of interest.
+                                Cannot specify both `chem_label` and `chem_index`
 
         :return:
         """
@@ -1255,16 +1178,19 @@ class BioSim1D:
     #####################################################################################################
 
 
-    def enable_history(self, bins=None, frequency=1, chem_labels=None, take_snapshot=False) -> None:
+    def enable_history(self, bins=None, frequency=1, chem_labels=None, take_snapshot=False, caption=None) -> None:
         """
         Request history capture, with the specified parameters.
         If history was already enabled, this function can be used to alter its capture parameters.
 
         :param bins:            Bin address (integer), or list of bin addresses. Use None to indicate all
-        :param frequency:
+        :param frequency:       [OPTIONAL] How many simulation cycles to wait until taking another data snapshot
         :param chem_labels:     [OPTIONAL] List of chemicals to include in the history;
                                     if None (default), include them all.
-        :param take_snapshot:   If True, a snapshot of the system's current configuration is added to the history
+        :param take_snapshot:   If True, a snapshot of the system's current configuration
+                                    is immediately added to the history
+        :param caption:         [OPTIONAL] String to save alongside this snapshot, if taken (only applicable
+                                    if `take_snapshot` is True
 
         :return:                None
         """
@@ -1275,7 +1201,10 @@ class BioSim1D:
 
         self.conc_history.enable_history(frequency=frequency, chem_labels=chem_labels, bins=bins)
         if take_snapshot:
-            self.capture_snapshot()
+            if caption is None:
+                self.capture_snapshot()
+            else:
+                self.capture_snapshot(caption=caption)
 
         print(f"History enabled for bins {bins} and chemicals {chem_labels} (None means 'all')")
 
@@ -1283,9 +1212,11 @@ class BioSim1D:
 
     def capture_snapshot(self, step_count=None, caption="") -> None:
         """
+        Preserve some data values (based on specs given at the time history was enabled),
+        linked to the current System Time.
 
         :param step_count:
-        :param caption:
+        :param caption:     [OPTIONAL] String to save alongside this snapshot
         :return:            None
         """
         if not self.conc_history.to_capture(step_count):
@@ -1305,21 +1236,22 @@ class BioSim1D:
 
 
 
-    def get_bin_history(self, bin_address :int) -> pd.DataFrame:
+    def get_bin_history(self, bin_address :int, include_captions=True) -> pd.DataFrame:
         """
         Get the concentration history at the given bin(s) of all the chemicals
         whose history was requested by a call of enable_history()
 
-        :param bin_address: A single bin address (an integer)
-        :return:            A Pandas data frame
+        :param bin_address:         A single bin address (an integer)
+        :param include_captions:    If True, the captions are returned as an extra "caption" column at the end
+        :return:                    A Pandas data frame
         """
-        return self.conc_history.bin_history(bin_address = bin_address)
+        return self.conc_history.bin_history(bin_address = bin_address, include_captions=include_captions)
 
 
 
     def add_snapshot(self, data_snapshot: dict, caption ="") -> None:
         """
-        TODO: being phased out
+        TODO: OBSOLETE.  Being phased out in favor of capture_snapshot()
         Preserve some data value (passed as dictionary) in the history, linked to the
         current System Time.
 
@@ -1383,7 +1315,7 @@ class BioSim1D:
         for i in range(n_steps):
             if self.debug:
                 if (i < 2) or (i >= n_steps-2):
-                    print(f"    Performing diffusion step {i}...")
+                    print(f"    Performing diffusion step {i} ...")
                 elif i == 2:
                     print("    ...")
 
@@ -1393,7 +1325,7 @@ class BioSim1D:
             self.capture_snapshot(step_count=i)     # Save historical values (if enabled)
 
         if self.debug:
-            print(f"\nSystem after Delta time {total_duration}, at end of {n_steps} steps of size {time_step}:")
+            print(f"\nSystem after Delta time {total_duration}, at end of {n_steps} steps of size {time_step:.5g}:")
             self.describe_state(concise=True)
             print()
 
@@ -1424,9 +1356,9 @@ class BioSim1D:
         for species_index in range(self.n_species):
 
             if algorithm is None:
-                increment_vector = self.diffuse_step_single_species(time_step, species_index=species_index, delta_x=delta_x)
+                increment_vector = self.diffuse_step_single_species(time_step, chem_index=species_index, delta_x=delta_x)
             elif algorithm == "5_1_explicit":
-                increment_vector = self.diffuse_step_single_species_5_1_stencils(time_step, species_index=species_index, delta_x=delta_x)
+                increment_vector = self.diffuse_step_single_species_5_1_stencils(time_step, chem_index=species_index, delta_x=delta_x)
             else:
                 raise Exception(f"diffuse_step(): unknown method: `{algorithm}`")
 
@@ -1437,7 +1369,7 @@ class BioSim1D:
 
 
 
-    def diffuse_step_single_species(self, time_step: float, species_index=0, delta_x=1) -> np.array:
+    def diffuse_step_single_species(self, time_step: float, chem_index=0, delta_x=1) -> np.array:
         """
         Diffuse the specified single chemical species, for the given time step, across all bins,
         and return a 1-D array of the changes in concentration ("Delta concentration")
@@ -1450,12 +1382,12 @@ class BioSim1D:
         This approach is based on a "3+1 stencil", aka "Explicit Forward-Time Centered Space".
         EXPLANATION:  https://life123.science/diffusion
 
-        :param time_step:       Delta time over which to carry out this single diffusion step;
-                                    if too large, an Exception will be raised.
-        :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
-        :param delta_x:         Distance between consecutive bins
+        :param time_step:   Delta time over which to carry out this single diffusion step;
+                                if too large, an Exception will be raised.
+        :param chem_index:  ID (in the form of an integer index) of the chemical species under consideration
+        :param delta_x:     Distance between consecutive bins
 
-        :return:                A 1-D Numpy array with the CHANGE in concentration for the given species across all bins
+        :return:            A 1-D Numpy array with the CHANGE in concentration for the given species across all bins
         """
         assert self.system is not None, "BioSim1D.diffuse_step_single_species(): Must first initialize the system"
         assert not self.chem_data.missing_diffusion_rate(), "BioSim1D.diffuse_step_single_species(): Must first set the diffusion rates"
@@ -1466,7 +1398,7 @@ class BioSim1D:
         if self.n_bins == 1:
             return increment_vector                                 # There's nothing to do in the case of just 1 bin!
 
-        diff = self.chem_data.get_diffusion_rate(species_index=species_index)     # The diffusion rate of the specified single species
+        diff = self.chem_data.get_diffusion_rate(species_index=chem_index)     # The diffusion rate of the specified single species
 
         assert not self.is_excessive(time_step, diff, delta_x), \
             f"diffuse_step_single_species(): Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"
@@ -1484,22 +1416,22 @@ class BioSim1D:
 
         for i in range(self.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
             #print(f"Processing bin number {i}")
-            current_conc = self.system[species_index , i]   # Concentration in the center of the convolution tile
+            current_conc = self.system[chem_index , i]   # Concentration in the center of the convolution tile
 
             if i == 0 :                     # Special case for the first bin (no left neighbor)
-                increment_vector[i] = effective_diff * (self.system[species_index , 1] - current_conc)
+                increment_vector[i] = effective_diff * (self.system[chem_index , 1] - current_conc)
             elif i == max_bin_number :      # Special case for the last bin (no right neighbor)
-                increment_vector[i] = effective_diff * (self.system[species_index , i - 1] - current_conc)
+                increment_vector[i] = effective_diff * (self.system[chem_index , i - 1] - current_conc)
             else:
                 increment_vector[i] = effective_diff * \
-                                        (self.system[species_index , i + 1] - current_conc
-                                         + self.system[species_index , i - 1] - current_conc)
+                                        (self.system[chem_index , i + 1] - current_conc
+                                         + self.system[chem_index , i - 1] - current_conc)
 
         return increment_vector
 
 
 
-    def diffuse_step_single_species_5_1_stencils(self, time_step: float, species_index=0, delta_x=1) -> np.array:
+    def diffuse_step_single_species_5_1_stencils(self, time_step: float, chem_index=0, delta_x=1) -> np.array:
         """
         Similar to diffuse_step_single_species(), but using a "5+1 stencil";
         i.e. spatial derivatives are turned into finite elements using 5 adjacent bins instead of 3.
@@ -1510,7 +1442,7 @@ class BioSim1D:
 
         :param time_step:       Delta time over which to carry out this single diffusion step;
                                     if too large, an Exception will be raised.
-        :param species_index:   ID (in the form of an integer index) of the chemical species under consideration
+        :param chem_index:   ID (in the form of an integer index) of the chemical species under consideration
         :param delta_x:         Distance between consecutive bins
 
         :return:                A Numpy array with the CHANGE in concentration for the given species across all bins
@@ -1527,7 +1459,7 @@ class BioSim1D:
         if self.n_bins == 1:
             return increment_vector                             # There's nothing to do in the case of just 1 bin!
 
-        diff = self.chem_data.get_diffusion_rate(species_index=species_index)     # The diffusion rate of the specified single species
+        diff = self.chem_data.get_diffusion_rate(species_index=chem_index)     # The diffusion rate of the specified single species
 
         # TODO: this Upper Bound is based on a *different* method, and should be made more specific to this method
         #assert not self.is_excessive(time_step, diff, delta_x), \
@@ -1550,12 +1482,12 @@ class BioSim1D:
         C1 = 4/3
         C0 = - 2.5
 
-        leftmost = self.system[species_index , 0]
-        rightmost = self.system[species_index , max_bin_number]
+        leftmost = self.system[chem_index , 0]
+        rightmost = self.system[chem_index , max_bin_number]
 
         for i in range(self.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
             #print(f"Processing bin number {i}")
-            C_i = self.system[species_index , i]
+            C_i = self.system[chem_index , i]
 
             # The boundary conditions, at left and right edges of the system,
             # state that the flux is zero across the boundaries
@@ -1564,20 +1496,20 @@ class BioSim1D:
                 C_i_minus_1 = leftmost
             elif i == 1:
                 C_i_minus_2 = leftmost
-                C_i_minus_1 = self.system[species_index , i-1]
+                C_i_minus_1 = self.system[chem_index , i - 1]
             else:
-                C_i_minus_2 = self.system[species_index , i-2]
-                C_i_minus_1 = self.system[species_index , i-1]
+                C_i_minus_2 = self.system[chem_index , i - 2]
+                C_i_minus_1 = self.system[chem_index , i - 1]
 
             if i == max_bin_number:      # Special cases for the last 2 bins
                 C_i_plus_1 = rightmost
                 C_i_plus_2 = rightmost
             elif i == max_bin_number - 1:
-                C_i_plus_1 = self.system[species_index , i+1]
+                C_i_plus_1 = self.system[chem_index , i + 1]
                 C_i_plus_2 = rightmost
             else:
-                C_i_plus_1 = self.system[species_index , i+1]
-                C_i_plus_2 = self.system[species_index , i+2]
+                C_i_plus_1 = self.system[chem_index , i + 1]
+                C_i_plus_2 = self.system[chem_index , i + 2]
 
             #print("The 5 bins under consideration: ", C_i_minus_2, C_i_minus_1, C_i, C_i_plus_1, C_i_plus_2)
             # Compute the "Central Differences" for the 2nd partial derivative, to "accuracy 4"
@@ -1649,7 +1581,9 @@ class BioSim1D:
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
-        :param snapshots:       OPTIONAL dict that may contain any the following keys:
+
+        :param snapshots:       OBSOLETE!
+                                OPTIONAL dict that may contain any the following keys:
                                         -"frequency"
                                         -"sample_bin" (Required integer; if not present, no snapshots are taken)
                                         -"species" (NOT YET IMPLEMENTED)
@@ -1658,6 +1592,8 @@ class BioSim1D:
                                     If provided, take a system snapshot after running a multiple
                                     of "frequency" run steps (default 1, i.e. at every step.)
                                     EXAMPLE: snapshots={"frequency": 2, "sample_bin": 0}
+
+        :param silent:
         :return:                None
         """
         time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
@@ -1786,7 +1722,7 @@ class BioSim1D:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def visualize_system(self, title_prefix=None, colors=None) -> pgo.Figure:
+    def visualize_system(self, title_prefix=None, colors=None, show=False) -> pgo.Figure:
         """
         Visualize the current state of the system of all the chemicals as a combined line plot,
         using plotly.
@@ -1795,11 +1731,15 @@ class BioSim1D:
         :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
         :param colors:      [OPTIONAL] If None, then use the registered colors (if specified),
                                 or the hardwired defaults as a last resort
+        :param show:        [OPTIONAL] If True, the plot will be shown
+                                Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
+                                      leads to it being automatically shown
+
         :return:            A Plotly "Figure" object
         """
         title = f"System snapshot at time t={self.system_time:.8g}"
         if title_prefix:
-            title = title_prefix + ".  " + title
+            title = title_prefix + "<br>" + title
 
         chem_labels = self.chem_data.get_all_labels()
         n_chem = len(chem_labels)
@@ -1815,22 +1755,25 @@ class BioSim1D:
         if n_chem == 1:
             chem_name = chem_labels[0]      # The only chemical
 
-            fig = px.line(y=self.lookup_species(species_name=chem_name),
+            fig = px.line(y=self.lookup_species(chem_label=chem_name),
                           title= title,
                           color_discrete_sequence = colors,
-                          labels={"y": f"[{chem_name}]", "x":"Bin number"},)
+                          labels={"y": f"[{chem_name}]", "x":"Bin number"}, )
         else:
             fig = px.line(data_frame=self.system_snapshot(), y=chem_labels,
                           title= title,
                           color_discrete_sequence = colors,
                           labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})                        
 
+        if show:
+            fig.show()
+
         return fig
 
 
 
     def system_heatmaps(self, chem_labels=None, colors=None,
-                        title_prefix ="", membranes=None) -> pgo.Figure:
+                        title_prefix ="", **kwargs) -> pgo.Figure:
         """
 
         :param chem_labels: [OPTIONAL] NOT YET USED.  For now, ALL chemicals get shown
@@ -1838,13 +1781,14 @@ class BioSim1D:
                                 or the hardwired defaults as a last resort
                                 (but only if more than 1 chemical; if only 1, go monochromatic)
         :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
-        :param membranes:
+        :param kwargs:      [OPTIONAL] Other named arguments to pass to PlotlyHelper.heatmap_stack_1D()
+                                For list, see documentation of method PlotlyHelper.heatmap_stack_1D
 
         :return:            A Plotly "Figure" object containing a stack of Heatmaps
         """
         title = f"System snapshot at time t={self.system_time:.8g}"
         if title_prefix:
-            title = title_prefix + ".  " + title
+            title = title_prefix + "<br>" + title
 
 
         if chem_labels is None:
@@ -1861,128 +1805,23 @@ class BioSim1D:
 
         conc_matrix = self.system
 
+        if self.membranes is None:
+            flattened_list = None
+        else:
+            flattened_list = [item for pair in self.membranes
+                              for item in pair]
+
         return PlotlyHelper.heatmap_stack_1D(data_matrix=conc_matrix, labels=chem_labels,
                                              title=title, data_name="Conc.", entity_name="CHEM",
                                              colors=colors,
-                                             barriers=membranes)
-
-
-
-    def system_heatmap_OLD(self, chem_labels=None, title_prefix ="", row_height=150,
-                           colors=None) -> pgo.Figure:
-        """
-        Produce a heatmap, and return it as a plotly Figure object.
-        Each chemical gets shown on a row, displaying the concentrations of the 1D system.
-
-        :param chem_labels: [OPTIONAL] NOT YET USED.  For now, ALL chemicals get shown
-        :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
-        :param row_height:  [OPTIONAL] Height of each of the heatmap rows;
-                                if too small to fit the heatmap, it will automatically be made larger
-        :param colors:      [OPTIONAL] If None, then use the registered colors (if specified);
-                                in case of absence of registered colors, use black if just 1 chemical,
-                                or the hardwired default colors otherwise
-        :return:            A Plotly "Figure" object with a Heatmap
-        """
-        # TODO: generalize to sub-selection of chemicals
-
-        MIN_ROW_HEIGHT_SINGLE_CHEM = 250    # For the case there's only 1 chem (i.e. 1 row in the heatmap)
-        MIN_TOT_HEIGHT = 300                # Note: if overall height is too small, it leads to an obscure JS error message
-
-
-        title = f"System snapshot at time t={self.system_time:.8g}"
-        if title_prefix:
-            title = title_prefix + ".  " + title
-
-        '''
-        # ANOTHER APPROACH TO CREATE A PLOTLY HEATMAP, using imshow()
-        fig = px.imshow(self.system_snapshot().T,
-                title= title,
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto='.2f', color_continuous_scale="gray_r")         # text_auto=’auto’
-
-        # Insert a little spacing between adjacent cells horizontally, and substantially more vertical
-        fig.update_traces(xgap=3)       # Alt way to specify it: fig.data[0].xgap=3
-        fig.update_traces(ygap=8)       # Vertical separation is larger because individual rows belong to different chemicals
-        '''
-
-        if chem_labels is None:
-            chem_labels = self.chem_data.get_all_labels()
-
-        conc_matrix = self.system_snapshot().T
-        # Create a "Heatmap" plotly object
-        hm = pgo.Heatmap(z=conc_matrix,
-                            y=chem_labels,
-                            colorscale='gray_r', colorbar={'title': 'Concentration'},
-                            xgap=3, ygap=8, texttemplate = '%{z:.2f}',
-                            hovertemplate= 'Conc.: %{z}<br>Bin number: %{x}<br>Chem: %{y}<extra>%{y}</extra>')
-
-        # Create the Figure object
-        fig = pgo.Figure(data=hm)
-
-
-        if colors is None:
-            # Attempt to make use of the previously-registered colors, if available
-            colors = self.chem_data.get_registered_colors(chem_labels)
-            if (colors is None) and len(chem_labels) > 1:
-                # Fall back to default colors (but don't bother if just 1 chemical)
-                colors = Colors.assign_default_colors(len(chem_labels))
-
-
-        if len(chem_labels) == 1:
-            row_height = max(MIN_ROW_HEIGHT_SINGLE_CHEM, row_height)
-            height = max(MIN_TOT_HEIGHT, row_height)
-        else:
-            height = max(MIN_TOT_HEIGHT, row_height * len(chem_labels))
-
-
-        if colors:
-            # "delta" affect the vertical extension of the color-coded edges; fine-tune for visual esthetics
-            if row_height <= 200:
-                delta = 0.46
-            elif row_height <= 350:
-                delta = 0.48
-            else:
-                delta = 0.49
-
-            # Add color-coded edges using shapes
-            # Note: x and y coord's are relative to the CENTER of the bins.  1 unit = bin dimension (horiz. or vert.)
-            for i, col in enumerate(colors):
-                for j in range(self.n_bins):
-                    fig.add_shape(
-                        type="rect",
-                        x0=j - 0.5,   x1=j + 0.5,         # Reduce x0 to extend to left; increase x1 to extend to right
-                        y0=i - delta, y1=i + delta,       # Reduce y0 to extend to bottom; increase y1 to extend to top
-                        line=dict(color=col, width=3),    # Edge color and width (note there's NO fill color)
-                        xref="x", yref="y"
-                    )
-
-            # Add annotations (small rectangles to the left of the heatmap) for row color-coding
-            for i, col in enumerate(colors):
-                fig.add_shape(
-                    type="rect",
-                    x0 = -0.5,      x1 = -0.4,       # Slightly outside the heatmap (to the left of the 1st bin)
-                    y0 = i - delta, y1 = i + delta,
-                    line=dict(width=0),
-                    fillcolor=col,
-                    xref="x", yref="y"
-                )
-
-
-        #height = max(MIN_HEIGHT, row_height * len(chem_labels))
-
-        #print("*** height: ", height)
-
-        fig.update_layout(title=title,
-                          xaxis={'title': 'Bin number'}, yaxis={'title': 'Chem. species'},
-                          yaxis_autorange="reversed",
-                          height=height)
-
-        return fig
+                                             barriers=flattened_list, **kwargs)
 
 
 
     def single_species_heatmap(self, species_index: int, heatmap_pars: dict, graphic_component, header=None) -> None:
         """
+        DEPRECATED!
+
         Send to the HTML log, a heatmap representation of the concentrations of
         the single requested species.  Note: if using in Jupyterlab, this image will NOT be displayed there
 
@@ -2035,6 +1874,8 @@ class BioSim1D:
 
     def single_species_line_plot(self, species_index: int, plot_pars: dict, graphic_component, header=None) -> None:
         """
+        DEPRECATED
+
         Send to the HTML log, a line plot representation of the concentrations of
         the single requested species.  To plot more than 1 species, use line_plot() instead
 
@@ -2150,7 +1991,8 @@ class BioSim1D:
 
 
 
-    def plot_history_single_bin(self, bin_address :int, colors=None, title=None, smoothed=False) -> pgo.Figure:
+    def plot_history_single_bin(self, bin_address :int, colors=None,
+                                title_prefix=None, title=None, smoothed=False) -> pgo.Figure:
         """
         Using plotly, draw the plots of chemical concentration values over time at the specified bin,
         based on the historical data that was saved when running simulations.
@@ -2162,7 +2004,8 @@ class BioSim1D:
                                 If provided, its length must match that of the data;
                                 if None, then use the registered colors (if specified),
                                 or the hardwired defaults as a last resort
-        :param title:       [OPTIONAL] Label for the top of the plot.  If not passed, a default is used
+        :param title_prefix:[OPTIONAL] Prefix to the default auto-generated title
+        :param title:       [OPTIONAL] If set, it over-rides `title_prefix.  If not passed, a default one is used
         :param smoothed:    [OPTIONAL] If True, a spline is used to smooth the lines;
                                 otherwise (default), line segments are used
         :return:            A plotly "Figure" object; an Exception is raised if no historical data is found
@@ -2178,6 +2021,9 @@ class BioSim1D:
                 chem_title = "all chemicals"
 
             title = f"Concentration changes with time of {chem_title} at bin {bin_address}"
+
+            if title_prefix:
+                title = f"{title_prefix}<br>{title}"
 
         # Retrieve the historical data
         df = self.conc_history.bin_history(bin_address = bin_address)
@@ -2205,29 +2051,29 @@ class BioSim1D:
     #                                                                       #
     #########################################################################
 
-    def frequency_analysis(self, species_name: str, threshold = 0.001, n_largest = None) -> pd.DataFrame:
+    def frequency_analysis(self, chem_label: str, threshold = 0.001, n_largest = None) -> pd.DataFrame:
         """
         Return the individual frequencies, and their relative amplitudes,
         in the concentration values of the specified chemical species.
         A Discrete Fourier Transform is used for the computation.
 
-        :param species_name:    The name of the chemical whose concentration we want to analyze
-        :param threshold:       Minimum amplitudes of the frequency components to be considered non-zero
-                                    (NOTE: these are the raw values returned by the DFT - not the normalized ones.)
-        :param n_largest:       If specified, only the rows with the given number of largest amplitudes gets returned
-                                    (if there are fewer rows to start with, they all get returned)
+        :param chem_label:  The name of the chemical whose concentration we want to analyze
+        :param threshold:   Minimum amplitudes of the frequency components to be considered non-zero
+                                (NOTE: these are the raw values returned by the DFT - not the normalized ones.)
+        :param n_largest:   If specified, only the rows with the given number of largest amplitudes gets returned
+                                (if there are fewer rows to start with, they all get returned)
 
-        :return:                A Pandas dataframe with 2 columns, "Frequency" and "Relative Amplitude";
-                                    amplitudes are relative the the smallest nonzero frequency (which is taken to be 1.0)
-                                    EXAMPLE:
-                                                   Frequency  Relative Amplitude
-                                                0        0.0                 3.0
-                                                1        2.0                 1.0
-                                                2        4.0                 0.5
-                                                3        8.0                 0.2
+        :return:            A Pandas dataframe with 2 columns, "Frequency" and "Relative Amplitude";
+                                amplitudes are relative the the smallest nonzero frequency (which is taken to be 1.0)
+                                EXAMPLE:
+                                               Frequency  Relative Amplitude
+                                            0        0.0                 3.0
+                                            1        2.0                 1.0
+                                            2        4.0                 0.5
+                                            3        8.0                 0.2
         """
 
-        conc_samples = self.lookup_species(species_name=species_name)
+        conc_samples = self.lookup_species(chem_label=chem_label)
 
         #import plotly.express as px
         #fig = px.line(y=conc_samples)

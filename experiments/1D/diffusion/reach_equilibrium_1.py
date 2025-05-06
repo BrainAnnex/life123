@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -21,23 +21,34 @@
 # Notice the diffusing pulse "bouncing" off the left wall after total time 30.
 #
 # Then the system is left undisturbed, and followed to equilibrium.
-#
-# *NO log file.*
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+
+# %% [markdown]
+# ### TAGS :  "diffusion 1D", "basic"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "May 2, 2025"
+LIFE123_VERSION = "1.0.0rc3"       # Library version this experiment is based on
 
 # %%
-from life123 import ChemData as chem
-from life123 import BioSim1D
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %%
-chem_data = chem(diffusion_rates=[0.1])
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
+from life123 import BioSim1D, ChemData, check_version
+
+# %%
+check_version(LIFE123_VERSION)
+
+# %%
+
+# %%
+chem_data = ChemData(diffusion_rates=0.1)
 bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
-bio.set_uniform_concentration(species_index=0, conc=0.)
+bio.set_uniform_concentration(chem_index=0, conc=0.)
 bio.inject_conc_to_bin(chem_index=0, bin_address=2, delta_conc=10.)
 
 bio.describe_state()
@@ -60,7 +71,7 @@ for i in range(10):
 print("\n\nREPEATING to LONGER time scales.  Dtime=100, again with time steps of 0.1 ...")
 
 # Reset the concentrations
-bio.set_uniform_concentration(species_index=0, conc=0.)
+bio.set_uniform_concentration(chem_index=0, conc=0.)
 bio.inject_conc_to_bin(chem_index=0, bin_address=2, delta_conc=10.)
 
 #total_time = 0.

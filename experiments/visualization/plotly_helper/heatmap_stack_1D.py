@@ -16,7 +16,7 @@
 # # Tests and showcase of `PlotlyHelper.heatmap_stack_1D()`
 
 # %%
-LAST_REVISED = "Apr. 28, 2025"
+LAST_REVISED = "Apr. 30, 2025"
 LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
@@ -293,6 +293,13 @@ PlotlyHelper.heatmap_stack_1D(data_matrix=data_matrix, labels=["A", "B", "C", "D
                               title="Because of the larger number of bins, less text is shown on them", 
                               data_name="Conc.", entity_name="CHEM",
                               colors=["turquoise", "yellow", "green", "pink"],
+                              barriers=[1, 2, 4, 10])
+
+# %%
+PlotlyHelper.heatmap_stack_1D(data_matrix=data_matrix, labels=["A", "B", "C", "D"],
+                              title="The user can over-ride formatting of numbers shown on bins", 
+                              data_name="Conc.", entity_name="CHEM",
+                              colors=["turquoise", "yellow", "green", "pink"], text_format=".2f",
                               barriers=[1, 2, 4, 10])
 
 # %%

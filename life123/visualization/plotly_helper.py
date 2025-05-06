@@ -114,6 +114,7 @@ class PlotlyHelper:
 
     @classmethod
     def plot_pandas(cls, df :pd.DataFrame, x_var="SYSTEM TIME", fields=None,
+                    log_y=False,
                     colors=None, title=None, title_prefix=None,
                     range_x=None, range_y=None,
                     x_label=None, y_label="Y", legend_header="Plot",
@@ -130,7 +131,9 @@ class PlotlyHelper:
         :param x_var:           Name of column with the independent variable for the x-axis
         :param fields:          Name, or list of names, of the dataframe columns whose values are to be plotted;
                                     if a list is passed, also display a figure legend;
-                                    if None, then display all columns except the one that was declared as the independent variable
+                                    if None, then display all columns except
+                                    the one that was declared as the independent variable thru argument `x_var`
+        :param log_y:           [OPTIONAL] If True, a log scale is used for the y-axis
         :param colors:          [OPTIONAL] Either a single color (string with standard plotly name, such as "red"),
                                     or list of names to use, in order; some of the entries may be None.
                                     If None, then the hardwired default colors are used
@@ -223,6 +226,7 @@ class PlotlyHelper:
 
         fig = px.line(data_frame=df, x=x_var, y=fields,
                       title=title, range_x=range_x, range_y=range_y,
+                      log_y=log_y,
                       color_discrete_sequence = colors,
                       labels={"value": y_label, "variable": legend_header},
                       line_shape=line_shape)
@@ -273,25 +277,28 @@ class PlotlyHelper:
             fig['layout']['shapes'] = vline_list    # The vertical lines are regarded by Plotly Express as "shapes"
                                                     # that are stored in the figure's "layout"
         if show:
-            fig.show()  # Actually display the plot
+            fig.show()  # Display the plot
 
         return fig
 
 
 
     @classmethod
-    def combine_plots(cls, fig_list :Union[list, tuple], title="", x_label=None, y_label=None,
+    def combine_plots(cls, fig_list :Union[list, tuple], layout_index=None,
+                      title="", x_label=None, y_label=None,
                       xrange=None, legend_title=None, curve_labels=None, show=False) -> pgo.Figure:
         """
-        Combine together several existing plotly plots into a single one (with combined axes)
+        Combine together several existing Plotly plots into a single one (with combined axes)
 
         EXAMPLE:
                     from life123 import PlotlyHelper
-                    p1 = PlotlyHelper.plot_pandas(various args, show=False)
-                    p2 = PlotlyHelper.plot_pandas(various args, show=False)
-                    PlotlyHelper.combine_plots([p1, p2], other optional args)
+                    plot_1 = PlotlyHelper.plot_pandas(various args, show=False)
+                    plot_2 = PlotlyHelper.plot_pandas(various args, show=False)
+                    PlotlyHelper.combine_plots([plot_1, plot_2], other optional args)
 
         :param fig_list:    List or tuple of plotly "Figure" objects (as returned by several functions)
+        :param layout_index:[OPTIONAL] If given, the layout of the "Figure" object with the given index
+                                (in `fig_list`) is used as is - and all the layout parameters below are ignored
         :param title:       [OPTIONAL] The title to use for the overall plot
         :param x_label:     [OPTIONAL] Caption to use for the x-axis; if not specified, use that of the 1st plot
         :param y_label:     [OPTIONAL] Caption to use for the y-axis; if not specified, use that of the 1st plot
@@ -300,7 +307,7 @@ class PlotlyHelper:
         :param legend_title:[OPTIONAL] String to show at the top of the legend box
         :param curve_labels:[OPTIONAL] List of labels to use for the various curves in the legend
                                 and in the hover boxes; if not specified, use the titles of the individual plots
-        :param show:        If True, the plot will be shown
+        :param show:        [OPTIONAL] If True, the plot will be shown
                                 Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
                                       leads to it being automatically shown
         :return:            A plotly "Figure" object for the combined plot
@@ -322,27 +329,34 @@ class PlotlyHelper:
             combined_data += fig.data      # concatenating lists
 
 
-        all_fig = pgo.Figure(data=combined_data)    # Note that the + is concatenating lists
+        if layout_index is not None:
+            assert 0 <= layout_index < len(fig_list), \
+                f"combine_plots(): argument {layout_index} must be an integer between 0 and {len(fig_list)-1}, inclusive"
 
-        all_fig.update_layout(title=title,
-                              xaxis_title=x_label,
-                              yaxis_title=y_label)
+            figure_providing_layout = fig_list[layout_index]
+            all_fig = pgo.Figure(data=combined_data, layout = figure_providing_layout.layout)
+        else:
+            all_fig = pgo.Figure(data=combined_data)    # Note that the + is concatenating lists
 
-        if legend_title:
-            all_fig.update_layout(legend={"title": legend_title})
+            all_fig.update_layout(title=title,
+                                  xaxis_title=x_label,
+                                  yaxis_title=y_label)
 
-        if xrange:
-            all_fig.update_layout(xaxis={"range": xrange})
+            if legend_title:
+                all_fig.update_layout(legend={"title": legend_title})
+
+            if xrange:
+                all_fig.update_layout(xaxis={"range": xrange})
 
 
-        for i, fig in enumerate(fig_list):
-            all_fig['data'][i]['showlegend'] = True
-            if curve_labels:
-                all_fig['data'][i]['name'] = curve_labels[i]
-                all_fig.data[i]['hovertemplate'] = f"{curve_labels[i]}<br>" + all_fig.data[i]['hovertemplate']
-            else:
-                all_fig['data'][i]['name'] = fig.layout.title.text
-                all_fig.data[i]['hovertemplate'] = f"{fig.layout.title.text}<br>" + all_fig.data[i]['hovertemplate']
+            for i, fig in enumerate(fig_list):
+                all_fig['data'][i]['showlegend'] = True
+                if curve_labels:
+                    all_fig['data'][i]['name'] = curve_labels[i]
+                    all_fig.data[i]['hovertemplate'] = f"{curve_labels[i]}<br>" + all_fig.data[i]['hovertemplate']
+                else:
+                    all_fig['data'][i]['name'] = fig.layout.title.text
+                    all_fig.data[i]['hovertemplate'] = f"{fig.layout.title.text}<br>" + all_fig.data[i]['hovertemplate']
 
 
         if show:
@@ -449,9 +463,10 @@ class PlotlyHelper:
     @classmethod
     def heatmap_stack_1D(cls, data_matrix, labels :[str],
                          title="", data_name="value", entity_name="SAMPLE",
-                         colors=None, color_borders=False, monochromatic=False,
+                         colors=None, color_borders=False, monochromatic=False, text_format=None,
                          height=None, grid_vert_spacing=None, colorbar_extend=1.2,
-                         barriers=None, barrier_color="brown") -> pgo.Figure:
+                         xgap=None, ygap=2,
+                         barriers=None, barrier_color="brown", show=False) -> pgo.Figure:
         """
         Prepare and return a Plotly Figure object containing a series of vertically-stacked 1-D heatmaps,
         each with its own colorbar, with data from a separate variable.
@@ -485,6 +500,8 @@ class PlotlyHelper:
 
         :param colorbar_extend: [OPTIONAL] Multiplicative factor to expand or shrink the colorbar by (Default 1.2)
 
+        :param xgap:            [OPTIONAL] Horizontal gap (in pixels) between adjacent bins
+
         :param colors:          [OPTIONAL] List of standard color names : one for each of the variables being included, in order.
                                     Colors, if specified, are used to draw a segment to the left of each heatmap,
                                     as well as (if `color_borders` is True) to draw borders around the bins
@@ -496,6 +513,11 @@ class PlotlyHelper:
                                      (smallest value = black; highest = white) rather than have each row use
                                      a scale based on its corresponding value in argument `colors`
 
+        :param text_format:     [OPTIONAL] String with standard python formatting for numbers,
+                                    affecting the values shown on cells.
+                                    If not specified, the level of detail is automatically set based on the number of bins.
+                                    EXAMPLES: ".3g", ".2f", ".0f"
+
         :param barriers:        [OPTIONAL] List of integers, in any order,
                                     specifying the positions of vertical barriers between heatmap bins.
                                     Use the bin number of the bin to the RIGHT of the desired barrier
@@ -505,10 +527,14 @@ class PlotlyHelper:
         :param barrier_color:   [OPTIONAL] Only applicable if `barriers` is set.
                                     Standard color name to use for the barriers (default, 'brown')
 
+        :param show:            If True, the plot will be shown
+                                    Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
+                                          gets it automatically shown
+
         :return:                A Plotly "Figure" object containing a stack of Heatmaps
         """
         assert type(labels) == list, \
-            "The argument `labels` must be a list"
+            f"The argument `labels` must be a list.  The passed argument was of type {type(labels)}"
 
 
         if barriers is not None:
@@ -583,14 +609,25 @@ class PlotlyHelper:
                                horizontal_spacing=0, vertical_spacing=grid_vert_spacing)
 
         # Show less cell text if there's a large number of bins
-        if n_bins <= 5:
-            texttemplate = "%{z:.3g}"
-        elif n_bins <= 10:
-            texttemplate = "%{z:.2g}"
-        elif n_bins <= 20:
-            texttemplate = "%{z:.1g}"
+        if text_format is not None:
+            texttemplate = f"%{{z:{text_format}}}"
         else:
-            texttemplate = None
+            if n_bins <= 5:
+                texttemplate = "%{z:.4g}"
+            elif n_bins <= 10:
+                texttemplate = "%{z:.3g}"
+            elif n_bins <= 15:
+                texttemplate = "%{z:.2g}"
+            elif n_bins <= 20:
+                texttemplate = "%{z:.1g}"
+            else:
+                texttemplate = None
+
+        if xgap is None:
+            if n_bins > 50:
+                xgap = 0    # If there are lots of bins, the heatmap generally looks better without gaps
+            else:
+                xgap = 2
 
         for i, hm_label in enumerate(labels):   # For each row of stacked heatmaps (starting at the top)
             row = i + 1   # row values start at 1
@@ -632,7 +669,7 @@ class PlotlyHelper:
 
             hm = pgo.Heatmap(z=hm_matrix,
                              y = [hm_label],
-                             xgap=2, ygap=2,
+                             xgap=xgap, ygap=ygap,
                              hovertemplate=hovertemplate,
                              texttemplate = texttemplate,
                              colorscale=color_scale,
@@ -710,6 +747,9 @@ class PlotlyHelper:
 
         fig.update_layout(title=title,
                           height=height)
+
+        if show:
+            fig.show()  # Display the plot
 
         return fig
 

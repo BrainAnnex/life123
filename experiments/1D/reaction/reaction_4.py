@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -19,21 +19,33 @@
 # Diffusion not applicable (just 1 bin)
 #
 # See also the experiment _"reactions_single_compartment/react_3"_  
-#
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+
+# %% [markdown]
+# ### TAGS :  "reactions 1D"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "May 4, 2025"
+LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
+
+# %%
+#import sys, os
+#os.getcwd()
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
+
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData as chem
-from life123 import BioSim1D
+from life123 import ChemData, BioSim1D, check_version
 
-import plotly.express as px
 from life123 import GraphicLog
+
+# %%
+check_version(LIFE123_VERSION)
+
+# %%
 
 # %%
 # Initialize the HTML logging
@@ -45,36 +57,46 @@ GraphicLog.config(filename=log_file,
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
-# Specify the chemicals
-chem_data = chem(names=["A", "B", "C"])     # NOTE: Diffusion not applicable (using just 1 bin)
+# Initialize the system.  NOTE: Diffusion not applicable (using just 1 bin)
+chem_data = ChemData(names=["A", "B", "C"], plot_colors=['red', 'darkorange', 'green'])
 
-
-# Reaction A + B <-> C , with 1st-order kinetics for each species
-chem_data.add_reaction(reactants=["A" , "B"], products=["C"],
-                       forward_rate=5., reverse_rate=2.)
-
-chem_data.describe_reactions()
-
-# %%
-# Initialize the system
 bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
-bio.set_uniform_concentration(species_index=0, conc=10.)
-bio.set_uniform_concentration(species_index=1, conc=50.)
-bio.set_uniform_concentration(species_index=2, conc=20.)
+bio.set_uniform_concentration(chem_index=0, conc=10.)
+bio.set_uniform_concentration(chem_index=1, conc=50.)
+bio.set_uniform_concentration(chem_index=2, conc=20.)
 
 bio.describe_state()
 
-# %%
-# Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0), caption="Initial state")
-bio.get_history()
 
 # %%
-# Send the plot to the HTML log file
-chem_data.plot_reaction_network("vue_cytoscape_2")
+# Specify the reaction
+reactions = bio.get_reactions()
 
-# %% [markdown] tags=[]
+# Reaction A + B <-> C , with 1st-order kinetics for each species
+reactions.add_reaction(reactants=["A" , "B"], products="C",
+                       forward_rate=5., reverse_rate=2.)
+
+reactions.describe_reactions()
+
+# %%
+# Send the plot of the reaction network to the HTML log file
+reactions.plot_reaction_network("vue_cytoscape_2")
+
+# %%
+
+# %%
+# Let's enable history - by default for all chemicals and all bins
+bio.enable_history(take_snapshot=True, caption="Initial state")
+
+# %%
+bio.get_bin_history(bin_address=0)
+
+# %%
+
+# %%
+
+# %% [markdown]
 # ### <a name="sec_2_first_step"></a>First step
 
 # %%
@@ -82,25 +104,21 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 bio.react(time_step=0.002, n_steps=1)
 bio.describe_state()
 
-# %% [markdown]
-# _Early in the reaction :_
-# [A] = 5.08 ,  [B] = 45.08 ,  [C] = [24.92]
+# %%
+bio.get_bin_history(bin_address=0)
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
-bio.get_history()
 
 # %% [markdown]
 # ### <a name="sec_2"></a>Numerous more steps
 
 # %%
 # Numerous more steps
-bio.react(time_step=0.002, n_steps=29, snapshots={"sample_bin": 0})
+bio.react(time_step=0.002, n_steps=29)
 
 bio.describe_state()
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ### <a name="sec_2_equilibrium"></a>Equilibrium
 
 # %% [markdown]
@@ -113,21 +131,17 @@ bio.describe_state()
 bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.get_history()
+bio.get_bin_history(bin_address=0)
 
 # %% [markdown]
-# ## Note: "A" (now largely depleted) is largely the limiting reagent
+# ## Note: `A` (now largely depleted) is largely the limiting reagent
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ## Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B", "C"], 
-              title="Reaction A + B <-> C .  Changes in concentrations with time",
-              color_discrete_sequence = ['red', 'violet', 'green'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+bio.plot_history_single_bin(bin_address=0, 
+                            title="Reaction  A + B <-> C . Concentrations at bin 0")
 
 # %% [markdown]
 # ## For more in-depth analysis of this reaction, including variable time steps, see the experiment _"reactions_single_compartment/react_3"_ 

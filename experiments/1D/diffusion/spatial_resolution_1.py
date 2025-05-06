@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -16,49 +16,34 @@
 # # Exploring the change of delta_x (spatial resolution) in diffusion accuracy.
 # #### From the same initial setup, diffusion is carried out over a fixed time span,
 # #### at different spatial resolutions - and then the respective results are compared
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+
+# %% [markdown]
+# ### TAGS :  "diffusion 1D", "under-the-hood"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "May 3, 2025"
+LIFE123_VERSION = "1.0.0rc3"       # Library version this experiment is based on
 
 # %%
-from experiments.get_notebook_info import get_notebook_basename
-
-from life123 import BioSim1D
-from life123 import ChemData as chem
-from life123 import Numerical as num
-
-import plotly.express as px
-from life123 import HtmlLog as log
-from life123 import GraphicLog
+#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
 
 # %%
-# Initialize the HTML logging
-log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-# Set up the use of some specified graphic (Vue) components
-GraphicLog.config(filename=log_file,
-                  components=["vue_heatmap_11", "vue_curves_3"])
+from life123 import BioSim1D, ChemData, Numerical, check_version
 
 # %%
-# Set the heatmap parameters (for the log file)
-heatmap_pars = {"range": [0, 150],
-                "outer_width": 850, "outer_height": 150,
-                "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
-                }
+check_version(LIFE123_VERSION)
 
-# Set the parameters of the line plots
-lineplot_pars = {"range": [0, 150],
-                "outer_width": 850, "outer_height": 250,
-                "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
-                }
+# %%
 
 # %% [markdown]
 # ## Prepare the initial system
 
 # %%
-chem_data = chem(names=["A"], diffusion_rates=[0.1])
+chem_data = ChemData(names="A", diffusion_rates=0.1)
 
 conc_list=[10,13,17,21,25,28,30,38,42,55,65,47,35,32,27,23,20,17,14,8,3,10,16,18,
            20,25,30,35,40,65,85,115,150,92,73,69,65,50,42,36,20,45,50,55,69,82,95,
@@ -66,42 +51,22 @@ conc_list=[10,13,17,21,25,28,30,38,42,55,65,47,35,32,27,23,20,17,14,8,3,10,16,18
 
 bio = BioSim1D(n_bins=len(conc_list), chem_data=chem_data)
 
-bio.set_species_conc(species_name="A", conc_list=conc_list)
+bio.set_species_conc(chem_label="A", conc_list=conc_list)
 
 bio.describe_state()
 
 # %%
-# Line plot
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= f"Diffusion. System snapshot at time t={bio.system_time}",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+# Visualize the initial system state
+bio.visualize_system(title_prefix="Diffusion")
 
 # %%
-# Show as a heatmap
-fig = px.imshow(bio.system_snapshot().T, 
-                title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto=False, color_continuous_scale="gray_r")
-fig.data[0].xgap=2
-fig.data[0].ygap=4
-
-fig.show()
-
-# %%
-log.write("1-D diffusion of a single species, with Diffusion rate 0.1",
-          style=log.h2)
-log.write("Initial system state at time t=0:", blanks_before=2, style=log.bold)
-
-# Output a heatmap to the log file
-bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, graphic_component="vue_heatmap_11")
-
-# Output a line plot the log file
-bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
+# Show as heatmap
+bio.system_heatmaps(title_prefix="Diffusion")
 
 # %%
 bio.describe_state(concise=True)
+
+# %%
 
 # %% [markdown]
 # ### Populate the data set with more bins, using interpolated concentration values
@@ -114,6 +79,8 @@ bio.describe_state()
 # %%
 bio.n_bins
 
+# %%
+
 # %% [markdown]
 # # The STARTING POINT
 # ### This system setup will be our starting point in exploring diffusion using different spacial resolutions
@@ -123,22 +90,13 @@ original_state = bio.save_system()    # SAVE a copy of the system state, to do m
 
 # %%
 # Line plot
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= f"Diffusion. System snapshot at time t={bio.system_time}",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Diffusion")
 
 # %%
-# Show as a heatmap
-fig = px.imshow(bio.system_snapshot().T, 
-                title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto=False, color_continuous_scale="gray_r")
-fig.data[0].xgap=2
-fig.data[0].ygap=4
+# Show as heatmap
+bio.system_heatmaps(title_prefix="Diffusion")
 
-fig.show()
+# %%
 
 # %% [markdown]
 # # Initial Diffusions with delta_x = 1
@@ -156,11 +114,7 @@ diffuse_dx_1 = bio.system
 
 # %%
 # Line plot
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= f"Diffusion. System snapshot at time t={bio.system_time}",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Diffusion")
 
 # %% [markdown]
 # ### Enough time has proceeded to result in some smoothing, and non-puny changes in most values - but still nowhere near equilibrium
@@ -200,7 +154,7 @@ diffuse_dx_1_2 = bio.system
 # ### Compare the last 2 runs (with dx=1 and dx=1/2)
 
 # %%
-num.compare_states(diffuse_dx_1 , diffuse_dx_1_2, verbose=True)
+Numerical .compare_states(diffuse_dx_1 , diffuse_dx_1_2, verbose=True)
 
 # %% [markdown]
 # # Again, restore the system to its initial (pre-diffusion) state
@@ -235,7 +189,7 @@ diffuse_dx_1_4 = bio.system
 # ### Compare the latest 2 runs (with dx=1/2 and dx=1/4)
 
 # %%
-num.compare_states(diffuse_dx_1_2 , diffuse_dx_1_4)
+Numerical .compare_states(diffuse_dx_1_2 , diffuse_dx_1_4)
 
 # %% [markdown]
 # ### Notice how the discrepancies have gone down
@@ -269,7 +223,7 @@ diffuse_dx_1_10 = bio.system
 # ### Again, compare the latest 2 runs (with dx=1/4 and dx=1/10)
 
 # %%
-num.compare_states(diffuse_dx_1_4 , diffuse_dx_1_10)
+Numerical.compare_states(diffuse_dx_1_4 , diffuse_dx_1_10)
 
 # %% [markdown]
 # ### Notice how the discrepancies have gone down even more

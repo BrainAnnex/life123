@@ -191,7 +191,7 @@ class BioSim2D:
             chem_index = self.chem_data.get_index(chem_label)
         else:
             assert chem_index is not None, "system_snapshot_xy(): must pass one of the arguments `chem_label` or `chem_index`"
-            self.chem_data.assert_valid_species_index(chem_index)
+            self.chem_data.assert_valid_chem_index(chem_index)
 
         matrix = self.system[chem_index].T    # A 2-D Numpy array with the chemical data in XY dimensions (notice the transpose)
 
@@ -238,7 +238,7 @@ class BioSim2D:
         if species_label is not None:
             species_index = self.chem_data.get_index(species_label)
 
-        self.chem_data.assert_valid_species_index(species_index)
+        self.chem_data.assert_valid_chem_index(species_index)
 
         xbin, ybin = bin_address
 
@@ -287,7 +287,7 @@ class BioSim2D:
         if species_name is not None:
             species_index = self.chem_data.get_index(species_name)
         else:
-            self.chem_data.assert_valid_species_index(species_index)
+            self.chem_data.assert_valid_chem_index(species_index)
 
         species_conc = self.system[species_index]
 
@@ -494,7 +494,7 @@ class BioSim2D:
         elif species_index is None:
             raise Exception("BioSim2D.set_species_conc(): must provide a `species_name` or `species_index`")
         else:
-            self.chem_data.assert_valid_species_index(species_index)
+            self.chem_data.assert_valid_chem_index(species_index)
 
         assert (type(conc_data) == list) or (type(conc_data) == tuple) or (type(conc_data) == np.ndarray), \
                     f"BioSim2D.set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \

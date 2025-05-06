@@ -18,18 +18,18 @@ def test_number_of_chemicals():
 
 def test_assert_valid_species_index():
     chem_data = ChemData(names=['A', 'B', 'C'])
-    chem_data.assert_valid_species_index(0)
-    chem_data.assert_valid_species_index(1)
-    chem_data.assert_valid_species_index(2)
+    chem_data.assert_valid_chem_index(0)
+    chem_data.assert_valid_chem_index(1)
+    chem_data.assert_valid_chem_index(2)
 
     with pytest.raises(Exception):
-        chem_data.assert_valid_species_index(3)     # Too large
+        chem_data.assert_valid_chem_index(3)     # Too large
 
     with pytest.raises(Exception):
-        chem_data.assert_valid_species_index(-1)    # Too small
+        chem_data.assert_valid_chem_index(-1)    # Too small
 
     with pytest.raises(Exception):
-        chem_data.assert_valid_species_index("2")   # Not an int
+        chem_data.assert_valid_chem_index("2")   # Not an int
 
 
 

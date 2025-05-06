@@ -245,7 +245,7 @@ class UniformCompartment:
         if species_name is not None:
             species_index = self.chem_data.get_index(species_name)
         elif species_index is not None:
-            self.chem_data.assert_valid_species_index(species_index)
+            self.chem_data.assert_valid_chem_index(species_index)
         else:
             raise Exception("UniformCompartment.set_single_conc(): at least one "
                             "of the arguments `species_index` or `species_name` must be provided")

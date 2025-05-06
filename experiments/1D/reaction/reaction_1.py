@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -25,31 +25,35 @@
 # ### TAGS :  "reactions 1D", "quick-start"
 
 # %%
-LAST_REVISED = "Jan. 13, 2025"
-LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
+LAST_REVISED = "May 4, 2025"
+LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
-# %% tags=[]
-#import sys
+# %%
+#import sys, os
+#os.getcwd()
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
-# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
+  
+from life123 import ChemData, BioSim1D, check_version
 
-from life123 import ChemData, BioSim1D
+# %%
+check_version(LIFE123_VERSION)
 
 # %%
 
 # %% [markdown]
 # # Initialize the System
 
-# %% tags=[]
+# %%
 # Initialize the system
 chem_data = ChemData(names=["A", "B"])              # Diffusion NOT taken into account
 bio = BioSim1D(n_bins=3, chem_data=chem_data)       # We'll specify the reactions later
 
-bio.set_uniform_concentration(species_name="A", conc=10.)   # Same across all bins
-bio.set_uniform_concentration(species_name="B", conc=50.)   # Same across all bins
+bio.set_uniform_concentration(chem_label="A", conc=10.)   # Same across all bins
+bio.set_uniform_concentration(chem_label="B", conc=50.)   # Same across all bins
 
 bio.describe_state()
 
@@ -84,7 +88,7 @@ reactions.describe_reactions()
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ### First Reaction Step
 
 # %%
@@ -139,7 +143,7 @@ bio.reaction_dynamics.is_in_equilibrium(conc=bio.bin_snapshot(bin_address=0))
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ## Plots of changes of concentration with time
 
 # %%

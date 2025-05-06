@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -24,28 +24,38 @@
 # -Spatial resolution ("delta x")  
 # -Temporal resolution ("delta t")    
 # -Alternate methods of estimating numerical derivatives
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+
+# %% [markdown]
+# ### TAGS :  "diffusion 1D", "under-the-hood"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "May 3, 2025"
+LIFE123_VERSION = "1.0.0rc3"       # Library version this experiment is based on
 
 # %%
+#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
 
-from life123 import BioSim1D
-from life123 import ChemData as chem
-from life123 import CollectionArray
-from life123 import Numerical as num
+# %%
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
+from life123 import BioSim1D, ChemData, CollectionArray, Numerical, check_version
 
 import numpy as np
 
-import plotly.express as px
+# %%
+check_version(LIFE123_VERSION)
+
+# %%
 
 # %%
 # We'll be considering just 1 chemical species, "A"
 diffusion_rate = 10.
 
-chem_data = chem(diffusion_rates=[diffusion_rate], names=["A"])
+chem_data = ChemData(diffusion_rates=diffusion_rate, names="A")
+
+# %%
 
 # %% [markdown]
 # # BASELINE
@@ -64,15 +74,14 @@ algorithm = None  # "Explicit, with 3+1 stencil"
 bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
-bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
-bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)
+bio.inject_sine_conc(chem_label="A", number_cycles=2, amplitude=8)
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= "Initial System State",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+# Visualize the initial system state
+bio.visualize_system(title_prefix="Initial System State")
+
+# %%
 
 # %% [markdown]
 # #### Now do 4 rounds of single-step diffusion, to collect the system state at a total of 5 time points: t0 (the initial state), plus t1, t2, t3 and t4
@@ -83,7 +92,7 @@ history = CollectionArray()
 
 # %%
 # Store the initial state
-arr = bio.lookup_species(species_index=0, copy=True)
+arr = bio.lookup_species(chem_index=0, copy=True)
 history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -91,7 +100,7 @@ history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {b
 for _ in range(4):
     bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
 
-    arr = bio.lookup_species(species_index=0, copy=True)
+    arr = bio.lookup_species(chem_index=0, copy=True)
     history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -128,7 +137,7 @@ rhs = diffusion_rate*second_gradient_x_at_t2
 rhs.shape
 
 # %%
-num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
+Numerical.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
 # The above number is a measure of the discrepancy from the perfect match (zero distance) that an ideal solution would provide. 
@@ -153,13 +162,13 @@ n_bins = 100          # Reducing the spatial resolution
 bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
-bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
-bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)
+bio.inject_sine_conc(chem_label="A", number_cycles=2, amplitude=8)
 
 # %%
 history = CollectionArray()   # All the system state will get collected in this object
 # Store the initial state
-arr = bio.lookup_species(species_index=0, copy=True)
+arr = bio.lookup_species(chem_index=0, copy=True)
 history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -167,7 +176,7 @@ history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {b
 for _ in range(4):
     bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
 
-    arr = bio.lookup_species(species_index=0, copy=True)
+    arr = bio.lookup_species(chem_index=0, copy=True)
     history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -194,10 +203,12 @@ second_gradient_x_at_t2.shape
 lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
 rhs = diffusion_rate*second_gradient_x_at_t2
 
-num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
+Numerical.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
 # #### The discrepancy value has indeed gone up from the baseline 0.023163289760024783
+
+# %%
 
 # %% [markdown]
 # ## Variation 2 : increase spatial resolution
@@ -211,13 +222,13 @@ n_bins = 900          # Increasing the spatial resolution (from the baseline of 
 bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
-bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
-bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)
+bio.inject_sine_conc(chem_label="A", number_cycles=2, amplitude=8)
 
 # %%
 history = CollectionArray()   # All the system state will get collected in this object
 # Store the initial state
-arr = bio.lookup_species(species_index=0, copy=True)
+arr = bio.lookup_species(chem_index=0, copy=True)
 history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -225,7 +236,7 @@ history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {b
 for _ in range(4):
     bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
 
-    arr = bio.lookup_species(species_index=0, copy=True)
+    arr = bio.lookup_species(chem_index=0, copy=True)
     history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -252,10 +263,12 @@ second_gradient_x_at_t2.shape
 lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
 rhs = diffusion_rate*second_gradient_x_at_t2
 
-num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
+Numerical.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
 # #### The discrepancy value has indeed gone down from the baseline 0.023163289760024783
+
+# %%
 
 # %% [markdown]
 # ## Variation 3 : reduce time resolution
@@ -270,13 +283,13 @@ delta_t = 0.02        # Reducing the time resolution (from baselin 0.01)
 bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
-bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
-bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)
+bio.inject_sine_conc(chem_label="A", number_cycles=2, amplitude=8)
 
 # %%
 history = CollectionArray()   # All the system state will get collected in this object
 # Store the initial state
-arr = bio.lookup_species(species_index=0, copy=True)
+arr = bio.lookup_species(chem_index=0, copy=True)
 history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -284,7 +297,7 @@ history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {b
 for _ in range(4):
     bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
 
-    arr = bio.lookup_species(species_index=0, copy=True)
+    arr = bio.lookup_species(chem_index=0, copy=True)
     history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -311,10 +324,12 @@ second_gradient_x_at_t2.shape
 lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
 rhs = diffusion_rate*second_gradient_x_at_t2
 
-num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
+Numerical.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
 # #### The discrepancy value has indeed gone up from the baseline 0.023163289760024783
+
+# %%
 
 # %% [markdown]
 # ## Variation 4 : increase time resolution
@@ -328,13 +343,13 @@ delta_t = 0.005        # Increasing the time resolution (from baselin 0.01)
 bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
-bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
-bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)
+bio.inject_sine_conc(chem_label="A", number_cycles=2, amplitude=8)
 
 # %%
 history = CollectionArray()   # All the system state will get collected in this object
 # Store the initial state
-arr = bio.lookup_species(species_index=0, copy=True)
+arr = bio.lookup_species(chem_index=0, copy=True)
 history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -342,7 +357,7 @@ history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {b
 for _ in range(4):
     bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
 
-    arr = bio.lookup_species(species_index=0, copy=True)
+    arr = bio.lookup_species(chem_index=0, copy=True)
     history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -369,10 +384,12 @@ second_gradient_x_at_t2.shape
 lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
 rhs = diffusion_rate*second_gradient_x_at_t2
 
-num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
+Numerical.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
 # #### The discrepancy value has indeed gone down from the baseline 0.023163289760024783
+
+# %%
 
 # %% [markdown]
 # ## Variation 5 : Use a better (higher-order) method to numerically estimate the SPATIAL derivatives
@@ -387,13 +404,13 @@ delta_t = 0.01        # Reducing the baseline time resolution
 bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
-bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
-bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)
+bio.inject_sine_conc(chem_label="A", number_cycles=2, amplitude=8)
 
 # %%
 history = CollectionArray()   # All the system state will get collected in this object
 # Store the initial state
-arr = bio.lookup_species(species_index=0, copy=True)
+arr = bio.lookup_species(chem_index=0, copy=True)
 history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -401,7 +418,7 @@ history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {b
 for _ in range(4):
     bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
 
-    arr = bio.lookup_species(species_index=0, copy=True)
+    arr = bio.lookup_species(chem_index=0, copy=True)
     history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -419,8 +436,8 @@ f_at_t2.shape
 
 # %%
 # Computer the second spatial derivative (MORE SOPHISTICATED METHOD, using 5-point stencils)
-gradient_x_at_t2 = num.gradient_order4_1d(arr=f_at_t2, dx=delta_x)
-second_gradient_x_at_t2 = num.gradient_order4_1d(arr=gradient_x_at_t2, dx=delta_x)
+gradient_x_at_t2 = Numerical.gradient_order4_1d(arr=f_at_t2, dx=delta_x)
+second_gradient_x_at_t2 = Numerical.gradient_order4_1d(arr=gradient_x_at_t2, dx=delta_x)
 second_gradient_x_at_t2.shape
 
 # %%
@@ -428,10 +445,12 @@ second_gradient_x_at_t2.shape
 lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
 rhs = diffusion_rate*second_gradient_x_at_t2
 
-num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
+Numerical.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
 # #### Not surprisingly, the discrepancy value (in part caused by poor numeric estimation of spatial derivatives) has indeed gone down from the baseline 0.023163289760024783
+
+# %%
 
 # %% [markdown]
 # ## Variation 6 : Use a better (higher-order) method to numerically estimate the TIME derivatives
@@ -444,13 +463,13 @@ num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 ed
 bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
-bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
-bio.inject_sine_conc(species_name="A", frequency=2, amplitude=8)
+bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)
+bio.inject_sine_conc(chem_label="A", number_cycles=2, amplitude=8)
 
 # %%
 history = CollectionArray()   # All the system state will get collected in this object
 # Store the initial state
-arr = bio.lookup_species(species_index=0, copy=True)
+arr = bio.lookup_species(chem_index=0, copy=True)
 history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -458,7 +477,7 @@ history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {b
 for _ in range(4):
     bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
 
-    arr = bio.lookup_species(species_index=0, copy=True)
+    arr = bio.lookup_species(chem_index=0, copy=True)
     history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -468,7 +487,7 @@ all_history.shape
 
 # %%
 # Compute time derivatives (for each bin) : MORE SOPHISTICATED METHOD, using 5-point stencils
-df_dt_all_bins = np.apply_along_axis(num.gradient_order4_1d, 0, all_history, delta_t)
+df_dt_all_bins = np.apply_along_axis(Numerical.gradient_order4_1d, 0, all_history, delta_t)
 
 # Let's consider the state at the midpoint in time (t2)
 f_at_t2 = all_history[2]     # The middle of the 5 time snapshots
@@ -485,7 +504,7 @@ second_gradient_x_at_t2.shape
 lhs = df_dt_all_bins[2]   # t2 is the middle point of the 5
 rhs = diffusion_rate*second_gradient_x_at_t2
 
-num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
+Numerical.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
 
 # %% [markdown]
 # #### Here, the discrepancy value has remained largely the same from the baseline 0.023163289760024783

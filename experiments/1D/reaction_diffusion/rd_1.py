@@ -28,7 +28,7 @@
 # ### TAGS :  "reactions 1D", "diffusion 1D", "quick-start"
 
 # %%
-LAST_REVISED = "Apr. 29, 2025"
+LAST_REVISED = "May 5, 2025"
 LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
@@ -67,8 +67,8 @@ reactions.describe_reactions()
 # # TIME 0 : Inject initial concentrations of `A` and `B` at opposite ends of the system
 
 # %%
-bio.set_bin_conc(bin_address=0, species_name="A", conc=20.)
-bio.set_bin_conc(bin_address=6, species_name="B", conc=20.)
+bio.set_bin_conc(bin_address=0, chem_label="A", conc=20.)
+bio.set_bin_conc(bin_address=6, chem_label="B", conc=20.)
 
 bio.describe_state()
 

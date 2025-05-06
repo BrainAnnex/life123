@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -17,27 +17,36 @@
 #
 # ### The initial system state is a sine wave of frequency 2 (i.e. 2 cycles across the system's length), of amplitude 10, with a baseline (bias) of 30
 # ### Afterward, the process is restarted and repeated with a frequency 5 times larger  
-#   
-#   
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+
+# %% [markdown]
+# ### TAGS :  "diffusion 1D"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "May 3, 2025"
+LIFE123_VERSION = "1.0.0rc3"       # Library version this experiment is based on
 
 # %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
-from life123 import BioSim1D
+# %%
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-import plotly.express as px
-import plotly.graph_objects as go
+from life123 import BioSim1D, ChemData, PlotlyHelper, check_version
 
-from life123 import ChemData as chem
+# %%
+check_version(LIFE123_VERSION)
+
+# %%
 
 # %%
 # Initialize the system.  We use a RELATIVELY LARGE NUMBER OF BINS, 
 # to captures the finer changes in the frequency components of the concentration function
-chem_data = chem(names=["A"], diffusion_rates=[0.5])
+chem_data = ChemData(names="A", diffusion_rates=0.5)
 bio = BioSim1D(n_bins=500, chem_data=chem_data)
+
+# %%
 
 # %% [markdown]
 # ## Initial Preparation -
@@ -45,33 +54,22 @@ bio = BioSim1D(n_bins=500, chem_data=chem_data)
 # #### (of amplitude 10 and bias value of 30)
 
 # %%
-bio.inject_sine_conc(species_name="A", amplitude=10, bias=30, frequency=2)
+bio.inject_sine_conc(chem_label="A", amplitude=10, bias=30, number_cycles=2)
 
 # %%
 bio.show_system_snapshot()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= "Initial System State",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+# Visualize the system's initial state
+bio.visualize_system(title_prefix="Initial System State")
 
 # %%
 # Show as heatmap
-fig = px.imshow(bio.system_snapshot().T, 
-                title= "Initial System State (as a heatmap)", 
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto=False, color_continuous_scale="gray_r") 
-
-fig.data[0].xgap=0
-fig.data[0].ygap=0
-
-fig.show()
+bio.system_heatmaps(title_prefix="Initial System State (as a heatmap)")
 
 # %%
 # Take a look at the frequency domain of the concentration values
-frequency_data = bio.frequency_analysis(species_name="A")
+frequency_data = bio.frequency_analysis(chem_label="A")
 frequency_data
 
 # %%
@@ -82,6 +80,8 @@ ratio
 bio.add_snapshot(data_snapshot={"ratio": ratio})
 bio.get_history()
 
+# %%
+
 # %% [markdown]
 # # Start the diffusion - to time t=10
 
@@ -90,7 +90,7 @@ bio.diffuse(total_duration=10, n_steps=100)
 
 # %%
 # Take a look at the frequency domain of the concentration values
-frequency_data = bio.frequency_analysis(species_name="A")
+frequency_data = bio.frequency_analysis(chem_label="A")
 frequency_data
 
 # %%
@@ -107,7 +107,7 @@ bio.get_history()
 # %%
 for i in range(49):
     bio.diffuse(total_duration=10, n_steps=100)
-    frequency_data = bio.frequency_analysis(species_name="A")
+    frequency_data = bio.frequency_analysis(chem_label="A")
     ratio = frequency_data.loc[2, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
     bio.add_snapshot(data_snapshot={"ratio": ratio})
 
@@ -115,14 +115,12 @@ for i in range(49):
 bio.get_history()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= f"System State at time t={bio.system_time}",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system()
 
 # %% [markdown]
-# #### Note how the curve is beginning to flatten; the peaks are no longer between 20 and 40
+# #### Note how the curve is beginning to flatten; the peaks are no longer at 20 and 40
+
+# %%
 
 # %% [markdown]
 # ## Do 150 more rounds of diffusion - to time t = 2000
@@ -130,7 +128,7 @@ fig.show()
 # %%
 for i in range(150):
     bio.diffuse(total_duration=10, n_steps=75)    # Notice the gradual decreas of the number of intermediate steps, given the smaller gradient
-    frequency_data = bio.frequency_analysis(species_name="A")
+    frequency_data = bio.frequency_analysis(chem_label="A")
     ratio = frequency_data.loc[2, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
     bio.add_snapshot(data_snapshot={"ratio": ratio})
 
@@ -138,22 +136,20 @@ for i in range(150):
 bio.get_history()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-          title= f"Diffusion. System snapshot at time t={bio.system_time}",
-          color_discrete_sequence = ['red'],
-          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system()
 
 # %% [markdown]
 # #### Note how the curve is flatter still - and even beginning to lose shape at the boundary 
+
+# %%
 
 # %% [markdown]
 # ## Do 800 more rounds of diffusion - to time t = 10000
 
 # %%
 for i in range(800):
-    bio.diffuse(total_duration=10, n_steps=20)   # Note how we're gradually increasing the time steps, because the gradiants are now smaller
-    frequency_data = bio.frequency_analysis(species_name="A")
+    bio.diffuse(total_duration=10, n_steps=20)   # Note how we're gradually increasing the number of intermediate steps, because the gradiants are now smaller
+    frequency_data = bio.frequency_analysis(chem_label="A")
     ratio = frequency_data.loc[2, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
     bio.add_snapshot(data_snapshot={"ratio": ratio})
 
@@ -161,35 +157,33 @@ for i in range(800):
 bio.get_history()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-          title= f"Diffusion. System snapshot at time t={bio.system_time}",
-          color_discrete_sequence = ['red'],
-          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system()
 
 # %% [markdown]
 # #### Getting decisively flatter, as it approaches equilibrium
+
+# %%
 
 # %% [markdown]
 # ## Now, let's look how the amplitude of the sine signal, relative to the constant bias, changed over time
 
 # %%
-fig = px.line(data_frame=bio.get_history(), y=["ratio"], 
-          title= "Component of frequency=2, relative to amplitude of constant bias",
-          color_discrete_sequence = ['purple'],
-          labels={"value":"ratio", "variable":"Freq. 2", "index":"Time (groups of 10 units)"})
-fig.show()
+PlotlyHelper.plot_pandas(df=bio.get_history(), x_var="SYSTEM TIME", fields="ratio",
+                         y_label="ratio",
+                         title= "Component of frequency=2, relative to amplitude of constant bias",
+                         colors="orange")
 
 # %%
-fig = px.line(data_frame=bio.get_history(), y=["ratio"], 
-              title= "Component of frequency=2, relative to amplitude of constant bias (log scale in y-axis)",
-              color_discrete_sequence = ['purple'],
-              labels={"value":"ratio", "variable":"Freq. 2", "index":"Time (groups of 10 units)"},
-              log_y=True)
-fig.show()
+# Same, but wigh log scale for y-axis (and save the figure object in a variable)
+fig_freq_2 = PlotlyHelper.plot_pandas(df=bio.get_history(), x_var="SYSTEM TIME", fields="ratio",
+                                     log_y=True, y_label="ratio",
+                                     title= "Component of frequency=2, relative to amplitude of constant bias<br>(log scale in y-axis)",
+                                     colors="orange")
+fig_freq_2.show()
 
 # %%
-saved_freq_2_df = bio.get_history().copy(deep=True)   # Save the whole dataframe, for later use
+
+# %%
 
 # %% [markdown]
 # # Start a NEW system
@@ -199,30 +193,18 @@ saved_freq_2_df = bio.get_history().copy(deep=True)   # Save the whole dataframe
 bio = BioSim1D(n_bins=500, chem_data=chem_data)
 
 # %%
-bio.inject_sine_conc(species_name="A", amplitude=10, bias=30, frequency=10)   # x5 higher frequency than before
+bio.inject_sine_conc(chem_label="A", amplitude=10, bias=30, number_cycles=10)   # x5 higher frequency than before
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= "Initial System State",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Initial System State")
 
 # %%
 # Show as heatmap
-fig = px.imshow(bio.system_snapshot().T, 
-                title= "Initial System State (as a heatmap)", 
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto=False, color_continuous_scale="gray_r") 
-
-fig.data[0].xgap=0
-fig.data[0].ygap=0
-
-fig.show()
+bio.system_heatmaps(title_prefix="Initial System State (as a heatmap)")
 
 # %%
 # Take a look at the frequency domain of the concentration values
-frequency_data = bio.frequency_analysis(species_name="A")
+frequency_data = bio.frequency_analysis(chem_label="A")
 frequency_data
 
 # %%
@@ -234,11 +216,16 @@ bio.add_snapshot(data_snapshot={"ratio": ratio})
 bio.get_history()
 
 # %%
+
+# %% [markdown]
+# ### Start the diffusion
+
+# %%
 bio.diffuse(total_duration=10, n_steps=100)
 
 # %%
 # Take a look at the frequency domain of the concentration values
-frequency_data = bio.frequency_analysis(species_name="A")
+frequency_data = bio.frequency_analysis(chem_label="A")
 frequency_data.loc[10]
 
 # %%
@@ -250,25 +237,20 @@ bio.add_snapshot(data_snapshot={"ratio": ratio})
 bio.get_history()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= "Initial System State",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system()
+
+# %% [markdown]
+# ### Continue the diffusion
 
 # %%
 for i in range(4):
     bio.diffuse(total_duration=10, n_steps=100)
-    frequency_data = bio.frequency_analysis(species_name="A")
+    frequency_data = bio.frequency_analysis(chem_label="A")
     ratio = frequency_data.loc[10, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
     bio.add_snapshot(data_snapshot={"ratio": ratio})
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= f"System State at time t={bio.system_time}",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system()
 
 # %%
 bio.get_history()
@@ -276,16 +258,12 @@ bio.get_history()
 # %%
 for i in range(10):
     bio.diffuse(total_duration=10, n_steps=100)
-    frequency_data = bio.frequency_analysis(species_name="A")
+    frequency_data = bio.frequency_analysis(chem_label="A")
     ratio = frequency_data.loc[10, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
     bio.add_snapshot(data_snapshot={"ratio": ratio})
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= f"System State at time t={bio.system_time}",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system()
 
 # %%
 bio.get_history()
@@ -293,16 +271,12 @@ bio.get_history()
 # %%
 for i in range(35):
     bio.diffuse(total_duration=10, n_steps=100)
-    frequency_data = bio.frequency_analysis(species_name="A")
+    frequency_data = bio.frequency_analysis(chem_label="A")
     ratio = frequency_data.loc[10, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
     bio.add_snapshot(data_snapshot={"ratio": ratio})
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= f"System State at time t={bio.system_time}",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system()
 
 # %%
 bio.get_history()
@@ -310,16 +284,12 @@ bio.get_history()
 # %%
 for i in range(50):
     bio.diffuse(total_duration=10, n_steps=100)
-    frequency_data = bio.frequency_analysis(species_name="A")
+    frequency_data = bio.frequency_analysis(chem_label="A")
     ratio = frequency_data.loc[10, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
     bio.add_snapshot(data_snapshot={"ratio": ratio})
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= f"System State at time t={bio.system_time}",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system()
 
 # %% [markdown]
 # **Most of the concentration graph is now flat as a board!**
@@ -327,43 +297,40 @@ fig.show()
 # %%
 bio.get_history()
 
+# %%
+
 # %% [markdown]
 # ## Like done earlier for the smaller frequency, let's look how the amplitude of the sine signal, relative to the constant bias, changed over time
 
 # %%
-fig = px.line(data_frame=bio.get_history(), y=["ratio"], 
-          title= "Component of frequency=10, relative to amplitude of constant bias",
-          color_discrete_sequence = ['green'],
-          labels={"value":"ratio", "variable":"Freq. 10", "index":"Time (groups of 10 units)"})
-fig.show()
+PlotlyHelper.plot_pandas(df=bio.get_history(), x_var="SYSTEM TIME", fields="ratio",
+                         y_label="ratio",
+                         title= "Component of frequency=10, relative to amplitude of constant bias",
+                         colors="red")
 
 # %%
-fig = px.line(data_frame=bio.get_history(), y=["ratio"], 
-              title= "Component of frequency=10, relative to amplitude of constant bias (log scale in y-axis)",
-              color_discrete_sequence = ['green'],
-              labels={"value":"ratio", "variable":"Freq. 10", "index":"Time (groups of 10 units)"},
-              log_y=True)
-fig.show()
+# Same, but wigh log scale for y-axis (and save the figure object in a variable)
+fig_freq_10 = PlotlyHelper.plot_pandas(df=bio.get_history(), x_var="SYSTEM TIME", fields="ratio",
+                                       log_y=True, y_label="ratio",
+                                       title= "Component of frequency=10, relative to amplitude of constant bias<br>(log scale in y-axis)",
+                                       colors="red")
+
+fig_freq_10.show()
 
 # %% [markdown]
-# ### Resurrect the earlier plot for frequency=2 (using a saved dataset)
+# ### Resurrect the earlier plot for frequency=2 (stored in a variable)
 # ### and then superpose them
 
 # %%
-fig_2 = px.line(data_frame=saved_freq_2_df, y=["ratio"], 
-              title= "Component of frequency=2, relative to amplitude of constant bias (log scale in y-axis)",
-              color_discrete_sequence = ['purple'],
-              labels={"value":"ratio", "variable":"Freq. 2", "index":"Time (groups of 10 units)"},
-              log_y=True)
-fig_2.show()
+fig_freq_2
 
 # %%
 # Combine the last 2 plots
-all_fig = go.Figure(data=fig.data + fig_2.data)    # Note that the + is concatenating lists
-all_fig.update_layout(title="Superposed plots for frequency 2 (purple) and 10 (green)")
-all_fig.show()
+PlotlyHelper.combine_plots(fig_list=[fig_freq_2, fig_freq_10],  
+                           title="Superposed plots for frequency 2 and 10",
+                           curve_labels=["Component of frequency=2", "Component of frequency=10"])
 
 # %% [markdown]
-# ## Note how more more substantial the attenuation of the higher frequency (green) is!
+# ## Note how more more substantial the attenuation of the higher frequency (red) is!
 
 # %%

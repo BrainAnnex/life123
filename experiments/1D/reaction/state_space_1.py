@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -27,8 +27,8 @@
 # ### TAGS :  "reactions 1D"
 
 # %%
-LAST_REVISED = "Dec. 16, 2024"
-LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
+LAST_REVISED = "May 5, 2025"
+LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -37,14 +37,12 @@ LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based o
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
-
+ 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import UniformCompartment,  BioSim1D
+from life123 import check_version, UniformCompartment,  BioSim1D, PlotlyHelper, GraphicLog
 
 import plotly.express as px
-import plotly.graph_objects as go
-from life123 import GraphicLog
 
 # %%
 # Initialize the HTML logging
@@ -68,15 +66,21 @@ uc.describe_reactions()
 # %%
 bio = BioSim1D(n_bins=1, reaction_handler=uc)
 
-bio.set_uniform_concentration(species_name="A", conc=10.)
-bio.set_uniform_concentration(species_name="B", conc=50.)
+bio.set_uniform_concentration(chem_label="A", conc=10.)
+bio.set_uniform_concentration(chem_label="B", conc=50.)
 
 bio.describe_state()
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
-bio.get_history()
+
+# %%
+# Let's enable history - by default for all chemicals and all bins (we're only using one)
+bio.enable_history(take_snapshot=True, caption="Initial setup")
+
+# %%
+bio.get_bin_history(bin_address=0)
+
+# %%
 
 # %%
 # Send the plot to the HTML log file
@@ -84,33 +88,29 @@ uc.plot_reaction_network("vue_cytoscape_2")
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ### To equilibrium
 
 # %%
 # Using smaller steps that in experiment reaction_2, to avoid the initial overshooting
-bio.react(time_step=0.05, n_steps=10, snapshots={"frequency": 1, "sample_bin": 0})
+bio.react(time_step=0.05, n_steps=10)
 
 # %%
 bio.describe_state()
 
 # %%
-bio.get_history()
+bio.get_bin_history(bin_address=0)
 
 # %%
 # Verify that the reaction has reached equilibrium
 bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # # Plots of changes of concentration with time
 
 # %%
-df = bio.get_history()
-
-px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B"], 
-              title="Reaction A <-> 3B .  Changes in [A] and [B] over time",
-              color_discrete_sequence = ['darkturquoise', 'green'],
-              labels={"value":"concentration", "variable":"Chemical"})
+bio.plot_history_single_bin(bin_address=0, 
+                            title_prefix="Reaction A <-> 3B")
 
 # %%
 
@@ -118,7 +118,10 @@ px.line(data_frame=df, x="SYSTEM TIME", y=["A", "B"],
 # ## Same data, but shown differently
 
 # %%
-fig0 = px.line(data_frame=bio.get_history(), x="A", y="B", 
+df = bio.get_bin_history(bin_address=0)
+
+# %%
+fig0 = px.line(data_frame=df, x="A", y="B", 
               title="State space of reaction A <-> 3B : [A] vs. [B]",
               color_discrete_sequence = ['#C83778'],
               labels={"value":"concentration", "variable":"Chemical"})
@@ -157,9 +160,10 @@ for ind in df.index:
 fig1.show()
 
 # %%
-# Combine the two above plots, while using the layout of fig1 (which includes the title and annotations)
-all_fig = go.Figure(data=fig0.data + fig1.data, layout = fig1.layout)
-all_fig.show()
+# Combine the two above plots, 
+# while using the layout of fig1 (which includes the title and annotations)
+
+PlotlyHelper.combine_plots(fig_list = [fig0, fig1], layout_index=1)
 
 # %% [markdown]
 # ### Note how the trajectory is progressively slowing down towards the dynamical system's "attractor" (equilibrium state of the reaction)
