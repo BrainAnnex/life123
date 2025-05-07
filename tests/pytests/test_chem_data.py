@@ -246,26 +246,26 @@ def test_get_diffusion_rate():
     chem_data = ChemData(names=["A", "B", "C"], diffusion_rates=[10, 11, 12])
 
     assert chem_data.get_diffusion_rate(name="A") == 10
-    assert chem_data.get_diffusion_rate(species_index=0) == 10
+    assert chem_data.get_diffusion_rate(chem_index=0) == 10
     with pytest.raises(Exception):
-        assert chem_data.get_diffusion_rate(name="A", species_index=0)
+        assert chem_data.get_diffusion_rate(name="A", chem_index=0)
 
     assert chem_data.get_diffusion_rate(name="C") == 12
-    assert chem_data.get_diffusion_rate(species_index=2) == 12
+    assert chem_data.get_diffusion_rate(chem_index=2) == 12
 
     with pytest.raises(Exception):
         chem_data.get_diffusion_rate(name="X")          # X doesn't exist
 
     with pytest.raises(Exception):
-        chem_data.get_diffusion_rate(species_index=3)   # Index 3 doesn't exist
+        chem_data.get_diffusion_rate(chem_index=3)   # Index 3 doesn't exist
 
     chem_data.add_chemical(name="Z")                    # This will be given index 3
     assert chem_data.get_diffusion_rate(name="Z") is None       # No diffusion value assigned
-    assert chem_data.get_diffusion_rate(species_index=3) is None
+    assert chem_data.get_diffusion_rate(chem_index=3) is None
 
     chem_data.set_diffusion_rate(label="Z", diff_rate=8)
     assert chem_data.get_diffusion_rate(name="Z") == 8
-    assert chem_data.get_diffusion_rate(species_index=3) == 8
+    assert chem_data.get_diffusion_rate(chem_index=3) == 8
 
 
 

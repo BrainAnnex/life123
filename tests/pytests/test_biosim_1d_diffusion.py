@@ -32,7 +32,7 @@ def test_diffuse_step_single_species_1():
     coeffs = np.array([C1, C0, C1])
     assert np.allclose(np.sum(coeffs), 0)   # The coefficients should add up to zero
 
-    result = bio.diffuse_step_single_species(time_step=delta_t, chem_index=0, delta_x=delta_x)
+    result = bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff, chem_index=0, delta_x=delta_x)
     #print(result)
 
     # MANUALLY computes the expected increments at each bin (i.e. manually do a convolution operation)
@@ -51,7 +51,8 @@ def test_diffuse_step_single_species_1():
 
 
 def test_diffuse_step_single_species_1a():
-    chem_data = chem(diffusion_rates=[10.])
+    diff = 10.
+    chem_data = chem(diffusion_rates=[diff])    # Just 1 chemical species
 
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
 
@@ -60,10 +61,10 @@ def test_diffuse_step_single_species_1a():
 
     with pytest.raises(Exception):
         #Excessive time step
-        bio.diffuse_step_single_species(time_step=0.034)
+        bio._diffuse_step_single_chem_3_1_stencil(time_step=0.034, diff=diff)
 
     # Diffuse by a single step
-    increment_vector = bio.diffuse_step_single_species(time_step=0.02)
+    increment_vector = bio._diffuse_step_single_chem_3_1_stencil(time_step=0.02, diff=diff)
     print("Increment vector is: ", increment_vector)
     assert np.allclose(increment_vector, [-20., 20.])
 
@@ -89,23 +90,6 @@ def test_diffuse_step_single_species_1b():
 
 
 
-def test_diffuse_step_single_species_2():
-    chem_data = chem(names=["A"])
-    bio = BioSim1D(n_bins=1, chem_data=chem_data)
-
-    bio.set_uniform_concentration(chem_index=0, conc=8.0)
-    with pytest.raises(Exception):
-        bio.diffuse_step_single_species(time_step=.001)    # Must set the diffusion rates first
-
-    chem_data.set_diffusion_rate(label="A", diff_rate = 20.)
-    bio.describe_state()    # 1 bins and 1 species:  [[8.]]
-
-    increment_vector = bio.diffuse_step_single_species(time_step=3)    # With just 1 bin, nothing happens
-    print("Increment vector is: ", increment_vector)
-    assert np.allclose(increment_vector, [0.])
-
-
-
 def test_diffuse_step_single_species_2b():
     chem_data = chem(names=["A"])
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
@@ -125,7 +109,7 @@ def test_diffuse_step_single_species_3():
     bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     with pytest.raises(Exception):
-        bio.diffuse_step_single_species(time_step=.001)    # Must first initialize the system
+        bio._diffuse_step_single_chem_3_1_stencil(time_step=.001)    # Must first initialize the system
 
 
     chem_data = chem(diffusion_rates=[2.78, 3.14])
@@ -146,6 +130,24 @@ def test_diffuse_step_single_species_3():
 
     assert np.allclose(bio.lookup_species(0), np.full(5, 22.2, dtype=float))
     assert np.allclose(bio.lookup_species(1), np.full(5, 66.6, dtype=float))
+
+
+
+def test_diffuse_step_1():
+    # Test with just 1 bin
+    chem_data = chem(names="A")
+    bio = BioSim1D(n_bins=1, chem_data=chem_data)
+
+    bio.set_uniform_concentration(chem_index=0, conc=8.0)
+
+    chem_data.set_diffusion_rate(label="A", diff_rate = 20.)
+    #bio.describe_state()    # 1 bins and 1 species:  [[8.]]
+
+    bio.diffuse_step(time_step=3)
+    assert np.allclose(bio.delta_diffusion, [[0.]])     # With just 1 bin, nothing happens!
+
+    bio.diffuse_step(time_step=77., algorithm="5_1_explicit")
+    assert np.allclose(bio.delta_diffusion, [[0.]])     # With just 1 bin, nothing happens!
 
 
 
@@ -281,7 +283,7 @@ def test_diffuse_step_single_species_5_1_stencils():
 
     #bio.describe_state()
 
-    result = bio.diffuse_step_single_species_5_1_stencils(time_step=delta_t, chem_index=0, delta_x=delta_x)
+    result = bio._diffuse_step_single_chem_5_1_stencil(time_step=delta_t, diff=diff, chem_index=0, delta_x=delta_x)
     #print(result)
 
     # Manually computes the expected increments at each bin
@@ -434,7 +436,7 @@ def test_diffuse_3():
 
     bio.describe_state()
     # Compute the increments to the concentrations, from a single diffusion step
-    incs = bio.diffuse_step_single_species_5_1_stencils(time_step=delta_t, chem_index=0, delta_x=delta_x)
+    incs = bio._diffuse_step_single_chem_5_1_stencil(time_step=delta_t, diff=diff, chem_index=0, delta_x=delta_x)
 
     # Redo computations on an identical system
     bio2 = BioSim1D(n_bins=5, chem_data=chem_data)

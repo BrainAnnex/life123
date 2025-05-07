@@ -113,7 +113,8 @@ class BioSim1D:
         self.delta_reactions_B = None   # Same as above, but for the "other sides" of bins with membranes
                                         # TODO: explore sparse-matrix representations
 
-        self.sealed = True           # If True, no exchange with the outside; if False, immersed in a "bath"
+        self.sealed = True              # If True, no exchange with the outside;
+                                        # if False (NOT currently supported), immersed in a "bath"
 
         # Only applicable if "sealed" is False:
         self.bath_concentrations = None      # A NumPy array for each species
@@ -855,7 +856,7 @@ class BioSim1D:
                 if not self.chem_data.get_all_diffusion_rates():
                     print(f"  Species {species_index}{name}. Diff rate: NOT SET. Conc: {all_conc}")
                 else:
-                    print(f"  Species {species_index}{name}. Diff rate: {self.chem_data.get_diffusion_rate(species_index=species_index)}. Conc: {all_conc}")
+                    print(f"  Species {species_index}{name}. Diff rate: {self.chem_data.get_diffusion_rate(chem_index=species_index)}. Conc: {all_conc}")
 
         else:   # This alternate view, using Pandas, currently only usable when there are no membranes
             df = pd.DataFrame(self.system, columns=[f"Bin {i}" for i in range(self.n_bins)])
@@ -1334,71 +1335,85 @@ class BioSim1D:
 
 
 
-    def diffuse_step(self, time_step, delta_x=1, algorithm=None) -> None:
+    def diffuse_step(self, time_step :float, delta_x=1, algorithm=None) -> None:
         """
-        Diffuse all the species for the given time step, across all bins;
-        clear the delta_diffusion array, and then re-compute it from all the species.
+        Diffuse all the chemical species for the given time step, across all bins;
+        clear the self.delta_diffusion array, and then re-compute it from all the species.
 
         IMPORTANT: the actual system concentrations are NOT changed.
 
         :param time_step:   Time step over which to carry out the diffusion
                             If too large - as determined by the method is_excessive() - an Exception will be raised
-        :param delta_x:     Distance between consecutive bins
-        :param algorithm:      (Optional) code specifying the method to use to solve the diffusion equation.
-                                Currently available options: "5_1_explicit"
+        :param delta_x:     Spatial distance between consecutive bins
+        :param algorithm:   [OPTIONAL] String indicating the desired method to use to solve the diffusion equation.
+                                Currently available option: "5_1_explicit";
+                                if not specified, thr default method diffuse_step_single_species() is used
         :return:            None (the array in the class variable "delta_diffusion" gets set)
         """
         # TODO: parallelize the independent computations
 
-        # 2-D array of incremental changes at every bin, for each chemical species
+        assert self.system is not None, \
+            "diffuse_step(): Must first initialize the system"
+
+        assert not self.chem_data.missing_diffusion_rate(), \
+            "diffuse_step(): Must first set the diffusion rates"
+
+        assert self.sealed == True, \
+            "BioSim1D.diffuse_step_single_species(): For now, there's no provision for exchange with the outside.  " \
+            "Only sealed systems are supported"
+
+
+        # 2-D array of incremental concentration changes at every bin, for each chemical species
         self.delta_diffusion = np.zeros((self.n_species, self.n_bins), dtype=float)
 
-        for species_index in range(self.n_species):
+        if self.n_bins == 1:
+            return                  # There's nothing to do in the case of just 1 bin!
+                                    # We'll use the all zeros in the just-initialized  self.delta_diffusion
 
+
+        # Loop over all the chemical species in the system
+        for chem_index in range(self.n_species):
+            diff = self.chem_data.get_diffusion_rate(chem_index=chem_index)     # The diffusion rate of this chemical
             if algorithm is None:
-                increment_vector = self.diffuse_step_single_species(time_step, chem_index=species_index, delta_x=delta_x)
+                increment_vector = self._diffuse_step_single_chem_3_1_stencil(time_step, diff=diff, chem_index=chem_index, delta_x=delta_x)
             elif algorithm == "5_1_explicit":
-                increment_vector = self.diffuse_step_single_species_5_1_stencils(time_step, chem_index=species_index, delta_x=delta_x)
+                increment_vector = self._diffuse_step_single_chem_5_1_stencil(time_step, diff=diff, chem_index=chem_index, delta_x=delta_x)
             else:
                 raise Exception(f"diffuse_step(): unknown method: `{algorithm}`")
 
             #print("Increment vector is: ", increment_vector)
 
             # For each bin, update the concentrations from the buffered increments
-            self.delta_diffusion[species_index] = increment_vector      # Vector operation to a row of the matrix delta_diffusion
+            self.delta_diffusion[chem_index] = increment_vector      # Vector operation to a row of the matrix delta_diffusion
 
 
 
-    def diffuse_step_single_species(self, time_step: float, chem_index=0, delta_x=1) -> np.array:
+    def _diffuse_step_single_chem_3_1_stencil(self, time_step :float, diff :float, chem_index=0, delta_x=1) -> np.array:
         """
+        Note: this is one of alternative methods to do this computation.
+
         Diffuse the specified single chemical species, for the given time step, across all bins,
         and return a 1-D array of the changes in concentration ("Delta concentration")
         for the given species across all bins.
 
         IMPORTANT: the actual system concentrations are NOT changed.
 
-        We're assuming an isolated environment, with nothing diffusing thru the "walls"
+        We're assuming an isolated environment, with nothing diffusing thru the outer "system walls"
 
         This approach is based on a "3+1 stencil", aka "Explicit Forward-Time Centered Space".
         EXPLANATION:  https://life123.science/diffusion
 
         :param time_step:   Delta time over which to carry out this single diffusion step;
                                 if too large, an Exception will be raised.
-        :param chem_index:  ID (in the form of an integer index) of the chemical species under consideration
-        :param delta_x:     Distance between consecutive bins
+        :param diff:        Diffusion rate of the chemical of interest
+        :param chem_index:  Integer index of the above chemical
+        :param delta_x:     Spatial distance between consecutive bins
 
-        :return:            A 1-D Numpy array with the CHANGE in concentration for the given species across all bins
+        :return:            A 1-D Numpy array with the CHANGE in concentrations
+                                for the given chemical species across all bins
         """
-        assert self.system is not None, "BioSim1D.diffuse_step_single_species(): Must first initialize the system"
-        assert not self.chem_data.missing_diffusion_rate(), "BioSim1D.diffuse_step_single_species(): Must first set the diffusion rates"
-        assert self.sealed == True, "BioSim1D.diffuse_step_single_species(): For now, there's no provision for exchange with the outside"
 
         increment_vector = np.zeros(self.n_bins, dtype=float)       # One element per bin
-
-        if self.n_bins == 1:
-            return increment_vector                                 # There's nothing to do in the case of just 1 bin!
-
-        diff = self.chem_data.get_diffusion_rate(species_index=chem_index)     # The diffusion rate of the specified single species
 
         assert not self.is_excessive(time_step, diff, delta_x), \
             f"diffuse_step_single_species(): Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"
@@ -1431,8 +1446,10 @@ class BioSim1D:
 
 
 
-    def diffuse_step_single_species_5_1_stencils(self, time_step: float, chem_index=0, delta_x=1) -> np.array:
+    def _diffuse_step_single_chem_5_1_stencil(self, time_step: float, diff :float, chem_index=0, delta_x=1) -> np.array:
         """
+        Note: this is one of alternative methods to do this computation.
+
         Similar to diffuse_step_single_species(), but using a "5+1 stencil";
         i.e. spatial derivatives are turned into finite elements using 5 adjacent bins instead of 3.
 
@@ -1440,28 +1457,21 @@ class BioSim1D:
 
         IMPORTANT: the actual system concentrations are NOT changed.
 
-        :param time_step:       Delta time over which to carry out this single diffusion step;
-                                    if too large, an Exception will be raised.
-        :param chem_index:   ID (in the form of an integer index) of the chemical species under consideration
-        :param delta_x:         Distance between consecutive bins
+        :param time_step:   Delta time over which to carry out this single diffusion step;
+                                if too large, an Exception will be raised.
+        :param diff:        Diffusion rate of the chemical of interest
+        :param chem_index:  Integer index of the above chemical
+        :param delta_x:     Spatial distance between consecutive bins
 
-        :return:                A Numpy array with the CHANGE in concentration for the given species across all bins
+        :return:            A 1-D Numpy array with the CHANGE in concentrations
+                                for the given chemical species across all bins
         """
-        assert self.system is not None, "Must first initialize the system"
-        assert self.n_bins > 0, "Must first set the number of bins"
-        assert self.n_bins >= 3, "For very small number of bins, use another method"
-        assert not self.chem_data.missing_diffusion_rate(), "Must first set the diffusion rates"
-        assert self.sealed == True, "For now, there's no provision for exchange with the outside"
-
-
         increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin
 
-        if self.n_bins == 1:
-            return increment_vector                             # There's nothing to do in the case of just 1 bin!
+        assert self.n_bins >= 3, \
+            "For very small number of bins, use a method other than '5_1_explicit'"
 
-        diff = self.chem_data.get_diffusion_rate(species_index=chem_index)     # The diffusion rate of the specified single species
-
-        # TODO: this Upper Bound is based on a *different* method, and should be made more specific to this method
+        # TODO: this Upper Bound is based on a *different* method, and should be made specific to this method
         #assert not self.is_excessive(time_step, diff, delta_x), \
             #f"Excessive large time_fraction. Should be < {self.max_time_step(diff, delta_x)}"
 
