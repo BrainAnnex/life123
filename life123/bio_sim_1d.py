@@ -3,7 +3,7 @@ import pandas as pd
 import math
 from scipy.fft import rfft, rfftfreq    # Fast Fourier Transforms to extract frequency components
 from scipy.stats import norm
-from typing import Union, List, Tuple
+from typing import Union, List
 from life123.collections import CollectionTabular
 from life123.uniform_compartment import UniformCompartment
 from life123.history import HistoryBinConcentration
@@ -15,6 +15,17 @@ from life123.visualization.plotly_helper import PlotlyHelper
 from life123.visualization.colors import Colors
 
 
+
+
+class Diffusion1D:
+    """
+    TODO: migrate here the diffusion-related methods from BioSim1D
+    """
+    pass
+
+
+    
+################################################################################################################
 
 class BioSim1D:
     """
@@ -1373,11 +1384,16 @@ class BioSim1D:
 
         # Loop over all the chemical species in the system
         for chem_index in range(self.n_species):
+            increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin;
+                                                                    # all the various delta concentrations will go here
+
             diff = self.chem_data.get_diffusion_rate(chem_index=chem_index)     # The diffusion rate of this chemical
             if algorithm is None:
-                increment_vector = self._diffuse_step_single_chem_3_1_stencil(time_step, diff=diff, chem_index=chem_index, delta_x=delta_x)
+                self._diffuse_step_single_chem_3_1_stencil(time_step=time_step, diff=diff, increment_vector=increment_vector,
+                                                           chem_index=chem_index, delta_x=delta_x)
             elif algorithm == "5_1_explicit":
-                increment_vector = self._diffuse_step_single_chem_5_1_stencil(time_step, diff=diff, chem_index=chem_index, delta_x=delta_x)
+                self._diffuse_step_single_chem_5_1_stencil(time_step=time_step, diff=diff, increment_vector=increment_vector,
+                                                           chem_index=chem_index, delta_x=delta_x)
             else:
                 raise Exception(f"diffuse_step(): unknown method: `{algorithm}`")
 
@@ -1388,7 +1404,8 @@ class BioSim1D:
 
 
 
-    def _diffuse_step_single_chem_3_1_stencil(self, time_step :float, diff :float, chem_index=0, delta_x=1) -> np.array:
+    def _diffuse_step_single_chem_3_1_stencil(self, time_step :float, diff :float,
+                                              increment_vector, chem_index=0, delta_x=1) -> None:
         """
         Note: this is one of alternative methods to do this computation.
 
@@ -1413,9 +1430,6 @@ class BioSim1D:
                                 for the given chemical species across all bins
         """
         #print(f"Diffusing species # {species_index}")
-
-        # TODO: provide increment_vector by the calling function
-        increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin; all the various delta concentrations will go here
 
         assert not self.is_excessive(time_step, diff, delta_x), \
             f"diffuse_step_single_species(): Excessive large time_step ({time_step}). " \
@@ -1539,11 +1553,10 @@ class BioSim1D:
             increment_vector[i] = change
         '''
 
-        return increment_vector
 
 
-
-    def _diffuse_step_single_chem_5_1_stencil(self, time_step: float, diff :float, chem_index=0, delta_x=1) -> np.array:
+    def _diffuse_step_single_chem_5_1_stencil(self, time_step: float, diff :float,
+                                              increment_vector, chem_index=0, delta_x=1) -> None:
         """
         Note: this is one of alternative methods to do this computation.
 
@@ -1563,7 +1576,6 @@ class BioSim1D:
         :return:            A 1-D Numpy array with the CHANGE in concentrations
                                 for the given chemical species across all bins
         """
-        increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin
 
         assert self.n_bins >= 5, \
             f"For very small number of bins ({self.n_bins}), use a method other than '5_1_explicit'"
@@ -1631,9 +1643,6 @@ class BioSim1D:
                                        + C0 * C_i
                                        + C1 * C_i_plus_1
                                        + C2 * C_i_plus_2)
-
-        return increment_vector
-
 
 
 
