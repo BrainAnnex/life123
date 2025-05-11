@@ -904,7 +904,7 @@ class BioSim1D:
                                     EXAMPLE: if the system contains bins 0 thru 30 (i.e 31 bins),
                                              then a possible list of membranes is  [ (0, 8) , (17, 31) ]
 
-        :param permeability:    [OPTIONAL] TODO: an optional value for each of the affected chemicals
+        :param permeability:    [OPTIONAL] For now, the same for all chemicals, and for all membranes
 
         :return:                None
         """
@@ -1350,7 +1350,7 @@ class BioSim1D:
                                 if not specified, thr default method diffuse_step_single_species() is used
         :return:            None (the array in the class variable "delta_diffusion" gets set)
         """
-        # TODO: parallelize the independent computations
+        # TODO: parallelize the independent computations for each chemical
 
         assert self.system is not None, \
             "diffuse_step(): Must first initialize the system"
@@ -1392,7 +1392,7 @@ class BioSim1D:
         """
         Note: this is one of alternative methods to do this computation.
 
-        Diffuse the specified single chemical species, for the given time step, across all bins,
+        Diffuse the specified single chemical species, for the given small time step, across all bins,
         and return a 1-D array of the changes in concentration ("Delta concentration")
         for the given species across all bins.
 
@@ -1412,35 +1412,132 @@ class BioSim1D:
         :return:            A 1-D Numpy array with the CHANGE in concentrations
                                 for the given chemical species across all bins
         """
+        #print(f"Diffusing species # {species_index}")
 
-        increment_vector = np.zeros(self.n_bins, dtype=float)       # One element per bin
+        # TODO: provide increment_vector by the calling function
+        increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin; all the various delta concentrations will go here
 
         assert not self.is_excessive(time_step, diff, delta_x), \
-            f"diffuse_step_single_species(): Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"
+            f"diffuse_step_single_species(): Excessive large time_step ({time_step}). " \
+            f"Should be < {self.max_time_step(diff, delta_x)}"
 
-
-        # Carry out a 1-D convolution operation, with a tile of size 3 (or 2 if only 2 bins)
-        #print(f"Diffusing species # {species_index}")
 
         max_bin_number = self.n_bins - 1    # Bin numbers range from 0 to max_bin_number, inclusive
 
-        effective_diff = diff * time_step   # We're calling this quantity "Effective Diffusion" (NOT a standard term)
+
+        # We're using the term "Corrected Diffusion" (NOT a standard term) for the quantity:
+        #   diffusion * time_step / (delta_x**2)
+        corrected_diff = diff * time_step
         if delta_x != 1:
-            effective_diff /= (delta_x**2)
+            corrected_diff /= (delta_x**2)
 
 
+        # We're using the term "Corrected Permeability" (NOT a standard term) for the quantity:
+        #   permeability * time_step / delta_x       [note there's no squaring in the delta_x for permeability]
+        if self.permeability is None:
+            corrected_perm = 0                  # Impermeable membrane
+        else:
+            corrected_perm = self.permeability * time_step
+            if delta_x != 1:
+                corrected_perm /= delta_x       # TODO: to further scrutinize
+
+
+        membrane_on_left = False                # TODO: fix!
+        membrane_on_right = False
+
+
+        # LOOP OVER ALL THE BINS IN THE SYSTEM
+        # Carry out a 1-D convolution operation, with a tile of size 3 (or 2 if only 2 bins)
+
+        # For starters, process the LEFTMOST bin
+        current_conc = self.system[chem_index , 0]
+        C_right = self.system[chem_index , 1]       # There's no C_left
+
+        if membrane_on_right:
+            delta_conc = corrected_perm * (C_right - current_conc)
+        else:
+            delta_conc = corrected_diff * (C_right - current_conc)
+
+        increment_vector[0] = delta_conc
+
+
+        # Now process all the non-edge bins
+        for i in range(1, max_bin_number):    # Bin number, ranging from 0 to max_bin_number, inclusive
+            #print(f"Processing bin number {i}")
+            current_conc = self.system[chem_index , i]   # Concentration in the center of the convolution tile
+            C_left = self.system[chem_index , i - 1]
+            C_right = self.system[chem_index , i + 1]
+
+            if membrane_on_left:
+                delta_conc = corrected_perm * (C_left  - current_conc) \
+                        + corrected_diff * (C_right - current_conc)
+            elif membrane_on_right:
+                delta_conc =  corrected_diff * (C_left  - current_conc) \
+                        + corrected_perm * (C_right - current_conc)
+            else:
+                delta_conc = corrected_diff * \
+                                (C_left  - current_conc
+                               + C_right - current_conc)
+
+            increment_vector[i] = delta_conc
+
+
+        # Finally, process the RIGHTMOST bin
+        current_conc = self.system[chem_index , max_bin_number]
+        C_left = self.system[chem_index , max_bin_number-1]           # There's no C_right
+
+        if membrane_on_left:
+            delta_conc = corrected_perm * (C_left - current_conc)
+        else:
+            delta_conc = corrected_diff * (C_left - current_conc)
+
+        increment_vector[max_bin_number] = delta_conc
+
+
+        '''
         for i in range(self.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
             #print(f"Processing bin number {i}")
             current_conc = self.system[chem_index , i]   # Concentration in the center of the convolution tile
 
-            if i == 0 :                     # Special case for the first bin (no left neighbor)
-                increment_vector[i] = effective_diff * (self.system[chem_index , 1] - current_conc)
-            elif i == max_bin_number :      # Special case for the last bin (no right neighbor)
-                increment_vector[i] = effective_diff * (self.system[chem_index , i - 1] - current_conc)
+            membrane_on_left = False
+            membrane_on_right = False
+
+            if i == 0 :                         # Special case for the first bin (no left neighbor)
+                                                # No flux exchange with the (non-existent!) left neighbor;
+                                                #   note that this is equivalent to having 
+                                                #   a hypothetical left neighbor with identical concentration
+                # We're at the LEFTMOST bin
+                C_right = self.system[chem_index , 1]
+                if membrane_on_right:
+                    change = corrected_perm * (C_right - current_conc)
+                else:
+                    change = corrected_diff * (C_right - current_conc)
+
+            elif i == max_bin_number :          # Special case for the last bin (no right neighbor)
+                # We're at the RIGHTMOST bin
+                C_left = self.system[chem_index , i - 1]
+                if membrane_on_left:
+                    change = corrected_perm * (C_left - current_conc)
+                else:
+                    change = corrected_diff * (C_left - current_conc)
+
             else:
-                increment_vector[i] = effective_diff * \
-                                        (self.system[chem_index , i + 1] - current_conc
-                                         + self.system[chem_index , i - 1] - current_conc)
+                C_left = self.system[chem_index , i - 1]
+                C_right = self.system[chem_index , i + 1]
+                if membrane_on_left:
+                    change = corrected_perm * (C_left  - current_conc) \
+                            + corrected_diff * (C_right - current_conc)
+                elif membrane_on_right:
+                    change =  corrected_diff * (C_left  - current_conc) \
+                            + corrected_perm * (C_right - current_conc)
+                else:
+                    change = corrected_diff * \
+                                    (C_left  - current_conc
+                                   + C_right - current_conc)
+
+
+            increment_vector[i] = change
+        '''
 
         return increment_vector
 
@@ -1468,10 +1565,11 @@ class BioSim1D:
         """
         increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin
 
-        assert self.n_bins >= 3, \
-            "For very small number of bins, use a method other than '5_1_explicit'"
+        assert self.n_bins >= 5, \
+            f"For very small number of bins ({self.n_bins}), use a method other than '5_1_explicit'"
 
-        # TODO: this Upper Bound is based on a *different* method, and should be made specific to this method
+        # TODO: this Upper Bound is based on a *different* method, and should be made specific to this method;
+        #       maybe fall back to the Von Neumann criterion
         #assert not self.is_excessive(time_step, diff, delta_x), \
             #f"Excessive large time_fraction. Should be < {self.max_time_step(diff, delta_x)}"
 
@@ -1480,11 +1578,14 @@ class BioSim1D:
 
         max_bin_number = self.n_bins - 1     # Bin numbers range from 0 to max_bin_number, inclusive
 
-        effective_diff = diff * time_step   # We're calling this quantity "Effective Diffusion" (NOT a standard term)
-        if delta_x != 1:
-            effective_diff /= (delta_x**2)
 
-        #print("effective_diff: ", effective_diff)
+        # We're using the term "Corrected Diffusion" (NOT a standard term) for the quantity:
+        #   diffusion * time_step / (delta_x**2)
+        corrected_diff = diff * time_step
+        if delta_x != 1:
+            corrected_diff /= (delta_x**2)
+
+        #print("corrected_diff: ", corrected_diff)
 
         # The coefficients for the "Central Differences" for the spatial 2nd partial derivative,
         #   to "accuracy 4" (using 5 term: 2 left neighbors and 2 right neighbors)
@@ -1501,6 +1602,7 @@ class BioSim1D:
 
             # The boundary conditions, at left and right edges of the system,
             # state that the flux is zero across the boundaries
+            # "zero-flux (Neumann) boundary condition"
             if i == 0:                     # Special cases for the first 2 bins
                 C_i_minus_2 = leftmost
                 C_i_minus_1 = leftmost
@@ -1523,7 +1625,7 @@ class BioSim1D:
 
             #print("The 5 bins under consideration: ", C_i_minus_2, C_i_minus_1, C_i, C_i_plus_1, C_i_plus_2)
             # Compute the "Central Differences" for the 2nd partial derivative, to "accuracy 4"
-            increment_vector[i] = effective_diff * \
+            increment_vector[i] = corrected_diff * \
                                       (  C2 * C_i_minus_2
                                        + C1 * C_i_minus_1
                                        + C0 * C_i
