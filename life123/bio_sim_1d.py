@@ -24,7 +24,7 @@ class Diffusion1D:
     pass
 
 
-    
+
 ################################################################################################################
 
 class BioSim1D:
@@ -1384,6 +1384,7 @@ class BioSim1D:
 
         # Loop over all the chemical species in the system
         for chem_index in range(self.n_species):
+            # A 1-D Numpy array with the CHANGE in concentrations for the given chemical species across all bins
             increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin;
                                                                     # all the various delta concentrations will go here
 
@@ -1410,7 +1411,7 @@ class BioSim1D:
         Note: this is one of alternative methods to do this computation.
 
         Diffuse the specified single chemical species, for the given small time step, across all bins,
-        and return a 1-D array of the changes in concentration ("Delta concentration")
+        and set the argument `increment_vector`, containing 1-D array of the changes in concentration ("Delta concentration")
         for the given species across all bins.
 
         IMPORTANT: the actual system concentrations are NOT changed.
@@ -1426,8 +1427,7 @@ class BioSim1D:
         :param chem_index:  Integer index of the above chemical
         :param delta_x:     Spatial distance between consecutive bins
 
-        :return:            A 1-D Numpy array with the CHANGE in concentrations
-                                for the given chemical species across all bins
+        :return:            None.  The `increment_vector` argument gets set
         """
         #print(f"Diffusing species # {species_index}")
 
@@ -1507,53 +1507,7 @@ class BioSim1D:
 
         increment_vector[max_bin_number] = delta_conc
 
-
-        '''
-        for i in range(self.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
-            #print(f"Processing bin number {i}")
-            current_conc = self.system[chem_index , i]   # Concentration in the center of the convolution tile
-
-            membrane_on_left = False
-            membrane_on_right = False
-
-            if i == 0 :                         # Special case for the first bin (no left neighbor)
-                                                # No flux exchange with the (non-existent!) left neighbor;
-                                                #   note that this is equivalent to having 
-                                                #   a hypothetical left neighbor with identical concentration
-                # We're at the LEFTMOST bin
-                C_right = self.system[chem_index , 1]
-                if membrane_on_right:
-                    change = corrected_perm * (C_right - current_conc)
-                else:
-                    change = corrected_diff * (C_right - current_conc)
-
-            elif i == max_bin_number :          # Special case for the last bin (no right neighbor)
-                # We're at the RIGHTMOST bin
-                C_left = self.system[chem_index , i - 1]
-                if membrane_on_left:
-                    change = corrected_perm * (C_left - current_conc)
-                else:
-                    change = corrected_diff * (C_left - current_conc)
-
-            else:
-                C_left = self.system[chem_index , i - 1]
-                C_right = self.system[chem_index , i + 1]
-                if membrane_on_left:
-                    change = corrected_perm * (C_left  - current_conc) \
-                            + corrected_diff * (C_right - current_conc)
-                elif membrane_on_right:
-                    change =  corrected_diff * (C_left  - current_conc) \
-                            + corrected_perm * (C_right - current_conc)
-                else:
-                    change = corrected_diff * \
-                                    (C_left  - current_conc
-                                   + C_right - current_conc)
-
-
-            increment_vector[i] = change
-        '''
-
-
+        
 
     def _diffuse_step_single_chem_5_1_stencil(self, time_step: float, diff :float,
                                               increment_vector, chem_index=0, delta_x=1) -> None:
@@ -1573,8 +1527,7 @@ class BioSim1D:
         :param chem_index:  Integer index of the above chemical
         :param delta_x:     Spatial distance between consecutive bins
 
-        :return:            A 1-D Numpy array with the CHANGE in concentrations
-                                for the given chemical species across all bins
+        :return:            None.  The `increment_vector` argument gets set
         """
 
         assert self.n_bins >= 5, \
