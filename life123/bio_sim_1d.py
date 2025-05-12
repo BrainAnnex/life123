@@ -94,38 +94,19 @@ class BioSim1D:
         """
 
         self.membranes = []     # List of (closed) membranes in the system.
-                                # In 1D, a membrane is a pair of points,
+                                # In 1D, a (closed) membrane is a pair of points,
                                 # identified by the index of the bin to their RIGHT side,
-                                # in sorted order.
+                                # ("index after") in sorted order.
                                 # EXAMPLE:  [ (0, 8) , (17, 31) ]
                                 # All integers must be between 0 and self.n_bins, both inclusive
 
         self.permeability = None
 
-        self.membranes_OLD = None   # NumPy boolean array of dimension n_bins;   TODO - DEPRECATED
-                                #   each boolean value marks the presence of a membrane in that bin.
-                                #   Any given bin is expected to either contain, or not contain, a single membrane passing thru it
-                                #   TODO - explore possible alternative: list of bin addresses the contains a membrane,
-                                #          or other sparse-matrix representation
-
-        self.A_fraction = None  # TODO - DEPRECATED
-                                # NumPy array of floats, of dimension n_bins;
-                                #   each value records the fraction (between 0. and 1.) of the LEFT one
-                                #   of the 2 parts into which the membrane splits the bin.
-                                #   0. if N/A
-
-        self.system_B = None    # TODO - DEPRECATED
-                                # Just like "system", but only for the "A" fractions of the bin, where applicable;
-                                #   0. if N/A
-
         self.delta_diffusion = None  # Buffer for the concentration changes from diffusion step (n_species x n_bins)
         self.delta_reactions = None  # Buffer for the concentration changes from reactions step (n_species x n_bins)
 
-        self.delta_reactions_B = None   # Same as above, but for the "other sides" of bins with membranes
-                                        # TODO: explore sparse-matrix representations
-
-        self.sealed = True              # If True, no exchange with the outside;
-                                        # if False (NOT currently supported), immersed in a "bath"
+        self.sealed = True                  # If True, no exchange with the outside;
+                                            #   if False (NOT currently supported), immersed in a "bath"
 
         # Only applicable if "sealed" is False:
         self.bath_concentrations = None      # A NumPy array for each species
@@ -269,9 +250,6 @@ class BioSim1D:
         # TODO: expand, or drop (not sure if really needed anymore)
         self.system = None
         self.system_earlier = None
-        self.system_B = None
-        self.membranes_OLD = None
-        self.A_fraction = None
         self.chem_data = None
         self.reaction_dynamics = None
         self.history = None
@@ -282,7 +260,7 @@ class BioSim1D:
         self.system_time = 0
 
         self.delta_reactions = None
-        self.delta_reactions_B = None
+
 
 
 
@@ -430,8 +408,7 @@ class BioSim1D:
 
 
 
-    def set_bin_conc(self, bin_address: int, conc: float, chem_index=None, chem_label=None,
-                     across_membrane=False, both_sides=False) -> None:
+    def set_bin_conc(self, bin_address: int, conc: float, chem_index=None, chem_label=None) -> None:
         """
         Assign the requested concentration value to the given bin, for the specified chemical species.
         Optionally, set the value for the "alternate bin" ("other side" of the membrane)
@@ -440,8 +417,6 @@ class BioSim1D:
         :param conc:            The desired concentration value to assign to the specified location
         :param chem_index:      Zero-based index to identify a specific chemical species
         :param chem_label:      [OPTIONAL] If provided, it over-rides the value for chem_index
-        :param across_membrane: It True, consider the "other side" of the bin, i.e. the portion across the membrane
-        :param both_sides:      If True, set the "regular" bin and the "other side" as well
         :return:                None
         """
         self.assert_valid_bin(bin_address)
@@ -455,14 +430,7 @@ class BioSim1D:
         else:
             self.chem_data.assert_valid_chem_index(chem_index)
 
-
-        if across_membrane or both_sides:
-            assert self.system_B is not None, \
-                "set_bin_conc(): the `other_side` option cannot be used unless membranes are first set"
-            self.system_B[chem_index, bin_address] = conc
-
-        if both_sides or (not across_membrane):
-            self.system[chem_index, bin_address] = conc
+        self.system[chem_index, bin_address] = conc
 
 
 
@@ -658,7 +626,7 @@ class BioSim1D:
 
 
 
-    def lookup_species(self, chem_index=None, chem_label=None, trans_membrane=False, copy=False) -> np.array:
+    def lookup_species(self, chem_index=None, chem_label=None, copy=False) -> np.array:
         """
         Return the NumPy array of concentration values across the all bins (from left to right)
         for the single specified chemical species.
@@ -666,8 +634,6 @@ class BioSim1D:
 
         :param chem_index:   The index order of the chemical species of interest
         :param chem_label:    (OPTIONAL) If provided, it over-rides the value for chem_index
-        :param trans_membrane:  If True, consider only the "other side" of the bins, i.e. the portion across the membrane
-                                    (it will be zero for bins without membrane)
         :param copy:            If True, an independent numpy array will be returned: a *copy* rather than a view
         :return:                A NumPy 1-D array of concentration values across the bins (from left to right);
                                     the size of the array is the number of bins
@@ -677,10 +643,7 @@ class BioSim1D:
         else:
             self.chem_data.assert_valid_chem_index(chem_index)
 
-        if trans_membrane:
-            species_conc =  self.system_B[chem_index]
-        else:
-            species_conc = self.system[chem_index]
+        species_conc = self.system[chem_index]
 
         if copy:
             return species_conc.copy()
@@ -689,14 +652,13 @@ class BioSim1D:
 
 
 
-    def bin_concentration(self, bin_address: int, chem_index=None, species_label=None, trans_membrane=False) -> float:
+    def bin_concentration(self, bin_address: int, chem_index=None, species_label=None) -> float:
         """
         Return the concentration at the requested bin of the specified chemical species
 
         :param bin_address:     The bin number
-        :param chem_index:   The index order of the chemical species of interest
+        :param chem_index:      The index order of the chemical species of interest
         :param species_label:   [OPTIONAL] If provided, it over-rides the value for chem_index
-        :param trans_membrane:  If True, consider the "other side" of the bin, i.e. the portion across the membrane
         :return:                A concentration value at the indicated bin, for the requested species
         """
         if species_label is not None:
@@ -704,10 +666,7 @@ class BioSim1D:
 
         self.chem_data.assert_valid_chem_index(chem_index)
 
-        if trans_membrane:
-            return self.system_B[chem_index, bin_address]
-        else:
-            return self.system[chem_index, bin_address]
+        return self.system[chem_index, bin_address]
 
 
 
@@ -732,22 +691,18 @@ class BioSim1D:
 
 
 
-    def bin_snapshot_array(self, bin_address: int, trans_membrane=False) -> np.array:
+    def bin_snapshot_array(self, bin_address: int) -> np.array:
         """
         Extract the concentrations of all the chemical species at the specified bin,
         as a Numpy array in the index order of the species
         EXAMPLE: np.array([10., 50.)]
 
-        :param bin_address:     An integer with the bin number
-        :param trans_membrane:  If True, consider the "other side" of the bin, i.e. the portion across the membrane
-        :return:                A Numpy array  of concentration values, in the index order of the species
+        :param bin_address: An integer with the bin number
+        :return:            A Numpy array  of concentration values, in the index order of the species
         """
         self.assert_valid_bin(bin_address)
 
-        if trans_membrane:
-            return self.system_B[:, bin_address]
-        else:
-            return self.system[: , bin_address]
+        return self.system[: , bin_address]
 
 
 
@@ -836,7 +791,7 @@ class BioSim1D:
             print(self.system)   # ...only showing the concentration data (a Numpy array)
             if self.uses_membranes():
                 print("Membranes:")
-                print(self.system_B)
+                print(self.membranes)
             return
 
         # If we get thus far, it's a FULL printout
@@ -852,16 +807,17 @@ class BioSim1D:
                 else:
                     name = ""
 
-                if self.membranes_OLD is None:
+                if self.membranes == []:
                     all_conc = self.system[species_index]
                 else:
+                    # TODO: Fix to make work with new membrane implementation
                     all_conc = "|"
                     for bin_no in range(self.n_bins):
                         all_conc += str(self.bin_concentration(bin_no, chem_index=species_index))
-                        if self.membranes_OLD[bin_no]:
+                        if self.membranes[bin_no]:
                             # Add a symbol for the membrane, and the additional membrane concentration data (on the "other side")
                             all_conc += "()"    # To indicate a membrane
-                            all_conc += str(self.bin_concentration(bin_no, chem_index=species_index, trans_membrane=True))
+                            all_conc += str(self.bin_concentration(bin_no, chem_index=species_index))
                         all_conc += "|"
 
                 if not self.chem_data.get_all_diffusion_rates():
@@ -869,7 +825,7 @@ class BioSim1D:
                 else:
                     print(f"  Species {species_index}{name}. Diff rate: {self.chem_data.get_diffusion_rate(chem_index=species_index)}. Conc: {all_conc}")
 
-        else:   # This alternate view, using Pandas, currently only usable when there are no membranes
+        else:   # Alternate view, using Pandas, only usable when there are no membranes
             df = pd.DataFrame(self.system, columns=[f"Bin {i}" for i in range(self.n_bins)])
 
             df.insert(0, "Species", self.chem_data.get_all_labels())
@@ -1687,8 +1643,6 @@ class BioSim1D:
             self.reaction_step(time_step)        # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
             # Update the state of the system
             self.system += self.delta_reactions           # Matrix operation to update all the concentrations
-            if self.uses_membranes():
-                self.system_B += self.delta_reactions_B   # Matrix operation to update all the concentrations
 
             self.system_time += time_step
 
@@ -1732,8 +1686,6 @@ class BioSim1D:
             "reaction_step(): must first set the Reactions object"
 
         self.delta_reactions = np.zeros((self.n_species, self.n_bins), dtype=float)
-        if self.uses_membranes():
-            self.delta_reactions_B = np.zeros((self.n_species, self.n_bins), dtype=float)
 
         # For each bin
         for bin_n in range(self.n_bins):     # Bin number, ranging from 0 to max_bin_number, inclusive
