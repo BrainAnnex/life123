@@ -581,3 +581,67 @@ def test_diffuse_8():
 
     dist = num.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignoring 2 edge points at each end
     assert np.allclose(dist, 0.003517310789846865)
+
+
+
+
+#########   TESTS OF MEMBRANES    #########
+
+def test_uses_membranes():
+    bio = BioSim1D(n_bins=123, chem_data=chem(labels="A"))
+    assert not bio.uses_membranes()
+
+    bio.set_membranes(membranes=[(0, 4)])
+    assert bio.uses_membranes()
+
+    bio.set_membranes(membranes=[])
+    assert not bio.uses_membranes()
+
+
+
+def test_set_membranes():
+    bio = BioSim1D(n_bins=40, chem_data=chem(labels="A"))
+
+    bio.set_membranes([ (0, 8) , (17, 31) ])
+    assert bio.membranes == [ (0, 8) , (17, 31) ]
+    assert bio.permeability is None
+
+    with pytest.raises(Exception):
+        bio.set_membranes(123)
+
+    with pytest.raises(Exception):
+        bio.set_membranes([1, 2, 3])
+
+    with pytest.raises(Exception):
+        bio.set_membranes([(1, 2, 3)])
+
+    with pytest.raises(Exception):
+        bio.set_membranes([(33, -22)])  # Not in sorted order
+
+    with pytest.raises(Exception):
+        bio.set_membranes([(-22, 33)])
+
+    with pytest.raises(Exception):
+        bio.set_membranes([(0, 66)])
+
+    with pytest.raises(Exception):
+        bio.set_membranes([ (3,4), (1,2) ])
+
+    with pytest.raises(Exception):
+        bio.set_membranes([ (1,2), (2,4) ])
+
+    bio.set_membranes([ (1,2), (3,4) ], permeability=123)
+    assert bio.permeability == 123
+
+
+
+def test_membranes_list():
+    bio = BioSim1D(n_bins=40, chem_data=chem(labels="A"))
+
+    assert bio.membranes_list() == []
+
+    bio.set_membranes([ (8,10) ])
+    assert bio.membranes_list() == [8,10]
+
+    bio.set_membranes([ (1,2), (3,4) ], permeability=123)
+    assert bio.membranes_list() == [1,2,3,4]

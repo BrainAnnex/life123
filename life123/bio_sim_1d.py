@@ -37,7 +37,7 @@ class BioSim1D:
         """
         :param n_bins:          The number of compartments (bins) to use in the simulation
 
-        [At least one of the 2 following arguments must be provided]
+        [IMPORTANT: At least one of the 2 following arguments MUST be provided]
         :param chem_data:       [OPTIONAL] Object of class "ChemData";
                                     if not specified, it will get extracted
                                     from the "UniformCompartment" class (if passed to the next argument)
@@ -100,10 +100,10 @@ class BioSim1D:
                                 # EXAMPLE:  [ (0, 8) , (17, 31) ]
                                 # All integers must be between 0 and self.n_bins, both inclusive
 
-        self.permeability = None
+        self.permeability = None    # For now, a single value for ALL chemicals and all membranes!
 
-        self.delta_diffusion = None  # Buffer for the concentration changes from diffusion step (n_species x n_bins)
-        self.delta_reactions = None  # Buffer for the concentration changes from reactions step (n_species x n_bins)
+        self.delta_diffusion = None # Buffer for the concentration changes from diffusion step (n_species x n_bins)
+        self.delta_reactions = None # Buffer for the concentration changes from reactions step (n_species x n_bins)
 
         self.sealed = True                  # If True, no exchange with the outside;
                                             #   if False (NOT currently supported), immersed in a "bath"
@@ -863,7 +863,7 @@ class BioSim1D:
 
         IMPORTANT: any previously-set membrane information is lost.
 
-        :param membranes:       List of pairs of bin coordinates.
+        :param membranes:       List of pairs of bin coordinates.  Use an empty list to clear all membranes.
                                     All integer values must be between 0 and self.n_bins, both inclusive,
                                     and be sorted in increasing order order.
                                     Membrane positions are identified by the index of the bin to their RIGHT side.
@@ -877,16 +877,18 @@ class BioSim1D:
         """
         assert type(membranes) == list, "set_membranes(): argument `membranes` must be a list"
 
-        assert len(membranes) > 0,  "set_membranes(): argument `membranes` cannot be empty"
+        if len(membranes) == 0:
+            self.membranes = []
+            return
 
-        # Validate the user data for each membrane
+        # Validate the user data for each membrane pair
         prev_right = -1
         for i, m in enumerate(membranes):
             # Verify that each element in the list is a pair of values
             assert type(m) == tuple, \
-                f"set_membranes(): argument `membranes` must be a list of pairs of values. `{m}` is not a pair"
+                f"set_membranes(): argument `membranes` must be a list of PAIRS of values. `{m}` is not a pair"
             assert len(m) == 2, \
-                f"set_membranes(): argument `membranes` must be a list of pairs of values. `{m}` contains {len(m)} values"
+                f"set_membranes(): argument `membranes` must be a list of PAIRS of values. `{m}` contains {len(m)} values"
 
             # The following part is specific to 1D
             left, right = m
@@ -894,6 +896,8 @@ class BioSim1D:
                 f"set_membranes(): argument `membranes` must be a list of pairs of integers.  `{left}` is of type {type(left)}"
             assert type(right) == int, \
                 f"set_membranes(): argument `membranes` must be a list of pairs of integers.  `{right}` is of type {type(right)}"
+            assert left != right, \
+                f"set_membranes(): the integers in each pair in the argument `membranes` cannot have the same value ({left})"
             assert left < right, \
                 f"set_membranes(): the integers in each pair in the argument `membranes` must be in sorted order. `{m}` is not in sorted order"
             assert (left >= 0) and (left < self.n_bins), \
@@ -913,6 +917,21 @@ class BioSim1D:
 
         if permeability is not None:
             self.permeability = permeability
+
+
+
+    def membranes_list(self) -> [int]:
+        """
+        Return a flattened version of the membrane data structure
+
+        :return: A (possibly empty) sorted list of integers
+        """
+        if self.membranes == []:
+            return []
+
+        flattened_list = [item for pair in self.membranes
+                          for item in pair]
+        return flattened_list
 
 
 
@@ -1831,7 +1850,7 @@ class BioSim1D:
 
         conc_matrix = self.system
 
-        if self.membranes is None:
+        if self.membranes == []:
             flattened_list = None
         else:
             flattened_list = [item for pair in self.membranes
