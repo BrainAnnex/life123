@@ -875,6 +875,8 @@ class BioSim1D:
 
         :return:                None
         """
+        #TODO: permeability values must be per chemical, and cannot exceed the value of diffusion
+
         assert type(membranes) == list, "set_membranes(): argument `membranes` must be a list"
 
         if len(membranes) == 0:
@@ -914,9 +916,7 @@ class BioSim1D:
 
 
         self.membranes = membranes
-
-        if permeability is not None:
-            self.permeability = permeability
+        self.permeability = permeability
 
 
 
@@ -932,6 +932,41 @@ class BioSim1D:
         flattened_list = [item for pair in self.membranes
                           for item in pair]
         return flattened_list
+
+
+
+    def membrane_on_left(self, bin_address :int) -> bool:
+        """
+        Return True if there's a membrane to the immediate left of the given bin (specified by its index)
+
+        :param bin_address:
+        :return:
+        """
+        if self.membranes == []:
+            return False
+
+        for (left, right) in self.membranes:
+            if (left == bin_address) or (right == bin_address):
+                return True
+
+        return False
+
+
+    def membrane_on_right(self, bin_address :int) -> bool:
+        """
+        Return True if there's a membrane to the immediate right of the given bin (specified by its index)
+
+        :param bin_address:
+        :return:
+        """
+        if self.membranes == []:
+            return False
+
+        for (left, right) in self.membranes:
+            if (left == bin_address + 1) or (right == bin_address + 1):
+                return True
+
+        return False
 
 
 
@@ -1396,6 +1431,8 @@ class BioSim1D:
         This approach is based on a "3+1 stencil", aka "Explicit Forward-Time Centered Space".
         EXPLANATION:  https://life123.science/diffusion
 
+        Note: the system must contain at least 2 bins, or an error will result.
+
         :param time_step:   Delta time over which to carry out this single diffusion step;
                                 if too large, an Exception will be raised.
         :param diff:        Diffusion rate of the chemical of interest
@@ -1431,9 +1468,6 @@ class BioSim1D:
                 corrected_perm /= delta_x       # TODO: to further scrutinize
 
 
-        membrane_on_left = False                # TODO: fix!
-        membrane_on_right = False
-
 
         # LOOP OVER ALL THE BINS IN THE SYSTEM
         # Carry out a 1-D convolution operation, with a tile of size 3 (or 2 if only 2 bins)
@@ -1442,7 +1476,7 @@ class BioSim1D:
         current_conc = self.system[chem_index , 0]
         C_right = self.system[chem_index , 1]       # There's no C_left
 
-        if membrane_on_right:
+        if self.membrane_on_right(0):
             delta_conc = corrected_perm * (C_right - current_conc)
         else:
             delta_conc = corrected_diff * (C_right - current_conc)
@@ -1457,17 +1491,25 @@ class BioSim1D:
             C_left = self.system[chem_index , i - 1]
             C_right = self.system[chem_index , i + 1]
 
-            if membrane_on_left:
-                delta_conc = corrected_perm * (C_left  - current_conc) \
-                        + corrected_diff * (C_right - current_conc)
-            elif membrane_on_right:
-                delta_conc =  corrected_diff * (C_left  - current_conc) \
-                        + corrected_perm * (C_right - current_conc)
+            # Contribution (possibly negative) coming in from the bin to its left
+            if self.membrane_on_left(i):
+                delta_conc = corrected_perm * (C_left  - current_conc)
             else:
+                delta_conc = corrected_diff * (C_left  - current_conc)
+
+            # Contribution (possibly negative) coming in from the bin to its right
+            if self.membrane_on_right(i):
+                delta_conc += corrected_perm * (C_right - current_conc)
+            else:
+                delta_conc += corrected_diff * (C_right - current_conc)
+
+            '''
+            # TODO: if no membrane on either side (typical scenario), just do 1 multiplication:
                 delta_conc = corrected_diff * \
                                 (C_left  - current_conc
                                + C_right - current_conc)
-
+            '''
+            #print(f"i: {i}, delta_conc: {delta_conc}")
             increment_vector[i] = delta_conc
 
 
@@ -1475,10 +1517,11 @@ class BioSim1D:
         current_conc = self.system[chem_index , max_bin_number]
         C_left = self.system[chem_index , max_bin_number-1]           # There's no C_right
 
-        if membrane_on_left:
+        if self.membrane_on_left(max_bin_number):
             delta_conc = corrected_perm * (C_left - current_conc)
         else:
             delta_conc = corrected_diff * (C_left - current_conc)
+
 
         increment_vector[max_bin_number] = delta_conc
 
@@ -1507,6 +1550,10 @@ class BioSim1D:
 
         assert self.n_bins >= 5, \
             f"For very small number of bins ({self.n_bins}), use a method other than '5_1_explicit'"
+
+        assert not self.uses_membranes(), \
+            "When membranes are present, use a method other than '5_1_explicit'"
+
 
         # TODO: this Upper Bound is based on a *different* method, and should be made specific to this method;
         #       maybe fall back to the Von Neumann criterion
@@ -1599,9 +1646,10 @@ class BioSim1D:
         This is also based on the "Von Neumann stability analysis"
         (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
 
-        :param diff_rate:
-        :param delta_x:
-        :return:
+        :param diff_rate:   The diffusion rate of the chemical under consideration
+        :param delta_x:     The spatial dimension of the bin
+        :return:            A reasonably safe max length for a single time step of the simulation,
+                                to try to steer clear of instabilities
         """
         return delta_x**2 * self.time_step_threshold/diff_rate
 

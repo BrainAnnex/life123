@@ -442,13 +442,10 @@ def test_set_membranes():
         bio.set_membranes()     # Missing required arg
 
     with pytest.raises(Exception):
-        bio.set_membranes(membranes=123)     # Wrong arg type
+        bio.set_membranes(membranes=123)        # Wrong arg type
 
     with pytest.raises(Exception):
-        bio.set_membranes(membranes=[])      # Empty arg
-
-    with pytest.raises(Exception):
-        bio.set_membranes(membranes=[8])    # Element isn't a pair
+        bio.set_membranes(membranes=[8])        # Element isn't a pair
 
     with pytest.raises(Exception):
         bio.set_membranes(membranes=[(1,2,3)])  # Element isn't a pair
