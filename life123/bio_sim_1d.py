@@ -34,8 +34,9 @@ class Membranes1D:
                                     # EXAMPLE:  [ (0, 8) , (17, 31) ]
                                     # All integers must be between 0 and self.n_bins, both inclusive
 
-        self.permeability = None    # For now, a single value for ALL chemicals and all membranes!
-                                    # TODO: turn into a map {chem_label -> permeability}
+        self.permeability = {}      # Dict mapping chemical labels to permeability.
+                                    # If not listed, taken to be zero (unable to diffuse across membranes)
+                                    # For now, the same for all membranes
 
 
 
@@ -520,7 +521,9 @@ class BioSim1D:
                                 # EXAMPLE:  [ (0, 8) , (17, 31) ]
                                 # All integers must be between 0 and self.n_bins, both inclusive
 
-        self.permeability = None    # For now, a single value for ALL chemicals and all membranes!
+        self.permeability = {}      # Dict mapping chemical labels to permeability.
+                                    # If not listed, taken to be zero (unable to diffuse across membranes)
+                                    # For now, the same for all membranes
 
         self.delta_diffusion = None # Buffer for the concentration changes from diffusion step (n_species x n_bins)
         self.delta_reactions = None # Buffer for the concentration changes from reactions step (n_species x n_bins)
@@ -1275,11 +1278,9 @@ class BioSim1D:
 
 
 
-    def set_membranes(self, membranes: List, permeability=None) -> None:
+    def set_membranes(self, membranes: List) -> None:
         """
-        Define the position and permeability of all membranes in the system.
-
-        Initialize the class variables "membranes" and "permeability"
+        Define the position of all membranes in the system.
 
         IMPORTANT: any previously-set membrane information is lost.
 
@@ -1290,13 +1291,8 @@ class BioSim1D:
                                     Membranes cannot intersect, nor touch!
                                     EXAMPLE: if the system contains bins 0 thru 30 (i.e 31 bins),
                                              then a possible list of membranes is  [ (0, 8) , (17, 31) ]
-
-        :param permeability:    [OPTIONAL] For now, the same for all chemicals, and for all membranes
-
         :return:                None
         """
-        #TODO: permeability values must be per chemical, and cannot exceed the value of diffusion
-
         assert type(membranes) == list, "set_membranes(): argument `membranes` must be a list"
 
         if len(membranes) == 0:
@@ -1336,7 +1332,30 @@ class BioSim1D:
 
 
         self.membranes = membranes
+
+
+
+    def set_permeability(self, permeability :dict) -> None:
+        """
+
+        :param permeability:
+        :return:            None
+        """
+        assert type(permeability) == dict, "set_permeability(): argument `permeability` must be a dictionary"
         self.permeability = permeability
+
+
+
+    def change_permeability(self, chem_label :str, permeability :float) -> None:
+        """
+
+        :param chem_label:
+        :param permeability:
+        :return:            None
+        """
+        #TODO: permeability value cannot exceed the value of diffusion
+        assert permeability >= 0, "change_permeability(): argument `permeability` must be a non-negative value"
+        self.permeability[chem_label] = permeability
 
 
 
@@ -1878,12 +1897,14 @@ class BioSim1D:
             corrected_diff /= (delta_x**2)
 
 
+        chem_label = self.chem_data.get_label(chem_index)
+        permeability = self.permeability.get(chem_label)
         # We're using the term "Corrected Permeability" (NOT a standard term) for the quantity:
         #   permeability * time_step / delta_x       [note there's no squaring in the delta_x for permeability]
-        if self.permeability is None:
+        if permeability is None:
             corrected_perm = 0                  # Impermeable membrane
         else:
-            corrected_perm = self.permeability * time_step
+            corrected_perm = permeability * time_step
             if delta_x != 1:
                 corrected_perm /= delta_x       # TODO: to further scrutinize
 

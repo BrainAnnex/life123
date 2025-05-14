@@ -108,21 +108,21 @@ class ChemCore:
 
 
 
-    def get_label(self, species_index: int) -> str:
+    def get_label(self, chem_index: int) -> str:
         """
         Return the label of the species with the given index.
 
-        :param species_index:   An integer (starting with zero) corresponding to the
-                                    original order with which the chemical species were first added
-        :return:                The name of the species with the given index.
-                                    If missing or blank, an Exception is raised
+        :param chem_index:  An integer (starting with zero) corresponding to the
+                                original order with which the chemical species were first added
+        :return:            The name of the chemical species with the given index.
+                                If missing or blank, an Exception is raised
         """
-        self.assert_valid_chem_index(species_index)
+        self.assert_valid_chem_index(chem_index)
 
-        name = self.chemical_data[species_index].get("label")    # If "label" is not present, None will be returned
+        name = self.chemical_data[chem_index].get("label")    # If "label" is not present, None will be returned
 
         assert name, \
-            f"get_label(): A chemical species with the requested index ({species_index}) is present, but it lacks a name"
+            f"get_label(): A chemical species with the requested index ({chem_index}) is present, but it lacks a name"
 
         return name
 
