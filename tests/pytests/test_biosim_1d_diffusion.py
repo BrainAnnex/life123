@@ -159,12 +159,12 @@ def test__diffuse_step_single_chem_3_1_stencil_D():
     assert np.allclose(np.sum(increment_vector), 0.)
 
 
-    # Now introduce membranes
-    bio.set_membranes([ (0,3) ])    # Membranes at the outer edges of the system
+    # Now introduce impermeable membranes at the outer edges of the system
+    bio.set_membranes([ (0,3) ])
 
     bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
                                               increment_vector=increment_vector)
-    assert np.allclose(increment_vector, [1.5, -4.5, 3.])      # Nothing has changes from earlier (w/o membranes)
+    assert np.allclose(increment_vector, [1.5, -4.5, 3.])      # Identical to membrane-free diffusion
 
     # Impermeable membranes around the leftmost bin
     bio.set_membranes([ (0,1) ])
@@ -202,13 +202,81 @@ def test__diffuse_step_single_chem_3_1_stencil_D():
     bio.set_membranes([ (1,2) ], permeability=diff)
     bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
                                               increment_vector=increment_vector)
-    assert np.allclose(increment_vector, [1.5, -4.5, 3.])
+    assert np.allclose(increment_vector, [1.5, -4.5, 3.])      # Identical to membrane-free diffusion
 
     # Slightly permeable membranes around the middle bin
     bio.set_membranes([ (1,2) ], permeability=diff/3)
     bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
                                               increment_vector=increment_vector)
     assert np.allclose(increment_vector, [0.5, -1.5, 1.])
+
+
+    # Impermeable membranes around the leftmost and the rightmost bins
+    bio.set_membranes([ (0,1), (2,3) ])
+    bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
+                                              increment_vector=increment_vector)
+    assert np.allclose(increment_vector, [0., 0., 0.])      # Diffusion is blocked by the membranes
+
+    # Permeable membranes around the leftmost and the rightmost bins, with permeability identical to diffusion rate
+    bio.set_membranes([ (0,1), (2,3) ], permeability=diff)
+    bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
+                                              increment_vector=increment_vector)
+    assert np.allclose(increment_vector, [1.5, -4.5, 3.])      # Identical to membrane-free diffusion
+
+    # Slightly permeable membranes around the leftmost and the rightmost bins
+    bio.set_membranes([ (0,1), (2,3) ], permeability=diff/3)
+    bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
+                                              increment_vector=increment_vector)
+    assert np.allclose(increment_vector, [.5, -1.5, 1.])
+
+
+
+def test__diffuse_step_single_chem_3_1_stencil_E():
+    n_bins = 4
+    delta_t = 0.01
+    diff = 5.
+
+    # Initialize the system
+    chem_data = chem(diffusion_rates=diff)    # Just 1 chemical species
+    bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+    bio.set_species_conc(chem_index=0, conc_list=[50, 100, 20, 60])
+
+    increment_vector = np.zeros(n_bins, dtype=float)
+
+    bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
+                                              increment_vector=increment_vector)
+
+    assert np.allclose(increment_vector, [2.5, -6.5, 6., -2.])
+    assert np.allclose(np.sum(increment_vector), 0.)
+
+
+    # Now introduce impermeable membranes at the outer edges of the system
+    bio.set_membranes([ (0,4) ])
+
+    bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
+                                              increment_vector=increment_vector)
+    assert np.allclose(increment_vector, [2.5, -6.5, 6., -2.])      # Identical to membrane-free diffusion
+
+    # Try out a series of membranes with permeability identical to the diffusion rate
+    bio.set_membranes([ (0,1) ], permeability=diff)
+    bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
+                                              increment_vector=increment_vector)
+    assert np.allclose(increment_vector, [2.5, -6.5, 6., -2.])      # Identical to membrane-free diffusion
+
+    bio.set_membranes([ (1,2) ], permeability=diff)
+    bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
+                                              increment_vector=increment_vector)
+    assert np.allclose(increment_vector, [2.5, -6.5, 6., -2.])      # Identical to membrane-free diffusion
+
+    bio.set_membranes([ (2,3) ], permeability=diff)
+    bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
+                                              increment_vector=increment_vector)
+    assert np.allclose(increment_vector, [2.5, -6.5, 6., -2.])      # Identical to membrane-free diffusion
+
+    bio.set_membranes([ (3,4) ], permeability=diff)
+    bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
+                                              increment_vector=increment_vector)
+    assert np.allclose(increment_vector, [2.5, -6.5, 6., -2.])      # Identical to membrane-free diffusion
 
 
 
