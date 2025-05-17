@@ -468,8 +468,131 @@ def test__diffuse_step_single_chem_3_1_stencil_E():
 
 
 
-def test_diffuse_step_single_species_5_1_stencils():
+def test__diffuse_step_single_chem_3_1_stencil_F():
+    n_bins = 100
+    delta_t = 0.015
+    diff = 4.2
 
+    # Initialize the system, with a complex pattern of initial concentrations
+    chem_data = chem(labels="A", diffusion_rates=diff)    # Just 1 chemical species
+    bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+    bio.inject_gradient(chem_label="A", conc_left = 10., conc_right = 1000.)
+    bio.inject_sine_conc(chem_label="A", number_cycles=4, amplitude=350, bias=20, phase=60, zero_clip = True)
+    bio.inject_bell_curve(chem_label="A", mean=0.8, sd=0.15, amplitude=2.3, bias=18)
+    #print(bio.system)
+
+    increment_vector = np.zeros(n_bins, dtype=float)
+
+    # Diffusion without membranes
+    bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
+                                              increment_vector=increment_vector)
+    #print(increment_vector)
+    assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation
+
+    # Now add various complex sets of membranes
+    bio.set_membranes([ (0,1), (2,4) , (18, 45), (48,49), (98,100) ])
+
+    bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
+                                              increment_vector=increment_vector)
+    assert np.allclose(np.sum(increment_vector), 0.)
+
+
+    bio.set_membranes([ (1,2), (3,8) , (28, 45), (46,49), (90,91) ])
+
+    bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
+                                              increment_vector=increment_vector)
+    assert np.allclose(np.sum(increment_vector), 0.)
+
+
+    bio.set_membranes([ (11,32), (33,48) , (56,79), (90,99) ])
+
+    bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
+                                              increment_vector=increment_vector)
+    assert np.allclose(np.sum(increment_vector), 0.)
+
+    for _ in range(5):
+        bio._diffuse_step_single_chem_3_1_stencil(time_step=delta_t, diff=diff,
+                                                  increment_vector=increment_vector)
+        assert np.allclose(np.sum(increment_vector), 0.)
+
+
+
+def test__diffuse_step_single_chem_3_1_stencil_G():
+    n_bins = 120
+    delta_t = 0.025
+    diff = [3.2, 2.7]
+
+    # Initialize the system, with a complex pattern of initial concentrations
+    chem_data = chem(labels=["A", "B"], diffusion_rates=diff)
+    bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+
+    bio.inject_gradient(chem_label="A", conc_left = 20., conc_right = 800.)
+    bio.inject_sine_conc(chem_label="A", number_cycles=5, amplitude=450, bias=10, phase=90, zero_clip = True)
+    bio.inject_bell_curve(chem_label="A", mean=0.7, sd=0.25, amplitude=13.3, bias=18)
+
+    bio.inject_gradient(chem_label="B", conc_left = 500., conc_right = 18.)
+    bio.inject_bell_curve(chem_label="B", mean=0.2, sd=0.45, amplitude=53.3, bias=68)
+    bio.inject_sine_conc(chem_label="B", number_cycles=7, amplitude=350, bias=2, phase=123, zero_clip = True)
+    #print(bio.system)
+
+    increment_vector = np.zeros(n_bins, dtype=float)
+
+    # Diffusion without membranes
+    bio._diffuse_step_single_chem_3_1_stencil(chem_index=0, time_step=delta_t, diff=diff[0],
+                                              increment_vector=increment_vector)
+    assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "A"
+
+    bio._diffuse_step_single_chem_3_1_stencil(chem_index=1, time_step=delta_t, diff=diff[1],
+                                              increment_vector=increment_vector)
+    assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "B"
+
+
+    # Now add various complex sets of membranes
+    bio.set_membranes([ (0,1), (2,4) , (18, 45), (46,47), (48,49), (98,100) ])
+
+    bio._diffuse_step_single_chem_3_1_stencil(chem_index=0, time_step=delta_t, diff=diff[0],
+                                              increment_vector=increment_vector)
+    assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "A"
+
+    bio._diffuse_step_single_chem_3_1_stencil(chem_index=1, time_step=delta_t, diff=diff[1],
+                                              increment_vector=increment_vector)
+    assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "B"
+
+
+    bio.set_membranes([ (1,2), (3,8) , (28, 45), (46,49), (90,91) ])
+
+    bio._diffuse_step_single_chem_3_1_stencil(chem_index=0, time_step=delta_t, diff=diff[0],
+                                              increment_vector=increment_vector)
+    assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "A"
+
+    bio._diffuse_step_single_chem_3_1_stencil(chem_index=1, time_step=delta_t, diff=diff[1],
+                                              increment_vector=increment_vector)
+    assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "B"
+
+
+    bio.set_membranes([ (11,32), (33,48) , (56,79), (90,99) ])
+
+    bio._diffuse_step_single_chem_3_1_stencil(chem_index=0, time_step=delta_t, diff=diff[0],
+                                              increment_vector=increment_vector)
+    assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "A"
+
+    bio._diffuse_step_single_chem_3_1_stencil(chem_index=1, time_step=delta_t, diff=diff[1],
+                                              increment_vector=increment_vector)
+    assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "B"
+
+
+    for _ in range(5):
+        bio._diffuse_step_single_chem_3_1_stencil(chem_index=0, time_step=delta_t, diff=diff[0],
+                                                  increment_vector=increment_vector)
+        assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "A"
+
+        bio._diffuse_step_single_chem_3_1_stencil(chem_index=1, time_step=delta_t, diff=diff[1],
+                                                  increment_vector=increment_vector)
+        assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "B"
+
+
+
+def test_diffuse_step_single_species_5_1_stencils():
     n_bins=5
     delta_t = 0.01
     delta_x = 2

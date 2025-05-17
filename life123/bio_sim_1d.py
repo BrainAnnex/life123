@@ -961,7 +961,8 @@ class BioSim1D:
 
     def inject_sine_conc(self, chem_label, number_cycles, amplitude, bias=0, phase=0, zero_clip = False) -> None:
         """
-        Add to the concentrations of the specified chemical species a sinusoidal signal across all bins.
+        Add to the current concentrations of the specified chemical species
+        a sinusoidal signal across all bins.
 
         Note:   A sine wave of the form  f(x) = A sin(B x - C)
                 has an amplitude of A, a period of 2Pi/B and a right phase shift of C (in radians)
@@ -998,15 +999,16 @@ class BioSim1D:
 
     def inject_bell_curve(self, chem_label, mean=0.5, sd=0.15, amplitude=1., bias=0) -> None:
         """
-        Add to the concentrations of the specified chemical species a signal across all bins in the shape of a Bell curve.
+        Add to the current concentrations of the specified chemical species a signal across all bins in the shape of a Bell curve.
         The default values provide bell shape centered in the middle of the system, and fairly spread out
         (but pretty close to zero at the endpoints)
 
         :param chem_label:      The name of the chemical species whose concentration we're modifying
-        :param mean:            A value, generally between 0 and 1, indication the position of the mean relative to the system;
+        :param mean:            A value, generally between 0 and 1, indication the spatial position of the mean
+                                    relative to the bin system;
                                     if less than 0 or greater than 1, only one tail of the curve will be seen
         :param sd:              Standard deviation, in units of the system length
-        :param amplitude:       Amount by which to multiply the signal
+        :param amplitude:       Amount by which to multiply the standard normal curve signal before adding it to current concentrations
         :param bias:            Positive amount to be added to all values (akin to "DC bias" in electrical circuits)
         :return:                None
         """
