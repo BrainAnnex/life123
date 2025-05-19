@@ -325,7 +325,7 @@ class System1D:
 
         assert len(conc_list) == self.n_bins, \
             f"BioSim1D.set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the bins " \
-            f"(the length should be {self.n_bins}, rather than {len(conc_list)})"
+            f"(its length should be {self.n_bins}, rather than {len(conc_list)})"
 
         # Verify that none of the concentrations are negative
         assert min(conc_list) >= 0, \
@@ -745,9 +745,9 @@ class Membranes1D(System1D):
     def set_permeability(self, permeability :dict) -> None:
         """
 
-        :param permeability:Dictionary mapping chemical labels
-                                to the membranes' permeability to them (in passive transport)
-        :return:            None
+        :param permeability:    Dictionary mapping chemical labels
+                                    to the membranes' permeability to them (in passive transport)
+        :return:                None
         """
         assert type(permeability) == dict, \
             "set_permeability(): argument `permeability` must be a dictionary"
@@ -844,6 +844,7 @@ class BioSim1D_UNDER_DEVELOPMENT(Membranes1D):
                                     if not specified, it'll get instantiated here
         """
         #TODO?: maybe allow optionally passing n_species in lieu of chem_data,
+        #       (or passing the names, like with UniformCompartment?)
         #       and let it create and return the "Chemicals" object in that case
 
         self.debug = False
@@ -1084,7 +1085,7 @@ class BioSim1D_UNDER_DEVELOPMENT(Membranes1D):
         Check whether the sum of all the concentrations of the specified chemical,
         across all bins, adds up to the passed value
 
-        :param expected:    Value that the sum of all the bin concentrations of the specified chemical should add up tp
+        :param expected:    Value that the sum of all the bin concentrations of the specified chemical should add up to
         :param chem_label:  String with the label to identify the chemical of interest
         :param chem_index:  Integer to identify the chemical of interest.
                                 Cannot specify both `chem_label` and `chem_index`
@@ -1146,7 +1147,6 @@ class BioSim1D_UNDER_DEVELOPMENT(Membranes1D):
 
 
 
-
     def describe_state(self, concise=False) -> Union[pd.DataFrame, None]:
         """
         A simple printout of the state of the system, for now useful only for small systems.
@@ -1155,69 +1155,39 @@ class BioSim1D_UNDER_DEVELOPMENT(Membranes1D):
             SYSTEM STATE at Time t = 0:
             [[0. 0. 0. 0.]
              [0. 0. 0. 0.]]
+            Membranes: [(1, 2)]
 
         EXAMPLE (not concise):
             SYSTEM STATE at Time t = 0:
-            4 bins and 2 chemical species:
-               <PANDAS data frame returned>
-
-        TODO: The goal for ASCII-based printouts involving membranes is something like.
-           ____________________
-        A: |20|18|12|8()  2| 6|    Diff rate: 0.2 (M: 0.01)
-        B: |30| 2|56|4()3.5|12|    Diff rate: 0.8 (M: 0.3)
-           --------------------
-             0  1  2      3  4
+            4 bins and 2 chemical species
+            Membranes present:  [(12, 25)]
+            <PANDAS data frame returned>
 
         :param concise: If True, only produce a minimalist printout with just the concentration values
-        :return:        None, if membranes are present, or a Pandas dataframe otherwise
+        :return:        None, if concise=True; a Pandas dataframe otherwise
         """
         print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
 
         if concise:             # A minimalist printout...
             print(self.system)   # ...only showing the concentration data (a Numpy array)
             if self.uses_membranes():
-                print("Membranes:")
-                print(self.membranes)
+                print("Membranes: ", self.membranes)
             return
 
         # If we get thus far, it's a FULL printout
 
-        print(f"{self.n_bins} bins and {self.n_species} chemical species:")
+        print(f"{self.n_bins} bins and {self.n_species} chemical species")
 
         if self.uses_membranes():
-            # Show a line of line of data for each chemical species in turn
-            for species_index in range(self.n_species):
-                name = self.chem_data.get_label(species_index)
-                if name:    # If a name was provided, show it
-                    name = f" ({name})"
-                else:
-                    name = ""
+            print("Membranes present: ", self.membranes)
 
-                if self.membranes == []:
-                    all_conc = self.system[species_index]
-                else:
-                    # TODO: Fix to make work with new membrane implementation
-                    all_conc = "|"
-                    for bin_no in range(self.n_bins):
-                        all_conc += str(self.bin_concentration(bin_no, chem_index=species_index))
-                        if self.membranes[bin_no]:
-                            # Add a symbol for the membrane, and the additional membrane concentration data (on the "other side")
-                            all_conc += "()"    # To indicate a membrane
-                            all_conc += str(self.bin_concentration(bin_no, chem_index=species_index))
-                        all_conc += "|"
 
-                if not self.chem_data.get_all_diffusion_rates():
-                    print(f"  Species {species_index}{name}. Diff rate: NOT SET. Conc: {all_conc}")
-                else:
-                    print(f"  Species {species_index}{name}. Diff rate: {self.chem_data.get_diffusion_rate(chem_index=species_index)}. Conc: {all_conc}")
+        df = pd.DataFrame(self.system, columns=[f"Bin {i}" for i in range(self.n_bins)])
 
-        else:   # Alternate view, using Pandas, only usable when there are no membranes
-            df = pd.DataFrame(self.system, columns=[f"Bin {i}" for i in range(self.n_bins)])
+        df.insert(0, "Species", self.chem_data.get_all_labels())
+        df.insert(1, "Diff rate", self.chem_data.get_all_diffusion_rates()) # Unset values will show up as None
 
-            df.insert(0, "Species", self.chem_data.get_all_labels())
-            df.insert(1, "Diff rate", self.chem_data.get_all_diffusion_rates()) # Unset values will show up as None
-
-            return df
+        return df
 
 
 

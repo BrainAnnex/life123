@@ -17,13 +17,13 @@
 #
 # ## Data Structure and Visualization of Membranes in 1D
 #
-# No simulations done here
+# No simulations done here; for diffusion and transport across membranes, please see `membranes_2` and other experiments
 
 # %% [markdown]
-# ### TAGS :  "membranes 1D", "basic"
+# ### TAGS :  "membranes 1D", "basic", "quick-start"
 
 # %%
-LAST_REVISED = "Apr. 29, 2025"
+LAST_REVISED = "May 18, 2025"
 LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%

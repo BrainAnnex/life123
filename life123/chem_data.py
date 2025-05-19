@@ -2,6 +2,7 @@ from typing import Union, List, NamedTuple
 
 import numpy as np
 import pandas as pd
+import string
 
 
 
@@ -747,18 +748,20 @@ class ChemData(Macromolecules):
         Reactions, if applicable, need to be added later by means of calls to add_reaction()
         Macro-molecules, if applicable, need to be added later.
 
-        If no names nor labels are provided, but diffusion rate or plot colors are given,
-        the strings "Chemical 1", "Chemical 2", ..., are used
+        If no names nor labels are provided, but diffusion rates or plot colors are given,
+        the strings "A", "B", ..., "Z", "Z2", "Z3", .... are used
 
         :param names:           [OPTIONAL] A single name, or list or tuple of names, of the chemicals.
                                     If not provided, the names are made equal to the labels.
-                                    If neither names nor labels is provided, "Chemical 1", "Chemical 2", ..., are used
+                                    If neither names nor labels is provided,
+                                    the strings "A", "B", ..., "Z", "Z2", "Z3", .... are used
                                     (as many as the diffusion rates or plot colors)
 
         :param labels:          [OPTIONAL] A single label, or list or tuple of labels, of the chemicals,
                                     in the same order as the names (if provided).
                                     If not provided, the labels are made equal to the names.
-                                    If neither names nor labels is provided, "Chemical 1", "Chemical 2", ..., are used
+                                    If neither names nor labels is provided,
+                                    "A", "B", ..., "Z", "Z2", "Z3", .... are used
                                     (as many as the diffusion rates or plot colors)
 
         :param diffusion_rates: [OPTIONAL] A non-negative number, or a list/tuple/Numpy array with the diffusion rates of the chemicals,
@@ -831,7 +834,8 @@ class ChemData(Macromolecules):
             else:
                 n_species = len(plot_colors)        # plot_colors cannot be None, otherwise all args would be (already excluded)
 
-            names = [f"Chemical {i+1}" for i in range(n_species)]   # The strings "Chemical 1", "Chemical 2", ..., will be used
+            #names = [f"Chemical {i+1}" for i in range(n_species)]   # The strings "Chemical 1", "Chemical 2", ..., will be used
+            names = self._generate_generic_names(n_species)
 
 
         if labels is None:
@@ -861,3 +865,21 @@ class ChemData(Macromolecules):
                 assert type(color) == str, \
                     f"ChemData instantiation: all the colors must be strings.  The passed value ({color}) is of type {type(color)}"
                 self.color_dict[l] = color
+
+
+
+    def _generate_generic_names(self, n :int) -> [str]:
+        """
+        Generate a list with n elements using the strings "A", "B", ..., "Z", "Z2", "Z3", ...
+
+        :param n:   Number of desired names
+        :return:    List of n names of the form ["A", "B", ..., "Z", "Z2", "Z3", ...]
+        """
+        letters = list(string.ascii_uppercase)      # ['A', 'B', ..., 'Z']
+
+        if n <= 26:
+            return letters[:n]
+
+        alphanumeric = [f"Z{i-25}" for i in range(27, n+1)]   # Note that 27 gets mapped to ["Z2"], 28 to ["Z2", "Z3"], etc.
+
+        return letters + alphanumeric

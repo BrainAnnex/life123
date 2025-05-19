@@ -615,3 +615,19 @@ def test_clear_macromolecules():
 
 def test__internal_reactions_data():
     pass   # TODO
+
+
+
+def test__generate_generic_names():
+    chem_data = ChemData()
+
+    assert chem_data._generate_generic_names(1) == ["A"]
+    assert chem_data._generate_generic_names(2) == ["A", "B"]
+    assert chem_data._generate_generic_names(26) == ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+                                                     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+    assert chem_data._generate_generic_names(27) == ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+                                                     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+                                                     'Z2']
+    assert chem_data._generate_generic_names(28) == ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+                                                     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+                                                     'Z2', 'Z3']
