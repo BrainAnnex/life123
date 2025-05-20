@@ -15,13 +15,13 @@
 # %% [markdown]
 # # Membranes in 1D : Diffusion and Passive Transport across Membranes
 #
-# #### Simple scenarios
+# #### Simple scenarios with 1 chemical
 
 # %% [markdown]
 # ### TAGS :  "membranes 1D", "basic", "quick-start"
 
 # %%
-LAST_REVISED = "May 18, 2025"
+LAST_REVISED = "May 19, 2025"
 LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
@@ -94,21 +94,38 @@ bio.system_heatmaps()
 # ## Now, let's start the diffusion
 
 # %%
-bio.diffuse(time_step=0.02, n_steps=4)
+bio.diffuse(time_step=0.02, n_steps=1)
 
 # %%
 bio.system_snapshot()
+
+# %%
+bio.system_heatmaps()
 
 # %% [markdown]
 # ### Nothing has changed in the 2 leftmost bins, as a result of the impermeable membranes  
 # By contrast, diffusion is progressing between the 2 rightmost bins
 #
 
-# %%
-bio.system_heatmaps()
+# %% [markdown]
+# *Technical side note:* since we're using, by default, simple 
+# 3-1 stencils for the diffusion step, the concentration increment in bin 3, and its corresponding decrement in bin 2, is:
 
 # %%
-bio.diffuse(time_step=0.02, n_steps=16)
+0.02 * 100 * 10 / (1*1)    # (Time step) * (Delta concentration) * (Diffusion rate const) / (bin length squared)
+
+# %% [markdown]
+# The 150 initial value in bin 2 increased by 20 to 170, and the 250 value in bin 3 correspondingly decreased to 230
+
+# %%
+
+# %%
+
+# %% [markdown]
+# ### Let's further advance the diffusion, by many more steps
+
+# %%
+bio.diffuse(time_step=0.02, n_steps=14)
 
 # %%
 bio.system_heatmaps()
@@ -130,6 +147,21 @@ bio.system_heatmaps()
 # %% [markdown]
 # ### Passive transport across membranes is now taking place both out of bin 1 (to its left neighbor) and into it (from its right neighbors)  
 # Diffusion is continuing normally between the 2 rightmost bins
+
+# %% [markdown]
+# *Technical side note -* Passive membrane transport out of bin 1 (conc. 50) into bin 0 (conc. 20) in this single step was:
+
+# %%
+30 * 1 * 0.02   # (Delta conc) * Permeability * (Time step) , since all bin sizes are 1
+
+# %% [markdown]
+# The concentration of bin 0 has increased from 20 to 20.6 during this single step.  
+# The concentration of bin 1 is also increasing, because its loss to bin 0 is more than compensated by its gain from bin 2 (bigger conc. difference)
+
+# %%
+
+# %% [markdown]
+# ### Let's continue to advance the diffusion
 
 # %%
 bio.diffuse(time_step=0.02, n_steps=4)
