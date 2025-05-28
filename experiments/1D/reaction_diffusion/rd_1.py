@@ -28,7 +28,7 @@
 # ### TAGS :  "reactions 1D", "diffusion 1D", "quick-start"
 
 # %%
-LAST_REVISED = "May 5, 2025"
+LAST_REVISED = "May 19, 2025"
 LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
@@ -273,11 +273,19 @@ bio.reaction_in_equilibrium(bin_address=0, rxn_index=0, explain=True)  # Choice 
 # %%
 
 # %% [markdown]
-# **Mass conservation**: The initial "**40** units of concentration" (20 from `A` and 20 from `B`) can be located by adding up the final concentrations in the 7 bins.  
-# Notice that the concentration of `C` needs to be multiplied by 2, because the production of each molecule of `C` consumed 2 of the original molecules (one `A` and one `B`)
+# **Mass conservation**: The initial total quantities of `A` and `B` were 20 each, and zero `C`.   Here's how they have changed:
 
 # %%
-(2.37 * 2 + 0.49 + 0.49) * 7
+20. - bio.chem_quantity(chem_label="A")  # Tot. decrease in `A`
+
+# %%
+20. - bio.chem_quantity(chem_label="B")  # Tot. decrease in `B`
+
+# %%
+bio.chem_quantity(chem_label="C")  # Tot. increase in `C`
+
+# %% [markdown]
+# All consistent with the stoichiometry of our reaction `A + B <-> C`
 
 # %%
 

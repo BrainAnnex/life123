@@ -146,51 +146,6 @@ class System1D:
 
 
 
-    def system_snapshot_arr(self, chem_label=None, chem_index=None) -> np.ndarray:
-        """
-        Return a snapshot of all the concentrations of the given chemical species,
-        across ALL BINS, as a 1D Numpy array.
-        If a Pandas dataframe is desired, use system_snapshot()
-
-        :param chem_label:  String with the label to identify the chemical of interest
-        :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
-        :return:            A 1-D Numpy array of concentration values along bin coordinates
-        """
-        assert (chem_label is not None) or (chem_index is not None), \
-            "system_snapshot_arr(): at least one of the args `chem_label` or `chem_index` must be provided"
-
-        if chem_label is not None:
-            assert chem_index is None, "system_snapshot_arr(): cannot pass both arguments `chem_label` and `chem_index`"
-            chem_index = self.chem_data.get_index(chem_label)
-        else:
-            assert chem_index is not None, "system_snapshot_arr(): must pass one of the arguments `chem_label` or `chem_index`"
-            self.chem_data.assert_valid_chem_index(chem_index)
-
-        arr = self.system[chem_index]    # A 1-D Numpy array with the chemical data along bin coordinates
-
-        return arr
-
-
-
-    def system_snapshot(self) -> pd.DataFrame:
-        """
-        Return a snapshot of all the concentrations of all the species, across all bins
-        as a Pandas dataframe
-
-        :return:    A Pandas dataframe: each row is a bin,
-                        and each column a chemical species
-        """
-        all_chem_names = self.chem_data.get_all_labels()
-        if self.system is None:
-            return pd.DataFrame(columns = all_chem_names)   # Empty dataframe
-
-        matrix = self.system.T
-
-        df = pd.DataFrame(matrix, columns = all_chem_names)
-
-        return df
-
-
 
 
     #####################################################################################################
@@ -494,6 +449,28 @@ class System1D:
 
 
 
+
+    #####################################################################################################
+
+    '''                                    ~   LOOK UP CONCENTRATIONS   ~                                           '''
+
+    def ________LOOKUP_CONCENTRATIONS________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
+    def chem_quantity(self, chem_label=None, chem_index=None):
+        """
+        Return the total quantity, across all bins, of the given chemical
+
+        :param chem_label:
+        :param chem_index:
+        :return:
+        """
+        return np.sum(self.lookup_species(chem_label=chem_label, chem_index=chem_index)) * self.global_Dx
+
+
+
     def lookup_species(self, chem_index=None, chem_label=None, copy=False) -> np.array:
         """
         Return the NumPy array of concentration values across the all bins (from left to right)
@@ -506,6 +483,8 @@ class System1D:
         :return:                A NumPy 1-D array of concentration values across the bins (from left to right);
                                     the size of the array is the number of bins
         """
+        #TODO: merge this function and system_snapshot_arr(), maybe under the name chem_snapshot_arr(
+
         if chem_label is not None:
             chem_index = self.chem_data.get_index(chem_label)
         else:
@@ -517,6 +496,54 @@ class System1D:
             return species_conc.copy()
         else:
             return species_conc
+
+
+
+    def system_snapshot_arr(self, chem_label=None, chem_index=None) -> np.ndarray:
+        """
+        Return a snapshot of all the concentrations of the given chemical species,
+        across ALL BINS, as a 1D Numpy array.
+        If a Pandas dataframe is desired, use system_snapshot()
+
+        :param chem_label:  String with the label to identify the chemical of interest
+        :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
+        :return:            A 1-D Numpy array of concentration values along bin coordinates
+        """
+        #TODO: merge this function and lookup_species(), maybe under the name chem_snapshot_arr()
+
+        assert (chem_label is not None) or (chem_index is not None), \
+            "system_snapshot_arr(): at least one of the args `chem_label` or `chem_index` must be provided"
+
+        if chem_label is not None:
+            assert chem_index is None, "system_snapshot_arr(): cannot pass both arguments `chem_label` and `chem_index`"
+            chem_index = self.chem_data.get_index(chem_label)
+        else:
+            assert chem_index is not None, "system_snapshot_arr(): must pass one of the arguments `chem_label` or `chem_index`"
+            self.chem_data.assert_valid_chem_index(chem_index)
+
+        arr = self.system[chem_index]    # A 1-D Numpy array with the chemical data along bin coordinates
+
+        return arr
+
+
+
+    def system_snapshot(self) -> pd.DataFrame:
+        """
+        Return a snapshot of all the concentrations of all the species, across all bins
+        as a Pandas dataframe
+
+        :return:    A Pandas dataframe: each row is a bin,
+                        and each column a chemical species
+        """
+        all_chem_names = self.chem_data.get_all_labels()
+        if self.system is None:
+            return pd.DataFrame(columns = all_chem_names)   # Empty dataframe
+
+        matrix = self.system.T
+
+        df = pd.DataFrame(matrix, columns = all_chem_names)
+
+        return df
 
 
 
