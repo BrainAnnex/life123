@@ -14,7 +14,8 @@
 
 # %% [markdown]
 # # Reaction-Diffusion in 1-D: `A <-> B` in 1-D, taken to equilibrium   
-# The reaction product `B` diffuses much faster than the reactant `A`
+# The reaction product `B` diffuses much faster than the reactant `A`.    
+# Eventually, both the reaction and the diffusion come to an equilibrium.
 
 # %% [markdown]
 # ### TAGS :  "reactions 1D", "diffusion 1D"

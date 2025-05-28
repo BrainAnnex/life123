@@ -1342,7 +1342,7 @@ class BioSim1D:
         :param delta_x:         Distance between consecutive bins
         :param algorithm:          (Optional) code specifying the method to use to solve the diffusion equation.
                                     Currently available options: "5_1_explicit"
-        :param to_equilibrium:
+
         :return:                A dictionary with data about the status of the operation
                                     "steps":        the number of steps that were run
                                     "system time":  the system time at the end of the operation
