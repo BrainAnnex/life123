@@ -18,7 +18,7 @@
 # #### Simple scenarios with 1 chemical
 
 # %% [markdown]
-# ### TAGS :  "membranes 1D", "basic", "quick-start"
+# ### TAGS :  "membranes 1D", "basic", "quick-start", "diffusion 1D"
 
 # %%
 LAST_REVISED = "May 19, 2025"

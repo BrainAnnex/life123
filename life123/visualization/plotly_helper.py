@@ -131,8 +131,8 @@ class PlotlyHelper:
         :param x_var:           Name of column with the independent variable for the x-axis
         :param fields:          Name, or list of names, of the dataframe columns whose values are to be plotted;
                                     if a list is passed, also display a figure legend;
-                                    if None, then display all columns except
-                                    the one that was declared as the independent variable thru argument `x_var`
+                                    if None, then display all columns EXCEPT the one that
+                                    was declared as the independent variable thru argument `x_var`
         :param log_y:           [OPTIONAL] If True, a log scale is used for the y-axis
         :param colors:          [OPTIONAL] Either a single color (string with standard plotly name, such as "red"),
                                     or list of names to use, in order; some of the entries may be None.

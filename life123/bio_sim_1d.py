@@ -357,11 +357,9 @@ class BioSim1D:
 
 
 
-
     def set_bin_conc(self, bin_address: int, conc: float, chem_index=None, chem_label=None) -> None:
         """
         Assign the requested concentration value to the given bin, for the specified chemical species.
-        Optionally, set the value for the "alternate bin" ("other side" of the membrane)
 
         :param bin_address:     The zero-based bin number of the desired compartment
         :param conc:            The desired concentration value to assign to the specified location
@@ -369,6 +367,7 @@ class BioSim1D:
         :param chem_label:      [OPTIONAL] If provided, it over-rides the value for chem_index
         :return:                None
         """
+        # TODO: add option to set concentrations of multiple chemicals at once in this bin
         self.assert_valid_bin(bin_address)
 
         assert conc >= 0., \
@@ -386,7 +385,8 @@ class BioSim1D:
 
     def set_species_conc(self, conc_list: Union[list, tuple, np.ndarray], chem_index=None, chem_label=None) -> None:
         """
-        Assign the requested list of concentration values to all the bins, in bin order, for the single specified species.
+        Assign the requested list of concentration values to all the bins, in bin order,
+        for the specified single chemical species.
 
         :param conc_list:   A list, tuple or Numpy array with the desired concentration values
                                 to assign to all the bins.
@@ -2133,7 +2133,7 @@ class BioSim1D:
             else:
                 chem_title = "all chemicals"
 
-            title = f"Concentration changes with time of {chem_title} at bin {bin_address}"
+            title = f"Concentration as a function of time of {chem_title} at bin {bin_address}"
 
             if title_prefix:
                 title = f"{title_prefix}<br>{title}"

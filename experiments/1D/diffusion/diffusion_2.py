@@ -15,7 +15,7 @@
 # %% [markdown]
 # # Diffusion of 2 chemicals in 1D
 #
-# ## Two symmetric initial concentration pulses (near the opposite edges of the system) diffusing out towards equilibrium
+# ## Two symmetric initial concentration pulses (near the opposite edges of the system) diffusing out towards equilibrium, with identical diffusion rates
 #
 # Symmetry is observed throughout
 

@@ -24,7 +24,7 @@
 # ### TAGS :  "diffusion 1D", "quick-start"
 
 # %%
-LAST_REVISED = "Apr. 28, 2025"
+LAST_REVISED = "May 29, 2025"
 LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
@@ -151,7 +151,7 @@ bio.conc_history.bin_history(bin_address=2)   # The bin where the initial concen
 bio.plot_history_single_bin(bin_address=2)
 
 # %%
-bio.plot_history_single_bin(bin_address=0)   # Left "edge" of the 1D system
+bio.plot_history_single_bin(bin_address=0, title_prefix="Notice the transient 'overshoot`")   # Left "edge" of the 1D system
 
 # %%
 bio.plot_history_single_bin(bin_address=9)   # Right "edge" of the 1D system

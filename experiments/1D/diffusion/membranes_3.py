@@ -18,7 +18,7 @@
 # #### Two chemicals: the membranes are permeable to one, and impermeable to the other one 
 
 # %% [markdown]
-# ### TAGS :  "membranes 1D", "basic"
+# ### TAGS :  "membranes 1D", "basic", "diffusion 1D"
 
 # %%
 LAST_REVISED = "May 19, 2025"
