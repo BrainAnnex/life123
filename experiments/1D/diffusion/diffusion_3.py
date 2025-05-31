@@ -15,14 +15,16 @@
 # %% [markdown]
 # # Transient separation of 2 chemicals in 1D, due to their different diffusion rates
 #
-# ### Starting with identical concentrations, they initially separate 
-# ### until they eventually attain identical concentrations at equilibrium
+# ### Starting with identical concentrations in one of the bins, they initially separate... 
+# ### until they eventually attain identical concentrations at equilibrium   
+#
+# For a complete separation by means of membranes, see experiment `membranes_3`
 
 # %% [markdown]
 # ### TAGS :  "diffusion 1D", "basic"
 
 # %%
-LAST_REVISED = "May 29, 2025"
+LAST_REVISED = "May 30, 2025"
 LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
@@ -42,7 +44,7 @@ check_version(LIFE123_VERSION)
 
 # %% [markdown]
 # ## Prepare the initial system
-# with identical bin concentration of the chemicals `A` and `B`, in the center bin.  
+# with identical bin concentrations of the chemicals `A` and `B`, in the center bin.  
 # `B` diffuses much faster than `A`
 
 # %%
@@ -71,8 +73,8 @@ bio.system_heatmaps(title_prefix="Diffusion")
 # ## Request history-keeping for some bins
 
 # %%
-# Request to save the concentration history at the bins with the initial concentration injection, 
-# and the bins at the ends of the system
+# Request to save the concentration history at the bin with the initial concentration injection, 
+# and at a couple of other bins
 bio.enable_history(bins=[0, 2, 4], frequency=3, take_snapshot=True)    
 
 # %%
@@ -90,7 +92,8 @@ bio.diffuse(total_duration=1.0, time_step=0.05)
 bio.describe_state()
 
 # %% [markdown]
-# ## The 2 chemicals `A` and `B` have separated due to their different diffusion rates
+# ## The 2 chemicals `A` and `B`, previously identical in concentrations, have separated due to their different diffusion rates  
+# Notice how `B` has spread out far more than `A`
 
 # %%
 bio.visualize_system(title_prefix="Diffusion")   # Line curve view
@@ -106,14 +109,13 @@ bio.system_heatmaps(title_prefix="Diffusion")
 # ## Let's advance the diffusion
 
 # %%
-# Advancing to time t=3, with time steps of 0.05
 bio.diffuse(total_duration=2.0, time_step=0.05)
 
 # %%
 bio.describe_state()
 
 # %% [markdown]
-# ## `B` is closer to equilibrium, while `A` is nowhere near it!
+# ## `B` is close to equilibrium, while `A` is nowhere near it!
 
 # %%
 bio.visualize_system(title_prefix="Diffusion")   # Line curve view
@@ -135,7 +137,7 @@ bio.diffuse(total_duration=2.0, time_step=0.05)
 bio.describe_state()
 
 # %% [markdown]
-# ## Notice that the concentrations of `A` and `B` in the central bin 4 are again getting closer
+# ## Notice that the concentrations of `A` and `B` in the central bin 4 are again getting closer in value
 
 # %%
 bio.visualize_system(title_prefix="Diffusion")   # Line curve view
@@ -158,13 +160,16 @@ bio.describe_state()
 
 # %% [markdown]
 # ## All bins now have essentially uniform concentration  
-# ## Notice that the concentrations of `A` and `B` in the central bin 4 are again essentially identical; their separation has terminated
+# ## Notice that the concentrations of `A` and `B` in the central bin 4 are again essentially identical; the separation of `A` and `B` is coming to an end
 
 # %%
 bio.visualize_system(title_prefix="Diffusion")   # Line curve view
 
 # %%
 bio.system_heatmaps(title_prefix="Diffusion")
+
+# %% [markdown]
+# #### Verify that the total amount of each chemicals hasn't changed
 
 # %%
 # Let's verify mass conservation
@@ -181,7 +186,7 @@ bio.check_mass_conservation(chem_label="B", expected=10.)
 # ## Visualization of time changes at particular bins
 
 # %% [markdown]
-# #### Instead of visualizing the entire system at a moment of time, like in the previous heatmaps, let's now look at the time evolution of the  chemicals `A` and `B` at selected bins (whose history we requested prior to running the simulation)
+# #### Instead of visualizing the entire system at a moment in time, like in the previous diagrams, let's now look at the time evolution of the concentrations of `A` and `B` at selected bins (bins whose history-keeping we requested prior to running the simulation)
 
 # %%
 bin4_hist = bio.conc_history.bin_history(bin_address=4)   # The bin where the initial concentration of `A` and `B` was applied
@@ -194,15 +199,12 @@ bio.plot_history_single_bin(bin_address=4, title_prefix="`A` and `B` separate, u
 # ## The transient separation of `A` and `B` is best seen by plotting the difference of their concentrations, as a function of time
 
 # %%
-bin4_hist["diff"] = bin4_hist["A"] - bin4_hist["B"]
-bin4_hist
+bin4_hist["A"] - bin4_hist["B"]
 
 # %%
-PlotlyHelper.plot_pandas(df=bin4_hist, x_var="SYSTEM TIME", y_label="[A] - [B]", fields="diff",
-                         colors="purple", legend_header="Chemical", 
-                         title="Transient separation of `A` and `B`, as seen in central bin 4")
-
-# %%
+PlotlyHelper.plot_curves(x=bin4_hist['SYSTEM TIME'], y = bin4_hist['A'] - bin4_hist['B'], 
+                         x_label="SYSTEM TIME", y_label="[A] - [B]", 
+                         colors="purple", title="Transient separation of `A` and `B`, as seen in central bin 4")
 
 # %%
 
@@ -210,9 +212,9 @@ PlotlyHelper.plot_pandas(df=bin4_hist, x_var="SYSTEM TIME", y_label="[A] - [B]",
 # ## The transient separation of `A` and `B` is also seen in other bins...
 
 # %%
-bio.plot_history_single_bin(bin_address=0, title_prefix="The transient separation of `A` and `B` happens at other bins, too")
+bio.plot_history_single_bin(bin_address=0, title_prefix="The transient separation of `A` and `B` happens at other bins, too...")
 
 # %%
-bio.plot_history_single_bin(bin_address=2, title_prefix="The transient separation of `A` and `B` happens at other bins, too")
+bio.plot_history_single_bin(bin_address=2, title_prefix="The transient separation of `A` and `B` happens at other bins, too...")
 
 # %%
