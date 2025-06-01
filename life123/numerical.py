@@ -9,6 +9,8 @@ import math
 class Numerical:
     """
     Assorted, general numerical methods
+
+    TODO: change @classmethod to @staticmethod , and ditch the cls's
     """
 
 
@@ -500,7 +502,7 @@ class Numerical:
 
 
     @classmethod
-    def gradient_order4(cls, f: np.array, *varargs) -> Union[np.array, list]:
+    def gradient_order4(cls, f :np.array, *varargs) -> Union[np.array, list]:
         """
         Compute the gradient, from the values in the given (possibly multidimensional) array,
         using the 5-point Central Difference, which produces an accuracy of order 4.
@@ -524,7 +526,7 @@ class Numerical:
         :param varargs: 0, 1, or N scalars giving the sample distances in each direction
 
         :return:        A list of N numpy arrays,
-                        each of the same shape as f giving the derivative of f with respect to each dimension
+                        each of the same shape as f, and giving the derivative of f with respect to each dimension
         """
 
         N = len(f.shape)            # Number of dimensions
@@ -570,22 +572,38 @@ class Numerical:
             slice4[axis] = slice(4, None)   # Ditch the first 4
             # All the above slice objects will produce a size 4 shorter on the current axis
 
-            # 1D equivalent -- out[2:-2] = (f[:4] - 8*f[1:-3] + 8*f[3:-1] - f[4:])/12.0
-            out[slice0] = (f[tuple(slice1)] - 8.0*f[tuple(slice2)] + 8.0*f[tuple(slice3)] - f[tuple(slice4)])/12.0
+            '''EXAMPLE in 1-D:
+                f: array([10, 20, 30, 40, 50, 60])
+                slice0: [slice(2, -2, None)]        In standard slicing notation, the slice has same effect on my_list as my_list[2:-2]
+                slice1: [slice(None, -4, None)]     In standard slicing notation, the slice has same effect on my_list as my_list[:-4]
+                slice2: [slice(1, -3, None)]
+                slice3: [slice(3, -1, None)]
+                slice4: [slice(4, None, None)] 
+                out: array([0., 0.,  0.,  0.,  0.,  0.])                     
+            '''
+            # Notice that the various "slice" variables are lists; turn them into tuples,  for indexing the Numpy array f
+            # EXAMPLE, cont'd:  tuple(slice1) is the tuple  (slice(None, -4, None),)
+            #                   and f[tuple(slice1)] is array([10, 20])
+            computed = (f[tuple(slice1)] - 8.0*f[tuple(slice2)] + 8.0*f[tuple(slice3)] - f[tuple(slice4)])/12.0
+            # 1D equivalent --> computed = (f[:-4] - 8*f[1:-3] + 8*f[3:-1] - f[4:])/12.0
+            #print("computed:", computed)           # EXAMPLE, cont'd: array([10. 10.])
+
+            out[tuple(slice0)] = computed           # EXAMPLE, cont'd: "out" gets set to  array([10., 10.,  0.,  0.,  0.,  0.])
+            # 1D equivalent -- out[2:-2] = computed
 
             # Now process the first 2 points
             slice0[axis] = slice(None, 2)
             slice1[axis] = slice(1, 3)
             slice2[axis] = slice(None, 2)
             # 1D equivalent -- out[0:2] = (f[1:3] - f[0:2])
-            out[slice0] = (f[tuple(slice1)] - f[tuple(slice2)])
+            out[tuple(slice0)] = (f[tuple(slice1)] - f[tuple(slice2)])
 
             # And, finally, the last 3 points
             slice0[axis] = slice(-2, None)
             slice1[axis] = slice(-2, None)
             slice2[axis] = slice(-3, -1)
             # 1D equivalent -- out[-2:] = (f[-2:] - f[-3:-1])
-            out[slice0] = (f[tuple(slice1)] - f[tuple(slice2)])
+            out[tuple(slice0)] = (f[tuple(slice1)] - f[tuple(slice2)])
 
 
             # Divide by the step size used on this axis

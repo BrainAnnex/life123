@@ -6,10 +6,10 @@ class Colors:
     """
     For color-related matters.
 
-    The name-to-rgb mapping was adapted from matplotlib.colors (version 3.6.3)
+    The color name-to-rgb mapping was adapted from matplotlib.colors (version 3.6.3)
     """
 
-    BASE_COLORS = {
+    BASE_COLORS = {     # NO LONGER IN USE
         'b': (0, 0, 1),        # blue
         'g': (0, 0.5, 0),      # green
         'r': (1, 0, 0),        # red
@@ -21,7 +21,7 @@ class Colors:
     }
 
 
-    # These colors are from Tableau
+    # These color names are from Tableau
     TABLEAU_COLORS = {
         'tab:blue': '#1f77b4',
         'tab:orange': '#ff7f0e',
@@ -1185,8 +1185,9 @@ class Colors:
         Convert a color, specified by a standard name,
         into RGB coordinates expressed as a triplet of numbers in the (0-1 range)
 
-        :param color_name:
-        :return:
+        :param color_name:  A string, specified one of various standard forms of a color name.
+                                EXAMPLES: "red", "turquoise"
+        :return:            A triplet of floats, representing the RGB coordinates of the requested color
         """
         hex_color = cls._colors_full_map[color_name]    # EXAMPLE: "#FFFF00"
 

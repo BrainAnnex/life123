@@ -1,7 +1,8 @@
-from typing import Union, List, NamedTuple, Set
+from typing import Union, List, NamedTuple
 
 import numpy as np
 import pandas as pd
+import string
 
 
 
@@ -51,19 +52,19 @@ class ChemCore:
 
 
 
-    def assert_valid_species_index(self, species_index: int) -> None:
+    def assert_valid_chem_index(self, chem_index: int) -> None:
         """
         Raise an Exception if the specified species_index (meant to identify a chemical) isn't valid
 
-        :param species_index:   An integer that indexes the chemical of interest (numbering starts at 0)
+        :param chem_index:   An integer that indexes the chemical of interest (numbering starts at 0)
         :return:                None
         """
         n_species = self.number_of_chemicals()
-        assert type(species_index) == int,  f"The specified species index ({species_index}) must be an integer: " \
-                                            f"instead, it has type {type(species_index)}"
+        assert type(chem_index) == int, f"The specified chemical index ({chem_index}) must be an integer: " \
+                                            f"instead, it has type {type(chem_index)}"
 
-        assert 0 <= species_index < n_species, \
-            f"The specified species index ({species_index}) is not in the expected range [0 - {n_species - 1}], inclusive.  " \
+        assert 0 <= chem_index < n_species, \
+            f"The specified chemical index ({chem_index}) is not in the expected range [0 - {n_species - 1}], inclusive.  " \
             f"I.e., there is no chemical species assigned to this index"
 
 
@@ -108,21 +109,21 @@ class ChemCore:
 
 
 
-    def get_label(self, species_index: int) -> str:
+    def get_label(self, chem_index: int) -> str:
         """
         Return the label of the species with the given index.
 
-        :param species_index:   An integer (starting with zero) corresponding to the
-                                    original order with which the chemical species were first added
-        :return:                The name of the species with the given index.
-                                    If missing or blank, an Exception is raised
+        :param chem_index:  An integer (starting with zero) corresponding to the
+                                original order with which the chemical species were first added
+        :return:            The name of the chemical species with the given index.
+                                If missing or blank, an Exception is raised
         """
-        self.assert_valid_species_index(species_index)
+        self.assert_valid_chem_index(chem_index)
 
-        name = self.chemical_data[species_index].get("label")    # If "label" is not present, None will be returned
+        name = self.chemical_data[chem_index].get("label")    # If "label" is not present, None will be returned
 
         assert name, \
-            f"get_label(): A chemical species with the requested index ({species_index}) is present, but it lacks a name"
+            f"get_label(): A chemical species with the requested index ({chem_index}) is present, but it lacks a name"
 
         return name
 
@@ -396,23 +397,23 @@ class Diffusion(ChemCore):
 
 
 
-    def get_diffusion_rate(self, species_index=None, name=None) -> Union[float, int, None]:
+    def get_diffusion_rate(self, chem_index=None, name=None) -> Union[float, int, None]:
         """
         Return the diffusion rate of the specified chemical species.
         If no value was assigned (but the chemical exists), return None.
 
         :param name:            Name of the chemical of interest
-        :param species_index:   Alternate way to specify the chemical, using its zero-based index (order
+        :param chem_index:   Alternate way to specify the chemical, using its zero-based index (order
                                     in which it was registered);
                                     `name` and `species_index` cannot be both specified, or an Exception will be raised
         :return:                The value of the diffusion rate for the species with the given index if present,
                                     or None if not
         """
-        assert (name is None) or (species_index is None), \
+        assert (name is None) or (chem_index is None), \
             "get_diffusion_rate(): cannot specify BOTH `name` and `species_index`"
 
         if name is None:
-            name = self.get_label(species_index)
+            name = self.get_label(chem_index)
         else:
             assert self.label_exists(name), \
                 f"get_diffusion_rate(): No chemical named `{name}` exists"
@@ -747,18 +748,20 @@ class ChemData(Macromolecules):
         Reactions, if applicable, need to be added later by means of calls to add_reaction()
         Macro-molecules, if applicable, need to be added later.
 
-        If no names nor labels are provided, but diffusion rate or plot colors are given,
-        the strings "Chemical 1", "Chemical 2", ..., are used
+        If no names nor labels are provided, but diffusion rates or plot colors are given,
+        the strings "A", "B", ..., "Z", "Z2", "Z3", .... are used
 
         :param names:           [OPTIONAL] A single name, or list or tuple of names, of the chemicals.
                                     If not provided, the names are made equal to the labels.
-                                    If neither names nor labels is provided, "Chemical 1", "Chemical 2", ..., are used
+                                    If neither names nor labels is provided,
+                                    the strings "A", "B", ..., "Z", "Z2", "Z3", .... are used
                                     (as many as the diffusion rates or plot colors)
 
         :param labels:          [OPTIONAL] A single label, or list or tuple of labels, of the chemicals,
                                     in the same order as the names (if provided).
                                     If not provided, the labels are made equal to the names.
-                                    If neither names nor labels is provided, "Chemical 1", "Chemical 2", ..., are used
+                                    If neither names nor labels is provided,
+                                    "A", "B", ..., "Z", "Z2", "Z3", .... are used
                                     (as many as the diffusion rates or plot colors)
 
         :param diffusion_rates: [OPTIONAL] A non-negative number, or a list/tuple/Numpy array with the diffusion rates of the chemicals,
@@ -831,7 +834,8 @@ class ChemData(Macromolecules):
             else:
                 n_species = len(plot_colors)        # plot_colors cannot be None, otherwise all args would be (already excluded)
 
-            names = [f"Chemical {i+1}" for i in range(n_species)]   # The strings "Chemical 1", "Chemical 2", ..., will be used
+            #names = [f"Chemical {i+1}" for i in range(n_species)]   # The strings "Chemical 1", "Chemical 2", ..., will be used
+            names = self._generate_generic_names(n_species)
 
 
         if labels is None:
@@ -861,3 +865,21 @@ class ChemData(Macromolecules):
                 assert type(color) == str, \
                     f"ChemData instantiation: all the colors must be strings.  The passed value ({color}) is of type {type(color)}"
                 self.color_dict[l] = color
+
+
+
+    def _generate_generic_names(self, n :int) -> [str]:
+        """
+        Generate a list with n elements using the strings "A", "B", ..., "Z", "Z2", "Z3", ...
+
+        :param n:   Number of desired names
+        :return:    List of n names of the form ["A", "B", ..., "Z", "Z2", "Z3", ...]
+        """
+        letters = list(string.ascii_uppercase)      # ['A', 'B', ..., 'Z']
+
+        if n <= 26:
+            return letters[:n]
+
+        alphanumeric = [f"Z{i-25}" for i in range(27, n+1)]   # Note that 27 gets mapped to ["Z2"], 28 to ["Z2", "Z3"], etc.
+
+        return letters + alphanumeric

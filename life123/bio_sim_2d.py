@@ -15,10 +15,12 @@ class BioSim2D:
     2D simulations of diffusion and reactions
     """
 
-    def __init__(self, x_bins :int, y_bins: int, chem_data=None, reaction_handler=None):
+    def __init__(self, x_bins :int, y_bins :int, chem_data=None, reaction_handler=None):
         """
         :param x_bins:          The bin size in the x-coordinates.  Notice that this is the number of COLUMNS in the data matrix
         :param y_bins:          The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
+
+        [At least one of the 2 following arguments must be provided]
         :param chem_data:       [OPTIONAL] Object of class "ChemData";
                                     if not specified, it will get extracted
                                     from the "UniformCompartment" class (if passed to the next argument)
@@ -78,7 +80,7 @@ class BioSim2D:
 
         :param x_bins:      The bin size in the x-coordinates.  Notice that this is the number of COLUMNS in the data matrix
         :param y_bins:      The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
-        :param chem_data:   (OPTIONAL) Object of class "Chemicals";
+        :param chem_data:   (OPTIONAL) Object of class "ChemData";
                                 if not specified, it will get extracted from the "Reactions" class
         :param reaction_handler:   (OPTIONAL) Object of class "Reactions";
                                 if not specified, it'll get instantiated here
@@ -189,7 +191,7 @@ class BioSim2D:
             chem_index = self.chem_data.get_index(chem_label)
         else:
             assert chem_index is not None, "system_snapshot_xy(): must pass one of the arguments `chem_label` or `chem_index`"
-            self.chem_data.assert_valid_species_index(chem_index)
+            self.chem_data.assert_valid_chem_index(chem_index)
 
         matrix = self.system[chem_index].T    # A 2-D Numpy array with the chemical data in XY dimensions (notice the transpose)
 
@@ -236,7 +238,7 @@ class BioSim2D:
         if species_label is not None:
             species_index = self.chem_data.get_index(species_label)
 
-        self.chem_data.assert_valid_species_index(species_index)
+        self.chem_data.assert_valid_chem_index(species_index)
 
         xbin, ybin = bin_address
 
@@ -285,7 +287,7 @@ class BioSim2D:
         if species_name is not None:
             species_index = self.chem_data.get_index(species_name)
         else:
-            self.chem_data.assert_valid_species_index(species_index)
+            self.chem_data.assert_valid_chem_index(species_index)
 
         species_conc = self.system[species_index]
 
@@ -492,7 +494,7 @@ class BioSim2D:
         elif species_index is None:
             raise Exception("BioSim2D.set_species_conc(): must provide a `species_name` or `species_index`")
         else:
-            self.chem_data.assert_valid_species_index(species_index)
+            self.chem_data.assert_valid_chem_index(species_index)
 
         assert (type(conc_data) == list) or (type(conc_data) == tuple) or (type(conc_data) == np.ndarray), \
                     f"BioSim2D.set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
@@ -737,7 +739,7 @@ class BioSim2D:
         if self.n_bins_x and self.n_bins_y == 1:
             return increment_matrix                                 # There's nothing to do in the case of just 1 bin!
 
-        diff = self.chem_data.get_diffusion_rate(species_index=species_index)     # The diffusion rate of the specified single species
+        diff = self.chem_data.get_diffusion_rate(chem_index=species_index)     # The diffusion rate of the specified single species
 
         #assert not self.is_excessive(time_step, diff, delta_x), \  # TODO: implement
             #f"Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"
@@ -1035,6 +1037,7 @@ class BioSim2D:
     def system_heatmaps(self, chem_labels=None, title_prefix = "", height=None, colors=None, cartesian=True) -> pgo.Figure:
         """
         Prepare and return a Plotly Figure object containing a grid of heatmaps (up to a max of 12)
+        Each heatmap contains the 2D concentrations of one of the chemicals of interest.
 
         :param chem_labels: [OPTIONAL] List of Labels to identify the chemicals of interest;
                                 if not specified, it means ALL chemicals.
@@ -1057,9 +1060,9 @@ class BioSim2D:
         # Note: no need to reverse the rows in the dataframes; the heatmaps will take care of that, if requested
 
         if (n_chem := len(chem_labels)) == 1:
-            title = f"System state at time t={self.system_time:.5g} for `{chem_labels[0]}`"
+            title = f"System state at time t={self.system_time:.5g} for `{chem_labels[0]}`"     # Single chemical
         else:
-            title = f"System state at time t={self.system_time:.5g} for {n_chem} chemicals:"
+            title = f"System state at time t={self.system_time:.5g} for {n_chem} chemicals:"    # Multiple chemicals
 
         if title_prefix:
             title = f"{title_prefix}.  {title}"

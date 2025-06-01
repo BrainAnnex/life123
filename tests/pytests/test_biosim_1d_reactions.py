@@ -22,8 +22,8 @@ def test_reaction_step_1():
     chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
-    bio.set_uniform_concentration(species_index=0, conc=10.)
-    bio.set_uniform_concentration(species_index=1, conc=50.)
+    bio.set_uniform_concentration(chem_index=0, conc=10.)
+    bio.set_uniform_concentration(chem_index=1, conc=50.)
 
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
@@ -43,8 +43,8 @@ def test_reaction_step_1b():
     chem_data = ChemData(names=["A", "B"])
     bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
-    bio.set_uniform_concentration(species_index=0, conc=10.)
-    bio.set_uniform_concentration(species_index=1, conc=50.)
+    bio.set_uniform_concentration(chem_index=0, conc=10.)
+    bio.set_uniform_concentration(chem_index=1, conc=50.)
 
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
@@ -84,8 +84,8 @@ def test_react_1():
     bio.reactions.add_reaction(reactants=["A"], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
     assert bio.reactions.number_of_reactions() == 1
 
-    bio.set_uniform_concentration(species_index=0, conc=10.)
-    bio.set_uniform_concentration(species_index=1, conc=50.)
+    bio.set_uniform_concentration(chem_index=0, conc=10.)
+    bio.set_uniform_concentration(chem_index=1, conc=50.)
 
     # Large number of steps
     bio.react(time_step=0.1, n_steps=15)
@@ -104,8 +104,8 @@ def test_react_2():
     bio.reactions.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
     assert bio.reactions.number_of_reactions() == 1
 
-    bio.set_uniform_concentration(species_index=0, conc=10.)
-    bio.set_uniform_concentration(species_index=1, conc=50.)
+    bio.set_uniform_concentration(chem_index=0, conc=10.)
+    bio.set_uniform_concentration(chem_index=1, conc=50.)
 
     # First step
     bio.react(time_step=0.1, n_steps=1)
@@ -129,9 +129,9 @@ def test_react_3():
                                forward_rate=5., reverse_rate=2.)
     assert bio.reactions.number_of_reactions() == 1
 
-    bio.set_uniform_concentration(species_index=0, conc=10.)
-    bio.set_uniform_concentration(species_index=1, conc=50.)
-    bio.set_uniform_concentration(species_index=2, conc=20.)
+    bio.set_uniform_concentration(chem_index=0, conc=10.)
+    bio.set_uniform_concentration(chem_index=1, conc=50.)
+    bio.set_uniform_concentration(chem_index=2, conc=20.)
 
     # First step
     bio.react(time_step=0.002, n_steps=1)
@@ -260,51 +260,3 @@ def test_react_7():
                                     [0.06824696],
                                     [0.43175304]])
     assert bio.n_bins == 1
-
-
-
-def test_react_with_membrane():
-    # Based on experiment "reaction/membranes_1"
-    chem_data = ChemData(names=["A", "B", "C"])     # NOTE: Diffusion not done
-    bio = BioSim1D(n_bins=5, chem_data=chem_data)
-
-    bio.set_membranes(membrane_pos=[1])   # A single membrane, passing thru bin 1
-
-    bio.set_all_uniform_concentrations(conc_list=[4., 8., 12.])
-    bio.set_bin_conc(bin_address=1, species_name="A", conc=10.)
-    bio.set_bin_conc(bin_address=1, species_name="A", conc=55., across_membrane=True)
-    bio.set_bin_conc(bin_address=1, species_name="B", conc=20.)
-    bio.set_bin_conc(bin_address=1, species_name="C", conc=30., both_sides=True)
-
-    # Make the last bin match all the concentrations of the "post-membrane" section of bin 1
-    bio.set_bin_conc(bin_address=4, species_name="A", conc=55.)
-    bio.set_bin_conc(bin_address=4, species_name="C", conc=30.)
-
-    assert np.allclose(bio.lookup_species(species_name="A"), [4, 10, 4, 4, 55])
-    assert np.allclose(bio.lookup_species(species_name="A", trans_membrane=True), [0, 55, 0, 0, 0])
-
-    assert np.allclose(bio.lookup_species(species_name="B"), [8, 20, 8, 8, 8])
-    assert np.allclose(bio.lookup_species(species_name="B", trans_membrane=True), [0, 8, 0, 0, 0])
-
-    assert np.allclose(bio.lookup_species(species_name="C"), [12, 30, 12, 12, 30])
-    assert np.allclose(bio.lookup_species(species_name="C", trans_membrane=True), [0, 30, 0, 0, 0])
-
-    # Reaction A + B <-> C , with 1st-order kinetics in both directions, mostly forward
-    bio.reactions.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=8., reverse_rate=2.)
-
-    bio.react(time_step=0.002, n_steps=1)
-
-    bin1_trans = bio.bin_concentration(bin_address=1, species_label="A", trans_membrane=True)
-    bin4 = bio.bin_concentration(bin_address=4, species_label="A")
-    assert np.allclose(bin1_trans, bin4)
-    assert np.allclose(bin4, 48.08)
-
-    bin1_trans = bio.bin_concentration(bin_address=1, species_label="B", trans_membrane=True)
-    bin4 = bio.bin_concentration(bin_address=4, species_label="B")
-    assert np.allclose(bin1_trans, bin4)
-    assert np.allclose(bin4, 1.08)
-
-    bin1_trans = bio.bin_concentration(bin_address=1, species_label="C", trans_membrane=True)
-    bin4 = bio.bin_concentration(bin_address=4, species_label="C")
-    assert np.allclose(bin1_trans, bin4)
-    assert np.allclose(bin4, 36.92)

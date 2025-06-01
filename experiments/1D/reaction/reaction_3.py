@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -16,20 +16,33 @@
 # ### One-bin `2A <-> 3B` reaction, with 1st-order kinetics in both directions, taken to equilibrium
 #
 # Diffusion not applicable (just 1 bin)
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+
+# %% [markdown]
+# ### TAGS :  "reactions 1D"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "May 4, 2025"
+LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
+
+# %%
+#import sys, os
+#os.getcwd()
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
+
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData as chem
-from life123 import BioSim1D
+from life123 import ChemData, BioSim1D, check_version
 
-import plotly.express as px
 from life123 import GraphicLog
+
+# %%
+check_version(LIFE123_VERSION)
+
+# %%
 
 # %%
 # Initialize the HTML logging
@@ -42,33 +55,39 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = chem(names=["A", "B"])     # NOTE: Diffusion not applicable (just 1 bin)
-
-
-
-# Reaction 2A <-> 3B , with 1st-order kinetics in both directions
-chem_data.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
+chem_data = ChemData(names=["A", "B"])     # NOTE: Diffusion not applicable (just 1 bin)
 
 bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
-bio.set_uniform_concentration(species_index=0, conc=10.)
-bio.set_uniform_concentration(species_index=1, conc=50.)
+bio.set_uniform_concentration(chem_index=0, conc=10.)
+bio.set_uniform_concentration(chem_index=1, conc=50.)
 
 bio.describe_state()
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0), caption="Initial state")
-bio.get_history()
+# Specify the reaction
+reactions = bio.get_reactions()
+
+# Reaction 2A <-> 3B , with 1st-order kinetics in both directions
+reactions.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
+reactions.describe_reactions()
 
 # %%
-chem_data.describe_reactions()
+# Send the plot of the reaction network to the HTML log file
+reactions.plot_reaction_network("vue_cytoscape_2")
 
 # %%
-# Send the plot to the HTML log file
-chem_data.plot_reaction_network("vue_cytoscape_2")
 
-# %% [markdown] tags=[]
+# %%
+# Let's enable history - by default for all chemicals and all bins
+bio.enable_history(take_snapshot=True, caption="Initial state")
+
+# %%
+bio.get_bin_history(bin_address=0)
+
+# %%
+
+# %% [markdown]
 # ### <a name="sec_2_first_step"></a>First step
 
 # %%
@@ -77,26 +96,20 @@ bio.react(time_step=0.05, n_steps=1)
 bio.describe_state()
 
 # %% [markdown]
-# _Early in the reaction :_
-# [A] = 15. [B] = 42.5
-#
-# We're taking a smaller first step than in experimetn "reaction_2", to avoid over-shooting the equilibrium value with too large a step!
+# We're taking a smaller first step than in experiment "reaction_2", to avoid over-shooting the equilibrium value with too large a step!
 
 # %%
-# Save the state of the concentrations of all species at bin 0
-bio.add_snapshot(bio.bin_snapshot(bin_address = 0))
-bio.get_history()
 
 # %% [markdown]
 # ### <a name="sec_2"></a>Numerous more steps
 
 # %%
 # Numerous more steps
-bio.react(time_step=0.1, n_steps=100, snapshots={"sample_bin": 0})
+bio.react(time_step=0.1, n_steps=100)
 
 bio.describe_state()
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ### <a name="sec_2_equilibrium"></a>Equilibrium
 
 # %% [markdown]
@@ -108,17 +121,14 @@ bio.describe_state()
 bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
-bio.get_history()
+bio.get_bin_history(bin_address=0)
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # # Plots of changes of concentration with time
 
 # %%
-fig = px.line(data_frame=bio.get_history(), x="SYSTEM TIME", y=["A", "B"], 
-              title="Changes in concentrations",
-              color_discrete_sequence = ['navy', 'darkorange'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig.show()
+bio.plot_history_single_bin(bin_address=0, 
+                            title="Reaction  2A <-> 3B . Concentrations at bin 0")
 
 # %% [markdown]
 # ### Notice the *early overshoots* (the time step is too large early in the simulation!)

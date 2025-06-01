@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -22,15 +22,16 @@
 # ### TAGS :   "quick-start", "uniform compartment"
 
 # %%
-LAST_REVISED = "Jan. 9, 2025"
-LIFE123_VERSION = "1.0.0rc2"         # Library version this experiment is based on
+LAST_REVISED = "Jan. 28, 2025"
+LIFE123_VERSION = "1.0.0rc3"         # Library version this experiment is based on
 
 # %%
 #import set_path            # Using MyBinder?  Uncomment this before running the next cell!
                             # Importing this module will add the project's home directory to sys.path
 
-# %% tags=[]
-#import sys
+# %%
+#import sys, os
+#os.getcwd()
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
@@ -44,7 +45,7 @@ life123.check_version(LIFE123_VERSION)
 # %% [markdown]
 # ## Initialize the System
 
-# %% tags=[]
+# %%
 # Instantiate the simulator and specify the chemicals
 uc = life123.UniformCompartment()  
 
@@ -58,7 +59,7 @@ uc.describe_reactions()
 # Set the initial concentrations of all the chemicals
 uc.set_conc({"A": 80., "B": 10.})
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ## Run the reaction
 
 # %%
@@ -69,7 +70,7 @@ uc.get_history()   # The system's history, saved during the run of single_compar
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ## Plots changes of concentration with time  
 # Notice that adaptive variable time steps were automatically taken
 

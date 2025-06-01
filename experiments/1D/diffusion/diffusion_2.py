@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -15,7 +15,7 @@
 # %% [markdown]
 # # Diffusion of 2 chemicals in 1D
 #
-# ## Two symmetric initial concentration pulses (near the opposite edges of the system) diffusing out towards equilibrium
+# ## Two symmetric initial concentration pulses (near the opposite edges of the system) diffusing out towards equilibrium, with identical diffusion rates
 #
 # Symmetry is observed throughout
 
@@ -23,8 +23,8 @@
 # ### TAGS :  "diffusion 1D", "basic"
 
 # %%
-LAST_REVISED = "Jan. 22, 2025"
-LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
+LAST_REVISED = "Apr. 29, 2025"
+LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -64,7 +64,7 @@ bio.system_snapshot()
 bio.visualize_system(title_prefix="Diffusion")   # Line curve view
 
 # %%
-bio.system_heatmap(title_prefix="Diffusion")
+bio.system_heatmaps(title_prefix="Diffusion")
 
 # %%
 
@@ -96,7 +96,7 @@ bio.describe_state(concise=True)
 bio.visualize_system(title_prefix="Diffusion")   # Line curve view
 
 # %%
-bio.system_heatmap(title_prefix="Diffusion")
+bio.system_heatmaps(title_prefix="Diffusion")
 
 # %%
 
@@ -104,7 +104,7 @@ bio.system_heatmap(title_prefix="Diffusion")
 # ## This is still an early stage in the diffusion process; let's advance it more...  
 # (Visualization from results shown at selected times)
 
-# %% tags=[]
+# %%
 for i in range(50):
     status = bio.diffuse(total_duration=delta_time, time_step=0.1)
 
@@ -116,7 +116,7 @@ for i in range(50):
         fig.show()
         
         # Heatmap view
-        fig = bio.system_heatmap()
+        fig = bio.system_heatmaps()
         fig.show()
 
 

@@ -11,17 +11,19 @@ class History:
         """
         For the management of historical data of various types,
         each of which relies on a child class.
-        This base (parent) class - which should NOT be directly instantiated -
-        provides common properties and methods.
+        This base (parent) class is NOT meant for the end user
+        - and should NOT be directly instantiated;
+        it provides common properties and methods.
 
-        :param active:
-        :param chem_labels:
-        :param frequency:
+        :param active:      Flag indicating whether the history is enabled
+        :param chem_labels: List of chemicals for which history is to be kept; use None to mean all
+        :param frequency:   How many simulation cycles to wait until taking another data snapshot
         """
         self.history = None                 # Object set by the children classes.
                                             # The type, depending on the child class, will be one of:
                                             # CollectionTabular, CollectionArray, Collection
-        self.active = active
+
+        self.active = active                # Flag indicating whether the history is enabled
         self.capture_frequency = frequency
 
         self.restrict_chemicals = chem_labels   # None means "no restriction" (i.e. ALL chemicals)
@@ -31,6 +33,17 @@ class History:
         self.initial_caption = None
 
         self.log_file = None
+
+
+
+
+    def is_enabled(self):
+        """
+        Return True if the history-keeping is enabled
+
+        :return:
+        """
+        return self.active
 
 
 
@@ -46,8 +59,10 @@ class History:
 
     def enable_history_common(self, frequency=1, chem_labels=None) -> None:
         """
+        Activate the keeping of historical data (the specifics
+        will depend on the child class)
 
-        :param frequency:
+        :param frequency:   How many simulation cycles to wait until taking another data snapshot
         :param chem_labels:
         :return:            None
         """
@@ -129,7 +144,7 @@ class History:
         :param data_snapshot:   Data format will vary in different child classes
         :param step_count:
         :param caption:         [OPTIONAL] String to save alongside this snapshot; if not provided,
-                                    the object property self.initial_caption is used, if set
+                                    the object property self.initial_caption is used, if that was set
         :return:                The caption that was actually used
         """
         if (not caption) and self.initial_caption:
@@ -168,74 +183,20 @@ class History:
 
 ##########################################################################################################################
 
-class HistoryUniformConcentration(History):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
-        self.history = CollectionTabular(parameter_name="SYSTEM TIME")  # To store user-selected snapshots of quantities of interest
-
-
-
-    def enable_history(self, frequency=1, chem_labels=None) -> None:
-        """
-        Request history capture, with the specified parameters.
-        If history was already enabled, this function can be used to alter its capture parameters.
-
-        :param frequency:
-        :param chem_labels: [OPTIONAL] List of chemicals to include in the history;
-                                if None (default), include them all.
-        :return:            None
-        """
-        self.enable_history_common(frequency=frequency, chem_labels=chem_labels)
-
-
-
-    def save_snapshot(self, system_time, data_snapshot, step_count=None, caption="") -> None:
-        """
-
-        :param system_time:
-        :param data_snapshot:   EXAMPLE: {"A": 1.3, "B": 4.9}
-        :param step_count:
-        :param caption:         [OPTIONAL] String to save alongside this snapshot
-        :return:                None
-        """
-        caption = self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
-                                                      caption=caption)
-
-        if self.log_file is None:
-            return
-
-        # If we get thus far, we have a log file to manage
-        if os.path.exists(self.log_file):
-            new_file = False
-        else:
-            new_file = True
-
-        # Open a CSV file in write mode
-        with open(self.log_file, mode="a", newline="") as fh:
-            fieldnames = ["SYSTEM TIME"] + list(data_snapshot.keys()) + ["caption"]
-            writer = csv.DictWriter(fh, fieldnames = fieldnames)
-
-            data_snapshot["SYSTEM TIME"] = system_time
-            data_snapshot["caption"] = caption
-
-            # Write the header (only of a newly-created file)
-            if new_file:
-                writer.writeheader()
-
-            # Write the dictionary as a row
-            writer.writerow(data_snapshot)
-
-
-
-
-
-##########################################################################################################################
-
 class HistoryBinConcentration(History):
+    """
+    For the management of historical data for bin concentrations
+    """
 
     def __init__(self, bins=None, *args, **kwargs):
+        """
+
+        :param bins:    List of bin addresses for which history is to be kept; use None to mean all
+        :param args:
+        :param kwargs:
+        """
         super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
+
         self.restrict_bins = bins                               # Bin address, or list of them, or None (meaning ALL bins, with no restriction)
         self.history = Collection(parameter_name="SYSTEM TIME") # To store user-selected snapshots of quantities of interest
 
@@ -246,7 +207,7 @@ class HistoryBinConcentration(History):
         Request history capture, with the specified parameters.
         If history was already enabled, this function can be used to alter its capture parameters.
 
-        :param frequency:
+        :param frequency:   [OPTIONAL] How many simulation cycles to wait until taking another data snapshot
         :param chem_labels: [OPTIONAL] List of chemicals to include in the history;
                                 if None (default), include them all.
         :param bins:        [OPTIONAL] Bin address, or list of them;
@@ -286,9 +247,13 @@ class HistoryBinConcentration(History):
         Return an error message elaborating on the problem, and possible causes,
         of lacking historical concentration data for the given bin
 
-        :param bin_address:
-        :return:
+        :param bin_address: A single bin address.  EXAMPLES, in 1D: 8   In 2D : (3,3)
+        :return:            A string elaborating on the problem, and possible causes,
+                                of lacking historical concentration data for the given bin
         """
+        if not self.is_enabled():
+            return "History collecting is NOT enabled - you need to enable it PRIOR to running the simulation. Use enable_history()"
+
         msg = f"No historical concentration data available for bin {bin_address}. "
 
         if bin_address in self.restrict_bins:
@@ -305,11 +270,12 @@ class HistoryBinConcentration(History):
         Return the history at the given bin, as a Pandas dataframe.
         The first column is "SYSTEM TIME", and the other ones are the various chemicals for which
         history had been enabled.
-        If no historical data is located, an informational string is returned
+        If no historical data is located, an informational string is returned instead
 
         :param bin_address:         A single bin address.  EXAMPLES, in 1D: 8   In 2D : (3,3)
         :param include_captions:    If True, the captions are returned as an extra "caption" column at the end
-        :return:                    A Pandas data frame, or a string if no historical data is present
+        :return:                    A Pandas data frame,
+                                        or a string with diagnostic suggestions if no historical data is present
         """
         assert type(bin_address) == int or type(bin_address) == tuple, \
             "bin_history(): Argument `bin_address` must be an integer (for 1D) of a tuple (2+ D)"
@@ -349,8 +315,18 @@ class HistoryBinConcentration(History):
 ##########################################################################################################################
 
 class HistoryReactionRate(History):
+    """
+    For the management of historical reaction-rate data for Uniform Compartments
+    """
 
     def __init__(self, rxns=None, *args, **kwargs):
+        """
+
+        :param rxns:    List of reactions (identified by their index) for which history is to be kept;
+                            use None to mean all
+        :param args:
+        :param kwargs:
+        """
         super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
         self.restrict_rxns = rxns
         self.history = CollectionTabular(parameter_name="SYSTEM TIME")  # To store user-selected snapshots of quantities of interest
@@ -362,7 +338,7 @@ class HistoryReactionRate(History):
         Request history capture, with the specified parameters.
         If history was already enabled, this function can be used to alter its capture parameters.
 
-        :param frequency:
+        :param frequency:   [OPTIONAL] How many simulation cycles to wait until taking another data snapshot
         :param chem_labels: [OPTIONAL] List of chemicals to include in the history;
                                 if None (default), include them all.
         :param rxns:
@@ -387,3 +363,74 @@ class HistoryReactionRate(History):
         """
         self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
                                   caption=caption)
+
+
+
+
+##########################################################################################################################
+
+class HistoryUniformConcentration(History):
+    """
+    For the management of historical concentration data for Uniform Compartments
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+
+        :param args:
+        :param kwargs:
+        """
+        super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
+        self.history = CollectionTabular(parameter_name="SYSTEM TIME")  # To store user-selected snapshots of quantities of interest
+
+
+
+    def enable_history(self, frequency=1, chem_labels=None) -> None:
+        """
+        Request history capture, with the specified parameters.
+        If history was already enabled, this function can be used to alter its capture parameters.
+
+        :param frequency:   [OPTIONAL] How many simulation cycles to wait until taking another data snapshot
+        :param chem_labels: [OPTIONAL] List of chemicals to include in the history;
+                                if None (default), include them all.
+        :return:            None
+        """
+        self.enable_history_common(frequency=frequency, chem_labels=chem_labels)
+
+
+
+    def save_snapshot(self, system_time, data_snapshot, step_count=None, caption="") -> None:
+        """
+
+        :param system_time:
+        :param data_snapshot:   EXAMPLE: {"A": 1.3, "B": 4.9}
+        :param step_count:
+        :param caption:         [OPTIONAL] String to save alongside this snapshot
+        :return:                None
+        """
+        caption = self.save_snapshot_common(system_time=system_time, data_snapshot=data_snapshot, step_count=step_count,
+                                            caption=caption)
+
+        if self.log_file is None:
+            return
+
+        # If we get thus far, we have a log file to manage
+        if os.path.exists(self.log_file):
+            new_file = False
+        else:
+            new_file = True
+
+        # Open a CSV file in write mode
+        with open(self.log_file, mode="a", newline="") as fh:
+            fieldnames = ["SYSTEM TIME"] + list(data_snapshot.keys()) + ["caption"]
+            writer = csv.DictWriter(fh, fieldnames = fieldnames)
+
+            data_snapshot["SYSTEM TIME"] = system_time
+            data_snapshot["caption"] = caption
+
+            # Write the header (only of a newly-created file)
+            if new_file:
+                writer.writeheader()
+
+            # Write the dictionary as a row
+            writer.writerow(data_snapshot)

@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -18,9 +18,12 @@
 # Contrary to perhaps an intuition of a "pile sliding down a sand dune as a unit", the concentration peak
 # remains in place, and simply spreads out from there
 
+# %% [markdown]
+# ### TAGS :  "diffusion 1D"
+
 # %%
-LAST_REVISED = "Nov. 12, 2024"
-LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
+LAST_REVISED = "May 3, 2025"
+LIFE123_VERSION = "1.0.0rc3"       # Library version this experiment is based on
 
 # %%
 #import set_path              # Using MyBinder?  Uncomment this before running the next cell!
@@ -30,21 +33,30 @@ LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import BioSim1D, ChemData
+from life123 import BioSim1D, ChemData, check_version
+
+# %%
+check_version(LIFE123_VERSION)
+
+# %%
 
 # %%
 # Initialize the system
-chem_data = ChemData(names=["A"], diffusion_rates=[10.])
+chem_data = ChemData(names="A", diffusion_rates=10.)
 
 bio = BioSim1D(n_bins=200, chem_data=chem_data)
 
 # %%
 # Set up the initial bell-shape concentration, with the peak close to one end of the system
-bio.inject_bell_curve(species_name="A", mean=0.25, sd=0.1, amplitude=20., bias=0)
+bio.inject_bell_curve(chem_label="A", mean=0.25, sd=0.1, amplitude=20., bias=0)
 
 # %%
 # Visualize the system state so far
 bio.visualize_system(title_prefix="Preparations in progress")
+
+# %%
+# Show as heatmap
+bio.system_heatmaps(title_prefix="Preparations in progress")
 
 # %%
 # Complete the initial-system preparation by adding a gradient slanting to the right
@@ -58,13 +70,17 @@ bio.visualize_system()
 # Do several round of diffusion, over relatively small times
 for _ in range(5):
     bio.diffuse(total_duration=20, n_steps=1000)
-    bio.visualize_system()
+    bio.visualize_system(show=True)
 
 # %%
 # Do more rounds of diffusion, over large times spans
 for _ in range(9):
     bio.diffuse(total_duration=300, n_steps=10000)
-    bio.visualize_system()
+    bio.visualize_system(show=True)
+
+# %%
+# Show as heatmap
+bio.system_heatmaps()
 
 # %% [markdown]
 # The system is **approaching equilibrium** at a value a little less than 45.   

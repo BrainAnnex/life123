@@ -245,7 +245,7 @@ class UniformCompartment:
         if species_name is not None:
             species_index = self.chem_data.get_index(species_name)
         elif species_index is not None:
-            self.chem_data.assert_valid_species_index(species_index)
+            self.chem_data.assert_valid_chem_index(species_index)
         else:
             raise Exception("UniformCompartment.set_single_conc(): at least one "
                             "of the arguments `species_index` or `species_name` must be provided")
@@ -1589,7 +1589,7 @@ class UniformCompartment:
         :param vertical_lines_to_add: [OPTIONAL] Ignored if the argument `show_intervals` is specified.
                                     List or tuple or Numpy array or Pandas series
                                     of x-coordinates at which to draw thin vertical dotted gray lines.
-                                    If the number of vertical line is so large as to overwhelm the plot,
+                                    If the number of vertical lines is so large as to overwhelm the plot,
                                     only a sample of them is shown.
                                     Note that vertical lines, if requested, go into the plot's "layout";
                                     as a result they might not appear if this plot is later combined with another one.
@@ -1709,13 +1709,15 @@ class UniformCompartment:
         Request history capture, with the specified parameters.
         If history was already enabled, this function can be used to alter its capture parameters.
 
-        :param kind:            Allowed values are "all" (default), "conc", and "rate"
-        :param frequency:
+        :param kind:            [OPTIONAL] Allowed values are "all" (default),
+                                    "conc" (concentration history), and "rate" (reaction rate history)
+        :param frequency:       [OPTIONAL] How often to capture a snapshot of the data
+                                    (default: at every simulation cycle)
         :param chem_labels:     [OPTIONAL] List of chemicals to include in the history;
                                     if None (default), include them all.
         :param take_snapshot:   If True, a snapshot of the system's current configuration is added to the history
 
-        :return:
+        :return:                None
         """
         assert kind in ["all", "conc", "rate"], \
             "enable_history(): argument `kind` must be either 'all' or 'conc' or 'rate'"

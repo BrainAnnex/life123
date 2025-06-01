@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -24,16 +24,17 @@
 # ### TAGS :  "diffusion 1D", "quick-start"
 
 # %%
-LAST_REVISED = "Jan. 23, 2025"
-LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
+LAST_REVISED = "May 29, 2025"
+LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %%
-#import sys
+#import sys, os
+#os.getcwd()
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
-# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
 from life123 import BioSim1D, ChemData, check_version
 
@@ -63,7 +64,10 @@ bio.system_snapshot()
 bio.visualize_system(title_prefix="Diffusion")   # Line curve view
 
 # %%
-bio.system_heatmap(title_prefix="Diffusion")
+bio.system
+
+# %%
+bio.system_heatmaps(title_prefix="Diffusion")
 
 # %%
 
@@ -75,7 +79,7 @@ bio.system_heatmap(title_prefix="Diffusion")
 # %%
 # Request to save the concentration history at the bin with the initial concentration injection, 
 # and the bins at the ends of the system
-bio.enable_history(bins=[0, 2, 9], frequency=4, take_snapshot=True)    
+bio.enable_history(bins=[0, 2, 9], frequency=4, take_snapshot=True)
 
 # %%
 
@@ -97,7 +101,7 @@ bio.describe_state(concise=True)
 bio.visualize_system(title_prefix="Diffusion")   # Line curve view
 
 # %%
-bio.system_heatmap(title_prefix="Diffusion")
+bio.system_heatmaps(title_prefix="Diffusion")
 
 # %%
 
@@ -105,7 +109,7 @@ bio.system_heatmap(title_prefix="Diffusion")
 # ## This is still an early stage in the diffusion process; let's advance it more...  
 # (Visualization from results shown at selected times)
 
-# %% tags=[]
+# %%
 for i in range(50):
     status = bio.diffuse(total_duration=delta_time, time_step=0.1)
 
@@ -117,11 +121,11 @@ for i in range(50):
         fig.show()
         
         # Heatmap view
-        fig = bio.system_heatmap()
+        fig = bio.system_heatmaps()
         fig.show()
 
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ## All bins now have essentially uniform concentration
 #
 # **Mass conservations**: The initial "10 units of concentration" are now uniformly spread across the 10 bins, leading to a near-constant concentration of 10/10 = **1.0**
@@ -147,7 +151,7 @@ bio.conc_history.bin_history(bin_address=2)   # The bin where the initial concen
 bio.plot_history_single_bin(bin_address=2)
 
 # %%
-bio.plot_history_single_bin(bin_address=0)   # Left "edge" of the 1D system
+bio.plot_history_single_bin(bin_address=0, title_prefix="Notice the transient 'overshoot`")   # Left "edge" of the 1D system
 
 # %%
 bio.plot_history_single_bin(bin_address=9)   # Right "edge" of the 1D system

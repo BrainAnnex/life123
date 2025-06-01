@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## High Frequencies in the concentration get smoothed out first  
+# ## High Frequencies in the concentration get smoothed out first by diffusion   
 # ### Ultimately, the only frequency passing thru is zero! (i.e., uniform concentration at equilibrium)
 # #### We explore how an initial concentration with 3 different sinusoidal frequencies fares in the course of a diffusion to equilibrium
 #
@@ -27,8 +27,8 @@
 # ### TAGS :  "diffusion 1D"
 
 # %%
-LAST_REVISED = "Dec. 16, 2024"
-LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
+LAST_REVISED = "May 2, 2025"
+LIFE123_VERSION = "1.0.0rc3"       # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -38,40 +38,20 @@ LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from experiments.get_notebook_info import get_notebook_basename
-
-from life123 import BioSim1D
-
-import plotly.express as px
-
-from life123 import ChemData as chem
-from life123 import HtmlLog as log
-from life123 import GraphicLog
+from life123 import BioSim1D, ChemData, check_version
 
 # %%
-# Initialize the HTML logging
-log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
-GraphicLog.config(filename=log_file,
-                  components=["vue_heatmap_11", "vue_curves_3"])
+check_version(LIFE123_VERSION)
 
 # %%
-# Set the heatmap parameters
-heatmap_pars = {"range": [10, 50],
-                "outer_width": 850, "outer_height": 150,
-                "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
-                }
-
-# Set the parameters of the line plots
-lineplot_pars = {"range": [10, 50],
-                "outer_width": 850, "outer_height": 250,
-                "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
-                }
 
 # %%
 # Initialize the system.  We use a RELATIVELY LARGE NUMBER OF BINS, 
 # to captures the many changes in the high-frequency component
-chem_data = chem(names="A", diffusion_rates=0.5)
+chem_data = ChemData(names="A", diffusion_rates=0.5)
 bio = BioSim1D(n_bins=500, chem_data=chem_data)
+
+# %%
 
 # %% [markdown]
 # ## PART 1 (of 3) of Initial Preparation -
@@ -79,71 +59,33 @@ bio = BioSim1D(n_bins=500, chem_data=chem_data)
 # #### (notice the bias value of 30; it will be seen at the eventual equilibrium, at the end)
 
 # %%
-bio.inject_sine_conc(species_name="A", amplitude=10, bias=30, frequency=1)
+bio.inject_sine_conc(chem_label="A", amplitude=10, bias=30, number_cycles=1)
 
 # %%
 bio.show_system_snapshot()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= "Low-frequency component of the Initial System State",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+# Visualize the system's initial state
+bio.visualize_system(title_prefix="Low-frequency component of the Initial System State")
 
 # %%
 # Show as heatmap
-fig = px.imshow(bio.system_snapshot().T, 
-                title= "Low-frequency component of the Initial System State (as a heatmap)", 
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto=False, color_continuous_scale="gray_r") 
-
-fig.data[0].xgap=0
-fig.data[0].ygap=0
-
-fig.show()
+bio.system_heatmaps(title_prefix="Low-frequency component of the Initial System State")
 
 # %%
-# Output to the log file
-log.write("Diffusion as a Low-Pass Filter", style=log.h3)
-
-log.write(f"Low-frequency component of the Initial System State:", blanks_before=2, style=log.bold)
-
-# Output a heatmap to the log file
-bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, header=f"Time {bio.system_time} :\n", graphic_component="vue_heatmap_11")
-# Output a line plot the log file
-bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # %% [markdown]
 # ## PART 2 (of 3) of Initial Preparation -
 # ### Now add a higher-frequency component (10 cycles over the length of the system)
 
 # %%
-bio.inject_sine_conc(species_name="A", amplitude=4, bias=0, frequency=10)
+bio.inject_sine_conc(chem_label="A", amplitude=4, bias=0, number_cycles=10)
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= "Low- and mid-frequency components of the Initial System State",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Low- and mid-frequency components of the Initial System State", 
+                     show=True)
 
-# Show as heatmap
-fig = px.imshow(bio.system_snapshot().T, 
-                title= "Low- and mid-frequency components of the Initial System State (as a heatmap)", 
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto=False, color_continuous_scale="gray_r") 
-
-fig.data[0].xgap=0
-fig.data[0].ygap=0
-
-fig.show()
-
-# %%
-# Output a heatmap to the log file
-bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, header=f"Low- and mid-frequency components of the Initial System State :\n", graphic_component="vue_heatmap_11")
-# Output a line plot the log file
-bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
+bio.system_heatmaps(title_prefix="Low- and mid-frequency components of the Initial System State")
 
 # %%
 
@@ -153,35 +95,17 @@ bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_c
 # #### (40 cycles over the length of the system)
 
 # %%
-bio.inject_sine_conc(species_name="A", amplitude=2, bias=0, frequency=40)
+bio.inject_sine_conc(chem_label="A", amplitude=2, bias=0, number_cycles=40)
 
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= "Initial System State with 3 superposed frequencies",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+# %%
+bio.visualize_system(title_prefix="Initial System State with 3 superposed frequencies", 
+                     show=True)
 
-
-# Show as heatmap
-fig = px.imshow(bio.system_snapshot().T, 
-                title= "Initial System State with 3 superposed frequencies (as a heatmap)", 
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto=False, color_continuous_scale="gray_r") 
-
-fig.data[0].xgap=0
-fig.data[0].ygap=0
-
-fig.show()
+bio.system_heatmaps(title_prefix="Initial System State with 3 superposed frequencies")
 
 # %%
 # Take a look at the frequency domain of the concentration values
-bio.frequency_analysis(species_name="A")
-
-# %%
-# Output a heatmap to the log file
-bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, header=f"Initial System State with 3 superposed frequencies :\n", graphic_component="vue_heatmap_11")
-# Output a line plot the log file
-bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
+bio.frequency_analysis(chem_label="A")
 
 # %%
 
@@ -191,34 +115,27 @@ bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_c
 # %%
 bio.diffuse(total_duration=10, time_step=0.1)
 
-# Show as a line plot
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-          title= f"Diffusion. System snapshot at time t={bio.system_time}",
-          color_discrete_sequence = ['red'],
-          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Diffusion")   # Show as a line plot
 
 # %% [markdown]
 # ### After the initial diffusion (at t=10), the highest frequency is largely gone
 
 # %%
 # Take a look at the frequency domain of the concentration values
-bio.frequency_analysis(species_name="A")
+bio.frequency_analysis(chem_label="A")
 
 # %%
 # A lot of tiny frequency components are now present; take just the largest 4
-bio.frequency_analysis(species_name="A", n_largest=4)
+bio.frequency_analysis(chem_label="A", n_largest=4)
+
+# %%
 
 # %%
 # Advance the diffusion
 bio.diffuse(total_duration=20, time_step=0.1)
 
 # Show as a line plot
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-          title= f"Diffusion. System snapshot at time t={bio.system_time}",
-          color_discrete_sequence = ['red'],
-          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Diffusion")
 
 # %% [markdown]
 # ### After additional diffusion (at t=30), the highest frequency (40 cycles) can no longer be visually detected.
@@ -226,138 +143,117 @@ fig.show()
 # #### The 40-cycle frequency is not even among the largest of the tiny values in the spurious frequencies of the distorted signal
 
 # %%
-bio.frequency_analysis(species_name="A", n_largest=10)
+bio.frequency_analysis(chem_label="A", n_largest=10)
+
+# %%
 
 # %%
 # Advance the diffusion
 bio.diffuse(total_duration=90, time_step=0.1)
 
 # Show as a line plot
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-          title= f"Diffusion. System snapshot at time t={bio.system_time}",
-          color_discrete_sequence = ['red'],
-          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Diffusion")
 
 # %% [markdown]
 # ### By now (at t=120), even the middle frequency (10 cycles) is notably attenuated
 
 # %%
-bio.frequency_analysis(species_name="A", n_largest=3)
+bio.frequency_analysis(chem_label="A", n_largest=3)
+
+# %%
 
 # %%
 # Advance the diffusion
 bio.diffuse(total_duration=100, time_step=0.1)
 
 # Show as a line plot
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-          title= f"Diffusion. System snapshot at time t={bio.system_time}",
-          color_discrete_sequence = ['red'],
-          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Diffusion")
 
 # %% [markdown]
 # ### With still more diffusion (at t=220), the middle frequency is only weakly visible
 
 # %%
-bio.frequency_analysis(species_name="A", n_largest=3)
+bio.frequency_analysis(chem_label="A", n_largest=3)
+
+# %%
 
 # %%
 # Advance the diffusion
 bio.diffuse(total_duration=180, time_step=0.1)
 
 # Show as a line plot
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-          title= f"Diffusion. System snapshot at time t={bio.system_time}",
-          color_discrete_sequence = ['red'],
-          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Diffusion")
 
 # %% [markdown]
 # ### By t=400, the middle frequency is barely noticeable.  The low frequency (1 cycle) is still prominent
 
 # %%
-bio.frequency_analysis(species_name="A", n_largest=3)
+bio.frequency_analysis(chem_label="A", n_largest=3)
+
+# %%
 
 # %%
 # Advance the diffusion
 bio.diffuse(total_duration=600, time_step=0.3)
 
 # Show as a line plot
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-          title= f"Diffusion. System snapshot at time t={bio.system_time}",
-          color_discrete_sequence = ['red'],
-          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Diffusion")
 
 # %% [markdown]
 # ### By t=1,000 there's no visual indication of the middle frequency (f=10)
 
 # %%
-bio.frequency_analysis(species_name="A", n_largest=10)
+bio.frequency_analysis(chem_label="A", n_largest=10)
+
+# %%
 
 # %%
 # Advance the diffusion
 bio.diffuse(total_duration=8000, time_step=.5)
 
 # Show as a line plot
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-          title= f"Diffusion. System snapshot at time t={bio.system_time}",
-          color_discrete_sequence = ['red'],
-          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Diffusion")
 
 # %% [markdown]
 # ### By t=9,000 even the lowest frequency has lost a major part of its sinusoidal shape
 
 # %%
-bio.frequency_analysis(species_name="A", n_largest=2)
+bio.frequency_analysis(chem_label="A", n_largest=2)
 
 # %% [markdown]
 # Note how the zero-frequency is now gaining over the baseline 1-cycle signal
+
+# %%
 
 # %%
 # Advance the diffusion
 bio.diffuse(total_duration=91000, time_step=.5)
 
 # Show as a line plot
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-          title= f"Diffusion. System snapshot at time t={bio.system_time}",
-          color_discrete_sequence = ['red'],
-          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Diffusion")
 
 # %%
-bio.frequency_analysis(species_name="A", n_largest=2)
+bio.frequency_analysis(chem_label="A", n_largest=2)
 
 # %% [markdown]
 # ### By t=100,000 the system is clearly approaching equilibrium
 
 # %%
+
+# %%
 # Advance the diffusion
 bio.diffuse(total_duration=100000, time_step=.6)
 
+# %%
 # Show as a line plot
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-          title= f"Diffusion. System snapshot at time t={bio.system_time}",
-          color_discrete_sequence = ['red'],
-          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+bio.visualize_system(title_prefix="Diffusion", show=True)
 
-
-# Show as heatmap
-fig = px.imshow(bio.system_snapshot().T, 
-                title= f"Diffusion. System snapshot at time t={bio.system_time}", 
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto=False, color_continuous_scale="gray_r") 
-
-fig.data[0].xgap=0
-fig.data[0].ygap=0
-
-fig.show()
+bio.system_heatmaps(title_prefix="Diffusion")
 
 # %% [markdown]
-# ### By t=200,000 the system is getting close to equilibrium about the value 30, which was the original "bias" (unvarying component) of the baseline frequency (the higher-frequency signals didn't have any bias)
+# ### By t=200,000 the system is getting close to equilibrium about the value 30, which was the original "bias" (unvarying component) of the baseline frequency; the higher-frequency signals didn't have any bias
 
 # %%
-bio.frequency_analysis(species_name="A", n_largest=2)
+bio.frequency_analysis(chem_label="A", n_largest=2)
+
+# %%

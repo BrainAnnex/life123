@@ -461,7 +461,7 @@ class Collection:
 
     def get_parameters(self) -> list:
         """
-        Return all the parameter values
+        Return a list of all the parameter values
 
         :return:    A list with all the parameter values
         """
@@ -470,7 +470,7 @@ class Collection:
 
     def get_captions(self) -> [str]:
         """
-        Return all the captions
+        Return a list of all the captions
 
         :return:    A list with all the captions
         """

@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -18,28 +18,36 @@
 #
 # In this "PART 1", we'll be looking at a tiny system with just 10 bins, to easily inspect the numbers directly.
 # We'll use concentrations initialized to an upward-shifted sine wave with 1 cycle over the length system
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta34.1)
+
+# %% [markdown]
+# ### TAGS :  "diffusion 1D", "under-the-hood"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "May 3, 2025"
+LIFE123_VERSION = "1.0.0rc3"       # Library version this experiment is based on
 
 # %%
+#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
 
-from life123 import BioSim1D
-from life123 import ChemData as chem
-from life123 import CollectionArray
-from life123 import Numerical as num
+# %%
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
+from life123 import BioSim1D, ChemData, CollectionArray, Numerical, check_version
 
 import numpy as np
 
-import plotly.express as px
+# %%
+check_version(LIFE123_VERSION)
+
+# %%
 
 # %%
 # We'll be considering just 1 chemical species, "A"
 diffusion_rate = 10.
 
-chem_data = chem(diffusion_rates=[diffusion_rate], names=["A"])
+chem_data = ChemData(diffusion_rates=[diffusion_rate], names=["A"])
 
 # %%
 # Initialize the system with just a few bins
@@ -48,29 +56,20 @@ bio = BioSim1D(n_bins=10, chem_data=chem_data)
 # %%
 # Initialize the concentrations to a sine wave with 1 cycle over the system
 # (with a bias to always keep it > 0)
-bio.inject_sine_conc(species_name="A", frequency=1, amplitude=10, bias=50)
+bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)
 
 # %%
 bio.show_system_snapshot()
 
 # %%
-fig = px.line(data_frame=bio.system_snapshot(), y=["A"], 
-              title= "Initial System State (for the tiny system)",
-              color_discrete_sequence = ['red'],
-              labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-fig.show()
+# Visualize the initial system state
+bio.visualize_system(title_prefix="Initial System State (for the tiny system)")
 
 # %%
 # Show as heatmap
-fig = px.imshow(bio.system_snapshot().T, 
-                title= "Initial System State (for the tiny system)", 
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto=False, color_continuous_scale="gray_r") 
+bio.system_heatmaps(title_prefix="Initial System State (for the tiny system)")
 
-fig.data[0].xgap=1
-fig.data[0].ygap=1
-
-fig.show()
+# %%
 
 # %% [markdown]
 # ### Now do 4 rounds of single-step diffusion, to collect the system state at a total of 5 time points: 
@@ -82,7 +81,7 @@ history = CollectionArray()
 
 # %%
 # Store the initial state
-arr = bio.lookup_species(species_index=0, copy=True)
+arr = bio.lookup_species(chem_index=0, copy=True)
 history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -102,7 +101,7 @@ for _ in range(4):
     bio.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x , algorithm=algorithm)
     bio.describe_state(concise=True)
 
-    arr = bio.lookup_species(species_index=0, copy=True)
+    arr = bio.lookup_species(chem_index=0, copy=True)
     history.store(par=bio.system_time, data_snapshot=arr, caption=f"State at time {bio.system_time}")
 
 # %%
@@ -247,7 +246,7 @@ lhs - rhs
 # Here we use a handy function to compare two equal-sized vectors,
 # while opting to disregarding a specified number of entries at each edge.
 # It returns the Euclidean distance ("L2 norm") of the shortened vectors
-num.compare_vectors(lhs, rhs, trim_edges=1)
+Numerical.compare_vectors(lhs, rhs, trim_edges=1)
 
 # %% [markdown]
 # #### IMPORTANT: all values in this experiment are VERY coarse, because of the large effective delta_x (the tiny number of bins.)

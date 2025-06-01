@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -13,55 +13,43 @@
 # ---
 
 # %% [markdown]
-# ## Attaining a Concentration Gradient  
+# # Attaining a Concentration Gradient  
 # ### by continuosly injecting and draining, at opposite ends
 #
 # The system starts out with a uniform concentration.  
-# Then identical concentrations are repeatedly *injected to the left* and *drained from the right*
+# Then identical concentrations are repeatedly *injected to the left* and *drained from the right*  
+# Diffusion turn the forced concentration imbalance into a smooth gradient.
+
+# %% [markdown]
+# ### TAGS :  "diffusion 1D"
 
 # %%
-LAST_REVISED = "Dec. 16, 2024"
-LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
+LAST_REVISED = "Apr. 29, 2025"
+LIFE123_VERSION = "1.0.0rc3"       # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %%
-#import sys
+#import sys, os
+#os.getcwd()
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
-# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
-from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import BioSim1D, ChemData, GraphicLog, HtmlLog as log
-
-import plotly.express as px
+from life123 import BioSim1D, ChemData, check_version
 
 # %%
-# Initialize the HTML logging
-log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
-GraphicLog.config(filename=log_file,
-                  components=["vue_heatmap_11", "vue_curves_3"])
+check_version(LIFE123_VERSION)
 
 # %%
-# Set the heatmap parameters
-heatmap_pars = {"range": [75, 125],
-                "outer_width": 850, "outer_height": 150,
-                "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
-                }
-
-# Set the parameters of the line plots
-lineplot_pars = {"range": [75, 125],
-                "outer_width": 850, "outer_height": 250,
-                "margins": {"top": 30, "right": 30, "bottom": 30, "left": 55}
-                }
 
 # %%
 # Initialize the system with a uniform concentration (of the only species)
 chem_data = ChemData(names="A", diffusion_rates=0.6)
 bio = BioSim1D(n_bins=9, chem_data=chem_data)
 
-bio.set_uniform_concentration(species_index=0, conc=100.)
+bio.set_uniform_concentration(chem_label="A", conc=100.)
 
 bio.describe_state()
 
@@ -73,27 +61,9 @@ bio.show_system_snapshot()
 bio.visualize_system(title_prefix="Diffusion")
 
 # %%
-# Show as heatmap
-fig = px.imshow(bio.system_snapshot().T, 
-                title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
-                labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                text_auto=True, color_continuous_scale="gray_r")         # text_auto='.2f'
-
-fig.data[0].xgap=4
-fig.data[0].ygap=4
-
-fig.show()
+bio.system_heatmaps(title_prefix="Diffusion", text_format=".0f")
 
 # %%
-# Output to the log file
-log.write("Creation of a gradient", style=log.h3)
-
-log.write(f"System state at time t={bio.system_time}:", blanks_before=2, style=log.bold)
-
-# Output a heatmap to the log file
-bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, header=f"Time {bio.system_time} :\n", graphic_component="vue_heatmap_11")
-# Output a line plot the log file
-bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 # %% [markdown]
 # # Start the simulation steps
@@ -101,7 +71,7 @@ bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_c
 # %%
 delta_time = 1.
 
-# %% tags=[]
+# %%
 for i in range(501):
     # Inject to the leftmost bin
     bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=4, zero_clip = False)
@@ -120,23 +90,12 @@ for i in range(501):
         bio.describe_state(concise=True)
         
         # Show the system state as a line plot
-        bio.visualize_system(title_prefix="Diffusion")
+        fig = bio.visualize_system(title_prefix="Diffusion")
+        fig.show()
         
         # Show as heatmap
-        fig = px.imshow(bio.system_snapshot().T, 
-                        title= f"Diffusion. System snapshot as a heatmap at time t={bio.system_time}", 
-                        labels=dict(x="Bin number", y="Chem. species", color="Concentration"),
-                        text_auto='.2f', color_continuous_scale="gray_r")
-
-        fig.data[0].xgap=4
-        fig.data[0].ygap=4
-
+        fig = bio.system_heatmaps(title_prefix="Diffusion", text_format=".3g")
         fig.show()
-
-        # Output a heatmap the log file
-        bio.single_species_heatmap(species_index=0, heatmap_pars=heatmap_pars, header=f"Time {bio.system_time}\n", graphic_component="vue_heatmap_11")
-        # Output a line plot the log file
-        bio.single_species_line_plot(species_index=0, plot_pars=lineplot_pars, graphic_component="vue_curves_3")
 
 
 # %% [markdown]
