@@ -1,7 +1,7 @@
 # Life123
 Dynamical Modeling of Biological Systems in 1, 2 and 3D (as well as single-compartment reactions)
 
-Includes diffusion, reactions, diffusion/reaction and (coming soon) membranes and compartments.
+Includes diffusion, reactions, diffusion/reaction, membranes and compartments.
 
 ## Fundamental Goals
 1. Detailed, quantitative biological simulations, including whole prokaryotic cells (bacteria), and later eukaryotic cells
