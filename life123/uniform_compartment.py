@@ -1589,7 +1589,7 @@ class UniformCompartment:
         :param vertical_lines_to_add: [OPTIONAL] Ignored if the argument `show_intervals` is specified.
                                     List or tuple or Numpy array or Pandas series
                                     of x-coordinates at which to draw thin vertical dotted gray lines.
-                                    If the number of vertical line is so large as to overwhelm the plot,
+                                    If the number of vertical lines is so large as to overwhelm the plot,
                                     only a sample of them is shown.
                                     Note that vertical lines, if requested, go into the plot's "layout";
                                     as a result they might not appear if this plot is later combined with another one.

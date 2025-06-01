@@ -2105,7 +2105,8 @@ class BioSim1D:
 
 
     def plot_history_single_bin(self, bin_address :int, colors=None,
-                                title_prefix=None, title=None, smoothed=False) -> pgo.Figure:
+                                title_prefix=None, title=None, smoothed=False,
+                                vertical_lines_to_add=None) -> pgo.Figure:
         """
         Using plotly, draw the plots of chemical concentration values over time at the specified bin,
         based on the historical data that was saved when running simulations.
@@ -2121,6 +2122,13 @@ class BioSim1D:
         :param title:       [OPTIONAL] If set, it over-rides `title_prefix.  If not passed, a default one is used
         :param smoothed:    [OPTIONAL] If True, a spline is used to smooth the lines;
                                 otherwise (default), line segments are used
+        :param vertical_lines_to_add: [OPTIONAL] List or tuple or Numpy array or Pandas series
+                                    of x-coordinates at which to draw thin vertical dotted gray lines.
+                                    If the number of vertical lines is so large as to overwhelm the plot,
+                                    only a sample of them is shown.
+                                    Note that vertical lines, if requested, go into the plot's "layout";
+                                    as a result they might not appear if this plot is later combined with another one.
+
         :return:            A plotly "Figure" object; an Exception is raised if no historical data is found
         """
         # TODO: add more options
@@ -2151,7 +2159,7 @@ class BioSim1D:
 
         return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
                                         colors=colors, legend_header="Chemical", title=title,
-                                        smoothed=smoothed)
+                                        smoothed=smoothed, vertical_lines_to_add=vertical_lines_to_add)
 
 
 

@@ -13,15 +13,18 @@
 # ---
 
 # %% [markdown]
-# # Reaction-Diffusion in 1-D: `A <-> B` in 1-D, taken to equilibrium   
-# The reaction product `B` diffuses much faster than the reactant `A`.    
-# Eventually, both the reaction and the diffusion come to an equilibrium.
+# # "Crossing the border in disguise" : a chemical crosses a membrane impermeable to it,  
+# #### by first undergoing a reaction converting it into a different chemical, to which the membrane is permeable,  
+# #### and then re-constituting the first chemical outside of the membrane, thru the reverse reaction.
+# #### Reaction-diffusion `A <-> B` in 1D, in the presence of membranes with selective permeability to passive transport.
+#  
+# Eventually, the reaction, the passive membrane transport and the diffusion all come to an equilibrium.
 
 # %% [markdown]
-# ### TAGS :  "reactions 1D", "diffusion 1D"
+# ### TAGS :  "reactions 1D", "diffusion 1D", "membranes 1D"
 
 # %%
-LAST_REVISED = "May 19, 2025"
+LAST_REVISED = "May 31, 2025"
 LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
@@ -39,45 +42,41 @@ check_version(LIFE123_VERSION)
 
 # %%
 
-# %%
-# Initialize the system
-chem_data = ChemData(names=["A", "B"], diffusion_rates=[1., 50.],   # `B`, the reaction produc diffuses much faster
-                     plot_colors=["turquoise", "green"])                  
-
-# %%
-
 # %% [markdown]
-# # Let's consider a 1-bin system for starter
+# ## Prepare the initial system, for starters with IM-PERMEABLE membranes
+# with two chemicals `A` and `B`
 
 # %%
-bio = BioSim1D(n_bins=1, chem_data=chem_data)
+chem_data = ChemData(diffusion_rates=[2., 2.], plot_colors=["turquoise", "green"])   # Names "A", "B" automatically assigned
+
+bio = BioSim1D(n_bins=9, chem_data=chem_data)
 
 # %%
 reactions = bio.get_reactions()
 
-# Reaction A <-> B , 1st-order kinetics, mostly (but not hugely) in the REVERSE direction
-reactions.add_reaction(reactants="A", products="B", forward_rate=2., reverse_rate=8.)
+# Reaction A <-> B , 1st-order kinetics, mostly (but not hugely) in the forward direction
+reactions.add_reaction(reactants="A", products="B", forward_rate=8., reverse_rate=2.)
 reactions.describe_reactions()
 
 # %%
+bio.set_bin_conc(bin_address=4, chem_label="A", conc=10.)   # Set the initial concentration of `A` in middle bin
 
-# %% [markdown]
-# ## Set the initial concentrations in the single bin
-
-# %%
-bio.set_bin_conc(bin_address=0, chem_label="A", conc=100.)
-bio.set_bin_conc(bin_address=0, chem_label="B", conc=100.)
+bio.set_membranes(membranes=[ (4,5) ])    # By default impermeable
 
 bio.describe_state()
 
 # %%
-
-# %% [markdown]
-# ## Enable History
+bio.system_heatmaps()
 
 # %%
-# Let's enable history for the one bin we currently have
-bio.enable_history(bins=[0], take_snapshot=True)     # Taking a snapshot to include the current initial state in the history
+
+# %% [markdown]
+# ## Request history-keeping for some bins
+
+# %%
+# Request to save the concentration history at the bin with the initial concentration injection, 
+# and at a couple of other bins
+bio.enable_history(bins=[0, 2, 4], frequency=10, take_snapshot=True)    
 
 # %%
 
@@ -85,144 +84,144 @@ bio.enable_history(bins=[0], take_snapshot=True)     # Taking a snapshot to incl
 
 # %% [markdown]
 # ### Advance reaction to equilibrium
+# The membranes are impermeable for now; so, no transport across them occurs
 
 # %%
-delta_t = 0.002   # This will be our time "quantum" for this experiment
+delta_t = 0.002   # This will be our time "quantum" (fixed time step for reactions, passive transport and diffusion) for this experiment
+
+# %%
+bio.react_diffuse(time_step=delta_t, n_steps=350)
+bio.describe_state()
+
+# %%
+bio.system_heatmaps()
+
+# %%
+bio.plot_history_single_bin(bin_address=4)
+
+# %%
+# Check the reaction equilibrium
+bio.reaction_in_equilibrium(bin_address=4, rxn_index=0, explain=True) 
+
+# %% [markdown]
+#
+
+# %%
+
+# %% [markdown]
+# # Let's siphon off the product `B` from the central bin 4, by making the membrane permeable to it   
+# while still remaining impermeable to `A`.   Note the system time when this happens:
+
+# %%
+bio.system_time
+
+# %%
+bio.change_permeability("B", 1.)          # Make the membrane permeable to `B` (and only to `B`!)
+
+# %%
+
+# %% [markdown]
+# ### Advance the reaction - and now also the passive transport of `B` across the membrane, and its diffusion outside
+
+# %%
+bio.react_diffuse(time_step=delta_t, n_steps=30)
+bio.describe_state()
+
+# %%
+bio.system_heatmaps()
+
+# %% [markdown]
+# Notice what's happening:  
+# 1. `B` is diffusing away (because we made the membranes permeable to it)  
+# 2. By Le Chatelier's principle, the reaction `A <-> B` in bin 4 is moving forward, because we're siphoning off the product `B`  
+# 3. In the other bins, `A` is re-forming from `B`, from the reverse reaction
+
+# %%
+
+# %% [markdown]
+# ### Continue advancing the reaction, passive transport of `B`, and diffusion
+
+# %%
+bio.react_diffuse(time_step=delta_t, n_steps=50)
+bio.describe_state()
+
+# %%
+bio.system_heatmaps()
+
+# %% [markdown]
+# Notice how the concentration of `A` in the central bin 4 is continuing to drop
+
+# %%
+bio.plot_history_single_bin(bin_address=4, vertical_lines_to_add=[0.7], 
+                            title_prefix="Dashed vertical line at time when the membranes were made permeable to `B`")
+
+# %%
+
+# %%
+bio.react_diffuse(time_step=delta_t, n_steps=150)
+bio.describe_state()
+
+# %%
+bio.system_heatmaps()
+
+# %% [markdown]
+# Notice how [A] in bin 4 is continuing to drop, as `A` keeps turns into `B`
+
+# %%
 
 # %%
 bio.react_diffuse(time_step=delta_t, n_steps=500)
 bio.describe_state()
 
 # %%
-bio.show_system_snapshot()
+bio.system_heatmaps()
 
 # %%
 
 # %%
-
-# %% [markdown]
-# ## Equilibrium 
-
-# %%
-bio.reaction_in_equilibrium(bin_address=0, rxn_index=0, explain=True)  # Choice of bin is immaterial now, because they have all equilibrated
-
-# %%
-
-# %% [markdown]
-# # Plots of changes of concentration with time
-
-# %%
-bio.plot_history_single_bin(bin_address=0)
-
-# %%
-
-# %%
-
-# %% [markdown]
-# # Repeat in multi-bin system
-
-# %%
-bio = BioSim1D(n_bins=11, chem_data=chem_data)
-
-# %%
-reactions = bio.get_reactions()
-
-# Reaction A <-> B , 1st-order kinetics, mostly (but not hugely) in the REVERSE direction
-reactions.add_reaction(reactants="A", products="B", forward_rate=2., reverse_rate=8.)
-reactions.describe_reactions()
-
-# %% [markdown]
-# # TIME 0 : Inject initial concentrations in the middle
-
-# %%
-bio.set_bin_conc(bin_address=5, chem_label="A", conc=100.)
-bio.set_bin_conc(bin_address=5, chem_label="B", conc=100.)
-
+bio.react_diffuse(time_step=delta_t, n_steps=1500)
 bio.describe_state()
 
 # %%
-# Let's enable history for the middle bin, and one of the end ones
-bio.enable_history(bins=[0, 5], frequency=2, take_snapshot=True)     # Taking a snapshot to include the current initial state in the history
+bio.system_heatmaps()
 
 # %%
 
 # %% [markdown]
-# ### Advance reaction and diffusion to equilibrium
+# ### Let's take the system to equilibrium, in reactions and diffusion
+
+# %%
+bio.react_diffuse(time_step=delta_t, n_steps=3000)
+bio.describe_state()
 
 # %%
 bio.system_heatmaps()
 
 # %%
-
-# %%
-bio.react_diffuse(time_step=0.005, n_steps=1)
-
-# %%
-bio.show_system_snapshot()
+# Check the reaction equilibrium in one of the bins (doesn't matter which one, since all bin concentrations are now the same)
+bio.reaction_in_equilibrium(bin_address=0, rxn_index=0, explain=True) 
 
 # %% [markdown]
-# #### Notice how much more rapidly `B` is diffusing, relative to `A`
+# ### From a casual glance at the past heatmaps, it might seem that `A` has diffused to equilibrium across all bins...  
+# ### But the actual mechanism was that `A` (trapped in bin 4 by a membrane impermeable to it) has transformed into `B`, which in turn has passively crossed the membrane, and then diffused across all bins, while at the same time forming `A` by the reverse reaction in all bins outside the membrane.  
+# #### All said and done, `A` has "found a way, thru its disguise as `B`" to indirectly pass thru an impermeable membrane!
 
 # %%
-bio.system_heatmaps()
+# Let's look at the central bin 4
+bio.plot_history_single_bin(bin_address=4, vertical_lines_to_add=[0.7], 
+                            title_prefix="Dashed vertical line at time when the membranes were made permeable to `B`;" \
+                            "<br>notice the syphoning off of `B` and the resumed advance of the reaction that consumes `A`.")
 
 # %%
-bio.chem_quantity(chem_label="A")
+# Let's look at a bin CLOSE to the central bin 4
+bio.plot_history_single_bin(bin_address=2, vertical_lines_to_add=[0.7], 
+                            title_prefix="Dashed vertical line at time when the membranes were made permeable to `B`;" \
+                            "<br>notice the QUICK arrival of `B` by diffusion, and the subsequent formation of `A` by reverse reaction.")
 
 # %%
-bio.chem_quantity(chem_label="B")
-
-# %% [markdown]
-# As expected from the stoichiometry, the total increase in `A` matches total decrease in `B`
-
-# %%
-
-# %%
-bio.react_diffuse(time_step=0.005, n_steps=4)
-bio.system_heatmaps()
-
-# %%
-bio.chem_quantity(chem_label="A")
-
-# %%
-bio.chem_quantity(chem_label="B")
-
-# %%
-
-# %%
-bio.react_diffuse(time_step=0.005, n_steps=45)
-bio.system_heatmaps()
-
-# %%
-bio.chem_quantity(chem_label="A")
-
-# %%
-bio.chem_quantity(chem_label="B")
-
-# %%
-
-# %%
-bio.react_diffuse(time_step=0.005, n_steps=350)
-bio.system_heatmaps()
-
-# %%
-bio.chem_quantity(chem_label="A")
-
-# %%
-bio.chem_quantity(chem_label="B")
-
-# %%
-
-# %%
-
-# %%
-
-# %%
-
-# %%
-bio.plot_history_single_bin(bin_address=5)
-
-# %%
-bio.plot_history_single_bin(bin_address=0)
+# Let's look at a bin FAR from the central bin 4
+bio.plot_history_single_bin(bin_address=0, vertical_lines_to_add=[0.7], 
+                            title_prefix="Dashed vertical line at time when the membranes were made permeable to `B`;" \
+                            "<br>notice the SLOW arrival of `B` by diffusion, and the subsequent formation of `A` by reverse reaction.")
 
 # %%

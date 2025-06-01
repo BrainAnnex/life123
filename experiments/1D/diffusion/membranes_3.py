@@ -15,7 +15,7 @@
 # %% [markdown]
 # # Membranes, with selective permeability, separate 2 previously fully-mixed chemicals
 #
-# #### The membranes are permeable to one of the chemicals, and impermeable to the other one 
+# #### The membranes are permeable to one of the chemicals, and impermeable to the other one.  
 #
 # See also experiment `diffusion_3`, where a transient separation is achieved WITHOUT membranes
 
@@ -23,7 +23,7 @@
 # ### TAGS :  "membranes 1D", "basic", "diffusion 1D"
 
 # %%
-LAST_REVISED = "May 19, 2025"
+LAST_REVISED = "May 31, 2025"
 LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
 
 # %%
@@ -47,7 +47,7 @@ check_version(LIFE123_VERSION)
 # with two chemicals `A` and `B`
 
 # %%
-chem_data = ChemData(diffusion_rates=[2., 2.], plot_colors=["turquoise", "green"])   # Name "A", "B" automatically assigned
+chem_data = ChemData(diffusion_rates=[2., 2.], plot_colors=["turquoise", "green"])   # Names "A", "B" automatically assigned
 
 bio = BioSim1D(n_bins=9, chem_data=chem_data)
 
