@@ -20,7 +20,13 @@ from life123.visualization.colors import Colors
 
 class System1D:
     """
-    EXPERIMENTAL.  NOT IN ACTIVE USE!
+    The foundational structure of 1D systems,
+    including bins, system state (concentrations and system time),
+    and the underlying "ChemData" object.
+
+    This base class does NOT know about membranes or reactions;
+    nor does it handle any simulation.
+    End users will typically instantiate the derived class BioSim1D
     """
     def __init__(self, n_bins :int, chem_data):
         """
@@ -47,11 +53,11 @@ class System1D:
 
         self.system_time = 0        # Global time of the system, from initialization on
 
-        assert type(n_bins) == int, "BioSim1D() instantiation: the argument `n_bins` must be an integer"
-        assert n_bins >= 1, "BioSim1D() instantiation: the number of bins must be at least 1"
+        assert type(n_bins) == int, "System1D() instantiation: the argument `n_bins` must be an integer"
+        assert n_bins >= 1, "System1D() instantiation: the number of bins must be at least 1"
 
         assert chem_data is not None, \
-            "System1D() instantiation: `chem_data` (Object of class `ChemData`) must be set"
+            "System1D() instantiation: the argument `chem_data` (Object of class `ChemData`) must be set"
             # TODO: maybe drop this requirement?  And then set it later on?
 
 
@@ -98,6 +104,39 @@ class System1D:
 
 
 
+    def assert_valid_bin(self, bin_address: int) -> None:
+        """
+        Raise an Exception if the given bin number isn't valid
+
+        :param bin_address: An integer that ought to be between 0 and (self.n_bins-1), inclusive
+        :return:            None
+        """
+        assert type(bin_address) == int, \
+            f"System1D: the requested bin address ({bin_address}) is not an integer; its type is {type(bin_address)}"
+
+        if bin_address < 0 or bin_address >= self.n_bins:
+            raise Exception(f"System1D: the requested bin address ({bin_address}) is out of bounds for the system size; "
+                            f"allowed range is [0-{self.n_bins-1}], inclusive")
+
+
+    def check_mass_conservation(self, expected :float, chem_label=None, chem_index=None) -> bool:
+        """
+        Check whether the sum of all the concentrations of the specified chemical,
+        across all bins, adds up to the passed value
+
+        :param expected:    Value that the sum of all the bin concentrations of the specified chemical should add up to
+        :param chem_label:  String with the label to identify the chemical of interest
+        :param chem_index:  Integer to identify the chemical of interest.
+                                Cannot specify both `chem_label` and `chem_index`
+
+        :return:            True if this validation passes, or False otherwise
+        """
+        arr = self.system_snapshot_arr(chem_label=chem_label, chem_index=chem_index)
+        total = np.sum(arr)
+        return np.allclose(expected, total)
+
+
+
     def save_system(self) -> dict:
         """
         For now, just return a copy of self.system, with a "frozen" snapshot of the current system state
@@ -116,9 +155,10 @@ class System1D:
         For details of the data structure, see the class variable "system"
 
         :param new_state:   Numpy array containing the desired new System's internal state
-        :return:
+        :return:            None
         """
-        #TODO: membranes aren't yet managed. System length and global_Dx are currently not modified
+        #TODO: membranes aren't yet managed. System length and global_Dx are currently not modified.
+        #      If membranes will later be included, this functions needs to be taken to a derived class
 
         self.system = new_state["system"]
         self.n_species, self.n_bins = self.system.shape     # Extract from the new state
@@ -137,7 +177,7 @@ class System1D:
         IMPORTANT: membranes aren't handled. System length and global_Dx are currently not modified
 
         :param new_state:   Numpy array containing the desired new System's internal state
-        :return:
+        :return:            None
         """
         self.system = new_state
         self.n_species, self.n_bins = new_state.shape     # Extract from the new state
@@ -150,9 +190,9 @@ class System1D:
 
     #####################################################################################################
 
-    '''                                    ~   SPATIAL ELEMENTS   ~                                           '''
+    '''                                    ~   SPATIAL ELEMENTS (incl. Resolution)  ~                                           '''
 
-    def ________SPATIAL_ELEMENTS________(DIVIDER):
+    def ________SPATIAL_ELEMENTS_RESOLUTION_______(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
@@ -181,6 +221,138 @@ class System1D:
         assert self.system_length, "x_coord(): must first call set_dimensions()"
 
         return bin_address * self.global_Dx
+
+
+
+    def increase_spatial_resolution(self, factor:int) -> None:
+        """
+        Increase the spatial resolution of the system by cloning and repeating
+        each bin, by the specified number of times.
+        Replace the System's internal state
+        (note that the number of bins will increase by the requested factor)
+
+        EXAMPLE: if the (2-chemicals) system is
+                        [[11. 12. 13.]
+                         [ 5. 15. 25.]]
+                and factor=2, then the result will be
+                        [[11. 11. 12. 12. 13. 13.]
+                         [ 5.  5. 15. 15. 25. 25.]]
+
+        :param factor:  Number of bins into which to split each bin (replicating their concentration values)
+        :return:        None
+        """
+        assert type(factor) == int, "The argument `factor` must be an integer"
+        new_state = np.repeat(self.system, factor, axis=1)
+        self.replace_system(new_state)
+
+
+
+    def double_spatial_resolution_linear(self) -> None:
+        """
+        Increase the spatial resolution of the system by inserting between bins
+        their average value (of concentrations, for every chemical species.)
+        Replace the System's internal state
+        (note that if the number of bins is initially N, it'll become 2N-1).
+        If the system has fewer than 2 bins, an Exception will be raised.
+
+        EXAMPLE: if the (2-chemicals) system is
+                        [[11. 12. 13.]
+                         [ 5. 15. 25.]]
+                then the result will be
+                        [[11.  11.5 12.  12.5 13. ]
+                         [ 5.  10.  15.  20.  25. ]]
+
+        :return:    None
+        """
+        assert self.n_bins >= 2, \
+            "double_spatial_resolution_linear(): function can only be used if the system contains at least 2 bins"
+
+        new_state = np.zeros((self.n_species, self.n_bins * 2 - 1), dtype=float)
+        #print(new_state)
+
+        for i in range(self.n_bins-1):
+            two_col = self.system[ : , i:i+2 ]
+            avg_col = two_col.mean(axis=1)
+
+            #print("two_col: ", two_col)
+            #print("avg_col: ", avg_col)
+
+            new_state[ : , 2*i] = two_col[ : , 0]
+            new_state[ : , 2*i+1] = avg_col
+
+        new_state[ : , -1] = self.system[ : , -1]
+
+        self.replace_system(new_state)
+
+
+
+    def decrease_spatial_resolution(self, factor:int) -> None:
+        """
+
+        TODO: eliminate the restriction that the number of bins must be a multiple of factor
+
+        EXAMPLE: if the system is
+                        [[10., 20., 30., 40., 50., 60.]
+                         [ 2., 8.,   5., 15., 4.,   2.]]
+                and factor=2, then the result will be
+                        [[15., 35., 55.]
+                         [ 5., 10.,  3.]]
+
+        :param factor:
+        :return:
+        """
+        assert type(factor) == int, "The argument `factor` must be an integer"
+        assert self.n_bins % factor == 0, f"The number of bins (currently {self.n_bins}) must be a multiple of the requested scaling factor"
+
+        reduced_n_bins = int(self.n_bins / factor)
+        # The result matrix will have the same number of chemical species, but fewer bins
+        new_state = np.zeros((self.n_species, reduced_n_bins), dtype=float)
+
+        for i in range(reduced_n_bins):
+            start_col = factor * i      # The start column will initially be 0, and will get incremented by factor
+            col_group = self.system[ : , start_col:start_col+factor] # Extract a submatrix containing the number of columns specified by "factor",
+                                                                    # starting with the column specified by start_col
+            compressed_col_group = np.sum(col_group, axis=1, keepdims=True) / factor    # Create a single column that is the average of the columns in the group
+            new_state[:, [i]] = compressed_col_group                                       # Store the newly-computed column of averages in the appropriate place
+                                                                                        # in the result matrix
+        self.replace_system(new_state)
+
+
+
+    def smooth_spatial_resolution(self) -> None:
+        """
+        EXAMPLE: if the system is
+                        [[10., 20., 30.]
+                         [ 2., 8.,   4.]]
+                then the result will be
+                        [[10., 15., 20., 25., 30.]
+                         [ 2.,  5.,  8.,  6.,  4.]]
+
+        :return:
+        """
+        n_bins = self.n_bins
+        new_n_bins = n_bins * 2 - 1     # The final number of bins
+        new_state = np.zeros((self.n_species, new_n_bins), dtype=float)
+
+        for start_col in range(n_bins-1):                           # The start column will be between 0 and (self.n_bins-2), inclusive
+            col_group = self.system[ : , start_col:start_col+2]      # Extract a submatrix containing 2 columns,
+                                                                    # starting with the one in position start_col
+            avg_col = np.sum(col_group, axis=1, keepdims=True) / 2. # Create a single column that is the average of the columns in the group
+
+            new_state[:, [2*start_col]] = self.system[ : , start_col:start_col+1]   # Set one column, from the first column in the group
+            new_state[:, [2*start_col+1]] = avg_col                                # Set the next column with the newly-computed column of averages
+
+
+        new_state[ : , -1:] = self.system[ : , -1:]                 # Set the last column of result to the last column of self.system
+
+        self.replace_system(new_state)
+
+
+
+
+
+
+
 
 
 
@@ -271,21 +443,21 @@ class System1D:
             # If the chemical is being identified by name, look up its index
             chem_index = self.chem_data.get_index(chem_label)
         elif chem_index is None:
-            raise Exception("BioSim1D.set_species_conc(): must provide a `chem_label` or `chem_index`")
+            raise Exception("System1D.set_species_conc(): must provide a `chem_label` or `chem_index`")
         else:
             self.chem_data.assert_valid_chem_index(chem_index)
 
         assert (type(conc_list) == list) or (type(conc_list) == tuple) or (type(conc_list) == np.ndarray), \
-            f"BioSim1D.set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
+            f"System1D.set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
             f"the passed value was of type {type(conc_list)})"
 
         assert len(conc_list) == self.n_bins, \
-            f"BioSim1D.set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the bins " \
+            f"System1D.set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the bins " \
             f"(its length should be {self.n_bins}, rather than {len(conc_list)})"
 
         # Verify that none of the concentrations are negative
         assert min(conc_list) >= 0, \
-            f"BioSim1D.set_species_conc(): concentrations cannot be negative (values like {min(conc_list)} aren't permissible)"
+            f"System1D.set_species_conc(): concentrations cannot be negative (values like {min(conc_list)} aren't permissible)"
 
         # Update the system state
         self.system[chem_index] = conc_list
@@ -341,10 +513,10 @@ class System1D:
         :return:            None
         """
         assert conc_left >= 0. and conc_right >= 0., \
-                    f"BioSim1D.inject_gradient(): the concentration values cannot be negative"
+                    f"System1D.inject_gradient(): the concentration values cannot be negative"
 
         assert self.n_bins > 1, \
-                    f"BioSim1D.inject_gradient(): minimum system size must be 2 bins"
+                    f"System1D.inject_gradient(): minimum system size must be 2 bins"
 
         species_index = self.chem_data.get_index(chem_label)
 
@@ -412,10 +584,10 @@ class System1D:
         :return:                None
         """
         assert bias >= 0, \
-            f"BioSim1D.inject_bell_curve(): the value for the `bias` ({bias}) cannot be negative"
+            f"System1D.inject_bell_curve(): the value for the `bias` ({bias}) cannot be negative"
 
         assert amplitude >= 0, \
-            f"BioSim1D.inject_bell_curve(): the value for the `amplitude` ({amplitude}) cannot be negative"
+            f"System1D.inject_bell_curve(): the value for the `amplitude` ({amplitude}) cannot be negative"
 
         species_index = self.chem_data.get_index(chem_label)
 
@@ -432,21 +604,6 @@ class System1D:
         # Note: all the values we're adding are non-negative; so, no danger of creating negative concentrations
         self.system[species_index] += amplitude * increments_arr + bias
 
-
-
-    def assert_valid_bin(self, bin_address: int) -> None:
-        """
-        Raise an Exception if the given bin number isn't valid
-
-        :param bin_address: An integer that ought to be between 0 and (self.n_bins-1), inclusive
-        :return:            None
-        """
-        assert type(bin_address) == int, \
-            f"BioSim1D: the requested bin address ({bin_address}) is not an integer; its type is {type(bin_address)}"
-
-        if bin_address < 0 or bin_address >= self.n_bins:
-            raise Exception(f"BioSim1D: the requested bin address ({bin_address}) is out of bounds for the system size; "
-                            f"allowed range is [0-{self.n_bins-1}], inclusive")
 
 
 
@@ -484,7 +641,7 @@ class System1D:
         :return:                A NumPy 1-D array of concentration values across the bins (from left to right);
                                     the size of the array is the number of bins
         """
-        #TODO: merge this function and system_snapshot_arr(), maybe under the name chem_snapshot_arr(
+        #TODO: merge this function and system_snapshot_arr(), maybe under the name chem_snapshot_arr()
 
         if chem_label is not None:
             chem_index = self.chem_data.get_index(chem_label)
@@ -664,7 +821,6 @@ class System1D:
 
 class Membranes1D(System1D):
     """
-    EXPERIMENTAL.  NOT IN ACTIVE USE!
 
     HOW MEMBRANES ARE MODELED.
 
@@ -700,6 +856,51 @@ class Membranes1D(System1D):
         self.permeability = {}  # Dict mapping chemical labels to permeability.
                                 # If not listed, taken to be zero (unable to diffuse across membranes)
                                 # For now, the same for all membranes
+
+
+
+
+    def describe_state(self, concise=False) -> Union[pd.DataFrame, None]:
+        """
+        A simple printout of the state of the system, for now useful only for small systems.
+
+        EXAMPLE (concise):
+            SYSTEM STATE at Time t = 0:
+            [[0. 0. 0. 0.]
+             [0. 0. 0. 0.]]
+            Membranes: [(1, 2)]
+
+        EXAMPLE (not concise):
+            SYSTEM STATE at Time t = 0:
+            4 bins and 2 chemical species
+            Membranes present:  [(12, 25)]
+            <PANDAS data frame returned>
+
+        :param concise: If True, only produce a minimalist printout with just the concentration values
+        :return:        None, if concise=True; a Pandas dataframe otherwise
+        """
+        print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
+
+        if concise:             # A minimalist printout...
+            print(self.system)   # ...only showing the concentration data (a Numpy array)
+            if self.uses_membranes():
+                print("Membranes: ", self.membranes)
+            return
+
+        # If we get thus far, it's a FULL printout
+
+        print(f"{self.n_bins} bins and {self.n_species} chemical species")
+
+        if self.uses_membranes():
+            print("Membranes present: ", self.membranes)
+
+
+        df = pd.DataFrame(self.system, columns=[f"Bin {i}" for i in range(self.n_bins)])
+
+        df.insert(0, "Species", self.chem_data.get_all_labels())
+        df.insert(1, "Diff rate", self.chem_data.get_all_diffusion_rates()) # Unset values will show up as None
+
+        return df
 
 
 
@@ -963,169 +1164,6 @@ class BioSim1D_UNDER_DEVELOPMENT(Membranes1D):
 
 
 
-
-
-    #####################################################################################################
-
-    '''                                    ~   SPATIAL RESOLUTION   ~                                           '''
-
-    def ________SPATIAL_RESOLUTION________(DIVIDER):
-        pass        # Used to get a better structure view in IDEs
-    #####################################################################################################
-
-    def increase_spatial_resolution(self, factor:int) -> None:
-        """
-        Increase the spatial resolution of the system by cloning and repeating
-        each bin, by the specified number of times.
-        Replace the System's internal state
-        (note that the number of bins will increase by the requested factor)
-
-        EXAMPLE: if the (2-chemicals) system is
-                        [[11. 12. 13.]
-                         [ 5. 15. 25.]]
-                and factor=2, then the result will be
-                        [[11. 11. 12. 12. 13. 13.]
-                         [ 5.  5. 15. 15. 25. 25.]]
-
-        :param factor:  Number of bins into which to split each bin (replicating their concentration values)
-        :return:        None
-        """
-        assert type(factor) == int, "The argument `factor` must be an integer"
-        new_state = np.repeat(self.system, factor, axis=1)
-        self.replace_system(new_state)
-
-
-
-    def double_spatial_resolution_linear(self) -> None:
-        """
-        Increase the spatial resolution of the system by inserting between bins
-        their average value (of concentrations, for every chemical species.)
-        Replace the System's internal state
-        (note that if the number of bins is initially N, it'll become 2N-1).
-        If the system has fewer than 2 bins, an Exception will be raised.
-
-        EXAMPLE: if the (2-chemicals) system is
-                        [[11. 12. 13.]
-                         [ 5. 15. 25.]]
-                then the result will be
-                        [[11.  11.5 12.  12.5 13. ]
-                         [ 5.  10.  15.  20.  25. ]]
-
-        :return:    None
-        """
-        assert self.n_bins >= 2, \
-            "double_spatial_resolution_linear(): function can only be used if the system contains at least 2 bins"
-
-        new_state = np.zeros((self.n_species, self.n_bins * 2 - 1), dtype=float)
-        #print(new_state)
-
-        for i in range(self.n_bins-1):
-            two_col = self.system[ : , i:i+2 ]
-            avg_col = two_col.mean(axis=1)
-
-            #print("two_col: ", two_col)
-            #print("avg_col: ", avg_col)
-
-            new_state[ : , 2*i] = two_col[ : , 0]
-            new_state[ : , 2*i+1] = avg_col
-
-        new_state[ : , -1] = self.system[ : , -1]
-
-        self.replace_system(new_state)
-
-
-
-    def decrease_spatial_resolution(self, factor:int) -> None:
-        """
-
-        TODO: eliminate the restriction that the number of bins must be a multiple of factor
-
-        EXAMPLE: if the system is
-                        [[10., 20., 30., 40., 50., 60.]
-                         [ 2., 8.,   5., 15., 4.,   2.]]
-                and factor=2, then the result will be
-                        [[15., 35., 55.]
-                         [ 5., 10.,  3.]]
-
-        :param factor:
-        :return:
-        """
-        assert type(factor) == int, "The argument `factor` must be an integer"
-        assert self.n_bins % factor == 0, f"The number of bins (currently {self.n_bins}) must be a multiple of the requested scaling factor"
-
-        reduced_n_bins = int(self.n_bins / factor)
-        # The result matrix will have the same number of chemical species, but fewer bins
-        new_state = np.zeros((self.n_species, reduced_n_bins), dtype=float)
-
-        for i in range(reduced_n_bins):
-            start_col = factor * i      # The start column will initially be 0, and will get incremented by factor
-            col_group = self.system[ : , start_col:start_col+factor] # Extract a submatrix containing the number of columns specified by "factor",
-                                                                    # starting with the column specified by start_col
-            compressed_col_group = np.sum(col_group, axis=1, keepdims=True) / factor    # Create a single column that is the average of the columns in the group
-            new_state[:, [i]] = compressed_col_group                                       # Store the newly-computed column of averages in the appropriate place
-                                                                                        # in the result matrix
-        self.replace_system(new_state)
-
-
-
-    def smooth_spatial_resolution(self) -> None:
-        """
-        EXAMPLE: if the system is
-                        [[10., 20., 30.]
-                         [ 2., 8.,   4.]]
-                then the result will be
-                        [[10., 15., 20., 25., 30.]
-                         [ 2.,  5.,  8.,  6.,  4.]]
-
-        :return:
-        """
-        n_bins = self.n_bins
-        new_n_bins = n_bins * 2 - 1     # The final number of bins
-        new_state = np.zeros((self.n_species, new_n_bins), dtype=float)
-
-        for start_col in range(n_bins-1):                           # The start column will be between 0 and (self.n_bins-2), inclusive
-            col_group = self.system[ : , start_col:start_col+2]      # Extract a submatrix containing 2 columns,
-                                                                    # starting with the one in position start_col
-            avg_col = np.sum(col_group, axis=1, keepdims=True) / 2. # Create a single column that is the average of the columns in the group
-
-            new_state[:, [2*start_col]] = self.system[ : , start_col:start_col+1]   # Set one column, from the first column in the group
-            new_state[:, [2*start_col+1]] = avg_col                                # Set the next column with the newly-computed column of averages
-
-
-        new_state[ : , -1:] = self.system[ : , -1:]                 # Set the last column of result to the last column of self.system
-
-        self.replace_system(new_state)
-
-
-
-
-
-    #####################################################################################################
-
-    '''                                    ~   UTILITIES   ~                                          '''
-
-    def ________UTILITIES________(DIVIDER):
-        pass        # Used to get a better structure view in IDEs
-    #####################################################################################################
-
-    def check_mass_conservation(self, expected :float, chem_label=None, chem_index=None) -> bool:
-        """
-        Check whether the sum of all the concentrations of the specified chemical,
-        across all bins, adds up to the passed value
-
-        :param expected:    Value that the sum of all the bin concentrations of the specified chemical should add up to
-        :param chem_label:  String with the label to identify the chemical of interest
-        :param chem_index:  Integer to identify the chemical of interest.
-                                Cannot specify both `chem_label` and `chem_index`
-
-        :return:
-        """
-        arr = self.system_snapshot_arr(chem_label=chem_label, chem_index=chem_index)
-        total = np.sum(arr)
-        return np.allclose(expected, total)
-
-
-
     def reaction_in_equilibrium(self, bin_address: int, rxn_index :int, tolerance=1, explain=True) -> bool:
         """
         Ascertain whether the given system concentrations are in equilibrium at the given bin,
@@ -1153,6 +1191,16 @@ class BioSim1D_UNDER_DEVELOPMENT(Membranes1D):
 
 
 
+
+
+    #####################################################################################################
+
+    '''                                    ~   UTILITIES   ~                                          '''
+
+    def ________UTILITIES________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
     def reset_system(self) -> None:
         """
         WARNING - THIS IS VERY PARTIAL.
@@ -1173,49 +1221,6 @@ class BioSim1D_UNDER_DEVELOPMENT(Membranes1D):
 
         self.delta_reactions = None
 
-
-
-    def describe_state(self, concise=False) -> Union[pd.DataFrame, None]:
-        """
-        A simple printout of the state of the system, for now useful only for small systems.
-
-        EXAMPLE (concise):
-            SYSTEM STATE at Time t = 0:
-            [[0. 0. 0. 0.]
-             [0. 0. 0. 0.]]
-            Membranes: [(1, 2)]
-
-        EXAMPLE (not concise):
-            SYSTEM STATE at Time t = 0:
-            4 bins and 2 chemical species
-            Membranes present:  [(12, 25)]
-            <PANDAS data frame returned>
-
-        :param concise: If True, only produce a minimalist printout with just the concentration values
-        :return:        None, if concise=True; a Pandas dataframe otherwise
-        """
-        print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
-
-        if concise:             # A minimalist printout...
-            print(self.system)   # ...only showing the concentration data (a Numpy array)
-            if self.uses_membranes():
-                print("Membranes: ", self.membranes)
-            return
-
-        # If we get thus far, it's a FULL printout
-
-        print(f"{self.n_bins} bins and {self.n_species} chemical species")
-
-        if self.uses_membranes():
-            print("Membranes present: ", self.membranes)
-
-
-        df = pd.DataFrame(self.system, columns=[f"Bin {i}" for i in range(self.n_bins)])
-
-        df.insert(0, "Species", self.chem_data.get_all_labels())
-        df.insert(1, "Diff rate", self.chem_data.get_all_diffusion_rates()) # Unset values will show up as None
-
-        return df
 
 
 
@@ -1711,7 +1716,7 @@ class BioSim1D_UNDER_DEVELOPMENT(Membranes1D):
 
     def single_species_heatmap(self, species_index: int, heatmap_pars: dict, graphic_component, header=None) -> None:
         """
-        DEPRECATED!
+        TODO: DEPRECATED!
 
         Send to the HTML log, a heatmap representation of the concentrations of
         the single requested species.  Note: if using in Jupyterlab, this image will NOT be displayed there
@@ -1765,7 +1770,7 @@ class BioSim1D_UNDER_DEVELOPMENT(Membranes1D):
 
     def single_species_line_plot(self, species_index: int, plot_pars: dict, graphic_component, header=None) -> None:
         """
-        DEPRECATED
+        TODO: DEPRECATED
 
         Send to the HTML log, a line plot representation of the concentrations of
         the single requested species.  To plot more than 1 species, use line_plot() instead
