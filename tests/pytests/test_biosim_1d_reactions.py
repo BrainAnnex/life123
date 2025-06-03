@@ -1,5 +1,5 @@
 # These are tests specifically for reactions in 1D;
-# for general tests of 1D system, see test_biosim_1d.py
+# for general tests of 1D system, see "test_biosim_1d.py"
 
 import numpy as np
 from life123 import ChemData

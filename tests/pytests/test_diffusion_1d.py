@@ -1,13 +1,11 @@
-# These are tests specifically for diffusion in 1D;
-# for general tests of 1D system, see test_biosim_1d.py
+# These are tests specifically for the class "Diffusion1D";
+# for general tests of diffusion in 1D system, see "test_biosim_1d.py"
 
 
 import pytest
 import numpy as np
 from scipy.ndimage import shift
-#from life123 import BioSim1D
-from life123.bio_sim_1d_experimental import BioSim1D_NEW, Diffusion1D, Membranes1D
-from life123 import ChemData
+from life123 import ChemData, Diffusion1D, Membranes1D
 
 
 

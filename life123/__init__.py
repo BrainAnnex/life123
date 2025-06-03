@@ -13,7 +13,7 @@
 __version__ = "1.0.0rc5"     # IN-PROGRESS
 
 
-from life123.bio_sim_1d import BioSim1D
+from life123.bio_sim_1d import (System1D, Membranes1D, Diffusion1D, BioSim1D)
 from life123.bio_sim_2d import BioSim2D
 from life123.bio_sim_3d import BioSim3D
 from life123.chem_data import ChemData
@@ -50,14 +50,17 @@ __all__ = [
     'CollectionArray',
     'Collection',
     'Colors',
+    'Diffusion1D',
     'HistoryBinConcentration',
     'HistoryUniformConcentration',
     'HistoryReactionRate',
+    'Membranes1D',
     'Numerical',
     'ReactionGeneric',
     'Reactions',
     'ReactionEnz',
     'ReactionKinetics',
+    'System1D',
     'ThermoDynamics',
     'VariableTimeSteps',
     'UniformCompartment',

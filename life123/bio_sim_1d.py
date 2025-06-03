@@ -16,43 +16,29 @@ from life123.visualization.colors import Colors
 
 
 
-
-class BioSim1D:
+class System1D:
     """
-    1D simulations of diffusion and reactions,
-    with optional membranes
+    The foundational structure of 1D systems,
+    including bins, system state (concentrations and system time),
+    and the underlying "ChemData" object.
+
+    This base class does NOT know about membranes or reactions;
+    nor does it handle any simulation.
+    End users will typically instantiate the derived class BioSim1D
     """
-
-    def __init__(self, n_bins :int, chem_data=None, reaction_handler=None):
+    def __init__(self, n_bins :int, chem_data):
         """
-        :param n_bins:          The number of compartments (bins) to use in the simulation
 
-        [IMPORTANT: At least one of the 2 following arguments MUST be provided]
-        :param chem_data:       [OPTIONAL] Object of class "ChemData";
-                                    if not specified, it will get extracted
-                                    from the "UniformCompartment" class (if passed to the next argument)
-        :param reaction_handler:[OPTIONAL] Object of class "UniformCompartment";
-                                    if not specified, it'll get instantiated here
+        :param n_bins:      The number of compartments (bins) to model our 1D system
+        :param chem_data:   Object of class "ChemData"
         """
-        self.debug = False
+        self.n_bins = n_bins        # Number of spatial compartments (bins) used in the simulation
 
-        self.n_bins = 0         # Number of spatial compartments (bins) used in the simulation
+        self.global_Dx = 1          # The width of each bin (relative to the other two dimensions, assumed to be small)
 
-        self.n_species = 1      # The number of (non-water) chemical species   TODO: phase out?
-
-        self.chem_data = None   # Object of type "ChemData", with info on the individual chemicals
-
-        self.reactions = None   # Object of type "Reactions", with info on all the reactions
-
-        self.reaction_dynamics = None   # Object of class "UniformCompartment"
-                                        # TODO: for now just 1 object is instantiated;
-                                        #       in the future, it might be 1 per bin (or bin cluster)
-
-        self.system_length = None       # The linear extension of the system,
-                                        # from the middle of the leftmost bin to the middle of the rightmost one.
-                                        #  The de-facto default value, though not used, is (n_bins-1)
-
-        self.global_Dx = 1              # Used in cases when not using ad-hoc local changes in x-scale resolution
+        self.system_length = None   # The linear extension of the system,
+                                    # from the middle of the leftmost bin to the middle of the rightmost one.
+                                    #  The de-facto default value, though not used, is (n_bins-1)
 
         self.system = None      # Concentration data in the System we're simulating, for all the chemicals:
                                 #   NumPy array of floats, of dimension: (n_species) x (n_bins)
@@ -63,120 +49,25 @@ class BioSim1D:
         self.system_earlier = None  # NOT IN CURRENT USE.  Envisioned for simulations where the past 2 time states are used
                                     # to compute the state at the next time step
 
+        self.system_time = 0        # Global time of the system, from initialization on
 
-        """
-        HOW MEMBRANES ARE MODELED.
-        
-        Only CLOSED membranes are modeled.
-        Membrane exist at the boundary between System bins.
-        A membrane is an ordered list of adjacent "sides".   The "sides" collectively encompass and encircle 
-        a portion of the System space.  
-        In 1D, the "sides" are points; in 2D, they are adjacent segments, and in 3D, adjacent rectangles.
-        The "sides" cannot lie diagonally (slanted) across the System space; they all must follow 
-        the directions of the axes (grid) of the System.
-        The "sides" cannot intersect, or even touch, with any other "side" of the same membrane or of any other membrane.
-        
-        In 1D, a membrane "side" is a point, identified by the coordinate of bin immediately to the right of it 
-        (or, if at the rightmost edge of the System, by the next integer of the bin to its left.)
-        In 2D, a membrane "side" is a segment, defined by its endpoint.  Each endpoint is identified by the 
-        coordinates of bin immediately to the right and above (in xy-coordinates)
-        In 3D, a membrane "side" is a rectangle, defined by 3 consecutive points.  Each point is identified by the 
-        coordinates of bin immediately past it (in xyz-coordinates)
-        """
+        assert type(n_bins) == int, "System1D() instantiation: the argument `n_bins` must be an integer"
+        assert n_bins >= 1, "System1D() instantiation: the number of bins must be at least 1"
 
-        self.membranes = []     # List of (closed) membranes in the system.
-                                # In 1D, a (closed) membrane is a pair of points,
-                                # identified by the index of the bin to their RIGHT side,
-                                # ("index after") in sorted order.
-                                # EXAMPLE:  [ (0, 8) , (17, 31) ]
-                                # All integers must be between 0 and self.n_bins, both inclusive
-
-        self.permeability = {}      # Dict mapping chemical labels to permeability.
-                                    # If not listed, taken to be zero (unable to diffuse across membranes)
-                                    # For now, the same for all membranes
-
-        self.delta_diffusion = None # Buffer for the concentration changes from diffusion step (n_species x n_bins)
-        self.delta_reactions = None # Buffer for the concentration changes from reactions step (n_species x n_bins)
-
-        self.sealed = True                  # If True, no exchange with the outside;
-                                            #   if False (NOT currently supported), immersed in a "bath"
-
-        # Only applicable if "sealed" is False:
-        self.bath_concentrations = None      # A NumPy array for each species
-        self.container_diffusion = None      # A NumPy array for each species: diffusion rate in/out of the container
-
-        self.time_step_threshold = 0.33333  # This is used to set an Upper Bound on the single time steps
-                                            #   in the diffusion process.
-                                            #   See explanation in file overly_large_single_timesteps.py
-
-        self.history = CollectionTabular()  # TODO: phase out in favor of the new self.conc_history
-                                            # To store user-selected snapshots of (parts of) the system,
-                                            #   whenever requested by the user.
-                                            #   Note that we're using the "tabular" format - friendly to Pandas
-
-        self.conc_history = HistoryBinConcentration(active=False)   # Note: this is the newer history-keeping approach
-
-        self.system_time = None             # Global time of the system, from initialization on
-
-
-        self._initialize_system(n_bins=n_bins, chem_data=chem_data, reaction_handler=reaction_handler)
-
-
-
-
-    #########################################################################
-    #                                                                       #
-    #                           SYSTEM-WIDE                                 #
-    #                                                                       #
-    #########################################################################
-
-    def _initialize_system(self, n_bins :int, chem_data=None, reaction_handler=None) -> None:
-        """
-        Initialize all concentrations to zero.
-        Membranes, if present, need to be set later.
-
-        :param n_bins:          The number of compartments (bins) to use in the simulation
-        :param chem_data:       [OPTIONAL] Object of class "ChemData";
-                                    if not specified, it will get extracted
-                                    from the "UniformCompartment" class (if passed to the next argument)
-        :param reaction_handler:[OPTIONAL] Object of class "UniformCompartment";
-                                    if not specified, it'll get instantiated here
-        :return:                None
-        """
-        #TODO?: maybe allow optionally passing n_species in lieu of chem_data,
-        #       and let it create and return the "Chemicals" object in that case
-
-        assert type(n_bins) == int, "BioSim1D() instantiation: the argument `n_bins` must be an integer"
-        assert n_bins >= 1, "BioSim1D() instantiation: the number of bins must be at least 1"
-
-        assert chem_data is not None or reaction_handler is not None, \
-            "BioSim1D() instantiation: at least one of the arguments `chem_data` or `reaction_handler` must be set"
+        assert chem_data is not None, \
+            "System1D() instantiation: the argument `chem_data` (Object of class `ChemData`) must be set"
             # TODO: maybe drop this requirement?  And then set it later on?
 
-        if chem_data:
-            self.chem_data = chem_data
-        else:
-            self.chem_data = reaction_handler.chem_data
 
-        if reaction_handler:
-            self.reaction_dynamics = reaction_handler
-        else:
-            self.reaction_dynamics = UniformCompartment(chem_data=self.chem_data)
+        self.chem_data = chem_data      # Object of type "ChemData", with info on the individual chemicals
 
-        self.reactions = self.reaction_dynamics.get_reactions()
-
-        self.n_bins = n_bins
-
-        self.n_species = self.chem_data.number_of_chemicals()
+        self.n_species = self.chem_data.number_of_chemicals()   # The number of (non-water) chemical species   TODO: phase out?
 
         assert self.n_species >= 1, \
-            "BioSim1D() instantiation: At least 1 chemical species must be declared prior to instantiating class"
+            "System1D() instantiation: At least 1 chemical species must be declared prior to instantiating class"
 
         # Initialize all bin concentrations to zero
         self.system = np.zeros((self.n_species, n_bins), dtype=float)
-
-        self.system_time = 0             # "Start the clock"
-
 
 
 
@@ -211,49 +102,37 @@ class BioSim1D:
 
 
 
-    def get_reactions(self):
+    def assert_valid_bin(self, bin_address: int) -> None:
         """
-        Return all the associated reactions
+        Raise an Exception if the given bin number isn't valid
 
-        :return:    Object ot type "Reactions" (with data about all the reactions)
+        :param bin_address: An integer that ought to be between 0 and (self.n_bins-1), inclusive
+        :return:            None
         """
-        return self.reactions
+        assert type(bin_address) == int, \
+            f"System1D: the requested bin address ({bin_address}) is not an integer; its type is {type(bin_address)}"
+
+        if bin_address < 0 or bin_address >= self.n_bins:
+            raise Exception(f"System1D: the requested bin address ({bin_address}) is out of bounds for the system size; "
+                            f"allowed range is [0-{self.n_bins-1}], inclusive")
 
 
 
-    def get_reaction_handler(self, bin_address=0):
+    def check_mass_conservation(self, expected :float, chem_label=None, chem_index=None) -> bool:
         """
-        Return the object that manages the reactions.
-        Note that for now just 1 object is present;
-        in the future, it might be 1 per bin (or per bin cluster)
+        Check whether the sum of all the concentrations of the specified chemical,
+        across all bins, adds up to the passed value
 
-        :param bin_address: CURRENTLY NOT USED
-        :return:            Object ot type "UniformCompartment"
+        :param expected:    Value that the sum of all the bin concentrations of the specified chemical should add up to
+        :param chem_label:  String with the label to identify the chemical of interest
+        :param chem_index:  Integer to identify the chemical of interest.
+                                Cannot specify both `chem_label` and `chem_index`
+
+        :return:            True if this validation passes, or False otherwise
         """
-        return self.reaction_dynamics
-
-
-
-    def reset_system(self) -> None:
-        """
-        WARNING - THIS IS VERY PARTIAL.
-
-        :return:    None
-        """
-        # TODO: expand, or drop (not sure if really needed anymore)
-        self.system = None
-        self.system_earlier = None
-        self.chem_data = None
-        self.reaction_dynamics = None
-        self.history = None
-
-        self.n_bins = 0
-        self.system_length = None
-        self.global_Dx = 1
-        self.system_time = 0
-
-        self.delta_reactions = None
-
+        arr = self.system_snapshot_arr(chem_label=chem_label, chem_index=chem_index)
+        total = np.sum(arr)
+        return np.allclose(expected, total)
 
 
 
@@ -275,9 +154,10 @@ class BioSim1D:
         For details of the data structure, see the class variable "system"
 
         :param new_state:   Numpy array containing the desired new System's internal state
-        :return:
+        :return:            None
         """
-        #TODO: membranes aren't yet managed. System length and global_Dx are currently not modified
+        #TODO: membranes aren't yet managed. System length and global_Dx are currently not modified.
+        #      If membranes will later be included, this functions needs to be taken to a derived class
 
         self.system = new_state["system"]
         self.n_species, self.n_bins = self.system.shape     # Extract from the new state
@@ -289,7 +169,6 @@ class BioSim1D:
 
 
 
-
     def replace_system(self, new_state: np.array) -> None:
         """
         Replace the System's internal state.
@@ -297,12 +176,175 @@ class BioSim1D:
         IMPORTANT: membranes aren't handled. System length and global_Dx are currently not modified
 
         :param new_state:   Numpy array containing the desired new System's internal state
-        :return:
+        :return:            None
         """
         self.system = new_state
         self.n_species, self.n_bins = new_state.shape     # Extract from the new state
         assert self.n_species == self.chem_data.number_of_chemicals(), \
             "replace_system(): inconsistency in the number of chemical species vs. what's stored in the `Chemicals` object"
+
+
+
+
+
+    #####################################################################################################
+
+    '''                                    ~   SPATIAL ELEMENTS (incl. Resolution)  ~                                           '''
+
+    def ________SPATIAL_ELEMENTS_RESOLUTION_______(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def set_dimensions(self, length) -> None:
+        """
+        Set the overall length of the system.
+        Doing so, will permit to convert bin numbers to positional values
+
+        :param length:
+        :return:
+        """
+        assert (type(length) == float) or (type(length) == int), "set_dimensions(): length must be a number"
+        assert length > 0, "set_dimensions(): length must be positive"
+
+        self.system_length = length
+        self.global_Dx = length / (self.n_bins-1)
+
+
+
+    def x_coord(self, bin_address):
+        """
+        Return the x coordinate of the middle of the specified bin.
+        By convention, for the leftmost bin, it's zero,
+        and for the rightmost, it's the overall length of the system
+        """
+        assert self.system_length, "x_coord(): must first call set_dimensions()"
+
+        return bin_address * self.global_Dx
+
+
+
+    def increase_spatial_resolution(self, factor:int) -> None:
+        """
+        Increase the spatial resolution of the system by cloning and repeating
+        each bin, by the specified number of times.
+        Replace the System's internal state
+        (note that the number of bins will increase by the requested factor)
+
+        EXAMPLE: if the (2-chemicals) system is
+                        [[11. 12. 13.]
+                         [ 5. 15. 25.]]
+                and factor=2, then the result will be
+                        [[11. 11. 12. 12. 13. 13.]
+                         [ 5.  5. 15. 15. 25. 25.]]
+
+        :param factor:  Number of bins into which to split each bin (replicating their concentration values)
+        :return:        None
+        """
+        assert type(factor) == int, "The argument `factor` must be an integer"
+        new_state = np.repeat(self.system, factor, axis=1)
+        self.replace_system(new_state)
+
+
+
+    def double_spatial_resolution_linear(self) -> None:
+        """
+        Increase the spatial resolution of the system by inserting between bins
+        their average value (of concentrations, for every chemical species.)
+        Replace the System's internal state
+        (note that if the number of bins is initially N, it'll become 2N-1).
+        If the system has fewer than 2 bins, an Exception will be raised.
+
+        EXAMPLE: if the (2-chemicals) system is
+                        [[11. 12. 13.]
+                         [ 5. 15. 25.]]
+                then the result will be
+                        [[11.  11.5 12.  12.5 13. ]
+                         [ 5.  10.  15.  20.  25. ]]
+
+        :return:    None
+        """
+        assert self.n_bins >= 2, \
+            "double_spatial_resolution_linear(): function can only be used if the system contains at least 2 bins"
+
+        new_state = np.zeros((self.n_species, self.n_bins * 2 - 1), dtype=float)
+        #print(new_state)
+
+        for i in range(self.n_bins-1):
+            two_col = self.system[ : , i:i+2 ]
+            avg_col = two_col.mean(axis=1)
+
+            #print("two_col: ", two_col)
+            #print("avg_col: ", avg_col)
+
+            new_state[ : , 2*i] = two_col[ : , 0]
+            new_state[ : , 2*i+1] = avg_col
+
+        new_state[ : , -1] = self.system[ : , -1]
+
+        self.replace_system(new_state)
+
+
+
+    def decrease_spatial_resolution(self, factor:int) -> None:
+        """
+
+        TODO: eliminate the restriction that the number of bins must be a multiple of factor
+
+        EXAMPLE: if the system is
+                        [[10., 20., 30., 40., 50., 60.]
+                         [ 2., 8.,   5., 15., 4.,   2.]]
+                and factor=2, then the result will be
+                        [[15., 35., 55.]
+                         [ 5., 10.,  3.]]
+
+        :param factor:
+        :return:
+        """
+        assert type(factor) == int, "The argument `factor` must be an integer"
+        assert self.n_bins % factor == 0, f"The number of bins (currently {self.n_bins}) must be a multiple of the requested scaling factor"
+
+        reduced_n_bins = int(self.n_bins / factor)
+        # The result matrix will have the same number of chemical species, but fewer bins
+        new_state = np.zeros((self.n_species, reduced_n_bins), dtype=float)
+
+        for i in range(reduced_n_bins):
+            start_col = factor * i      # The start column will initially be 0, and will get incremented by factor
+            col_group = self.system[ : , start_col:start_col+factor] # Extract a submatrix containing the number of columns specified by "factor",
+                                                                    # starting with the column specified by start_col
+            compressed_col_group = np.sum(col_group, axis=1, keepdims=True) / factor    # Create a single column that is the average of the columns in the group
+            new_state[:, [i]] = compressed_col_group                                       # Store the newly-computed column of averages in the appropriate place
+                                                                                        # in the result matrix
+        self.replace_system(new_state)
+
+
+
+    def smooth_spatial_resolution(self) -> None:
+        """
+        EXAMPLE: if the system is
+                        [[10., 20., 30.]
+                         [ 2., 8.,   4.]]
+                then the result will be
+                        [[10., 15., 20., 25., 30.]
+                         [ 2.,  5.,  8.,  6.,  4.]]
+
+        :return:
+        """
+        n_bins = self.n_bins
+        new_n_bins = n_bins * 2 - 1     # The final number of bins
+        new_state = np.zeros((self.n_species, new_n_bins), dtype=float)
+
+        for start_col in range(n_bins-1):                           # The start column will be between 0 and (self.n_bins-2), inclusive
+            col_group = self.system[ : , start_col:start_col+2]      # Extract a submatrix containing 2 columns,
+                                                                    # starting with the one in position start_col
+            avg_col = np.sum(col_group, axis=1, keepdims=True) / 2. # Create a single column that is the average of the columns in the group
+
+            new_state[:, [2*start_col]] = self.system[ : , start_col:start_col+1]   # Set one column, from the first column in the group
+            new_state[:, [2*start_col+1]] = avg_col                                # Set the next column with the newly-computed column of averages
+
+
+        new_state[ : , -1:] = self.system[ : , -1:]                 # Set the last column of result to the last column of self.system
+
+        self.replace_system(new_state)
 
 
 
@@ -337,13 +379,12 @@ class BioSim1D:
 
 
 
-    def set_all_uniform_concentrations(self, conc_list: Union[list, tuple], snapshot=True) -> None:
+    def set_all_uniform_concentrations(self, conc_list: Union[list, tuple]) -> None:
         """
         Set the concentrations of all chemical species at once, uniformly across all bins
 
-        :param conc_list:   List or tuple of concentration values for each of the chemical species
-        :param snapshot:    [OPTIONAL] DEPRECATED.  Being phased out.  If True (default), add to the history
-                                a snapshot of this state being set
+        :param conc_list:   List or tuple of concentration values for each of the chemical species,
+                                in their index order
         :return:            None
         """
         assert len(conc_list) == self.chem_data.number_of_chemicals(), \
@@ -351,9 +392,6 @@ class BioSim1D:
 
         for i, conc in enumerate(conc_list):
             self.set_uniform_concentration(chem_index=i, conc=conc)
-
-        if snapshot:    # TODO: phase out, for consistency with other similar methods
-            self.capture_snapshot(caption="Set concentration")  # Save this operation in the history (if enabled)
 
 
 
@@ -399,21 +437,21 @@ class BioSim1D:
             # If the chemical is being identified by name, look up its index
             chem_index = self.chem_data.get_index(chem_label)
         elif chem_index is None:
-            raise Exception("BioSim1D.set_species_conc(): must provide a `chem_label` or `chem_index`")
+            raise Exception("System1D.set_species_conc(): must provide a `chem_label` or `chem_index`")
         else:
             self.chem_data.assert_valid_chem_index(chem_index)
 
         assert (type(conc_list) == list) or (type(conc_list) == tuple) or (type(conc_list) == np.ndarray), \
-            f"BioSim1D.set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
+            f"System1D.set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
             f"the passed value was of type {type(conc_list)})"
 
         assert len(conc_list) == self.n_bins, \
-            f"BioSim1D.set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the bins " \
+            f"System1D.set_species_conc(): the argument `conc_list` must be a list of concentration values for ALL the bins " \
             f"(its length should be {self.n_bins}, rather than {len(conc_list)})"
 
         # Verify that none of the concentrations are negative
         assert min(conc_list) >= 0, \
-            f"BioSim1D.set_species_conc(): concentrations cannot be negative (values like {min(conc_list)} aren't permissible)"
+            f"System1D.set_species_conc(): concentrations cannot be negative (values like {min(conc_list)} aren't permissible)"
 
         # Update the system state
         self.system[chem_index] = conc_list
@@ -469,10 +507,10 @@ class BioSim1D:
         :return:            None
         """
         assert conc_left >= 0. and conc_right >= 0., \
-                    f"BioSim1D.inject_gradient(): the concentration values cannot be negative"
+                    f"System1D.inject_gradient(): the concentration values cannot be negative"
 
         assert self.n_bins > 1, \
-                    f"BioSim1D.inject_gradient(): minimum system size must be 2 bins"
+                    f"System1D.inject_gradient(): minimum system size must be 2 bins"
 
         species_index = self.chem_data.get_index(chem_label)
 
@@ -540,10 +578,10 @@ class BioSim1D:
         :return:                None
         """
         assert bias >= 0, \
-            f"BioSim1D.inject_bell_curve(): the value for the `bias` ({bias}) cannot be negative"
+            f"System1D.inject_bell_curve(): the value for the `bias` ({bias}) cannot be negative"
 
         assert amplitude >= 0, \
-            f"BioSim1D.inject_bell_curve(): the value for the `amplitude` ({amplitude}) cannot be negative"
+            f"System1D.inject_bell_curve(): the value for the `amplitude` ({amplitude}) cannot be negative"
 
         species_index = self.chem_data.get_index(chem_label)
 
@@ -562,22 +600,6 @@ class BioSim1D:
 
 
 
-    def assert_valid_bin(self, bin_address: int) -> None:
-        """
-        Raise an Exception if the given bin number isn't valid
-
-        :param bin_address: An integer that ought to be between 0 and (self.n_bins-1), inclusive
-        :return:            None
-        """
-        assert type(bin_address) == int, \
-            f"BioSim1D: the requested bin address ({bin_address}) is not an integer; its type is {type(bin_address)}"
-
-        if bin_address < 0 or bin_address >= self.n_bins:
-            raise Exception(f"BioSim1D: the requested bin address ({bin_address}) is out of bounds for the system size; "
-                            f"allowed range is [0-{self.n_bins-1}], inclusive")
-
-
-
 
 
     #####################################################################################################
@@ -589,7 +611,7 @@ class BioSim1D:
     #####################################################################################################
 
 
-    def chem_quantity(self, chem_label=None, chem_index=None):
+    def chem_quantity(self, chem_label=None, chem_index=None) -> float:
         """
         Return the total quantity, across all bins, of the given chemical
 
@@ -786,6 +808,60 @@ class BioSim1D:
 
 
 
+
+
+
+##########################################################################################
+
+class Membranes1D(System1D):
+    """
+    This class expands the underlying foundational System1D, to provide modeling of membranes (barriers)
+
+    * Only CLOSED membranes are modeled.
+
+    * Membrane exist at the boundary between System bins.
+
+    * A membrane is an ordered list of adjacent "sides".
+      The "sides" collectively encompass a portion of the System space, and trace the  boundary of the membrane.
+
+    * "Sides":
+        In 1D, the "sides" are points; in 2D, they are adjacent segments, and in 3D, adjacent rectangles.
+
+        In 2D and 3D, the "sides" cannot lie diagonally (slanted) across the System space; they all must follow
+        the directions of the axes (grid) of the System.
+
+        The "sides" cannot intersect, or even touch, with any other "side"
+        of the same membrane or of any other membrane.
+
+    * Positions of the "Sides":
+        In 1D, a membrane "side" is a point, identified by the coordinate of bin immediately to the right of it
+        (or, if at the rightmost edge of the System, by the next integer of the bin to its left.)
+        In 2D, a membrane "side" is a segment, defined by its endpoint.  Each endpoint is identified by the
+        coordinates of bin immediately to the right and above (in xy-coordinates)
+        In 3D, a membrane "side" is a rectangle, defined by 3 consecutive points.  Each point is identified by the
+        coordinates of bin immediately past it (in xyz-coordinates)
+    """
+
+
+    def __init__(self, n_bins :int, chem_data):
+
+        super().__init__(n_bins, chem_data=chem_data)    # Invoke the constructor of its parent class
+
+        self.membranes = []     # List of (closed) membranes in the system.
+                                # In 1D, a (closed) membrane is a pair of points,
+                                # identified by the index of the bin to their RIGHT side ("index after"),
+                                # in sorted order.
+                                # EXAMPLE:  [ (0, 8) , (17, 31) ]
+                                # All integers must be between 0 and self.n_bins, both inclusive
+
+        self.permeability = {}  # Dict mapping chemical labels to permeability.
+                                # If not listed, taken to be zero (unable to diffuse across membranes)
+                                # For now, permeability is the same for all membranes
+                                #   (i.e. a function of only the chemicals)
+
+
+
+
     def describe_state(self, concise=False) -> Union[pd.DataFrame, None]:
         """
         A simple printout of the state of the system, for now useful only for small systems.
@@ -829,16 +905,6 @@ class BioSim1D:
         return df
 
 
-
-
-
-    #####################################################################################################
-
-    '''                                    ~   MEMBRANES   ~                                          '''
-
-    def ________MEMBRANES________(DIVIDER):
-        pass        # Used to get a better structure view in IDEs
-    #####################################################################################################
 
     def uses_membranes(self) -> bool:
         """
@@ -923,12 +989,13 @@ class BioSim1D:
     def change_permeability(self, chem_label :str, permeability :float) -> None:
         """
 
-        :param chem_label:
-        :param permeability:
+        :param chem_label:  A string to identify the chemical of interest
+        :param permeability:The permeability of all membranes to that chemical
         :return:            None
         """
         #TODO: permeability value cannot exceed the value of diffusion
-        assert permeability >= 0, "change_permeability(): argument `permeability` must be a non-negative value"
+        assert permeability >= 0, \
+            "change_permeability(): argument `permeability` must be a non-negative value"
         self.permeability[chem_label] = permeability
 
 
@@ -985,193 +1052,115 @@ class BioSim1D:
 
 
 
+################################################################################################################
+
+class BioSim1D(Membranes1D):
+    """
+    1D simulations of diffusion and reactions,
+    with optional membranes
+    """
+
+    def __init__(self, n_bins :int, chem_data=None, reaction_handler=None):
+        """
+        Initialize all concentrations to zero.
+        Membranes, if present, need to be set later.
+
+        :param n_bins:          The number of compartments (bins) to use in the simulation
+
+        [IMPORTANT: At least one of the 2 following arguments MUST be provided]
+        :param chem_data:       [OPTIONAL] Object of class "ChemData";
+                                    if not specified, it will get extracted
+                                    from the "UniformCompartment" class (if passed to the next argument)
+        :param reaction_handler:[OPTIONAL] Object of class "UniformCompartment";
+                                    if not specified, it'll get instantiated here
+        """
+        #TODO?: maybe allow optionally passing n_species in lieu of chem_data,
+        #       (or passing the names, like with UniformCompartment?)
+        #       and let it create and return the "Chemicals" object in that case
+
+        self.debug = False
+
+        self.reactions = None   # Object of type "Reactions", with info on all the reactions
+
+        self.reaction_dynamics = None   # Object of class "UniformCompartment"
+                                        # TODO: for now just 1 object is instantiated;
+                                        #       in the future, it might be 1 per bin (or bin cluster)
+
+
+        self.delta_diffusion = None # Buffer for the concentration changes from diffusion step (n_species x n_bins)
+        self.delta_reactions = None # Buffer for the concentration changes from reactions step (n_species x n_bins)
+
+        self.sealed = True                  # If True, no exchange with the outside;
+                                            #   if False (NOT currently supported), immersed in a "bath"
+
+        # Only applicable if "sealed" is False:
+        self.bath_concentrations = None      # A NumPy array for each species
+        self.container_diffusion = None      # A NumPy array for each species: diffusion rate in/out of the container
+
+        self.time_step_threshold = 0.33333  # This is used to set an Upper Bound on the single time steps
+                                            #   in the diffusion process.
+                                            #   See explanation in file overly_large_single_timesteps.py
+
+        self.history = CollectionTabular()  # TODO: phase out in favor of the new self.conc_history
+                                            # To store user-selected snapshots of (parts of) the system,
+                                            #   whenever requested by the user.
+                                            #   Note that we're using the "tabular" format - friendly to Pandas
+
+        self.conc_history = HistoryBinConcentration(active=False)   # Note: this is the newer history-keeping approach
+
+
+        assert chem_data is not None or reaction_handler is not None, \
+            "BioSim1D() instantiation: at least one of the arguments `chem_data` or `reaction_handler` must be set"
+            # TODO: maybe drop this requirement?  And then set it later on?
+
+        if not chem_data:
+            chem_data = reaction_handler.chem_data
+
+        if reaction_handler:
+            self.reaction_dynamics = reaction_handler
+        else:
+            self.reaction_dynamics = UniformCompartment(chem_data=chem_data)
+
+        self.reactions = self.reaction_dynamics.get_reactions()
+
+
+        super().__init__(n_bins, chem_data=chem_data)    # Invoke the constructor of its parent class
+
+
+
+
+
+
+
     #####################################################################################################
 
-    '''                                    ~   SPATIAL ELEMENTS   ~                                           '''
+    '''                                    ~   ________REACTIONS________   ~                                           '''
 
-    def ________SPATIAL_ELEMENTS________(DIVIDER):
+    def ________REACTIONS________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def set_dimensions(self, length) -> None:
+
+    def get_reactions(self):
         """
-        Set the overall length of the system.
-        Doing so, will permit to convert bin numbers to positional values
+        Return all the associated reactions
 
-        :param length:
-        :return:
+        :return:    Object ot type "Reactions" (with data about all the reactions)
         """
-        assert (type(length) == float) or (type(length) == int), "set_dimensions(): length must be a number"
-        assert length > 0, "set_dimensions(): length must be positive"
-
-        self.system_length = length
-        self.global_Dx = length / (self.n_bins-1)
+        return self.reactions
 
 
 
-    def x_coord(self, bin_address):
+    def get_reaction_handler(self, bin_address=0):
         """
-        Return the x coordinate of the middle of the specified bin.
-        By convention, for the leftmost bin, it's zero,
-        and for the rightmost, it's the overall length of the system
+        Return the object that manages the reactions.
+        Note that for now just 1 object is present;
+        in the future, it might be 1 per bin (or per bin cluster)
+
+        :param bin_address: CURRENTLY NOT USED
+        :return:            Object ot type "UniformCompartment"
         """
-        assert self.system_length, "x_coord(): must first call set_dimensions()"
-
-        return bin_address * self.global_Dx
-
-
-
-    def increase_spatial_resolution(self, factor:int) -> None:
-        """
-        Increase the spatial resolution of the system by cloning and repeating
-        each bin, by the specified number of times.
-        Replace the System's internal state
-        (note that the number of bins will increase by the requested factor)
-
-        EXAMPLE: if the (2-chemicals) system is
-                        [[11. 12. 13.]
-                         [ 5. 15. 25.]]
-                and factor=2, then the result will be
-                        [[11. 11. 12. 12. 13. 13.]
-                         [ 5.  5. 15. 15. 25. 25.]]
-
-        :param factor:  Number of bins into which to split each bin (replicating their concentration values)
-        :return:        None
-        """
-        assert type(factor) == int, \
-            "increase_spatial_resolution(): The argument `factor` must be an integer"
-        new_state = np.repeat(self.system, factor, axis=1)
-        self.replace_system(new_state)
-
-
-
-    def double_spatial_resolution_linear(self) -> None:
-        """
-        Increase the spatial resolution of the system by inserting between bins
-        their average value (of concentrations, for every chemical species.)
-        Replace the System's internal state
-        (note that if the number of bins is initially N, it'll become 2N-1).
-        If the system has fewer than 2 bins, an Exception will be raised.
-
-        EXAMPLE: if the (2-chemicals) system is
-                        [[11. 12. 13.]
-                         [ 5. 15. 25.]]
-                then the result will be
-                        [[11.  11.5 12.  12.5 13. ]
-                         [ 5.  10.  15.  20.  25. ]]
-
-        :return:    None
-        """
-        assert self.n_bins >= 2, \
-            "double_spatial_resolution_linear(): function can only be used if the system contains at least 2 bins"
-
-        new_state = np.zeros((self.n_species, self.n_bins * 2 - 1), dtype=float)
-        #print(new_state)
-
-        for i in range(self.n_bins-1):
-            two_col = self.system[ : , i:i+2 ]
-            avg_col = two_col.mean(axis=1)
-
-            #print("two_col: ", two_col)
-            #print("avg_col: ", avg_col)
-
-            new_state[ : , 2*i] = two_col[ : , 0]
-            new_state[ : , 2*i+1] = avg_col
-
-        new_state[ : , -1] = self.system[ : , -1]
-
-        self.replace_system(new_state)
-
-
-
-    def decrease_spatial_resolution(self, factor:int) -> None:
-        """
-
-        TODO: eliminate the restriction that the number of bins must be a multiple of the given factor
-
-        EXAMPLE: if the system is
-                        [[10., 20., 30., 40., 50., 60.]
-                         [ 2., 8.,   5., 15., 4.,   2.]]
-                and factor=2, then the result will be
-                        [[15., 35., 55.]
-                         [ 5., 10.,  3.]]
-
-        :param factor:
-        :return:
-        """
-        assert type(factor) == int, "The argument `factor` must be an integer"
-        assert self.n_bins % factor == 0, f"The number of bins (currently {self.n_bins}) must be a multiple of the requested scaling factor"
-
-        reduced_n_bins = int(self.n_bins / factor)
-        # The result matrix will have the same number of chemical species, but fewer bins
-        new_state = np.zeros((self.n_species, reduced_n_bins), dtype=float)
-
-        for i in range(reduced_n_bins):
-            start_col = factor * i      # The start column will initially be 0, and will get incremented by factor
-            col_group = self.system[ : , start_col:start_col+factor] # Extract a submatrix containing the number of columns specified by "factor",
-                                                                    # starting with the column specified by start_col
-            compressed_col_group = np.sum(col_group, axis=1, keepdims=True) / factor    # Create a single column that is the average of the columns in the group
-            new_state[:, [i]] = compressed_col_group                                       # Store the newly-computed column of averages in the appropriate place
-                                                                                        # in the result matrix
-        self.replace_system(new_state)
-
-
-
-    def smooth_spatial_resolution(self) -> None:
-        """
-        EXAMPLE: if the system is
-                        [[10., 20., 30.]
-                         [ 2., 8.,   4.]]
-                then the result will be
-                        [[10., 15., 20., 25., 30.]
-                         [ 2.,  5.,  8.,  6.,  4.]]
-
-        :return:
-        """
-        n_bins = self.n_bins
-        new_n_bins = n_bins * 2 - 1     # The final number of bins
-        new_state = np.zeros((self.n_species, new_n_bins), dtype=float)
-
-        for start_col in range(n_bins-1):                           # The start column will be between 0 and (self.n_bins-2), inclusive
-            col_group = self.system[ : , start_col:start_col+2]      # Extract a submatrix containing 2 columns,
-                                                                    # starting with the one in position start_col
-            avg_col = np.sum(col_group, axis=1, keepdims=True) / 2. # Create a single column that is the average of the columns in the group
-
-            new_state[:, [2*start_col]] = self.system[ : , start_col:start_col+1]   # Set one column, from the first column in the group
-            new_state[:, [2*start_col+1]] = avg_col                                # Set the next column with the newly-computed column of averages
-
-
-        new_state[ : , -1:] = self.system[ : , -1:]                 # Set the last column of result to the last column of self.system
-
-        self.replace_system(new_state)
-
-
-
-
-
-    #####################################################################################################
-
-    '''                                    ~   UTILITIES   ~                                          '''
-
-    def ________UTILITIES________(DIVIDER):
-        pass        # Used to get a better structure view in IDEs
-    #####################################################################################################
-
-    def check_mass_conservation(self, expected :float, chem_label=None, chem_index=None) -> bool:
-        """
-        Check whether the sum of all the concentrations of the specified chemical,
-        across all bins, adds up to the passed value
-
-        :param expected:    Value that the sum of all the bin concentrations of the specified chemical should add up to
-        :param chem_label:  String with the label to identify the chemical of interest
-        :param chem_index:  Integer to identify the chemical of interest.
-                                Cannot specify both `chem_label` and `chem_index`
-
-        :return:
-        """
-        arr = self.system_snapshot_arr(chem_label=chem_label, chem_index=chem_index)
-        total = np.sum(arr)
-        return np.allclose(expected, total)
+        return self.reaction_dynamics
 
 
 
@@ -1199,6 +1188,38 @@ class BioSim1D:
         #TODO: put together a version for 2D
         return self.get_reaction_handler().is_in_equilibrium(conc=self.bin_snapshot(bin_address),
                                                              rxn_index=rxn_index, tolerance=tolerance, explain=explain)
+
+
+
+
+
+    #####################################################################################################
+
+    '''                                    ~   UTILITIES   ~                                          '''
+
+    def ________UTILITIES________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+    def reset_system(self) -> None:
+        """
+        WARNING - THIS IS VERY PARTIAL.
+
+        :return:    None
+        """
+        # TODO: expand, or drop (not sure if really needed anymore)
+        self.system = None
+        self.system_earlier = None
+        self.chem_data = None
+        self.reaction_dynamics = None
+        self.history = None
+
+        self.n_bins = 0
+        self.system_length = None
+        self.global_Dx = 1
+        self.system_time = 0
+
+        self.delta_reactions = None
 
 
 
@@ -1342,7 +1363,7 @@ class BioSim1D:
         :param delta_x:         Distance between consecutive bins
         :param algorithm:          (Optional) code specifying the method to use to solve the diffusion equation.
                                     Currently available options: "5_1_explicit"
-
+        :param to_equilibrium:
         :return:                A dictionary with data about the status of the operation
                                     "steps":        the number of steps that were run
                                     "system time":  the system time at the end of the operation
@@ -1412,17 +1433,21 @@ class BioSim1D:
 
         # Loop over all the chemical species in the system
         for chem_index in range(self.n_species):
-            # A 1-D Numpy array with the CHANGE in concentrations for the given chemical species across all bins
-            increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin;
-                                                                    # all the various delta concentrations will go here
+            diff_obj = Diffusion1D(n_bins=self.n_bins, membranes=self.membranes)    # TODO: move out of loop, after a code tweak
 
             diff = self.chem_data.get_diffusion_rate(chem_index=chem_index)     # The diffusion rate of this chemical
+            chem_label = self.chem_data.get_label(chem_index)
+            permeability = self.permeability.get(chem_label)
+
+            # Compute the "increment vector", a 1-D Numpy array with the CHANGE in concentrations for the given chemical species across all bins
             if algorithm is None:
-                self._diffuse_step_single_chem_3_1_stencil(time_step=time_step, diff=diff, increment_vector=increment_vector,
-                                                           chem_index=chem_index, delta_x=delta_x)
+                increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=time_step, diff=diff,
+                                                                     permeability=permeability, delta_x=delta_x,
+                                                                     conc_array=self.system_snapshot_arr(chem_index=chem_index))
             elif algorithm == "5_1_explicit":
-                self._diffuse_step_single_chem_5_1_stencil(time_step=time_step, diff=diff, increment_vector=increment_vector,
-                                                           chem_index=chem_index, delta_x=delta_x)
+                increment_vector = diff_obj.diffuse_step_5_1_stencil(time_step=time_step, diff=diff,
+                                                                     delta_x=delta_x,
+                                                                     conc_array=self.system_snapshot_arr(chem_index=chem_index))
             else:
                 raise Exception(f"diffuse_step(): unknown method: `{algorithm}`")
 
@@ -1430,248 +1455,6 @@ class BioSim1D:
 
             # For each bin, update the concentrations from the buffered increments
             self.delta_diffusion[chem_index] = increment_vector      # Vector operation to a row of the matrix delta_diffusion
-
-
-
-    def _diffuse_step_single_chem_3_1_stencil(self, time_step :float, diff :float,
-                                              increment_vector, chem_index=0, delta_x=1) -> None:
-        """
-        Note: this is one of alternative methods to do this computation.
-
-        Diffuse the specified single chemical species, for the given small time step, across all bins,
-        and set the argument `increment_vector`, containing 1-D array of the changes in concentration ("Delta concentration")
-        for the given species across all bins.
-
-        IMPORTANT: the actual system concentrations are NOT changed.
-
-        We're assuming an isolated environment, with nothing diffusing thru the outer "system walls"
-
-        This approach is based on a "3+1 stencil", aka "Explicit Forward-Time Centered Space".
-        EXPLANATION:  https://life123.science/diffusion
-
-        Note: the system must contain at least 2 bins, or an error will result.
-
-        :param time_step:   Delta time over which to carry out this single diffusion step;
-                                if too large, an Exception will be raised.
-        :param diff:        Diffusion rate of the chemical of interest
-        :param chem_index:  Integer index of the above chemical
-        :param delta_x:     Spatial distance between consecutive bins
-
-        :return:            None.  The `increment_vector` argument gets set
-        """
-        #print(f"Diffusing species # {species_index}")
-
-        assert not self.is_excessive(time_step, diff, delta_x), \
-            f"diffuse_step_single_species(): Excessive large time_step ({time_step}). " \
-            f"Should be < {self.max_time_step(diff, delta_x)}"
-
-
-        max_bin_number = self.n_bins - 1    # Bin numbers range from 0 to max_bin_number, inclusive
-
-
-        # We're using the term "Corrected Diffusion" (NOT a standard term) for the quantity:
-        #   diffusion * time_step / (delta_x**2)
-        corrected_diff = diff * time_step
-        if delta_x != 1:
-            corrected_diff /= (delta_x**2)
-
-
-        chem_label = self.chem_data.get_label(chem_index)
-        permeability = self.permeability.get(chem_label)
-        # We're using the term "Corrected Permeability" (NOT a standard term) for the quantity:
-        #   permeability * time_step / delta_x       [note there's no squaring in the delta_x for permeability]
-        if permeability is None:
-            corrected_perm = 0                  # Impermeable membrane
-        else:
-            corrected_perm = permeability * time_step
-            if delta_x != 1:
-                corrected_perm /= delta_x       # TODO: to further scrutinize
-
-
-
-        # LOOP OVER ALL THE BINS IN THE SYSTEM
-        # Carry out a 1-D convolution operation, with a tile of size 3 (or 2 if only 2 bins)
-
-        # For starters, process the LEFTMOST bin
-        current_conc = self.system[chem_index , 0]
-        C_right = self.system[chem_index , 1]       # There's no C_left
-
-        if self.membrane_on_right(0):
-            delta_conc = corrected_perm * (C_right - current_conc)
-        else:
-            delta_conc = corrected_diff * (C_right - current_conc)
-
-        increment_vector[0] = delta_conc
-
-
-        # Now process all the non-edge bins
-        for i in range(1, max_bin_number):    # Bin number, ranging from 0 to max_bin_number, inclusive
-            #print(f"Processing bin number {i}")
-            current_conc = self.system[chem_index , i]   # Concentration in the center of the convolution tile
-            C_left = self.system[chem_index , i - 1]
-            C_right = self.system[chem_index , i + 1]
-
-            # Contribution (possibly negative) coming in from the bin to its left
-            if self.membrane_on_left(i):
-                delta_conc = corrected_perm * (C_left  - current_conc)
-            else:
-                delta_conc = corrected_diff * (C_left  - current_conc)
-
-            # Contribution (possibly negative) coming in from the bin to its right
-            if self.membrane_on_right(i):
-                delta_conc += corrected_perm * (C_right - current_conc)
-            else:
-                delta_conc += corrected_diff * (C_right - current_conc)
-
-            '''
-            # TODO: if no membrane on either side (typical scenario), just do 1 multiplication:
-                delta_conc = corrected_diff * \
-                                (C_left  - current_conc
-                               + C_right - current_conc)
-            '''
-            #print(f"i: {i}, delta_conc: {delta_conc}")
-            increment_vector[i] = delta_conc
-
-
-        # Finally, process the RIGHTMOST bin
-        current_conc = self.system[chem_index , max_bin_number]
-        C_left = self.system[chem_index , max_bin_number-1]           # There's no C_right
-
-        if self.membrane_on_left(max_bin_number):
-            delta_conc = corrected_perm * (C_left - current_conc)
-        else:
-            delta_conc = corrected_diff * (C_left - current_conc)
-
-
-        increment_vector[max_bin_number] = delta_conc
-
-        
-
-    def _diffuse_step_single_chem_5_1_stencil(self, time_step: float, diff :float,
-                                              increment_vector, chem_index=0, delta_x=1) -> None:
-        """
-        Note: this is one of alternative methods to do this computation.
-
-        Similar to diffuse_step_single_species(), but using a "5+1 stencil";
-        i.e. spatial derivatives are turned into finite elements using 5 adjacent bins instead of 3.
-
-        For more info, see diffuse_step_single_species()
-
-        IMPORTANT: the actual system concentrations are NOT changed.
-
-        :param time_step:   Delta time over which to carry out this single diffusion step;
-                                if too large, an Exception will be raised.
-        :param diff:        Diffusion rate of the chemical of interest
-        :param chem_index:  Integer index of the above chemical
-        :param delta_x:     Spatial distance between consecutive bins
-
-        :return:            None.  The `increment_vector` argument gets set
-        """
-
-        assert self.n_bins >= 5, \
-            f"For very small number of bins ({self.n_bins}), use a method other than '5_1_explicit'"
-
-        assert not self.uses_membranes(), \
-            "When membranes are present, use a method other than '5_1_explicit'"
-
-
-        # TODO: this Upper Bound is based on a *different* method, and should be made specific to this method;
-        #       maybe fall back to the Von Neumann criterion
-        #assert not self.is_excessive(time_step, diff, delta_x), \
-            #f"Excessive large time_fraction. Should be < {self.max_time_step(diff, delta_x)}"
-
-
-        # Carry out a 1-D convolution operation, with a tile of size 5
-
-        max_bin_number = self.n_bins - 1     # Bin numbers range from 0 to max_bin_number, inclusive
-
-
-        # We're using the term "Corrected Diffusion" (NOT a standard term) for the quantity:
-        #   diffusion * time_step / (delta_x**2)
-        corrected_diff = diff * time_step
-        if delta_x != 1:
-            corrected_diff /= (delta_x**2)
-
-        #print("corrected_diff: ", corrected_diff)
-
-        # The coefficients for the "Central Differences" for the spatial 2nd partial derivative,
-        #   to "accuracy 4" (using 5 term: 2 left neighbors and 2 right neighbors)
-        C2 = -1/12
-        C1 = 4/3
-        C0 = - 2.5
-
-        leftmost = self.system[chem_index , 0]
-        rightmost = self.system[chem_index , max_bin_number]
-
-        for i in range(self.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
-            #print(f"Processing bin number {i}")
-            C_i = self.system[chem_index , i]
-
-            # The boundary conditions, at left and right edges of the system,
-            # state that the flux is zero across the boundaries
-            # "zero-flux (Neumann) boundary condition"
-            if i == 0:                     # Special cases for the first 2 bins
-                C_i_minus_2 = leftmost
-                C_i_minus_1 = leftmost
-            elif i == 1:
-                C_i_minus_2 = leftmost
-                C_i_minus_1 = self.system[chem_index , i - 1]
-            else:
-                C_i_minus_2 = self.system[chem_index , i - 2]
-                C_i_minus_1 = self.system[chem_index , i - 1]
-
-            if i == max_bin_number:      # Special cases for the last 2 bins
-                C_i_plus_1 = rightmost
-                C_i_plus_2 = rightmost
-            elif i == max_bin_number - 1:
-                C_i_plus_1 = self.system[chem_index , i + 1]
-                C_i_plus_2 = rightmost
-            else:
-                C_i_plus_1 = self.system[chem_index , i + 1]
-                C_i_plus_2 = self.system[chem_index , i + 2]
-
-            #print("The 5 bins under consideration: ", C_i_minus_2, C_i_minus_1, C_i, C_i_plus_1, C_i_plus_2)
-            # Compute the "Central Differences" for the 2nd partial derivative, to "accuracy 4"
-            increment_vector[i] = corrected_diff * \
-                                      (  C2 * C_i_minus_2
-                                       + C1 * C_i_minus_1
-                                       + C0 * C_i
-                                       + C1 * C_i_plus_1
-                                       + C2 * C_i_plus_2)
-
-
-
-    def is_excessive(self, time_step, diff_rate, delta_x) -> bool:
-        """
-        Use a loose heuristic to determine if the requested time step is too long,
-        given the diffusion rate and delta_x.
-        This is also based on the "Von Neumann stability analysis"
-        (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
-
-        :param time_step:
-        :param diff_rate:
-        :param delta_x:
-        :return:
-        """
-        if time_step > self.max_time_step(diff_rate, delta_x):
-            return True
-        else:
-            return False
-
-
-
-    def max_time_step(self, diff_rate, delta_x) -> float:
-        """
-        Determine a reasonable upper bound on the time step, for the given diffusion rate and delta_x
-        This is also based on the "Von Neumann stability analysis"
-        (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
-
-        :param diff_rate:   The diffusion rate of the chemical under consideration
-        :param delta_x:     The spatial dimension of the bin
-        :return:            A reasonably safe max length for a single time step of the simulation,
-                                to try to steer clear of instabilities
-        """
-        return delta_x**2 * self.time_step_threshold/diff_rate
 
 
 
@@ -1876,7 +1659,7 @@ class BioSim1D:
             fig = px.line(data_frame=self.system_snapshot(), y=chem_labels,
                           title= title,
                           color_discrete_sequence = colors,
-                          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})                        
+                          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
 
         if show:
             fig.show()
@@ -1933,7 +1716,7 @@ class BioSim1D:
 
     def single_species_heatmap(self, species_index: int, heatmap_pars: dict, graphic_component, header=None) -> None:
         """
-        DEPRECATED!
+        TODO: DEPRECATED!
 
         Send to the HTML log, a heatmap representation of the concentrations of
         the single requested species.  Note: if using in Jupyterlab, this image will NOT be displayed there
@@ -1987,7 +1770,7 @@ class BioSim1D:
 
     def single_species_line_plot(self, species_index: int, plot_pars: dict, graphic_component, header=None) -> None:
         """
-        DEPRECATED
+        TODO: DEPRECATED
 
         Send to the HTML log, a line plot representation of the concentrations of
         the single requested species.  To plot more than 1 species, use line_plot() instead
@@ -2166,6 +1949,7 @@ class BioSim1D:
 
 
 
+
     #########################################################################
     #                                                                       #
     #                       FOURIER ANALYSIS                                #
@@ -2247,3 +2031,287 @@ class BioSim1D:
             return df.nlargest(n=n_largest, columns="Relative Amplitude")
 
         return df
+
+
+
+
+
+############################################################################################
+
+class Diffusion1D:
+    """
+    Module to model diffusion in 1D systems with or without membranes.
+
+    NOT meant for the end user!
+    """
+
+    def __init__(self, n_bins :int, membranes=None):
+        """
+
+        :param n_bins:
+        :param membranes:
+        """
+
+        self.n_bins = n_bins
+
+        self.time_step_threshold = 0.33333  # This is used to set an Upper Bound on the single time steps
+                                            #   in the diffusion process.
+                                            #   See explanation in file overly_large_single_timesteps.py
+
+        # A 1-D Numpy array with the CHANGE in concentrations for the given chemical species across all bins
+        self.increment_vector = np.zeros(self.n_bins, dtype=float)  # One element per bin;
+                                                                    # all the various delta concentrations will go here
+        # TODO: move self.increment_vector to be local variable inside the various functions using it; then
+        #       the object can be re-used!  code tweak
+
+        self.membranes = membranes      # Object of class "Membranes1D"
+
+
+
+
+    def is_excessive(self, time_step, diff_rate, delta_x) -> bool:
+        """
+        Use a loose heuristic to determine if the requested time step is too long,
+        given the diffusion rate and delta_x.
+        This is also based on the "Von Neumann stability analysis"
+        (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
+
+        :param time_step:
+        :param diff_rate:
+        :param delta_x:
+        :return:
+        """
+        if time_step > self.max_time_step(diff_rate, delta_x):
+            return True
+        else:
+            return False
+
+
+
+    def max_time_step(self, diff_rate, delta_x) -> float:
+        """
+        Determine a reasonable upper bound on the time step, for the given diffusion rate and delta_x
+        This is also based on the "Von Neumann stability analysis"
+        (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
+
+        :param diff_rate:   The diffusion rate of the chemical under consideration
+        :param delta_x:     The spatial dimension of the bin
+        :return:            A reasonably safe max length for a single time step of the simulation,
+                                to try to steer clear of instabilities
+        """
+        return delta_x**2 * self.time_step_threshold/diff_rate
+
+
+
+    def diffuse_step_3_1_stencil(self, time_step :float, diff :float, conc_array :np.ndarray,
+                                 permeability=None, delta_x=1) -> np.ndarray:
+        """
+        Note: this is one of alternative methods to do this computation.
+
+        Diffuse the specified single chemical species, for the given small time step, across all bins,
+        and set the argument `increment_vector`, containing 1-D array of the changes in concentration ("Delta concentration")
+        for the given species across all bins.
+
+        IMPORTANT: the actual system concentrations are NOT changed.
+
+        We're assuming an isolated environment, with nothing diffusing thru the outer "system walls"
+
+        This approach is based on a "3+1 stencil", aka "Explicit Forward-Time Centered Space".
+        EXPLANATION:  https://life123.science/diffusion
+
+        Note: the system must contain at least 2 bins, or an error will result.
+
+        :param time_step:   Delta time over which to carry out this single diffusion step;
+                                if too large, an Exception will be raised.
+        :param diff:        Diffusion rate of the chemical of interest
+        :param permeability:Permeability of the chemical of interest
+        :param conc_array:  1D Numpy array of concentrations in the bins, for the chemical of interest
+        :param delta_x:     Spatial distance between consecutive bins
+
+        :return:            The "increment vector", a 1-D Numpy array with the CHANGE in concentrations
+                            across all bins, caused by the diffusion step
+        """
+        #print(f"Diffusing species # {species_index}")
+
+        assert not self.is_excessive(time_step, diff, delta_x), \
+            f"diffuse_step_single_species(): Excessive large time_step ({time_step}). " \
+            f"Should be < {self.max_time_step(diff, delta_x)}"
+
+
+        max_bin_number = self.n_bins - 1    # Bin numbers range from 0 to max_bin_number, inclusive
+
+
+        # We're using the term "Corrected Diffusion" (NOT a standard term) for the quantity:
+        #   diffusion * time_step / (delta_x**2)
+        corrected_diff = diff * time_step
+        if delta_x != 1:
+            corrected_diff /= (delta_x**2)
+
+
+        # We're using the term "Corrected Permeability" (NOT a standard term) for the quantity:
+        #   permeability * time_step / delta_x       [note there's no squaring in the delta_x for permeability]
+        if permeability is None:
+            corrected_perm = 0                  # Impermeable membrane
+        else:
+            corrected_perm = permeability * time_step
+            if delta_x != 1:
+                corrected_perm /= delta_x       # TODO: to further scrutinize
+
+
+
+        # LOOP OVER ALL THE BINS IN THE SYSTEM
+        # Carry out a 1-D convolution operation, with a tile of size 3 (or 2 if only 2 bins)
+
+        # For starters, process the LEFTMOST bin
+        current_conc = conc_array[0]
+        C_right = conc_array[1]       # There's no C_left
+
+        if self.membranes and self.membranes.membrane_on_right(0):
+            delta_conc = corrected_perm * (C_right - current_conc)
+        else:
+            delta_conc = corrected_diff * (C_right - current_conc)
+
+        self.increment_vector[0] = delta_conc
+
+
+        # Now process all the non-edge bins
+        for i in range(1, max_bin_number):    # Bin number, ranging from 0 to max_bin_number, inclusive
+            #print(f"Processing bin number {i}")
+            current_conc = conc_array[i]   # Concentration in the center of the convolution tile
+            C_left = conc_array[i - 1]
+            C_right = conc_array[i + 1]
+
+            # Contribution (possibly negative) coming in from the bin to its left
+            if self.membranes and self.membranes.membrane_on_left(i):
+                delta_conc = corrected_perm * (C_left  - current_conc)
+            else:
+                delta_conc = corrected_diff * (C_left  - current_conc)
+
+            # Contribution (possibly negative) coming in from the bin to its right
+            if self.membranes and self.membranes.membrane_on_right(i):
+                delta_conc += corrected_perm * (C_right - current_conc)
+            else:
+                delta_conc += corrected_diff * (C_right - current_conc)
+
+            '''
+            # TODO: if no membrane on either side (typical scenario), just do 1 multiplication:
+                delta_conc = corrected_diff * \
+                                (C_left  - current_conc
+                               + C_right - current_conc)
+            '''
+            #print(f"i: {i}, delta_conc: {delta_conc}")
+            self.increment_vector[i] = delta_conc
+
+
+        # Finally, process the RIGHTMOST bin
+        current_conc = conc_array[max_bin_number]
+        C_left = conc_array[max_bin_number-1]           # There's no C_right
+
+        if self.membranes and self.membranes.membrane_on_left(max_bin_number):
+            delta_conc = corrected_perm * (C_left - current_conc)
+        else:
+            delta_conc = corrected_diff * (C_left - current_conc)
+
+
+        self.increment_vector[max_bin_number] = delta_conc
+
+        return  self.increment_vector
+
+
+
+    def diffuse_step_5_1_stencil(self, time_step: float, diff :float,
+                                conc_array, delta_x=1) -> np.ndarray:
+        """
+        Note: this is one of alternative methods to do this computation.
+
+        Similar to diffuse_step_single_species(), but using a "5+1 stencil";
+        i.e. spatial derivatives are turned into finite elements using 5 adjacent bins instead of 3.
+
+        For more info, see diffuse_step_single_species()
+
+        IMPORTANT: the actual system concentrations are NOT changed.
+
+        :param time_step:   Delta time over which to carry out this single diffusion step;
+                                if too large, an Exception will be raised.
+        :param diff:        Diffusion rate of the chemical of interest
+        :param conc_array:  1D Numpy array of concentrations in the bins, for the chemical of interest
+        :param delta_x:     Spatial distance between consecutive bins
+
+        :return:            The "increment vector", a 1-D Numpy array with the CHANGE in concentrations
+                            across all bins, caused by the diffusion step
+        """
+
+        assert self.n_bins >= 5, \
+            f"For very small number of bins ({self.n_bins}), use a method other than '5_1_explicit'"
+
+        if self.membranes:
+            assert not self.membranes.uses_membranes(), \
+                "When membranes are present, use a method other than '5_1_explicit'"
+
+
+        # TODO: this Upper Bound is based on a *different* method, and should be made specific to this method;
+        #       maybe fall back to the Von Neumann criterion
+        #assert not self.is_excessive(time_step, diff, delta_x), \
+            #f"Excessive large time_fraction. Should be < {self.max_time_step(diff, delta_x)}"
+
+
+        # Carry out a 1-D convolution operation, with a tile of size 5
+
+        max_bin_number = self.n_bins - 1     # Bin numbers range from 0 to max_bin_number, inclusive
+
+
+        # We're using the term "Corrected Diffusion" (NOT a standard term) for the quantity:
+        #   diffusion * time_step / (delta_x**2)
+        corrected_diff = diff * time_step
+        if delta_x != 1:
+            corrected_diff /= (delta_x**2)
+
+        #print("corrected_diff: ", corrected_diff)
+
+        # The coefficients for the "Central Differences" for the spatial 2nd partial derivative,
+        #   to "accuracy 4" (using 5 term: 2 left neighbors and 2 right neighbors)
+        C2 = -1/12
+        C1 = 4/3
+        C0 = - 2.5
+
+        leftmost = conc_array[0]
+        rightmost = conc_array[max_bin_number]
+
+        for i in range(self.n_bins):    # Bin number, ranging from 0 to max_bin_number, inclusive
+            #print(f"Processing bin number {i}")
+            C_i = conc_array[i]
+
+            # The boundary conditions, at left and right edges of the system,
+            # state that the flux is zero across the boundaries
+            # "zero-flux (Neumann) boundary condition"
+            if i == 0:                     # Special cases for the first 2 bins
+                C_i_minus_2 = leftmost
+                C_i_minus_1 = leftmost
+            elif i == 1:
+                C_i_minus_2 = leftmost
+                C_i_minus_1 = conc_array[i - 1]
+            else:
+                C_i_minus_2 = conc_array[i - 2]
+                C_i_minus_1 = conc_array[i - 1]
+
+            if i == max_bin_number:      # Special cases for the last 2 bins
+                C_i_plus_1 = rightmost
+                C_i_plus_2 = rightmost
+            elif i == max_bin_number - 1:
+                C_i_plus_1 = conc_array[i + 1]
+                C_i_plus_2 = rightmost
+            else:
+                C_i_plus_1 = conc_array[i + 1]
+                C_i_plus_2 = conc_array[i + 2]
+
+            #print("The 5 bins under consideration: ", C_i_minus_2, C_i_minus_1, C_i, C_i_plus_1, C_i_plus_2)
+            # Compute the "Central Differences" for the 2nd partial derivative, to "accuracy 4"
+            self.increment_vector[i] = corrected_diff * \
+                                      (  C2 * C_i_minus_2
+                                       + C1 * C_i_minus_1
+                                       + C0 * C_i
+                                       + C1 * C_i_plus_1
+                                       + C2 * C_i_plus_2)
+
+
+        return self.increment_vector

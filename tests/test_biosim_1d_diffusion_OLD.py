@@ -1,5 +1,5 @@
 # These are tests specifically for diffusion in 1D;
-# for general tests of 1D system, see test_biosim_1d.py
+# for general tests of 1D system, see test_biosim_1d_OLD.py
 
 
 import pytest

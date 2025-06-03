@@ -1,12 +1,11 @@
 # These are tests specifically for diffusion in 1D;
-# for general tests of 1D system, see test_biosim_1d.py
+# for general tests of 1D system, see "test_biosim_1d.py",
+# and for test of the Diffusion1D class, see "test_diffusion_1d.py"
 
 
 import pytest
 import numpy as np
-from scipy.ndimage import shift
-#from life123 import BioSim1D
-from life123.bio_sim_1d_experimental import BioSim1D_NEW, Diffusion1D
+from life123 import BioSim1D, Diffusion1D
 from life123 import ChemData as chem
 from life123 import Numerical as num
 from life123 import CollectionArray
@@ -18,7 +17,7 @@ from life123 import CollectionArray
 def test_diffuse_step_1():
     # Test with just 1 bin
     chem_data = chem(names="A")
-    bio = BioSim1D_NEW(n_bins=1, chem_data=chem_data)
+    bio = BioSim1D(n_bins=1, chem_data=chem_data)
 
     bio.set_uniform_concentration(chem_index=0, conc=8.0)
 
@@ -36,7 +35,7 @@ def test_diffuse_step_1():
 def test_diffuse_step_4():
     # Multiple diffusion steps, with 2 bins
     chem_data = chem(diffusion_rates=[1.])
-    bio = BioSim1D_NEW(n_bins=2, chem_data=chem_data)
+    bio = BioSim1D(n_bins=2, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=10.)
     bio.describe_state()
@@ -58,7 +57,7 @@ def test_diffuse_step_4():
 def test_diffuse_step_5():
     # Multiple diffusion steps, with 3 bins, and a large time step
     chem_data = chem(diffusion_rates=[.5])
-    bio = BioSim1D_NEW(n_bins=3, chem_data=chem_data)
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin_address=1, chem_index=0, delta_conc=10.)
     #bio.describe_state()
@@ -80,7 +79,7 @@ def test_diffuse_step_5():
 def test_diffuse_step_6():
     # Multiple diffusion steps, with 5 bins, and a large time step
     chem_data = chem(diffusion_rates=0.5)
-    bio = BioSim1D_NEW(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=10.)
     #bio.describe_state()
@@ -102,7 +101,7 @@ def test_diffuse_step_7():
     # Multiple diffusion steps, with 5 bins,
     # 1/2 the time step of the previous test, and double the duration
     chem_data = chem(diffusion_rates=[.5])
-    bio = BioSim1D_NEW(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=10.)
     #bio.describe_state()
@@ -123,7 +122,7 @@ def test_diffuse_step_7():
 def test_diffuse_step_8():
     # Many diffusion steps that the system equilibrates, no matter the starting point
     chem_data = chem(diffusion_rates=[.3])
-    bio = BioSim1D_NEW(n_bins=15, chem_data=chem_data)
+    bio = BioSim1D(n_bins=15, chem_data=chem_data)
 
     np.random.seed(18)
     bio.set_species_conc(chem_index=0, conc_list=100 * np.random.rand(15))
@@ -154,7 +153,7 @@ def test_diffuse_step_8():
 
 def test_diffuse_step_1_b():
     chem_data = chem(diffusion_rates=[5., 20.])
-    bio = BioSim1D_NEW(n_bins=3, chem_data=chem_data)
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
 
     with pytest.raises(Exception):
         bio.set_bin_conc(bin_address=3, chem_index=0, conc=100.) # Bin number out of range
@@ -190,7 +189,7 @@ def test_diffuse_step_1_b():
 def test_diffuse_1():
     chem_data = chem(diffusion_rates=[10.])
 
-    bio = BioSim1D_NEW(n_bins=2, chem_data=chem_data)
+    bio = BioSim1D(n_bins=2, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=100.)
     #bio.describe_state()
@@ -209,7 +208,7 @@ def test_diffuse_1():
 
 def test_diffuse_2():
     chem_data = chem(names=["A"])
-    bio = BioSim1D_NEW(n_bins=1, chem_data=chem_data)
+    bio = BioSim1D(n_bins=1, chem_data=chem_data)
     bio.set_uniform_concentration(chem_index=0, conc=8.0)
 
     chem_data.set_diffusion_rate(label="A", diff_rate = 20.)
@@ -225,14 +224,14 @@ def test_diffuse_3():
     n_bins=5
 
     chem_data = chem(names="A")
-    bio = BioSim1D_NEW(n_bins=n_bins, chem_data=chem_data)
+    bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
 
     with pytest.raises(Exception):
         bio.diffuse(time_step=0.08, n_steps=1)    # Must first initialize the system
 
 
     chem_data = chem(diffusion_rates=[2.78, 3.14])
-    bio = BioSim1D_NEW(n_bins=n_bins, chem_data=chem_data)
+    bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
 
     bio.set_uniform_concentration(chem_index=0, conc=22.2)
     bio.set_uniform_concentration(chem_index=1, conc=66.6)
@@ -254,7 +253,7 @@ def test_diffuse_3():
 
 def test_diffuse_4():
     chem_data = chem(diffusion_rates=[5., 20.])
-    bio = BioSim1D_NEW(n_bins=3, chem_data=chem_data)
+    bio = BioSim1D(n_bins=3, chem_data=chem_data)
     bio.set_bin_conc(chem_index=0, bin_address=1, conc=100.)
     bio.set_species_conc(chem_index=1, conc_list=[10, 20, 50])
     #bio.describe_state()
@@ -313,7 +312,7 @@ def test_diffuse_4():
 def test_diffuse_5():
     chem_data = chem(diffusion_rates=[0.1])
     # Diffuse 1 species almost to equilibrium, starting from a single concentration pulse
-    bio = BioSim1D_NEW(n_bins=10, chem_data=chem_data)
+    bio = BioSim1D(n_bins=10, chem_data=chem_data)
 
     bio.set_uniform_concentration(chem_index=0, conc=0.)
     bio.inject_conc_to_bin(chem_index=0, bin_address=2, delta_conc=10.)
@@ -336,7 +335,7 @@ def test_diffuse_6():
     chem_data = chem(diffusion_rates=diff)
     initial_concs = np.array([50, 80, 40, 100, 120])
 
-    bio = BioSim1D_NEW(n_bins=n_bins, chem_data=chem_data)
+    bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
     bio.set_species_conc(chem_index=0, conc_list=initial_concs)
     #bio.describe_state()
 
@@ -348,7 +347,7 @@ def test_diffuse_6():
 
 
     # Redo computations on an identical system
-    bio2 = BioSim1D_NEW(n_bins=n_bins, chem_data=chem_data)
+    bio2 = BioSim1D(n_bins=n_bins, chem_data=chem_data)
     bio2.set_species_conc(chem_index=0, conc_list=initial_concs)
 
     status = bio2.diffuse(time_step=delta_t, n_steps=1, delta_x=delta_x, algorithm="5_1_explicit")
@@ -371,7 +370,7 @@ def test_diffuse_7():
 
     chem_data = chem(diffusion_rates=[diffusion_rate], names=["A"])
 
-    bio = BioSim1D_NEW(n_bins=n_bins, chem_data=chem_data)
+    bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
 
     bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=12, bias=40)
     bio.inject_sine_conc(chem_label="A", number_cycles=2, amplitude=10)
@@ -430,7 +429,7 @@ def test_diffuse_8():
 
     chem_data = chem(diffusion_rates=[diffusion_rate], names=["A"])
 
-    bio = BioSim1D_NEW(n_bins=n_bins, chem_data=chem_data)
+    bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
 
     bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=12, bias=40)
     bio.inject_sine_conc(chem_label="A", number_cycles=2, amplitude=10)
