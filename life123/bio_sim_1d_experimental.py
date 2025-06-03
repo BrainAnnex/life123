@@ -119,6 +119,7 @@ class System1D:
                             f"allowed range is [0-{self.n_bins-1}], inclusive")
 
 
+
     def check_mass_conservation(self, expected :float, chem_label=None, chem_index=None) -> bool:
         """
         Check whether the sum of all the concentrations of the specified chemical,
@@ -351,12 +352,6 @@ class System1D:
 
 
 
-
-
-
-
-
-
     #####################################################################################################
 
     '''                                    ~   SET/MODIFY CONCENTRATIONS   ~                                           '''
@@ -390,7 +385,8 @@ class System1D:
         """
         Set the concentrations of all chemical species at once, uniformly across all bins
 
-        :param conc_list:   List or tuple of concentration values for each of the chemical species
+        :param conc_list:   List or tuple of concentration values for each of the chemical species,
+                                in their index order
         :return:            None
         """
         assert len(conc_list) == self.chem_data.number_of_chemicals(), \
@@ -617,7 +613,7 @@ class System1D:
     #####################################################################################################
 
 
-    def chem_quantity(self, chem_label=None, chem_index=None):
+    def chem_quantity(self, chem_label=None, chem_index=None) -> float:
         """
         Return the total quantity, across all bins, of the given chemical
 
@@ -821,24 +817,31 @@ class System1D:
 
 class Membranes1D(System1D):
     """
+    This class expands the underlying foundational System1D, to provide modeling of membranes (barriers)
 
-    HOW MEMBRANES ARE MODELED.
+    * Only CLOSED membranes are modeled.
 
-    Only CLOSED membranes are modeled.
-    Membrane exist at the boundary between System bins.
-    A membrane is an ordered list of adjacent "sides".   The "sides" collectively encompass and encircle
-    a portion of the System space.
-    In 1D, the "sides" are points; in 2D, they are adjacent segments, and in 3D, adjacent rectangles.
-    The "sides" cannot lie diagonally (slanted) across the System space; they all must follow
-    the directions of the axes (grid) of the System.
-    The "sides" cannot intersect, or even touch, with any other "side" of the same membrane or of any other membrane.
+    * Membrane exist at the boundary between System bins.
 
-    In 1D, a membrane "side" is a point, identified by the coordinate of bin immediately to the right of it
-    (or, if at the rightmost edge of the System, by the next integer of the bin to its left.)
-    In 2D, a membrane "side" is a segment, defined by its endpoint.  Each endpoint is identified by the
-    coordinates of bin immediately to the right and above (in xy-coordinates)
-    In 3D, a membrane "side" is a rectangle, defined by 3 consecutive points.  Each point is identified by the
-    coordinates of bin immediately past it (in xyz-coordinates)
+    * A membrane is an ordered list of adjacent "sides".
+      The "sides" collectively encompass a portion of the System space, and trace the  boundary of the membrane.
+
+    * "Sides":
+        In 1D, the "sides" are points; in 2D, they are adjacent segments, and in 3D, adjacent rectangles.
+
+        In 2D and 3D, the "sides" cannot lie diagonally (slanted) across the System space; they all must follow
+        the directions of the axes (grid) of the System.
+
+        The "sides" cannot intersect, or even touch, with any other "side"
+        of the same membrane or of any other membrane.
+
+    * Positions of the "Sides":
+        In 1D, a membrane "side" is a point, identified by the coordinate of bin immediately to the right of it
+        (or, if at the rightmost edge of the System, by the next integer of the bin to its left.)
+        In 2D, a membrane "side" is a segment, defined by its endpoint.  Each endpoint is identified by the
+        coordinates of bin immediately to the right and above (in xy-coordinates)
+        In 3D, a membrane "side" is a rectangle, defined by 3 consecutive points.  Each point is identified by the
+        coordinates of bin immediately past it (in xyz-coordinates)
     """
 
 
@@ -848,14 +851,15 @@ class Membranes1D(System1D):
 
         self.membranes = []     # List of (closed) membranes in the system.
                                 # In 1D, a (closed) membrane is a pair of points,
-                                # identified by the index of the bin to their RIGHT side,
-                                # ("index after") in sorted order.
+                                # identified by the index of the bin to their RIGHT side ("index after"),
+                                # in sorted order.
                                 # EXAMPLE:  [ (0, 8) , (17, 31) ]
                                 # All integers must be between 0 and self.n_bins, both inclusive
 
         self.permeability = {}  # Dict mapping chemical labels to permeability.
                                 # If not listed, taken to be zero (unable to diffuse across membranes)
-                                # For now, the same for all membranes
+                                # For now, permeability is the same for all membranes
+                                #   (i.e. a function of only the chemicals)
 
 
 
@@ -1052,7 +1056,7 @@ class Membranes1D(System1D):
 
 ################################################################################################################
 
-class BioSim1D_UNDER_DEVELOPMENT(Membranes1D):
+class BioSim1D_NEW(Membranes1D):
     """
     1D simulations of diffusion and reactions,
     with optional membranes
@@ -1123,8 +1127,6 @@ class BioSim1D_UNDER_DEVELOPMENT(Membranes1D):
 
 
         super().__init__(n_bins, chem_data=chem_data)    # Invoke the constructor of its parent class
-
-
 
 
 
@@ -1433,7 +1435,7 @@ class BioSim1D_UNDER_DEVELOPMENT(Membranes1D):
 
         # Loop over all the chemical species in the system
         for chem_index in range(self.n_species):
-            diff_obj = Diffusion1D(n_bins=self.n_bins, membranes=self.membranes)
+            diff_obj = Diffusion1D(n_bins=self.n_bins, membranes=self.membranes)    # TODO: move out of loop, after a code tweak
 
             diff = self.chem_data.get_diffusion_rate(chem_index=chem_index)     # The diffusion rate of this chemical
             chem_label = self.chem_data.get_label(chem_index)
@@ -2040,14 +2042,17 @@ class BioSim1D_UNDER_DEVELOPMENT(Membranes1D):
 
 class Diffusion1D:
     """
-    EXPERIMENTAL.  NOT IN ACTIVE USE!
-
     Module to model diffusion in 1D systems with or without membranes.
 
     NOT meant for the end user!
     """
 
-    def __init__(self, n_bins :int, membranes):
+    def __init__(self, n_bins :int, membranes=None):
+        """
+
+        :param n_bins:
+        :param membranes:
+        """
 
         self.n_bins = n_bins
 
@@ -2058,9 +2063,11 @@ class Diffusion1D:
         # A 1-D Numpy array with the CHANGE in concentrations for the given chemical species across all bins
         self.increment_vector = np.zeros(self.n_bins, dtype=float)  # One element per bin;
                                                                     # all the various delta concentrations will go here
-
+        # TODO: move self.increment_vector to be local variable inside the various functions using it; then
+        #       the object can be re-used!  code tweak
 
         self.membranes = membranes      # Object of class "Membranes1D"
+
 
 
 
@@ -2098,8 +2105,8 @@ class Diffusion1D:
 
 
 
-    def diffuse_step_3_1_stencil(self, time_step :float, diff :float,
-                                 permeability, conc_array, delta_x=1) -> np.ndarray:
+    def diffuse_step_3_1_stencil(self, time_step :float, diff :float, conc_array :np.ndarray,
+                                 permeability=None, delta_x=1) -> np.ndarray:
         """
         Note: this is one of alternative methods to do this computation.
 
@@ -2161,7 +2168,7 @@ class Diffusion1D:
         current_conc = conc_array[0]
         C_right = conc_array[1]       # There's no C_left
 
-        if self.membranes.membrane_on_right(0):
+        if self.membranes and self.membranes.membrane_on_right(0):
             delta_conc = corrected_perm * (C_right - current_conc)
         else:
             delta_conc = corrected_diff * (C_right - current_conc)
@@ -2177,13 +2184,13 @@ class Diffusion1D:
             C_right = conc_array[i + 1]
 
             # Contribution (possibly negative) coming in from the bin to its left
-            if self.membranes.membrane_on_left(i):
+            if self.membranes and self.membranes.membrane_on_left(i):
                 delta_conc = corrected_perm * (C_left  - current_conc)
             else:
                 delta_conc = corrected_diff * (C_left  - current_conc)
 
             # Contribution (possibly negative) coming in from the bin to its right
-            if self.membranes.membrane_on_right(i):
+            if self.membranes and self.membranes.membrane_on_right(i):
                 delta_conc += corrected_perm * (C_right - current_conc)
             else:
                 delta_conc += corrected_diff * (C_right - current_conc)
@@ -2202,7 +2209,7 @@ class Diffusion1D:
         current_conc = conc_array[max_bin_number]
         C_left = conc_array[max_bin_number-1]           # There's no C_right
 
-        if self.membranes.membrane_on_left(max_bin_number):
+        if self.membranes and self.membranes.membrane_on_left(max_bin_number):
             delta_conc = corrected_perm * (C_left - current_conc)
         else:
             delta_conc = corrected_diff * (C_left - current_conc)
@@ -2239,8 +2246,9 @@ class Diffusion1D:
         assert self.n_bins >= 5, \
             f"For very small number of bins ({self.n_bins}), use a method other than '5_1_explicit'"
 
-        assert not self.membranes.uses_membranes(), \
-            "When membranes are present, use a method other than '5_1_explicit'"
+        if self.membranes:
+            assert not self.membranes.uses_membranes(), \
+                "When membranes are present, use a method other than '5_1_explicit'"
 
 
         # TODO: this Upper Bound is based on a *different* method, and should be made specific to this method;

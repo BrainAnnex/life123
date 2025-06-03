@@ -771,6 +771,7 @@ class ChemData(Macromolecules):
                                     in the same order as the names/labels (if provided).
         """
         # TODO: allow a way to optionally pass macromolecules as well
+        # TODO: allow to provide the number of chemicals, in lieu of the names
 
         super().__init__()       # Invoke the constructor of its parent class
 
