@@ -967,7 +967,7 @@ class Membranes1D(System1D):
                     f"The left endpoint in {m} should be > {prev_right}"
 
             prev_right = right
-
+        # END for
 
         self.membranes = membranes
 
@@ -1431,9 +1431,12 @@ class BioSim1D(Membranes1D):
                                     # We'll use the all zeros in the just-initialized  self.delta_diffusion
 
 
+        diff_obj = Diffusion1D(n_bins=self.n_bins, membranes=self)    # TODO: maybe move to the invoking function;
+                                                                                #       maybe turn into object variable
+
+
         # Loop over all the chemical species in the system
         for chem_index in range(self.n_species):
-            diff_obj = Diffusion1D(n_bins=self.n_bins, membranes=self.membranes)    # TODO: move out of loop, after a code tweak
 
             diff = self.chem_data.get_diffusion_rate(chem_index=chem_index)     # The diffusion rate of this chemical
             chem_label = self.chem_data.get_label(chem_index)
@@ -2058,13 +2061,7 @@ class Diffusion1D:
                                             #   in the diffusion process.
                                             #   See explanation in file overly_large_single_timesteps.py
 
-        # A 1-D Numpy array with the CHANGE in concentrations for the given chemical species across all bins
-        self.increment_vector = np.zeros(self.n_bins, dtype=float)  # One element per bin;
-                                                                    # all the various delta concentrations will go here
-        # TODO: move self.increment_vector to be local variable inside the various functions using it; then
-        #       the object can be re-used!  code tweak
-
-        self.membranes = membranes      # Object of class "Membranes1D"
+        self.membranes = membranes      # Object of class "BioSim1D"
 
 
 
@@ -2137,6 +2134,9 @@ class Diffusion1D:
             f"diffuse_step_single_species(): Excessive large time_step ({time_step}). " \
             f"Should be < {self.max_time_step(diff, delta_x)}"
 
+        # A 1-D Numpy array with the CHANGE in concentrations for the given chemical species across all bins
+        increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin;
+                                                                # all the various delta concentrations will go here
 
         max_bin_number = self.n_bins - 1    # Bin numbers range from 0 to max_bin_number, inclusive
 
@@ -2171,7 +2171,7 @@ class Diffusion1D:
         else:
             delta_conc = corrected_diff * (C_right - current_conc)
 
-        self.increment_vector[0] = delta_conc
+        increment_vector[0] = delta_conc
 
 
         # Now process all the non-edge bins
@@ -2200,7 +2200,7 @@ class Diffusion1D:
                                + C_right - current_conc)
             '''
             #print(f"i: {i}, delta_conc: {delta_conc}")
-            self.increment_vector[i] = delta_conc
+            increment_vector[i] = delta_conc
 
 
         # Finally, process the RIGHTMOST bin
@@ -2213,9 +2213,9 @@ class Diffusion1D:
             delta_conc = corrected_diff * (C_left - current_conc)
 
 
-        self.increment_vector[max_bin_number] = delta_conc
+        increment_vector[max_bin_number] = delta_conc
 
-        return  self.increment_vector
+        return  increment_vector
 
 
 
@@ -2254,6 +2254,10 @@ class Diffusion1D:
         #assert not self.is_excessive(time_step, diff, delta_x), \
             #f"Excessive large time_fraction. Should be < {self.max_time_step(diff, delta_x)}"
 
+
+        # A 1-D Numpy array with the CHANGE in concentrations for the given chemical species across all bins
+        increment_vector = np.zeros(self.n_bins, dtype=float)   # One element per bin;
+                                                                # all the various delta concentrations will go here
 
         # Carry out a 1-D convolution operation, with a tile of size 5
 
@@ -2306,7 +2310,7 @@ class Diffusion1D:
 
             #print("The 5 bins under consideration: ", C_i_minus_2, C_i_minus_1, C_i, C_i_plus_1, C_i_plus_2)
             # Compute the "Central Differences" for the 2nd partial derivative, to "accuracy 4"
-            self.increment_vector[i] = corrected_diff * \
+            increment_vector[i] = corrected_diff * \
                                       (  C2 * C_i_minus_2
                                        + C1 * C_i_minus_1
                                        + C0 * C_i
@@ -2314,4 +2318,4 @@ class Diffusion1D:
                                        + C2 * C_i_plus_2)
 
 
-        return self.increment_vector
+        return increment_vector
