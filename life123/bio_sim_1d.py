@@ -105,9 +105,10 @@ class System1D:
 
     def get_system_time(self, precision=8) -> float:
         """
+        Return the current system time
 
-        :param precision:
-        :return:
+        :param precision:   Desired number of decimal digits
+        :return:            The current system time
         """
         time_as_str = f"{self.system_time:,.{precision}g}"
         return float(time_as_str)
@@ -133,8 +134,6 @@ class System1D:
         :param concise: If True, only produce a minimalist printout with just the concentration values
         :return:        None, if concise=True; a Pandas dataframe otherwise
         """
-        # TODO: move to System1D, alongside the object variable self.membranes
-
         print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
 
         if concise:             # A minimalist printout...

@@ -55,6 +55,26 @@ def test_system_size():
 
 
 
+def test_get_system_time():
+    bio = System1D(n_bins=8 , chem_data=ChemData(names="A"))
+
+    result = bio.get_system_time()
+    assert np.allclose(result, 0)
+
+    bio.system_time = 1.23456789
+    result = bio.get_system_time()
+    assert np.allclose(result, 1.23456789)
+
+    result = bio.get_system_time(precision=1)
+    assert np.allclose(result, 1.)
+
+
+
+def test_describe_state():
+    pass
+
+
+
 def test_get_chem_data():
     chem_data=ChemData(names="A")
     bio = System1D(n_bins=8 , chem_data=chem_data)
