@@ -24,7 +24,7 @@
 # ### TAGS :  "reactions 1D", "diffusion 1D", "membranes 1D"
 
 # %%
-LAST_REVISED = "June 3, 2025"
+LAST_REVISED = "June 6, 2025"
 LIFE123_VERSION = "1.0.0rc5"        # Library version this experiment is based on
 
 # %%
@@ -61,7 +61,7 @@ reactions.describe_reactions()
 # %%
 bio.set_bin_conc(bin_address=4, chem_label="A", conc=10.)   # Set the initial concentration of `A` in middle bin
 
-bio.set_membranes(membranes=[ (4,5) ])    # By default impermeable
+bio.membranes().set_membranes(membranes=[ (4,5) ])    # By default impermeable
 
 bio.describe_state()
 
@@ -113,10 +113,10 @@ bio.reaction_in_equilibrium(bin_address=4, rxn_index=0, explain=True)
 # while still remaining impermeable to `A`.   Note the system time when this happens:
 
 # %%
-bio.system_time
+bio.get_system_time()
 
 # %%
-bio.change_permeability("B", 1.)          # Make the membrane permeable to `B` (and only to `B`!)
+bio.membranes().change_permeability("B", 1.)          # Make the membrane permeable to `B` (and only to `B`!)
 
 # %%
 

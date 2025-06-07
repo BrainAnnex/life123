@@ -93,7 +93,7 @@ def test_set_uniform_concentration():
     assert np.allclose(bio.lookup_species(0), expected)
 
     # New test
-    bio.reset_system()
+    bio._reset_system()
     chem_data = ChemData(names=["A", "B", "C"])
     bio = BioSim1D(n_bins=15, chem_data=chem_data)
     bio.set_uniform_concentration(chem_label="A", conc=10.)
@@ -469,13 +469,13 @@ def test_set_membranes():
         bio.set_membranes(membranes=[(2,7) , (3,9)])    # Overlapping
 
     bio.set_membranes(membranes=[(2,4) , (5,9)])
-    assert bio.membranes == [(2,4) , (5,9)]
+    assert bio.membranes_obj == [(2, 4) , (5, 9)]
 
     with pytest.raises(Exception):
         bio.set_membranes(membranes=[(5,9), (2,4)])     # Not in sorted order
 
     bio.set_membranes(membranes=[(0,3) , (4,6), (8,10)])
-    assert bio.membranes == [(0,3) , (4,6), (8,10)]
+    assert bio.membranes_obj == [(0, 3) , (4, 6), (8, 10)]
 
 
 

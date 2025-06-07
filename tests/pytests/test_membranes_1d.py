@@ -11,41 +11,24 @@ def test_constructor():
         Membranes1D()                  # Missing required arguments
 
     with pytest.raises(Exception):
-        Membranes1D(n_bins=3)          # Missing required arguments
-
-
-    chem_data = ChemData(names="A")
+        Membranes1D(n_bins="I'm not an integer")
 
     with pytest.raises(Exception):
-        Membranes1D(n_bins="I'm not an integer", chem_data=chem_data)
-
-    with pytest.raises(Exception):
-        Membranes1D(n_bins=0, chem_data=chem_data)      # Must be at least 1
+        Membranes1D(n_bins=0)      # Must be at least 1
 
 
-
-    bio = Membranes1D(n_bins=5, chem_data=chem_data)
+    bio = Membranes1D(n_bins=5)
 
     assert bio.n_bins == 5
-    assert bio.n_species == 1
-    assert bio.chem_data == chem_data
-    assert bio.global_Dx == 1
-    assert np.allclose(bio.system_time, 0)
-    expected = np.zeros((1, 5), dtype=float)
-    assert np.allclose(bio.system, expected)
-    assert bio.membranes == []
+    assert bio.membrane_list == []
     assert bio.permeability == {}
 
 
     # New test
     chem_data = ChemData(names=["A", "B", "C"])
-    bio = Membranes1D(n_bins=15, chem_data=chem_data)
+    bio = Membranes1D(n_bins=15)
     assert bio.n_bins == 15
-    assert bio.n_species == 3
-    assert bio.chem_data == chem_data
-    expected = np.zeros((3,15), dtype=float)
-    assert np.allclose(bio.system, expected)
-    assert bio.membranes == []
+    assert bio.membrane_list == []
     assert bio.permeability == {}
 
 
@@ -56,15 +39,14 @@ def test_describe_state():
 
 
 def test_uses_membranes():
-    chem_data = ChemData(names=["A", "B"])
-    bio = Membranes1D(n_bins=5, chem_data=chem_data)
+    bio = Membranes1D(n_bins=5)
 
     assert not bio.uses_membranes()
     bio.set_membranes(membranes=[(2, 4)])
     assert bio.uses_membranes()
     
     
-    bio = Membranes1D(n_bins=123, chem_data=ChemData(labels="A"))
+    bio = Membranes1D(n_bins=123)
     assert not bio.uses_membranes()
 
     bio.set_membranes(membranes=[(0, 4)])
@@ -76,7 +58,7 @@ def test_uses_membranes():
 
 
 def test_set_membranes():
-    bio = Membranes1D(n_bins=10, chem_data=ChemData("A")) # 10 bins, numbered 0 thru 9
+    bio = Membranes1D(n_bins=10) # 10 bins, numbered 0 thru 9
 
     with pytest.raises(Exception):
         bio.set_membranes()     # Missing required arg
@@ -112,13 +94,13 @@ def test_set_membranes():
         bio.set_membranes(membranes=[(2,7) , (3,9)])    # Overlapping
 
     bio.set_membranes(membranes=[(2,4) , (5,9)])
-    assert bio.membranes == [(2,4) , (5,9)]
+    assert bio.membrane_list == [(2, 4) , (5, 9)]
 
     with pytest.raises(Exception):
         bio.set_membranes(membranes=[(5,9), (2,4)])     # Not in sorted order
 
     bio.set_membranes(membranes=[(0,3) , (4,6), (8,10)])
-    assert bio.membranes == [(0,3) , (4,6), (8,10)]
+    assert bio.membrane_list == [(0, 3) , (4, 6), (8, 10)]
     assert bio.permeability == {}
 
 
@@ -132,20 +114,20 @@ def test_change_permeability():
 
 
 def test_membranes_list():
-    bio = Membranes1D(n_bins=40, chem_data=ChemData(labels="A"))
+    bio = Membranes1D(n_bins=40)
 
-    assert bio.membranes_list() == []
+    assert bio._flattened_membranes_list() == []
 
     bio.set_membranes([ (8,10) ])
-    assert bio.membranes_list() == [8,10]
+    assert bio._flattened_membranes_list() == [8, 10]
 
     bio.set_membranes([ (1,2), (3,4) ])
-    assert bio.membranes_list() == [1,2,3,4]
+    assert bio._flattened_membranes_list() == [1, 2, 3, 4]
 
 
 
 def test_membrane_on_left():
-    bio = Membranes1D(n_bins=40, chem_data=ChemData(labels="A"))
+    bio = Membranes1D(n_bins=40)
 
     assert not bio.membrane_on_left(10)
 
@@ -172,7 +154,7 @@ def test_membrane_on_left():
 
 
 def test_membrane_on_right():
-    bio = Membranes1D(n_bins=40, chem_data=ChemData(labels="A"))
+    bio = Membranes1D(n_bins=40)
 
     assert not bio.membrane_on_right(10)
 

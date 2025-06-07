@@ -23,7 +23,7 @@
 # * [Equilibrium](#reaction_2_sec_2_equilibrium)
 
 # %% [markdown]
-# ### TAGS :  "reactions 1D"
+# ### TAGS :  "reactions 1D", "basic"
 
 # %%
 LAST_REVISED = "May 4, 2025"

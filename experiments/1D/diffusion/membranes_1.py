@@ -23,8 +23,8 @@
 # ### TAGS :  "membranes 1D", "basic", "quick-start"
 
 # %%
-LAST_REVISED = "May 18, 2025"
-LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
+LAST_REVISED = "June 4, 2025"
+LIFE123_VERSION = "1.0.0rc5"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -75,16 +75,16 @@ bio.system_heatmaps(text_format=".0f")
 # # Add Membranes
 
 # %%
-bio.set_membranes(membranes=[ (0, 5) ])
+bio.membranes().set_membranes(membranes=[ (0, 5) ])
 
 # %%
-bio.membranes
+bio.membranes().membrane_list
 
 # %%
 bio.system_heatmaps(text_format=".0f")
 
 # %%
-bio.set_membranes(membranes=[ (0, 5), (10, 11), (16,21) ])    # Overwrite previous membranes
+bio.membranes().set_membranes(membranes=[ (0, 5), (10, 11), (16,21) ])    # Overwrite previous membranes
 
 # %%
 bio.system_heatmaps(text_format=".0f")

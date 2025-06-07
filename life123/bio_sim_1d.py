@@ -66,8 +66,20 @@ class System1D:
         assert self.n_species >= 1, \
             "System1D() instantiation: At least 1 chemical species must be declared prior to instantiating class"
 
-        # Initialize all bin concentrations to zero
+        # Initialize all bin concentrations to zero, for all the chemical species
         self.system = np.zeros((self.n_species, n_bins), dtype=float)
+
+
+        self.membranes_obj = Membranes1D(n_bins=n_bins)
+
+
+        self.saved_values = CollectionTabular() # To store user-selected values,
+                                                #   whenever requested by the user, indexed by system time.
+                                                #   We're using the "tabular" format - friendly to Pandas
+
+        self.conc_history = HistoryBinConcentration(active=False)   # Note: this is the mainstay of history-keeping
+                                                                    # of concentration values during the simulation
+
 
 
 
@@ -88,6 +100,63 @@ class System1D:
         :return:    The number of bins in the system
         """
         return self.n_bins
+
+
+
+    def get_system_time(self, precision=8) -> float:
+        """
+
+        :param precision:
+        :return:
+        """
+        time_as_str = f"{self.system_time:,.{precision}g}"
+        return float(time_as_str)
+
+
+
+    def describe_state(self, concise=False) -> Union[pd.DataFrame, None]:
+        """
+        A simple printout of the state of the system, for now useful only for small systems.
+
+        EXAMPLE (concise):
+            SYSTEM STATE at Time t = 0:
+            [[0. 0. 0. 0.]
+             [0. 0. 0. 0.]]
+            Membranes: [(1, 2)]
+
+        EXAMPLE (not concise):
+            SYSTEM STATE at Time t = 0:
+            4 bins and 2 chemical species
+            Membranes present:  [(12, 25)]
+            <PANDAS data frame returned>
+
+        :param concise: If True, only produce a minimalist printout with just the concentration values
+        :return:        None, if concise=True; a Pandas dataframe otherwise
+        """
+        # TODO: move to System1D, alongside the object variable self.membranes
+
+        print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
+
+        if concise:             # A minimalist printout...
+            print(self.system)   # ...only showing the concentration data (a Numpy array)
+            if self.membranes_obj.uses_membranes():
+                print("Membranes: ", self.membranes_obj)
+            return
+
+        # If we get thus far, it's a FULL printout
+
+        print(f"{self.n_bins} bins and {self.n_species} chemical species")
+
+        if self.membranes_obj.uses_membranes():
+            print("Membranes present: ", self.membranes_obj)
+
+
+        df = pd.DataFrame(self.system, columns=[f"Bin {i}" for i in range(self.n_bins)])
+
+        df.insert(0, "Species", self.chem_data.get_all_labels())
+        df.insert(1, "Diff rate", self.chem_data.get_all_diffusion_rates()) # Unset values will show up as None
+
+        return df
 
 
 
@@ -373,7 +442,8 @@ class System1D:
         else:
             self.chem_data.assert_valid_chem_index(chem_index)
 
-        assert conc >= 0., f"The concentration must be a positive number or zero (the requested value was {conc})"
+        assert conc >= 0., \
+            f"set_uniform_concentration(): the concentration must be a positive number or zero (the requested value was {conc})"
 
         self.system[chem_index] = np.full(self.n_bins, conc, dtype=float)
 
@@ -809,252 +879,128 @@ class System1D:
 
 
 
+    #####################################################################################################
+
+    '''                                      ~   HISTORY   ~                                          '''
+
+    def ________HISTORY________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
 
-##########################################################################################
-
-class Membranes1D(System1D):
-    """
-    This class expands the underlying foundational System1D, to provide modeling of membranes (barriers)
-
-    * Only CLOSED membranes are modeled.
-
-    * Membrane exist at the boundary between System bins.
-
-    * A membrane is an ordered list of adjacent "sides".
-      The "sides" collectively encompass a portion of the System space, and trace the  boundary of the membrane.
-
-    * "Sides":
-        In 1D, the "sides" are points; in 2D, they are adjacent segments, and in 3D, adjacent rectangles.
-
-        In 2D and 3D, the "sides" cannot lie diagonally (slanted) across the System space; they all must follow
-        the directions of the axes (grid) of the System.
-
-        The "sides" cannot intersect, or even touch, with any other "side"
-        of the same membrane or of any other membrane.
-
-    * Positions of the "Sides":
-        In 1D, a membrane "side" is a point, identified by the coordinate of bin immediately to the right of it
-        (or, if at the rightmost edge of the System, by the next integer of the bin to its left.)
-        In 2D, a membrane "side" is a segment, defined by its endpoint.  Each endpoint is identified by the
-        coordinates of bin immediately to the right and above (in xy-coordinates)
-        In 3D, a membrane "side" is a rectangle, defined by 3 consecutive points.  Each point is identified by the
-        coordinates of bin immediately past it (in xyz-coordinates)
-    """
-
-
-    def __init__(self, n_bins :int, chem_data):
-
-        super().__init__(n_bins, chem_data=chem_data)    # Invoke the constructor of its parent class
-
-        self.membranes = []     # List of (closed) membranes in the system.
-                                # In 1D, a (closed) membrane is a pair of points,
-                                # identified by the index of the bin to their RIGHT side ("index after"),
-                                # in sorted order.
-                                # EXAMPLE:  [ (0, 8) , (17, 31) ]
-                                # All integers must be between 0 and self.n_bins, both inclusive
-
-        self.permeability = {}  # Dict mapping chemical labels to permeability.
-                                # If not listed, taken to be zero (unable to diffuse across membranes)
-                                # For now, permeability is the same for all membranes
-                                #   (i.e. a function of only the chemicals)
-
-
-
-
-    def describe_state(self, concise=False) -> Union[pd.DataFrame, None]:
+    def enable_history(self, bins=None, frequency=1, chem_labels=None, take_snapshot=False, caption=None) -> None:
         """
-        A simple printout of the state of the system, for now useful only for small systems.
+        Request history capture, with the specified parameters.
+        If history was already enabled, this function can be used to alter its capture parameters.
 
-        EXAMPLE (concise):
-            SYSTEM STATE at Time t = 0:
-            [[0. 0. 0. 0.]
-             [0. 0. 0. 0.]]
-            Membranes: [(1, 2)]
+        :param bins:            Bin address (integer), or list of bin addresses. Use None to indicate all
+        :param frequency:       [OPTIONAL] How many simulation cycles to wait until taking another data snapshot
+        :param chem_labels:     [OPTIONAL] List of chemicals to include in the history;
+                                    if None (default), include them all.
+        :param take_snapshot:   If True, a snapshot of the system's current configuration
+                                    is immediately added to the history
+        :param caption:         [OPTIONAL] String to save alongside this snapshot, if taken (only applicable
+                                    if `take_snapshot` is True
 
-        EXAMPLE (not concise):
-            SYSTEM STATE at Time t = 0:
-            4 bins and 2 chemical species
-            Membranes present:  [(12, 25)]
-            <PANDAS data frame returned>
-
-        :param concise: If True, only produce a minimalist printout with just the concentration values
-        :return:        None, if concise=True; a Pandas dataframe otherwise
-        """
-        print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
-
-        if concise:             # A minimalist printout...
-            print(self.system)   # ...only showing the concentration data (a Numpy array)
-            if self.uses_membranes():
-                print("Membranes: ", self.membranes)
-            return
-
-        # If we get thus far, it's a FULL printout
-
-        print(f"{self.n_bins} bins and {self.n_species} chemical species")
-
-        if self.uses_membranes():
-            print("Membranes present: ", self.membranes)
-
-
-        df = pd.DataFrame(self.system, columns=[f"Bin {i}" for i in range(self.n_bins)])
-
-        df.insert(0, "Species", self.chem_data.get_all_labels())
-        df.insert(1, "Diff rate", self.chem_data.get_all_diffusion_rates()) # Unset values will show up as None
-
-        return df
-
-
-
-    def uses_membranes(self) -> bool:
-        """
-        Return True if membranes are part of the system
-
-        :return:    True if any membrane was created in the system; False otherwise
-        """
-        return self.membranes != []
-
-
-
-    def set_membranes(self, membranes: List) -> None:
-        """
-        Define the position of all membranes in the system.
-
-        IMPORTANT: any previously-set membrane information is lost.
-
-        :param membranes:       List of pairs of bin coordinates.  Use an empty list to clear all membranes.
-                                    All integer values must be between 0 and self.n_bins, both inclusive,
-                                    and be sorted in increasing order order.
-                                    Membrane positions are identified by the index of the bin to their RIGHT side.
-                                    Membranes cannot intersect, nor touch!
-                                    EXAMPLE: if the system contains bins 0 thru 30 (i.e 31 bins),
-                                             then a possible list of membranes is  [ (0, 8) , (17, 31) ]
         :return:                None
         """
-        assert type(membranes) == list, "set_membranes(): argument `membranes` must be a list"
+        # TODO: move all history-related methods to a new base class shared by 1D, 2D and 3D (?)
 
-        if len(membranes) == 0:
-            self.membranes = []
-            return
+        # Make sure that all bin addresses, if specified, are valid
+        if bins:
+            for b in bins:
+                self.assert_valid_bin(b)
 
-        # Validate the user data for each membrane pair
-        prev_right = -1
-        for i, m in enumerate(membranes):
-            # Verify that each element in the list is a pair of values
-            assert type(m) == tuple, \
-                f"set_membranes(): argument `membranes` must be a list of PAIRS of values. `{m}` is not a pair"
-            assert len(m) == 2, \
-                f"set_membranes(): argument `membranes` must be a list of PAIRS of values. `{m}` contains {len(m)} values"
+        self.conc_history.enable_history(frequency=frequency, chem_labels=chem_labels, bins=bins)
+        if take_snapshot:
+            if caption is None:
+                self.capture_snapshot()
+            else:
+                self.capture_snapshot(caption=caption)
 
-            # The following part is specific to 1D
-            left, right = m
-            assert type(left) == int, \
-                f"set_membranes(): argument `membranes` must be a list of pairs of integers.  `{left}` is of type {type(left)}"
-            assert type(right) == int, \
-                f"set_membranes(): argument `membranes` must be a list of pairs of integers.  `{right}` is of type {type(right)}"
-            assert left != right, \
-                f"set_membranes(): the integers in each pair in the argument `membranes` cannot have the same value ({left})"
-            assert left < right, \
-                f"set_membranes(): the integers in each pair in the argument `membranes` must be in sorted order. `{m}` is not in sorted order"
-            assert (left >= 0) and (left < self.n_bins), \
-                f"set_membranes(): the left side of the membrane must be an integer between 0 and {self.n_bins - 1}, inclusive. The given value was {left}"
-            assert (right <= self.n_bins), \
-                f"set_membranes(): the right side of the membrane must be an integer between 1 and {self.n_bins}, inclusive. The given value was {right}"
-
-            if i > 0:
-                assert left > prev_right, \
-                    f"set_membranes(): membrane endpoint coordinates must be in sorted order, and membranes cannot overlap nor touch. " \
-                    f"The left endpoint in {m} should be > {prev_right}"
-
-            prev_right = right
-        # END for
-
-        self.membranes = membranes
+        print(f"History enabled for bins {bins} and chemicals {chem_labels} (None means 'all')")
 
 
 
-    def set_permeability(self, permeability :dict) -> None:
+    def capture_snapshot(self, step_count=None, caption="") -> None:
         """
+        Preserve a pre-defined type of snapshot
+        (some concentration values, based on specs specified at the time history was enabled),
+        linked to the current System Time.
 
-        :param permeability:    Dictionary mapping chemical labels
-                                    to the membranes' permeability to them (in passive transport)
-        :return:                None
-        """
-        assert type(permeability) == dict, \
-            "set_permeability(): argument `permeability` must be a dictionary"
-        self.permeability = permeability
-
-
-
-    def change_permeability(self, chem_label :str, permeability :float) -> None:
-        """
-
-        :param chem_label:  A string to identify the chemical of interest
-        :param permeability:The permeability of all membranes to that chemical
+        :param step_count:  [OPTIONAL] Information about the simulation step, needed if history
+                                is to be selectively captured, only every so many steps
+        :param caption:     [OPTIONAL] String to save alongside this snapshot
         :return:            None
         """
-        #TODO: permeability value cannot exceed the value of diffusion
-        assert permeability >= 0, \
-            "change_permeability(): argument `permeability` must be a non-negative value"
-        self.permeability[chem_label] = permeability
+        if not self.conc_history.to_capture(step_count):
+            return      # Based on previous specs, no history needs to be saved at this simulation step
+
+        data_snapshot = self.selected_concentrations(bins=self.conc_history.restrict_bins,
+                                                     chem_labels=self.conc_history.restrict_chemicals)
+        '''
+           EXAMPLE of data_snapshot (5.0 and 8.0 are system times):
+                { 5.0: {"A": 1.3, "B": 3.9},
+                  8.0: {"A": 4.6, "B": 2.7}
+                }        
+        '''
+        self.conc_history.save_snapshot(step_count=step_count, system_time=self.system_time,
+                                        data_snapshot=data_snapshot,
+                                        caption=caption)
 
 
 
-    def membranes_list(self) -> [int]:
+    def get_bin_history(self, bin_address :int, include_captions=True) -> pd.DataFrame:
         """
-        Return a flattened version of the membrane data structure
+        Get the concentration history at the given bin(s) of all the chemicals
+        whose history was requested by a call of enable_history()
 
-        :return: A (possibly empty) sorted list of integers
+        :param bin_address:         A single bin address (an integer)
+        :param include_captions:    If True, the captions are returned as an extra "caption" column at the end
+        :return:                    A Pandas data frame
         """
-        if self.membranes == []:
-            return []
-
-        flattened_list = [item for pair in self.membranes
-                          for item in pair]
-        return flattened_list
+        return self.conc_history.bin_history(bin_address = bin_address, include_captions=include_captions)
 
 
 
-    def membrane_on_left(self, bin_address :int) -> bool:
+    def save_value(self, data_snapshot: dict, caption ="") -> None:
         """
-        Return True if there's a membrane to the immediate left of the given bin (specified by its index)
+        Preserve some data value (passed as dictionary) in the history, linked to the
+        current System Time.
 
-        :param bin_address:
-        :return:
+        Note: if wanting to routinely save system concentration values, use capture_snapshot() instead
+
+        EXAMPLE:  save_value(data_snapshot = {"my value A": 12.5, "my value B": 3.7},
+                              caption="Just prior to infusion")
+
+        :param data_snapshot:   A dictionary of data to preserve for later use
+        :param caption:         Optional caption to attach to this preserved data
+        :return:                None
         """
-        if self.membranes == []:
-            return False
-
-        for (left, right) in self.membranes:
-            if (left == bin_address) or (right == bin_address):
-                return True
-
-        return False
+        self.saved_values.store(par=self.system_time,
+                                data_snapshot = data_snapshot, caption=caption) # obj of type "CollectionTabular"
 
 
-    def membrane_on_right(self, bin_address :int) -> bool:
+
+    def get_saved_values(self) -> pd.DataFrame:
         """
-        Return True if there's a membrane to the immediate right of the given bin (specified by its index)
+        Retrieve and return a Pandas dataframe with the system history that had been saved
+        using save_value()
 
-        :param bin_address:
-        :return:
+        IMPORTANT: not to be confused with the standard concentration history, obtained by a call to get_bin_history()
+
+        :return:    A Pandas dataframe
         """
-        if self.membranes == []:
-            return False
-
-        for (left, right) in self.membranes:
-            if (left == bin_address + 1) or (right == bin_address + 1):
-                return True
-
-        return False
+        return self.saved_values.get_dataframe()
 
 
 
 
 
 ################################################################################################################
+################################################################################################################
 
-class BioSim1D(Membranes1D):
+class BioSim1D(System1D):
     """
     1D simulations of diffusion and reactions,
     with optional membranes
@@ -1101,13 +1047,6 @@ class BioSim1D(Membranes1D):
                                             #   in the diffusion process.
                                             #   See explanation in file overly_large_single_timesteps.py
 
-        self.history = CollectionTabular()  # TODO: phase out in favor of the new self.conc_history
-                                            # To store user-selected snapshots of (parts of) the system,
-                                            #   whenever requested by the user.
-                                            #   Note that we're using the "tabular" format - friendly to Pandas
-
-        self.conc_history = HistoryBinConcentration(active=False)   # Note: this is the newer history-keeping approach
-
 
         assert chem_data is not None or reaction_handler is not None, \
             "BioSim1D() instantiation: at least one of the arguments `chem_data` or `reaction_handler` must be set"
@@ -1125,8 +1064,6 @@ class BioSim1D(Membranes1D):
 
 
         super().__init__(n_bins, chem_data=chem_data)    # Invoke the constructor of its parent class
-
-
 
 
 
@@ -1201,9 +1138,9 @@ class BioSim1D(Membranes1D):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def reset_system(self) -> None:
+    def _reset_system(self) -> None:
         """
-        WARNING - THIS IS VERY PARTIAL.
+        WARNING - THIS IS VERY PARTIAL.  EXPERIMENTAL, under development!
 
         :return:    None
         """
@@ -1212,7 +1149,8 @@ class BioSim1D(Membranes1D):
         self.system_earlier = None
         self.chem_data = None
         self.reaction_dynamics = None
-        self.history = None
+        self.saved_values = None
+        self.conc_history = None
 
         self.n_bins = 0
         self.system_length = None
@@ -1228,114 +1166,34 @@ class BioSim1D(Membranes1D):
 
     #####################################################################################################
 
-    '''                                      ~   HISTORY   ~                                          '''
+    '''                                    ~   MEMBRANES   ~                                           '''
 
-    def ________HISTORY________(DIVIDER):
+    def ________MEMBRANES________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-
-    def enable_history(self, bins=None, frequency=1, chem_labels=None, take_snapshot=False, caption=None) -> None:
-        """
-        Request history capture, with the specified parameters.
-        If history was already enabled, this function can be used to alter its capture parameters.
-
-        :param bins:            Bin address (integer), or list of bin addresses. Use None to indicate all
-        :param frequency:       [OPTIONAL] How many simulation cycles to wait until taking another data snapshot
-        :param chem_labels:     [OPTIONAL] List of chemicals to include in the history;
-                                    if None (default), include them all.
-        :param take_snapshot:   If True, a snapshot of the system's current configuration
-                                    is immediately added to the history
-        :param caption:         [OPTIONAL] String to save alongside this snapshot, if taken (only applicable
-                                    if `take_snapshot` is True
-
-        :return:                None
-        """
-        # Make sure that all bin addresses, if specified, are valid
-        if bins:
-            for b in bins:
-                self.assert_valid_bin(b)
-
-        self.conc_history.enable_history(frequency=frequency, chem_labels=chem_labels, bins=bins)
-        if take_snapshot:
-            if caption is None:
-                self.capture_snapshot()
-            else:
-                self.capture_snapshot(caption=caption)
-
-        print(f"History enabled for bins {bins} and chemicals {chem_labels} (None means 'all')")
+    def membranes(self):
+        return self.membranes_obj
 
 
-
-    def capture_snapshot(self, step_count=None, caption="") -> None:
-        """
-        Preserve some data values (based on specs given at the time history was enabled),
-        linked to the current System Time.
-
-        :param step_count:
-        :param caption:     [OPTIONAL] String to save alongside this snapshot
-        :return:            None
-        """
-        if not self.conc_history.to_capture(step_count):
-            return
-
-        data_snapshot = self.selected_concentrations(bins=self.conc_history.restrict_bins,
-                                                     chem_labels=self.conc_history.restrict_chemicals)
-        '''
-           EXAMPLE of data_snapshot:
-                { 5: {"A": 1.3, "B": 3.9},
-                  8: {"A": 4.6, "B": 2.7}
-                }        
-        '''
-        self.conc_history.save_snapshot(step_count=step_count, system_time=self.system_time,
-                                        data_snapshot=data_snapshot,
-                                        caption=caption)
+    def uses_membranes(self) -> bool:
+        raise Exception("***** OBSOLETED function: use  .membranes().uses_membranes() instead")
+        #return self.membranes.uses_membranes()
 
 
-
-    def get_bin_history(self, bin_address :int, include_captions=True) -> pd.DataFrame:
-        """
-        Get the concentration history at the given bin(s) of all the chemicals
-        whose history was requested by a call of enable_history()
-
-        :param bin_address:         A single bin address (an integer)
-        :param include_captions:    If True, the captions are returned as an extra "caption" column at the end
-        :return:                    A Pandas data frame
-        """
-        return self.conc_history.bin_history(bin_address = bin_address, include_captions=include_captions)
+    def set_membranes(self, membranes: List) -> None:
+        raise Exception("***** OBSOLETED function: use  .membranes().set_membranes() instead")
+        #return self.membranes.set_membranes(membranes)
 
 
-
-    def add_snapshot(self, data_snapshot: dict, caption ="") -> None:
-        """
-        TODO: OBSOLETE.  Being phased out in favor of capture_snapshot()
-        Preserve some data value (passed as dictionary) in the history, linked to the
-        current System Time.
-
-        EXAMPLE:  add_snapshot(data_snapshot = {"concentration_A": 12.5, "concentration_B": 3.7},
-                                caption="Just prior to infusion")
-
-        IMPORTANT: if the data is not immutable, then it ought to be cloned first,
-                   to preserve it from possible later modifications
-
-        :param data_snapshot:   A dictionary of data to preserve for later use
-        :param caption:         Optional caption to attach to this preserved data
-        :return:                None
-        """
-        self.history.store(par=self.system_time,
-                           data_snapshot = data_snapshot, caption=caption)
+    def change_permeability(self, chem_label :str, permeability :float) -> None:
+        raise Exception("***** OBSOLETED function: use  .membranes().change_permeability() instead")
+        #return self.membranes.change_permeability(chem_label=chem_label, permeability=permeability)
 
 
-
-    def get_history(self) -> pd.DataFrame:
-        """
-        TODO: being phased out
-        Retrieve and return a Pandas dataframe with the system history that had been saved
-        using add_snapshot()
-
-        :return:        a Pandas dataframe
-        """
-        return self.history.get_dataframe()
+    def set_permeability(self, permeability :dict) -> None:
+        raise Exception("***** OBSOLETED function: use  .membranes().set_permeability() instead")
+        #return self.membranes.set_permeability(permeability)
 
 
 
@@ -1431,7 +1289,7 @@ class BioSim1D(Membranes1D):
                                     # We'll use the all zeros in the just-initialized  self.delta_diffusion
 
 
-        diff_obj = Diffusion1D(n_bins=self.n_bins, membranes=self)    # TODO: maybe move to the invoking function;
+        diff_obj = Diffusion1D(n_bins=self.n_bins, membranes=self.membranes_obj)    # TODO: maybe move to the invoking function;
                                                                                 #       maybe turn into object variable
 
 
@@ -1440,7 +1298,7 @@ class BioSim1D(Membranes1D):
 
             diff = self.chem_data.get_diffusion_rate(chem_index=chem_index)     # The diffusion rate of this chemical
             chem_label = self.chem_data.get_label(chem_index)
-            permeability = self.permeability.get(chem_label)
+            permeability = self.membranes_obj.permeability.get(chem_label)
 
             # Compute the "increment vector", a 1-D Numpy array with the CHANGE in concentrations for the given chemical species across all bins
             if algorithm is None:
@@ -1461,7 +1319,7 @@ class BioSim1D(Membranes1D):
 
 
 
-    def react(self, total_duration=None, time_step=None, n_steps=None, snapshots=None, silent=False) -> None:
+    def react(self, total_duration=None, time_step=None, n_steps=None, silent=False) -> None:
         """
         Update the system concentrations as a result of all the reactions in all bins - taking
         the presence of membranes into account, if applicable.
@@ -1479,37 +1337,17 @@ class BioSim1D(Membranes1D):
 
         Optionally, save some data from the individual reaction steps
 
-        TODO: in case of any Exception, the state of the system is still valid, as of the time before this call
-
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
         :param time_step:       The size of each time step
         :param n_steps:         The desired number of steps
-
-        :param snapshots:       OBSOLETE!
-                                OPTIONAL dict that may contain any the following keys:
-                                        -"frequency"
-                                        -"sample_bin" (Required integer; if not present, no snapshots are taken)
-                                        -"species" (NOT YET IMPLEMENTED)
-                                        -"initial_caption" (default blank. NOT YET IMPLEMENTED)
-                                        -"final_caption" (default blank. NOT YET IMPLEMENTED)
-                                    If provided, take a system snapshot after running a multiple
-                                    of "frequency" run steps (default 1, i.e. at every step.)
-                                    EXAMPLE: snapshots={"frequency": 2, "sample_bin": 0}
-
         :param silent:
         :return:                None
         """
+        #TODO: TODO: in case of any Exception, the state of the system is still valid, as of the time before this call
+
         time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
                                                              time_step=time_step,
                                                              n_steps=n_steps)
-
-        # TODO: this is an old system being phased out
-        if snapshots:
-            frequency = snapshots.get("frequency", 1)         # If not present, it will be 1
-            sample_bin = snapshots.get("sample_bin", None)    # If not present, it will be None
-        else:
-            frequency = None
-            sample_bin = None
 
 
         for i in range(n_steps):
@@ -1521,11 +1359,6 @@ class BioSim1D(Membranes1D):
 
             self.capture_snapshot(step_count=i+1)       # Save historical values (if enabled)
                                                         # It's i+1 because we save the conc. values at the END of the step
-
-            # Preserve some of the data, as requested  TODO: this is an old system being phased out
-            if snapshots and ((i+1)%frequency == 0) and (sample_bin is not None):
-                self.add_snapshot(self.bin_snapshot(bin_address = snapshots["sample_bin"]))
-
 
         if not silent:
             # Print out a summary, at the termination of the run
@@ -1636,6 +1469,8 @@ class BioSim1D(Membranes1D):
 
         :return:            A Plotly "Figure" object
         """
+        # TODO: move all visualization-related methods to System1D
+
         title = f"System snapshot at time t={self.system_time:.8g}"
         if title_prefix:
             title = title_prefix + "<br>" + title
@@ -1704,10 +1539,10 @@ class BioSim1D(Membranes1D):
 
         conc_matrix = self.system
 
-        if self.membranes == []:
+        if self.membranes_obj == []:
             flattened_list = None
         else:
-            flattened_list = [item for pair in self.membranes
+            flattened_list = [item for pair in self.membranes_obj.membrane_list
                               for item in pair]
 
         return PlotlyHelper.heatmap_stack_1D(data_matrix=conc_matrix, labels=chem_labels,
@@ -2039,6 +1874,218 @@ class BioSim1D(Membranes1D):
 
 
 
+
+##########################################################################################
+##########################################################################################
+
+class Membranes1D():
+    """
+    This class expands the underlying foundational System1D, to provide modeling of membranes (barriers)
+
+    * Only CLOSED membranes are modeled.
+
+    * Membrane exist at the boundary between System bins.
+
+    * A membrane is an ordered list of adjacent "sides".
+      The "sides" collectively encompass a portion of the System space, and trace the  boundary of the membrane.
+
+    * "Sides":
+        In 1D, the "sides" are points; in 2D, they are adjacent segments, and in 3D, adjacent rectangles.
+
+        In 2D and 3D, the "sides" cannot lie diagonally (slanted) across the System space; they all must follow
+        the directions of the axes (grid) of the System.
+
+        The "sides" cannot intersect, or even touch, with any other "side"
+        of the same membrane or of any other membrane.
+
+    * Positions of the "Sides":
+        In 1D, a membrane "side" is a point, identified by the coordinate of bin immediately to the right of it
+        (or, if at the rightmost edge of the System, by the next integer of the bin to its left.)
+        In 2D, a membrane "side" is a segment, defined by its endpoint.  Each endpoint is identified by the
+        coordinates of bin immediately to the right and above (in xy-coordinates)
+        In 3D, a membrane "side" is a rectangle, defined by 3 consecutive points.  Each point is identified by the
+        coordinates of bin immediately past it (in xyz-coordinates)
+    """
+
+
+    def __init__(self, n_bins :int):
+        """
+
+        :param n_bins:
+        """
+        assert type(n_bins) == int, \
+            "Membranes1D instantiation: argument `n_bins` must be an integer"
+
+        assert n_bins >= 1, \
+            "Membranes1D instantiation: argument `n_bins` must be equal to, or larger than, 1"
+
+        self.membrane_list = [] # List of (closed) membranes in the system.
+                                # In 1D, a (closed) membrane is a pair of points,
+                                # identified by the index of the bin to their RIGHT side ("index after"),
+                                # in sorted order.
+                                # EXAMPLE:  [ (0, 8) , (17, 31) ]
+                                # All integers must be between 0 and self.n_bins, both inclusive
+
+        self.permeability = {}  # Dict mapping chemical labels to permeability.
+                                # If not listed, taken to be zero (unable to diffuse across membranes)
+                                # For now, permeability is the same for all membranes
+                                #   (i.e. a function of only the chemicals)
+
+        self.n_bins = n_bins
+
+
+
+    def uses_membranes(self) -> bool:
+        """
+        Return True if membranes are part of the system
+
+        :return:    True if any membrane was created in the system; False otherwise
+        """
+        return self.membrane_list != []
+
+
+
+    def set_membranes(self, membranes: List) -> None:
+        """
+        Define the position of all membranes in the system.
+
+        IMPORTANT: any previously-set membrane information is lost.
+
+        :param membranes:       List of pairs of bin coordinates.  Use an empty list to clear all membranes.
+                                    All integer values must be between 0 and self.n_bins, both inclusive,
+                                    and be sorted in increasing order order.
+                                    Membrane positions are identified by the index of the bin to their RIGHT side.
+                                    Membranes cannot intersect, nor touch!
+                                    EXAMPLE: if the system contains bins 0 thru 30 (i.e 31 bins),
+                                             then a possible list of membranes is  [ (0, 8) , (17, 31) ]
+        :return:                None
+        """
+        assert type(membranes) == list, "set_membranes(): argument `membranes` must be a list"
+
+        if len(membranes) == 0:
+            self.membrane_list = []
+            return
+
+        # Validate the user data for each membrane pair
+        prev_right = -1
+        for i, m in enumerate(membranes):
+            # Verify that each element in the list is a pair of values
+            assert type(m) == tuple, \
+                f"set_membranes(): argument `membranes` must be a list of PAIRS of values. `{m}` is not a pair"
+            assert len(m) == 2, \
+                f"set_membranes(): argument `membranes` must be a list of PAIRS of values. `{m}` contains {len(m)} values"
+
+            # The following part is specific to 1D
+            left, right = m
+            assert type(left) == int, \
+                f"set_membranes(): argument `membranes` must be a list of pairs of integers.  `{left}` is of type {type(left)}"
+            assert type(right) == int, \
+                f"set_membranes(): argument `membranes` must be a list of pairs of integers.  `{right}` is of type {type(right)}"
+            assert left != right, \
+                f"set_membranes(): the integers in each pair in the argument `membranes` cannot have the same value ({left})"
+            assert left < right, \
+                f"set_membranes(): the integers in each pair in the argument `membranes` must be in sorted order. `{m}` is not in sorted order"
+            assert (left >= 0) and (left < self.n_bins), \
+                f"set_membranes(): the left side of the membrane must be an integer between 0 and {self.n_bins - 1}, inclusive. The given value was {left}"
+            assert (right <= self.n_bins), \
+                f"set_membranes(): the right side of the membrane must be an integer between 1 and {self.n_bins}, inclusive. The given value was {right}"
+
+            if i > 0:
+                assert left > prev_right, \
+                    f"set_membranes(): membrane endpoint coordinates must be in sorted order, and membranes cannot overlap nor touch. " \
+                    f"The left endpoint in {m} should be > {prev_right}"
+
+            prev_right = right
+        # END for
+
+        self.membrane_list = membranes
+
+
+
+    def set_permeability(self, permeability :dict) -> None:
+        """
+
+        :param permeability:    Dictionary mapping chemical labels
+                                    to the membranes' permeability to them (in passive transport)
+        :return:                None
+        """
+        assert type(permeability) == dict, \
+            "set_permeability(): argument `permeability` must be a dictionary"
+        self.permeability = permeability
+
+
+
+    def change_permeability(self, chem_label :str, permeability :float) -> None:
+        """
+        Use the specified value to set the permeability of all the membranes
+        to given chemical
+
+        :param chem_label:  A string to identify the chemical of interest
+        :param permeability:The permeability of all membranes to that chemical
+        :return:            None
+        """
+        #TODO: permeability value cannot exceed the value of diffusion(?)
+        assert permeability >= 0, \
+            "change_permeability(): argument `permeability` must be a non-negative value"
+        self.permeability[chem_label] = permeability
+
+
+
+    def _flattened_membranes_list(self) -> [int]:
+        """
+        Return a flattened version of the membrane data structure
+
+        :return: A (possibly empty) sorted list of integers
+        """
+        if self.membrane_list == []:
+            return []
+
+        flattened_list = [item for pair in self.membrane_list
+                          for item in pair]
+        return flattened_list
+
+
+
+    def membrane_on_left(self, bin_address :int) -> bool:
+        """
+        Return True if there's a membrane to the immediate left of the given bin (specified by its index)
+
+        :param bin_address:
+        :return:
+        """
+        if self.membrane_list == []:
+            return False
+
+        for (left, right) in self.membrane_list:
+            if (left == bin_address) or (right == bin_address):
+                return True
+
+        return False
+
+
+    def membrane_on_right(self, bin_address :int) -> bool:
+        """
+        Return True if there's a membrane to the immediate right of the given bin (specified by its index)
+
+        :param bin_address:
+        :return:
+        """
+        if self.membrane_list == []:
+            return False
+
+        for (left, right) in self.membrane_list:
+            if (left == bin_address + 1) or (right == bin_address + 1):
+                return True
+
+        return False
+
+
+
+
+
+
+
+############################################################################################
 ############################################################################################
 
 class Diffusion1D:
@@ -2061,7 +2108,7 @@ class Diffusion1D:
                                             #   in the diffusion process.
                                             #   See explanation in file overly_large_single_timesteps.py
 
-        self.membranes = membranes      # Object of class "BioSim1D"
+        self.membranes = membranes      # Object of class "Membranes1D"
 
 
 

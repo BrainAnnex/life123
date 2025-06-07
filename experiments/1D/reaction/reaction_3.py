@@ -18,7 +18,7 @@
 # Diffusion not applicable (just 1 bin)
 
 # %% [markdown]
-# ### TAGS :  "reactions 1D"
+# ### TAGS :  "reactions 1D", "basic"
 
 # %%
 LAST_REVISED = "May 4, 2025"

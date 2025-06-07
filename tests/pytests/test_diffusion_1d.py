@@ -5,7 +5,7 @@
 import pytest
 import numpy as np
 from scipy.ndimage import shift
-from life123 import ChemData, Diffusion1D, Membranes1D
+from life123 import ChemData, Diffusion1D, Membranes1D, System1D
 
 
 
@@ -75,7 +75,7 @@ def test_diffuse_step_3_1_stencil_C():
     n_bins = 2
     diff = 10.
 
-    membranes=Membranes1D(n_bins=n_bins, chem_data=ChemData("A"))
+    membranes = Membranes1D(n_bins=n_bins)
     bio = Diffusion1D(n_bins=n_bins, membranes=membranes)
     
     initial_concs = np.array([100, 0])      # 2 bins
@@ -135,7 +135,7 @@ def test_diffuse_step_3_1_stencil_D():
     delta_t = 0.01
     diff = 5.
 
-    membranes=Membranes1D(n_bins=n_bins, chem_data=ChemData("A"))
+    membranes = Membranes1D(n_bins=n_bins)
     bio = Diffusion1D(n_bins=n_bins, membranes=membranes)
 
     initial_concs = np.array([50, 80, 20])      # 3 bins
@@ -222,7 +222,7 @@ def test_diffuse_step_3_1_stencil_E():
     delta_t = 0.01
     diff = 5.
 
-    membranes=Membranes1D(n_bins=n_bins, chem_data=ChemData("A"))
+    membranes = Membranes1D(n_bins=n_bins)
     bio = Diffusion1D(n_bins=n_bins, membranes=membranes)
     initial_concs = np.array([50, 100, 20, 60])
 
@@ -448,17 +448,19 @@ def test_diffuse_step_3_1_stencil_F():
     diff = 4.2
 
     # Initialize the system, with a complex pattern of initial concentrations
-    membranes=Membranes1D(n_bins=n_bins, chem_data=ChemData("A"))
-    bio = Diffusion1D(n_bins=n_bins, membranes=membranes)
-    membranes.inject_gradient(chem_label="A", conc_left = 10., conc_right = 1000.)
-    membranes.inject_sine_conc(chem_label="A", number_cycles=4, amplitude=350, bias=20, phase=60, zero_clip = True)
-    membranes.inject_bell_curve(chem_label="A", mean=0.8, sd=0.15, amplitude=2.3, bias=18)
+    membranes = Membranes1D(n_bins=n_bins)
+    diff_obj = Diffusion1D(n_bins=n_bins, membranes=membranes)
+    bio = System1D(n_bins=n_bins, chem_data=ChemData("A"))
+    
+    bio.inject_gradient(chem_label="A", conc_left = 10., conc_right = 1000.)
+    bio.inject_sine_conc(chem_label="A", number_cycles=4, amplitude=350, bias=20, phase=60, zero_clip = True)
+    bio.inject_bell_curve(chem_label="A", mean=0.8, sd=0.15, amplitude=2.3, bias=18)
     #print(bio.system)
-    initial_concs = membranes.lookup_species(chem_index=0)
+    initial_concs = bio.lookup_species(chem_index=0)
 
     # Diffusion without membranes
-    increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff,
-                                              conc_array=initial_concs)
+    increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff,
+                                                         conc_array=initial_concs)
     #print(increment_vector)
     assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation
 
@@ -466,26 +468,26 @@ def test_diffuse_step_3_1_stencil_F():
     # Now add various complex sets of membranes (all impermeable)
     membranes.set_membranes([ (0,1), (2,4), (18, 25), (28,29), (38,40) ])
 
-    increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff,
+    increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff,
                                               conc_array=initial_concs)
     assert np.allclose(np.sum(increment_vector), 0.)
 
 
     membranes.set_membranes([ (1,2), (3,8), (38,40) ])
 
-    increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff,
+    increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff,
                                               conc_array=initial_concs)
     assert np.allclose(np.sum(increment_vector), 0.)
 
 
     membranes.set_membranes([ (11,19), (22,28) , (31,34), (39,40) ])
 
-    increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff,
+    increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff,
                                               conc_array=initial_concs)
     assert np.allclose(np.sum(increment_vector), 0.)
 
     for _ in range(5):
-        increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff,
+        increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff,
                                                   conc_array=initial_concs)
         assert np.allclose(np.sum(increment_vector), 0.)
 
@@ -497,26 +499,27 @@ def test_diffuse_step_3_1_stencil_G():
     diff = [3.2, 2.7]
 
     # Initialize the system, with a complex pattern of initial concentrations
-    membranes=Membranes1D(n_bins=n_bins, chem_data=ChemData(["A", "B"]))
-    bio = Diffusion1D(n_bins=n_bins, membranes=membranes)
+    membranes = Membranes1D(n_bins=n_bins)
+    diff_obj = Diffusion1D(n_bins=n_bins, membranes=membranes)
+    bio = System1D(n_bins=n_bins, chem_data=ChemData(["A", "B"]))
 
-    membranes.inject_gradient(chem_label="A", conc_left = 20., conc_right = 800.)
-    membranes.inject_sine_conc(chem_label="A", number_cycles=5, amplitude=450, bias=10, phase=90, zero_clip = True)
-    membranes.inject_bell_curve(chem_label="A", mean=0.7, sd=0.25, amplitude=13.3, bias=18)
-    initial_concs_A = membranes.lookup_species(chem_index=0)
+    bio.inject_gradient(chem_label="A", conc_left = 20., conc_right = 800.)
+    bio.inject_sine_conc(chem_label="A", number_cycles=5, amplitude=450, bias=10, phase=90, zero_clip = True)
+    bio.inject_bell_curve(chem_label="A", mean=0.7, sd=0.25, amplitude=13.3, bias=18)
+    initial_concs_A = bio.lookup_species(chem_index=0)
 
-    membranes.inject_gradient(chem_label="B", conc_left = 500., conc_right = 18.)
-    membranes.inject_bell_curve(chem_label="B", mean=0.2, sd=0.45, amplitude=53.3, bias=68)
-    membranes.inject_sine_conc(chem_label="B", number_cycles=7, amplitude=350, bias=2, phase=123, zero_clip = True)
+    bio.inject_gradient(chem_label="B", conc_left = 500., conc_right = 18.)
+    bio.inject_bell_curve(chem_label="B", mean=0.2, sd=0.45, amplitude=53.3, bias=68)
+    bio.inject_sine_conc(chem_label="B", number_cycles=7, amplitude=350, bias=2, phase=123, zero_clip = True)
     #print(bio.system)
-    initial_concs_B = membranes.lookup_species(chem_index=1)
+    initial_concs_B = bio.lookup_species(chem_index=1)
 
     # Diffusion without membranes
-    increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[0],
-                                                    conc_array=initial_concs_A)
+    increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[0],
+                                                         conc_array=initial_concs_A)
     assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "A"
 
-    increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[1],
+    increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[1],
                                                     conc_array=initial_concs_B)
     assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "B"
 
@@ -524,11 +527,11 @@ def test_diffuse_step_3_1_stencil_G():
     # Now add a complex sets of membranes, initially impermeable
     membranes.set_membranes([ (0,1), (2,4) , (11, 19), (20,37), (40,41), (58,60) ])
 
-    increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[0],
+    increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[0],
                                               conc_array=initial_concs_A)    # Diffuse "A"
     assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "A"
 
-    increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[1],
+    increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[1],
                                               conc_array=initial_concs_B)    # Diffuse "B"
     assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "B"
 
@@ -536,11 +539,11 @@ def test_diffuse_step_3_1_stencil_G():
     # Make the membranes permeable
 
     for _ in range(5):
-        increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[0], permeability=2.1,
+        increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[0], permeability=2.1,
                                                   conc_array=initial_concs_A)    # Diffuse "A"
         assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "A"
 
-        increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[1], permeability=1.4,
+        increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[1], permeability=1.4,
                                                   conc_array=initial_concs_B)    # Diffuse "B"
         assert np.allclose(np.sum(increment_vector), 0.)    # Check mass conservation for "B"
 
@@ -554,26 +557,27 @@ def test_diffuse_step_3_1_stencil_H():
     diff = [3.1, 1.7]
 
     # Initialize the system, with a complex pattern of initial concentrations
-    membranes=Membranes1D(n_bins=n_bins, chem_data=ChemData(["A", "B"]))
-    bio = Diffusion1D(n_bins=n_bins, membranes=membranes)
+    membranes = Membranes1D(n_bins=n_bins)
+    diff_obj = Diffusion1D(n_bins=n_bins, membranes=membranes)
+    bio = System1D(n_bins=n_bins, chem_data=ChemData(["A", "B"]))
 
-    membranes.inject_gradient(chem_label="A", conc_left = 120., conc_right = 800.)
-    membranes.inject_sine_conc(chem_label="A", number_cycles=3, amplitude=450, bias=20, phase=210, zero_clip = True)
-    membranes.inject_bell_curve(chem_label="A", mean=0.2, sd=0.5, amplitude=53.3, bias=18)
+    bio.inject_gradient(chem_label="A", conc_left = 120., conc_right = 800.)
+    bio.inject_sine_conc(chem_label="A", number_cycles=3, amplitude=450, bias=20, phase=210, zero_clip = True)
+    bio.inject_bell_curve(chem_label="A", mean=0.2, sd=0.5, amplitude=53.3, bias=18)
 
-    membranes.inject_gradient(chem_label="B", conc_left = 500., conc_right = 28.)
-    membranes.inject_bell_curve(chem_label="B", mean=0.4, sd=0.35, amplitude=23.3, bias=68)
-    membranes.inject_sine_conc(chem_label="B", number_cycles=8, amplitude=350, bias=2, phase=123, zero_clip = True)
+    bio.inject_gradient(chem_label="B", conc_left = 500., conc_right = 28.)
+    bio.inject_bell_curve(chem_label="B", mean=0.4, sd=0.35, amplitude=23.3, bias=68)
+    bio.inject_sine_conc(chem_label="B", number_cycles=8, amplitude=350, bias=2, phase=123, zero_clip = True)
     #print(bio.system)
 
 
     # Diffusion without membranes
-    increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[0],
-                                              conc_array=membranes.lookup_species(chem_index=0))    # Diffuse A
+    increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[0],
+                                              conc_array=bio.lookup_species(chem_index=0))    # Diffuse A
     incr_vector_A_no_membranes = increment_vector.copy()
 
-    increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[1],
-                                              conc_array=membranes.lookup_species(chem_index=1))    # Diffuse B
+    increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[1],
+                                              conc_array=bio.lookup_species(chem_index=1))    # Diffuse B
     incr_vector_B_no_membranes = increment_vector.copy()
 
 
@@ -581,12 +585,12 @@ def test_diffuse_step_3_1_stencil_H():
     # with identical permeabilities to their respective diffusion rates
     membranes.set_membranes([ (0,1), (2,4) , (12, 19), (20,37), (40,41), (47,49) ])
 
-    increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[0], permeability=diff[0],
-                                              conc_array=membranes.lookup_species(chem_index=0))    # Diffuse A
+    increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[0], permeability=diff[0],
+                                              conc_array=bio.lookup_species(chem_index=0))    # Diffuse A
     assert np.allclose(increment_vector, incr_vector_A_no_membranes)
 
-    increment_vector = bio.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[1], permeability=diff[1],
-                                              conc_array=membranes.lookup_species(chem_index=1))    # Diffuse B
+    increment_vector = diff_obj.diffuse_step_3_1_stencil(time_step=delta_t, diff=diff[1], permeability=diff[1],
+                                              conc_array=bio.lookup_species(chem_index=1))    # Diffuse B
     assert np.allclose(increment_vector, incr_vector_B_no_membranes)
 
 

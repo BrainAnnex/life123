@@ -24,7 +24,7 @@
 # ### TAGS :  "diffusion 1D", "basic"
 
 # %%
-LAST_REVISED = "June 3, 2025"
+LAST_REVISED = "June 4, 2025"
 LIFE123_VERSION = "1.0.0rc5"        # Library version this experiment is based on
 
 # %%

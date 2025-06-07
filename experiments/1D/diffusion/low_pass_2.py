@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## The attenuation over time of a single-frequency in the initial concentration
+# ## The attenuation over time of a single-frequency component in the initial concentration
 #
 # ### The initial system state is a sine wave of frequency 2 (i.e. 2 cycles across the system's length), of amplitude 10, with a baseline (bias) of 30
 # ### Afterward, the process is restarted and repeated with a frequency 5 times larger  
@@ -22,8 +22,8 @@
 # ### TAGS :  "diffusion 1D"
 
 # %%
-LAST_REVISED = "May 3, 2025"
-LIFE123_VERSION = "1.0.0rc3"       # Library version this experiment is based on
+LAST_REVISED = "June 4, 2025"
+LIFE123_VERSION = "1.0.0rc5"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -73,12 +73,16 @@ frequency_data = bio.frequency_analysis(chem_label="A")
 frequency_data
 
 # %%
+# The ratio of the frequency-2 wave over the constant part (the bias)
 ratio = frequency_data.loc[1, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
 ratio
 
+# %% [markdown]
+# #### Start saving the value of this type of ratio
+
 # %%
-bio.add_snapshot(data_snapshot={"ratio": ratio})
-bio.get_history()
+bio.save_value(data_snapshot={"ratio": ratio})
+bio.get_saved_values()
 
 # %%
 
@@ -98,8 +102,10 @@ ratio = frequency_data.loc[2, "Relative Amplitude"] / frequency_data.loc[0, "Rel
 ratio
 
 # %%
-bio.add_snapshot(data_snapshot={"ratio": ratio})
-bio.get_history()
+bio.save_value(data_snapshot={"ratio": ratio})
+bio.get_saved_values()
+
+# %%
 
 # %% [markdown]
 # ## Do 49 more rounds of diffusion - to time t = 500
@@ -109,10 +115,10 @@ for i in range(49):
     bio.diffuse(total_duration=10, n_steps=100)
     frequency_data = bio.frequency_analysis(chem_label="A")
     ratio = frequency_data.loc[2, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
-    bio.add_snapshot(data_snapshot={"ratio": ratio})
+    bio.save_value(data_snapshot={"ratio": ratio})
 
 # %%
-bio.get_history()
+bio.get_saved_values()
 
 # %%
 bio.visualize_system()
@@ -130,10 +136,10 @@ for i in range(150):
     bio.diffuse(total_duration=10, n_steps=75)    # Notice the gradual decreas of the number of intermediate steps, given the smaller gradient
     frequency_data = bio.frequency_analysis(chem_label="A")
     ratio = frequency_data.loc[2, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
-    bio.add_snapshot(data_snapshot={"ratio": ratio})
+    bio.save_value(data_snapshot={"ratio": ratio})
 
 # %%
-bio.get_history()
+bio.get_saved_values()
 
 # %%
 bio.visualize_system()
@@ -151,10 +157,10 @@ for i in range(800):
     bio.diffuse(total_duration=10, n_steps=20)   # Note how we're gradually increasing the number of intermediate steps, because the gradiants are now smaller
     frequency_data = bio.frequency_analysis(chem_label="A")
     ratio = frequency_data.loc[2, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
-    bio.add_snapshot(data_snapshot={"ratio": ratio})
+    bio.save_value(data_snapshot={"ratio": ratio})
 
 # %%
-bio.get_history()
+bio.get_saved_values()
 
 # %%
 bio.visualize_system()
@@ -168,17 +174,17 @@ bio.visualize_system()
 # ## Now, let's look how the amplitude of the sine signal, relative to the constant bias, changed over time
 
 # %%
-PlotlyHelper.plot_pandas(df=bio.get_history(), x_var="SYSTEM TIME", fields="ratio",
+PlotlyHelper.plot_pandas(df=bio.get_saved_values(), x_var="SYSTEM TIME", fields="ratio",
                          y_label="ratio",
                          title= "Component of frequency=2, relative to amplitude of constant bias",
                          colors="orange")
 
 # %%
 # Same, but wigh log scale for y-axis (and save the figure object in a variable)
-fig_freq_2 = PlotlyHelper.plot_pandas(df=bio.get_history(), x_var="SYSTEM TIME", fields="ratio",
-                                     log_y=True, y_label="ratio",
-                                     title= "Component of frequency=2, relative to amplitude of constant bias<br>(log scale in y-axis)",
-                                     colors="orange")
+fig_freq_2 = PlotlyHelper.plot_pandas(df=bio.get_saved_values(), x_var="SYSTEM TIME", fields="ratio",
+                                      log_y=True, y_label="ratio",
+                                      title= "Component of frequency=2, relative to amplitude of constant bias<br>(log scale in y-axis)",
+                                      colors="orange")
 fig_freq_2.show()
 
 # %%
@@ -212,8 +218,8 @@ ratio = frequency_data.loc[1, "Relative Amplitude"] / frequency_data.loc[0, "Rel
 ratio
 
 # %%
-bio.add_snapshot(data_snapshot={"ratio": ratio})
-bio.get_history()
+bio.save_value(data_snapshot={"ratio": ratio})
+bio.get_saved_values()
 
 # %%
 
@@ -233,8 +239,8 @@ ratio = frequency_data.loc[10, "Relative Amplitude"] / frequency_data.loc[0, "Re
 ratio
 
 # %%
-bio.add_snapshot(data_snapshot={"ratio": ratio})
-bio.get_history()
+bio.save_value(data_snapshot={"ratio": ratio})
+bio.get_saved_values()
 
 # %%
 bio.visualize_system()
@@ -247,55 +253,55 @@ for i in range(4):
     bio.diffuse(total_duration=10, n_steps=100)
     frequency_data = bio.frequency_analysis(chem_label="A")
     ratio = frequency_data.loc[10, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
-    bio.add_snapshot(data_snapshot={"ratio": ratio})
+    bio.save_value(data_snapshot={"ratio": ratio})
 
 # %%
 bio.visualize_system()
 
 # %%
-bio.get_history()
+bio.get_saved_values()
 
 # %%
 for i in range(10):
     bio.diffuse(total_duration=10, n_steps=100)
     frequency_data = bio.frequency_analysis(chem_label="A")
     ratio = frequency_data.loc[10, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
-    bio.add_snapshot(data_snapshot={"ratio": ratio})
+    bio.save_value(data_snapshot={"ratio": ratio})
 
 # %%
 bio.visualize_system()
 
 # %%
-bio.get_history()
+bio.get_saved_values()
 
 # %%
 for i in range(35):
     bio.diffuse(total_duration=10, n_steps=100)
     frequency_data = bio.frequency_analysis(chem_label="A")
     ratio = frequency_data.loc[10, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
-    bio.add_snapshot(data_snapshot={"ratio": ratio})
+    bio.save_value(data_snapshot={"ratio": ratio})
 
 # %%
 bio.visualize_system()
 
 # %%
-bio.get_history()
+bio.get_saved_values()
 
 # %%
 for i in range(50):
     bio.diffuse(total_duration=10, n_steps=100)
     frequency_data = bio.frequency_analysis(chem_label="A")
     ratio = frequency_data.loc[10, "Relative Amplitude"] / frequency_data.loc[0, "Relative Amplitude"]
-    bio.add_snapshot(data_snapshot={"ratio": ratio})
+    bio.save_value(data_snapshot={"ratio": ratio})
 
 # %%
 bio.visualize_system()
 
 # %% [markdown]
-# **Most of the concentration graph is now flat as a board!**
+# #### **Most of the concentration graph is now flat as a board!**
 
 # %%
-bio.get_history()
+bio.get_saved_values()
 
 # %%
 
@@ -303,14 +309,14 @@ bio.get_history()
 # ## Like done earlier for the smaller frequency, let's look how the amplitude of the sine signal, relative to the constant bias, changed over time
 
 # %%
-PlotlyHelper.plot_pandas(df=bio.get_history(), x_var="SYSTEM TIME", fields="ratio",
+PlotlyHelper.plot_pandas(df=bio.get_saved_values(), x_var="SYSTEM TIME", fields="ratio",
                          y_label="ratio",
                          title= "Component of frequency=10, relative to amplitude of constant bias",
                          colors="red")
 
 # %%
 # Same, but wigh log scale for y-axis (and save the figure object in a variable)
-fig_freq_10 = PlotlyHelper.plot_pandas(df=bio.get_history(), x_var="SYSTEM TIME", fields="ratio",
+fig_freq_10 = PlotlyHelper.plot_pandas(df=bio.get_saved_values(), x_var="SYSTEM TIME", fields="ratio",
                                        log_y=True, y_label="ratio",
                                        title= "Component of frequency=10, relative to amplitude of constant bias<br>(log scale in y-axis)",
                                        colors="red")

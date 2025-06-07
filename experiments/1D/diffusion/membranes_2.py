@@ -80,7 +80,7 @@ bio.system_heatmaps()
 bio.set_membranes(membranes=[ (1,2) ])    # By default impermeable
 
 # %%
-bio.membranes
+bio.membranes_obj
 
 # %%
 bio.describe_state()
