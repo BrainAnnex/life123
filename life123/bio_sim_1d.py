@@ -642,10 +642,12 @@ class System1D:
                                     relative to the bin system;
                                     if less than 0 or greater than 1, only one tail of the curve will be seen
         :param sd:              Standard deviation, in units of the system length
-        :param amplitude:       Amount by which to multiply the standard normal curve signal before adding it to current concentrations
+        :param amplitude:       Amount by which to multiply the standard normal curve signal before adding it to current concentrations;
+                                    note: NOT the same as the max_amplitude of the bell curve
         :param bias:            Positive amount to be added to all values (akin to "DC bias" in electrical circuits)
         :return:                None
         """
+        # TODO: also offer a max_amplitude mode.  Explore total conservation
         assert bias >= 0, \
             f"System1D.inject_bell_curve(): the value for the `bias` ({bias}) cannot be negative"
 
@@ -835,7 +837,7 @@ class System1D:
 
     def selected_concentrations(self, bins=None, chem_labels=None) -> dict:
         """
-        Extract and return the concentration values of one or more (use None for all) chemicals,
+        Extract and return the concentration values of one or more chemicals,
         in one or more bins.
         The value is returned as a dictionary where the keys are bin addresses, and the values are dicts of
         concentration values for the various chemicals (identified by their labels)
@@ -938,9 +940,9 @@ class System1D:
         data_snapshot = self.selected_concentrations(bins=self.conc_history.restrict_bins,
                                                      chem_labels=self.conc_history.restrict_chemicals)
         '''
-           EXAMPLE of data_snapshot (5.0 and 8.0 are system times):
-                { 5.0: {"A": 1.3, "B": 3.9},
-                  8.0: {"A": 4.6, "B": 2.7}
+           EXAMPLE of data_snapshot (5 and 8 are bin addresses):
+                { 5: {"A": 1.3, "B": 3.9},
+                  8: {"A": 4.6, "B": 2.7}
                 }        
         '''
         self.conc_history.save_snapshot(step_count=step_count, system_time=self.system_time,

@@ -223,7 +223,7 @@ class HistoryBinConcentration(History):
         """
 
            EXAMPLE of data_snapshot (for 1D) systems:
-                { 6: {"A": 1.3, "B": 3.9},
+                { 5: {"A": 1.3, "B": 3.9},
                   8: {"A": 4.6, "B": 2.7}
                 }
 
@@ -298,7 +298,9 @@ class HistoryBinConcentration(History):
 
         df = pd.DataFrame(columns = cols) # EXAMPLE: ['SYSTEM TIME', 'A', 'B', 'C']
 
-        for row in self.history.get_collection():
+        # TODO: this rebuilding of a dataframe row-by-row is inefficient, and can be RATHER slow
+        #       with 30,000 records in one test
+        for row in self.history.get_collection():   # Traverse the returned list
             t , data, caption = row           # Unpack
             conc_dict = data[bin_address]
             l = len(df)
