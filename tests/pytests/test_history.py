@@ -19,39 +19,80 @@ def test_bin_history():
     hist.enable_history()
 
     data_snapshot = \
-            { 5: {"A": 1.3, "B": 3.9},
-              8: {"A": 4.6, "B": 2.7}
+            { 5: {"A": 1, "B": 3},
+              8: {"A": 4, "B": 2}
             }
-
     hist.save_snapshot(system_time=0, data_snapshot=data_snapshot)
 
     data_snapshot = \
-            { 5: {"A": 2.3, "B": 3.1},
-              8: {"A": 0.6, "B": 0.7}
+            { 5: {"A": 2, "B": 7},
+              8: {"A": 5, "B": 0}
             }
+    hist.save_snapshot(system_time=100, data_snapshot=data_snapshot, caption="2nd entry")
 
-    hist.save_snapshot(system_time=0, data_snapshot=data_snapshot)
+    #l = hist.history.get_collection()
+    #print(l)
 
-    l = hist.history.get_collection()
+    with pytest.raises(Exception):
+        hist.bin_history(bin_address="bad address")
 
-    print(l)
+    assert hist.bin_history(bin_address=666) == "" \
+        "No historical concentration data available for bin 666. History collecting IS enabled for ALL bins - but was it enabled PRIOR to running the simulation?"
+
 
     df = hist.bin_history(bin_address=5)
-    print(df)
+    expected = pd.DataFrame([[0, 1, 3], [100, 2, 7]], columns = ["SYSTEM TIME", "A", "B"])  # FULL MATRIX, specified by row
+    assert df.equals(expected)
 
     df = hist.bin_history(bin_address=8)
-    print(df)
+    expected = pd.DataFrame([[0, 4, 2], [100, 5, 0]], columns = ["SYSTEM TIME", "A", "B"])  # FULL MATRIX, specified by row
+    assert df.equals(expected)
 
-    '''
-    Try this Pandas df structure;
-    SYSTEM TIME | bin_5_A | bin_5_B | bin_8_A | bin_8_B
-    
-    OR:
-    
-    SYSTEM TIME | A_bin_5 | A_bin_8 | B_bin_5 | B_bin_8
-    '''
+    df = hist.bin_history(bin_address=8, include_captions=True)
+    expected = pd.DataFrame([[0, 4, 2, ""], [100, 5, 0, "2nd entry"]], columns = ["SYSTEM TIME", "A", "B", "caption"])
+    assert df.equals(expected)
 
 
+    data_snapshot = \
+            { 5: {"A": 10, "B": 14},
+              8: {"A": 18, "B": 20}
+            }
+    hist.save_snapshot(system_time=200, data_snapshot=data_snapshot, caption="one more entry")
+
+    df = hist.bin_history(bin_address=8)
+    expected = pd.DataFrame([[0, 4, 2], [100, 5, 0], [200, 18, 20]],
+                            columns = ["SYSTEM TIME", "A", "B"])
+    assert df.equals(expected)
+
+    df = hist.bin_history(bin_address=8, downsize=2)    # Include every other row, starting with the initial one
+    expected = pd.DataFrame([[0, 4, 2], [200, 18, 20]],
+                            columns = ["SYSTEM TIME", "A", "B"])
+    assert df.equals(expected)
+
+    df = hist.bin_history(bin_address=8, downsize=3)    # Every 3rd row, but always include the last one
+    expected = pd.DataFrame([[0, 4, 2], [200, 18, 20]],
+                            columns = ["SYSTEM TIME", "A", "B"])
+    assert df.equals(expected)
+
+
+    data_snapshot = \
+            { 5: {"A": 60, "B": 42},
+              8: {"A": 38, "B": 2}
+            }
+    hist.save_snapshot(system_time=500, data_snapshot=data_snapshot, caption="last entry")
+
+    df = hist.bin_history(bin_address=8, downsize=3)    # Every 3rd row
+    expected = pd.DataFrame([[0, 4, 2], [500, 38, 2]],
+                            columns = ["SYSTEM TIME", "A", "B"])
+    assert df.equals(expected)
+
+    df = hist.bin_history(bin_address=8, include_captions=True, downsize=3)    # Every 3rd row
+    expected = pd.DataFrame([[0, 4, 2, ""], [500, 38, 2, "last entry"]],
+                            columns = ["SYSTEM TIME", "A", "B", "caption"])
+    assert df.equals(expected)
+
+    df = hist.bin_history(bin_address=8, include_captions=True, downsize=1000)    # We again end up with the first (0-th) and last rows
+    assert df.equals(expected)
 
 
 

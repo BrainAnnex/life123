@@ -197,8 +197,12 @@ class HistoryBinConcentration(History):
         """
         super().__init__(*args, **kwargs)          # Invoke the constructor of its parent class, passing all the available args
 
-        self.restrict_bins = bins                               # Bin address, or list of them, or None (meaning ALL bins, with no restriction)
+        self.restrict_bins = bins                               # Bin address, or list of them,
+                                                                #   or None (meaning ALL bins, with no restriction)
         self.history = Collection(parameter_name="SYSTEM TIME") # To store user-selected snapshots of quantities of interest
+        # Note: an alternative (untried) to using general Collections for the history
+        #       might be to use CollectionTabular tabular instead,
+        #       with columns such as:  SYSTEM TIME | bin_5_A | bin_5_B | bin_8_A | bin_8_B | caption
 
 
 
@@ -231,7 +235,7 @@ class HistoryBinConcentration(History):
                 { (0,0): {"A": 1.3, "B": 3.9},
                   (3,5): {"A": 4.6, "B": 2.7}
                 }
-        :param system_time:
+        :param system_time:     The time of this data snapshot
         :param data_snapshot:
         :param step_count:
         :param caption:         [OPTIONAL] String to save alongside this snapshot
@@ -256,7 +260,9 @@ class HistoryBinConcentration(History):
 
         msg = f"No historical concentration data available for bin {bin_address}. "
 
-        if bin_address in self.restrict_bins:
+        if self.restrict_bins is None:
+             msg += f"History collecting IS enabled for ALL bins - but was it enabled PRIOR to running the simulation?"
+        elif bin_address in self.restrict_bins:
             msg += f"History collecting IS indeed enabled for this bin - but was it enabled PRIOR to running the simulation?"
         else:
             msg += f"History recording is NOT currently enabled for this bin; it is only enabled for bins {self.restrict_bins}"
@@ -265,7 +271,7 @@ class HistoryBinConcentration(History):
 
 
 
-    def bin_history(self, bin_address, include_captions=False):
+    def bin_history(self, bin_address, include_captions=False, downsize=1):
         """
         Return the history at the given bin, as a Pandas dataframe.
         The first column is "SYSTEM TIME", and the other ones are the various chemicals for which
@@ -273,12 +279,16 @@ class HistoryBinConcentration(History):
         If no historical data is located, an informational string is returned instead
 
         :param bin_address:         A single bin address.  EXAMPLES, in 1D: 8   In 2D : (3,3)
-        :param include_captions:    If True, the captions are returned as an extra "caption" column at the end
+        :param include_captions:    [OPTIONAL] If True, the captions are returned as an extra "caption" column at the end
+        :param downsize:            [OPTIONAL] Pare down the returned history.
+                                        If different from 1, include only every n-th entry, where n = downsize,
+                                        starting with the initial (0-th) one.  The final row is also always included, regardless.
+                                        Note: handy when the user unwisely collected an excessive amount of history!
         :return:                    A Pandas data frame,
                                         or a string with diagnostic suggestions if no historical data is present
         """
         assert type(bin_address) == int or type(bin_address) == tuple, \
-            "bin_history(): Argument `bin_address` must be an integer (for 1D) of a tuple (2+ D)"
+            "bin_history(): Argument `bin_address` must be an integer (for 1D) of a tuple (for 2+ D)"
 
         snapshot_list = self.history.get_data()
         if snapshot_list == []:
@@ -296,18 +306,28 @@ class HistoryBinConcentration(History):
         else:
             cols = ['SYSTEM TIME'] + chem_labels
 
-        df = pd.DataFrame(columns = cols) # EXAMPLE: ['SYSTEM TIME', 'A', 'B', 'C']
+        # EXAMPLE of cols:  ['SYSTEM TIME', 'A', 'B', 'C']
+        #       or:         ['SYSTEM TIME', 'A', 'B', 'C', 'caption']
 
-        # TODO: this rebuilding of a dataframe row-by-row is inefficient, and can be RATHER slow
-        #       with 30,000 records in one test
-        for row in self.history.get_collection():   # Traverse the returned list
-            t , data, caption = row           # Unpack
-            conc_dict = data[bin_address]
-            l = len(df)
-            df.loc[l] = conc_dict           # Add a new row, with all columns except "SYSTEM TIME"
-            df.loc[l, "SYSTEM TIME"] = t    # Set the "SYSTEM TIME" cell for the row just added
+        history_list = self.history.get_collection()
+        last_index = len(history_list) - 1
+
+        data_matrix = []        # A list of lists
+        for i, row in enumerate(history_list):   # Traverse the returned list
+            if (downsize != 1) and (i != last_index) and (i % downsize) != 0:
+                continue
+
+            t , data, caption = row                 # Unpack the system time, concentration data and caption
+            conc_dict = data[bin_address]               # EXAMPLE: {'A': 3.4, 'B': 0.8}
+            conc_list = list(conc_dict.values())        # EXAMPLE: [3.4, 0.8]
             if include_captions:
-                df.loc[l, "caption"] = caption
+                data_row = [t] + conc_list + [caption]
+            else:
+                data_row = [t] + conc_list
+
+            data_matrix.append(data_row)
+
+        df = pd.DataFrame(data_matrix, columns = cols)  # FULL MATRIX, specified by row
 
         return df
 
