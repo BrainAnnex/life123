@@ -271,6 +271,16 @@ class HistoryBinConcentration(History):
 
 
 
+    def bin_history_size(self) -> int:
+        """
+        Return the number of data points in the history kept so far
+
+        :return:    An integer
+        """
+        return len(self.history)
+
+
+
     def bin_history(self, bin_address, include_captions=False, downsize=1):
         """
         Return the history at the given bin, as a Pandas dataframe.
@@ -278,7 +288,7 @@ class HistoryBinConcentration(History):
         history had been enabled.
         If no historical data is located, an informational string is returned instead
 
-        :param bin_address:         A single bin address.  EXAMPLES, in 1D: 8   In 2D : (3,3)
+        :param bin_address:         A single bin address.  EXAMPLES, in 1D:  8   In 2D :  (3,3)
         :param include_captions:    [OPTIONAL] If True, the captions are returned as an extra "caption" column at the end
         :param downsize:            [OPTIONAL] Pare down the returned history.
                                         If different from 1, include only every n-th entry, where n = downsize,

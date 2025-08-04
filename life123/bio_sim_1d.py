@@ -77,7 +77,8 @@ class System1D:
                                                 #   whenever requested by the user, indexed by system time.
                                                 #   We're using the "tabular" format - friendly to Pandas
 
-        self.conc_history = HistoryBinConcentration(active=False)   # Note: this is the mainstay of history-keeping
+        self.conc_history = HistoryBinConcentration(active=False)   # Object of type "HistoryBinConcentration"
+                                                                    # Note: this is the primary way of history-keeping
                                                                     # of concentration values during the simulation
 
 
@@ -919,7 +920,14 @@ class System1D:
             else:
                 self.capture_snapshot(caption=caption)
 
-        print(f"History enabled for bins {bins} and chemicals {chem_labels} (None means 'all')")
+        if (bins is None) and (chem_labels is None):
+            print(f"History enabled for ALL bins and ALL chemicals")
+        elif bins is None:
+            print(f"History enabled for ALL bins, for chemicals {chem_labels}")
+        elif chem_labels is None:
+            print(f"History enabled for bins {bins}, for ALL chemicals")
+        else:
+            print(f"History enabled for bins {bins} and chemicals {chem_labels}")
 
 
 
@@ -1728,7 +1736,7 @@ class BioSim1D(System1D):
 
     def plot_history_single_bin(self, bin_address :int, colors=None,
                                 title_prefix=None, title=None, smoothed=False,
-                                vertical_lines_to_add=None) -> pgo.Figure:
+                                vertical_lines_to_add=None, max_points=None) -> pgo.Figure:
         """
         Using plotly, draw the plots of chemical concentration values over time at the specified bin,
         based on the historical data that was saved when running simulations.
@@ -1750,10 +1758,22 @@ class BioSim1D(System1D):
                                     only a sample of them is shown.
                                     Note that vertical lines, if requested, go into the plot's "layout";
                                     as a result they might not appear if this plot is later combined with another one.
+        :param max_points:  [OPTIONAL] Maximum number of points to include in the plot; if exceeded,
+                                only an appropriate sampling of historical data is used,
+                                and an informational message is printed out
 
         :return:            A plotly "Figure" object; an Exception is raised if no historical data is found
         """
         # TODO: add more options
+
+        MAX_NUMBER_POINTS = 2000    # Used to avoid slow plotting and large image storage sizes, in case
+                                    # a very massive history was saved
+
+        if max_points:
+            assert max_points > 10, "plot_history_single_bin(): argument `max_points` must be greater than 10"
+        else:
+            max_points = MAX_NUMBER_POINTS
+
 
         self.assert_valid_bin(bin_address)
 
@@ -1768,12 +1788,20 @@ class BioSim1D(System1D):
             if title_prefix:
                 title = f"{title_prefix}<br>{title}"
 
-        # Retrieve the historical data
-        df = self.conc_history.bin_history(bin_address = bin_address)
-        if type(df) == str:         # No data was found
-            raise Exception(df)
 
-        #chem_labels = list(df.columns).remove("SYSTEM TIME")  # All the column names, except the independent var
+        # Retrieve the historical data
+        n_points = self.conc_history.bin_history_size()
+
+        if n_points > max_points:
+            downsize = math.ceil(n_points/max_points)
+            print(f"NOTICE: Excessive number of data points ({n_points}) - only showing 1 out of every {downsize}")
+        else:
+            downsize = 1
+
+        df = self.conc_history.bin_history(bin_address = bin_address, downsize=downsize)
+        if type(df) == str:         # No data was found
+            raise Exception(df)     # df contains an error message rather than a dataframe
+
         chem_labels = self.conc_history.restrict_chemicals  # The chemicals for which history was kept
 
         if colors is None:  # Attempt to make use of the previously-registered colors, if available
