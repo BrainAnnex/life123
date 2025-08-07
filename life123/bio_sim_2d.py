@@ -13,6 +13,8 @@ from life123.visualization.colors import Colors
 class BioSim2D:
     """
     2D simulations of diffusion and reactions
+
+    TODO: reorganize by splitting, as done for BioSim1D
     """
 
     def __init__(self, x_bins :int, y_bins :int, chem_data=None, reaction_handler=None):

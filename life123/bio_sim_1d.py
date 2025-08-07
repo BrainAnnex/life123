@@ -26,6 +26,7 @@ class System1D:
     nor does it handle any simulation.
     End users will typically instantiate the derived class BioSim1D
     """
+
     def __init__(self, n_bins :int, chem_data):
         """
 
@@ -1909,7 +1910,7 @@ class BioSim1D(System1D):
 
 class Membranes1D():
     """
-    This class expands the underlying foundational System1D, to provide modeling of membranes (barriers)
+    This class supports the underlying foundational System1D, to provide modeling of membranes (barriers)
 
     * Only CLOSED membranes are modeled.
 
@@ -2119,7 +2120,7 @@ class Membranes1D():
 
 class Diffusion1D:
     """
-    Module to model diffusion in 1D systems with or without membranes.
+    Module to model diffusion in 1D systems, with or without membranes.
 
     NOT meant for the end user!
     """

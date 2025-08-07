@@ -1,5 +1,14 @@
-from typing import Union, List, NamedTuple
+"""
+5 classes:
+    * ChemCore
+    * Diffusion (which extends ChemCore)
+    * Macromolecutes (which extends Diffusion)
+    * ChemDate (which extends Macromolecutes) : THIS IS THE CLASS TYPICALLY INSTANTIATED BY THE USER
 
+    * ChemicalAffinity (derived from NamedTuple)
+"""
+
+from typing import Union, List, NamedTuple
 import numpy as np
 import pandas as pd
 import string
@@ -424,8 +433,8 @@ class Diffusion(ChemCore):
 
     def get_all_diffusion_rates(self) -> list:
         """
-        Return a list of the diffusion rates of all the chemicals,
-        in the order of their indexes.
+        Return a list of the diffusion rates of all the registered chemicals,
+        in the order of their registration indexes.
 
         If any value is missing, None is used for it
 

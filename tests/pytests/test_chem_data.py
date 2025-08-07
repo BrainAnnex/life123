@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 from life123 import ChemData
+from life123.chem_data import Diffusion
 from tests.utilities.comparisons import *
 
 
@@ -270,10 +271,59 @@ def test_get_diffusion_rate():
 
 
 def test_get_all_diffusion_rates():
-    pass
+    diff = Diffusion()
+
+    result = diff.get_all_diffusion_rates()
+    assert result == []
+
+    diff.add_chemical_with_diffusion(name="A", diff_rate=1)
+    result = diff.get_all_diffusion_rates()
+    assert result == [1]
+
+    diff.set_diffusion_rate(label="A", diff_rate=10)
+    result = diff.get_all_diffusion_rates()
+    assert result == [10]
+
+    diff.add_chemical(name="B")
+    result = diff.get_all_diffusion_rates()
+    assert result == [10, None]
+
+    diff.add_chemical_with_diffusion(name="C", diff_rate=8)
+    result = diff.get_all_diffusion_rates()
+    assert result == [10, None, 8]
+
+    diff.set_diffusion_rate(label="B", diff_rate=3)
+    result = diff.get_all_diffusion_rates()
+    assert result == [10, 3, 8]
+
+
 
 def test_missing_diffusion_rate():
-    pass
+    diff = Diffusion()
+
+    result = diff.missing_diffusion_rate()
+    assert result == False
+
+    diff.add_chemical_with_diffusion(name="A", diff_rate=1)
+    result = diff.missing_diffusion_rate()
+    assert result == False
+
+    diff.set_diffusion_rate(label="A", diff_rate=10)
+    result = diff.missing_diffusion_rate()
+    assert result == False
+
+    diff.add_chemical(name="B")
+    result = diff.missing_diffusion_rate()
+    assert result == True       # B's diffusion rate is missing
+
+    diff.add_chemical_with_diffusion(name="C", diff_rate=8)
+    result = diff.missing_diffusion_rate()
+    assert result == True       # B's diffusion rate is still missing
+
+    diff.set_diffusion_rate(label="B", diff_rate=3)
+    result = diff.missing_diffusion_rate()
+    assert result == False
+
 
 
 
