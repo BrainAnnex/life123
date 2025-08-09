@@ -1260,10 +1260,12 @@ class Reactions:
         :return:            None
         """
         print(f"Number of reactions: {self.number_of_reactions()} (at temp. {self.temp - 273.15:,.4g} C)")
+
+        # Print a concise description of each reaction in turn
         for description in self.multiple_reactions_describe(concise=concise):
             print(description)
 
-        chem_labels = self.labels_of_active_chemicals()   # Set of labels
+        chem_labels = self.labels_of_active_chemicals(sort_by_index=True)   # Set of chem labels, sorted by chemical index
 
         if self.chem_data.color_dict != {}:   # If plot colors were registered, show them alongside the chem labels
             chem_labels_with_colors = []
@@ -1327,17 +1329,24 @@ class Reactions:
 
 
 
-    def labels_of_active_chemicals(self) -> Set[str]:
+    def labels_of_active_chemicals(self, sort_by_index=False) -> [str]:
         """
-        Return the set of the labels of all the chemicals
+        Return a list of the labels of all the chemicals
         involved in ANY of the registered reactions,
         but NOT counting chemicals that always appear
         in a catalytic role in all the reactions they participate in
         (if a chemical participates in a non-catalytic role in ANY reaction, it'll appear here)
 
-        :return:    A set of chemical labels
+        The list is not in any particular order, unless sort_by_index is True
+
+        :param sort_by_index:   If True, the list is sorted by the index (order of registration)
+                                    of the chemicals in it
+        :return:                A set of chemical labels
         """
-        return self.active_chemicals
+        if not sort_by_index:
+            return list(self.active_chemicals)
+
+        return sorted(self.active_chemicals, key=self.chem_data.get_index)
 
 
 

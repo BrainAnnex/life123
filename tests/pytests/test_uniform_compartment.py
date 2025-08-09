@@ -16,8 +16,9 @@ def test_constructor():
     with pytest.raises(Exception):
         UniformCompartment(reactions=rxns, names=names)
 
+    alt_chem_data = ChemData()
     with pytest.raises(Exception):
-        UniformCompartment(reactions=rxns, chem_data=chem_data)
+        UniformCompartment(reactions=rxns, chem_data=alt_chem_data) # inconsistent
 
 
     uc = UniformCompartment(reactions=rxns)
@@ -33,6 +34,11 @@ def test_constructor():
     uc = UniformCompartment(names=names)
     assert uc.chem_data.get_all_labels() == names
     assert uc.reactions.number_of_reactions() == 0
+
+    uc = UniformCompartment(reactions=rxns, chem_data=chem_data)
+    assert uc.reactions == rxns
+    assert uc.chem_data == chem_data
+    assert uc.chem_data.get_all_labels() == names
 
 
 

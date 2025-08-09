@@ -29,8 +29,8 @@
 # ### TAGS :  "diffusion 1D"
 
 # %%
-LAST_REVISED = "May 3, 2025"
-LIFE123_VERSION = "1.0.0rc3"       # Library version this experiment is based on
+LAST_REVISED = "Aug. 7, 2025"
+LIFE123_VERSION = "1.0.0rc5"       # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -93,8 +93,8 @@ for i in range(2001):
 
 
 # %%
-(bio.bin_concentration(bin_address=0, species_label="A") ,
- bio.bin_concentration(bin_address=rightmost_bin, species_label="A"))
+(bio.bin_concentration(bin_address=0, chem_label="A") ,
+ bio.bin_concentration(bin_address=rightmost_bin, chem_label="A"))
 
 # %% [markdown]
 # ### By now, the gradient has stabilized with  
@@ -146,8 +146,8 @@ for i in range(501):
         bio.visualize_system(show=True)
 
 # %%
-(bio.bin_concentration(bin_address=0, species_label="A") ,
- bio.bin_concentration(bin_address=rightmost_bin, species_label="A"))
+(bio.bin_concentration(bin_address=0, chem_label="A") ,
+ bio.bin_concentration(bin_address=rightmost_bin, chem_label="A"))
 
 # %% [markdown]
 # ### The one-time pulse injected into the system, gradually "melted down into" the stationary gradient.

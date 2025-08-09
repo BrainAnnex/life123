@@ -119,7 +119,8 @@ class System1D:
 
     def describe_state(self, concise=False) -> Union[pd.DataFrame, None]:
         """
-        A simple printout of the state of the system, for now useful only for small systems.
+        Either a simple printout of the state of the system ("concise" option)
+        or a more detailed printout with a returned Pandas data frame (not "concise")
 
         EXAMPLE (concise):
             SYSTEM STATE at Time t = 0:
@@ -134,7 +135,8 @@ class System1D:
             <PANDAS data frame returned>
 
         :param concise: If True, only produce a minimalist printout with just the concentration values
-        :return:        None, if concise=True; a Pandas dataframe otherwise
+        :return:        None, if concise=True;
+                            a Pandas dataframe otherwise
         """
         print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
 
@@ -195,7 +197,7 @@ class System1D:
 
         :param expected:    Value that the sum of all the bin concentrations of the specified chemical should add up to
         :param chem_label:  String with the label to identify the chemical of interest
-        :param chem_index:  Integer to identify the chemical of interest.
+        :param chem_index:  DEPRECATED.  Integer to identify the chemical of interest.
                                 Cannot specify both `chem_label` and `chem_index`
 
         :return:            True if this validation passes, or False otherwise
@@ -434,7 +436,7 @@ class System1D:
         Any previous values get over-written
 
         :param conc:        The desired value of chemical concentration for the above species
-        :param chem_index:  [OPTIONAL] Zero-based index to identify a specific chemical
+        :param chem_index:  [DEPRECATED] Zero-based index to identify a specific chemical
         :param chem_label:  [OPTIONAL] If provided, it over-rides the value for chem_index
         :return:            None
         """
@@ -472,7 +474,7 @@ class System1D:
 
         :param bin_address:     The zero-based bin number of the desired compartment
         :param conc:            The desired concentration value to assign to the specified location
-        :param chem_index:      Zero-based index to identify a specific chemical species
+        :param chem_index:      DEPRECATED.  Zero-based index to identify a specific chemical species
         :param chem_label:      [OPTIONAL] If provided, it over-rides the value for chem_index
         :return:                None
         """
@@ -500,7 +502,7 @@ class System1D:
         :param conc_list:   A list, tuple or Numpy array with the desired concentration values
                                 to assign to all the bins.
                                 The dimensions must match the system's dimensions.
-        :param chem_index:  Zero-based index to identify a specific chemical species
+        :param chem_index:  DEPRECATED.  Zero-based index to identify a specific chemical species
         :param chem_label:  (OPTIONAL) If provided, it over-rides the value for chem_index
         :return:            None
         """
@@ -535,7 +537,7 @@ class System1D:
 
         :param bin_address: The zero-based bin number of the desired cell
         :param chem_label:  String to identify the chemical of interest
-        :param chem_index:  Alternate way to identify the chemical of interest, with a zero-based index
+        :param chem_index:  DEPRECATED.  Alternate way to identify the chemical of interest, with a zero-based index
         :param delta_conc:  The concentration to add to the specified location
         :param zero_clip:   If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
                                 otherwise, an Exception will be raised
@@ -633,23 +635,28 @@ class System1D:
 
 
 
-    def inject_bell_curve(self, chem_label, mean=0.5, sd=0.15, amplitude=1., bias=0) -> None:
+    def inject_bell_curve(self, chem_label, center=None, mean=0.5, sd=0.15, amplitude=1., bias=0) -> None:
         """
         Add to the current concentrations of the specified chemical species a signal across all bins in the shape of a Bell curve.
         The default values provide bell shape centered in the middle of the system, and fairly spread out
         (but pretty close to zero at the endpoints)
 
-        :param chem_label:      The name of the chemical species whose concentration we're modifying
-        :param mean:            A value, generally between 0 and 1, indication the spatial position of the mean
-                                    relative to the bin system;
-                                    if less than 0 or greater than 1, only one tail of the curve will be seen
-        :param sd:              Standard deviation, in units of the system length
-        :param amplitude:       Amount by which to multiply the standard normal curve signal before adding it to current concentrations;
-                                    note: NOT the same as the max_amplitude of the bell curve
-        :param bias:            Positive amount to be added to all values (akin to "DC bias" in electrical circuits)
-        :return:                None
+        :param chem_label:  The name of the chemical species whose concentration we're modifying
+        :param center:    A value, generally between 0 and 1, indication the spatial position of the mean
+                                relative to the bin system;
+                                if less than 0 or greater than 1, only one tail of the curve will be seen
+        :param mean:        [DEPRECATED: use `localized` instead]
+        :param sd:          Standard deviation, in units of the system length
+        :param amplitude:   Amount by which to multiply the standard normal curve signal before adding it to current concentrations;
+                                note: NOT the same as the max_amplitude of the bell curve
+        :param bias:        Positive amount to be added to all values (akin to "DC bias" in electrical circuits)
+        :return:            None
         """
         # TODO: also offer a max_amplitude mode.  Explore total conservation
+
+        if center is not None:
+            mean = center
+
         assert bias >= 0, \
             f"System1D.inject_bell_curve(): the value for the `bias` ({bias}) cannot be negative"
 
@@ -689,7 +696,7 @@ class System1D:
         Return the total quantity, across all bins, of the given chemical
 
         :param chem_label:
-        :param chem_index:
+        :param chem_index:  DEPRECATED.
         :return:
         """
         return np.sum(self.lookup_species(chem_label=chem_label, chem_index=chem_index)) * self.global_Dx
@@ -702,11 +709,11 @@ class System1D:
         for the single specified chemical species.
         NOTE: what is being returned NOT a copy, unless specifically requested
 
-        :param chem_index:   The index order of the chemical species of interest
-        :param chem_label:    (OPTIONAL) If provided, it over-rides the value for chem_index
-        :param copy:            If True, an independent numpy array will be returned: a *copy* rather than a view
-        :return:                A NumPy 1-D array of concentration values across the bins (from left to right);
-                                    the size of the array is the number of bins
+        :param chem_index:   DEPRECATED.  The index order of the chemical species of interest
+        :param chem_label:   If provided, it over-rides the value for chem_index
+        :param copy:         If True, an independent numpy array will be returned: a *copy* rather than a view
+        :return:             A NumPy 1-D array of concentration values across the bins (from left to right);
+                                the size of the array is the number of bins
         """
         #TODO: merge this function and system_snapshot_arr(), maybe under the name chem_snapshot_arr()
 
@@ -731,7 +738,7 @@ class System1D:
         If a Pandas dataframe is desired, use system_snapshot()
 
         :param chem_label:  String with the label to identify the chemical of interest
-        :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
+        :param chem_index:  DEPRECATED.  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
         :return:            A 1-D Numpy array of concentration values along bin coordinates
         """
         #TODO: merge this function and lookup_species(), maybe under the name chem_snapshot_arr()
@@ -772,17 +779,17 @@ class System1D:
 
 
 
-    def bin_concentration(self, bin_address: int, chem_index=None, species_label=None) -> float:
+    def bin_concentration(self, bin_address: int, chem_index=None, chem_label=None) -> float:
         """
         Return the concentration at the requested bin of the specified chemical species
 
-        :param bin_address:     The bin number
-        :param chem_index:      The index order of the chemical species of interest
-        :param species_label:   [OPTIONAL] If provided, it over-rides the value for chem_index
-        :return:                A concentration value at the indicated bin, for the requested species
+        :param bin_address: The bin number
+        :param chem_index:  DEPRECATED.  The index order of the chemical species of interest
+        :param chem_label:  If provided, it over-rides the value for chem_index
+        :return:            A concentration value at the indicated bin, for the requested species
         """
-        if species_label is not None:
-            chem_index = self.chem_data.get_index(species_label)
+        if chem_label is not None:
+            chem_index = self.chem_data.get_index(chem_label)
 
         self.chem_data.assert_valid_chem_index(chem_index)
 
@@ -872,7 +879,7 @@ class System1D:
             self.assert_valid_bin(bin_address)
             bin_values = {}
             for chem_label in chem_labels:
-                conc = self.bin_concentration(bin_address=bin_address, species_label=chem_label)
+                conc = self.bin_concentration(bin_address=bin_address, chem_label=chem_label)
                 bin_values[chem_label] = conc
 
             result[bin_address] = bin_values
@@ -1016,27 +1023,42 @@ class BioSim1D(System1D):
     with optional membranes
     """
 
-    def __init__(self, n_bins :int, chem_data=None, reaction_handler=None):
+    def __init__(self, n_bins :int, chem_data=None, reaction_handler=None, reactions=None):
         """
         Initialize all concentrations to zero.
         Membranes, if present, need to be set later.
 
         :param n_bins:          The number of compartments (bins) to use in the simulation
 
-        [IMPORTANT: At least one of the 2 following arguments MUST be provided]
+        [IMPORTANT: At least one of the 3 following arguments MUST be provided]
         :param chem_data:       [OPTIONAL] Object of class "ChemData";
                                     if not specified, it will get extracted
                                     from the "UniformCompartment" class (if passed to the next argument)
         :param reaction_handler:[OPTIONAL] Object of class "UniformCompartment";
                                     if not specified, it'll get instantiated here
+        :param reactions:       [OPTIONAL] Object of type "Reactions", with data about the reactions and the chemicals
         """
         #TODO?: maybe allow optionally passing n_species in lieu of chem_data,
         #       (or passing the names, like with UniformCompartment?)
-        #       and let it create and return the "Chemicals" object in that case
+        #       and let it create and store the "Chemicals" object in that case
+        if reaction_handler and chem_data:
+            assert reaction_handler.get_chem_data() == chem_data, \
+                "BioSim1D() instantiation: the argument `reaction_handler` is based " \
+                "on a 'ChemData' object that doesn't match the one passed by the argument `chem_data`"
+
+        if chem_data and reactions:
+            assert reactions.get_chem_data() == chem_data, \
+                "BioSim1D() instantiation: the argument `reactions` is based " \
+                "on a 'ChemData' object that doesn't match the one passed by the argument `chem_data`"
+
+        if reactions and reaction_handler:
+            assert reaction_handler.get_reactions() == reactions, \
+                "BioSim1D() instantiation: the argument `reaction_handler` is based " \
+                "on a 'Reactions' object that doesn't match the one passed by the argument `reactions`"
 
         self.debug = False
 
-        self.reactions = None   # Object of type "Reactions", with info on all the reactions
+        self.reactions = reactions   # Object of type "Reactions", with info on all the reactions
 
         self.reaction_dynamics = None   # Object of class "UniformCompartment"
                                         # TODO: for now just 1 object is instantiated;
@@ -1068,7 +1090,7 @@ class BioSim1D(System1D):
         if reaction_handler:
             self.reaction_dynamics = reaction_handler
         else:
-            self.reaction_dynamics = UniformCompartment(chem_data=chem_data)
+            self.reaction_dynamics = UniformCompartment(chem_data=chem_data, reactions=reactions)
 
         self.reactions = self.reaction_dynamics.get_reactions()
 

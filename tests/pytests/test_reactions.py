@@ -338,24 +338,28 @@ def test_single_reaction_describe():
 
 
 
-def test_names_of_active_chemicals():
+def test_labels_of_active_chemicals():
     chem_data = ChemData(names=['A', 'B', 'C', 'X', 'Y'])
     rxns = Reactions(chem_data)
 
-    assert rxns.labels_of_active_chemicals() == set()    # No reactions yet
+    assert rxns.labels_of_active_chemicals() == []   # No reactions yet
 
     rxns.add_reaction(reactants="A", products="B")
-    assert rxns.labels_of_active_chemicals() == {"A", "B"}
+    assert set(rxns.labels_of_active_chemicals()) == {"A", "B"}
+    assert rxns.labels_of_active_chemicals(sort_by_index=True) == ["A", "B"]
 
     rxns.add_reaction(reactants=["B", "X"], products=["C", "X"])
-    assert rxns.labels_of_active_chemicals() == {"A", "B", "C"}  # "X" is an enzyme
+    assert set(rxns.labels_of_active_chemicals()) == {"A", "B", "C"}  # "X" is an enzyme
+    assert rxns.labels_of_active_chemicals(sort_by_index=True) == ["A", "B", "C"]
 
     rxns.add_reaction(reactants="X", products="Y")
-    assert rxns.labels_of_active_chemicals() == {"A", "B", "C", "X", "Y"}
+    assert set(rxns.labels_of_active_chemicals()) == {"A", "B", "C", "X", "Y"}
     # "X" is now involved in some reactions in a non-enzymatic role
+    assert rxns.labels_of_active_chemicals(sort_by_index=True) == ["A", "B", "C", "X", "Y"]
 
     rxns.add_reaction(reactants=["A", "B", "Z"], products=["C", "Z"])
-    assert rxns.labels_of_active_chemicals() == {"A", "B", "C", "X", "Y"}  # "Z" is an enzyme
+    assert set(rxns.labels_of_active_chemicals()) == {"A", "B", "C", "X", "Y"}  # "Z" is an enzyme
+    assert rxns.labels_of_active_chemicals(sort_by_index=True) == ["A", "B", "C", "X", "Y"]
 
 
 

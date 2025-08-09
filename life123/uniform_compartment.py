@@ -62,16 +62,22 @@ class UniformCompartment:
 
         :param enable_diagnostics:  [OPTIONAL] If True, the diagnostics mode is turned on - and will remain on unless explicitly
                                         disabled by a call to pause_diagnostics();
-                                        if False, no action taken
+                                        if False (default), no action taken
         """
 
         self.chem_data = None       # Object of type "ChemData" (with data about the chemicals and their reactions,
                                     #                            incl. macromolecules)
         self.reactions = None       # Object ot type "Reactions" (with data about all the reactions)
 
+
+        if chem_data and reactions:
+            assert reactions.get_chem_data() == chem_data, \
+                "BioSim1D() instantiation: the argument `reactions` is based " \
+                "on a 'ChemData' object that doesn't match the one passed by the argument `chem_data`"
+
         if reactions is not None:
-            assert chem_data is None, \
-                "UniformCompartment instantiation: Cannot pass both `chem_data` and `reactions` as arguments (the `reactions` object already contains the `chem_data`)"
+            #assert chem_data is None, \
+                #"UniformCompartment instantiation: Cannot pass both `chem_data` and `reactions` as arguments (the `reactions` object already contains the `chem_data`)"
             assert names is None, \
                 "UniformCompartment instantiation: Cannot pass both `names` and `reactions` as arguments (the `reactions` object already contains the `names`)"
             self.chem_data = reactions.chem_data
