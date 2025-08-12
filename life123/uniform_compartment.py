@@ -822,8 +822,22 @@ class UniformCompartment:
         #print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_common() with:")
         #print(f"             delta_time={delta_time}, system={self.system}, ")
 
-        (delta_concentrations, _) = \
-            self._attempt_reaction_step(delta_time, variable_steps=False, explain_variable_steps=None, step_counter=step_counter)
+        try:
+            (delta_concentrations, _) = \
+                self._attempt_reaction_step(delta_time, variable_steps=False,
+                                            explain_variable_steps=None, step_counter=step_counter)
+
+        # CATCH any 'ExcessiveTimeStepHard' exception raised in the loop  (i.e. a HARD ABORT),
+        # in order to re-raise an Exception with a more detailed error message
+        except ExcessiveTimeStepHard as ex:
+            # Single reactions steps can fail with this error condition if the attempted time step was too large,
+            # under the following scenarios:
+            #       1. negative concentrations from any one reaction
+            #       2. negative concentration from the combined effect of multiple reactions
+            #print("*** CAUGHT a HARD ABORT in reaction_step_common_fixed_step()")
+            raise Exception(f"reaction_step_common_fixed_step(): unable to complete the reaction step.  "
+                            f"Consider reducing the time step. \n{ex}")
+
 
         return  delta_concentrations    # TODO: consider returning tentative_updated_system , since we already computed it
 
@@ -921,7 +935,12 @@ class UniformCompartment:
                 #print("*** CAUGHT a HARD ABORT")
                 self.number_neg_concs += 1
                 if explain_variable_steps and (explain_variable_steps[0] <= self.system_time <= explain_variable_steps[1]):
-                    print(ex)
+                    explanation = ex
+                    explanation += f"\n      -> will backtrack, and re-do step with a SMALLER delta time, " \
+                                    f"multiplied by {self.adaptive_steps.step_factors['error']} " \
+                                    f"(set to {delta_time * self.adaptive_steps.step_factors['error']:.5g}) " \
+                                    f"\n      [Step started at t={self.system_time:.5g}, and will rewind there]"
+                    print(explanation)
 
                 delta_time *= self.adaptive_steps.step_factors["error"]       # Reduce the excessive time step by a pre-set factor
                 recommended_next_step = delta_time
@@ -1095,7 +1114,7 @@ class UniformCompartment:
                       f"upon advancing reactions from system time t={self.system_time:,.5g}\n"
                       f"         It'll be AUTOMATICALLY CORRECTED with a reduction in time step size")
 
-            # A type of HARD ABORT is detected (a negative concentration resulting from the combined effect of all reactions)
+            # A type of HARD ABORT is detected and raised (a negative concentration resulting from the combined effect of all reactions)
             if self.diagnostics_enabled:
                 self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
                                                                 data={"action": "ABORT",
@@ -1107,11 +1126,10 @@ class UniformCompartment:
                 self.diagnostics.save_diagnostic_aborted_rxns(system_time=self.system_time, time_step=delta_time,
                                                              caption=f"aborted: neg. conc. from combined multiple rxns")
 
-            raise ExcessiveTimeStepHard(f"INFO: the tentative time step ({delta_time:.5g}) "
+
+            raise ExcessiveTimeStepHard(f"      INFO: the tentative time step ({delta_time:.5g}) "
                                         f"leads to a NEGATIVE concentration of one of the chemicals: "
-                                        f"\n      -> will backtrack, and re-do step with a SMALLER delta time, "
-                                        f"multiplied by {self.adaptive_steps.step_factors['error']} (set to {delta_time * self.adaptive_steps.step_factors['error']:.5g}) "
-                                        f"[Step started at t={self.system_time:.5g}, and will rewind there.  Baseline values: {self.system} ; delta conc's: {delta_concentrations}]")
+                                        f"\n      Baseline values: {self.system} ; delta concentrations: {delta_concentrations}]")
 
 
         return  (delta_concentrations, recommended_next_step)       # Maybe also return tentative_updated_system
@@ -1315,31 +1333,34 @@ class UniformCompartment:
 
 
 
-    def validate_increment(self,  delta_conc, baseline_conc: float,
+    def validate_increment(self,  delta_conc :float, baseline_conc :float,
                            rxn_index :int, species_index: int, delta_time) -> None:
         """
-        Examine the requested concentration change given by delta_conc
+        Examine the single requested concentration change `delta_conc`
         (typically, as computed by an ODE solver),
-        relative to the baseline (pre-reaction) value baseline_conc,
+        relative to the baseline (pre-reaction) value `baseline_conc`,
         for the given SINGLE chemical species and SINGLE reaction.
 
-        If the concentration change would render the concentration negative,
-        raise an Exception (of custom type "ExcessiveTimeStepHard")
+        If the requested concentration change would render the concentration negative,
+        save diagnostic data if diagnostics are enabled, and then
+        raise an Exception of custom type "ExcessiveTimeStepHard"
 
-        :param delta_conc:              The change in concentration computed by the ode solver
-                                            (for the specified chemical, in the given reaction)
-        :param baseline_conc:           The initial concentration
+        :param delta_conc:      The change in concentration that we're considering
+                                    for the specified chemical, in the given reaction
+        :param baseline_conc:   The initial concentration value for that chemical
 
-        [The remaining arguments are ONLY USED for error printing]
-        :param rxn_index:               The index (0-based) to identify the reaction of interest (ONLY USED for error printing)
-        :param species_index:           The index (0-based) to identify the chemical species of interest (ONLY USED for error printing)
-        :param delta_time:              The time duration of the reaction step (ONLY USED for error printing)
+        [The remaining arguments are ONLY USED for diagnostics and error printing]
+        :param rxn_index:       The index (0-based) to identify the reaction of interest (ONLY USED for error printing)
+        :param species_index:   The index (0-based) to identify the chemical species of interest (ONLY USED for error printing)
+        :param delta_time:      The time duration of the reaction step (ONLY USED for error printing)
 
-        :return:                        None (an Exception is raised if a negative concentration is detected)
+        :return:                None.  An Exception is raised if a negative new concentration would result
+                                    from the requested concentration change
         """
         if (baseline_conc + delta_conc) < 0:
-            #print(f"\n*** CAUTION: negative concentration in chemical `{self.chem_data.get_name(species_index)}` in step starting at t={self.system_time:.4g}.  "
-            #      f"It will be AUTOMATICALLY CORRECTED with a reduction in time step size, as follows:")
+            # If the requested concentration change would lead to a negative concentration
+            #print(f"\n*** CAUTION: negative concentration in chemical `{self.chem_data.get_name(species_index)}` "
+            #      f"in step starting at t={self.system_time:.5g})"
 
             # A type of HARD ABORT is detected (a single reaction that, by itself, would lead to a negative concentration;
             #   while it's possible that other coupled reactions might counterbalance this - nonetheless,
@@ -1356,13 +1377,12 @@ class UniformCompartment:
                                                aborted=True,
                                                caption=f"aborted: neg. conc. in `{self.chem_data.get_label(species_index)}`")
 
-            raise ExcessiveTimeStepHard(f"    INFO: the tentative time step ({delta_time:.5g}) "
-                                    f"leads to a NEGATIVE concentration of `{self.chem_data.get_label(species_index)}` "
-                                    f"from reaction {self.reactions.single_reaction_describe(rxn_index=rxn_index, concise=True)} (rxn # {rxn_index}): "
-                                    f"\n      Baseline value: {baseline_conc:.5g} ; delta conc: {delta_conc:.5g}"
-                                    f"\n      -> will backtrack, and re-do step with a SMALLER delta time, "
-                                    f"multiplied by {self.adaptive_steps.step_factors['error']} (set to {delta_time * self.adaptive_steps.step_factors['error']:.5g}) "
-                                    f"\n      [Step started at t={self.system_time:.5g}, and will rewind there]")
+            chem_name = self.chem_data.get_label(species_index)
+            raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
+                                    f"would lead to a NEGATIVE concentration of the chemical `{chem_name}` "
+                                    f"from the reaction `{self.reactions.single_reaction_describe(rxn_index=rxn_index, concise=True)}` (rxn # {rxn_index}): "
+                                    f"\n      Baseline concentration value of `{chem_name}` : {baseline_conc:.6g} ; requested change (NOT carried out): {delta_conc:.6g}"
+                                    )
 
 
 

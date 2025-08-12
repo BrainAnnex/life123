@@ -114,6 +114,8 @@ def test_get_conc_dict():
 
     with pytest.raises(Exception):
         rxn.get_conc_dict(species="C")                      # Wrong data type
+
+    with pytest.raises(Exception):
         rxn.get_conc_dict(system_data=np.array([1, 2]))     # Wrong number of entries
 
     result = rxn.get_conc_dict(system_data=np.array([1, 2, 3, 4]))
@@ -204,9 +206,41 @@ def test_single_compartment_react():
 
 
 
-def test_single_reaction_fixed_step():
-    chem_data = ChemData(names=["A", "B"])
-    uc = UniformCompartment(chem_data=chem_data)
+def test_reaction_step_common_fixed_step():
+    uc = UniformCompartment(names=["A", "B"])
+
+    uc.set_conc(conc=[10., 50.], snapshot=False)
+
+    # Reaction A <-> B , with 1st-order kinetics in both directions.
+    # Based on experiment "reactions_single_compartment/react_1"
+    uc.add_reaction(reactants="A", products="B", forward_rate=3., reverse_rate=2.)
+
+    result = uc.reaction_step_common_fixed_step(delta_time=0.1)
+    assert np.allclose(result, [ 7. , -7.])     # The increment vector
+
+    # Reset the system concentration to their original values, and repeat
+    uc.set_conc(conc=[10., 50.], snapshot=False)
+    result = uc.reaction_step_common_fixed_step(delta_time=0.1)
+    assert np.allclose(result, [ 7. , -7.])
+
+    uc.set_conc(conc=[10., 50.], snapshot=False)
+    result = uc.reaction_step_common_fixed_step(delta_time=0.2)
+    assert np.allclose(result, [ 14. , -14.])     # The increment vector has doubled
+
+    uc.set_conc(conc=[10., 50.], snapshot=False)
+    result = uc.reaction_step_common_fixed_step(delta_time=0.7142857)
+    assert np.allclose(result, [49.999999, -49.999999])     # The increment vector is a hair from making [B] negative
+
+    uc.set_conc(conc=[10., 50.], snapshot=False)
+    with pytest.raises(Exception):
+        uc.reaction_step_common_fixed_step(delta_time=0.71429)  # A step so large that it would make [B] negative
+
+    # TODO: test with multiple reactions
+
+
+
+def test__reaction_elemental_step():
+    uc = UniformCompartment(names=["A", "B"])
 
     uc.set_conc(conc=[10., 50.], snapshot=False)
 
@@ -240,9 +274,8 @@ def test_single_reaction_fixed_step():
 
 
 
-def test_single_reaction_variable_step_1():
-    chem_data = ChemData(names=["A", "B"])
-    uc = UniformCompartment(chem_data=chem_data)
+def test__reaction_elemental_step_1():
+    uc = UniformCompartment(names=["A", "B"])
 
     uc.set_conc(conc=[10., 50.], snapshot=False)
 
@@ -276,9 +309,8 @@ def test_single_reaction_variable_step_1():
 
 
 
-def test_single_reaction_step_2():
-    chem_data = ChemData(names=["A", "B", "C"])
-    uc = UniformCompartment(chem_data=chem_data)
+def test__reaction_elemental_step_2():
+    uc = UniformCompartment(names=["A", "B", "C"])
 
     uc.set_conc(conc=[10., 50., 20.], snapshot=False)
 
@@ -304,9 +336,8 @@ def test_single_reaction_step_2():
 
 
 
-def test_single_reaction_step_3():
-    chem_data = ChemData(names=["A", "C", "D"])
-    uc = UniformCompartment(chem_data=chem_data)
+def test__reaction_elemental_step_3():
+    uc = UniformCompartment(names=["A", "C", "D"])
 
     uc.set_conc(conc=[4., 7., 2.], snapshot=False)
 
@@ -322,9 +353,8 @@ def test_single_reaction_step_3():
 
 
 
-def test_single_reaction_step_4():
-    chem_data = ChemData(names=["A", "B", "C", "D"])
-    uc = UniformCompartment(chem_data=chem_data)
+def test__reaction_elemental_step_4():
+    uc = UniformCompartment(names=["A", "B", "C", "D"])
 
     uc.set_conc(conc=[4., 7., 5., 2.], snapshot=False)
 
@@ -341,9 +371,8 @@ def test_single_reaction_step_4():
 
 
 
-def test_single_reaction_step_5():
-    chem_data = ChemData(names=["A", "B"])
-    uc = UniformCompartment(chem_data=chem_data)
+def test__reaction_elemental_step_5():
+    uc = UniformCompartment(names=["A", "B"])
 
     uc.set_conc(conc=[3., 5.], snapshot=False)
 
@@ -357,9 +386,8 @@ def test_single_reaction_step_5():
 
 
 
-def test_single_reaction_step_6():
-    chem_data = ChemData(names=["A", "B", "C", "D", "E"])
-    uc = UniformCompartment(chem_data=chem_data)
+def test__reaction_elemental_step_6():
+    uc = UniformCompartment(names=["A", "B", "C", "D", "E"])
 
     uc.set_conc(conc=[3., 5., 1., 0.4, 0.1], snapshot=False)
 
@@ -655,16 +683,17 @@ def test_reaction_in_equilibrium():
 
 
 def test_validate_increment():
-    chem_data = ChemData(names=["A", "B", "C"])
-    uc = UniformCompartment(chem_data=chem_data)
+    uc = UniformCompartment(names=["A", "B", "C"])
 
-    uc.add_reaction(reactants=["A"], products=["B"])
+    uc.add_reaction(reactants="A", products="B")
 
     uc.validate_increment(delta_conc=50., baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.02)
     uc.validate_increment(delta_conc=-9.99, baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.02)
 
     with pytest.raises(Exception):      # Would lead to a negative concentration
-        uc.validate_increment(delta_conc=-10.01, baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.02)
+        uc.validate_increment(delta_conc=-10.001, baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.97)
+
+    # TODO: test that diagnostic data, if enabled, gets saved as needed
 
 
 
