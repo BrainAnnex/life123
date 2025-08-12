@@ -683,6 +683,7 @@ class UniformCompartment:
 
 
             # ----------  CORE OPERATION OF MAIN LOOP  ----------
+            #TODO: switch to using reaction_step_common_fixed_step() if variable_steps is False
             delta_concentrations, step_actually_taken, recommended_next_step = \
                     self.reaction_step_common(delta_time=time_step,
                                               variable_steps=variable_steps, explain_variable_steps=explain_variable_steps,
@@ -822,7 +823,7 @@ class UniformCompartment:
         #print(f"             delta_time={delta_time}, system={self.system}, ")
 
         (delta_concentrations, _) = \
-            self._attempt_reaction_step(delta_time, variable_steps=False, explain_variable_steps=False, step_counter=step_counter)
+            self._attempt_reaction_step(delta_time, variable_steps=False, explain_variable_steps=None, step_counter=step_counter)
 
         return  delta_concentrations    # TODO: consider returning tentative_updated_system , since we already computed it
 
@@ -974,6 +975,7 @@ class UniformCompartment:
 
         :return:                The pair (delta_concentrations, recommended_next_step)
         """
+        #TODO: explain_variable_steps should be a boolean
         # *****  CORE OPERATION  *****
         delta_concentrations = self._reaction_elemental_step(delta_time=delta_time, rxn_list=None)
 

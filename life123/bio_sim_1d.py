@@ -1737,9 +1737,9 @@ class BioSim1D(System1D):
             conc_array = self.bin_snapshot_array(bin_address=bin_n)
             #print(f"\conc_array in bin {bin_n}: ", conc_array)
 
-            # Obtain the Delta-conc for each species, for bin number bin_n (a NumPy array)
-            increment_vector, _, _ = self.reaction_dynamics.reaction_step_common(delta_time=delta_time, conc_array=conc_array,
-                                                                                 variable_steps=False)  # Using fixed time steps
+            # Obtain the Delta-conc for each chemical, for the reactions in bin number bin_n (a NumPy array)
+            # A fixed time step is being used for now
+            increment_vector = self.reaction_dynamics.reaction_step_common_fixed_step(delta_time=delta_time, conc_array=conc_array)
 
             # Replace the "bin_n"-th column of the self.delta_reactions matrix with the contents of the vector increment_vector
             self.delta_reactions[:, bin_n] = np.array([increment_vector])
