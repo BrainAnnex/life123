@@ -13,16 +13,16 @@
 # ---
 
 # %% [markdown]
-# ## A strong, localized transient becomes irrelevant with distance
+# ## A strong, localized transient concentration becomes irrelevant with distance
 #
 # Diffusion of a narrow, bell-shaped, initial concentration of a single chemical.   
-# With increasing distance from the location of the transient signal, hardly any change with time is detected, as the system goes to equilibrium
+# With increasing distance from the initial location of the transient signal, hardly any change with time is detected as the system goes to equilibrium
 
 # %% [markdown]
 # ### TAGS :  "diffusion 1D"
 
 # %%
-LAST_REVISED = "Aug. 7, 2025"
+LAST_REVISED = "Aug. 10, 2025"
 LIFE123_VERSION = "1.0.0rc5"       # Library version this experiment is based on
 
 # %%
@@ -167,5 +167,9 @@ bio.plot_history_single_bin(title_prefix="Bin hugely far from the location of th
 
 # %% [markdown]
 # # Notice how faraway locations barely register that the distant transient ever happened!
+
+# %% [markdown]
+# #### VARIATION:  
+# Transients that never make it far from their origin, because of _chemical reactions consuming them_, are explored in the experiment `1D/reaction_diffusion/transient_getting_mopped_up`
 
 # %%

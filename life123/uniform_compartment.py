@@ -844,7 +844,7 @@ class UniformCompartment:
 
         delta_concentrations = None
 
-        SMALLEST_VALUE_TO_TRY = delta_time / 2000.       # Used to prevent infinite loops
+        SMALLEST_VALUE_TO_TRY = delta_time / 2000.       # Used to prevent infinite loops (only applicable in case of variable steps)
 
         normal_exit = False
 

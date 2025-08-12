@@ -190,6 +190,23 @@ class System1D:
 
 
 
+    def total_chem_mass(self, chem_label=None, chem_index=None) -> float:
+        """
+        Return the sum of all the concentrations of the specified chemical,
+        across all bins
+
+        :param chem_label:  String with the label to identify the chemical of interest
+        :param chem_index:  Integer to identify the chemical of interest.
+                                Cannot specify both `chem_label` and `chem_index`
+
+        :return:            True if this validation passes, or False otherwise
+        """
+        arr = self.system_snapshot_arr(chem_label=chem_label, chem_index=chem_index)
+        return np.sum(arr)
+
+
+
+
     def check_mass_conservation(self, expected :float, chem_label=None, chem_index=None) -> bool:
         """
         Check whether the sum of all the concentrations of the specified chemical,
@@ -197,7 +214,7 @@ class System1D:
 
         :param expected:    Value that the sum of all the bin concentrations of the specified chemical should add up to
         :param chem_label:  String with the label to identify the chemical of interest
-        :param chem_index:  DEPRECATED.  Integer to identify the chemical of interest.
+        :param chem_index:  Integer to identify the chemical of interest.
                                 Cannot specify both `chem_label` and `chem_index`
 
         :return:            True if this validation passes, or False otherwise
@@ -635,24 +652,28 @@ class System1D:
 
 
 
-    def inject_bell_curve(self, chem_label, center=None, mean=0.5, sd=0.15, amplitude=1., bias=0) -> None:
+    def inject_bell_curve(self, chem_label, center=None, mean=0.5, sd=0.15, amplitude=None, max_amplitude=None, bias=0) -> None:
         """
         Add to the current concentrations of the specified chemical species a signal across all bins in the shape of a Bell curve.
         The default values provide bell shape centered in the middle of the system, and fairly spread out
         (but pretty close to zero at the endpoints)
 
         :param chem_label:  The name of the chemical species whose concentration we're modifying
-        :param center:    A value, generally between 0 and 1, indication the spatial position of the mean
+        :param center:      A value, generally between 0 and 1, indication the spatial position of the mean
                                 relative to the bin system;
                                 if less than 0 or greater than 1, only one tail of the curve will be seen
         :param mean:        [DEPRECATED: use `localized` instead]
         :param sd:          Standard deviation, in units of the system length
-        :param amplitude:   Amount by which to multiply the standard normal curve signal before adding it to current concentrations;
-                                note: NOT the same as the max_amplitude of the bell curve
+        :param amplitude:   Amount by which to multiply the standard normal curve signal,
+                                before adding it to current concentrations
+                                Note: NOT the same as the max_amplitude of the bell curve; see next argument.
+        :param max_amplitude:Largest value (EXCLUSIVE of bias) that the (smoothed version of the) bell curve reaches.
+                                Only one of the 2 arguments `amplitude` and `max_amplitude` may be provided;
+                                if neither is specified, `amplitude` is set to 1
         :param bias:        Positive amount to be added to all values (akin to "DC bias" in electrical circuits)
         :return:            None
         """
-        # TODO: also offer a max_amplitude mode.  Explore total conservation
+        # TODO: Pytest: Explore total conservation
 
         if center is not None:
             mean = center
@@ -660,8 +681,19 @@ class System1D:
         assert bias >= 0, \
             f"System1D.inject_bell_curve(): the value for the `bias` ({bias}) cannot be negative"
 
-        assert amplitude >= 0, \
-            f"System1D.inject_bell_curve(): the value for the `amplitude` ({amplitude}) cannot be negative"
+        if amplitude is None:
+            if max_amplitude is None:
+                amplitude = 1.
+            else:
+                # Tha analytica max of a bell curve is:  MAX_AMPLITUDE = A /(σ sqrt(2π)) ;
+                # solve for A
+                amplitude = max_amplitude * sd * math.sqrt(2*math.pi)
+                #print("*** DERIVED AMPLITUDE:", amplitude)
+        else:       # if a value for `amplitude` was provided
+            assert max_amplitude is None, \
+                f"System1D.inject_bell_curve(): cannot provide values for both `amplitude` and `max_amplitude`"
+            assert amplitude >= 0, \
+                f"System1D.inject_bell_curve(): the value for the `amplitude` ({amplitude}) cannot be negative"
 
         species_index = self.chem_data.get_index(chem_label)
 
@@ -1009,6 +1041,277 @@ class System1D:
         :return:    A Pandas dataframe
         """
         return self.saved_values.get_dataframe()
+
+
+
+
+
+    #####################################################################################################
+
+    '''                                    ~   VISUALIZATION   ~                                           '''
+
+    def ________VISUALIZATION________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
+    def visualize_system(self, title_prefix=None, colors=None, plot_bg_color="oldlace", show=False) -> pgo.Figure:
+        """
+        Visualize the current state of the system of all the chemicals as a combined line plot,
+        using plotly.
+        The x-axis is the bin coordinate, and the y-axis are the concentrations of each of the chemicals.
+        An auto-generated title is included.
+
+        :param title_prefix:[OPTIONAL] Prefix to the auto-generated title;
+                                either a string,
+                                or a list/tuple (2 entries) max to insert on separate lines
+        :param colors:      [OPTIONAL] List of standardized color names to use for each of the chemicals.
+                                If None, then use the registered colors (if present),
+                                or the hardwired defaults as a last resort
+        :param plot_bg_color:[OPTIONAL] The color inside the axes.  The default color used here is different from
+                                Plotly standard color, to visually differentiate this kind of plots from other type
+        :param show:        [OPTIONAL] If True, the plot will be shown.
+                                Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
+                                      leads to it being automatically shown
+
+        :return:            A Plotly "Figure" object
+        """
+        title = f"System snapshot at time t={self.system_time:.8g}"
+
+        title = PlotlyHelper.assemble_title(title, title_prefix)
+
+
+        chem_labels = self.chem_data.get_all_labels()
+        n_chem = len(chem_labels)
+
+        if colors is None:
+            # Attempt to make use of the previously-registered colors, if available
+            colors = self.chem_data.get_registered_colors(chem_labels)
+            if colors is None:
+                # Fallback to default colors
+                colors = Colors.assign_default_colors(n_chem)
+
+
+        # Handle differently the scenarios with just 1 chemical in the system, vs. multiple ones
+        if n_chem == 1:
+            chem_name = chem_labels[0]      # The only chemical
+
+            fig = px.line(y=self.lookup_species(chem_label=chem_name),
+                          title= title,
+                          color_discrete_sequence = colors,
+                          labels={"x":"Bin number", "y": f"[{chem_name}]"}
+                          )
+        else:
+            fig = px.line(data_frame=self.system_snapshot(), y=chem_labels,
+                          title= title,
+                          color_discrete_sequence = colors,
+                          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"}
+                          )
+
+
+        if plot_bg_color is not None:
+            # Change background color (the color inside the axes)
+            fig.update_layout(
+                plot_bgcolor = plot_bg_color      # inside the plot area
+            )
+
+        if show:
+            fig.show()
+
+        return fig
+
+
+
+    def system_heatmaps(self, chem_labels=None, colors=None,
+                        title_prefix ="", **kwargs) -> pgo.Figure:
+        """
+
+        :param chem_labels: [OPTIONAL] NOT YET USED.  For now, ALL chemicals get shown
+        :param colors:      [OPTIONAL] If None, then use the registered colors (if specified),
+                                or the hardwired defaults as a last resort
+                                (but only if more than 1 chemical; if only 1, go monochromatic)
+        :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
+        :param kwargs:      [OPTIONAL] Other named arguments to pass to PlotlyHelper.heatmap_stack_1D()
+                                For list, see documentation of method PlotlyHelper.heatmap_stack_1D
+
+        :return:            A Plotly "Figure" object containing a stack of Heatmaps
+        """
+        title = f"System snapshot at time t={self.system_time:.8g}"
+
+        title = PlotlyHelper.assemble_title(title, title_prefix)
+
+
+        if chem_labels is None:
+            chem_labels = self.chem_data.get_all_labels()
+
+
+        if colors is None:
+            # Attempt to make use of the previously-registered colors, if available
+            colors = self.chem_data.get_registered_colors(chem_labels)
+            if (colors is None) and len(chem_labels) > 1:
+                # Fall back to default colors (but don't bother if just 1 chemical)
+                colors = Colors.assign_default_colors(len(chem_labels))
+
+
+        conc_matrix = self.system
+
+        if self.membranes_obj == []:
+            flattened_list = None
+        else:
+            flattened_list = [item for pair in self.membranes_obj.membrane_list
+                              for item in pair]
+
+        return PlotlyHelper.heatmap_stack_1D(data_matrix=conc_matrix, labels=chem_labels,
+                                             title=title, data_name="Conc.", entity_name="CHEM",
+                                             colors=colors,
+                                             barriers=flattened_list, **kwargs)
+
+
+
+    def line_plot(self, plot_pars: dict, graphic_component, header=None, color_mapping=None) -> None:
+        """
+        Send to the HTML log, a line plot representation of the concentrations of
+        all the chemical species species.
+
+        IMPORTANT: must first call GraphicLog.config(), or an Exception will be raised
+
+        :param plot_pars:           A dictionary of parameters (such as "outer_width") for the plot
+        :param graphic_component:   A string with the name of the graphic module to use.  EXAMPLE: "vue_curves_4"
+        :param header:              [OPTIONAL] String to display just above the plot
+        :param color_mapping:       [OPTIONAL] Dict mapping index numbers to color names or RBG hex values.
+                                        If not provided, the colors associated to the chemicals are used, if any
+        :return:                    None
+        """
+        #TODO: offer an option to limit which chemical species to display
+
+        if not GraphicLog.is_initialized():
+            raise Exception("Prior to calling line_plot(), "
+                            "need to initialize the graphics module with a call to GraphicLog.config()")
+
+        if header:
+            # Display the requested header just above the plot, in the log file
+            log.write(f"{header}", style=log.h1, newline=False)
+
+
+        #
+        # Prepare the data for the plot
+        #
+
+        # Concentration data for the plots
+        #       outer level : order of chemical-species index,
+        #       inner level : in bin index order from left to right
+        species_concentrations = [list(self.lookup_species(i)) for i in range(self.n_species)]
+        #print(species_concentrations)
+
+        all_data = {
+            "curve_labels": self.chem_data.get_all_labels(),
+
+            # Concentration data for the plots
+            "plot_data": species_concentrations,
+
+            # Set the range of values for the y-scale of the plot
+            "range_min": plot_pars["range"][0],
+            "range_max": plot_pars["range"][1],
+
+            # Set the dimensions and margins of the plot
+            "outer_width": plot_pars["outer_width"],
+            "outer_height": plot_pars["outer_height"],
+            "margins": plot_pars["margins"]
+        }
+
+        # If a color mapping was provided, add it to the data
+        if color_mapping:
+            all_data["color_mapping"] = color_mapping
+        elif col_map := self.chem_data.get_color_mapping_by_index():
+            all_data["color_mapping"] = col_map
+
+
+        # Send the plot to the HTML log file.
+        # The version of the heatmap Vue component specified
+        # in the call to GraphicLog.config() will be used
+        GraphicLog.export_plot(all_data, graphic_component, unpack=True)
+
+
+
+    def plot_history_single_bin(self, bin_address :int, colors=None,
+                                title_prefix=None, title=None, smoothed=False,
+                                vertical_lines_to_add=None, max_points=None) -> pgo.Figure:
+        """
+        Using plotly, draw the plots of chemical concentration values over time at the specified bin,
+        based on the historical data that was saved when running simulations.
+
+        Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
+
+        :param bin_address: A single bin address (an integer)
+        :param colors:      [OPTIONAL] List of CSS color names for each of the heatmaps.
+                                If provided, its length must match that of the data;
+                                if None, then use the registered colors (if specified),
+                                or the hardwired defaults as a last resort
+        :param title_prefix:[OPTIONAL] Prefix to the default auto-generated title
+        :param title:       [OPTIONAL] If set, it over-rides `title_prefix.  If not passed, a default one is used
+        :param smoothed:    [OPTIONAL] If True, a spline is used to smooth the lines;
+                                otherwise (default), line segments are used
+        :param vertical_lines_to_add: [OPTIONAL] List or tuple or Numpy array or Pandas series
+                                    of x-coordinates at which to draw thin vertical dotted gray lines.
+                                    If the number of vertical lines is so large as to overwhelm the plot,
+                                    only a sample of them is shown.
+                                    Note that vertical lines, if requested, go into the plot's "layout";
+                                    as a result they might not appear if this plot is later combined with another one.
+        :param max_points:  [OPTIONAL] Maximum number of points to include in the plot; if exceeded,
+                                only an appropriate sampling of historical data is used,
+                                and an informational message is printed out
+
+        :return:            A plotly "Figure" object; an Exception is raised if no historical data is found
+        """
+        # TODO: add more options
+
+        MAX_NUMBER_POINTS = 2000    # Used to avoid slow plotting and large image storage sizes, in case
+                                    # a very massive history was saved
+
+        if max_points:
+            assert max_points > 10, "plot_history_single_bin(): argument `max_points` must be greater than 10"
+        else:
+            max_points = MAX_NUMBER_POINTS
+
+
+        self.assert_valid_bin(bin_address)
+
+        if title is None:
+            if self.chem_data.number_of_chemicals() == 1:
+                chem_title = f"chemical `{self.chem_data.get_label(0)}`"    # The label of the only chemical in the system
+            else:
+                chem_title = "all chemicals"
+
+            title = f"Concentration as a function of time of {chem_title} at bin {bin_address}"
+
+            if title_prefix:
+                title = f"{title_prefix}<br>{title}"
+
+
+        # Retrieve the historical data
+        n_points = self.conc_history.bin_history_size()
+
+        if n_points > max_points:
+            downsize = math.ceil(n_points/max_points)
+            print(f"NOTICE: Excessive number of data points ({n_points}) - only showing 1 out of every {downsize}")
+        else:
+            downsize = 1
+
+        df = self.conc_history.bin_history(bin_address = bin_address, downsize=downsize)
+        if type(df) == str:         # No data was found
+            raise Exception(df)     # df contains an error message rather than a dataframe
+
+        chem_labels = self.conc_history.restrict_chemicals  # The chemicals for which history was kept
+
+        if colors is None:  # Attempt to make use of the previously-registered colors, if available
+            colors = self.chem_data.get_registered_colors(chem_labels)
+
+        return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
+                                        colors=colors, legend_header="Chemical", title=title,
+                                        smoothed=smoothed, vertical_lines_to_add=vertical_lines_to_add)
+
+
+
 
 
 
@@ -1402,7 +1705,7 @@ class BioSim1D(System1D):
         """
         Compute and store the incremental concentration changes in all bins,
         from all reactions,
-        for a single time step of duration delta_time.
+        for a single time step of duration `delta_time`.
 
         The incremental concentration changes are stored in the class variable
         "delta_reactions", which contains a Numpy array that gets cleared and set.
@@ -1480,371 +1783,12 @@ class BioSim1D(System1D):
 
     #####################################################################################################
 
-    '''                                    ~   VISUALIZATION   ~                                           '''
+    '''                                    ~   FOURIER ANALYSIS    ~                                           '''
 
-    def ________VISUALIZATION________(DIVIDER):
+    def ________FOURIER_ANALYSIS________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
-    def visualize_system(self, title_prefix=None, colors=None, show=False) -> pgo.Figure:
-        """
-        Visualize the current state of the system of all the chemicals as a combined line plot,
-        using plotly.
-        The x-axis is the bin coordinate, and the y-axis are the concentrations of each of the chemicals.
-
-        :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
-        :param colors:      [OPTIONAL] If None, then use the registered colors (if specified),
-                                or the hardwired defaults as a last resort
-        :param show:        [OPTIONAL] If True, the plot will be shown
-                                Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
-                                      leads to it being automatically shown
-
-        :return:            A Plotly "Figure" object
-        """
-        # TODO: move all visualization-related methods to System1D
-
-        title = f"System snapshot at time t={self.system_time:.8g}"
-        if title_prefix:
-            title = title_prefix + "<br>" + title
-
-        chem_labels = self.chem_data.get_all_labels()
-        n_chem = len(chem_labels)
-
-        if colors is None:
-            # Attempt to make use of the previously-registered colors, if available
-            colors = self.chem_data.get_registered_colors(chem_labels)
-            if colors is None:
-                # Fall back to default colors
-                colors = Colors.assign_default_colors(n_chem)
-
-
-        if n_chem == 1:
-            chem_name = chem_labels[0]      # The only chemical
-
-            fig = px.line(y=self.lookup_species(chem_label=chem_name),
-                          title= title,
-                          color_discrete_sequence = colors,
-                          labels={"y": f"[{chem_name}]", "x":"Bin number"}, )
-        else:
-            fig = px.line(data_frame=self.system_snapshot(), y=chem_labels,
-                          title= title,
-                          color_discrete_sequence = colors,
-                          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"})
-
-        if show:
-            fig.show()
-
-        return fig
-
-
-
-    def system_heatmaps(self, chem_labels=None, colors=None,
-                        title_prefix ="", **kwargs) -> pgo.Figure:
-        """
-
-        :param chem_labels: [OPTIONAL] NOT YET USED.  For now, ALL chemicals get shown
-        :param colors:      [OPTIONAL] If None, then use the registered colors (if specified),
-                                or the hardwired defaults as a last resort
-                                (but only if more than 1 chemical; if only 1, go monochromatic)
-        :param title_prefix:[OPTIONAL] A string to prefix to the auto-generated title
-        :param kwargs:      [OPTIONAL] Other named arguments to pass to PlotlyHelper.heatmap_stack_1D()
-                                For list, see documentation of method PlotlyHelper.heatmap_stack_1D
-
-        :return:            A Plotly "Figure" object containing a stack of Heatmaps
-        """
-        title = f"System snapshot at time t={self.system_time:.8g}"
-        if title_prefix:
-            title = title_prefix + "<br>" + title
-
-
-        if chem_labels is None:
-            chem_labels = self.chem_data.get_all_labels()
-
-
-        if colors is None:
-            # Attempt to make use of the previously-registered colors, if available
-            colors = self.chem_data.get_registered_colors(chem_labels)
-            if (colors is None) and len(chem_labels) > 1:
-                # Fall back to default colors (but don't bother if just 1 chemical)
-                colors = Colors.assign_default_colors(len(chem_labels))
-
-
-        conc_matrix = self.system
-
-        if self.membranes_obj == []:
-            flattened_list = None
-        else:
-            flattened_list = [item for pair in self.membranes_obj.membrane_list
-                              for item in pair]
-
-        return PlotlyHelper.heatmap_stack_1D(data_matrix=conc_matrix, labels=chem_labels,
-                                             title=title, data_name="Conc.", entity_name="CHEM",
-                                             colors=colors,
-                                             barriers=flattened_list, **kwargs)
-
-
-
-    def single_species_heatmap(self, species_index: int, heatmap_pars: dict, graphic_component, header=None) -> None:
-        """
-        TODO: DEPRECATED!
-
-        Send to the HTML log, a heatmap representation of the concentrations of
-        the single requested species.  Note: if using in Jupyterlab, this image will NOT be displayed there
-
-        IMPORTANT: must first call GraphicLog.config(), or an Exception will be raised
-
-        :param species_index:       Index identifying the species of interest
-        :param heatmap_pars:        A dictionary of parameters for the heatmap
-        :param graphic_component:   A string with the name of the graphic module to use.  EXAMPLE: "vue_heatmap_11"
-        :param header:              Optional string to display just above the heatmap
-        :return:                    None
-        """
-        if not GraphicLog.is_initialized():
-            raise Exception("Prior to calling single_species_heatmap(), "
-                            "need to initialize the graphics module with a call to GraphicLog.config()")
-
-        if header:
-            log.write(f"{header}", style=log.h1, newline=False, also_print=False)
-
-
-        #
-        # Prepare the data for the heatmap
-        #
-
-        # List of concentrations in the various bins, for the requested species
-        species_concentrations = list(self.lookup_species(species_index))
-        #print(species_concentrations)
-
-        all_data = {
-            "y_labels": [f"Mol {species_index}"],
-
-            # Data for the heatmap, by rows, starting with the bottom one
-            "heatmap_data": [species_concentrations],
-
-            # Set the range of values in the heatmap bins
-            "range_min": heatmap_pars["range"][0],
-            "range_max": heatmap_pars["range"][1],
-
-            # Set the dimensions and margins of the heatmap
-            "outer_width": heatmap_pars["outer_width"],
-            "outer_height": heatmap_pars["outer_height"],
-            "margins": heatmap_pars["margins"]
-        }
-
-        # Send the plot to the HTML log file.
-        # The version of the heatmap Vue component specified
-        # in the call to GraphicLog.config() will be used
-        GraphicLog.export_plot(all_data, graphic_component, unpack=True)
-
-
-
-    def single_species_line_plot(self, species_index: int, plot_pars: dict, graphic_component, header=None) -> None:
-        """
-        TODO: DEPRECATED
-
-        Send to the HTML log, a line plot representation of the concentrations of
-        the single requested species.  To plot more than 1 species, use line_plot() instead
-
-        IMPORTANT: must first call GraphicLog.config(), or an Exception will be raised
-
-        :param species_index:       Index identifying the species of interest
-        :param plot_pars:           A dictionary of parameters for the plot
-        :param graphic_component:   A string with the name of the graphic module to use.  EXAMPLE: "vue_curves_3"
-        :param header:              Optional string to display just above the plot
-        :return:                    None
-        """
-        if not GraphicLog.is_initialized():
-            raise Exception("Prior to calling single_species_line_plot(), "
-                            "need to initialize the graphics module with a call to GraphicLog.config()")
-
-        if header:
-            log.write(f"{header}", style=log.h1, newline=False)
-
-
-        #
-        # Prepare the data for the plot
-        #
-
-        # List of concentrations in the various bins, for the requested species
-        species_concentrations = list(self.lookup_species(species_index))
-        #print(species_concentrations)
-
-        all_data = {
-            "y_labels": [f"Mol {species_index}"],
-
-            # Concentration data for the plots (for now just 1 chemical species), in index order
-            "data": species_concentrations,
-
-            # Set the range of values for the y-scale of the plot
-            "range_min": plot_pars["range"][0],
-            "range_max": plot_pars["range"][1],
-
-            # Set the dimensions and margins of the plot
-            "outer_width": plot_pars["outer_width"],
-            "outer_height": plot_pars["outer_height"],
-            "margins": plot_pars["margins"]
-        }
-
-        # Send the plot to the HTML log file.
-        # The version of the heatmap Vue component specified
-        # in the call to GraphicLog.config() will be used
-        GraphicLog.export_plot(all_data, graphic_component, unpack=True)
-
-
-
-    def line_plot(self, plot_pars: dict, graphic_component, header=None, color_mapping=None) -> None:
-        """
-        Send to the HTML log, a line plot representation of the concentrations of
-        all the chemical species species.
-
-        IMPORTANT: must first call GraphicLog.config(), or an Exception will be raised
-
-        :param plot_pars:           A dictionary of parameters (such as "outer_width") for the plot
-        :param graphic_component:   A string with the name of the graphic module to use.  EXAMPLE: "vue_curves_4"
-        :param header:              [OPTIONAL] String to display just above the plot
-        :param color_mapping:       [OPTIONAL] Dict mapping index numbers to color names or RBG hex values.
-                                        If not provided, the colors associated to the chemicals are used, if any
-        :return:                    None
-        """
-        #TODO: offer an option to limit which chemical species to display
-
-        if not GraphicLog.is_initialized():
-            raise Exception("Prior to calling line_plot(), "
-                            "need to initialize the graphics module with a call to GraphicLog.config()")
-
-        if header:
-            # Display the requested header just above the plot, in the log file
-            log.write(f"{header}", style=log.h1, newline=False)
-
-
-        #
-        # Prepare the data for the plot
-        #
-
-        # Concentration data for the plots
-        #       outer level : order of chemical-species index,
-        #       inner level : in bin index order from left to right
-        species_concentrations = [list(self.lookup_species(i)) for i in range(self.n_species)]
-        #print(species_concentrations)
-
-        all_data = {
-            "curve_labels": self.chem_data.get_all_labels(),
-
-            # Concentration data for the plots
-            "plot_data": species_concentrations,
-
-            # Set the range of values for the y-scale of the plot
-            "range_min": plot_pars["range"][0],
-            "range_max": plot_pars["range"][1],
-
-            # Set the dimensions and margins of the plot
-            "outer_width": plot_pars["outer_width"],
-            "outer_height": plot_pars["outer_height"],
-            "margins": plot_pars["margins"]
-        }
-
-        # If a color mapping was provided, add it to the data
-        if color_mapping:
-            all_data["color_mapping"] = color_mapping
-        elif col_map := self.chem_data.get_color_mapping_by_index():
-            all_data["color_mapping"] = col_map
-
-
-        # Send the plot to the HTML log file.
-        # The version of the heatmap Vue component specified
-        # in the call to GraphicLog.config() will be used
-        GraphicLog.export_plot(all_data, graphic_component, unpack=True)
-
-
-
-    def plot_history_single_bin(self, bin_address :int, colors=None,
-                                title_prefix=None, title=None, smoothed=False,
-                                vertical_lines_to_add=None, max_points=None) -> pgo.Figure:
-        """
-        Using plotly, draw the plots of chemical concentration values over time at the specified bin,
-        based on the historical data that was saved when running simulations.
-
-        Note: if this plot is to be later combined with others, use PlotlyHelper.combine_plots()
-
-        :param bin_address: A single bin address (an integer)
-        :param colors:      [OPTIONAL] List of CSS color names for each of the heatmaps.
-                                If provided, its length must match that of the data;
-                                if None, then use the registered colors (if specified),
-                                or the hardwired defaults as a last resort
-        :param title_prefix:[OPTIONAL] Prefix to the default auto-generated title
-        :param title:       [OPTIONAL] If set, it over-rides `title_prefix.  If not passed, a default one is used
-        :param smoothed:    [OPTIONAL] If True, a spline is used to smooth the lines;
-                                otherwise (default), line segments are used
-        :param vertical_lines_to_add: [OPTIONAL] List or tuple or Numpy array or Pandas series
-                                    of x-coordinates at which to draw thin vertical dotted gray lines.
-                                    If the number of vertical lines is so large as to overwhelm the plot,
-                                    only a sample of them is shown.
-                                    Note that vertical lines, if requested, go into the plot's "layout";
-                                    as a result they might not appear if this plot is later combined with another one.
-        :param max_points:  [OPTIONAL] Maximum number of points to include in the plot; if exceeded,
-                                only an appropriate sampling of historical data is used,
-                                and an informational message is printed out
-
-        :return:            A plotly "Figure" object; an Exception is raised if no historical data is found
-        """
-        # TODO: add more options
-
-        MAX_NUMBER_POINTS = 2000    # Used to avoid slow plotting and large image storage sizes, in case
-                                    # a very massive history was saved
-
-        if max_points:
-            assert max_points > 10, "plot_history_single_bin(): argument `max_points` must be greater than 10"
-        else:
-            max_points = MAX_NUMBER_POINTS
-
-
-        self.assert_valid_bin(bin_address)
-
-        if title is None:
-            if self.chem_data.number_of_chemicals() == 1:
-                chem_title = f"chemical `{self.chem_data.get_label(0)}`"    # The label of the only chemical in the system
-            else:
-                chem_title = "all chemicals"
-
-            title = f"Concentration as a function of time of {chem_title} at bin {bin_address}"
-
-            if title_prefix:
-                title = f"{title_prefix}<br>{title}"
-
-
-        # Retrieve the historical data
-        n_points = self.conc_history.bin_history_size()
-
-        if n_points > max_points:
-            downsize = math.ceil(n_points/max_points)
-            print(f"NOTICE: Excessive number of data points ({n_points}) - only showing 1 out of every {downsize}")
-        else:
-            downsize = 1
-
-        df = self.conc_history.bin_history(bin_address = bin_address, downsize=downsize)
-        if type(df) == str:         # No data was found
-            raise Exception(df)     # df contains an error message rather than a dataframe
-
-        chem_labels = self.conc_history.restrict_chemicals  # The chemicals for which history was kept
-
-        if colors is None:  # Attempt to make use of the previously-registered colors, if available
-            colors = self.chem_data.get_registered_colors(chem_labels)
-
-        return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
-                                        colors=colors, legend_header="Chemical", title=title,
-                                        smoothed=smoothed, vertical_lines_to_add=vertical_lines_to_add)
-
-
-
-
-
-
-
-    #########################################################################
-    #                                                                       #
-    #                       FOURIER ANALYSIS                                #
-    #                                                                       #
-    #########################################################################
 
     def frequency_analysis(self, chem_label: str, threshold = 0.001, n_largest = None) -> pd.DataFrame:
         """
