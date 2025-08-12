@@ -1741,7 +1741,7 @@ class BioSim1D(System1D):
             increment_vector, _, _ = self.reaction_dynamics.reaction_step_common(delta_time=delta_time, conc_array=conc_array,
                                                                                  variable_steps=False)  # Using fixed time steps
 
-            # Replace the "bin_n" column of the self.delta_reactions matrix with the contents of the vector increment_vector
+            # Replace the "bin_n"-th column of the self.delta_reactions matrix with the contents of the vector increment_vector
             self.delta_reactions[:, bin_n] = np.array([increment_vector])
             #print(self.delta_reactions)
 

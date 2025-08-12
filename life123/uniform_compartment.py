@@ -776,11 +776,64 @@ class UniformCompartment:
 
 
 
+    def reaction_step_common_fixed_step(self, delta_time: float, conc_array=None,
+                                        step_counter=1) -> np.array:
+        """
+        This is the common entry point for both fixed-step single-compartment reactions,
+        and the reaction component of fixed-step reaction-diffusions in 1D, 2D and 3D.
+
+        "Compartments" may or may not correspond to the "bins" of the higher layers;
+        the calling code might have opted to merge some bins into a single "compartment".
+
+        Using the given concentration data for all the applicable species in a single compartment,
+        do a single reaction time step for ALL the reactions -
+        based on the INITIAL concentrations (prior to this reaction step),
+        which are used as the basis for all the reactions.
+
+        Return the increment vector for all the chemical species concentrations in the compartment
+
+        NOTES:  * the actual system concentrations are NOT changed
+                * this method doesn't modify the step sizes: in case of any error caused by an excessively-large
+                  step size, an Exception is raised.
+
+        :param delta_time:      The requested time duration of the reaction step
+        :param conc_array:      [OPTIONAL]All initial concentrations at the start of the reaction step,
+                                    as a Numpy array for ALL the chemical species, in their index order.
+                                    If not provided, self.system is used instead
+        :param step_counter:    [OPTIONAL] Integer currently only used for diagnostics
+
+        :return:                The increment vector for the concentrations of ALL the chemical species,
+                                    in their index order, as a Numpy array
+                                    EXAMPLE (for a single-reaction reactant and product with a 1:3 stoichiometry):
+                                        array([7. , -21.])
+        """
+        # TODO: no longer pass conc_array .  Use the object variable self.system instead
+        #       Determine whether 1 or multiple UC objects are to be used by Bio1D, etc.
+
+        if conc_array is not None:
+            self.system = conc_array    # For historical reasons, as a convenience to Bio1D, etc.
+                                        # TODO: maybe it ought to be kept separate in separate instances of the UC object
+
+        # Validate arguments
+        assert self.system is not None, "UniformCompartment.reaction_step_common(): " \
+                                        "the concentration values of the various chemicals must be set first"
+
+        #print(f"************ At SYSTEM TIME: {self.system_time:,.4g}, calling reaction_step_common() with:")
+        #print(f"             delta_time={delta_time}, system={self.system}, ")
+
+        (delta_concentrations, _) = \
+            self._attempt_reaction_step(delta_time, variable_steps=False, explain_variable_steps=False, step_counter=step_counter)
+
+        return  delta_concentrations    # TODO: consider returning tentative_updated_system , since we already computed it
+
+
+
+
     def reaction_step_common(self, delta_time: float, conc_array=None,
                              variable_steps=False, explain_variable_steps=None, step_counter=1) -> (np.array, float, float):
         """
-        This is the common entry point for both single-compartment reactions,
-        and the reaction component of reaction-diffusions in 1D, 2D and 3D.
+        This is the common entry point for both variable-step single-compartment reactions,
+        and the reaction component of variable-step reaction-diffusions in 1D, 2D and 3D.
 
         "Compartments" may or may not correspond to the "bins" of the higher layers;
         the calling code might have opted to merge some bins into a single "compartment".
@@ -811,8 +864,8 @@ class UniformCompartment:
         :return:                The triplet:
                                     1) increment vector for the concentrations of ALL the chemical species,
                                         in their index order, as a Numpy array
-                                        EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):
-                                            array([7. , -21.])  TODO: is this really necessary?  Maybe update self.system here?
+                                        EXAMPLE (for a single-reaction reactant and product with a 1:3 stoichiometry):
+                                            array([7. , -21.])
                                     2) time step size actually taken - which might be smaller than the requested one
                                         because of reducing the step to avoid negative-concentration errors
                                     3) recommended_next_step : a suggestions to the calling module
@@ -929,7 +982,8 @@ class UniformCompartment:
             diagnostic_data_snapshot = {}
 
 
-        recommended_next_step = delta_time       # Baseline value; no reason yet to suggest a change in step size
+        recommended_next_step = delta_time      # (Only applicable if variable_steps is True)
+                                                # Baseline value; no reason yet to suggest a change in step size
 
         if variable_steps:
             decision_data = self.adaptive_steps.adjust_timestep(n_chems=self.chem_data.number_of_chemicals(),
