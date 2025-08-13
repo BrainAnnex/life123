@@ -1280,10 +1280,10 @@ class Reactions:
 
 
         if self.active_enzymes == set():    # If no enzymes were involved in any reaction
-            print(f"Set of chemicals involved in the above reactions: {chem_labels}")
+            print(f"Chemicals involved in the above reactions: {chem_labels}")
         else:
-            print(f"Set of chemicals involved in the above reactions (not counting enzymes): {chem_labels}")
-            print(f"Set of enzymes involved in the above reactions: "
+            print(f"Chemicals involved in the above reactions (not counting enzymes): {chem_labels}")
+            print(f"Enzymes involved in the above reactions: "
                   f"{self.names_of_enzymes()}")
 
 

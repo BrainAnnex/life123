@@ -379,10 +379,10 @@ class UniformCompartment:
                 print(f"     {mm} || {state_str}")
 
         if self.reactions.active_enzymes == set():    # If no enzymes were involved in any reaction
-            print(f"Set of chemicals involved in reactions: {self.reactions.labels_of_active_chemicals()}")
+            print(f"Chemicals involved in reactions: {self.reactions.labels_of_active_chemicals()}")
         else:
-            print(f"Set of chemicals involved in reactions (not counting enzymes): {self.reactions.labels_of_active_chemicals()}")
-            print(f"Set of enzymes involved in reactions: {self.reactions.names_of_enzymes()}")
+            print(f"Chemicals involved in reactions (not counting enzymes): {self.reactions.labels_of_active_chemicals()}")
+            print(f"Enzymes involved in reactions: {self.reactions.names_of_enzymes()}")
 
 
 
@@ -573,8 +573,8 @@ class UniformCompartment:
         """
 
         # Default values
-        capture_initial_caption = "1st reaction step"
-        capture_final_caption = "last reaction step"
+        initial_step_caption = "1st reaction step"
+        final_step_caption = "last reaction step"
 
         # Validation
         assert self.system is not None, "UniformCompartment.single_compartment_react(): " \
@@ -592,7 +592,7 @@ class UniformCompartment:
             f"UniformCompartment.single_compartment_react(): no reactions are present.  Make sure to first add them with add_reaction()"
 
 
-        self.conc_history.initial_caption = capture_initial_caption     # TODO: turn into method
+        self.conc_history.initial_caption = initial_step_caption     # TODO: turn into method
 
 
         """
@@ -683,11 +683,18 @@ class UniformCompartment:
 
 
             # ----------  CORE OPERATION OF MAIN LOOP  ----------
-            #TODO: switch to using reaction_step_common_fixed_step() if variable_steps is False
-            delta_concentrations, step_actually_taken, recommended_next_step = \
+            if variable_steps:
+                delta_concentrations, step_actually_taken, recommended_next_step = \
                     self.reaction_step_common(delta_time=time_step,
                                               variable_steps=variable_steps, explain_variable_steps=explain_variable_steps,
                                               step_counter=step_count)
+            else:
+                # Fixed steps
+                delta_concentrations = \
+                    self.reaction_step_common_fixed_step(delta_time=time_step, step_counter=step_count)
+                step_actually_taken = time_step
+                recommended_next_step = time_step
+
 
             # Update the System State
             self.previous_system = self.system.copy()
@@ -770,10 +777,10 @@ class UniformCompartment:
 
 
         # One final snapshot, unless already taken for the last step done
-        self.capture_conc_snapshot(step_count=step_count, caption=capture_final_caption, extra=True)
+        self.capture_conc_snapshot(step_count=step_count, caption=final_step_caption, extra=True)
 
         # Add a caption to the very last entry in the system history
-        self.conc_history.set_caption_last_snapshot(capture_final_caption)
+        self.conc_history.set_caption_last_snapshot(final_step_caption)
 
 
 
@@ -836,7 +843,7 @@ class UniformCompartment:
             #       2. negative concentration from the combined effect of multiple reactions
             #print("*** CAUGHT a HARD ABORT in reaction_step_common_fixed_step()")
             raise Exception(f"reaction_step_common_fixed_step(): unable to complete the reaction step.  "
-                            f"Consider reducing the time step. \n{ex}")
+                            f"Try reducing the time step. \n{ex}")
 
 
         return  delta_concentrations    # TODO: consider returning tentative_updated_system , since we already computed it
@@ -967,7 +974,7 @@ class UniformCompartment:
             raise Exception(f"reaction_step_common(): unable to complete the reaction step.  "
                             f"In spite of numerous automated reductions of the time step, "
                             f"it continues to lead to concentration changes that are considered excessive; "
-                            f"consider reducing the original time step, and/or increasing the 'abort' thresholds with set_thresholds(). "
+                            f"try reducing the original time step, and/or increasing the 'abort' thresholds with set_thresholds(). "
                             f"Current values: {self.adaptive_steps.thresholds}")
 
         # If we get thus far, it's the normal exit of the reaction step
@@ -1127,9 +1134,13 @@ class UniformCompartment:
                                                              caption=f"aborted: neg. conc. from combined multiple rxns")
 
 
-            raise ExcessiveTimeStepHard(f"      INFO: the tentative time step ({delta_time:.5g}) "
-                                        f"leads to a NEGATIVE concentration of one of the chemicals: "
-                                        f"\n      Baseline values: {self.system} ; delta concentrations: {delta_concentrations}]")
+            neg_indices = np.where(tentative_updated_system < 0)[0]
+            first_neg_index = neg_indices[0]
+            chem_name = self.chem_data.get_label(int(first_neg_index))  # The int() is to convert the NumPy integer type
+            raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
+                                        f"would lead to a NEGATIVE concentration "
+                                        f"\n      in one or more of the chemicals (for instance `{chem_name}`, of index {first_neg_index}), from the combined reactions."
+                                        f"\n      Baseline concentration values: {self.system} at system time {self.system_time:.5g}; requested changes (NOT carried out): {delta_concentrations}")
 
 
         return  (delta_concentrations, recommended_next_step)       # Maybe also return tentative_updated_system
@@ -1150,23 +1161,25 @@ class UniformCompartment:
         NOTES:  - the actual System Concentrations and the System Time (stored in object variables) are NOT changed
                 - if any of the concentrations go negative, an Exception is raised
 
-        :param delta_time:      The time duration of this individual reaction step - assumed to be small enough that the
-                                    concentration won't vary significantly during this span.
-        :param rxn_list:        OPTIONAL list of reactions (specified by their indices) to include in this simulation step ;
-                                    EXAMPLE: [1, 3, 7]
-                                    If None, do all the reactions
+        :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
+                                concentration won't vary significantly during this span.
+        :param rxn_list:    OPTIONAL list of reactions (specified by their indices) to include in this simulation step ;
+                                EXAMPLE: [1, 3, 7]
+                                If None, do all the reactions
 
-        :return:            The increment vector for the concentrations of ALL the chemical species
+        :return:            The increment vector caused by all the specified reactions
+                                for the concentrations of ALL the chemical species,
                                 (whether involved in the reactions or not),
                                 as a Numpy array for all the chemical species, in their index order
-                            EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):   array([7. , -21.])
+                            EXAMPLE (for a single-reaction reactant and product with a 3:1 stoichiometry):
+                                array([7. , -21.])
         """
 
         # The increment vector is cumulative for ALL the requested reactions
         increment_vector = np.zeros(self.chem_data.number_of_chemicals(), dtype=float)       # One element per chemical species
 
-        # Compute the rates ("velocities") of all the applicable reactions
-        rate_dict = self.compute_all_reaction_rates(rxn_list=rxn_list)
+        # Compute the rates ("velocities") of all the applicable reactions, as a dict; the keys are the reaction indexes
+        rate_dict = self.compute_all_reaction_rates(rxn_list=rxn_list)  # EXAMPLE: {0: 40., 1: 4.4}
 
 
         if rxn_list is None:    # Meaning ALL (active) reactions
@@ -1381,7 +1394,7 @@ class UniformCompartment:
             raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
                                     f"would lead to a NEGATIVE concentration of the chemical `{chem_name}` "
                                     f"from the reaction `{self.reactions.single_reaction_describe(rxn_index=rxn_index, concise=True)}` (rxn # {rxn_index}): "
-                                    f"\n      Baseline concentration value of `{chem_name}` : {baseline_conc:.6g} ; requested change (NOT carried out): {delta_conc:.6g}"
+                                    f"\n      Baseline concentration value of `{chem_name}` : {baseline_conc:.6g} at system time {self.system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}"
                                     )
 
 
