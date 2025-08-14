@@ -448,27 +448,35 @@ def test_inject_sine_conc():
 
 
 def test_inject_bell_curve():
-    chem_data = ChemData(names=["A"])
+    chem_data = ChemData(names="A")
 
     bio = System1D(n_bins=10, chem_data=chem_data)
 
     with pytest.raises(Exception):
         bio.inject_bell_curve(chem_label="A", bias=-100)      # Negative bias
+
+    with pytest.raises(Exception):
         bio.inject_bell_curve(chem_label="A", amplitude=-1)   # Negative amplitude
 
-    bio.inject_bell_curve(chem_label="A", mean=0.5, sd=0.15, amplitude=1., bias=0)
+    bio.inject_bell_curve(chem_label="A", center=0.5, sd=0.15, amplitude=1., bias=0)
     assert np.allclose(bio.lookup_species(chem_label="A"),
                        [0.01028186, 0.09231148, 0.47878856, 1.43461641, 2.48331496, 2.48331496,
                         1.43461641, 0.47878856, 0.09231148, 0.01028186])
 
     bio = System1D(n_bins=10, chem_data=chem_data)
-    bio.inject_bell_curve(chem_label="A", mean=0.5, sd=0.05, amplitude=2., bias=10)
+    bio.inject_bell_curve(chem_label="A", center=0.5, sd=0.05, amplitude=2., bias=10)
     assert np.allclose(bio.lookup_species(chem_label="A"),
                        [10., 10., 10.00000317, 10.06169116, 18.60769844, 18.60769844,
                          10.06169116, 10.00000317, 10., 10.])
 
+    bio = System1D(n_bins=10, chem_data=chem_data)
+    bio.inject_bell_curve(chem_label="A", center=0.5, sd=0.05, amplitude=2., bias=10, clip=(1,8))
+    assert np.allclose(bio.lookup_species(chem_label="A"),
+                       [0, 10., 10.00000317, 10.06169116, 18.60769844, 18.60769844,
+                         10.06169116, 10.00000317, 10., 0])
+
     bio = System1D(n_bins=20, chem_data=chem_data)
-    bio.inject_bell_curve(chem_label="A", mean=0.2, sd=0.05, amplitude=2., bias=10)
+    bio.inject_bell_curve(chem_label="A", center=0.2, sd=0.05, amplitude=2., bias=10)
     assert np.allclose(bio.lookup_species(chem_label="A"),
                        [10.00535321, 10.20730806, 12.65097387, 21.19391452, 25.60794776, 17.18616024,
                         11.09253477, 10.05484802, 10.00090923, 10.00000498, 10.00000001, 10.,

@@ -166,10 +166,10 @@ bio.plot_history_single_bin(title_prefix="Bin very far from the location of the 
 bio.plot_history_single_bin(title_prefix="Bin hugely far from the location of the concentration injection.", bin_address=400)
 
 # %% [markdown]
-# # Notice how faraway locations barely register that the distant transient ever happened!
+# # Notice how faraway locations (such as bin 400) barely register that the distant transient ever happened!
 
 # %% [markdown]
-# #### VARIATION:  
+# #### **VARIATION:**   
 # Transients that never make it far from their origin, because of _chemical reactions consuming them_, are explored in the experiment `1D/reaction_diffusion/transient_getting_mopped_up`
 
 # %%

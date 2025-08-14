@@ -252,7 +252,7 @@ class PlotlyHelper:
             if range_x:
                 step = 1    # Always show all vertical lines if a range on the x-axis was specified
             else:
-                # Possibly limit the number of vertical lines shown
+                # Possibly, limit the number of vertical lines shown
                 step = 1 + len(vertical_lines_to_add) // MAX_NUMBER_VERTICAL_LINES
                 if step > 1:
                     print(f"plot_pandas() NOTICE: Excessive number of vertical lines ({len(vertical_lines_to_add)}) - only showing 1 every {step} lines")
@@ -270,7 +270,7 @@ class PlotlyHelper:
                            'yref': 'y domain'
                            }
                 vline_list.append(vline)
-                # Strangely, a direct call to fig.add_vline(), as done below, dramatically slows things down in case
+                # Strangely, a direct call to fig.add_vline(), as done in the comment below, dramatically slows things down in case
                 # of a large number of vertical lines; so, we'll be directly modifying the data structure of the "fig" dictionary
                 #fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
             # END for

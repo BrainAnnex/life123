@@ -348,7 +348,8 @@ class UniformCompartment:
 
     def describe_state(self) -> None:
         """
-        Print out various data on the current state of the system
+        Print out various data on the current state of the system, incl. system time
+
         :return:        None
         """
         print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
@@ -843,7 +844,7 @@ class UniformCompartment:
             #       2. negative concentration from the combined effect of multiple reactions
             #print("*** CAUGHT a HARD ABORT in reaction_step_common_fixed_step()")
             raise Exception(f"reaction_step_common_fixed_step(): unable to complete the reaction step.  "
-                            f"Try reducing the time step. \n{ex}")
+                            f"Try REDUCING the time step. \n{ex}")
 
 
         return  delta_concentrations    # TODO: consider returning tentative_updated_system , since we already computed it

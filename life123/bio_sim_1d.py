@@ -143,7 +143,7 @@ class System1D:
         if concise:             # A minimalist printout...
             print(self.system)   # ...only showing the concentration data (a Numpy array)
             if self.membranes_obj.uses_membranes():
-                print("Membranes: ", self.membranes_obj)
+                print("Membranes: ", self.membranes_obj.membrane_list)
             return
 
         # If we get thus far, it's a FULL printout
@@ -151,7 +151,7 @@ class System1D:
         print(f"{self.n_bins} bins and {self.n_species} chemical species")
 
         if self.membranes_obj.uses_membranes():
-            print("Membranes present: ", self.membranes_obj)
+            print("Membranes present: ", self.membranes_obj.membrane_list)
 
 
         df = pd.DataFrame(self.system, columns=[f"Bin {i}" for i in range(self.n_bins)])
@@ -652,7 +652,8 @@ class System1D:
 
 
 
-    def inject_bell_curve(self, chem_label, center=None, mean=0.5, sd=0.15, amplitude=None, max_amplitude=None, bias=0) -> None:
+    def inject_bell_curve(self, chem_label, center=None, mean=0.5, sd=0.15,
+                          amplitude=None, max_amplitude=None, bias=0, clip=None) -> None:
         """
         Add to the current concentrations of the specified chemical species a signal across all bins in the shape of a Bell curve.
         The default values provide bell shape centered in the middle of the system, and fairly spread out
@@ -662,7 +663,7 @@ class System1D:
         :param center:      A value, generally between 0 and 1, indication the spatial position of the mean
                                 relative to the bin system;
                                 if less than 0 or greater than 1, only one tail of the curve will be seen
-        :param mean:        [DEPRECATED: use `localized` instead]
+        :param mean:        [DEPRECATED: use `center` instead]
         :param sd:          Standard deviation, in units of the system length
         :param amplitude:   Amount by which to multiply the standard normal curve signal,
                                 before adding it to current concentrations
@@ -671,12 +672,16 @@ class System1D:
                                 Only one of the 2 arguments `amplitude` and `max_amplitude` may be provided;
                                 if neither is specified, `amplitude` is set to 1
         :param bias:        Positive amount to be added to all values (akin to "DC bias" in electrical circuits)
+        :param clip:        [OPTIONAL] Pair of integers; any bin to the left of the 1st value,
+                                or to the right of the 2nd value, will be left unmodified
         :return:            None
         """
-        # TODO: Pytest: Explore total conservation
-
         if center is not None:
             mean = center
+        else:
+            print("inject_bell_curve(): argument `mean` is deprecated; use `center` instead")
+
+        assert 0 <= mean <= 1, "inject_bell_curve(): the `center` value must be a number between 0. and 1."
 
         assert bias >= 0, \
             f"System1D.inject_bell_curve(): the value for the `bias` ({bias}) cannot be negative"
@@ -689,6 +694,7 @@ class System1D:
                 # solve for A
                 amplitude = max_amplitude * sd * math.sqrt(2*math.pi)
                 #print("*** DERIVED AMPLITUDE:", amplitude)
+
         else:       # if a value for `amplitude` was provided
             assert max_amplitude is None, \
                 f"System1D.inject_bell_curve(): cannot provide values for both `amplitude` and `max_amplitude`"
@@ -708,7 +714,19 @@ class System1D:
         # use those values to update the concentrations across all bins,
         # for the requested chemical species
         # Note: all the values we're adding are non-negative; so, no danger of creating negative concentrations
-        self.system[species_index] += amplitude * increments_arr + bias
+        #self.system[species_index] += amplitude * increments_arr + bias
+
+        increments_arr = amplitude * increments_arr + bias
+
+        if clip is not None:
+            left, right = clip
+            # Zero out before left
+            increments_arr[:left] = 0
+
+            # Zero out after right
+            increments_arr[right+1:] = 0
+
+        self.system[species_index] += increments_arr
 
 
 
@@ -1061,6 +1079,7 @@ class System1D:
         using plotly.
         The x-axis is the bin coordinate, and the y-axis are the concentrations of each of the chemicals.
         An auto-generated title is included.
+        If membranes are present, they will appear as brown vertical lines.
 
         :param title_prefix:[OPTIONAL] Prefix to the auto-generated title;
                                 either a string,
@@ -1115,6 +1134,12 @@ class System1D:
                 plot_bgcolor = plot_bg_color      # inside the plot area
             )
 
+        if self.membranes_obj.membrane_list != []:
+            # Add vertical lines to indicate the position of the membranes
+            for (left, right) in self.membranes_obj.membrane_list:
+                fig.add_vline(x=left-0.5, line_width=2, line_dash="solid", line_color="brown")
+                fig.add_vline(x=right-0.5, line_width=2, line_dash="solid", line_color="brown")
+
         if show:
             fig.show()
 
@@ -1155,7 +1180,7 @@ class System1D:
 
         conc_matrix = self.system
 
-        if self.membranes_obj == []:
+        if self.membranes_obj.membrane_list == []:
             flattened_list = None
         else:
             flattened_list = [item for pair in self.membranes_obj.membrane_list

@@ -218,6 +218,9 @@ for _ in range(3):
 bio2.react_diffuse(total_duration=0.5, time_step=0.002)
 bio2.visualize_system(title_prefix="Reaction-Diffusion.")
 
+# %% [markdown]
+# ### Notice how `A` has been largely consumed by now...  and what is diffusing away is `C` (as well as the dip in `B`) rather than `A`
+
 # %%
 # Continue advancing the reaction-diffusion
 bio2.react_diffuse(total_duration=0.7, time_step=0.002)
