@@ -1426,6 +1426,9 @@ class BioSim1D(System1D):
         super().__init__(n_bins, chem_data=chem_data)    # Invoke the constructor of its parent class
 
 
+        self.diff_obj = Diffusion1D(n_bins=self.n_bins, membranes=self.membranes_obj)
+
+
 
 
 
@@ -1568,29 +1571,51 @@ class BioSim1D(System1D):
     #####################################################################################################
 
 
-    def diffuse(self, total_duration=None, time_step=None, n_steps=None, delta_x=1, algorithm=None) -> dict:
+    def diffuse(self, total_duration=None, time_step=None, n_steps=None, fraction_max_step=None, delta_x=1, algorithm=None) -> dict:
         """
         Uniform-step diffusion, with 2 out of 3 criteria specified:
             1) until reaching, or just exceeding, the desired time duration
-            2) using the given time step
-            3) carrying out the specified number of steps
+            2) using the given time step OR fraction_max_step
+            3) making use of the specified number of steps
+
+        If only the `total_duration` is specified, then a default is used for the step sizes
 
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
         :param time_step:       The size of each time step
+        :param fraction_max_step:
         :param n_steps:         The desired number of steps
-        :param delta_x:         Distance between consecutive bins
-        :param algorithm:          (Optional) code specifying the method to use to solve the diffusion equation.
-                                    Currently available options: "5_1_explicit"
-        :param to_equilibrium:
+        :param delta_x:         Distance between consecutive bins (the spatial dimension of each bin)
+        :param algorithm:       [OPTIONAL] String indicating the desired method to use to solve the diffusion equation.
+                                    Currently available options: "5_1_explicit";
+                                    if not specified, the default method diffuse_step_single_species() is used
+
         :return:                A dictionary with data about the status of the operation
                                     "steps":        the number of steps that were run
                                     "system time":  the system time at the end of the operation
+                                    "time_step":    the size of each time step
         """
         # TODO: maybe add an option `to_equilibrium` that continues execution until equilibrium (or a max # of steps)
         #       for each section between membranes
+
+        # Assign a default for fraction_max_step when no other step information was provided
+        if n_steps is None and time_step is None and fraction_max_step is None:
+            fraction_max_step = 0.5    # THE DEFAULT being used in case of minimal guidelines from the user
+
+
+        if fraction_max_step is not None:
+            assert time_step is None, \
+                "diffuse(): cannot specify both arguments `time_step` and `fraction_max_step`"
+            assert 0 < fraction_max_step <= 1, \
+                 "diffuse(): arguments `fraction_max_step` must be > 0 and <= 1"
+            max_diff_rate = self.chem_data.get_max_diffusion_rate()     # The largest diffusion rate is the one
+                                                                        # setting the upper bound on max time steps
+
+            time_step = fraction_max_step * self.diff_obj.max_time_step(diff_rate=max_diff_rate, delta_x=delta_x)
+
+
         time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
-                                                             time_step=time_step,
-                                                             n_steps=n_steps)
+                                                                  time_step=time_step,
+                                                                  n_steps=n_steps)
         for i in range(n_steps):
             if self.debug:
                 if (i < 2) or (i >= n_steps-2):
@@ -1608,7 +1633,7 @@ class BioSim1D(System1D):
             self.describe_state(concise=True)
             print()
 
-        status = {"steps": n_steps, "system time": f"{self.system_time:,.5g}"}
+        status = {"steps": n_steps, "system time": f"{self.system_time:,.5g}", "time_step": time_step}
         return status
 
 
@@ -1625,7 +1650,7 @@ class BioSim1D(System1D):
         :param delta_x:     Spatial distance between consecutive bins
         :param algorithm:   [OPTIONAL] String indicating the desired method to use to solve the diffusion equation.
                                 Currently available option: "5_1_explicit";
-                                if not specified, thr default method diffuse_step_single_species() is used
+                                if not specified, the default method diffuse_step_single_species() is used
         :return:            None (the array in the class variable "delta_diffusion" gets set)
         """
         # TODO: parallelize the independent computations for each chemical
@@ -1649,8 +1674,9 @@ class BioSim1D(System1D):
                                     # We'll use the all zeros in the just-initialized  self.delta_diffusion
 
 
-        diff_obj = Diffusion1D(n_bins=self.n_bins, membranes=self.membranes_obj)    # TODO: maybe move to the invoking function;
-                                                                                #       maybe turn into object variable
+        #diff_obj = Diffusion1D(n_bins=self.n_bins, membranes=self.membranes_obj)    # maybe move to the invoking function;
+                                                                                     #       maybe turn into object variable
+        diff_obj = self.diff_obj
 
 
         # Loop over all the chemical species in the system
@@ -2119,8 +2145,8 @@ class Diffusion1D:
     def __init__(self, n_bins :int, membranes=None):
         """
 
-        :param n_bins:
-        :param membranes:
+        :param n_bins:      Total number of bins in the system
+        :param membranes:   [OPTIONAL] Object of class "Membranes1D"
         """
 
         self.n_bins = n_bins
@@ -2128,23 +2154,28 @@ class Diffusion1D:
         self.time_step_threshold = 0.33333  # This is used to set an Upper Bound on the single time steps
                                             #   in the diffusion process.
                                             #   See explanation in file overly_large_single_timesteps.py
+                                            #   This value is a bit stricter than what's given
+                                            #   by the "Von Neumann stability analysis"
+                                            #   https://www.youtube.com/watch?v=QUiUGNwNNmo)
 
         self.membranes = membranes      # Object of class "Membranes1D"
 
 
 
 
-    def is_excessive(self, time_step, diff_rate, delta_x) -> bool:
+    def is_excessive(self, time_step :float, diff_rate :float, delta_x :float) -> bool:
         """
         Use a loose heuristic to determine if the requested time step is too long,
         given the diffusion rate and delta_x.
         This is also based on the "Von Neumann stability analysis"
         (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
 
-        :param time_step:
-        :param diff_rate:
-        :param delta_x:
-        :return:
+        :param time_step:   Duration of the time interval being TENTATIVELY used in the simulation step
+        :param diff_rate:   The diffusion rate of the chemical under consideration
+        :param delta_x:     The spatial dimension of the bin
+        :return:            True if the time step is deemed excessive
+                                based the heuristic implemented by the function max_time_step();
+                                False otherwise
         """
         if time_step > self.max_time_step(diff_rate, delta_x):
             return True
@@ -2159,9 +2190,15 @@ class Diffusion1D:
         This is also based on the "Von Neumann stability analysis"
         (an explanation can be found at: https://www.youtube.com/watch?v=QUiUGNwNNmo)
 
+        This heuristic does NOT take into account the variability of the concentrations across bins
+        (such as the magnitude of the 2nd spatial derivative of the concentrations)
+
+        Note: different chemicals with varied diffusion rates will have different max time steps;
+              larger diffusion rates call for smaller max steps
+
         :param diff_rate:   The diffusion rate of the chemical under consideration
         :param delta_x:     The spatial dimension of the bin
-        :return:            A reasonably safe max length for a single time step of the simulation,
+        :return:            A relatively safe max length for a single time step of the simulation,
                                 to try to steer clear of instabilities
         """
         return delta_x**2 * self.time_step_threshold/diff_rate

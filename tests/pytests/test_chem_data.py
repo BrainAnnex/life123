@@ -264,7 +264,7 @@ def test_get_diffusion_rate():
     assert chem_data.get_diffusion_rate(name="Z") is None       # No diffusion value assigned
     assert chem_data.get_diffusion_rate(chem_index=3) is None
 
-    chem_data.set_diffusion_rate(label="Z", diff_rate=8)
+    chem_data.set_diffusion_rate(chem_label="Z", diff_rate=8)
     assert chem_data.get_diffusion_rate(name="Z") == 8
     assert chem_data.get_diffusion_rate(chem_index=3) == 8
 
@@ -280,7 +280,7 @@ def test_get_all_diffusion_rates():
     result = diff.get_all_diffusion_rates()
     assert result == [1]
 
-    diff.set_diffusion_rate(label="A", diff_rate=10)
+    diff.set_diffusion_rate(chem_label="A", diff_rate=10)
     result = diff.get_all_diffusion_rates()
     assert result == [10]
 
@@ -292,9 +292,29 @@ def test_get_all_diffusion_rates():
     result = diff.get_all_diffusion_rates()
     assert result == [10, None, 8]
 
-    diff.set_diffusion_rate(label="B", diff_rate=3)
+    diff.set_diffusion_rate(chem_label="B", diff_rate=3)
     result = diff.get_all_diffusion_rates()
     assert result == [10, 3, 8]
+
+
+
+def test_get_max_diffusion_rate():
+    diff = Diffusion()
+
+    with pytest.raises(Exception):
+        diff.get_max_diffusion_rate()       # No rate yet specified
+
+    diff.set_diffusion_rate(chem_label="A", diff_rate=10)
+    result = diff.get_max_diffusion_rate()
+    assert result == 10
+
+    diff.set_diffusion_rate(chem_label="B", diff_rate=3)
+    result = diff.get_max_diffusion_rate()
+    assert result == 10
+
+    diff.set_diffusion_rate(chem_label="B", diff_rate=11)
+    result = diff.get_max_diffusion_rate()
+    assert result == 11
 
 
 
@@ -308,7 +328,7 @@ def test_missing_diffusion_rate():
     result = diff.missing_diffusion_rate()
     assert result == False
 
-    diff.set_diffusion_rate(label="A", diff_rate=10)
+    diff.set_diffusion_rate(chem_label="A", diff_rate=10)
     result = diff.missing_diffusion_rate()
     assert result == False
 
@@ -320,7 +340,7 @@ def test_missing_diffusion_rate():
     result = diff.missing_diffusion_rate()
     assert result == True       # B's diffusion rate is still missing
 
-    diff.set_diffusion_rate(label="B", diff_rate=3)
+    diff.set_diffusion_rate(chem_label="B", diff_rate=3)
     result = diff.missing_diffusion_rate()
     assert result == False
 

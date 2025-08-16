@@ -24,7 +24,7 @@
 # ### TAGS :  "diffusion 1D", "basic"
 
 # %%
-LAST_REVISED = "June 4, 2025"
+LAST_REVISED = "Aug. 15, 2025"
 LIFE123_VERSION = "1.0.0rc5"        # Library version this experiment is based on
 
 # %%
@@ -85,11 +85,13 @@ bio.enable_history(bins=[0, 2, 4], frequency=3, take_snapshot=True)
 # ## Initial Diffusion Step
 
 # %%
-# Advancing to time t=1, with time steps of 0.05
-bio.diffuse(total_duration=1.0, time_step=0.05)
+# Advancing to time t=1, with moderate time steps
+bio.diffuse(total_duration=1.0, fraction_max_step=0.4)
 
 # %%
 bio.describe_state()
+
+# %%
 
 # %% [markdown]
 # ## The 2 chemicals `A` and `B`, previously identical in concentrations, have separated due to their different diffusion rates  
@@ -109,7 +111,7 @@ bio.system_heatmaps(title_prefix="Diffusion")
 # ## Let's advance the diffusion
 
 # %%
-bio.diffuse(total_duration=2.0, time_step=0.05)
+bio.diffuse(total_duration=2.0, fraction_max_step=0.4)
 
 # %%
 bio.describe_state()
@@ -131,7 +133,7 @@ bio.system_heatmaps(title_prefix="Diffusion")
 # ## Let's advance the diffusion some more
 
 # %%
-bio.diffuse(total_duration=2.0, time_step=0.05)
+bio.diffuse(total_duration=2.0, fraction_max_step=0.4)
 
 # %%
 bio.describe_state()
@@ -153,7 +155,7 @@ bio.system_heatmaps(title_prefix="Diffusion")
 # ## Finally, let's advance the diffusion to equilibrium
 
 # %%
-bio.diffuse(total_duration=95.0, time_step=0.05)
+bio.diffuse(total_duration=95.0, fraction_max_step=0.4)
 
 # %%
 bio.describe_state()

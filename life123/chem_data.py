@@ -337,8 +337,9 @@ class Diffusion(ChemCore):
 
         self.diffusion_rates = {}   # Values for the diffusion rates, indexed by chemical "label".
                                     # All values must be non-negative numbers.
-                                    # Only chemicals with an assigned diffusion rate will be present here.
-                                    # EXAMPLE: {"A": 6.4, "B": 12.0}
+                                    # Only chemicals with an assigned diffusion rate will be present here;
+                                    #   some registered chemicals may be missing.
+                                    # EXAMPLE: {"A": 6.4, "D": 12.0}
 
 
 
@@ -371,22 +372,22 @@ class Diffusion(ChemCore):
         if label is None:
             label = name
 
-        self.set_diffusion_rate(label=label, diff_rate=diff_rate)
+        self.set_diffusion_rate(chem_label=label, diff_rate=diff_rate)
 
         return index
 
 
 
-    def set_diffusion_rate(self, label :str, diff_rate :Union[float, int]) -> None:
+    def set_diffusion_rate(self, chem_label :str, diff_rate :float) -> None:
         """
         Set the diffusion rate of the given chemical species (identified by its name)
 
-        :param label:       Label of a chemical species
+        :param chem_label:  Label of a chemical
         :param diff_rate:   Diffusion rate (in water) for the above chemical
         :return:            None
         """
         self.assert_valid_diffusion(diff_rate)
-        self.diffusion_rates[label] = diff_rate
+        self.diffusion_rates[chem_label] = diff_rate
 
 
 
@@ -442,6 +443,20 @@ class Diffusion(ChemCore):
         """
         return [self.diffusion_rates.get(name) for name in self.get_all_labels()]
         # If any value is not present, None is used for it
+
+
+
+    def get_max_diffusion_rate(self) -> float:
+        """
+        Return the largest of all the diffusion rates.
+            If no rates are present, an Exception is raised.
+
+        :return:
+        """
+        assert self.diffusion_rates, \
+            "get_max_diffusion_rate(): no diffusion rates were defined"
+
+        return max(self.diffusion_rates.values())
 
 
 
@@ -868,7 +883,7 @@ class ChemData(Macromolecules):
                 diff = diffusion_rates[i]
                 self.assert_valid_diffusion(diff)
                 self.add_chemical(name=chem_name, label=l)
-                self.set_diffusion_rate(label=l, diff_rate=diff)
+                self.set_diffusion_rate(chem_label=l, diff_rate=diff)
 
             if plot_colors is not None:
                 color = plot_colors[i]

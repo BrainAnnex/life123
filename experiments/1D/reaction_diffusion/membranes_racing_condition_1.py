@@ -44,12 +44,13 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Initialize the chemical data
-chem_data = ChemData(names=["A", "B", "C"], diffusion_rates=[100., 80., 120.],  
+chem_data = ChemData(names=["A", "B", "C"], diffusion_rates=[100., 600., 120.],  
                      plot_colors=["red", "turquoise", "green"]) 
 
 rxns = Reactions(chem_data=chem_data)
 
 # Reaction A + B <-> C , with 1st-order kinetics for each species; note that it's mostly in the forward direction
+# The reaction is mostly in the forward direction
 rxns.add_reaction(reactants=["A", "B"], products="C", forward_rate=0.1, reverse_rate=0.02)
 rxns.describe_reactions()
 
@@ -61,7 +62,7 @@ rxns.describe_reactions()
 # ### Initialize the 1D System, including Membranes
 
 # %%
-bio = BioSim1D(n_bins=50, chem_data=chem_data, reactions=rxns)
+bio = BioSim1D(n_bins=30, chem_data=chem_data, reactions=rxns)
 
 # %%
 bio.membranes().set_membranes(membranes=[ (2, 18) ])
@@ -74,7 +75,7 @@ bio.membranes().membrane_list
 # as their respective membrane permeability (by passive transport)
 # `C`, by constrast, keep the default 0 permeability (i.e., can't cross membranes)
 bio.membranes().change_permeability("A", 50.)
-bio.membranes().change_permeability("B", 40.)
+bio.membranes().change_permeability("B", 400.)
 
 # %%
 
@@ -90,7 +91,17 @@ bio.inject_bell_curve(chem_label="A", center=0.2, sd=0.05, max_amplitude=100., b
 
 # %%
 # Chemical `B`, by contrast, is uniformly distributed
-bio.set_uniform_concentration(chem_label="B", conc=100.)
+bio.set_uniform_concentration(chem_label="B", conc=80.)
+
+# %%
+
+# %% [markdown]
+# ### Request history-keeping for some bins
+
+# %%
+# Request to save the concentration history at the bins with the initial concentration injection, 
+# and the bins at, or near, both ends of the system
+bio.enable_history(bins=[0, 10, 20, 29], frequency=15, take_snapshot=True)    
 
 # %%
 
@@ -117,22 +128,11 @@ bio.visualize_system(title_prefix="Initial strong, localized transient of chemic
 # %%
 
 # %% [markdown]
-# ## Request history-keeping for some bins
+# ## Start the simulation of the reaction-diffusion
 
 # %%
-# Request to save the concentration history at the bins with the initial concentration injection, 
-# and the bins at, or near, both ends of the system
-bio.enable_history(bins=[0, 10, 20, 49], frequency=15, take_snapshot=True)    
-
-# %%
-
-# %%
-
-# %%
-
-# %%
-# The first round of REACTION-diffusion, over a small time duration
-bio.react_diffuse(total_duration=0.025, time_step=0.001)
+# The first round of reaction-diffusion, over a small time duration
+bio.react_diffuse(total_duration=0.025, time_step=0.0005)
 bio.visualize_system(title_prefix=["The localized transient `A` starts turning into `C` by `A + B <-> C`, ",
                                    "before it can diffuse away much.  Notice the production of `C`, which can't cross the membrane"])
 
@@ -147,39 +147,27 @@ bio.system_heatmaps(title_prefix=["The localized transient `A` starts turning in
 # ### Let's continue the reaction-diffusion
 
 # %%
-bio.react_diffuse(total_duration=0.025, time_step=0.001)
+bio.react_diffuse(total_duration=0.025, time_step=0.0005)
 bio.visualize_system()
 
 # %%
-bio.react_diffuse(total_duration=0.025, time_step=0.001)
+bio.react_diffuse(total_duration=0.025, time_step=0.0005)
 bio.visualize_system()
 
 # %%
-bio.react_diffuse(total_duration=0.025, time_step=0.001)
+bio.react_diffuse(total_duration=0.025, time_step=0.0005)
 bio.visualize_system()
 
 # %%
-bio.react_diffuse(total_duration=0.05, time_step=0.002)
+bio.react_diffuse(total_duration=0.05, time_step=0.0005)
 bio.visualize_system()
 
 # %%
-bio.react_diffuse(total_duration=0.05, time_step=0.002)
+bio.react_diffuse(total_duration=0.15, time_step=0.0005)
 bio.visualize_system()
 
 # %%
-bio.react_diffuse(total_duration=0.1, time_step=0.0025)
-bio.visualize_system()
-
-# %%
-bio.react_diffuse(total_duration=0.2, time_step=0.0025)
-bio.visualize_system()
-
-# %%
-bio.react_diffuse(total_duration=0.5, time_step=0.0025)
-bio.visualize_system()
-
-# %%
-bio.react_diffuse(total_duration=2, time_step=0.0025)
+bio.react_diffuse(total_duration=2.7, time_step=0.0005)
 bio.visualize_system()
 
 # %%
@@ -192,13 +180,103 @@ bio.plot_history_single_bin(title_prefix="Reaction-Diffusion. Bin where the tran
                              bin_address=10)
 
 # %%
+bio.plot_history_single_bin(title_prefix="Reaction-Diffusion. At left-most edge of system.", bin_address=0)
+
+# %% [markdown]
+# #### Only a small amount of `A` reaches bin 0 early on, and later converts to `C`
+
+# %%
 bio.plot_history_single_bin(title_prefix="Reaction-Diffusion.", bin_address=20)
 
 # %%
 bio.plot_history_single_bin(title_prefix="Reaction-Diffusion.  Faraway bin.", 
-                             bin_address=49)
+                             bin_address=29)
 
 # %% [markdown]
 # ## Virtually no `A` ever reaches the faraway bins!
+
+# %%
+
+# %%
+
+# %%
+
+# %% [markdown]
+# # Now, let's repeat, starting like before but with a much higher diffusion rate of `A`
+
+# %%
+# Initial conditioned just like before
+
+bio = BioSim1D(n_bins=30, chem_data=chem_data, reactions=rxns)
+
+bio.membranes().set_membranes(membranes=[ (2, 18) ])
+
+bio.inject_bell_curve(chem_label="A", center=0.2, sd=0.05, max_amplitude=100., bias=0., clip=(2,17))
+bio.set_uniform_concentration(chem_label="B", conc=80.)
+
+# %%
+# 10 times more than before
+
+chem_data.set_diffusion_rate(chem_label="A", diff_rate = 1000)     
+bio.membranes().change_permeability("A", 500.)
+
+# %%
+# Request history-keeping for some bins
+bio.enable_history(bins=[0, 10, 20, 29], frequency=15, take_snapshot=True)   
+
+# %%
+# Show as heatmap (including the membranes, shown in brown)
+bio.system_heatmaps(title_prefix="Initial strong, localized transient of chemical `A` (membranes shown in brown)")
+
+# %%
+# Visualize the system state so far
+bio.visualize_system(title_prefix="Initial strong, localized transient of chemical `A` (membranes shown in brown)")
+
+# %% [markdown]
+# ### Repeat the simulation
+
+# %%
+# The first round of REACTION-diffusion, over a small time duration
+bio.react_diffuse(total_duration=0.025, time_step=0.0003)
+bio.visualize_system(title_prefix=["This time, the localized transient `A` diffuses more substantially across the membrane,",
+                                   "before being converted into `C`, which can't cross the membrane"])
+
+# %%
+bio.react_diffuse(total_duration=0.025, time_step=0.0002)
+bio.visualize_system()
+
+# %%
+bio.react_diffuse(total_duration=0.025, time_step=0.0002)
+bio.visualize_system()
+
+# %%
+bio.react_diffuse(total_duration=0.025, time_step=0.0002)
+bio.visualize_system()
+
+# %%
+bio.react_diffuse(total_duration=0.05, time_step=0.0003)
+bio.visualize_system()
+
+# %%
+bio.react_diffuse(total_duration=0.15, time_step=0.0003)
+bio.visualize_system()
+
+# %%
+bio.react_diffuse(total_duration=2.7, time_step=0.0003)
+bio.visualize_system()
+
+# %%
+bio.react_diffuse(total_duration=5, time_step=0.0003)
+bio.visualize_system()
+
+# %%
+bio.react_diffuse(total_duration=10, time_step=0.0003)
+bio.visualize_system()
+
+# %%
+bio.plot_history_single_bin(title_prefix="Reaction-Diffusion.  Faraway bin.", 
+                             bin_address=29)
+
+# %%
 
 # %%

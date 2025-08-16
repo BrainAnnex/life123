@@ -21,7 +21,7 @@ def test_diffuse_step_1():
 
     bio.set_uniform_concentration(chem_index=0, conc=8.0)
 
-    chem_data.set_diffusion_rate(label="A", diff_rate = 20.)
+    chem_data.set_diffusion_rate(chem_label="A", diff_rate = 20.)
     #bio.describe_state()    # 1 bins and 1 species:  [[8.]]
 
     bio.diffuse_step(time_step=3)
@@ -211,7 +211,7 @@ def test_diffuse_2():
     bio = BioSim1D(n_bins=1, chem_data=chem_data)
     bio.set_uniform_concentration(chem_index=0, conc=8.0)
 
-    chem_data.set_diffusion_rate(label="A", diff_rate = 20.)
+    chem_data.set_diffusion_rate(chem_label="A", diff_rate = 20.)
     #bio.describe_state()    # 1 bins and 1 species:  [[8.]]
 
     bio.diffuse(time_step=3, n_steps=1)    # With just 1 bin, nothing happens
@@ -258,15 +258,15 @@ def test_diffuse_4():
     bio.set_species_conc(chem_index=1, conc_list=[10, 20, 50])
     #bio.describe_state()
     """
-    Species 0. Diff rate: 5.0. Conc:  [  0. 100.   0.]
+    Species 0. Diff rate: 5.0. Conc:  [  0. 100. 0.]
     Species 1. Diff rate: 20.0. Conc:  [10. 20. 50.]   
     """
 
     with pytest.raises(Exception):
         bio.diffuse()               # Is not passing any arguments
 
-    with pytest.raises(Exception):
-        bio.diffuse(total_duration= 5)      # Is not passing enough arguments
+    #with pytest.raises(Exception):
+        #bio.diffuse(total_duration= 5)      # Is not passing enough arguments
 
     with pytest.raises(Exception):
         bio.diffuse(time_step = 0.2)        # Is not passing enough arguments

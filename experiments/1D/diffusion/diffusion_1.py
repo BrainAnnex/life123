@@ -24,8 +24,8 @@
 # ### TAGS :  "diffusion 1D", "quick-start"
 
 # %%
-LAST_REVISED = "May 29, 2025"
-LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
+LAST_REVISED = "Aug. 15, 2025"
+LIFE123_VERSION = "1.0.0rc5"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -89,7 +89,9 @@ bio.enable_history(bins=[0, 2, 9], frequency=4, take_snapshot=True)
 # # Initial Diffusion Step
 
 # %%
-#Advancing to time t=10, with time steps of 0.1 ...
+# Advancing to time t=10, with time steps of 0.1 ...
+# Not sure what value to pass for time steps?  If unspecified, a default value is used
+
 delta_time = 10.
 
 status = bio.diffuse(total_duration=delta_time, time_step=0.1)
