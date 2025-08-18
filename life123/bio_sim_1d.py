@@ -1571,9 +1571,11 @@ class BioSim1D(System1D):
     #####################################################################################################
 
 
-    def diffuse(self, total_duration=None, time_step=None, n_steps=None, fraction_max_step=None, delta_x=1, algorithm=None) -> dict:
+    def diffuse(self, total_duration=None, time_step=None, n_steps=None, fraction_max_step=None, delta_x=1,
+                algorithm=None, show_status=False) -> dict:
         """
-        Uniform-step diffusion, with 2 out of 3 criteria specified:
+        Uniform-step diffusion, with up to 2 out of 3 criteria specified:
+
             1) until reaching, or just exceeding, the desired time duration
             2) using the given time step OR fraction_max_step
             3) making use of the specified number of steps
@@ -1581,13 +1583,16 @@ class BioSim1D(System1D):
         If only the `total_duration` is specified, then a default is used for the step sizes
 
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
-        :param time_step:       The size of each time step
-        :param fraction_max_step:
-        :param n_steps:         The desired number of steps
+        :param time_step:       The size of each constant time step
+        :param fraction_max_step: The fraction (> 0 and <= 1) of what is regarded as the max allowed step,
+                                    based on stability considerations for the diffusion of the chemical with the
+                                    largest diffusion rate
+        :param n_steps:         The desired number of constant steps
         :param delta_x:         Distance between consecutive bins (the spatial dimension of each bin)
         :param algorithm:       [OPTIONAL] String indicating the desired method to use to solve the diffusion equation.
                                     Currently available options: "5_1_explicit";
                                     if not specified, the default method diffuse_step_single_species() is used
+        :param show_status:
 
         :return:                A dictionary with data about the status of the operation
                                     "steps":        the number of steps that were run
@@ -1597,12 +1602,14 @@ class BioSim1D(System1D):
         # TODO: maybe add an option `to_equilibrium` that continues execution until equilibrium (or a max # of steps)
         #       for each section between membranes
 
-        # Assign a default for fraction_max_step when no other step information was provided
+        # Assign a default for fraction_max_step
+        # in cases when no other step information was provided
         if n_steps is None and time_step is None and fraction_max_step is None:
             fraction_max_step = 0.5    # THE DEFAULT being used in case of minimal guidelines from the user
 
 
         if fraction_max_step is not None:
+            # First validate, and then determine the corresponding time step
             assert time_step is None, \
                 "diffuse(): cannot specify both arguments `time_step` and `fraction_max_step`"
             assert 0 < fraction_max_step <= 1, \
@@ -1634,6 +1641,10 @@ class BioSim1D(System1D):
             print()
 
         status = {"steps": n_steps, "system time": f"{self.system_time:,.5g}", "time_step": time_step}
+
+        if show_status:
+            print(status)
+
         return status
 
 
@@ -1798,20 +1809,46 @@ class BioSim1D(System1D):
 
 
 
-    def react_diffuse(self, total_duration=None, time_step=None, n_steps=None, delta_x = 1) -> None:
+    def react_diffuse(self, total_duration=None, time_step=None, n_steps=None, fraction_max_step=None, delta_x = 1) -> None:
         """
-        It expects 2 out of the following 3 arguments:  total_duration, time_step, n_steps
-        Perform a series of reaction and diffusion constant time steps.
+         Uniform-step reaction-diffusion, with up to 2 out of 3 criteria specified:
+
+            1) until reaching, or just exceeding, the desired time duration
+            2) using the given time step OR fraction_max_step
+            3) making use of the specified number of steps
+
+        If only the `total_duration` is specified, then a default is used for the step sizes
 
         :param total_duration:  The overall time advance (i.e. time_step * n_steps)
         :param time_step:       The size of each constant time step
+        :param fraction_max_step: The fraction (> 0 and <= 1) of what is regarded as the max allowed step,
+                                    based on stability considerations for the diffusion of the chemical with the
+                                    largest diffusion rate
         :param n_steps:         The desired number of constant steps
-        :param delta_x:         Distance between consecutive bins
+        :param delta_x:         Distance between consecutive bins  (the spatial dimension of each bin)
         :return:                None
         """
+        # Assign a default for fraction_max_step (based on diffusion considerations)
+        # in cases when no other step information was provided
+        if n_steps is None and time_step is None and fraction_max_step is None:
+            fraction_max_step = 0.5    # THE DEFAULT being used in case of minimal guidelines from the user
+
+
+        if fraction_max_step is not None:
+            # First validate, and then determine the corresponding time step
+            assert time_step is None, \
+                "react_diffuse(): cannot specify both arguments `time_step` and `fraction_max_step`"
+            assert 0 < fraction_max_step <= 1, \
+                 "react_diffuse(): arguments `fraction_max_step` must be > 0 and <= 1"
+            max_diff_rate = self.chem_data.get_max_diffusion_rate()     # The largest diffusion rate is the one
+                                                                        # setting the upper bound on max time steps
+
+            time_step = fraction_max_step * self.diff_obj.max_time_step(diff_rate=max_diff_rate, delta_x=delta_x)
+
+
         time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
-                                                             time_step=time_step,
-                                                             n_steps=n_steps)
+                                                                  time_step=time_step,
+                                                                  n_steps=n_steps)
 
         for i in range(n_steps):
             # TODO: split off the diffusion step and the reaction steps to different computing cores

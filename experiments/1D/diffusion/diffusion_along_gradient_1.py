@@ -16,7 +16,7 @@
 # ## Diffusion of a bell-shaped initial concentration along an initial gradient
 # A single chemical, whose initial concentration is a mix of a bell shape and a gradient.   
 # Contrary to perhaps an intuition of a "pile sliding down a sand dune as a unit", the concentration peak
-# remains in place, and simply spreads out from there
+# remains in place, and simply spreads out from there: reminiscent of an ice cream dropped on the floor!
 
 # %% [markdown]
 # ### TAGS :  "diffusion 1D"

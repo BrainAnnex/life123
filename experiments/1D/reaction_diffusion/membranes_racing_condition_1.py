@@ -21,7 +21,7 @@
 # ### TAGS : "reactions 1D", "diffusion 1D", "membranes 1D"
 
 # %%
-LAST_REVISED = "Aug. 13, 2025"
+LAST_REVISED = "Aug. 15, 2025"
 LIFE123_VERSION = "1.0.0rc5"       # Library version this experiment is based on
 
 # %%
@@ -44,7 +44,8 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Initialize the chemical data
-chem_data = ChemData(names=["A", "B", "C"], diffusion_rates=[100., 600., 120.],  
+chem_data = ChemData(names=["A", "B", "C"], 
+                     diffusion_rates=[100., 600., 120.],  
                      plot_colors=["red", "turquoise", "green"]) 
 
 rxns = Reactions(chem_data=chem_data)
@@ -132,7 +133,7 @@ bio.visualize_system(title_prefix="Initial strong, localized transient of chemic
 
 # %%
 # The first round of reaction-diffusion, over a small time duration
-bio.react_diffuse(total_duration=0.025, time_step=0.0005)
+bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5)      # time_step=0.0005
 bio.visualize_system(title_prefix=["The localized transient `A` starts turning into `C` by `A + B <-> C`, ",
                                    "before it can diffuse away much.  Notice the production of `C`, which can't cross the membrane"])
 
