@@ -46,6 +46,7 @@ class System1D:
                                 #   Each row represents a species;
                                 #   For example, self.system[0] is the linear sequence of bin concentrations
                                 #   for the 0-th chemical
+                                #   TODO: maybe rename system_conc
 
         self.system_earlier = None  # NOT IN CURRENT USE.  Envisioned for simulations where the past 2 time states are used
                                     # to compute the state at the next time step
@@ -231,9 +232,27 @@ class System1D:
 
         :return:    A dict of (for now a part of) the elements needed to later restore the complete system state
         """
-        # TODO: deal with membranes, and anything else needed to later restore the complete system state
+        # TODO: turn into JSON, and offer option to save to a file
 
-        return {"system": self.system.copy(), "system_time": self.system_time}
+        return self.snapshot_system(copy=True)
+
+
+
+    def snapshot_system(self, copy=True) -> dict:
+        """
+        Return a "frozen" snapshot of the current system state
+
+        :param copy:    If True (default), a copy is made of arrays;
+                            otherwise, the "snapshot" is not a fixed entity - and will change if the system is updated!
+        :return:        A dict of (for now a part of) the elements needed to later restore the complete system state
+        """
+        # TODO: deal with membranes, and anything else needed to later restore the complete system state
+        if copy:
+            conc = self.system.copy()
+        else:
+            conc = self.system
+
+        return {"system_time": self.system_time, "concentrations": conc}
 
 
 
@@ -783,12 +802,13 @@ class System1D:
 
     def system_snapshot_arr(self, chem_label=None, chem_index=None) -> np.ndarray:
         """
-        Return a snapshot of all the concentrations of the given chemical species,
+        Return a snapshot (at the current system time) of all the concentrations
+        of the given chemical species,
         across ALL BINS, as a 1D Numpy array.
         If a Pandas dataframe is desired, use system_snapshot()
 
         :param chem_label:  String with the label to identify the chemical of interest
-        :param chem_index:  DEPRECATED.  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
+        :param chem_index:  Integer to identify the chemical of interest.  Cannot specify both chem_label and chem_index
         :return:            A 1-D Numpy array of concentration values along bin coordinates
         """
         #TODO: merge this function and lookup_species(), maybe under the name chem_snapshot_arr()
@@ -811,12 +831,14 @@ class System1D:
 
     def system_snapshot(self) -> pd.DataFrame:
         """
-        Return a snapshot of all the concentrations of all the species, across all bins
+        Return a snapshot  (at the current system time) of all the concentrations
+        of ALL the chemical species, across all bins
         as a Pandas dataframe
 
         :return:    A Pandas dataframe: each row is a bin,
                         and each column a chemical species
         """
+        #TODO: rename snapshot_concentrations()
         all_chem_names = self.chem_data.get_all_labels()
         if self.system is None:
             return pd.DataFrame(columns = all_chem_names)   # Empty dataframe
@@ -1095,7 +1117,7 @@ class System1D:
 
         :return:            A Plotly "Figure" object
         """
-        title = f"System snapshot at time t={self.system_time:.8g}"
+        title = f"System snapshot at time t={self.system_time:.6g}"
 
         title = PlotlyHelper.assemble_title(title, title_prefix)
 
@@ -1161,7 +1183,7 @@ class System1D:
 
         :return:            A Plotly "Figure" object containing a stack of Heatmaps
         """
-        title = f"System snapshot at time t={self.system_time:.8g}"
+        title = f"System snapshot at time t={self.system_time:.6g}"
 
         title = PlotlyHelper.assemble_title(title, title_prefix)
 
@@ -1272,7 +1294,9 @@ class System1D:
                                 If provided, its length must match that of the data;
                                 if None, then use the registered colors (if specified),
                                 or the hardwired defaults as a last resort
-        :param title_prefix:[OPTIONAL] Prefix to the default auto-generated title
+        :param title_prefix:[OPTIONAL] Prefix to the auto-generated title;
+                                either a string,
+                                or a list/tuple (2 entries) max to insert on separate lines
         :param title:       [OPTIONAL] If set, it over-rides `title_prefix.  If not passed, a default one is used
         :param smoothed:    [OPTIONAL] If True, a spline is used to smooth the lines;
                                 otherwise (default), line segments are used
@@ -1288,7 +1312,7 @@ class System1D:
 
         :return:            A plotly "Figure" object; an Exception is raised if no historical data is found
         """
-        # TODO: add more options
+        # TODO: add more options, such as "show"
 
         MAX_NUMBER_POINTS = 2000    # Used to avoid slow plotting and large image storage sizes, in case
                                     # a very massive history was saved
@@ -1309,8 +1333,7 @@ class System1D:
 
             title = f"Concentration as a function of time of {chem_title} at bin {bin_address}"
 
-            if title_prefix:
-                title = f"{title_prefix}<br>{title}"
+            title = PlotlyHelper.assemble_title(title, title_prefix)
 
 
         # Retrieve the historical data
@@ -1592,7 +1615,8 @@ class BioSim1D(System1D):
         :param algorithm:       [OPTIONAL] String indicating the desired method to use to solve the diffusion equation.
                                     Currently available options: "5_1_explicit";
                                     if not specified, the default method diffuse_step_single_species() is used
-        :param show_status:
+        :param show_status:     If True, the return value gets printed
+                                    (note: in Jupyterlab, it gets automatically shown, if run as the last statement)
 
         :return:                A dictionary with data about the status of the operation
                                     "steps":        the number of steps that were run
@@ -1809,7 +1833,8 @@ class BioSim1D(System1D):
 
 
 
-    def react_diffuse(self, total_duration=None, time_step=None, n_steps=None, fraction_max_step=None, delta_x = 1) -> None:
+    def react_diffuse(self, total_duration=None, time_step=None, n_steps=None, fraction_max_step=None, delta_x = 1,
+                      show_status=False) -> dict:
         """
          Uniform-step reaction-diffusion, with up to 2 out of 3 criteria specified:
 
@@ -1826,7 +1851,10 @@ class BioSim1D(System1D):
                                     largest diffusion rate
         :param n_steps:         The desired number of constant steps
         :param delta_x:         Distance between consecutive bins  (the spatial dimension of each bin)
-        :return:                None
+        :param show_status:     If True, the return value gets printed
+                                    (note: in Jupyterlab, it gets automatically shown, if run as the last statement)
+
+        :return:                A dictionary with data about the status of the operation
         """
         # Assign a default for fraction_max_step (based on diffusion considerations)
         # in cases when no other step information was provided
@@ -1864,7 +1892,12 @@ class BioSim1D(System1D):
 
             self.capture_snapshot(step_count=i)     # Save historical values (if enabled)
 
+        status = {"steps": n_steps, "system time": f"{self.system_time:,.5g}", "time_step": time_step}
 
+        if show_status:
+            print(status)
+
+        return status
 
 
 

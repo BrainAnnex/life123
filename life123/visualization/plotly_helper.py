@@ -290,20 +290,21 @@ class PlotlyHelper:
                       x_label=None, y_label=None,
                       xrange=None, legend_title=None, curve_labels=None, show=False) -> pgo.Figure:
         """
-        Combine together several existing Plotly plots into a single one (with combined axes)
+        Combine together several existing Plotly plots into a single one (with COMBINED axes)
 
         EXAMPLE:
                     from life123 import PlotlyHelper
                     plot_1 = PlotlyHelper.plot_pandas(various args, show=False)
                     plot_2 = PlotlyHelper.plot_pandas(various args, show=False)
-                    PlotlyHelper.combine_plots([plot_1, plot_2], other optional args)
+                    PlotlyHelper.combine_plots( [plot_1, plot_2] , other optional args)
 
-        :param fig_list:    List or tuple of plotly "Figure" objects (as returned by several functions)
+        :param fig_list:    List or tuple of plotly "Figure" objects (as returned by graphic functions)
         :param title:       [OPTIONAL] The title to use for the overall plot
         :param modify:      [OPTIONAL] Dictionary of plot-style changes to permanently apply to some individual plots
                                 (indexed by their position in `fig_list`) before they get combined.
                                 Allowed values: "dash", "dot", "solid", "dashdot", "longdash", "longdashdot"
                                 EXAMPLE:  {0 : "dash", 4: "dot"}
+                                Note: the modification will alter the original plot
 
         :param layout_index:[OPTIONAL] If given, the layout of the "Figure" object with the given index
                                 (in `fig_list`) is used as is - and all the layout parameters below are ignored
