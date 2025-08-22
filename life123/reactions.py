@@ -10,18 +10,178 @@ from life123.html_log import HtmlLog as log
 
 ###################################################################################################################
 
-class ReactionEnz:
+class ReactionCommon:
+    """
+    Base class for all individual reactions.
+    Typically NOT instantiated by the user
+    """
+    def __init__(self, active=True, reversible=True):
+        self.active = active              # TODO: not yet in use
+        self.reversible = reversible
+
+
+
+class ReactionElementary(ReactionCommon):
+    """
+    Base class for all elementary reactions (i.e. with no intermediaries).
+    Typically NOT instantiated by the user
+    """
+    def __init__(self, forward_rate=None, reverse_rate=None,
+                       delta_H=None, delta_S=None, delta_G=None, **kwargs):
+
+        super().__init__(**kwargs)          # Invoke the constructor of its parent class
+
+        if not self.reversible:
+            assert not reverse_rate, \
+                f"ReactionElementary instantiation: irreversible reactions cannot have a `reverse_rate` value ({reverse_rate})"
+
+        self.forward_rate = forward_rate
+        self.reverse_rate = reverse_rate
+        self.delta_H = delta_H
+        self.delta_S = delta_S
+        self.delta_G = delta_G
+        self.K = None               # Equilibrium constant
+
+        if (reverse_rate is not None) and not np.allclose(self.reverse_rate, 0):
+            self.K = forward_rate / reverse_rate
+
+
+
+    def set_thermodynamic_data(self, temp :float) -> None:
+        """
+        Set all the thermodynamic data derivable from the given temperature,
+        and all previously passed kinetic and thermodynamic data.
+        Raise an Exception if any inconsistency is detected.
+
+        :param temp:    System temperature in Kelvins.  For now, assumed constant everywhere,
+                            and unvarying (or very slowly varying).
+                            If the temp gradually changes, periodically call this method.
+        :return:        None
+        """
+
+        if not temp:
+            return      # There's nothing to do
+
+        # Process kinetic data, if available,
+        #       extracting thermodynamic data when feasible
+        if self.K:
+            # If the temperature is set, compute the change in Gibbs Free Energy
+            delta_G_kinetic = ThermoDynamics.delta_G_from_K(K = self.K, temp = temp)
+            if self.delta_G is None:
+                self.delta_G = delta_G_kinetic
+            else:   # If already present (passed as argument), make sure that the two match!
+                assert np.allclose(delta_G_kinetic, self.delta_G), \
+                    f"set_thermodynamic_data(): Kinetic data (leading to Delta_G={delta_G_kinetic}) " \
+                    f"is inconsistent with the passed value of Delta_G={self.delta_G})"
+
+
+        if (self.delta_H is not None) and (self.delta_S is not None):
+            # If all the thermodynamic data (possibly except delta_G) is available...
+
+            # Compute the change in Gibbs Free Energy from delta_H and delta_S, at the current temperature
+            delta_G_thermo = ThermoDynamics.delta_G_from_enthalpy(delta_H = self.delta_H, delta_S = self.delta_S, temp = temp)
+
+            if self.delta_G is None:
+                self.delta_G = delta_G_thermo
+            else:  # If already present (passed as argument or was set from kinetic data), make sure that the two match!
+                if not np.allclose(delta_G_thermo, self.delta_G):
+                    if self.delta_G is not None:
+                        raise Exception(f"set_thermodynamic_data(): thermodynamic data (leading to Delta_G={delta_G_thermo}) "
+                                        f"is inconsistent with the passed value of delta_G={self.delta_G})")
+                    else:
+                        raise Exception(f"set_thermodynamic_data(): thermodynamic data (leading to Delta_G={delta_G_thermo}) "
+                                        f"is inconsistent with kinetic data (leading to Delta_G={self.delta_G})")
+
+
+        if self.delta_G is not None:
+            if self.K is None:
+                # If the temperature is known, compute the equilibrium constant (from the thermodynamic data)
+                # Note: no need to do it if self.K is present, because we ALREADY handled that case
+                self.K = ThermoDynamics.K_from_delta_G(delta_G = self.delta_G, temp = temp)
+
+                # If only one of the Forward or Reverse rates was provided, compute the other one
+                if (self.forward_rate is None) and (self.reverse_rate is not None):
+                    self.forward_rate = self.K * self.reverse_rate
+                if (self.reverse_rate is None) and (self.forward_rate is not None):
+                    self.reverse_rate = self.forward_rate / self.K
+
+
+            # If either Enthalpy or Entropy is missing, but the other one is known, compute the missing one
+            if (self.delta_H is None) and (self.delta_S is not None):
+                self.delta_H = ThermoDynamics.delta_H_from_gibbs(delta_G=self.delta_G, delta_S=self.delta_S, temp=temp)
+            elif (self.delta_H is not None) and (self.delta_S is None):
+                self.delta_S = ThermoDynamics.delta_S_from_gibbs(delta_G=self.delta_G, delta_H=self.delta_H, temp=temp)
+
+
+
+
+
+###################################################################################################################
+
+class ReactionUnimolecular(ReactionElementary):
+    """
+    Reactions of type A <-> B
+
+    NOT YET IN FULL USE for simulations.  Use the class "ReactionGeneric" for now
+    """
+    def __init__(self, reactant :str, product :str, **kwargs):
+        super().__init__(**kwargs)          # Invoke the constructor of its parent class
+
+        assert type(reactant) == str, "ReactionUnimolecular instantiation: argument `reactant` must be a string"
+        assert type(product) == str, "ReactionUnimolecular instantiation: argument `product` must be a string"
+        assert reactant != product, "ReactionUnimolecular instantiation: the `reactant` and the `product` cannot be identical"
+
+        self.reactant = reactant
+        self.product = product
+
+
+    def extract_reactant_names(self) -> [str]:
+        return [self.reactant]
+
+    def extract_product_names(self) -> [str]:
+        return [self.product]
+
+
+
+class ReactionSynthesis(ReactionElementary):
+    """
+    Reactions of type A + B <-> C
+
+    NOT YET IN FULL USE for simulations.  Use the class "ReactionGeneric" for now
+    """
+    def __init__(self, reactants :(str, str), product :str, **kwargs):
+        super().__init__(**kwargs)          # Invoke the constructor of its parent class
+
+
+class ReactionDecomposition(ReactionElementary):
+    """
+    Reactions of type A <-> B + C
+
+    NOT YET IN FULL USE for simulations.  Use the class "ReactionGeneric" for now
+    """
+    def __init__(self, reactant :str, products :(str, str), **kwargs):
+        super().__init__(**kwargs)          # Invoke the constructor of its parent class
+
+
+
+###################################################################################################################
+
+class ReactionEnz(ReactionCommon):
     """
     Data about a SINGLE enzyme-catalyzed reaction that can be modeled kinetically as:
 
     E + S <-> ES <-> E + P
+
+        E : Enzyme
+        S : Substrate
+        ES: Intermediate Enzyme-Substrate complex
+        P : Product
     """
 
     def __init__(self, enzyme=None, substrate=None, product=None,
                  k1_F=None, k1_R=None, k2_F=None, k2_R=None,
-                 kM=None, kcat=None):
+                 kM=None, kcat=None, **kwargs):
         """
-
         :param enzyme:      The label for the chemical acting as enzyme
         :param substrate:
         :param product:
@@ -32,7 +192,7 @@ class ReactionEnz:
         :param kM:          Michaelis constant
         :param kcat:
         """
-        self.active = True          # TODO: EXPERIMENTAL!
+        super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
         self.enzyme = enzyme
         self.substrate = substrate
@@ -174,9 +334,10 @@ class ReactionEnz:
         return k1_reverse
 
 
-    def min_k1_forward(self, kM, kcat):
+
+    def min_k1_forward(self, kM :float, kcat :float) -> float:
         """
-        Return the minimum physically-meaningful value for k1_forward,
+        Return the minimum physically-possible value for k1_forward,
         for the given kinetic parameters kM and kcat
 
         :param kM:
@@ -187,12 +348,18 @@ class ReactionEnz:
 
 
 
+
+
 ###################################################################################################################
 
-class ReactionGeneric:
+class ReactionGeneric(ReactionCommon):
     """
-    Data about a generic SINGLE reaction,
-    including:
+    Data about a generic SINGLE reaction of the most general type,
+    with arbitrary number of reactants and products,
+    arbitrary stoichiometry,
+    and arbitrary kinetic reaction orders for each participating chemical.
+
+    Included:
         - stoichiometry
         - kinetic data (reaction rates, reaction orders)
         - thermodynamic data (temperature, changes in enthalpy/entropy/Gibbs Free Energy)
@@ -218,7 +385,7 @@ class ReactionGeneric:
 
     def __init__(self, reactants: Union[int, str, list], products: Union[int, str, list],
                  kF=None, kR=None,
-                 delta_H=None, delta_S=None, delta_G=None, temp=None):
+                 delta_H=None, delta_S=None, delta_G=None, temp=None, **kwargs):
         """
         Create the structure for a new SINGLE chemical reaction,
         optionally including its kinetic and/or thermodynamic data.
@@ -252,7 +419,7 @@ class ReactionGeneric:
         :param temp:        [OPTIONAL] Temperature in Kelvins.  For now, assumed constant everywhere,
                                 and unvarying (or very slowly varying)
         """
-        self.active = True          # TODO: EXPERIMENTAL!
+        super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
         self.reactants = None
         self.products = None
@@ -878,6 +1045,8 @@ class ReactionGeneric:
 
 
 
+
+
 ###################################################################################################################
 
 class Reactions:
@@ -911,7 +1080,8 @@ class Reactions:
 
         self.chem_data = chem_data
 
-        self.reaction_list = []     # List of objects of class "Reaction"
+        self.reaction_list = []     # List of objects of the various individual reaction classes,
+                                    # such as "ReactionGeneric" and "ReactionEnz"
 
         self.temp = 298.15          # Temperature in Kelvins.  (By default, the equivalent of 25 C)
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
@@ -987,14 +1157,14 @@ class Reactions:
 
 
 
-    def get_reaction(self, i :int) -> ReactionGeneric:
+    def get_reaction(self, i :int):
         """
         Return the data structure of the i-th reaction,
         in the order in which reactions were added (numbering starts at 0)
 
         :param i:   An integer that indexes the reaction of interest (numbering starts at 0)
-        :return:    A dictionary with 4 keys ("reactants", "products", "kF", "kR"),
-                    where "kF" is the forward reaction rate constant, and "kR" the back reaction rate constant
+        :return:    An object of one of the various individual reaction classes,
+                    such as "ReactionGeneric" and "ReactionEnz"
         """
         self.assert_valid_rxn_index(i)
 
@@ -1130,7 +1300,46 @@ class Reactions:
 
 
 
-    def add_reaction(self, reactants: Union[int, str, list], products: Union[int, str, list],
+    def add_reaction_from_object(self, rxn) -> int:
+        """
+        Register a new SINGLE chemical reaction,
+        and set all its kinetic and/or thermodynamic data from the available information,
+        including the value of the temperature (stored in object variable.)
+
+        All the involved chemicals can be either previously registered, or not.
+
+        :param rxn: One of the specific Reaction classes, such as
+                        ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition,
+                        ReactionEnz, ReactionGeneric
+        :return:    Integer index of the newly-added reaction
+                        (in the list self.reaction_list, stored as object variable)
+        """
+        self.reaction_list.append(rxn)
+
+        # Register any newly-encountered reactant not already registered
+        rxn_reactants = rxn.extract_reactant_names()
+        for label in rxn_reactants:
+            if not self.chem_data.label_exists(label):
+                self.chem_data.add_chemical(name=label)
+
+        # Register any newly-encountered reaction product not already registered
+        # (reactants are done first, because that's typically a more appealing order of appearance)
+        rxn_products = rxn.extract_product_names()
+        for label in rxn_products:
+            if not self.chem_data.label_exists(label):
+                self.chem_data.add_chemical(name=label)
+
+
+        self.active_chemicals = self.active_chemicals | set(rxn_reactants) | set(rxn_products)     # Union of sets
+
+        rxn.set_thermodynamic_data(temp=self.temp)
+
+        return len(self.reaction_list) - 1
+
+
+
+
+    def add_reaction(self, reactants :Union[int, str, list], products :Union[int, str, list],
                      forward_rate=None, reverse_rate=None,
                      delta_H=None, delta_S=None, delta_G=None) -> int:
         """
@@ -1185,7 +1394,7 @@ class Reactions:
                 self.chem_data.add_chemical(name=label)
 
 
-        # TODO: since we already have rxn_reactants, rxn_products and rxn.enzyme, the following can be simplified
+        # TODO: since we already have rxn_reactants, rxn_products and rxn.enzyme, the following could be simplified!
         involved_chemicals = rxn.extract_chemicals_in_reaction(exclude_enzyme=True)
 
         self.active_chemicals = self.active_chemicals.union(involved_chemicals)     # Union of sets

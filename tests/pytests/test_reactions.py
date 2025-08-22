@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from life123 import ChemData
-from life123.reactions import Reactions
+from life123.reactions import Reactions, ReactionCommon, ReactionElementary, ReactionUnimolecular
 from tests.utilities.comparisons import *
 
 
@@ -292,10 +292,10 @@ def test_add_reaction():
     assert r.products == [(2, "B", 1)]
     assert r.delta_H == 5.
     assert r.delta_S == 0.4
-    assert np.allclose(r.delta_G, -75.0)         # 5 - 200 * 0.4
-    assert np.allclose(r.K , 1.0461347154679432)  # exp(75/(8.3144598 * 200))
+    assert np.allclose(r.delta_G, -75.0)            # 5 - 200 * 0.4
+    assert np.allclose(r.K , 1.0461347154679432)    # exp(75/(8.3144598 * 200))
     assert np.allclose(r.kF , 10.)
-    assert np.allclose(r.kR , 9.558998331803693) # 10. / 1.0461347154679432
+    assert np.allclose(r.kR , 9.558998331803693)    # 10. / 1.0461347154679432
 
     assert rxns.active_chemicals == {"A", "B", "C", "D"}
     assert rxns.active_enzymes == set()
@@ -319,6 +319,50 @@ def test_add_reaction():
     assert rxns.number_of_reactions() == 8
     assert rxns.active_chemicals == {"A", "B", "C", "D", "F"}
     assert rxns.active_enzymes == {"D", "F"}
+
+
+def test_add_reaction_from_object():
+    chem_data = ChemData()
+    rxns = Reactions(chem_data)
+    rxns.temp = 200
+
+    r_uni_AB = ReactionUnimolecular(reactant="A", product="B",
+                                    forward_rate=11., reverse_rate=13.)
+    rxns.add_reaction_from_object(r_uni_AB)
+
+    assert rxns.number_of_reactions() == 1
+
+    r = rxns.get_reaction(0)        # Get the 0-th (and only so far) reaction
+    assert r == r_uni_AB
+    assert r.reactant == "A"
+    assert r.product == "B"
+    assert np.allclose(r.forward_rate , 11.)
+    assert np.allclose(r.reverse_rate , 13.)
+    assert np.allclose(r.K , 11./13.)
+    assert r.delta_H is None
+    assert r.delta_S is None
+    assert np.allclose(r.delta_G, 277.7928942715384)   # - RT log(K)
+    assert rxns.active_chemicals == {"A", "B"}
+
+
+    r_uni_CD = ReactionUnimolecular(reactant="C", product="D",
+                                    forward_rate=10., delta_H= 5., delta_S= 0.4)
+    rxns.add_reaction_from_object(r_uni_CD)
+
+    assert rxns.number_of_reactions() == 2
+
+    r = rxns.get_reaction(1)
+    assert r == r_uni_CD
+
+    assert r.reactant == "C"
+    assert r.product == "D"
+    assert np.allclose(r.forward_rate , 10.)                # The given value
+    assert r.delta_H == 5.                                  # The given value
+    assert r.delta_S == 0.4                                 # The given value
+    assert np.allclose(r.delta_G, -75.0)                    # 5 - 200 * 0.4
+    assert np.allclose(r.K , 1.0461347154679432)            # exp(75/(8.3144598 * 200))
+    assert np.allclose(r.reverse_rate , 9.558998331803693)  # 10. / 1.0461347154679432
+    assert rxns.active_chemicals == {"A", "B", "C", "D"}
 
 
 
@@ -427,3 +471,93 @@ def test_prepare_graph_network():
     assert compare_recordsets(graph_data["structure"], expected_structure)
     assert graph_data["color_mapping"] == {'Chemical': '#8DCC92', 'Reaction': '#D9C8AD'}
     assert graph_data["caption_mapping"] == {'Chemical': 'name', 'Reaction': 'name'}
+
+
+
+#####################################################################################################
+
+def test_constructor_ReactionCommon():
+    rxn = ReactionCommon()
+    assert rxn.active == True
+    assert rxn.reversible == True
+
+
+    rxn = ReactionCommon(active=False, reversible=False)
+    assert rxn.active == False
+    assert rxn.reversible == False
+
+
+
+def test_constructor_ReactionElementary():
+    rxn = ReactionElementary()
+    assert rxn.active == True
+    assert rxn.reversible == True
+    assert rxn.forward_rate is None
+    assert rxn.K is None
+
+
+    rxn = ReactionElementary(forward_rate=10, reverse_rate=2, delta_H=-3000)
+    assert rxn.active == True
+    assert rxn.reversible == True
+    assert rxn.forward_rate == 10
+    assert rxn.reverse_rate == 2
+    assert rxn.delta_H == -3000
+    assert rxn.delta_S is None
+    assert rxn.K == 5
+
+
+    with pytest.raises(Exception):
+        ReactionElementary(reversible=False, forward_rate=10, reverse_rate=2)   # Irreversible can't have reverse rate
+
+
+    rxn = ReactionElementary(active=False, reversible=False, forward_rate=10, reverse_rate=0)
+    assert rxn.active == False
+    assert rxn.reversible == False
+    assert rxn.forward_rate == 10
+    assert rxn.reverse_rate == 0
+    assert rxn.K is None
+
+
+
+def test_constructor_ReactionUnimolecular():
+    with pytest.raises(Exception):
+        ReactionUnimolecular()      # Missing arguments
+
+    with pytest.raises(Exception):
+        ReactionUnimolecular(reactant=123, product="B")     # Bad reactant
+
+    with pytest.raises(Exception):
+        ReactionUnimolecular(reactant="A", product=True)    # Bad product
+
+    rxn = ReactionUnimolecular(reactant="A", product="B")
+    assert rxn.active == True
+    assert rxn.reversible == True
+    assert rxn.forward_rate is None
+    assert rxn.K is None
+    assert rxn.delta_S is None
+    assert rxn.reactant == "A"
+    assert rxn.product == "B"
+
+
+    rxn = ReactionUnimolecular(reversible=False, reactant="A", product="B",
+                               forward_rate=20)
+    assert rxn.active == True
+    assert rxn.reversible == False
+    assert rxn.forward_rate == 20
+    assert rxn.reverse_rate is None
+    assert rxn.K is None
+    assert rxn.delta_S is None
+    assert rxn.reactant == "A"
+    assert rxn.product == "B"
+
+
+    rxn = ReactionUnimolecular(active=False, reactant="A", product="B",
+                               forward_rate=20, reverse_rate=4)
+    assert rxn.active == False
+    assert rxn.reversible == True
+    assert rxn.forward_rate == 20
+    assert rxn.reverse_rate == 4
+    assert rxn.K == 5
+    assert rxn.delta_S is None
+    assert rxn.reactant == "A"
+    assert rxn.product == "B"

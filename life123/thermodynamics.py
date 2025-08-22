@@ -7,7 +7,7 @@ class ThermoDynamics:
     changes in Gibbs Free Energy, Enthalpy, Entropy - and how
     they relate to equilibrium constant, at a given temperature.
 
-    This class does NOT get instantiated
+    This class does NOT get instantiated.
 
             "K"       (equilibrium constant - from either kinetic or thermodynamic data;
                        if both present, they must match up!)

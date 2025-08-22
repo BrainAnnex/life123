@@ -1199,7 +1199,7 @@ class Membranes2D():
         :param y_bins:          The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
         """
         #TODO: move all the Membrane classes (1D, 2D, 3D) to a separate file
-        
+
         assert type(x_bins) == int, "Membranes2D() instantiation: the argument `x_bins` must be an integer"
         assert type(y_bins) == int, "Membranes2D() instantiation: the argument `y_bins` must be an integer"
 
