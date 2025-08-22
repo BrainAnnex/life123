@@ -1123,3 +1123,315 @@ class BioSim2D:
         return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
                                         colors=colors, legend_header="Chemical", title=title,
                                         smoothed=smoothed)
+
+
+
+##########################################################################################
+##########################################################################################
+
+
+class System2D:
+    """
+    The foundational structure of 2D systems,
+    including bins, system state (concentrations and system time),
+    and the underlying "ChemData" object.
+
+    This base class does NOT know about membranes or reactions;
+    nor does it handle any simulation.
+    End users will typically instantiate the derived class BioSim2D
+    """
+    def __init__(self, x_bins :int, y_bins :int, chem_data):
+        """
+        :param x_bins:      The bin size in the x-coordinates.  Notice that this is the number of COLUMNS in the data matrix
+        :param y_bins:      The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
+        :param chem_data:   Object of class "ChemData"
+        """
+        # TODO: NOT YET IN USE
+        pass
+
+
+##########################################################################################
+##########################################################################################
+
+class Membranes2D():
+    """
+    This class supports the underlying foundational class System1D, to provide modeling of membranes (barriers)
+
+    * Only CLOSED membranes are modeled.
+        In 1D, that's not well-defined, but we'll consider a PAIR of membranes (with no other membrane between them)
+        to constitute a "closed membrane" for our purposes.
+
+    * Membranes exist at the boundary between System bins.
+
+    * Conceptually, a membrane is a list of "sides".
+        Those "sides" collectively encompass a portion of the System space,
+        and trace the  boundary of the closed membrane ("organelle")
+
+    * "Sides":
+        In 1D, the "sides" are points; in 2D, they are adjacent segments, and in 3D, rectangles.
+
+        In 2D and 3D, the "sides" cannot lie diagonally (slanted) across the System space; they all must follow
+        the directions of the axes (grid) of the System.
+
+        The "sides" cannot intersect, or even touch, with any other "side"
+        of the same membrane or of any other membrane.
+
+    * Implementation:
+        In 1D, a membrane is a list of exactly 2 points.
+        Each point is identified by the coordinate of bin immediately to the RIGHT of it
+        (or, if at the rightmost edge of the System, by the next integer of the coordinate of the bin to its left.)
+        So, the "side" of a membrane at the leftmost position in the system will have the value 0.
+        All integers must be between 0 and the total number of bins, both inclusive
+
+        In 2D, a membrane "side" is a segment, and a membrane is a closed vertex_list.
+        Each point of the vertex_list is identified by the coordinates
+        of the bin immediately to its RIGHT and ABOVE (in xy-coordinates).
+        So, a point at the leftmost/bottom position in the system will have the value (0,0)
+
+        In 3D, a membrane "side" is a rectangle, defined by 4 consecutive points.
+        Each point is identified by the coordinates of bin immediately past it (in xyz-coordinates)
+    """
+
+
+    def __init__(self, x_bins :int, y_bins :int):
+        """
+        :param x_bins:          The bin size in the x-coordinates.  Notice that this is the number of COLUMNS in the data matrix
+        :param y_bins:          The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
+        """
+        #TODO: move all the Membrane classes (1D, 2D, 3D) to a separate file
+        
+        assert type(x_bins) == int, "Membranes2D() instantiation: the argument `x_bins` must be an integer"
+        assert type(y_bins) == int, "Membranes2D() instantiation: the argument `y_bins` must be an integer"
+
+        assert x_bins >= 1 and y_bins >= 1, \
+            "Membranes2D() instantiation: The number of bins must be at least 1 in each dimension"
+
+
+        self.membrane_list = [] # List of (closed) membranes in the system.
+                                # A closed membrane is conceptually a list of "sides",
+                                #   defined by a list of points around the closed loop, NOT repeating the initial one.
+                                # Each point is identified by the system coordinates
+                                #   of the bin immediately to the right and above (in xy-coordinates)
+                                # EXAMPLE:  [
+                                #               [(0,0), (3,0), (3,2), (0,2)],                       # <-- Membrane 1
+                                #               [(7,5), (10,5), (10,8), (14,8), (14,10), (7,10)]    # <-- Membrane 2
+                                #           ]
+
+                                # The position of the elements in the outer list is their "membrane ID"
+                                # Since membranes are closed vertex_lists, there's an implicit connection betw the last point and the first
+                                # All integers on the left  of the inner pairs must be betw. 0 and self.n_bins_x, both inclusive
+                                # All integers on the right of the inner pairs must be betw. 0 and self.n_bins_y, both inclusive
+
+        self.permeability = {}  # Dict mapping chemical labels to permeability.
+                                # If not listed, taken to be zero (unable to diffuse across membranes)
+                                # For now, permeability is the same for all membranes
+                                #   (i.e. a function of only the chemicals)
+
+        self.n_bins_x = x_bins
+        self.n_bins_y = y_bins
+
+
+
+    def uses_membranes(self) -> bool:
+        """
+        Return True if membranes are part of the system
+
+        :return:    True if any membrane was created in the system; False otherwise
+        """
+        return self.membrane_list != []
+
+
+
+    def delete_membranes(self) -> None:
+        """
+        Get rid of all the membranes
+
+        :return:    None
+        """
+        self.membrane_list = []
+
+
+
+    def add_membrane(self, vertex_list :[(int, int)]) -> int:
+        """
+        Perform a lof of validations against of list of the coordinates of the vertices of a closed polygon that
+        represents the boundary of a membrane; all edges must be aligned with the axes and not intersect, overlap,
+        or touch in any manner (except of the common endpoint of adjacent vertices).
+
+        If the data structure is valid, then add to the system a membrane defined by it
+
+        :param vertex_list: List of (x,y) integer coordinates, in order
+                                EXAMPLE: [(7,5), (10,5), (10,8), (14,8), (14,10), (7,10)]
+        :return:            The integer ID assigned to the newly-added membrane
+        """
+        # TODO: verify that the new membrane doesn't overlap with any other one
+
+        assert type(vertex_list) == list, \
+            f"add_membrane(): argument `vertex_list` must be a list.  It is of type {type(vertex_list)}"
+
+        assert len(vertex_list) >= 4, \
+            f"add_membrane(): argument `vertex_list` must be a list of at least 4 elements; instead, it contains {len(vertex_list)}"
+
+        first_pnt = vertex_list[0]
+        last_pnt = vertex_list[-1]
+
+        if first_pnt != last_pnt:
+            vertex_list.append(first_pnt)
+
+        previous_pnt = None
+        previous_axis_of_change = None
+        for pnt in vertex_list:
+            assert type(pnt) == tuple, "add_membrane(): argument `vertex_list` must be a list of pairs"
+            assert len(pnt) == 2, "add_membrane(): argument `vertex_list` must be a list of pairs"
+            x, y = pnt
+            assert (type(x) == int) and (type(y) == int), \
+                f"add_membrane(): all list elements in argument `vertex_list` must be pairs of INTEGERS; {pnt} isn't"
+            assert (x >= 0) and (x < self.n_bins_x), \
+                f"set_membranes(): the LEFT (x-coordinate) components of the pairs must be integers between 0 and {self.n_bins_x - 1}, inclusive. The following value doesn't fit: {x}"
+            assert (y >= 0) and (y < self.n_bins_y), \
+                f"set_membranes(): the RIGHT (y-coordinate) components of the pairs must be integers between 0 and {self.n_bins_y - 1}, inclusive. The following value doesn't fit: {y}"
+
+            if previous_pnt is not None:
+                x_prev, y_prev = previous_pnt
+                assert (x != x_prev) or (y != y_prev), \
+                    f"add_membrane(): attempting to add a segment of zero length, starting AND ending at {previous_pnt}"
+
+                assert (x == x_prev) or (y == y_prev), \
+                    f"add_membrane(): attempting to add a membrane side that isn't horizontal of vertical.  " \
+                    f"The segment from {previous_pnt} to {pnt} is diagonal"
+
+                # Watch out for collinear adjacent segments (a side is just a continuation, or a "backtracking", of another one)
+                if x == x_prev:
+                    axis_of_change = "y"
+                else:
+                    axis_of_change = "x"
+
+                assert axis_of_change != previous_axis_of_change, \
+                    f"add_membrane(): the segment from {previous_pnt} to {pnt} is along the {axis_of_change}-axis, just as the previous segment; consolidate the vertices"
+
+                previous_axis_of_change = axis_of_change
+
+            previous_pnt = pnt
+
+
+        self._assert_simple_polygon(vertex_list)
+
+        vertex_list.pop(-1)    # Jettison the redundant last vertex (same as the first one)
+
+        self.membrane_list.append(vertex_list)
+
+        print("*** INFO: the 2D simulations and visualizations currently disregard membranes")
+
+        return len(self.membrane_list) - 1      # The position of the added element in the array
+
+
+
+    def _assert_simple_polygon(self, vertex_list :[(int, int)]) -> None:
+        """
+        Check if polygon is simple, i.e. with no intersections, nor overlaps,
+        not even a single point (except for the shared endpoint of adjacent edges)
+
+        If not, raise an Exception
+
+        The last vertex must be a repeat of the first one
+
+        :param vertex_list: List of pairs on integers, representing the vertices of the polygon, in order.
+                                The initial vertex MUST be present again at the end of the list.
+        :return:        None
+        """
+
+        edges = [(vertex_list[i], vertex_list[i + 1])
+                 for i in range(len(vertex_list) - 1)]
+
+        #print("edges:")
+        #for i, e in enumerate(edges):
+            #print(f"({i}): {e})")
+
+        for i, e1 in enumerate(edges):
+            for j, e2 in enumerate(edges):
+                if j <= i+1:                    # The order of the pair of vertices doesn't matter;
+                    continue                    #   also, don't check an edge and itself, nor an edge and an adjacent one
+
+                if i==0 and (j==len(edges)-1):  # The first & last edges are adjacent, and don't need to be checked
+                    continue
+
+                if self._segments_intersect(e1, e2):
+                    raise Exception(f"_assert_simple_polygon(): Detected intersection between edge {i}: {e1} and edge {j}: {e2}")
+
+
+
+    def _segments_intersect(self, seg1, seg2) -> bool:
+        """
+        Given 2 segments, each of which may be horizontal or vertical, determine whether they intersect or not.
+        "Intersection" is broadly defined as ANY overlap, whether in the middle or at end points.
+
+        :param seg1:
+        :param seg2:
+        :return:    True if the above segments intersect, or False otherwise
+        """
+        # Unpack the coordinates of the endpoints
+        (x1,y1),(x2,y2) = seg1
+        (x3,y3),(x4,y4) = seg2
+
+        # Normalize coordinates so we can use intervals easily
+        if x1 > x2 or y1 > y2:
+            x1,y1,x2,y2 = x2,y2,x1,y1
+        if x3 > x4 or y3 > y4:
+            x3,y3,x4,y4 = x4,y4,x3,y3
+
+        # Horizontal segments
+        if y1==y2 and y3==y4:
+            if y1!=y3:
+                return False
+            if max(x1,x3) <= min(x2,x4):  # overlap in x
+                return True
+            return False
+
+        # Vertical segments
+        if x1==x2 and x3==x4:
+            if x1!=x3:
+                return False
+            if max(y1,y3) <= min(y2,y4):  # overlap in y
+                return True
+            return False
+
+        # One horizontal, one vertical
+        if y1==y2 and x3==x4:  # seg1 horizontal, seg2 vertical
+            if (x1 <= x3 <= x2) and (y3 <= y1 <= y4):
+                return True
+        if x1==x2 and y3==y4:  # seg1 vertical, seg2 horizontal
+            if (x3 <= x1 <= x4) and (y1 <= y3 <= y2):
+                return True
+
+        return False
+
+
+
+    def set_permeability(self, permeability :dict) -> None:
+        """
+        Set the permeability of all membranes for various chemicals.
+        For now, permeability is the same for all membranes,
+        i.e. a function of only the chemicals.
+
+        :param permeability:    Dictionary mapping chemical labels
+                                    to the membranes' permeability to them (in passive transport)
+        :return:                None
+        """
+        assert type(permeability) == dict, \
+            "set_permeability(): argument `permeability` must be a dictionary"
+        self.permeability = permeability
+
+
+
+    def change_permeability(self, chem_label :str, permeability :float) -> None:
+        """
+        Use the specified value to set the permeability of all the membranes
+        to given chemical
+
+        :param chem_label:  A string to identify the chemical of interest
+        :param permeability:The permeability of all membranes to that chemical
+        :return:            None
+        """
+        assert permeability >= 0, \
+            "change_permeability(): argument `permeability` must be a non-negative value"
+        self.permeability[chem_label] = permeability

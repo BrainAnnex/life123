@@ -1997,17 +1997,20 @@ class BioSim1D(System1D):
 
 class Membranes1D():
     """
-    This class supports the underlying foundational System1D, to provide modeling of membranes (barriers)
+    This class supports the underlying foundational class System1D, to provide modeling of membranes (barriers)
 
     * Only CLOSED membranes are modeled.
+        In 1D, that's not well-defined, but we'll consider a PAIR of membranes (with no other membrane between them)
+        to constitute a "closed membrane" for our purposes.
 
-    * Membrane exist at the boundary between System bins.
+    * Membranes exist at the boundary between System bins.
 
-    * A membrane is an ordered list of adjacent "sides".
-      The "sides" collectively encompass a portion of the System space, and trace the  boundary of the membrane.
+    * Conceptually, a membrane is a list of "sides".
+        Those "sides" collectively encompass a portion of the System space,
+        and trace the  boundary of the closed membrane ("organelle")
 
     * "Sides":
-        In 1D, the "sides" are points; in 2D, they are adjacent segments, and in 3D, adjacent rectangles.
+        In 1D, the "sides" are points; in 2D, they are adjacent segments, and in 3D, rectangles.
 
         In 2D and 3D, the "sides" cannot lie diagonally (slanted) across the System space; they all must follow
         the directions of the axes (grid) of the System.
@@ -2015,20 +2018,27 @@ class Membranes1D():
         The "sides" cannot intersect, or even touch, with any other "side"
         of the same membrane or of any other membrane.
 
-    * Positions of the "Sides":
-        In 1D, a membrane "side" is a point, identified by the coordinate of bin immediately to the right of it
-        (or, if at the rightmost edge of the System, by the next integer of the bin to its left.)
-        In 2D, a membrane "side" is a segment, defined by its endpoint.  Each endpoint is identified by the
-        coordinates of bin immediately to the right and above (in xy-coordinates)
-        In 3D, a membrane "side" is a rectangle, defined by 3 consecutive points.  Each point is identified by the
-        coordinates of bin immediately past it (in xyz-coordinates)
+    * Implementation:
+        In 1D, a membrane is a list of exactly 2 points.
+        Each point is identified by the coordinate of bin immediately to the RIGHT of it
+        (or, if at the rightmost edge of the System, by the next integer of the coordinate of the bin to its left.)
+        So, the "side" of a membrane at the leftmost position in the system will have the value 0.
+        All integers must be between 0 and the total number of bins, both inclusive
+
+        In 2D, a membrane "side" is a segment, and a membrane is a closed polygon.
+        Each point of the polygon is identified by the coordinates
+        of the bin immediately to its RIGHT and ABOVE (in xy-coordinates).
+        So, a point at the leftmost/bottom position in the system will have the value (0,0)
+
+        In 3D, a membrane "side" is a rectangle, defined by 4 consecutive points.
+        Each point is identified by the coordinates of bin immediately past it (in xyz-coordinates)
     """
 
 
     def __init__(self, n_bins :int):
         """
 
-        :param n_bins:
+        :param n_bins:  The number of compartments (bins) to model our 1D system
         """
         assert type(n_bins) == int, \
             "Membranes1D instantiation: argument `n_bins` must be an integer"
@@ -2037,10 +2047,17 @@ class Membranes1D():
             "Membranes1D instantiation: argument `n_bins` must be equal to, or larger than, 1"
 
         self.membrane_list = [] # List of (closed) membranes in the system.
-                                # In 1D, a (closed) membrane is a pair of points,
-                                # identified by the index of the bin to their RIGHT side ("index after"),
-                                # in sorted order.
-                                # EXAMPLE:  [ (0, 8) , (17, 31) ]
+                                # A closed membrane in 1D consists of exactly 2 "sides"
+                                # In 1D, a membrane "side" is a point,
+                                #   identified by the index of the bin to their RIGHT side ("index after").
+                                # EXAMPLE:  [
+                                #               [0, 8] ,    # <-- Membrane 1
+                                #               [17, 31]    # <-- Membrane 2
+                                #           ]
+                                # The position of the elements in the outer list is their "membrane ID"
+                                # Note: in 1D, all integers in the flattened array are required
+                                #       to be in sorted increasing order, with no repeats nor overlaps!
+                                # OLD format, being phased out:  [ (0, 8) , (17, 31) ]   TODO: old format, to update
                                 # All integers must be between 0 and self.n_bins, both inclusive
 
         self.permeability = {}  # Dict mapping chemical labels to permeability.
@@ -2121,6 +2138,9 @@ class Membranes1D():
 
     def set_permeability(self, permeability :dict) -> None:
         """
+        Set the permeability of all membranes for various chemicals.
+        For now, permeability is the same for all membranes,
+        i.e. a function of only the chemicals.
 
         :param permeability:    Dictionary mapping chemical labels
                                     to the membranes' permeability to them (in passive transport)
@@ -2141,7 +2161,6 @@ class Membranes1D():
         :param permeability:The permeability of all membranes to that chemical
         :return:            None
         """
-        #TODO: permeability value cannot exceed the value of diffusion(?)
         assert permeability >= 0, \
             "change_permeability(): argument `permeability` must be a non-negative value"
         self.permeability[chem_label] = permeability

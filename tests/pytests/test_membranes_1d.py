@@ -24,14 +24,6 @@ def test_constructor():
     assert bio.permeability == {}
 
 
-    # New test
-    chem_data = ChemData(names=["A", "B", "C"])
-    bio = Membranes1D(n_bins=15)
-    assert bio.n_bins == 15
-    assert bio.membrane_list == []
-    assert bio.permeability == {}
-
-
 
 def test_describe_state():
     pass
