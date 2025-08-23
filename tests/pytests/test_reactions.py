@@ -321,13 +321,14 @@ def test_add_reaction():
     assert rxns.active_enzymes == {"D", "F"}
 
 
+
 def test_add_reaction_from_object():
     chem_data = ChemData()
     rxns = Reactions(chem_data)
     rxns.temp = 200
 
     r_uni_AB = ReactionUnimolecular(reactant="A", product="B",
-                                    forward_rate=11., reverse_rate=13.)
+                                    kF=11., kR=13.)
     rxns.add_reaction_from_object(r_uni_AB)
 
     assert rxns.number_of_reactions() == 1
@@ -336,8 +337,8 @@ def test_add_reaction_from_object():
     assert r == r_uni_AB
     assert r.reactant == "A"
     assert r.product == "B"
-    assert np.allclose(r.forward_rate , 11.)
-    assert np.allclose(r.reverse_rate , 13.)
+    assert np.allclose(r.kF, 11.)
+    assert np.allclose(r.kR, 13.)
     assert np.allclose(r.K , 11./13.)
     assert r.delta_H is None
     assert r.delta_S is None
@@ -346,7 +347,7 @@ def test_add_reaction_from_object():
 
 
     r_uni_CD = ReactionUnimolecular(reactant="C", product="D",
-                                    forward_rate=10., delta_H= 5., delta_S= 0.4)
+                                    kF=10., delta_H= 5., delta_S= 0.4)
     rxns.add_reaction_from_object(r_uni_CD)
 
     assert rxns.number_of_reactions() == 2
@@ -356,12 +357,12 @@ def test_add_reaction_from_object():
 
     assert r.reactant == "C"
     assert r.product == "D"
-    assert np.allclose(r.forward_rate , 10.)                # The given value
+    assert np.allclose(r.kF, 10.)                # The given value
     assert r.delta_H == 5.                                  # The given value
     assert r.delta_S == 0.4                                 # The given value
     assert np.allclose(r.delta_G, -75.0)                    # 5 - 200 * 0.4
     assert np.allclose(r.K , 1.0461347154679432)            # exp(75/(8.3144598 * 200))
-    assert np.allclose(r.reverse_rate , 9.558998331803693)  # 10. / 1.0461347154679432
+    assert np.allclose(r.kR, 9.558998331803693)  # 10. / 1.0461347154679432
     assert rxns.active_chemicals == {"A", "B", "C", "D"}
 
 
@@ -492,29 +493,29 @@ def test_constructor_ReactionElementary():
     rxn = ReactionElementary()
     assert rxn.active == True
     assert rxn.reversible == True
-    assert rxn.forward_rate is None
+    assert rxn.kF is None
     assert rxn.K is None
 
 
-    rxn = ReactionElementary(forward_rate=10, reverse_rate=2, delta_H=-3000)
+    rxn = ReactionElementary(kF=10, kR=2, delta_H=-3000)
     assert rxn.active == True
     assert rxn.reversible == True
-    assert rxn.forward_rate == 10
-    assert rxn.reverse_rate == 2
+    assert rxn.kF == 10
+    assert rxn.kR == 2
     assert rxn.delta_H == -3000
     assert rxn.delta_S is None
     assert rxn.K == 5
 
 
     with pytest.raises(Exception):
-        ReactionElementary(reversible=False, forward_rate=10, reverse_rate=2)   # Irreversible can't have reverse rate
+        ReactionElementary(reversible=False, kF=10, kR=2)   # Irreversible can't have reverse rate
 
 
-    rxn = ReactionElementary(active=False, reversible=False, forward_rate=10, reverse_rate=0)
+    rxn = ReactionElementary(active=False, reversible=False, kF=10, kR=0)
     assert rxn.active == False
     assert rxn.reversible == False
-    assert rxn.forward_rate == 10
-    assert rxn.reverse_rate == 0
+    assert rxn.kF == 10
+    assert rxn.kR == 0
     assert rxn.K is None
 
 
@@ -532,7 +533,7 @@ def test_constructor_ReactionUnimolecular():
     rxn = ReactionUnimolecular(reactant="A", product="B")
     assert rxn.active == True
     assert rxn.reversible == True
-    assert rxn.forward_rate is None
+    assert rxn.kF is None
     assert rxn.K is None
     assert rxn.delta_S is None
     assert rxn.reactant == "A"
@@ -540,11 +541,11 @@ def test_constructor_ReactionUnimolecular():
 
 
     rxn = ReactionUnimolecular(reversible=False, reactant="A", product="B",
-                               forward_rate=20)
+                               kF=20)
     assert rxn.active == True
     assert rxn.reversible == False
-    assert rxn.forward_rate == 20
-    assert rxn.reverse_rate is None
+    assert rxn.kF == 20
+    assert rxn.kR is None
     assert rxn.K is None
     assert rxn.delta_S is None
     assert rxn.reactant == "A"
@@ -552,11 +553,11 @@ def test_constructor_ReactionUnimolecular():
 
 
     rxn = ReactionUnimolecular(active=False, reactant="A", product="B",
-                               forward_rate=20, reverse_rate=4)
+                               kF=20, kR=4)
     assert rxn.active == False
     assert rxn.reversible == True
-    assert rxn.forward_rate == 20
-    assert rxn.reverse_rate == 4
+    assert rxn.kF == 20
+    assert rxn.kR == 4
     assert rxn.K == 5
     assert rxn.delta_S is None
     assert rxn.reactant == "A"

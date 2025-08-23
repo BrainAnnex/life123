@@ -1181,7 +1181,6 @@ class UniformCompartment:
 
         # Compute and save up the rates ("velocities") of all the reactions we're looking into, as a dict;
         # the keys are the reaction indexes
-        #rate_dict = self.compute_all_reaction_rates(rxn_list=rxn_list)
         rates_dict = {}      # EXAMPLE: {0: 40., 1: 4.4}
 
 
@@ -1190,7 +1189,6 @@ class UniformCompartment:
             rxn_list = self.reactions.active_reaction_indices()
 
 
-        number_chemicals = self.chem_data.number_of_chemicals()
         name_mapping = self.chem_data.get_label_mapping()
 
         # For each applicable reaction, find the needed adjustments ("deltas")
@@ -1201,7 +1199,7 @@ class UniformCompartment:
 
             increment_dict_single_rxn, rxn_rate = \
                 self._inner_reaction_loop(rxn=rxn, rxn_index=rxn_index, delta_time=delta_time,
-                                          number_chemicals=number_chemicals, name_mapping=name_mapping)
+                                          name_mapping=name_mapping)
             # EXAMPLE of increment_dict_single_rxn: {0: 3.2, 6: -3.2}
 
             rates_dict[rxn_index] = rxn_rate                    # Save the value
@@ -1225,16 +1223,16 @@ class UniformCompartment:
 
 
 
-    def _inner_reaction_loop(self, rxn, rxn_index, delta_time,
-                             number_chemicals :int, name_mapping :dict) -> ():
+    def _inner_reaction_loop(self, rxn, rxn_index, delta_time, name_mapping :dict) -> ():
         """
         Simulate the specified single reaction, over the specified time interval
 
         :param rxn:             The specific Reaction object, such as ReactionGeneric or ReactionUnimolecular
-        :param rxn_index:
-        :param delta_time:
-        :param number_chemicals:
-        :param name_mapping:
+        :param rxn_index:       The index (0-based) to identify the reaction of interest (ONLY USED for error messages)
+        :param delta_time:      The time duration of this individual reaction step - assumed to be small enough that the
+                                    concentration won't vary significantly during this span
+        :param name_mapping:    A dict with all the mappings of the chemical labels to their registered index
+
         :return:                The pair (increment_dict_single_rxn, rxn_rate)
                                     EXAMPLE of increment_dict_single_rxn: {0: 3.2, 6: -3.2}
         """

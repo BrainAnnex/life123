@@ -28,24 +28,24 @@ class ReactionElementary(ReactionCommon):
     Base class for all elementary reactions (i.e. with no intermediaries).
     Typically NOT instantiated by the user
     """
-    def __init__(self, forward_rate=None, reverse_rate=None,
-                       delta_H=None, delta_S=None, delta_G=None, **kwargs):
+    def __init__(self, kF=None, kR=None,
+                 delta_H=None, delta_S=None, delta_G=None, **kwargs):
 
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
         if not self.reversible:
-            assert not reverse_rate, \
-                f"ReactionElementary instantiation: irreversible reactions cannot have a `reverse_rate` value ({reverse_rate})"
+            assert not kR, \
+                f"ReactionElementary instantiation: irreversible reactions cannot have a `reverse_rate` value ({kR})"
 
-        self.forward_rate = forward_rate    # TODO: rename kF (it's the forward rate CONSTANT)
-        self.reverse_rate = reverse_rate
+        self.kF = kF                # Forward rate constant
+        self.kR = kR                # Reverse rate constant
         self.delta_H = delta_H
         self.delta_S = delta_S
         self.delta_G = delta_G
         self.K = None               # Equilibrium constant
 
-        if (reverse_rate is not None) and not np.allclose(self.reverse_rate, 0):
-            self.K = forward_rate / reverse_rate
+        if (kR is not None) and not np.allclose(self.kR, 0):
+            self.K = kF / kR
 
 
 
@@ -102,10 +102,10 @@ class ReactionElementary(ReactionCommon):
                 self.K = ThermoDynamics.K_from_delta_G(delta_G = self.delta_G, temp = temp)
 
                 # If only one of the Forward or Reverse rates was provided, compute the other one
-                if (self.forward_rate is None) and (self.reverse_rate is not None):
-                    self.forward_rate = self.K * self.reverse_rate
-                if (self.reverse_rate is None) and (self.forward_rate is not None):
-                    self.reverse_rate = self.forward_rate / self.K
+                if (self.kF is None) and (self.kR is not None):
+                    self.kF = self.K * self.kR
+                if (self.kR is None) and (self.kF is not None):
+                    self.kR = self.kF / self.K
 
 
             # If either Enthalpy or Entropy is missing, but the other one is known, compute the missing one
@@ -157,8 +157,8 @@ class ReactionUnimolecular(ReactionElementary):
         :return:            The differences between the reaction's forward and reverse rates
         """
         return ReactionKinetics.compute_reaction_rate_elementary(reactants = [self.reactant], products=[self.product],
-                            kF = self.forward_rate, kR=self.reverse_rate, reversible=self.reversible,
-                            conc_array=conc_array, name_mapping=name_mapping)
+                                                                 kF = self.kF, kR=self.kR, reversible=self.reversible,
+                                                                 conc_array=conc_array, name_mapping=name_mapping)
 
 
 
