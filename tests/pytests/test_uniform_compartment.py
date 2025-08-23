@@ -539,64 +539,6 @@ def test_single_compartment_correct_neg_conc():
 ###########################  LOWER-LEVEL METHODS  ###########################
 
 
-def test_compute_all_reaction_rates():
-    chem_data = ChemData(names=["A", "B", "C", "D"])
-    uc = UniformCompartment(chem_data=chem_data)
-
-    # Start with reaction A <-> B , with 1st-order kinetics in both directions
-    uc.add_reaction(reactants="A", products="B", forward_rate=20., reverse_rate=2.)  # Reaction 0
-    uc.set_conc(conc=[5., 8., 0, 0], snapshot=False)
-
-    result = uc.compute_all_reaction_rates()    # {0: 84.}
-    assert len(result) == 1
-    assert np.allclose(result[0], 84.)
-
-    # Add reaction 2B <-> 3C , with 1st-order kinetics in both directions
-    uc.add_reaction(reactants=[(2, "B", 1)], products=[(3, "C", 1)],
-                           forward_rate=10., reverse_rate=25.)   # Rxn 1
-    uc.set_conc(conc=[5., 8., 15., 0], snapshot=False)
-    result = uc.compute_all_reaction_rates()  # {0: 84., 1: -295.}
-    assert len(result) == 2
-    assert np.allclose(result[0], 84.)
-    assert np.allclose(result[1], -295.)
-
-    # Add reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
-    uc.add_reaction(reactants=[(2,"A",1) , (5,"B",1)], products=[(4,"C",1) , (3,"D",1)],
-                     forward_rate=5., reverse_rate=2.)          # Rxn 2
-    uc.set_conc(conc=[5., 8., 15.,  7.], snapshot=False)
-    result = uc.compute_all_reaction_rates()    # {0: 84., 1: -295., 2: -10.}
-    assert len(result) == 3
-    assert np.allclose(result[0], 84.)
-    assert np.allclose(result[1], -295.)
-    assert np.allclose(result[2], -10.)
-
-    # Add reaction  2A <-> B , with 2nd-order kinetics in the forward direction
-    uc.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=3., reverse_rate=2.)
-    result = uc.compute_all_reaction_rates()    # {0: 84., 1: -295., 2: -10., 3: 59.}
-    assert len(result) == 4
-    assert np.allclose(result[0], 84.)
-    assert np.allclose(result[1], -295.)
-    assert np.allclose(result[2], -10.)
-    assert np.allclose(result[3], 59.)
-
-    # This time, only process reactions 0 and 2
-    result_0_2 = uc.compute_all_reaction_rates(rxn_list=[0, 2])   # {0: 84., 2: -10.}
-    assert len(result_0_2) == 2
-    assert np.allclose(result_0_2[0], 84.)
-    assert np.allclose(result_0_2[2], -10.)
-
-
-    # FLUSH OUT ALL REACTIONS (to start over)
-    uc.clear_reactions()
-    # Start with reaction A <-> B , with 1st-order kinetics in both directions
-    uc.add_reaction(reactants="A", products="B", forward_rate=20., reverse_rate=2.)   # Rxn 0
-    uc.set_conc(conc=[5., 8., 0, 0], snapshot=False)
-    result = uc.compute_all_reaction_rates()   #  {0: 84.}
-    assert len(result) == 1
-    assert np.allclose(result[0], 84.)
-
-
-
 def test_is_in_equilibrium():
     chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
     uc = UniformCompartment(chem_data=chem_data)

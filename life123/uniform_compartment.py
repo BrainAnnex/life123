@@ -1199,20 +1199,24 @@ class UniformCompartment:
         for rxn_index in rxn_list:      # Consider each reaction in turn
             rxn = self.reactions.get_reaction(rxn_index)
 
-            increment_vector_single_rxn, rxn_rate = \
+            increment_dict_single_rxn, rxn_rate = \
                 self._inner_reaction_loop(rxn=rxn, rxn_index=rxn_index, delta_time=delta_time,
                                           number_chemicals=number_chemicals, name_mapping=name_mapping)
+            # EXAMPLE of increment_dict_single_rxn: {0: 3.2, 6: -3.2}
 
             rates_dict[rxn_index] = rxn_rate                    # Save the value
 
-            increment_vector += increment_vector_single_rxn     # Accumulate the increment vector across ALL reactions
-                                                                # TODO: consider using a small dict in lieu of increment_vector_single_rxn
+            # Accumulate the increment vector from the chemicals in this reaction
+            for (chem_index, delta_conc) in increment_dict_single_rxn.items():
+                increment_vector[chem_index] += delta_conc
+
 
             if self.diagnostics_enabled:
                 self.diagnostics.save_rxn_data(rxn_index=rxn_index,
                                                system_time=self.system_time, time_step=delta_time,
-                                               increment_vector_single_rxn=increment_vector_single_rxn,
+                                               increment_dict_single_rxn=increment_dict_single_rxn,
                                                rate=rxn_rate)   # TODO: drop the rate?
+                                               # increment_vector_single_rxn=increment_vector_single_rxn,
         # END for (over rxn_list)
 
         self.system_rxn_rates = rates_dict
@@ -1231,17 +1235,13 @@ class UniformCompartment:
         :param delta_time:
         :param number_chemicals:
         :param name_mapping:
-        :return:                The pair (increment_vector_single_rxn, rxn_rate)
+        :return:                The pair (increment_dict_single_rxn, rxn_rate)
+                                    EXAMPLE of increment_dict_single_rxn: {0: 3.2, 6: -3.2}
         """
         # TODO: consider replacing this function with _reaction_elemental_step_SINGLE_REACTION(), when the latter is complete
 
-
-        # One array entry per chemical species; notice that this array gets RESET for EACH REACTION
-        # TODO: instead of using a potentially very large array (mostly of zeros) for each rxn, consider a dict instead
-        #       then combine then at end
-        increment_vector_single_rxn = np.zeros(number_chemicals, dtype=float)
-        increment_dict_single_rxn = {}      # TODO: use this as a replacement for increment_vector_single_rxn
-                                            # The keys are the chemical indexes
+        increment_dict_single_rxn = {}      # The keys are the chemical indexes,
+                                            # and the values are their respective concentration changes as a result of this reaction
 
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
         rxn_rate = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=self.system, name_mapping=name_mapping)
@@ -1276,7 +1276,6 @@ class UniformCompartment:
             self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
                                     rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
-            increment_vector_single_rxn[species_index] += delta_conc
             increment_dict_single_rxn[species_index] = increment_dict_single_rxn.get(species_index,0) + delta_conc
 
 
@@ -1298,7 +1297,6 @@ class UniformCompartment:
             self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
                                     rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
-            increment_vector_single_rxn[species_index] += delta_conc
             increment_dict_single_rxn[species_index] = increment_dict_single_rxn.get(species_index,0) + delta_conc
 
 
@@ -1310,14 +1308,14 @@ class UniformCompartment:
             print(f"    Macromolecule count:")
 
 
-        return (increment_vector_single_rxn, rxn_rate)   # TODO: return increment_dict_single_rxn in lieu of increment_vector_single_rxn
+        #assert len(increment_dict_single_rxn) == len(rxn.extract_chemicals_in_reaction())
 
-
+        return (increment_dict_single_rxn, rxn_rate)
 
 
 
     def _reaction_elemental_step_SINGLE_REACTION(self, delta_time: float, increment_vector,
-                                                 rxn,
+                                                 rxn, rxn_index,
                                                  delta_dict):     # TODO: EXPERIMENTAL; not yet in use
         """
         :param delta_time:
@@ -1427,7 +1425,7 @@ class UniformCompartment:
                                                                       "time_step": delta_time},
                                                                 delta_conc_arr=None)
                 self.diagnostics.save_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
-                                               increment_vector_single_rxn=None,
+                                               increment_dict_single_rxn=None,
                                                aborted=True,
                                                caption=f"aborted: neg. conc. in `{self.chem_data.get_label(species_index)}`")
 
@@ -1437,46 +1435,6 @@ class UniformCompartment:
                                     f"from the reaction `{self.reactions.single_reaction_describe(rxn_index=rxn_index, concise=True)}` (rxn # {rxn_index}): "
                                     f"\n      Baseline concentration value of `{chem_name}` : {baseline_conc:.6g} at system time {self.system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}"
                                     )
-
-
-
-    def compute_all_reaction_rates(self, rxn_list=None) -> dict:
-        """
-        OBSOLETED.  DO NOT USE.
-
-        Compute the reaction rates ("velocities"),
-        at the current system chemical concentrations,
-        for all the specified reactions (by default, all.)
-
-        Return a dict with the rates, indexed by the reaction number.
-
-        For background info: https://life123.science/reactions
-
-        :param rxn_list:    OPTIONAL list of reactions (specified by their integer index);
-                                if None, do all the reactions.  EXAMPLE: [1, 3, 7]
-
-        :return:            A dict of the reactions rates, as defined by compute_reaction_rate(),
-                                at the current concentrations of chemicals in the system (as stored in self.system).
-                                The dict is indexed by the reaction number, and contains as many entries as the
-                                number of reactions being included in the simulation
-                                EXAMPLE: {0: 40., 1: 4.4}
-        """
-        #TODO: OBSOLETE
-        print("OBSOLETE:  compute_all_reaction_rates() is now obsolete")
-
-        rates_dict = {}
-
-        if rxn_list is None:    # Meaning ALL reactions
-            rxn_list = range(self.reactions.number_of_reactions())
-
-        # Process the requested reactions
-        name_mapping = self.chem_data.get_label_mapping()
-        for i in rxn_list:      # Consider each desired reaction in turn
-            rxn = self.reactions.get_reaction(i)
-            delta = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=self.system, name_mapping=name_mapping)
-            rates_dict[i] = delta
-
-        return rates_dict
 
 
 

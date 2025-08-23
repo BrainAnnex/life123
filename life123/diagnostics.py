@@ -55,10 +55,10 @@ class Diagnostics:
     #####  1. diagnostic_rxn_data  #####
 
     def save_rxn_data(self, rxn_index :int, system_time, time_step,
-                      increment_vector_single_rxn: Union[np.array, None],
+                      increment_dict_single_rxn=None,
                       aborted=False,
                       rate=None,
-                      caption="") -> None:
+                      caption="") -> None: # increment_vector_single_rxn: Union[np.array, None],
         """
         Save up diagnostic data for 1 reaction, for a simulation step
         (by convention, regardless of whether the step is completed or aborted)
@@ -66,7 +66,7 @@ class Diagnostics:
         :param rxn_index:                   The integer index (0-based) to identify the reaction of interest
         :param system_time:                 The START time of the reaction step
         :param time_step:                   The duration of the current simulation step
-        :param increment_vector_single_rxn: A Numpy array of size equal to the total number of chemical species,
+        :param increment_dict_single_rxn: A Numpy array of size equal to the total number of chemical species,
                                                 containing the "delta concentrations" caused by this reaction
                                                 for ALL the chemicals (whether involved in the reaction or not);
                                                 it may be None if the current reaction step was aborted
@@ -83,11 +83,10 @@ class Diagnostics:
         # Sorted list of the indexes of all the chemicals participating in this reaction
         indexes = self.reactions.get_chemicals_indexes_in_reaction(rxn_index)
 
-        # Validate increment_vector_single_rxn
-        if increment_vector_single_rxn is not None:     # If the values are available (not the case in aborts)
-            assert len(increment_vector_single_rxn) == self.chem_data.number_of_chemicals(), \
-                f"save_diagnostic_rxn_data(): the length of the Numpy array increment_vector_single_rxn " \
-                f"({len(increment_vector_single_rxn)}) doesn't match the overall number of chemical ({self.chem_data.number_of_chemicals()})"
+        # Validate increment_dict_single_rxn
+        if increment_dict_single_rxn is not None:     # If the values are available (not the case in aborts)
+            assert type(increment_dict_single_rxn) == dict, \
+                "save_diagnostic_rxn_data(): the argument `increment_dict_single_rxn` must be of type dict"
 
 
         # Initialize a "MovieTabular" object for this reaction, if needed
@@ -97,12 +96,12 @@ class Diagnostics:
 
         data_snapshot = {"time_step": time_step, "aborted": aborted}      # Dict being prepared to add a new row to a Pandas dataframe
 
-        if increment_vector_single_rxn is None:     # If the values aren't available (as is the case in aborts)
+        if increment_dict_single_rxn is None:     # If the values aren't available (as is the case in aborts)
             for index in indexes:       # For all the chemicals participating in this reaction
                 data_snapshot["Delta " + self.chem_data.get_label(index)] = np.nan
         else:
             for index in indexes:       # For all the chemicals participating in this reaction
-                data_snapshot["Delta " + self.chem_data.get_label(index)] = increment_vector_single_rxn[index]
+                data_snapshot["Delta " + self.chem_data.get_label(index)] = increment_dict_single_rxn[index]
 
         if rate is not None:
             data_snapshot["rate"] = rate
@@ -124,7 +123,7 @@ class Diagnostics:
         """
         for rxn_index in range(self.reactions.number_of_reactions()):
             self.save_rxn_data(system_time=system_time, time_step=time_step,
-                               increment_vector_single_rxn=None,
+                               increment_dict_single_rxn=None,
                                aborted=True,
                                rxn_index=rxn_index, caption=caption)
 

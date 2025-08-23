@@ -3,9 +3,11 @@
 from typing import Union, Set, Tuple
 import numpy as np
 from life123.thermodynamics import ThermoDynamics
+from life123.reaction_kinetics import ReactionKinetics
 from life123.visualization.py_graph_visual import PyGraphVisual
 from life123.visualization.graphic_log import GraphicLog
 from life123.html_log import HtmlLog as log
+
 
 
 ###################################################################################################################
@@ -35,7 +37,7 @@ class ReactionElementary(ReactionCommon):
             assert not reverse_rate, \
                 f"ReactionElementary instantiation: irreversible reactions cannot have a `reverse_rate` value ({reverse_rate})"
 
-        self.forward_rate = forward_rate
+        self.forward_rate = forward_rate    # TODO: rename kF (it's the forward rate CONSTANT)
         self.reverse_rate = reverse_rate
         self.delta_H = delta_H
         self.delta_S = delta_S
@@ -141,6 +143,23 @@ class ReactionUnimolecular(ReactionElementary):
 
     def extract_product_names(self) -> [str]:
         return [self.product]
+
+
+    def determine_reaction_rate(self, conc_array :np.ndarray, name_mapping :dict) -> float:
+        """
+        Fo the specified concentrations of chemicals,
+        determine its initial reaction's "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate",
+        at the start of the time step.
+
+        :param conc_array:  Numpy array of concentrations of ALL chemical, in their index order
+        :param name_mapping:A dict with all the mappings of the chemical labels to their registered index
+        :return:            The differences between the reaction's forward and reverse rates
+        """
+        return ReactionKinetics.compute_reaction_rate_elementary(reactants = [self.reactant], products=[self.product],
+                            kF = self.forward_rate, kR=self.reverse_rate, reversible=self.reversible,
+                            conc_array=conc_array, name_mapping=name_mapping)
+
 
 
 

@@ -4,7 +4,7 @@ import math
 import cmath
 import numpy as np
 import plotly.graph_objects as pgo
-from life123.reactions import ReactionGeneric
+#from life123.reactions import ReactionGeneric
 from life123.numerical import Numerical
 from life123.visualization.plotly_helper import PlotlyHelper
 
@@ -19,7 +19,7 @@ class ReactionKinetics:
 
 
     @classmethod
-    def solve_exactly(cls, rxn :ReactionGeneric, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
+    def solve_exactly(cls, rxn, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
         """
         Return the exact solution of the given reaction,
         PROVIDED that it is a 1st Order Reaction of the type A <=> B.
@@ -329,15 +329,17 @@ class ReactionKinetics:
         i.e. its "forward rate" minus its "reverse rate",
         at the start of the time step.
 
-        This function is to be used for elementary, or non-elementary, reactions that follow the familiar "Rate Laws",
-        with forward and reverse rate constants stored in the passed "Reaction" object,
-        and with reaction orders, for the various Reactants and Products, also stored in that "Reaction" object.
+        This function is to be used for elementary, or non-elementary,
+        reactions that follow the familiar "Rate Laws",
+        with forward and reverse rate constants stored in the passed "ReactionGeneric" object,
+        and with reaction orders, for the various Reactants and Products,
+        also stored in that "ReactionGeneric" object.
 
         For background info:  https://life123.science/reactions
 
         :param rxn:         An object of type "ReactionGeneric", with the details of the reaction
         :param conc_array:  Numpy array of concentrations of ALL chemical, in their index order
-        :param name_mapping:A dict with all the mappings of the chemical names to the registered index
+        :param name_mapping:A dict with all the mappings of the chemical labels to their registered index
         :return:            The differences between the reaction's forward and reverse rates
         """
         reactants, products, fwd_rate_constant, rev_rate_constant = rxn.unpack_for_dynamics()
@@ -351,6 +353,11 @@ class ReactionKinetics:
             conc = conc_array[species_index]
             forward_rate *= conc ** order       # Raise to power
 
+
+        if not rxn.reversible:
+            return forward_rate
+
+
         reverse_rate = rev_rate_constant        # The initial multiplicative factor
         for p in products:
             # Unpack data from the reaction product p
@@ -359,6 +366,45 @@ class ReactionKinetics:
             species_index = name_mapping[species_name]
             conc = conc_array[species_index]
             reverse_rate *= conc ** order     # Raise to power
+
+        return forward_rate - reverse_rate
+
+
+
+
+    @classmethod
+    def compute_reaction_rate_elementary(cls, reactants :[str], products :[str],
+                                        kF :float, kR :float, reversible :bool,
+                                        conc_array :np.ndarray, name_mapping :dict) -> float:
+        """
+        For the SINGLE given reaction, and the specified concentrations of chemicals,
+        compute its initial reaction's "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate",
+        at the start of the time step.
+
+        :param reactants:   List of labels of the reactants
+        :param products:    List of labels of the products of the reaction
+        :param kF:          Forward reaction rate
+        :param kR:          Reverse reaction rate
+        :param reversible:  True if the reaction is reversible; False otherwise
+        :param conc_array:  Numpy array of concentrations of ALL chemical, in their index order
+        :param name_mapping:A dict with all the mappings of the chemical labels to their registered index
+        :return:            The differences between the reaction's forward and reverse rates
+        """
+        forward_rate = kF        # The initial multiplicative factor
+        for r in reactants:
+            species_index = name_mapping[r]
+            conc = conc_array[species_index]
+            forward_rate *= conc
+
+        if not reversible:
+            return forward_rate
+
+        reverse_rate = kR        # The initial multiplicative factor
+        for p in products:
+            species_index = name_mapping[p]
+            conc = conc_array[species_index]
+            reverse_rate *= conc
 
         return forward_rate - reverse_rate
 
