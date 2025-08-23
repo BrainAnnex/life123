@@ -136,6 +136,7 @@ class ReactionUnimolecular(ReactionElementary):
 
 
     def extract_reactant_names(self) -> [str]:
+        # TODO: maybe rename to extract_reactant_labels()
         return [self.reactant]
 
     def extract_product_names(self) -> [str]:

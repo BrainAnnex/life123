@@ -29,7 +29,7 @@ class ReactionKinetics:
 
         For details, see https://life123.science/reactions
 
-        :param rxn:     Object of type "Reaction", containing data for the reaction of interest
+        :param rxn:     Object of type "ReactionGeneric", containing data for the reaction of interest
         :param A0:      Initial concentration of the reactant A
         :param B0:      Initial concentration of the product B
         :param t_arr:   A Numpy array with the desired times at which the solutions are desired
@@ -335,7 +335,7 @@ class ReactionKinetics:
 
         For background info:  https://life123.science/reactions
 
-        :param rxn:         An object of type "Reaction", with the details of the reaction
+        :param rxn:         An object of type "ReactionGeneric", with the details of the reaction
         :param conc_array:  Numpy array of concentrations of ALL chemical, in their index order
         :param name_mapping:A dict with all the mappings of the chemical names to the registered index
         :return:            The differences between the reaction's forward and reverse rates
