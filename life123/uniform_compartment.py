@@ -1222,6 +1222,29 @@ class UniformCompartment:
         return increment_vector
 
 
+    def _fetch_concs_for_rnx(self, rxn, conc_array :np.ndarray):
+        """
+        Extract, out of the Numpy array of the given system concentrations,
+        just the concentrations of relevance for the specified reaction
+
+        :param rxn:         An object of one of the available reaction classes, such as
+                                "ReactionGeneric" or "ReactionUnimolecular"
+        :param conc_array:  Numpy array of concentrations of ALL chemical, in their index order
+        :return:            A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in the given reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+        """
+        # Get the SET of the chemical labels of all the chemicals appearing in this reaction
+        chem_labels = rxn.extract_chemicals_in_reaction()   # EXAMPLE: {"B", "F", "D"}
+
+        conc_dict = {}
+        for label in chem_labels:
+            chem_index = self.chem_data.get_index(label)    # The integer index this chemical
+            conc_dict[label] = conc_array[chem_index]
+
+        return conc_dict
+
+
 
     def _inner_reaction_loop(self, rxn, rxn_index, delta_time, name_mapping :dict) -> ():
         """

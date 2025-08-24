@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
-from life123 import ChemData, UniformCompartment, Reactions
+from life123 import ChemData, UniformCompartment
+from life123.reactions import Reactions, ReactionUnimolecular, ReactionSynthesis
 
 
 
@@ -537,6 +538,37 @@ def test_single_compartment_correct_neg_conc():
 
 
 ###########################  LOWER-LEVEL METHODS  ###########################
+
+
+def test__fetch_concs_for_rnx():
+    chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
+    uc = UniformCompartment(chem_data=chem_data)
+    rxns = uc.get_reactions()
+
+    uc.set_conc({"A": 12, "B": 1, "C": 31, "D": 19, "E": 2, "F": 3})
+
+    uc.add_reaction(reactants="D", products="F")
+    r = uc.get_single_reaction(0)
+    result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
+    assert result == {"D": 19, "F": 3}
+
+    uc.add_reaction(reactants=["A", "F"], products="C")
+    r = uc.get_single_reaction(1)
+    result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
+    assert result == {"A": 12, "C": 31, "F": 3}
+
+    r_uni = ReactionUnimolecular(reactant="C", product="A")
+    rxns.add_reaction_from_object(r_uni)
+    r = uc.get_single_reaction(2)
+    result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
+    assert result == {"A": 12, "C": 31}
+
+    r_syn = ReactionSynthesis(reactants=["C", "D"], product="B")
+    rxns.add_reaction_from_object(r_syn)
+    r = uc.get_single_reaction(3)
+    result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
+    assert result == {"B": 1, "C": 31, "D": 19}
+
 
 
 def test_is_in_equilibrium():

@@ -145,6 +145,18 @@ class ReactionUnimolecular(ReactionElementary):
         return [self.product]
 
 
+
+    def extract_chemicals_in_reaction(self) -> Set[str]:
+        """
+        Return a SET of the chemical labels of all the chemicals appearing in this reaction.
+
+        :return:    A SET of the labels of the chemicals involved in this reaction
+                        Note: being a set, it's NOT in any particular order
+        """
+        return {self.reactant, self.product}
+
+
+
     def determine_reaction_rate(self, conc_array :np.ndarray, name_mapping :dict) -> float:
         """
         Fo the specified concentrations of chemicals,
@@ -162,6 +174,7 @@ class ReactionUnimolecular(ReactionElementary):
 
 
 
+#######################################################################################################################
 
 class ReactionSynthesis(ReactionElementary):
     """
@@ -170,8 +183,46 @@ class ReactionSynthesis(ReactionElementary):
     NOT YET IN FULL USE for simulations.  Use the class "ReactionGeneric" for now
     """
     def __init__(self, reactants :(str, str), product :str, **kwargs):
+
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
+        assert type(reactants) == list or type(reactants) == tuple, \
+            "ReactionSynthesis instantiation: argument `reactants` must be a list or tuple"
+        assert len(reactants) == 2, \
+            "ReactionSynthesis instantiation: argument `reactants` must be a pair"
+        assert type(product) == str, "ReactionSynthesis instantiation: argument `product` must be a string"
+
+        (r1, r2) = reactants
+        assert (r1 != product) and (r2 != product), \
+            "ReactionSynthesis instantiation: the `product` cannot be identical to any of the reactants"
+
+        self.reactant_1 = r1
+        self.reactant_2 = r2
+        self.product = product
+
+
+
+    def extract_reactant_names(self) -> [str]:
+        # TODO: maybe rename to extract_reactant_labels()
+        return [self.reactant_1, self.reactant_2]
+
+    def extract_product_names(self) -> [str]:
+        return [self.product]
+
+
+
+    def extract_chemicals_in_reaction(self) -> Set[str]:
+        """
+        Return a SET of the chemical labels of all the chemicals appearing in this reaction.
+
+        :return:    A SET of the labels of the chemicals involved in this reaction
+                        Note: being a set, it's NOT in any particular order
+        """
+        return {self.reactant_1, self.reactant_2, self.product}
+
+
+
+#######################################################################################################################
 
 class ReactionDecomposition(ReactionElementary):
     """
@@ -674,13 +725,13 @@ class ReactionGeneric(ReactionCommon):
 
     def extract_chemicals_in_reaction(self, exclude_enzyme=False) -> Set[str]:
         """
-        Return a SET of names (being a set, it's NOT in any particular order)
-        identifying all the chemicals appearing in this reaction.
+        Return a SET of the chemical labels of all the chemicals appearing in this reaction.
+
         Optionally, exclude any that participate in a catalytic role
         (appearing identically on both sides of the reaction)
 
         :param exclude_enzyme:  If True, any enzyme, if present, won't be included
-        :return:                A SET of indices of the chemicals involved in this reaction
+        :return:                A SET of the labels of the chemicals involved in this reaction
                                 Note: being a set, it's NOT in any particular order
         """
         chem_set = set()    # Running set being built
@@ -1355,7 +1406,6 @@ class Reactions:
         rxn.set_thermodynamic_data(temp=self.temp)
 
         return len(self.reaction_list) - 1
-
 
 
 
