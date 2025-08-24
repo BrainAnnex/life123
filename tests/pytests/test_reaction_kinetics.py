@@ -60,48 +60,48 @@ def test_compute_reaction_rate():
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
     rxn = ReactionGeneric(reactants="A", products="B", kF=20., kR=2.)
-    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=conc_array, name_mapping=name_mapping)
+    result = ReactionKinetics.compute_reaction_rate_OLD(rxn=rxn, conc_array=conc_array, name_mapping=name_mapping)
     assert np.allclose(result, 20. * 5. - 2. * 8.)      # 84.0
 
     # Reaction 5A <-> 2B , with 1st-order kinetics in both directions.
     # Same as before, but different stoichiometry (which does NOT influence the result)
     rxn = ReactionGeneric(reactants=[(5, "A", 1)], products=[(2, "B", 1)],
                           kF=20., kR=2.)
-    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=conc_array, name_mapping=name_mapping)
+    result = ReactionKinetics.compute_reaction_rate_OLD(rxn=rxn, conc_array=conc_array, name_mapping=name_mapping)
     assert np.allclose(result, 20. * 5. - 2. * 8.)      # 84.0
 
     # Reaction C <-> D , with 1st-order kinetics in both directions
     rxn = ReactionGeneric(reactants="C", products="D", kF=20., kR=2.)
-    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=np.array([0., 0., 5., 8.]), name_mapping=name_mapping)
+    result = ReactionKinetics.compute_reaction_rate_OLD(rxn=rxn, conc_array=np.array([0., 0., 5., 8.]), name_mapping=name_mapping)
     assert np.allclose(result, 20. * 5. - 2. * 8.)      # 84.0
 
     # Reaction 2B <-> 3C , with 1st-order kinetics in both directions
     rxn = ReactionGeneric(reactants=[(2, "B", 1)], products=[(3, "C", 1)],
                           kF=10., kR=25.)
-    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=np.array([0., 8., 15., 0.]), name_mapping=name_mapping)
+    result = ReactionKinetics.compute_reaction_rate_OLD(rxn=rxn, conc_array=np.array([0., 8., 15., 0.]), name_mapping=name_mapping)
     assert np.allclose(result,  10. * 8. - 25. * 15.)   # -295.0
 
     # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
     rxn = ReactionGeneric(reactants=[(2, "A", 1) , (5, "B", 1)], products=[(4, "C", 1) , (3, "D", 1)],
                           kF=5., kR=2.)
-    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=np.array([3.5, 9., 11., 7.]), name_mapping=name_mapping)
+    result = ReactionKinetics.compute_reaction_rate_OLD(rxn=rxn, conc_array=np.array([3.5, 9., 11., 7.]), name_mapping=name_mapping)
     assert np.allclose(result,  5. * 3.5 * 9. - 2. * 11. * 7.)  # 3.5
 
-    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=np.array([5., 8., 15.,  7.]), name_mapping=name_mapping)
+    result = ReactionKinetics.compute_reaction_rate_OLD(rxn=rxn, conc_array=np.array([5., 8., 15., 7.]), name_mapping=name_mapping)
     assert np.allclose(result,  -10.)
 
     # Reaction  2A <-> B , with 2nd-ORDER kinetics in the forward direction
     rxn = ReactionGeneric(reactants=[(2, "A", 2)], products=["B"], kF=5., kR=2.)
-    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=np.array([4.5, 6., 0., 0.]), name_mapping=name_mapping)
+    result = ReactionKinetics.compute_reaction_rate_OLD(rxn=rxn, conc_array=np.array([4.5, 6., 0., 0.]), name_mapping=name_mapping)
     assert np.allclose(result, 5. * 4.5 **2 - 2. * 6.)          # 89.25
 
     rxn.kF = 3.
-    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=np.array([5., 8., 15.,  7.]), name_mapping=name_mapping)
+    result = ReactionKinetics.compute_reaction_rate_OLD(rxn=rxn, conc_array=np.array([5., 8., 15., 7.]), name_mapping=name_mapping)
     assert np.allclose(result, 59.)
 
     # Reaction  B <-> 2C , with 2nd-ORDER kinetics in the reverse direction
     rxn = ReactionGeneric(reactants=[("B")], products=[(2, "C", 2)], kF=4., kR=2.)
-    result = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_array=np.array([0., 5., 4, 0.]), name_mapping=name_mapping)
+    result = ReactionKinetics.compute_reaction_rate_OLD(rxn=rxn, conc_array=np.array([0., 5., 4, 0.]), name_mapping=name_mapping)
     assert np.allclose(result, 4. * 5. - 2. * 4. **2)           # -12.0
 
 
