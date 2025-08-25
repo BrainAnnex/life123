@@ -66,11 +66,9 @@ class Diagnostics:
         :param rxn_index:                   The integer index (0-based) to identify the reaction of interest
         :param system_time:                 The START time of the reaction step
         :param time_step:                   The duration of the current simulation step
-        :param increment_dict_single_rxn: A Numpy array of size equal to the total number of chemical species,
-                                                containing the "delta concentrations" caused by this reaction
-                                                for ALL the chemicals (whether involved in the reaction or not);
-                                                it may be None if the current reaction step was aborted
-                                                Note: diagnostic data is saved only for the chemicals involved in this reaction
+        :param increment_dict_single_rxn:   A dict mapping chemical labels to their concentrations,
+                                                for all the chemicals involved in the given reaction
+                                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         :param aborted:                     True is the current reaction step was aborted (i.e. will get repeated);
                                                 False (default) for normal situations
         :param rate:                        [OPTIONAL] The value of the reaction rate (aka reaction velocity) at this step

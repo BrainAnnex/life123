@@ -1209,7 +1209,7 @@ class UniformCompartment:
 
             # Accumulate the increment vector from the chemicals in this reaction
             for (chem_index, delta_conc) in increment_dict_single_rxn.items():
-                increment_vector[chem_index] += delta_conc
+                increment_vector[chem_index] += delta_conc  # Accumulate  all the increments from this reaction
 
 
             if self.diagnostics_enabled:
@@ -1223,6 +1223,7 @@ class UniformCompartment:
         self.system_rxn_rates = rates_dict
 
         return increment_vector
+
 
 
     def _fetch_concs_for_rnx(self, rxn, conc_array :np.ndarray):
@@ -1264,7 +1265,6 @@ class UniformCompartment:
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
                                 EXAMPLE of increment_dict_single_rxn: {0: 3.2, 6: -3.2}
         """
-        # TODO: consider replacing this function with _reaction_elemental_step_SINGLE_REACTION(), when the latter is complete
 
         increment_dict_single_rxn = {}      # The keys are the chemical indexes,
                                             # and the values are their respective concentration changes as a result of this reaction
@@ -1301,6 +1301,7 @@ class UniformCompartment:
             # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
             # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
             #       Further testing done upstream
+            # TODO: it might be more efficient to check this in bulk than with many function calls
             self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
                                     rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
@@ -1322,6 +1323,7 @@ class UniformCompartment:
             # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
             # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
             #       Further testing done upstream
+            # TODO: it might be more efficient to check this in bulk than with many function calls
             self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
                                     rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
@@ -1339,77 +1341,6 @@ class UniformCompartment:
         #assert len(increment_dict_single_rxn) == len(rxn.extract_chemicals_in_reaction())
 
         return (increment_dict_single_rxn, rxn_rate)
-
-
-
-    def _reaction_elemental_step_SINGLE_REACTION(self, delta_time: float, increment_vector,
-                                                 rxn, rxn_index,
-                                                 delta_dict):     # TODO: EXPERIMENTAL; not yet in use
-        """
-        :param delta_time:
-        :param increment_vector:
-        :param rxn:       The specific Reaction object, such as ReactionGeneric or ReactionUnimolecular
-        :param delta_dict:
-        :return:
-        """
-        rxn_type = type(rxn)
-
-        supported_types = [ReactionGeneric, ReactionUnimolecular]
-
-        assert rxn_type in supported_types, \
-            f"_reaction_elemental_step_SINGLE_REACTION(): the only types currently supported are {supported_types}"
-
-        # NOTE: instead of using a potentially very large array (mostly of zeros)
-        #       for the concentration increments by a single reaction,
-        #       we use a dict instead; then the caller function will combine them all
-        increment_dict_single_rxn = {}      # The key will be the chemicals in the reaction
-
-        reactants = rxn.extract_reactant_names()
-        products = rxn.extract_product_names()
-
-
-        """
-        Determine the concentration adjustments as a result of this reaction step, 
-        for the reaction being considered
-        """
-
-        # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
-        for r in reactants:
-            stoichiometry, species_index, order = r                 # Unpack
-            delta_conc = stoichiometry * (- delta_dict[rxn_index])  # Increment to this reactant from the reaction being considered
-            # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
-            # Note: not enough to detect conc going negative from combined changes from multiple reactions!  Further testing done upstream
-            # TODO: it might be more efficient to check this in bulk than with many function calls
-            self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
-                                    rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
-
-            increment_dict_single_rxn[species_index] = increment_dict_single_rxn.get(species_index, 0) + delta_conc
-
-
-        # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
-        for p in products:
-            stoichiometry, species_index, order = p             # Unpack
-            delta_conc = stoichiometry * delta_dict[rxn_index]  # Increment to this reaction product from the reaction being considered
-            # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
-            # Note: not enough to detect conc going negative from combined changes from multiple reactions!
-            #       Further testing done upstream
-            # TODO: it might be more efficient to check this in bulk than with many function calls
-            self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
-                                    rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
-
-            increment_dict_single_rxn[species_index] = increment_dict_single_rxn.get(species_index, 0) + delta_conc
-
-
-        for k, v in increment_dict_single_rxn.items():
-            increment_vector[k] += v                # Accumulate the increment vector across all the increments from this reaction
-
-
-        # TODO: need a version of examine_increment_array() and save_diagnostic_data() that accept increment_dict_single_rxn
-        #       instead of increment_vector_single_rxn [also, maybe move one or both of them to calling function]
-        '''  
-        if self.diagnostics:
-            self.save_diagnostic_data(delta_time, increment_vector_single_rxn, rxn_index)
-        '''
 
 
 
