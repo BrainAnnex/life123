@@ -175,6 +175,51 @@ class ReactionUnimolecular(ReactionElementary):
 
 
 
+    def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
+        """
+        Simulate the reaction, over the specified time interval
+
+        :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
+                                concentration won't vary significantly during this span
+        :param conc_dict:   A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in the given reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6}
+
+        :return:            The pair (increment_dict_single_rxn, rxn_rate)
+                                - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
+                                                            during this step
+                                - rxn_rate                  is the reaction rate ("velocity") for this reaction
+                                EXAMPLE of increment_dict_single_rxn: {"B": -0.2, "F": 0.2}
+        """
+
+        increment_dict_single_rxn = {}      # The keys are the chemical labels,
+                                            # and the values are their respective concentration changes as a result of this reaction
+
+        # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
+        rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
+
+        delta_rxn = rxn_rate * delta_time
+
+
+        # Determine the concentration adjustments as a result of this reaction step:
+
+        # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
+        r = self.reactant           # EXAMPLE: "B"
+        # stoichiometry = 1
+        delta_conc = - delta_rxn    # Increment to this reactant from the reaction step
+        increment_dict_single_rxn[r] = delta_conc
+
+
+        # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
+        p = self.product            # EXAMPLE: "F"
+        # stoichiometry = 1
+        delta_conc = delta_rxn      # Increment to this reaction product from the reaction step
+        increment_dict_single_rxn[p] = delta_conc
+
+        return (increment_dict_single_rxn, rxn_rate)
+
+
+
 
 #######################################################################################################################
 
@@ -997,6 +1042,85 @@ class ReactionGeneric(ReactionCommon):
         return ReactionKinetics.compute_reaction_rate(reactant_data= reactants_and_order, product_data=products_and_order,
                                                       kF = self.kF, kR=self.kR, reversible=self.reversible,
                                                       conc_dict=conc_dict)
+
+
+
+    def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
+        """
+        Simulate the reaction, over the specified time interval
+
+        :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
+                                concentration won't vary significantly during this span
+        :param conc_dict:   A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in the given reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+
+        :return:            The pair (increment_dict_single_rxn, rxn_rate)
+                                - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
+                                                            during this step
+                                - rxn_rate                  is the reaction rate ("velocity") for this reaction
+                                EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
+        """
+
+        increment_dict_single_rxn = {}      # The keys are the chemical indexes,
+                                            # and the values are their respective concentration changes as a result of this reaction
+
+        # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
+        rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
+
+        delta_rxn = rxn_rate * delta_time
+
+
+        reactants = self.extract_reactants() # A list of triplets of the form (stoichiometry, species name, reaction order)
+        products = self.extract_products()   # A list of triplets of the form (stoichiometry, species name, reaction order)
+
+
+        """
+        Determine the concentration adjustments as a result of this reaction step, 
+        for this individual reaction being considered
+        """
+
+        # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
+        for r in reactants:
+            # Unpack data from the reactant r
+            species_name = self.extract_species_name(r)
+            if species_name == self.enzyme:
+                #print(f"*** SKIPPING reactant CATALYST {species_name} in reaction")
+                continue    # Skip if r is a catalyst for this reaction
+
+            stoichiometry = self.extract_stoichiometry(r)
+
+            delta_conc = stoichiometry * (- delta_rxn)  # Increment to this reactant from the reaction being considered
+
+            increment_dict_single_rxn[species_name] = increment_dict_single_rxn.get(species_name,0) + delta_conc
+
+
+        # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
+        for p in products:
+            # Unpack data from the reactant r
+            species_name = self.extract_species_name(p)
+            if species_name == self.enzyme:
+                #print(f"*** SKIPPING product CATALYST {species_name} in reaction")
+                continue    # Skip if p is a catalyst for this reaction
+
+            stoichiometry = self.extract_stoichiometry(p)
+
+            delta_conc = stoichiometry * delta_rxn  # Increment to this reaction product from the reaction being considered
+
+            increment_dict_single_rxn[species_name] = increment_dict_single_rxn.get(species_name,0) + delta_conc
+
+        '''
+        # Macro-molecule related part, if applicable    TODO: implement
+        if (self.macro_system_state != {}) and (rxn.macro_enzyme is not None):
+            print(f"[NOT YET IMPLEMENTED] Making adjustments for macro-molecule catalysis for reaction")    #  # {rxn_index}
+            print(f"    Macromolecule: {rxn.macro_enzyme[0]}, at site # {rxn.macro_enzyme[1]}")
+            #print(f"    Site occupancy at the beginning of the time step:")
+            #print(f"    Macromolecule count:")
+        '''
+
+        assert len(increment_dict_single_rxn) == len(self.extract_chemicals_in_reaction())  # TODO: temp test
+
+        return (increment_dict_single_rxn, rxn_rate)
 
 
 

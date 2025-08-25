@@ -1200,6 +1200,29 @@ class UniformCompartment:
             conc_dict = self._fetch_concs_for_rnx(rxn=rxn, conc_array=self.system)
             # For the chems in this rxn only.  EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
 
+            # ********** START OF NEW APPROACH
+            increment_dict_single_rxn, rxn_rate = rxn.step_simulation(delta_time=delta_time,
+                                                                      conc_dict=conc_dict)
+            # EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
+
+            rates_dict[rxn_index] = rxn_rate                    # Save the value
+
+            for (chem_label, delta_conc) in increment_dict_single_rxn.items():
+                chem_index = self.chem_data.get_index(chem_label)
+                # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
+                # for any of the proposed concentration changes for this reaction.
+                # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
+                #       Further testing done upstream
+                # TODO: pass the chem_label, rather than chem_index, to validate_increment()
+                self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[chem_index],
+                                        rxn_index=rxn_index, species_index=chem_index, delta_time=delta_time)
+
+                # Accumulate the increment vector from the chemicals in this reaction
+                increment_vector[chem_index] += delta_conc  # Accumulate  all the increments from this reaction
+
+
+            '''
+            # START OF OLD APPROACH
             increment_dict_single_rxn, rxn_rate = \
                 self._inner_reaction_loop(rxn=rxn, delta_time=delta_time,
                                           conc_dict=conc_dict)
@@ -1219,7 +1242,7 @@ class UniformCompartment:
             # Accumulate the increment vector from the chemicals in this reaction
             for (chem_index, delta_conc) in increment_dict_single_rxn.items():
                 increment_vector[chem_index] += delta_conc  # Accumulate  all the increments from this reaction
-
+            '''
 
             if self.diagnostics_enabled:
                 self.diagnostics.save_rxn_data(rxn_index=rxn_index,

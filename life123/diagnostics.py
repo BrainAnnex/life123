@@ -79,13 +79,19 @@ class Diagnostics:
         self.reactions.assert_valid_rxn_index(rxn_index)
 
         # Sorted list of the indexes of all the chemicals participating in this reaction
-        indexes = self.reactions.get_chemicals_indexes_in_reaction(rxn_index)
+        indexes = self.reactions.get_chemicals_indexes_in_reaction(rxn_index)   # TODO: get the chem labels instead?
+
 
         # Validate increment_dict_single_rxn
         if increment_dict_single_rxn is not None:     # If the values are available (not the case in aborts)
             assert type(increment_dict_single_rxn) == dict, \
                 "save_diagnostic_rxn_data(): the argument `increment_dict_single_rxn` must be of type dict"
 
+            assert len(increment_dict_single_rxn) == len(indexes), \
+                f"save_rxn_data(): the size of the argument `increment_dict_single_rxn` should be {len(indexes)}"
+
+            # TODO: also validate that the keys in increment_dict_single_rxn match the labels of the chemicals in this rxn
+            
 
         # Initialize a "MovieTabular" object for this reaction, if needed
         if rxn_index not in self.diagnostic_rxn_data:
@@ -99,7 +105,8 @@ class Diagnostics:
                 data_snapshot["Delta " + self.chem_data.get_label(index)] = np.nan
         else:
             for index in indexes:       # For all the chemicals participating in this reaction
-                data_snapshot["Delta " + self.chem_data.get_label(index)] = increment_dict_single_rxn[index]
+                chem_label = self.chem_data.get_label(index)
+                data_snapshot["Delta " + chem_label] = increment_dict_single_rxn[chem_label]
 
         if rate is not None:
             data_snapshot["rate"] = rate
