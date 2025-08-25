@@ -1201,9 +1201,18 @@ class UniformCompartment:
             # For the chems in this rxn only.  EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
 
             increment_dict_single_rxn, rxn_rate = \
-                self._inner_reaction_loop(rxn=rxn, rxn_index=rxn_index, delta_time=delta_time,
+                self._inner_reaction_loop(rxn=rxn, delta_time=delta_time,
                                           conc_dict=conc_dict)
             # EXAMPLE of increment_dict_single_rxn: {0: 3.2, 6: -3.2}
+
+            # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
+            # for any of the proposed concentration changes for this reaction.
+            # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
+            #       Further testing done upstream
+            for (species_index, delta_conc) in increment_dict_single_rxn.items():
+                self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
+                                        rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
+
 
             rates_dict[rxn_index] = rxn_rate                    # Save the value
 
@@ -1250,12 +1259,11 @@ class UniformCompartment:
 
 
 
-    def _inner_reaction_loop(self, rxn, rxn_index, delta_time, conc_dict :dict) -> ():
+    def _inner_reaction_loop(self, rxn, delta_time, conc_dict :dict) -> ():
         """
         Simulate the specified single reaction, over the specified time interval
 
         :param rxn:         The specific Reaction object, such as ReactionGeneric or ReactionUnimolecular
-        :param rxn_index:   The index (0-based) to identify the reaction of interest (ONLY USED for error messages)
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
                                 concentration won't vary significantly during this span
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
@@ -1263,6 +1271,9 @@ class UniformCompartment:
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
 
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
+                                - increment_dict_single_rxn is the mapping of chemical indexes to their concentration changes
+                                                            during this step
+                                - rxn_rate                  is the reaction rate ("velocity") for this reaction
                                 EXAMPLE of increment_dict_single_rxn: {0: 3.2, 6: -3.2}
         """
 
@@ -1298,12 +1309,6 @@ class UniformCompartment:
             stoichiometry = rxn.extract_stoichiometry(r)
 
             delta_conc = stoichiometry * (- delta_rxn)  # Increment to this reactant from the reaction being considered
-            # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
-            # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
-            #       Further testing done upstream
-            # TODO: it might be more efficient to check this in bulk than with many function calls
-            self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
-                                    rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
             increment_dict_single_rxn[species_index] = increment_dict_single_rxn.get(species_index,0) + delta_conc
 
@@ -1320,22 +1325,16 @@ class UniformCompartment:
             stoichiometry = rxn.extract_stoichiometry(p)
 
             delta_conc = stoichiometry * delta_rxn  # Increment to this reaction product from the reaction being considered
-            # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
-            # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
-            #       Further testing done upstream
-            # TODO: it might be more efficient to check this in bulk than with many function calls
-            self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
-                                    rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
 
             increment_dict_single_rxn[species_index] = increment_dict_single_rxn.get(species_index,0) + delta_conc
 
 
         # Macro-molecule related part, if applicable    TODO: implement
         if (self.macro_system_state != {}) and (rxn.macro_enzyme is not None):
-            print(f"Making adjustments for macro-molecule catalysis for reaction # {rxn_index}")
+            print(f"[NOT YET IMPLEMENTED] Making adjustments for macro-molecule catalysis for reaction")    #  # {rxn_index}
             print(f"    Macromolecule: {rxn.macro_enzyme[0]}, at site # {rxn.macro_enzyme[1]}")
-            print(f"    Site occupancy at the beginning of the time step:")
-            print(f"    Macromolecule count:")
+            #print(f"    Site occupancy at the beginning of the time step:")
+            #print(f"    Macromolecule count:")
 
 
         #assert len(increment_dict_single_rxn) == len(rxn.extract_chemicals_in_reaction())
