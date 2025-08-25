@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from life123 import ChemData
-from life123.reactions import Reactions, ReactionCommon, ReactionElementary, ReactionUnimolecular
+from life123.reactions import Reactions, ReactionCommon, ReactionElementary, ReactionUnimolecular, ReactionGeneric
 from tests.utilities.comparisons import *
 
 
@@ -372,6 +372,31 @@ def test_clear_reactions_data():
 
 
 
+def test_determine_reaction_rate_ReactionGeneric():
+    rxn = ReactionGeneric(reactants="A", products="B",
+                          kF=20., kR=2., reversible=True)
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5. - 2. * 8.)  # 84.0
+
+    rxn.reversible = False
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5.)            # 100.0
+
+
+    # Reaction  2A <-> B , with 2nd-ORDER kinetics in the forward direction
+    rxn = ReactionGeneric(reactants=[(2, "A", 2)], products="B",
+                          kF=5., kR=2., reversible=True)
+    result = rxn.determine_reaction_rate(conc_dict={"A": 4.5, "B": 6.})
+    assert np.allclose(result, 5. * 4.5 **2 - 2. * 6.)  # 89.25
+
+    rxn.reversible = False
+    result = rxn.determine_reaction_rate(conc_dict={"A": 4.5, "B": 6.})
+    assert np.allclose(result, 5. * 4.5 **2)            # 101.25
+
+
+
 
 #################  TO DESCRIBE THE DATA  #################
 
@@ -519,6 +544,7 @@ def test_constructor_ReactionElementary():
     assert rxn.K is None
 
 
+#################################################################################
 
 def test_constructor_ReactionUnimolecular():
     with pytest.raises(Exception):
@@ -562,3 +588,17 @@ def test_constructor_ReactionUnimolecular():
     assert rxn.delta_S is None
     assert rxn.reactant == "A"
     assert rxn.product == "B"
+
+
+
+def test_determine_reaction_rate_ReactionUnimolecular():
+    rxn = ReactionUnimolecular(reactant="A", product="B",
+                               kF=20., kR=2., reversible=True)
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5. - 2. * 8.)  # 84.0
+
+    rxn.reversible = False
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5.)            # 100.0

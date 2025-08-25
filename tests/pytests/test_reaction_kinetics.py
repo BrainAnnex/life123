@@ -51,7 +51,88 @@ def test_exact_solution_combination_rxn():
 
 
 
+def test_compute_reaction_rate_first_order():
+    # All reactions below have 1st-order kinetics with respect to all the involved chemicals
+
+    # Reaction A <-> B
+    result = ReactionKinetics.compute_reaction_rate_first_order(reactants=["A"], products=["B"],
+                                                                kF=20., kR=2., reversible=True,
+                                                                conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5. - 2. * 8.)  # 84.0
+
+    result = ReactionKinetics.compute_reaction_rate_first_order(reactants=["A"], products=["B"],
+                                                                kF=20., kR=2., reversible=False,
+                                                                conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5)             # 100.0
+
+
+
 def test_compute_reaction_rate():
+    # Reaction  2A <-> B , with 2nd-ORDER kinetics in the forward direction
+    result = ReactionKinetics.compute_reaction_rate(reactant_data=[("A", 2)], product_data=[("B", 1)],
+                                                    kF=5., kR=2., reversible=True,
+                                                    conc_dict={"A": 4.5, "B": 6.})
+    assert np.allclose(result, 5. * 4.5 **2 - 2. * 6.)  # 89.25
+
+    result = ReactionKinetics.compute_reaction_rate(reactant_data=[("A", 2)], product_data=[("B", 1)],
+                                                    kF=5., kR=2., reversible=False,
+                                                    conc_dict={"A": 4.5, "B": 6.})
+    assert np.allclose(result, 5. * 4.5 **2)            # 101.25
+
+
+
+def test_compute_reaction_rate_OLD():
+    # TODO: move all these old tests to test_compute_reaction_rate_first_order or test_compute_reaction_rate (some already copied over)
+
+    # Reaction A <-> B , with 1st-order kinetics in both directions
+    rxn = ReactionGeneric(reactants="A", products="B", kF=20., kR=2.)
+    result = ReactionKinetics.compute_reaction_rate_OBSOLETE(rxn=rxn, conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5. - 2. * 8.)      # 84.0
+
+    # Reaction 5A <-> 2B , with 1st-order kinetics in both directions.
+    # Same as before, but different stoichiometry (which does NOT influence the result)
+    rxn = ReactionGeneric(reactants=[(5, "A", 1)], products=[(2, "B", 1)],
+                          kF=20., kR=2.)
+    result = ReactionKinetics.compute_reaction_rate_OBSOLETE(rxn=rxn, conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5. - 2. * 8.)      # 84.0
+
+    # Reaction C <-> D , with 1st-order kinetics in both directions
+    rxn = ReactionGeneric(reactants="C", products="D", kF=20., kR=2.)
+    result = ReactionKinetics.compute_reaction_rate_OBSOLETE(rxn=rxn, conc_dict={"C": 5., "D": 8.})
+    assert np.allclose(result, 20. * 5. - 2. * 8.)      # 84.0
+
+    # Reaction 2B <-> 3C , hypothetically with 1st-order kinetics in both directions
+    rxn = ReactionGeneric(reactants=[(2, "B", 1)], products=[(3, "C", 1)],
+                          kF=10., kR=25.)
+    result = ReactionKinetics.compute_reaction_rate_OBSOLETE(rxn=rxn, conc_dict={"B": 8., "C": 15.})
+    assert np.allclose(result,  10. * 8. - 25. * 15.)   # -295.0
+
+    # Reaction 2A + 5B <-> 4C + 3D , hypothetically with 1st-order kinetics for each species
+    rxn = ReactionGeneric(reactants=[(2, "A", 1) , (5, "B", 1)], products=[(4, "C", 1) , (3, "D", 1)],
+                          kF=5., kR=2.)
+    result = ReactionKinetics.compute_reaction_rate_OBSOLETE(rxn=rxn, conc_dict={"A": 3.5, "B": 9., "C": 11., "D": 7.})
+    assert np.allclose(result,  5. * 3.5 * 9. - 2. * 11. * 7.)  # 3.5
+
+    result = ReactionKinetics.compute_reaction_rate_OBSOLETE(rxn=rxn, conc_dict={"A": 5., "B": 8., "C": 15., "D": 7.})
+    assert np.allclose(result,  -10.)
+
+    # Reaction  2A <-> B , with 2nd-ORDER kinetics in the forward direction
+    rxn = ReactionGeneric(reactants=[(2, "A", 2)], products=["B"], kF=5., kR=2.)
+    result = ReactionKinetics.compute_reaction_rate_OBSOLETE(rxn=rxn, conc_dict={"A": 4.5, "B": 6.})
+    assert np.allclose(result, 5. * 4.5 **2 - 2. * 6.)          # 89.25
+
+    rxn.kF = 3.
+    result = ReactionKinetics.compute_reaction_rate_OBSOLETE(rxn=rxn, conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 59.)
+
+    # Reaction  B <-> 2C , with 2nd-ORDER kinetics in the reverse direction
+    rxn = ReactionGeneric(reactants="B", products=[(2, "C", 2)], kF=4., kR=2.)
+    result = ReactionKinetics.compute_reaction_rate_OBSOLETE(rxn=rxn, conc_dict={"B": 5., "C": 4})
+    assert np.allclose(result, 4. * 5. - 2. * 4. **2)           # -12.0
+
+
+
+def test_compute_reaction_rate_OLD():
     chem_data = ChemData(names=["A", "B", "C", "D"])
 
     name_mapping = chem_data.get_label_mapping()

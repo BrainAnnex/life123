@@ -372,7 +372,7 @@ class ReactionKinetics:
 
 
     @classmethod
-    def compute_reaction_rate(cls, rxn, conc_dict :dict) -> float:
+    def compute_reaction_rate_OBSOLETE(cls, rxn, conc_dict :dict) -> float:
         """
         For the SINGLE given reaction, and the specified concentrations of chemicals,
         compute its initial reaction's "rate" (aka "velocity"),
@@ -391,9 +391,6 @@ class ReactionKinetics:
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
                                 for all the chemicals involved in the given reaction
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
-
-        :param conc_array:  Numpy array of concentrations of ALL chemical, in their index order
-        :param name_mapping:A dict with all the mappings of the chemical labels to their registered index
 
         :return:            The differences between the reaction's forward and reverse rates
         """
@@ -428,13 +425,60 @@ class ReactionKinetics:
 
 
 
+    @classmethod
+    def compute_reaction_rate(cls, reactant_data :[(str, int)], product_data :[(str, int)],
+                              kF :float, kR :float, reversible :bool,
+                              conc_dict :dict) -> float:
+        """
+        Given a SINGLE reaction, and the specified concentrations of chemicals,
+        compute its initial reaction's "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate",
+        at the start of the time step.
+
+        This function is to be used for elementary, or non-elementary,
+        reactions that follow the familiar "Rate Laws".
+
+        For background info:  https://life123.science/reactions
+
+        :param reactant_data:   List of PAIRS of the form (label of reactant , order of reaction with respect to it)
+        :param product_data:    List of PAIRS of the form (label of reaction product , order of reaction with respect to it)
+        :param kF:          Forward reaction rate
+        :param kR:          Reverse reaction rate
+        :param reversible:  True if the reaction is reversible; False otherwise
+        :param conc_dict:   A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in the given reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+
+        :return:            The differences between the reaction's forward and reverse rates
+        """
+        forward_rate = kF        # The initial multiplicative factor
+        for (r, order) in reactant_data:
+            # Process the unpacked data from the list of reactants
+            conc = conc_dict[r]
+            forward_rate *= conc ** order       # Raise to power
+
+
+        if not reversible:
+            return forward_rate
+
+
+        reverse_rate = kR        # The initial multiplicative factor
+        for (p, order) in product_data:
+            # Process the unpacked data from the list of the reaction products
+            conc = conc_dict[p]
+            reverse_rate *= conc ** order     # Raise to power
+
+        return forward_rate - reverse_rate
+
+
 
     @classmethod
-    def compute_reaction_rate_elementary(cls, reactants :[str], products :[str],
-                                        kF :float, kR :float, reversible :bool,
-                                        conc_array :np.ndarray, name_mapping :dict) -> float:
+    def compute_reaction_rate_first_order(cls, reactants :[str], products :[str],
+                                          kF :float, kR :float, reversible :bool,
+                                          conc_dict :dict) -> float:
         """
-        For the SINGLE given reaction, and the specified concentrations of chemicals,
+        Given a SINGLE reaction, in 1st order to all its chemical species,
+        and the specified concentrations of chemicals,
         compute its initial reaction's "rate" (aka "velocity"),
         i.e. its "forward rate" minus its "reverse rate",
         at the start of the time step.
@@ -444,14 +488,16 @@ class ReactionKinetics:
         :param kF:          Forward reaction rate
         :param kR:          Reverse reaction rate
         :param reversible:  True if the reaction is reversible; False otherwise
-        :param conc_array:  Numpy array of concentrations of ALL chemical, in their index order
-        :param name_mapping:A dict with all the mappings of the chemical labels to their registered index
+        :param conc_dict:   A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in the given reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+
         :return:            The differences between the reaction's forward and reverse rates
         """
         forward_rate = kF        # The initial multiplicative factor
         for r in reactants:
-            species_index = name_mapping[r]
-            conc = conc_array[species_index]
+            # Process all the reactants
+            conc = conc_dict[r]
             forward_rate *= conc
 
         if not reversible:
@@ -459,8 +505,8 @@ class ReactionKinetics:
 
         reverse_rate = kR        # The initial multiplicative factor
         for p in products:
-            species_index = name_mapping[p]
-            conc = conc_array[species_index]
+            # Process all the reaction products
+            conc = conc_dict[p]
             reverse_rate *= conc
 
         return forward_rate - reverse_rate

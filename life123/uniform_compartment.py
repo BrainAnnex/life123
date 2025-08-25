@@ -9,7 +9,7 @@ from life123.chem_data import ChemData
 from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
 from life123.reactions import Reactions, ReactionGeneric, ReactionUnimolecular
-from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
+from life123.reaction_kinetics import VariableTimeSteps
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
 
@@ -1203,11 +1203,6 @@ class UniformCompartment:
             increment_dict_single_rxn, rxn_rate = \
                 self._inner_reaction_loop(rxn=rxn, rxn_index=rxn_index, delta_time=delta_time,
                                           conc_dict=conc_dict)
-            '''                          
-            increment_dict_single_rxn, rxn_rate = \
-                self._inner_reaction_loop_OLD(rxn=rxn, rxn_index=rxn_index, delta_time=delta_time,
-                                             name_mapping=name_mapping)
-            '''
             # EXAMPLE of increment_dict_single_rxn: {0: 3.2, 6: -3.2}
 
             rates_dict[rxn_index] = rxn_rate                    # Save the value
@@ -1275,100 +1270,13 @@ class UniformCompartment:
                                             # and the values are their respective concentration changes as a result of this reaction
 
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
-        rxn_rate = ReactionKinetics.compute_reaction_rate(rxn=rxn, conc_dict=conc_dict)
+        #rxn_rate = ReactionKinetics.compute_reaction_rate_OBSOLETE(rxn=rxn, conc_dict=conc_dict)
+        rxn_rate = rxn.determine_reaction_rate(conc_dict=conc_dict)
 
         delta_rxn = rxn_rate * delta_time
 
 
-        reactants = rxn.extract_reactants() # A list of triplets of the form (stoichiometry, species name, reaction order)
-        products = rxn.extract_products()   # A list of triplets of the form (stoichiometry, species name, reaction order)
-
-
-        """
-        Determine the concentration adjustments as a result of this reaction step, 
-        for this individual reaction being considered
-        """
-
-        # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
-        for r in reactants:
-            # Unpack data from the reactant r
-            species_name = rxn.extract_species_name(r)
-            species_index = self.chem_data.get_index(species_name)
-            if species_name == rxn.enzyme:
-                #print(f"*** SKIPPING reactant ENZYME {species_index} in reaction {rxn_index}")
-                continue    # Skip if r is an enzyme for this reaction
-
-            stoichiometry = rxn.extract_stoichiometry(r)
-
-            delta_conc = stoichiometry * (- delta_rxn)  # Increment to this reactant from the reaction being considered
-            # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
-            # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
-            #       Further testing done upstream
-            self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
-                                    rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
-
-            increment_dict_single_rxn[species_index] = increment_dict_single_rxn.get(species_index,0) + delta_conc
-
-
-        # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
-        for p in products:
-            # Unpack data from the reactant r
-            species_name = rxn.extract_species_name(p)
-            species_index = self.chem_data.get_index(species_name)
-            if species_name == rxn.enzyme:
-                #print(f"*** SKIPPING product ENZYME {species_index} in reaction {rxn_index}")
-                continue    # Skip if p is an enzyme for this reaction
-
-            stoichiometry = rxn.extract_stoichiometry(p)
-
-            delta_conc = stoichiometry * delta_rxn  # Increment to this reaction product from the reaction being considered
-            # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
-            # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
-            #       Further testing done upstream
-            self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
-                                    rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
-
-            increment_dict_single_rxn[species_index] = increment_dict_single_rxn.get(species_index,0) + delta_conc
-
-
-        # Macro-molecule related part, if applicable    TODO: implement
-        if (self.macro_system_state != {}) and (rxn.macro_enzyme is not None):
-            print(f"Making adjustments for macro-molecule catalysis for reaction # {rxn_index}")
-            print(f"    Macromolecule: {rxn.macro_enzyme[0]}, at site # {rxn.macro_enzyme[1]}")
-            print(f"    Site occupancy at the beginning of the time step:")
-            print(f"    Macromolecule count:")
-
-
-        #assert len(increment_dict_single_rxn) == len(rxn.extract_chemicals_in_reaction())
-
-        return (increment_dict_single_rxn, rxn_rate)
-
-
-
-    def _inner_reaction_loop_OLD(self, rxn, rxn_index, delta_time, name_mapping :dict) -> ():
-        """
-        Simulate the specified single reaction, over the specified time interval
-
-        :param rxn:             The specific Reaction object, such as ReactionGeneric or ReactionUnimolecular
-        :param rxn_index:       The index (0-based) to identify the reaction of interest (ONLY USED for error messages)
-        :param delta_time:      The time duration of this individual reaction step - assumed to be small enough that the
-                                    concentration won't vary significantly during this span
-        :param name_mapping:    A dict with all the mappings of the chemical labels to their registered index
-
-        :return:                The pair (increment_dict_single_rxn, rxn_rate)
-                                    EXAMPLE of increment_dict_single_rxn: {0: 3.2, 6: -3.2}
-        """
-        # TODO: consider replacing this function with _reaction_elemental_step_SINGLE_REACTION(), when the latter is complete
-
-        increment_dict_single_rxn = {}      # The keys are the chemical indexes,
-                                            # and the values are their respective concentration changes as a result of this reaction
-
-        # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
-        rxn_rate = ReactionKinetics.compute_reaction_rate_OLD(rxn=rxn, conc_array=self.system, name_mapping=name_mapping)
-
-        delta_rxn = rxn_rate * delta_time
-
-
+        # TODO: adapt the following to simpler reactions
         reactants = rxn.extract_reactants() # A list of triplets of the form (stoichiometry, species name, reaction order)
         products = rxn.extract_products()   # A list of triplets of the form (stoichiometry, species name, reaction order)
 

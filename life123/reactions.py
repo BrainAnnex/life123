@@ -157,20 +157,22 @@ class ReactionUnimolecular(ReactionElementary):
 
 
 
-    def determine_reaction_rate(self, conc_array :np.ndarray, name_mapping :dict) -> float:
+    def determine_reaction_rate(self, conc_dict :dict) -> float:
         """
-        Fo the specified concentrations of chemicals,
+        For the specified concentrations of the chemicals in the reaction,
         determine its initial reaction's "rate" (aka "velocity"),
         i.e. its "forward rate" minus its "reverse rate",
         at the start of the time step.
 
-        :param conc_array:  Numpy array of concentrations of ALL chemical, in their index order
-        :param name_mapping:A dict with all the mappings of the chemical labels to their registered index
+        :param conc_dict:   A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in the given reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         :return:            The differences between the reaction's forward and reverse rates
         """
-        return ReactionKinetics.compute_reaction_rate_elementary(reactants = [self.reactant], products=[self.product],
-                                                                 kF = self.kF, kR=self.kR, reversible=self.reversible,
-                                                                 conc_array=conc_array, name_mapping=name_mapping)
+        return ReactionKinetics.compute_reaction_rate_first_order(reactants = [self.reactant], products=[self.product],
+                                                                  kF = self.kF, kR=self.kR, reversible=self.reversible,
+                                                                  conc_dict=conc_dict)
+
 
 
 
@@ -222,6 +224,23 @@ class ReactionSynthesis(ReactionElementary):
 
 
 
+    def determine_reaction_rate(self, conc_dict :dict) -> float:
+        """
+        For the specified concentrations of the chemicals in the reaction,
+        determine its initial reaction's "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate",
+        at the start of the time step.
+
+        :param conc_dict:   A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in the given reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+        :return:            The differences between the reaction's forward and reverse rates
+        """
+        pass    #TODO
+
+
+
+
 #######################################################################################################################
 
 class ReactionDecomposition(ReactionElementary):
@@ -232,6 +251,23 @@ class ReactionDecomposition(ReactionElementary):
     """
     def __init__(self, reactant :str, products :(str, str), **kwargs):
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
+
+
+
+    def determine_reaction_rate(self, conc_dict :dict) -> float:
+        """
+        For the specified concentrations of the chemicals in the reaction,
+        determine its initial reaction's "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate",
+        at the start of the time step.
+
+        :param conc_dict:   A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in the given reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+        :return:            The differences between the reaction's forward and reverse rates
+        """
+        pass    #TODO
+
 
 
 
@@ -935,6 +971,33 @@ class ReactionGeneric(ReactionCommon):
             return (quotient, formula)
 
         return quotient
+
+
+
+
+    def determine_reaction_rate(self, conc_dict :dict) -> float:
+        """
+        For the specified concentrations of the chemicals in the reaction,
+        determine its initial reaction's "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate",
+        at the start of the time step.
+
+        :param conc_dict:   A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in the given reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+        :return:            The differences between the reaction's forward and reverse rates
+        """
+
+        reactants_and_order = [(self.extract_species_name(r) , self.extract_rxn_order(r))
+                                for r in self.reactants]
+
+        products_and_order = [(self.extract_species_name(p) , self.extract_rxn_order(p))
+                               for p in self.products]
+
+        return ReactionKinetics.compute_reaction_rate(reactant_data= reactants_and_order, product_data=products_and_order,
+                                                      kF = self.kF, kR=self.kR, reversible=self.reversible,
+                                                      conc_dict=conc_dict)
+
 
 
 
