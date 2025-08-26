@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from life123 import ChemData
-from life123.reactions import Reactions, ReactionCommon, ReactionElementary, ReactionUnimolecular, ReactionGeneric
+from life123.reactions import Reactions, ReactionCommon, ReactionElementary, ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionGeneric
 from tests.utilities.comparisons import *
 
 
@@ -373,6 +373,7 @@ def test_clear_reactions_data():
 
 
 def test_determine_reaction_rate_ReactionGeneric():
+    # Reaction A <-> B
     rxn = ReactionGeneric(reactants="A", products="B",
                           kF=20., kR=2., reversible=True)
 
@@ -385,6 +386,14 @@ def test_determine_reaction_rate_ReactionGeneric():
     assert np.allclose(result, 20. * 5.)            # 100.0
 
 
+    # Reaction 5A <-> 2B , hypothetically with 1st-order kinetics in both directions.
+    # The (funky) stoichiometry has no effect on reaction rates
+    rxn = ReactionGeneric(reactants=[(5, "A", 1)], products=[(2, "B", 1)],
+                          kF=20., kR=2.)
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5. - 2. * 8.)      # 84.0
+
+
     # Reaction  2A <-> B , with 2nd-ORDER kinetics in the forward direction
     rxn = ReactionGeneric(reactants=[(2, "A", 2)], products="B",
                           kF=5., kR=2., reversible=True)
@@ -394,6 +403,34 @@ def test_determine_reaction_rate_ReactionGeneric():
     rxn.reversible = False
     result = rxn.determine_reaction_rate(conc_dict={"A": 4.5, "B": 6.})
     assert np.allclose(result, 5. * 4.5 **2)            # 101.25
+
+    rxn.reversible = True
+    rxn.kF = 3.
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 59.)
+
+
+    # Reaction  B <-> 2C , with 2nd-ORDER kinetics in the reverse direction
+    rxn = ReactionGeneric(reactants="B", products=[(2, "C", 2)], kF=4., kR=2.)
+    result = rxn.determine_reaction_rate(conc_dict={"B": 5., "C": 4})
+    assert np.allclose(result, 4. * 5. - 2. * 4. **2)           # -12.0
+
+
+    # Reaction 2B <-> 3C , hypothetically with 1st-order kinetics in both directions
+    rxn = ReactionGeneric(reactants=[(2, "B", 1)], products=[(3, "C", 1)],
+                          kF=10., kR=25.)
+    result = rxn.determine_reaction_rate(conc_dict={"B": 8., "C": 15.})
+    assert np.allclose(result,  10. * 8. - 25. * 15.)   # -295.0
+
+
+    # Reaction 2A + 5B <-> 4C + 3D , hypothetically with 1st-order kinetics for each species
+    rxn = ReactionGeneric(reactants=[(2, "A", 1) , (5, "B", 1)], products=[(4, "C", 1) , (3, "D", 1)],
+                          kF=5., kR=2.)
+    result = rxn.determine_reaction_rate(conc_dict={"A": 3.5, "B": 9., "C": 11., "D": 7.})
+    assert np.allclose(result,  5. * 3.5 * 9. - 2. * 11. * 7.)  # 3.5
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 15., "D": 7.})
+    assert np.allclose(result,  -10.)
 
 
 
@@ -544,7 +581,9 @@ def test_constructor_ReactionElementary():
     assert rxn.K is None
 
 
-#################################################################################
+
+
+########################   ReactionUnimolecular    #########################################################
 
 def test_constructor_ReactionUnimolecular():
     with pytest.raises(Exception):
@@ -602,3 +641,39 @@ def test_determine_reaction_rate_ReactionUnimolecular():
 
     result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
     assert np.allclose(result, 20. * 5.)            # 100.0
+
+
+
+########################   ReactionSynthesis    #########################################################
+
+def test_determine_reaction_rate_ReactionSynthesis():
+    # Reaction A + B <-> C
+    rxn = ReactionSynthesis(reactants=["A", "B"], product="C",
+                            kF=20., reversible=False)
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
+    assert np.allclose(result, 20. * 5. * 8.)
+
+    rxn.reversible = True
+    rxn.kR = 2.
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
+    assert np.allclose(result, 20. * 5. * 8. - 2. * 3.)
+
+
+
+########################   ReactionDecomposition    #########################################################
+
+def test_determine_reaction_rate_ReactionDecomposition():
+    # Reaction A <-> B + C
+    rxn = ReactionDecomposition(reactant="A", products=["B", "C"],
+                                kF=20., reversible=False)
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
+    assert np.allclose(result, 20. * 5.)
+
+    rxn.reversible = True
+    rxn.kR = 2.
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
+    assert np.allclose(result, 20. * 5.  - 2. * 8. * 3.)

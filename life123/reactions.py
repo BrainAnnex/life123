@@ -35,7 +35,7 @@ class ReactionElementary(ReactionCommon):
 
         if not self.reversible:
             assert not kR, \
-                f"ReactionElementary instantiation: irreversible reactions cannot have a `reverse_rate` value ({kR})"
+                f"ReactionElementary instantiation: irreversible reactions cannot have a value for the reverse rate constant (kR = {kR})"
 
         self.kF = kF                # Forward rate constant
         self.kR = kR                # Reverse rate constant
@@ -137,6 +137,21 @@ class ReactionUnimolecular(ReactionElementary):
         self.product = product
 
 
+
+
+    def describe(self, concise=False) -> str:
+        """
+        Return as a string, a user-friendly plain-text form of the reaction
+
+        :param concise:     If True, less detail is shown
+        :return:            A string with a description of the specified reaction
+        """
+        if self.reversible:
+            return f"{self.reactant} <-> {self.product}  (Elementary Unimolecular reaction)"
+        else:
+            return f"{self.reactant} -> {self.product}  (Elementary Unimolecular Ir-reversible reaction)"
+
+
     def extract_reactant_names(self) -> [str]:
         # TODO: maybe rename to extract_reactant_labels()
         return [self.reactant]
@@ -159,7 +174,7 @@ class ReactionUnimolecular(ReactionElementary):
 
     def determine_reaction_rate(self, conc_dict :dict) -> float:
         """
-        For the specified concentrations of the chemicals in the reaction,
+        For the specified concentrations of the chemicals in the unimolecular reaction,
         determine its initial reaction's "rate" (aka "velocity"),
         i.e. its "forward rate" minus its "reverse rate",
         at the start of the time step.
@@ -177,7 +192,7 @@ class ReactionUnimolecular(ReactionElementary):
 
     def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
         """
-        Simulate the reaction, over the specified time interval
+        Simulate the unimolecular reaction, over the specified time interval
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
                                 concentration won't vary significantly during this span
@@ -249,6 +264,21 @@ class ReactionSynthesis(ReactionElementary):
 
 
 
+
+    def describe(self, concise=False) -> str:
+        """
+        Return as a string, a user-friendly plain-text form of the reaction
+
+        :param concise:     If True, less detail is shown
+        :return:            A string with a description of the specified reaction
+        """
+        if self.reversible:
+            return f"{self.reactant_1} + {self.reactant_2}  <-> {self.product}  (Elementary Synthesis reaction)"
+        else:
+            return f"{self.reactant_1} + {self.reactant_2}  -> {self.product}  (Elementary Synthesis Ir-reversible reaction)"
+
+
+
     def extract_reactant_names(self) -> [str]:
         # TODO: maybe rename to extract_reactant_labels()
         return [self.reactant_1, self.reactant_2]
@@ -271,7 +301,7 @@ class ReactionSynthesis(ReactionElementary):
 
     def determine_reaction_rate(self, conc_dict :dict) -> float:
         """
-        For the specified concentrations of the chemicals in the reaction,
+        For the specified concentrations of the chemicals in the synthesis reaction,
         determine its initial reaction's "rate" (aka "velocity"),
         i.e. its "forward rate" minus its "reverse rate",
         at the start of the time step.
@@ -281,7 +311,58 @@ class ReactionSynthesis(ReactionElementary):
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         :return:            The differences between the reaction's forward and reverse rates
         """
-        pass    #TODO
+        return ReactionKinetics.compute_reaction_rate_first_order(reactants = [self.reactant_1, self.reactant_2],
+                                                                  products=[self.product],
+                                                                  kF = self.kF, kR=self.kR, reversible=self.reversible,
+                                                                  conc_dict=conc_dict)
+
+
+
+    def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
+        """
+        Simulate the synthesis reaction A + B <-> C, over the specified time interval,
+        using the "Forward Euler" method
+
+        :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
+                                concentration won't vary significantly during this span
+        :param conc_dict:   A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in the given reaction
+                                EXAMPLE:  {"A": 1.5, "B": 31.6, "C": 19.9}
+
+        :return:            The pair (increment_dict_single_rxn, rxn_rate)
+                                - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
+                                                            during this step
+                                - rxn_rate                  is the reaction rate ("velocity") for this reaction
+                                EXAMPLE of increment_dict_single_rxn: "A": -1.3, "B": 2.9, "C": -1.6
+        """
+
+        increment_dict_single_rxn = {}      # The keys are the chemical labels,
+                                            # and the values are their respective concentration changes as a result of this reaction
+
+        # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
+        rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
+
+        delta_rxn = rxn_rate * delta_time
+
+
+        # Determine the concentration adjustments as a result of this reaction step:
+
+        # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
+        for r in [self.reactant_1, self.reactant_2]:
+            # EXAMPLE of r: "A"
+            # stoichiometry = 1
+            delta_conc = - delta_rxn    # Increment to this reactant from the reaction step
+            increment_dict_single_rxn[r] = delta_conc
+
+
+        # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
+        p = self.product            # EXAMPLE: "F"
+        # stoichiometry = 1
+        delta_conc = delta_rxn      # Increment to this reaction product from the reaction step
+        increment_dict_single_rxn[p] = delta_conc
+
+        return (increment_dict_single_rxn, rxn_rate)
+
 
 
 
@@ -297,11 +378,41 @@ class ReactionDecomposition(ReactionElementary):
     def __init__(self, reactant :str, products :(str, str), **kwargs):
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
+        assert type(products) == list or type(products) == tuple, \
+            "ReactionSynthesis instantiation: argument `reactants` must be a list or tuple"
+        assert len(products) == 2, \
+            "ReactionSynthesis instantiation: argument `reactants` must be a pair"
+        assert type(reactant) == str, \
+            "ReactionSynthesis instantiation: argument `product` must be a string"
+
+        (p1, p2) = products
+        assert (p1 != reactant) and (p2 != reactant), \
+            "ReactionSynthesis instantiation: the `reactant` cannot be identical to any of the reaction products"
+
+        self.reactant = reactant
+        self.product_1 = p1
+        self.product_2 = p2
+
+
+
+
+    def describe(self, concise=False) -> str:
+        """
+        Return as a string, a user-friendly plain-text form of the reaction
+
+        :param concise:     If True, less detail is shown
+        :return:            A string with a description of the specified reaction
+        """
+        if self.reversible:
+            return f"{self.reactant} <-> {self.product_1} + {self.product_2} (Elementary Decomposition reaction)"
+        else:
+            return f"{self.reactant} -> {self.product_1} + {self.product_2} (Elementary Decomposition Ir-reversible reaction)"
+
 
 
     def determine_reaction_rate(self, conc_dict :dict) -> float:
         """
-        For the specified concentrations of the chemicals in the reaction,
+        For the specified concentrations of the chemicals in the decomposition reaction,
         determine its initial reaction's "rate" (aka "velocity"),
         i.e. its "forward rate" minus its "reverse rate",
         at the start of the time step.
@@ -311,7 +422,58 @@ class ReactionDecomposition(ReactionElementary):
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         :return:            The differences between the reaction's forward and reverse rates
         """
-        pass    #TODO
+        return ReactionKinetics.compute_reaction_rate_first_order(reactants = [self.reactant],
+                                                                  products=[self.product_1, self.product_2],
+                                                                  kF = self.kF, kR=self.kR, reversible=self.reversible,
+                                                                  conc_dict=conc_dict)
+
+
+
+    def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
+        """
+        Simulate the decomposition reaction A <-> B + C, over the specified time interval,
+        using the "Forward Euler" method
+
+        :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
+                                concentration won't vary significantly during this span
+        :param conc_dict:   A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in the given reaction
+                                EXAMPLE:  {"A": 1.5, "B": 31.6, "C": 19.9}
+
+        :return:            The pair (increment_dict_single_rxn, rxn_rate)
+                                - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
+                                                            during this step
+                                - rxn_rate                  is the reaction rate ("velocity") for this reaction
+                                EXAMPLE of increment_dict_single_rxn: "A": -1.3, "B": 2.9, "C": -1.6
+        """
+
+        increment_dict_single_rxn = {}      # The keys are the chemical labels,
+                                            # and the values are their respective concentration changes as a result of this reaction
+
+        # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
+        rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
+
+        delta_rxn = rxn_rate * delta_time
+
+
+        # Determine the concentration adjustments as a result of this reaction step:
+
+        # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
+        r = self.reactant            # EXAMPLE: "F"
+        # EXAMPLE of r: "A"
+        # stoichiometry = 1
+        delta_conc = - delta_rxn    # Increment to this reactant from the reaction step
+        increment_dict_single_rxn[r] = delta_conc
+
+
+        # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
+        for p in [self.product_1, self.product_1]:
+            # EXAMPLE of p: "B"
+            # stoichiometry = 1
+            delta_conc = delta_rxn      # Increment to this reaction product from the reaction step
+            increment_dict_single_rxn[p] = delta_conc
+
+        return (increment_dict_single_rxn, rxn_rate)
 
 
 
@@ -893,13 +1055,16 @@ class ReactionGeneric(ReactionCommon):
         left = self._standard_form_chem_eqn(reactants)       # Left side of the equation, as a user-friendly string
         right = self._standard_form_chem_eqn(products)       # Right side of the equation
 
+        if self.reversible:
+            rxn_description = f"{left} <-> {right}"
+        else:
+            rxn_description = f"{left} -> {right}"
+
         if concise:
-            return f"{left} <-> {right}"        # Concise start point for a description of the reaction
+            return rxn_description      # Minimalist description
 
 
         # If we get this far, we're looking for a more detailed description
-
-        rxn_description = f"{left} <-> {right}"        # Start point for a description of the reaction
         details = []
         rxn_properties = self.extract_rxn_properties()
         for k,v in rxn_properties.items():
@@ -1022,7 +1187,7 @@ class ReactionGeneric(ReactionCommon):
 
     def determine_reaction_rate(self, conc_dict :dict) -> float:
         """
-        For the specified concentrations of the chemicals in the reaction,
+        For the specified concentrations of the chemicals in the generic reaction,
         determine its initial reaction's "rate" (aka "velocity"),
         i.e. its "forward rate" minus its "reverse rate",
         at the start of the time step.
@@ -1047,7 +1212,7 @@ class ReactionGeneric(ReactionCommon):
 
     def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
         """
-        Simulate the reaction, over the specified time interval
+        Simulate the generic reaction, over the specified time interval
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
                                 concentration won't vary significantly during this span
