@@ -38,7 +38,7 @@ LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import check_version, ChemData, Reactions, UniformCompartment, CollectionTabular, GraphicLog
+from life123 import check_version, ChemData, ReactionRegistry, UniformCompartment, CollectionTabular, GraphicLog
 
 import pandas as pd
 
@@ -63,7 +63,7 @@ chem_data = ChemData(names=["S","E","ES","P"], plot_colors=["cyan","violet","red
 chem_data.all_chemicals()
 
 # %%
-rxns = Reactions(chem_data=chem_data)
+rxns = ReactionRegistry(chem_data=chem_data)
 
 
 # Reaction S <-> P , with 1st-order kinetics, favorable thermodynamics in the forward direction, 

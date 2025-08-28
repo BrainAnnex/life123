@@ -31,7 +31,7 @@
 # ### TAGS : "reactions 1D", "diffusion 1D", "membranes 1D"
 
 # %%
-LAST_REVISED = "Aug. 19, 2025"
+LAST_REVISED = "Aug. 28, 2025"
 LIFE123_VERSION = "1.0.0rc5"       # Library version this experiment is based on
 
 # %%
@@ -42,7 +42,7 @@ LIFE123_VERSION = "1.0.0rc5"       # Library version this experiment is based on
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import BioSim1D, ChemData, Reactions, PlotlyHelper, check_version
+from life123 import BioSim1D, ChemData, ReactionRegistry, PlotlyHelper, check_version
 
 # %%
 check_version(LIFE123_VERSION)
@@ -58,11 +58,11 @@ chem_data = ChemData(names=["A", "B", "C"],
                      diffusion_rates=[100., 800., 500.],        # The diffusion rate of `A` will later be increased in scenario 2
                      plot_colors=["red", "turquoise", "green"]) 
 
-rxns = Reactions(chem_data=chem_data)
+rxns = ReactionRegistry(chem_data=chem_data)
 
 # Reaction A + B <-> C , with 1st-order kinetics for each species; note that it's mostly in the forward direction
 # The reaction is mostly in the forward direction
-rxns.add_reaction(reactants=["A", "B"], products="C", forward_rate=0.1, reverse_rate=0.02)
+rxns.add_reaction(reactants=["A", "B"], products="C", kF=0.1, kR=0.02)
 rxns.describe_reactions()
 
 # %%

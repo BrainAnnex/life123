@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from life123 import ChemData, UniformCompartment
-from life123.reactions import Reactions, ReactionUnimolecular, ReactionSynthesis
+from life123.reactions import ReactionRegistry, ReactionUnimolecular, ReactionSynthesis
 
 
 
@@ -12,7 +12,7 @@ def test_constructor():
     with pytest.raises(Exception):
         UniformCompartment(chem_data=chem_data, names=names)
 
-    rxns = Reactions(chem_data=chem_data)
+    rxns = ReactionRegistry(chem_data=chem_data)
 
     with pytest.raises(Exception):
         UniformCompartment(reactions=rxns, names=names)
@@ -153,7 +153,7 @@ def test_single_compartment_react():
 
     # Test based on experiment "cycles_1"
     chem_data = ChemData(names=["A", "B", "C", "E_high", "E_low"])
-    rxns = Reactions(chem_data=chem_data)
+    rxns = ReactionRegistry(chem_data=chem_data)
 
     # Reaction A <-> B, mostly in forward direction (favored energetically)
     rxns.add_reaction(reactants="A", products="B",
@@ -558,13 +558,13 @@ def test__fetch_concs_for_rnx():
     assert result == {"A": 12, "C": 31, "F": 3}
 
     r_uni = ReactionUnimolecular(reactant="C", product="A")
-    rxns.add_reaction_from_object(r_uni)
+    rxns.register_reaction(r_uni)
     r = uc.get_single_reaction(2)
     result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
     assert result == {"A": 12, "C": 31}
 
     r_syn = ReactionSynthesis(reactants=["C", "D"], product="B")
-    rxns.add_reaction_from_object(r_syn)
+    rxns.register_reaction(r_syn)
     r = uc.get_single_reaction(3)
     result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
     assert result == {"B": 1, "C": 31, "D": 19}
@@ -722,14 +722,24 @@ def test_sigmoid():
 
 
 def test_logistic():
-    rxn = UniformCompartment(None)
+    uc = UniformCompartment()
 
     #print(rxn.logistic(-10))
-    assert np.allclose(rxn.logistic(-100), 0)
-    assert np.allclose(rxn.logistic(-10), 0.00004539786)
-    assert np.allclose(rxn.logistic(0), 0.5)
-    assert np.allclose(rxn.logistic(10), 0.99995460213)
-    assert np.allclose(rxn.logistic(100), 1)
+    assert np.allclose(uc.logistic(-100), 0)
+    assert np.allclose(uc.logistic(-10), 0.00004539786)
+    assert np.allclose(uc.logistic(0), 0.5)
+    assert np.allclose(uc.logistic(10), 0.99995460213)
+    assert np.allclose(uc.logistic(100), 1)
+
+
+
+def test_set_temp():
+    uc = UniformCompartment()
+    uc.set_temp(123)
+    assert uc.temp == 123
+
+    uc.set_temp(0, "C")
+    assert np.allclose(uc.temp, 273.15)
 
 
 

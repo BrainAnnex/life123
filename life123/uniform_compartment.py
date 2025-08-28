@@ -8,7 +8,7 @@ from typing import Union
 from life123.chem_data import ChemData
 from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
-from life123.reactions import Reactions, ReactionGeneric, ReactionUnimolecular
+from life123.reactions import ReactionRegistry, ReactionGeneric, ReactionUnimolecular
 from life123.reaction_kinetics import VariableTimeSteps
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
@@ -67,8 +67,10 @@ class UniformCompartment:
 
         self.chem_data = None       # Object of type "ChemData" (with data about the chemicals and their reactions,
                                     #                            incl. macromolecules)
-        self.reactions = None       # Object ot type "Reactions" (with data about all the reactions)
+        self.reactions = None       # Object ot type "ReactionRegistry" (with data about all the reactions)
 
+        self.temp = 298.15          # Temperature in Kelvins.  (By default, the equivalent of 25 C)
+                                    # For now, assumed constant everywhere, and unvarying (or very slowly varying)
 
         if chem_data and reactions:
             assert reactions.get_chem_data() == chem_data, \
@@ -90,7 +92,7 @@ class UniformCompartment:
                     "UniformCompartment instantiation: Cannot pass both `chem_data` and `names` as arguments (the `chem_data` object contains the `names`)"
                 self.chem_data = chem_data
 
-            self.reactions = Reactions(chem_data=self.chem_data)
+            self.reactions = ReactionRegistry(chem_data=self.chem_data)
 
 
         self.system_time = 0.       # Global time of the system, from initialization on
@@ -335,6 +337,25 @@ class UniformCompartment:
 
 
 
+    def set_temp(self, temp :float, units="K") -> None:
+        """
+        Specify the temperature of the environment
+
+        :param temp:    Temperature value (or use None to unset)
+        :param units:   Either "K" for Kelvins (default) or "C" for Celsius
+        :return:        None
+        """
+        # TODO: also allow lowercase units
+        if units == "C":
+            temp += 273.15
+        else:
+            assert units == "K", \
+                "set_temp(): allowable values for `units` are 'K' and 'C'"
+
+        self.temp = temp
+
+
+
 
 
     #####################################################################################################
@@ -438,7 +459,7 @@ class UniformCompartment:
         Register a new SINGLE chemical reaction,
         optionally including its kinetic and/or thermodynamic data.
 
-        For details, see ChemData.add_reaction()
+        For details, see ReactionRegistry.add_reaction()
 
         :param kwargs:  Any arbitrary named arguments
         :return:        Integer index of the newly-added reaction
@@ -1325,7 +1346,7 @@ class UniformCompartment:
             # Unpack data from the reactant r
             species_name = rxn.extract_species_name(r)
             species_index = self.chem_data.get_index(species_name)
-            if species_name == rxn.enzyme:
+            if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING reactant ENZYME {species_index} in reaction {rxn_index}")
                 continue    # Skip if r is an enzyme for this reaction
 
@@ -1341,7 +1362,7 @@ class UniformCompartment:
             # Unpack data from the reactant r
             species_name = rxn.extract_species_name(p)
             species_index = self.chem_data.get_index(species_name)
-            if species_name == rxn.enzyme:
+            if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING product ENZYME {species_index} in reaction {rxn_index}")
                 continue    # Skip if p is an enzyme for this reaction
 
@@ -2175,16 +2196,16 @@ class UniformCompartment:
             # only including the concentrations that are applicable to this reaction
             all_applicable_concs = []
             '''
-            for species_name in rxn.extract_chemicals_in_reaction(exclude_enzyme=False):
+            for species_name in rxn.extract_chemicals_in_reaction():
                 s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
                 all_applicable_concs.append(s)
             '''
-            reactants = rxn.extract_reactant_names(exclude_enzyme=False)
+            reactants = rxn.extract_reactant_names()
             for species_name in reactants:
                 s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
                 all_applicable_concs.append(s)
 
-            products = rxn.extract_product_names(exclude_enzyme=False)
+            products = rxn.extract_product_names()
             for species_name in products:
                 if species_name not in reactants:           # Don't report the same concentration twice!
                     s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[B] = 0.3"

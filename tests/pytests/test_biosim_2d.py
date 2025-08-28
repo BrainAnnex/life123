@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from life123 import BioSim2D, Reactions, UniformCompartment, ChemData
+from life123 import BioSim2D, ReactionRegistry, UniformCompartment, ChemData
 
 
 
@@ -44,7 +44,7 @@ def test_constructor():
     assert bio.chem_data == chem_data
     expected = np.zeros((4, 3, 5), dtype=float)
     assert np.allclose(bio.system, expected)
-    assert type(bio.reactions) == Reactions
+    assert type(bio.reactions) == ReactionRegistry
     assert type(bio.reaction_dynamics) == UniformCompartment
 
 
@@ -63,7 +63,7 @@ def test_constructor():
     assert bio.n_species == 3
     expected = np.zeros((3, 4, 2), dtype=float)
     assert np.allclose(bio.system, expected)
-    assert type(bio.reactions) == Reactions
+    assert type(bio.reactions) == ReactionRegistry
     assert type(bio.reaction_dynamics) == UniformCompartment
     assert type(bio.chem_data) == ChemData
 

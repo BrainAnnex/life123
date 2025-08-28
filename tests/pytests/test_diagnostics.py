@@ -4,12 +4,12 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 from life123 import ChemData, CollectionTabular
 from life123.diagnostics import Diagnostics
-from life123.reactions import Reactions
+from life123.reactions import ReactionRegistry
 
 
 
 def test_explain_time_advance():
-    diag = Diagnostics(Reactions(ChemData()))   # Argument isn't actually used, but it's required
+    diag = Diagnostics(ReactionRegistry(ChemData()))   # Argument isn't actually used, but it's required
 
     # Start out with uniform steps
     diag.diagnostic_conc_data.store(par=20.,
@@ -74,7 +74,7 @@ def test_explain_time_advance():
 
 def test__delta_names():
     chem_data = ChemData(names=["A", "B", "X"])
-    diag = Diagnostics(Reactions(chem_data))
+    diag = Diagnostics(ReactionRegistry(chem_data))
 
     assert diag._delta_names() == ["Delta A", "Delta B", "Delta X"]
 
@@ -82,7 +82,7 @@ def test__delta_names():
 
 def test__delta_conc_dict():
     chem_data = ChemData(names=["A", "B", "X"])
-    diag = Diagnostics(Reactions(chem_data))
+    diag = Diagnostics(ReactionRegistry(chem_data))
 
     assert diag._delta_conc_dict(np.array([10, 20, 30])) == \
            {"Delta A": 10, "Delta B": 20, "Delta X": 30}
@@ -94,7 +94,7 @@ def test__delta_conc_dict():
 
 def test_save_diagnostic_rxn_data():
     chem_data = ChemData(names=["A", "B", "C", "X"])
-    rxns = Reactions(chem_data=chem_data)
+    rxns = ReactionRegistry(chem_data=chem_data)
 
     # Add 3 reactions
     rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)        # Rxn 0
@@ -195,7 +195,7 @@ def test_save_diagnostic_rxn_data():
 
 def test_save_diagnostic_aborted_rxns():
     chem_data = ChemData(names=["A", "B", "C", "X"])
-    rxns = Reactions(chem_data=chem_data)
+    rxns = ReactionRegistry(chem_data=chem_data)
 
     # Add 3 reactions
     rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)
@@ -227,7 +227,7 @@ def test_save_diagnostic_aborted_rxns():
 
 def test_get_diagnostic_rxn_data():
     chem_data = ChemData(names=["A", "B", "C", "X"])
-    rxns = Reactions(chem_data=chem_data)
+    rxns = ReactionRegistry(chem_data=chem_data)
 
     # Add 3 reactions
     rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)        # Rxn 0
@@ -330,7 +330,7 @@ def test_get_diagnostic_rxn_data():
 
 def test_stoichiometry_checker():
     chem_data = ChemData(names=["A", "B", "C", "D"])
-    rxns = Reactions(chem_data=chem_data)
+    rxns = ReactionRegistry(chem_data=chem_data)
 
     diag = Diagnostics(reactions=rxns)
 

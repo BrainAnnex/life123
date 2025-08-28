@@ -27,7 +27,7 @@ def test_reaction_step_1():
 
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
-    bio.reactions.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    bio.reactions.add_reaction(reactants=["A"], products=["B"], kF=3., kR=2.)
 
     assert bio.reactions.number_of_reactions() == 1
     assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
@@ -48,10 +48,12 @@ def test_reaction_step_1b():
 
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
-    bio.reactions.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    bio.reactions.add_reaction(reactants=["A"], products=["B"], kF=3., kR=2., temp=298.15)
 
     assert bio.reactions.number_of_reactions() == 1
-    assert bio.reactions.multiple_reactions_describe() == ["0: A <-> B  (kF = 3 / kR = 2 / delta_G = -1,005.1 / K = 1.5) | 1st order in all reactants & products"]
+    result = bio.reactions.multiple_reactions_describe()
+
+    assert result == ["0: A <-> B  (kF = 3 / kR = 2 / delta_G = -1,005.1 / K = 1.5) | 1st order in all reactants & products"]
     assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
 
     # First step

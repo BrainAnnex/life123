@@ -48,7 +48,7 @@ LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import check_version, ChemData, Reactions, UniformCompartment, ReactionEnz, PlotlyHelper
+from life123 import check_version, ChemData, ReactionRegistry, UniformCompartment, ReactionEnzyme, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
@@ -105,7 +105,7 @@ chem_data.all_chemicals()
 # ### Specify the Kinetic Parameters
 
 # %%
-rxns = Reactions(chem_data=chem_data)
+rxns = ReactionRegistry(chem_data=chem_data)
 
 # %% tags=[]
 # Elementary Reaction E + S <-> ES
@@ -161,7 +161,7 @@ PlotlyHelper.plot_pandas(df=rates_exact, colors="blue",
 # # 2. Guessing a SMALLER value of `k1_forward` (UNDER-ESTIMATED)
 
 # %%
-enz = ReactionEnz()
+enz = ReactionEnzyme()
 
 # %%
 enz.min_k1_forward(kM=kM, kcat=kcat)   # The smallest possible value
@@ -181,7 +181,7 @@ chem_data.all_chemicals()   # Nothing changed here; same chemicals as before
 # %%
 
 # %%
-rxns_underest = Reactions(chem_data=chem_data)   # New set of reactions
+rxns_underest = ReactionRegistry(chem_data=chem_data)   # New set of reactions
 
 # %% tags=[]
 # Reaction E + S <-> ES , with 1st-order kinetics, 
@@ -249,7 +249,7 @@ chem_data.all_chemicals()   # Nothing changed here; same chemicals as before
 # %%
 
 # %%
-rxns_overest = Reactions(chem_data=chem_data)   # New set of reactions
+rxns_overest = ReactionRegistry(chem_data=chem_data)   # New set of reactions
 
 # %% tags=[]
 # Reaction E + S <-> ES , with 1st-order kinetics, 

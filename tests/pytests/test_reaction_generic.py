@@ -15,7 +15,7 @@ def test_initialize():
     assert rxn.delta_S is None
     assert rxn.delta_G is None
     assert rxn.K is None
-    assert rxn.enzyme is None
+    assert rxn.catalyst is None
 
 
     # More complex scenarios
@@ -207,14 +207,13 @@ def test_extract_chemicals_in_reaction():
     rxn = ReactionGeneric(reactants=["A", "B"], products="C")
     assert rxn.extract_chemicals_in_reaction() == {"A", "B", "C"}
 
-    rxn = ReactionGeneric(reactants=["A", "B"], products=["B", "C"])               # B acts as enzyme
-    assert rxn.extract_chemicals_in_reaction(exclude_enzyme=False) == {"A", "B", "C"}
-    assert rxn.extract_chemicals_in_reaction(exclude_enzyme=True) == {"A", "C"}
+    rxn = ReactionGeneric(reactants=["A", "B"], products=["B", "C"])               # B acts as catalyst
+    assert rxn.extract_chemicals_in_reaction() == {"A", "B", "C"}
 
 
-    rxn = ReactionGeneric(reactants=[(2, "D"), "C"], products=["C", (3, "E")])     # C acts as enzyme
-    assert rxn.extract_chemicals_in_reaction(exclude_enzyme=False) == {"C", "D", "E"}
-    assert rxn.extract_chemicals_in_reaction(exclude_enzyme=True) == {"D", "E"}
+
+    rxn = ReactionGeneric(reactants=[(2, "D"), "C"], products=["C", (3, "E")])     # C acts as catalyst
+    assert rxn.extract_chemicals_in_reaction() == {"C", "D", "E"}
 
 
 
@@ -225,13 +224,11 @@ def test_extract_reactant_names():
     rxn = ReactionGeneric(reactants=["A", "B"], products="C")
     assert rxn.extract_reactant_names() == ["A", "B"]
 
-    rxn = ReactionGeneric(reactants=["A", "B"], products=["B", "C"])               # B acts as enzyme
-    assert rxn.extract_reactant_names(exclude_enzyme=False) == ["A", "B"]
-    assert rxn.extract_reactant_names(exclude_enzyme=True) == ["A"]
+    rxn = ReactionGeneric(reactants=["A", "B"], products=["B", "C"])               # B acts as catalyst
+    assert rxn.extract_reactant_names() == ["A", "B"]
 
-    rxn = ReactionGeneric(reactants=[(2, "D"), "C"], products=["C", (3, "E")])     # C acts as enzyme
-    assert rxn.extract_reactant_names(exclude_enzyme=False) == ["D", "C"]
-    assert rxn.extract_reactant_names(exclude_enzyme=True) == ["D"]
+    rxn = ReactionGeneric(reactants=[(2, "D"), "C"], products=["C", (3, "E")])     # C acts as catalyst
+    assert rxn.extract_reactant_names() == ["D", "C"]
 
 
 
@@ -243,13 +240,12 @@ def test_extract_product_names():
     assert rxn.extract_product_names() == ["C"]
 
 
-    rxn = ReactionGeneric(reactants=["A", "B"], products=["B", "C"])               # B acts as enzyme
-    assert rxn.extract_product_names(exclude_enzyme=False) == ["B", "C"]
-    assert rxn.extract_product_names(exclude_enzyme=True) == ["C"]
+    rxn = ReactionGeneric(reactants=["A", "B"], products=["B", "C"])               # B acts as catalyst
+    assert rxn.extract_product_names() == ["B", "C"]
 
-    rxn = ReactionGeneric(reactants=[(2, "D"), "C"], products=["C", (3, "E")])     # C acts as enzyme
-    assert rxn.extract_product_names(exclude_enzyme=False) == ["C", "E"]
-    assert rxn.extract_product_names(exclude_enzyme=True) == ["E"]
+    rxn = ReactionGeneric(reactants=[(2, "D"), "C"], products=["C", (3, "E")])     # C acts as catalyst
+    assert rxn.extract_product_names() == ["C", "E"]
+
 
 
 

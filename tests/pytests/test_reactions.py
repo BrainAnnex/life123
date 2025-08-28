@@ -1,17 +1,16 @@
 import pytest
 import numpy as np
 from life123 import ChemData
-from life123.reactions import Reactions, ReactionCommon, ReactionElementary, ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionGeneric
+from life123.reactions import ReactionRegistry, ReactionCommon, ReactionOneStep, ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionGeneric
 from tests.utilities.comparisons import *
 
 
 
 def test_constructor():
     chem_data = ChemData()
-    rxns = Reactions(chem_data=chem_data)
+    rxns = ReactionRegistry(chem_data=chem_data)
 
     assert rxns.reaction_list == []
-    assert np.allclose(rxns.temp, 298.15)       # The default temperature
 
     assert rxns.active_chemicals == set()       # Empty set
     assert rxns.active_enzymes == set()         # Empty set
@@ -20,7 +19,7 @@ def test_constructor():
 
 def test_number_of_reactions():
     chem_data = ChemData(names=["A", "B", "C"])
-    rxns = Reactions(chem_data=chem_data)
+    rxns = ReactionRegistry(chem_data=chem_data)
 
     assert rxns.number_of_reactions() == 0
 
@@ -34,7 +33,7 @@ def test_number_of_reactions():
 
 def test_active_reaction_indices():
     chem_data = ChemData(names=["A", "B", "C"])
-    rxns = Reactions(chem_data)
+    rxns = ReactionRegistry(chem_data)
 
     assert rxns.active_reaction_indices() == []
 
@@ -74,7 +73,7 @@ def test_get_reverse_rate():
 
 def test_get_chemicals_in_reaction():
     chem_data = ChemData(names=["A", "B"])
-    rxns = Reactions(chem_data)
+    rxns = ReactionRegistry(chem_data)
 
     with pytest.raises(Exception):
         rxns.get_chemicals_in_reaction(0)   # There are no reactions defined yet
@@ -107,7 +106,7 @@ def test_get_chemicals_in_reaction():
 
 def test_get_chemicals_indexes_in_reaction():
     chem_data = ChemData(names=["A", "B"])
-    rxns = Reactions(chem_data)
+    rxns = ReactionRegistry(chem_data)
 
     with pytest.raises(Exception):
         rxns.get_chemicals_indexes_in_reaction(0)   # There are no reactions defined yet
@@ -143,18 +142,9 @@ def test_get_reactions_participating_in():
 
 
 
-def test_set_temp():
-    rxns = Reactions(ChemData())
-    rxns.set_temp(123)
-    assert rxns.temp == 123
-
-
-
 def test_add_reaction():
     chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
-    rxns = Reactions(chem_data)
-    rxns.temp = None
-
+    rxns = ReactionRegistry(chem_data)
 
     # Reactants and the products can't be the same
     with pytest.raises(Exception):
@@ -178,7 +168,7 @@ def test_add_reaction():
 
 
     # Add the first (0-th) reaction
-    rxns.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    rxns.add_reaction(reactants=["A"], products=["B"], kF=3., kR=2.)
 
     assert rxns.number_of_reactions() == 1
     r = rxns.get_reaction(0)
@@ -233,11 +223,9 @@ def test_add_reaction():
     assert rxns.active_enzymes == set()
 
 
-    # Add another reaction (reaction index 2).  This time, first set the temperature
-    rxns.temp = 200
-
+    # Add another reaction (reaction index 2).  This time, specify the temperature
     rxns.add_reaction(reactants=[(2, "D", 3)], products=[(1, "C", 2)],
-                      forward_rate=11., reverse_rate=13.)
+                      kF=11., kR=13., temp=200)
     assert rxns.number_of_reactions() == 3
 
     r = rxns.get_reaction(2)
@@ -256,7 +244,7 @@ def test_add_reaction():
 
     # Add a multi-term reaction (reaction index 3)
     rxns.add_reaction(reactants=["A", (2, "B", 1)], products=[(3, "C", 2), "D"],
-                      forward_rate=5., reverse_rate=1.)
+                      kF=5., kR=1., temp=200)
     assert rxns.number_of_reactions() == 4
 
     r = rxns.get_reaction(3)
@@ -283,8 +271,8 @@ def test_add_reaction():
 
     # Add another reaction (reaction index 4), this time with thermodynamic data;
     # the reverse reaction rate will get computed from the thermodynamic data
-    rxns.add_reaction(reactants=["A"], products=[(2, "B", 1)], forward_rate=10.,
-                      delta_H= 5., delta_S= 0.4)
+    rxns.add_reaction(reactants=["A"], products=[(2, "B", 1)], kF=10.,
+                      delta_H= 5., delta_S= 0.4, temp=200)
     assert rxns.number_of_reactions() == 5
 
     r = rxns.get_reaction(4)
@@ -324,12 +312,11 @@ def test_add_reaction():
 
 def test_add_reaction_from_object():
     chem_data = ChemData()
-    rxns = Reactions(chem_data)
-    rxns.temp = 200
+    rxns = ReactionRegistry(chem_data)
 
     r_uni_AB = ReactionUnimolecular(reactant="A", product="B",
-                                    kF=11., kR=13.)
-    rxns.add_reaction_from_object(r_uni_AB)
+                                    kF=11., kR=13., temp=200)
+    rxns.register_reaction(r_uni_AB)
 
     assert rxns.number_of_reactions() == 1
 
@@ -347,8 +334,8 @@ def test_add_reaction_from_object():
 
 
     r_uni_CD = ReactionUnimolecular(reactant="C", product="D",
-                                    kF=10., delta_H= 5., delta_S= 0.4)
-    rxns.add_reaction_from_object(r_uni_CD)
+                                    kF=10., delta_H= 5., delta_S= 0.4, temp=200)
+    rxns.register_reaction(r_uni_CD)
 
     assert rxns.number_of_reactions() == 2
 
@@ -357,12 +344,12 @@ def test_add_reaction_from_object():
 
     assert r.reactant == "C"
     assert r.product == "D"
-    assert np.allclose(r.kF, 10.)                # The given value
-    assert r.delta_H == 5.                                  # The given value
-    assert r.delta_S == 0.4                                 # The given value
-    assert np.allclose(r.delta_G, -75.0)                    # 5 - 200 * 0.4
-    assert np.allclose(r.K , 1.0461347154679432)            # exp(75/(8.3144598 * 200))
-    assert np.allclose(r.kR, 9.558998331803693)  # 10. / 1.0461347154679432
+    assert np.allclose(r.kF, 10.)                   # The given value
+    assert r.delta_H == 5.                          # The given value
+    assert r.delta_S == 0.4                         # The given value
+    assert np.allclose(r.delta_G, -75.0)            # 5 - 200 * 0.4
+    assert np.allclose(r.K , 1.0461347154679432)    # exp(75/(8.3144598 * 200))
+    assert np.allclose(r.kR, 9.558998331803693)     # 10. / 1.0461347154679432
     assert rxns.active_chemicals == {"A", "B", "C", "D"}
 
 
@@ -447,7 +434,7 @@ def test_single_reaction_describe():
 
 def test_labels_of_active_chemicals():
     chem_data = ChemData(names=['A', 'B', 'C', 'X', 'Y'])
-    rxns = Reactions(chem_data)
+    rxns = ReactionRegistry(chem_data)
 
     assert rxns.labels_of_active_chemicals() == []   # No reactions yet
 
@@ -472,7 +459,7 @@ def test_labels_of_active_chemicals():
 
 def test_indexes_of_active_chemicals():
     chem_data = ChemData(names=['Y', 'X', 'C', 'B', 'A'])
-    rxns = Reactions(chem_data)
+    rxns = ReactionRegistry(chem_data)
 
     assert rxns.indexes_of_active_chemicals() == []                 # No reactions yet
 
@@ -492,7 +479,7 @@ def test_indexes_of_active_chemicals():
 
 def test_names_of_enzymes():
     chem_data = ChemData(names=['A', 'B', 'C', 'X', 'Y'])
-    rxns = Reactions(chem_data)
+    rxns = ReactionRegistry(chem_data)
 
     assert rxns.names_of_enzymes() == set()    # No enzymes yet
 
@@ -517,9 +504,9 @@ def test_names_of_enzymes():
 def test_prepare_graph_network():
     # Set up an A <-> B reaction
     chem_data = ChemData(names=["A", "B"])
-    rxns = Reactions(chem_data)
+    rxns = ReactionRegistry(chem_data)
 
-    rxns.add_reaction(reactants="A", products="B", forward_rate=3., reverse_rate=2.)
+    rxns.add_reaction(reactants="A", products="B", kF=3., kR=2., temp=298.15)
 
     graph_data = rxns.prepare_graph_network()
 
@@ -537,29 +524,31 @@ def test_prepare_graph_network():
 
 
 
+
+
 #####################################################################################################
 
 def test_constructor_ReactionCommon():
     rxn = ReactionCommon()
     assert rxn.active == True
-    assert rxn.reversible == True
+    assert rxn.temp is None
 
 
-    rxn = ReactionCommon(active=False, reversible=False)
+    rxn = ReactionCommon(active=False, temp=200)
     assert rxn.active == False
-    assert rxn.reversible == False
+    assert rxn.temp == 200
 
 
 
-def test_constructor_ReactionElementary():
-    rxn = ReactionElementary()
+def test_constructor_ReactionOneStep():
+    rxn = ReactionOneStep()
     assert rxn.active == True
     assert rxn.reversible == True
     assert rxn.kF is None
     assert rxn.K is None
 
 
-    rxn = ReactionElementary(kF=10, kR=2, delta_H=-3000)
+    rxn = ReactionOneStep(kF=10, kR=2, delta_H=-3000)
     assert rxn.active == True
     assert rxn.reversible == True
     assert rxn.kF == 10
@@ -570,10 +559,10 @@ def test_constructor_ReactionElementary():
 
 
     with pytest.raises(Exception):
-        ReactionElementary(reversible=False, kF=10, kR=2)   # Irreversible can't have reverse rate
+        ReactionOneStep(reversible=False, kF=10, kR=2)   # Irreversible can't have reverse rate
 
 
-    rxn = ReactionElementary(active=False, reversible=False, kF=10, kR=0)
+    rxn = ReactionOneStep(active=False, reversible=False, kF=10, kR=0)
     assert rxn.active == False
     assert rxn.reversible == False
     assert rxn.kF == 10

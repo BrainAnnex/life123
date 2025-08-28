@@ -46,7 +46,7 @@ LIFE123_VERSION = "1.0-rc.1"      # Library version this experiment is based on
 import numpy as np
 import plotly.express as px
 
-from life123 import check_version, ReactionEnz
+from life123 import check_version, ReactionEnzyme
 
 # %%
 check_version(LIFE123_VERSION)
@@ -83,7 +83,7 @@ k2_forward
 # The Life123 class `ReactionEnz` conveniently provides the necessary transformations.
 
 # %%
-enz = ReactionEnz()
+enz = ReactionEnzyme()
 
 # %%
 # Example, using the k1_forward=18. from experiment `enzyme_1_a`, to determine k1_reverse

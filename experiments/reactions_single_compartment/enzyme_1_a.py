@@ -51,7 +51,7 @@ LIFE123_VERSION = "1.0.0rc2"         # Library version this experiment is based 
 import ipynbname
 import pandas as pd
 
-from life123 import check_version, ChemData, UniformCompartment, ReactionEnz, GraphicLog, PlotlyHelper
+from life123 import check_version, ChemData, UniformCompartment, ReactionEnzyme, GraphicLog, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
@@ -188,10 +188,10 @@ PlotlyHelper.plot_pandas(df=rates,
 # for background reference, see:  https://vallance.chem.ox.ac.uk/pdfs/KineticsLectureNotes.pdf (p. 20)
 
 # %%
-rxn = ReactionEnz(enzyme="E", substrate="S", product="P",
-                  k1_F=uc.get_reactions().get_forward_rate(0), 
-                  k1_R=uc.get_reactions().get_reverse_rate(0), 
-                  k2_F=uc.get_reactions().get_forward_rate(1))
+rxn = ReactionEnzyme(enzyme="E", substrate="S", product="P",
+                     k1_F=uc.get_reactions().get_forward_rate(0),
+                     k1_R=uc.get_reactions().get_reverse_rate(0),
+                     k2_F=uc.get_reactions().get_forward_rate(1))
 
 # %%
 rxn.kM          #  For the data in this experiment, it comes out to (49. + 100.) / 18.
