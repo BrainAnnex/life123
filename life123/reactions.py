@@ -1,4 +1,6 @@
-# classes: "ReactionCommon", "ReactionEnz", "ReactionGeneric" and "Reactions"
+# classes: "ReactionCommon", "ReactionOneStep", "ReactionUnimolecular",
+#          "ReactionSynthesis", "ReactionDecomposition", "ReactionEnzyme",
+#          "ReactionGeneric" and "ReactionRegistry"
 
 from typing import Union, Set, Tuple
 import numpy as np
@@ -362,12 +364,12 @@ class ReactionUnimolecular(ReactionOneStep):
         """
         description = f"{self.reactant} <-> {self.product}"
 
-        if self.reversible:
-            description += "  (Elementary Unimolecular reaction)"
-        else:
-            description += "  (Elementary Unimolecular Ir-reversible reaction)"
-
         if not concise:
+            if self.reversible:
+                description += "  (Elementary Unimolecular reaction)"
+            else:
+                description += "  (Elementary Unimolecular Ir-reversible reaction)"
+
             description += self.reaction_details()
 
         return description
@@ -537,13 +539,14 @@ class ReactionSynthesis(ReactionOneStep):
         :return:            A string with a description of the specified reaction
         """
         description = f"{self.reactant_1} + {self.reactant_2}  <-> {self.product}"
-        if self.reversible:
-            description += "  (Elementary Synthesis reaction)"
-        else:
-            description += "  (Elementary Synthesis Ir-reversible reaction)"
 
         if not concise:
-            description += self.reaction_details()
+            if self.reversible:
+                description += "  (Elementary Synthesis reaction)"
+            else:
+                description += "  (Elementary Synthesis Ir-reversible reaction)"
+
+                description += self.reaction_details()
 
         return description
 
@@ -718,12 +721,12 @@ class ReactionDecomposition(ReactionOneStep):
         """
         description = f"{self.reactant} <-> {self.product_1} + {self.product_2}"
 
-        if self.reversible:
-            description += "  (Elementary Decomposition reaction)"
-        else:
-            description += "  (Elementary Decomposition Ir-reversible reaction)"
-
         if not concise:
+            if self.reversible:
+                description += "  (Elementary Decomposition reaction)"
+            else:
+                description += "  (Elementary Decomposition Ir-reversible reaction)"
+
             description += self.reaction_details()
 
         return description

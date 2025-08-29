@@ -22,7 +22,7 @@
 # ### TAGS :   "basic", "uniform compartment"
 
 # %%
-LAST_REVISED = "Aug. 28, 2025"
+LAST_REVISED = "Aug. 29, 2025"
 LIFE123_VERSION = "1.0.0rc5"         # Library version this experiment is based on
 
 # %%
@@ -74,6 +74,8 @@ uc.set_conc({"A": 80., "B": 10.})
 
 # %% [markdown]
 # #### This time (contrasted to experiment `react_1_a`) we'll be running the simulation in two parts
+
+# %%
 
 # %% [markdown]
 # ## Part 1 (early run)
