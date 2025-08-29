@@ -40,7 +40,7 @@ class UniformCompartment:
     This might be thought of as a "zero-dimensional system"
     """
 
-    def __init__(self, reactions=None, chem_data=None, names=None, preset="mid", enable_diagnostics=False):
+    def __init__(self, reactions=None, chem_data=None, names=None, preset="mid", enable_diagnostics=False, temp = 298.15):
         """
         Note: AT MOST 1 of the following 3 arguments can be passed
 
@@ -69,7 +69,7 @@ class UniformCompartment:
                                     #                            incl. macromolecules)
         self.reactions = None       # Object ot type "ReactionRegistry" (with data about all the reactions)
 
-        self.temp = 298.15          # Temperature in Kelvins.  (By default, the equivalent of 25 C)
+        self.temp = temp            # Temperature in Kelvins.  (By default, 298.15 K, the equivalent of 25 C)
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
 
         if chem_data and reactions:
@@ -464,7 +464,10 @@ class UniformCompartment:
         :param kwargs:  Any arbitrary named arguments
         :return:        Integer index of the newly-added reaction
         """
-        return self.reactions.add_reaction(**kwargs)
+        if self.temp:
+            return self.reactions.add_reaction(temp=self.temp, **kwargs)
+        else:
+            return self.reactions.add_reaction(**kwargs)
 
 
 

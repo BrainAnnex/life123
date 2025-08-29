@@ -372,60 +372,6 @@ class ReactionKinetics:
 
 
     @classmethod
-    def compute_reaction_rate_OBSOLETE(cls, rxn, conc_dict :dict) -> float:
-        """
-        For the SINGLE given reaction, and the specified concentrations of chemicals,
-        compute its initial reaction's "rate" (aka "velocity"),
-        i.e. its "forward rate" minus its "reverse rate",
-        at the start of the time step.
-
-        This function is to be used for elementary, or non-elementary,
-        reactions that follow the familiar "Rate Laws",
-        with forward and reverse rate constants stored in the passed "ReactionGeneric" object,
-        and with reaction orders, for the various Reactants and Products,
-        also stored in that "ReactionGeneric" object.
-
-        For background info:  https://life123.science/reactions
-
-        :param rxn:         An object of type "ReactionGeneric", with the details of the reaction
-        :param conc_dict:   A dict mapping chemical labels to their concentrations,
-                                for all the chemicals involved in the given reaction
-                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
-
-        :return:            The differences between the reaction's forward and reverse rates
-        """
-        reactants, products, fwd_rate_constant, rev_rate_constant = rxn.unpack_for_dynamics()
-
-        forward_rate = fwd_rate_constant        # The initial multiplicative factor
-        for r in reactants:
-            # Unpack data from the reactant r
-            species_name = rxn.extract_species_name(r)
-            order = rxn.extract_rxn_order(r)
-            #species_index = name_mapping[species_name]
-            #conc = conc_array[species_index]
-            conc = conc_dict[species_name]
-            forward_rate *= conc ** order       # Raise to power
-
-
-        if not rxn.reversible:
-            return forward_rate
-
-
-        reverse_rate = rev_rate_constant        # The initial multiplicative factor
-        for p in products:
-            # Unpack data from the reaction product p
-            species_name = rxn.extract_species_name(p)
-            order = rxn.extract_rxn_order(p)
-            #species_index = name_mapping[species_name]
-            #conc = conc_array[species_index]
-            conc = conc_dict[species_name]
-            reverse_rate *= conc ** order     # Raise to power
-
-        return forward_rate - reverse_rate
-
-
-
-    @classmethod
     def compute_reaction_rate(cls, reactant_data :[(str, int)], product_data :[(str, int)],
                               kF :float, kR :float, reversible :bool,
                               conc_dict :dict) -> float:
@@ -510,6 +456,11 @@ class ReactionKinetics:
             reverse_rate *= conc
 
         return forward_rate - reverse_rate
+
+
+
+def reaction_quotient(self, conc, explain=False) -> Union[np.double, Tuple[np.double, str]]:
+    pass    # TODO
 
 
 

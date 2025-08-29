@@ -88,6 +88,7 @@ class ReactionOneStep(ReactionCommon):
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
         self.reversible = reversible
+        self.temp = temp
 
         if not self.reversible:
             assert not kR, \
@@ -1321,7 +1322,7 @@ class ReactionGeneric(ReactionOneStep):
         given the concentrations of chemicals involved in this reaction
 
         :param conc:        Dictionary with the concentrations of the species involved in the reaction.
-                            The keys are the chemical names
+                            The keys are the chemical labels
                                 EXAMPLE: {'A': 23.9, 'B': 36.1}
         :param explain:     If True, it also returns the math formula being used for the computation
                                 EXAMPLES:   "([C][D]) / ([A][B])"
