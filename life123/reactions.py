@@ -368,7 +368,7 @@ class ReactionUnimolecular(ReactionOneStep):
             if self.reversible:
                 description += "  (Elementary Unimolecular reaction)"
             else:
-                description += "  (Elementary Unimolecular Ir-reversible reaction)"
+                description += "  (Elementary Unimolecular Irreversible reaction)"
 
             description += self.reaction_details()
 
@@ -544,7 +544,7 @@ class ReactionSynthesis(ReactionOneStep):
             if self.reversible:
                 description += "  (Elementary Synthesis reaction)"
             else:
-                description += "  (Elementary Synthesis Ir-reversible reaction)"
+                description += "  (Elementary Synthesis Irreversible reaction)"
 
                 description += self.reaction_details()
 
@@ -725,7 +725,7 @@ class ReactionDecomposition(ReactionOneStep):
             if self.reversible:
                 description += "  (Elementary Decomposition reaction)"
             else:
-                description += "  (Elementary Decomposition Ir-reversible reaction)"
+                description += "  (Elementary Decomposition Irreversible reaction)"
 
             description += self.reaction_details()
 
