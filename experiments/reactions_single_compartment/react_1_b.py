@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -22,14 +22,14 @@
 # ### TAGS :   "basic", "uniform compartment"
 
 # %%
-LAST_REVISED = "Jan. 9, 2025"
-LIFE123_VERSION = "1.0.0rc2"         # Library version this experiment is based on
+LAST_REVISED = "Aug. 28, 2025"
+LIFE123_VERSION = "1.0.0rc5"         # Library version this experiment is based on
 
 # %%
 #import set_path            # Using MyBinder?  Uncomment this before running the next cell!
                             # Importing this module will add the project's home directory to sys.path
 
-# %% tags=[]
+# %%
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
@@ -38,9 +38,9 @@ import ipynbname
 import life123
 
 # %%
-life123.check_version(LIFE123_VERSION)
+life123.check_version(LIFE123_VERSION)    # To check compatibility
 
-# %% tags=[]
+# %%
 # Initialize logging (for the system state)
 csv_log_file = ipynbname.name() + "_system_log.csv"   # Use the notebook base filename 
                                                       # IN CASE OF PROBLEMS, set manually to any desired name
@@ -52,7 +52,7 @@ csv_log_file = ipynbname.name() + "_system_log.csv"   # Use the notebook base fi
 # %% [markdown]
 # ## Initialize the Uniform-Compartment Simulation
 
-# %% tags=[]
+# %%
 # Instantiate the simulator and specify the chemicals
 uc = life123.UniformCompartment()  
 
@@ -60,10 +60,9 @@ uc = life123.UniformCompartment()
 # We're now requesting that all System Concentration Data get logged in our previously-specified CSV file
 uc.start_csv_log(csv_log_file)
 
-# %% tags=[]
+# %%
 # Reaction A <-> B , with 1st-order kinetics in both directions
-uc.add_reaction(reactants="A", products="B", 
-                forward_rate=3., reverse_rate=2.)
+uc.add_reaction(reactants="A", products="B", kF=3., kR=2.)
 
 uc.describe_reactions()
 
@@ -73,7 +72,7 @@ uc.set_conc({"A": 80., "B": 10.})
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # #### This time (contrasted to experiment `react_1_a`) we'll be running the simulation in two parts
 
 # %% [markdown]
