@@ -1,4 +1,4 @@
-# 3 classes: "ReactionEnz", "ReactionGeneric" and "Reactions"
+# classes: "ReactionCommon", "ReactionEnz", "ReactionGeneric" and "Reactions"
 
 from typing import Union, Set, Tuple
 import numpy as np
@@ -416,6 +416,27 @@ class ReactionUnimolecular(ReactionOneStep):
 
 
 
+    def reaction_quotient(self, conc, explain=False) -> Union[np.double, Tuple[np.double, str]]:
+        """
+        Compute the "Reaction Quotient" (aka "Mass–action Ratio"),
+        given the concentrations of chemicals involved in this reaction
+
+        :param conc:        Dictionary with the concentrations of the species involved in the reaction.
+                            The keys are the chemical labels
+                                EXAMPLE: {'A': 23.9, 'B': 36.1}
+        :param explain:     If True, it also returns the math formula being used for the computation
+                                EXAMPLES:   "([C][D]) / ([A][B])"
+                                            "[B] / [A]^2"
+
+        :return:            If explain is False, return value for the "Reaction Quotient" (aka "Mass–action Ratio");
+                                if True, return a pair with that quotient and a string with the math formula that was used.
+                                Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
+        """
+        return ReactionKinetics.reaction_quotient(reactant_data=[(self.reactant, 1)], product_data=[(self.product, 1)],
+                                                  conc=conc, explain=explain)
+
+
+
     def determine_reaction_rate(self, conc_dict :dict) -> float:
         """
         For the specified concentrations of the chemicals in the unimolecular reaction,
@@ -570,6 +591,28 @@ class ReactionSynthesis(ReactionOneStep):
 
 
 
+    def reaction_quotient(self, conc, explain=False) -> Union[np.double, Tuple[np.double, str]]:
+        """
+        Compute the "Reaction Quotient" (aka "Mass–action Ratio"),
+        given the concentrations of chemicals involved in this reaction
+
+        :param conc:        Dictionary with the concentrations of the species involved in the reaction.
+                            The keys are the chemical labels
+                                EXAMPLE: {'A': 23.9, 'B': 36.1}
+        :param explain:     If True, it also returns the math formula being used for the computation
+                                EXAMPLES:   "([C][D]) / ([A][B])"
+                                            "[B] / [A]^2"
+
+        :return:            If explain is False, return value for the "Reaction Quotient" (aka "Mass–action Ratio");
+                                if True, return a pair with that quotient and a string with the math formula that was used.
+                                Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
+        """
+        return ReactionKinetics.reaction_quotient(reactant_data=[(self.reactant_1, 1) , (self.reactant_2, 1)],
+                                                  product_data= [(self.product, 1)],
+                                                  conc=conc, explain=explain)
+
+
+
     def determine_reaction_rate(self, conc_dict :dict) -> float:
         """
         For the specified concentrations of the chemicals in the synthesis reaction,
@@ -715,6 +758,39 @@ class ReactionDecomposition(ReactionOneStep):
         :return:    A list of triplets of the form (stoichiometry, chemical label, reaction order)
         """
         return [(1, self.product_1, 1), (1, self.product_2, 1)]
+
+
+
+    def extract_chemicals_in_reaction(self) -> Set[str]:
+        """
+        Return a SET of the chemical labels of all the chemicals appearing in this reaction.
+
+        :return:    A SET of the labels of the chemicals involved in this reaction
+                        Note: being a set, it's NOT in any particular order
+        """
+        return {self.reactant, self.product_1, self.product_2}
+
+
+
+    def reaction_quotient(self, conc, explain=False) -> Union[np.double, Tuple[np.double, str]]:
+        """
+        Compute the "Reaction Quotient" (aka "Mass–action Ratio"),
+        given the concentrations of chemicals involved in this reaction
+
+        :param conc:        Dictionary with the concentrations of the species involved in the reaction.
+                            The keys are the chemical labels
+                                EXAMPLE: {'A': 23.9, 'B': 36.1}
+        :param explain:     If True, it also returns the math formula being used for the computation
+                                EXAMPLES:   "([C][D]) / ([A][B])"
+                                            "[B] / [A]^2"
+
+        :return:            If explain is False, return value for the "Reaction Quotient" (aka "Mass–action Ratio");
+                                if True, return a pair with that quotient and a string with the math formula that was used.
+                                Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
+        """
+        return ReactionKinetics.reaction_quotient(reactant_data=[(self.reactant, 1)],
+                                                  product_data=[(self.product_1, 1) , (self.product_1, 1)],
+                                                  conc=conc, explain=explain)
 
 
 
@@ -1335,8 +1411,8 @@ class ReactionGeneric(ReactionOneStep):
         numerator = np.double(1)    # The product of all the concentrations of the reaction products (adjusted for reaction order)
         denominator = np.double(1)  # The product of all the concentrations of the reactants (also adjusted for reaction order)
 
-        numerator_text = ""      # First part of the the textual explanation
-        denominator_text = ""    # Second part of the the textual explanation
+        numerator_text = ""      # First part of the textual explanation
+        denominator_text = ""    # Second part of the textual explanation
 
 
         # Compute the numerator of the "Reaction Quotient"
