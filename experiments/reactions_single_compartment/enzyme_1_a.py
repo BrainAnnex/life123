@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -14,7 +14,7 @@
 
 # %% [markdown]
 # # **Enzyme Kinetics** : 
-# #### _Accurate numerical solution_ - compared to the **Michaelis-Menten** model approximation and to the alternative **Morrison** model.
+# #### _Accurate numerical solution_ -  which gets compared to the **Michaelis-Menten** model approximation and to the alternative **Morrison** model.
 #
 # #### Two Coupled Reactions: `E + S <-> ES`, and  `ES -> E + P` , using real-life kinetic parameters.  
 # #### Scenario with **_small amount of Enzyme_**, relative to the initial Substrate concentration.
@@ -43,7 +43,7 @@ LIFE123_VERSION = "1.0.0rc2"         # Library version this experiment is based 
 # %%
 #import set_path                     # Using MyBinder?  Uncomment this before running the next cell!
 
-# %% tags=[]
+# %%
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
@@ -56,7 +56,7 @@ from life123 import check_version, ChemData, UniformCompartment, ReactionEnzyme,
 # %%
 check_version(LIFE123_VERSION)
 
-# %% tags=[]
+# %%
 # Initialize the HTML logging (for the graphics)
 log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
                                             # IN CASE OF PROBLEMS, set manually to any desired name
@@ -97,7 +97,7 @@ chem_data.all_chemicals()
 # Here we use the "slower" preset for the variable steps, a very conservative option prioritizing accuracy over speed
 uc = UniformCompartment(chem_data=chem_data, preset="slower")
 
-# %% tags=[]
+# %%
 # Reaction E + S <-> ES , with 1st-order kinetics, 
 uc.add_reaction(reactants=["E", "S"], products="ES",
                 forward_rate=18., reverse_rate=100.) 
@@ -129,7 +129,7 @@ E0 = 1.
 uc.set_conc(conc={"S": S0, "E": E0})      # SMALL ampount of enzyme `E`, relative to substrate `S`
 uc.describe_state()
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # #### Advance the reactions to equilibrium
 
 # %%
@@ -150,7 +150,7 @@ uc.plot_history(title_prefix="DETAIL at early times",
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ### What is the initial rate of production of the final reaction product `P`?   
 # One could take the numerical derivative (gradient) of the time values of [P] - but no need to!  **Reaction rates are computed in the course of the simulation, and stored in a rate-history dataframe**
 
@@ -249,7 +249,7 @@ PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["P_rate", "Michaelis_rate"],
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # # 3. Comparing the results to the Morrison model
 
 # %% [markdown]
