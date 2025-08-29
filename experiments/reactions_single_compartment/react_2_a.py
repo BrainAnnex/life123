@@ -25,7 +25,7 @@
 # #### involving adaptive variable time steps
 
 # %%
-LAST_REVISED = "Aug. 12, 2024"
+LAST_REVISED = "Aug. 29, 2024"
 LIFE123_VERSION = "1.0.0rc5"      # Library version this experiment is based on
 
 # %%
@@ -66,8 +66,7 @@ GraphicLog.config(filename=log_file,
 uc = UniformCompartment()
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-uc.add_reaction(reactants="A", products="B", 
-                forward_rate=3., reverse_rate=2.)
+uc.add_reaction(reactants="A", products="B", kF=3., kR=2.)
 
 print("Number of reactions: ", uc.number_of_reactions())
 
