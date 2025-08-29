@@ -2086,7 +2086,7 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True, verbose=None) -> Union[bool, dict]:
+    def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True) -> Union[bool, dict]:
         """
         Ascertain whether the given concentrations (by default the current System concentrations)
         are in equilibrium for the specified reactions (by default, check all reactions)
@@ -2103,7 +2103,6 @@ class UniformCompartment:
                                 incl. the formula(s) being used to check the equilibrium
                                 EXAMPLES:   "([C][D]) / ([A][B])"
                                             "[B] / [A]^2"
-        :param verbose:     Alternate name for argument `explain`   TODO: DEPRECATED in favor of "explain"
 
         :return:            Return True if ALL the reactions are close enough to an equilibrium,
                                 as allowed by the requested tolerance;
@@ -2112,11 +2111,6 @@ class UniformCompartment:
                                 EXAMPLE:  {False: [3, 6]}
         """
         # TODO: optionally display last lines in diagnostic data, if available
-        # TODO: phase out "verbose" in favour of "explain"
-
-        if verbose is not None:
-            print("*** INFO: argument `verbose` is deprecated; use `explain` instead")
-            explain = verbose
 
         if conc is None:
             conc=self.get_conc_dict()   # Use the current System concentrations, as a dict.
@@ -2178,7 +2172,7 @@ class UniformCompartment:
         :return:            True if the given reaction is close enough to an equilibrium,
                                 as allowed by the requested tolerance
         """
-        rxn = self.reactions.get_reaction(rxn_index)    # Look up the requested reaction
+        rxn = self.reactions.get_reaction(rxn_index)    # Look up the object of the requested reaction
 
         if np.allclose(rxn.extract_reverse_rate(), 0):
             print("reaction_in_equilibrium() currently does NOT handle irreversible reactions (with a zero reverse rate)")

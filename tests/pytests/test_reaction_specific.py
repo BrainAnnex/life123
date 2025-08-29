@@ -1,8 +1,204 @@
 import pytest
 import numpy as np
-from life123 import ReactionGeneric
+from life123.reactions import ReactionCommon, ReactionOneStep, ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionGeneric
 
 
+
+#######################   ReactionCommon   ###################################################################
+
+def test_constructor_ReactionCommon():
+    rxn = ReactionCommon()
+    assert rxn.active == True
+    assert rxn.temp is None
+
+
+    rxn = ReactionCommon(active=False, temp=200)
+    assert rxn.active == False
+    assert rxn.temp == 200
+
+
+
+def test_constructor_ReactionOneStep():
+    rxn = ReactionOneStep()
+    assert rxn.active == True
+    assert rxn.reversible == True
+    assert rxn.kF is None
+    assert rxn.K is None
+
+
+    rxn = ReactionOneStep(kF=10, kR=2, delta_H=-3000)
+    assert rxn.active == True
+    assert rxn.reversible == True
+    assert rxn.kF == 10
+    assert rxn.kR == 2
+    assert rxn.delta_H == -3000
+    assert rxn.delta_S is None
+    assert rxn.K == 5
+
+
+    with pytest.raises(Exception):
+        ReactionOneStep(reversible=False, kF=10, kR=2)   # Irreversible can't have reverse rate
+
+
+    rxn = ReactionOneStep(active=False, reversible=False, kF=10, kR=0)
+    assert rxn.active == False
+    assert rxn.reversible == False
+    assert rxn.kF == 10
+    assert rxn.kR == 0
+    assert rxn.K is None
+
+
+
+
+########################   ReactionUnimolecular    #########################################################
+
+def test_constructor_ReactionUnimolecular():
+    with pytest.raises(Exception):
+        ReactionUnimolecular()      # Missing arguments
+
+    with pytest.raises(Exception):
+        ReactionUnimolecular(reactant=123, product="B")     # Bad reactant
+
+    with pytest.raises(Exception):
+        ReactionUnimolecular(reactant="A", product=True)    # Bad product
+
+    rxn = ReactionUnimolecular(reactant="A", product="B")
+    assert rxn.active == True
+    assert rxn.reversible == True
+    assert rxn.kF is None
+    assert rxn.K is None
+    assert rxn.delta_S is None
+    assert rxn.reactant == "A"
+    assert rxn.product == "B"
+
+
+    rxn = ReactionUnimolecular(reversible=False, reactant="A", product="B",
+                               kF=20)
+    assert rxn.active == True
+    assert rxn.reversible == False
+    assert rxn.kF == 20
+    assert rxn.kR is None
+    assert rxn.K is None
+    assert rxn.delta_S is None
+    assert rxn.reactant == "A"
+    assert rxn.product == "B"
+
+
+    rxn = ReactionUnimolecular(active=False, reactant="A", product="B",
+                               kF=20, kR=4)
+    assert rxn.active == False
+    assert rxn.reversible == True
+    assert rxn.kF == 20
+    assert rxn.kR == 4
+    assert rxn.K == 5
+    assert rxn.delta_S is None
+    assert rxn.reactant == "A"
+    assert rxn.product == "B"
+
+
+
+def test_determine_reaction_rate_ReactionUnimolecular():
+    rxn = ReactionUnimolecular(reactant="A", product="B",
+                               kF=20., kR=2., reversible=True)
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5. - 2. * 8.)  # 84.0
+
+    rxn.reversible = False
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5.)            # 100.0
+
+
+
+def test_reaction_quotient_ReactionUnimolecular():
+    # Reaction : A <-> B
+    rxn = ReactionUnimolecular(reactant="A", product="B")
+    c = {'A': 24., 'B': 36.}
+    assert np.allclose(1.5, rxn.reaction_quotient(conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
+    assert np.allclose(1.5, quotient)
+    assert formula == '[B] / [A]'
+
+
+    # Reaction : A <-> F
+    rxn = ReactionUnimolecular(reactant="A", product="F")
+    c = {'A': 3., 'F': 33.}
+    assert np.allclose(11., rxn.reaction_quotient(conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
+    assert np.allclose(11., quotient)
+    assert formula == '[F] / [A]'
+
+
+
+########################   ReactionSynthesis    #########################################################
+
+def test_determine_reaction_rate_ReactionSynthesis():
+    # Reaction A + B <-> C
+    rxn = ReactionSynthesis(reactants=["A", "B"], product="C",
+                            kF=20., reversible=False)
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
+    assert np.allclose(result, 20. * 5. * 8.)
+
+    rxn.reversible = True
+    rxn.kR = 2.
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
+    assert np.allclose(result, 20. * 5. * 8. - 2. * 3.)
+
+
+def test_reaction_quotient_ReactionSynthesis():
+    # Reaction :  A + B <-> C
+    rxn = ReactionSynthesis(reactants=["A" , "B"], product="C")
+    c = {'A': 3., 'B': 4., 'C': 12.}
+    assert np.allclose(1., rxn.reaction_quotient(conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
+    assert np.allclose(1., quotient)
+    assert formula == '[C] / ([A][B])'
+
+
+    # Reaction :  2A <-> B
+    rxn = ReactionSynthesis(reactants=["A" , "A"], product="B")
+    c = {'A': 4., 'B': 20.}
+    assert np.allclose(1.25, rxn.reaction_quotient(conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
+    assert np.allclose(1.25, quotient)
+    assert formula == '[B] / ([A][A])'
+
+
+
+
+########################   ReactionDecomposition    #########################################################
+
+def test_determine_reaction_rate_ReactionDecomposition():
+    # Reaction A <-> B + C
+    rxn = ReactionDecomposition(reactant="A", products=["B", "C"],
+                                kF=20., reversible=False)
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
+    assert np.allclose(result, 20. * 5.)
+
+    rxn.reversible = True
+    rxn.kR = 2.
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
+    assert np.allclose(result, 20. * 5.  - 2. * 8. * 3.)
+
+
+
+def test_determine_reaction_quotient_ReactionDecomposition():
+    # Reaction :  B <-> 2A
+    rxn = ReactionDecomposition(reactant="B", products=["A", "A"])
+    c = {'A': 4., 'B': 20.}
+    assert np.allclose(0.8, rxn.reaction_quotient(conc=c, explain=False))
+    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
+    assert np.allclose(0.8, quotient)
+    assert formula == '([A][A]) / [B]'
+
+
+
+########################   ReactionGeneric    #########################################################
 
 def test_initialize():
     rxn = ReactionGeneric(reactants="A", products="B")
@@ -281,7 +477,7 @@ def test_reaction_quotient():
     assert formula == '[B] / [A]'
 
 
-    # Reaction 3:  2A <-> 3B
+    # Reaction :  2A <-> 3B
     rxn = ReactionGeneric(reactants=[(2, "A", 1)], products=[(3, "B", 1)])   # 1st order
     c = {'A': 3., 'B': 12.}
     assert np.allclose(4., rxn.reaction_quotient(conc=c, explain=False))
@@ -308,7 +504,7 @@ def test_reaction_quotient():
     assert formula == '([C][D]) / [A]'
 
 
-    # Reaction 6:  2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
+    # Reaction :  2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
     rxn = ReactionGeneric(reactants=[(2, "A", 1) , (5, "B", 1)], products=[(4, "C", 1) , (3, "D", 1)])
     c = {'A': 2., 'B': 1., 'C': 4., 'D': 8.}
     assert np.allclose(16., rxn.reaction_quotient(conc=c, explain=False))

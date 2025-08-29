@@ -432,8 +432,8 @@ class ReactionUnimolecular(ReactionOneStep):
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        return ReactionKinetics.reaction_quotient(reactant_data=[(self.reactant, 1)], product_data=[(self.product, 1)],
-                                                  conc=conc, explain=explain)
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=[(self.reactant, 1)], product_data=[(self.product, 1)],
+                                                          conc=conc, explain=explain)
 
 
 
@@ -607,9 +607,9 @@ class ReactionSynthesis(ReactionOneStep):
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        return ReactionKinetics.reaction_quotient(reactant_data=[(self.reactant_1, 1) , (self.reactant_2, 1)],
-                                                  product_data= [(self.product, 1)],
-                                                  conc=conc, explain=explain)
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=[(self.reactant_1, 1) , (self.reactant_2, 1)],
+                                                          product_data= [(self.product, 1)],
+                                                          conc=conc, explain=explain)
 
 
 
@@ -788,9 +788,9 @@ class ReactionDecomposition(ReactionOneStep):
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        return ReactionKinetics.reaction_quotient(reactant_data=[(self.reactant, 1)],
-                                                  product_data=[(self.product_1, 1) , (self.product_1, 1)],
-                                                  conc=conc, explain=explain)
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=[(self.reactant, 1)],
+                                                          product_data=[(self.product_1, 1) , (self.product_1, 1)],
+                                                          conc=conc, explain=explain)
 
 
 
@@ -1408,63 +1408,15 @@ class ReactionGeneric(ReactionOneStep):
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        numerator = np.double(1)    # The product of all the concentrations of the reaction products (adjusted for reaction order)
-        denominator = np.double(1)  # The product of all the concentrations of the reactants (also adjusted for reaction order)
+        reactants_and_order = [(self.extract_species_name(r) , self.extract_rxn_order(r))
+                                for r in self.reactants]
 
-        numerator_text = ""      # First part of the textual explanation
-        denominator_text = ""    # Second part of the textual explanation
+        products_and_order = [(self.extract_species_name(p) , self.extract_rxn_order(p))
+                               for p in self.products]
 
-
-        # Compute the numerator of the "Reaction Quotient"
-        for p in self.products:
-            # Loop over the reaction products
-            species_name = self.extract_species_name(p)
-            rxn_order = self.extract_rxn_order(p)
-
-            species_conc = conc.get(species_name)
-            assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
-                                             f"concentration of `{species_name}` was not provided"
-
-            numerator *= (species_conc ** rxn_order)
-            if explain:
-                numerator_text += f"[{species_name}]"
-                if rxn_order > 1:
-                    numerator_text += f"^{rxn_order} "
-
-        if explain and len(self.products) > 1:
-            numerator_text = f"({numerator_text})"  # In case of multiple terms, enclose them in parenthesis
-
-
-        # Compute the denominator of the "Reaction Quotient"
-        for r in self.reactants:
-            # Loop over the reactants
-            species_name =  self.extract_species_name(r)
-            rxn_order =  self.extract_rxn_order(r)
-
-            species_conc = conc.get(species_name)
-            assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
-                                             f"concentration of `{species_name}` was not provided"
-
-            denominator *= (species_conc ** rxn_order)
-            if explain:
-                denominator_text += f"[{species_name}]"
-                if rxn_order > 1:
-                    denominator_text += f"^{rxn_order} "
-
-        if explain and len(self.reactants) > 1:
-            denominator_text = f"({denominator_text})"  # In case of multiple terms, enclose them in parenthesis
-
-
-        with np.errstate(divide='ignore', invalid='ignore'):
-            # It might be np.inf (if just the denominator is zero) or np.nan (if both are zero)
-            quotient = numerator / denominator
-
-        if explain:
-            formula = f"{numerator_text} / {denominator_text}"
-            return (quotient, formula)
-
-        return quotient
-
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=reactants_and_order,
+                                                          product_data=products_and_order,
+                                                          conc=conc, explain=explain)
 
 
 

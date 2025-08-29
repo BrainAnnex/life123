@@ -411,8 +411,8 @@ class ReactionKinetics:
 
 
     @classmethod
-    def reaction_quotient(cls, reactant_data :[(str, int)], product_data :[(str, int)],
-                          conc, explain=False) -> Union[np.double, Tuple[np.double, str]]:
+    def compute_reaction_quotient(cls, reactant_data :[(str, int)], product_data :[(str, int)],
+                                  conc, explain=False) -> Union[np.double, Tuple[np.double, str]]:
         """
         Compute the "Reaction Quotient" (aka "Mass–action Ratio"),
         for the reaction with the specified parameters,

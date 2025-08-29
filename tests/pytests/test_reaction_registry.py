@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from life123 import ChemData
-from life123.reactions import ReactionRegistry, ReactionCommon, ReactionOneStep, ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionGeneric
+from life123.reactions import ReactionRegistry, ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionGeneric
 from tests.utilities.comparisons import *
 
 
@@ -310,7 +310,7 @@ def test_add_reaction():
 
 
 
-def test_add_reaction_from_object():
+def test_register_reaction():
     chem_data = ChemData()
     rxns = ReactionRegistry(chem_data)
 
@@ -525,144 +525,3 @@ def test_prepare_graph_network():
 
 
 
-
-#####################################################################################################
-
-def test_constructor_ReactionCommon():
-    rxn = ReactionCommon()
-    assert rxn.active == True
-    assert rxn.temp is None
-
-
-    rxn = ReactionCommon(active=False, temp=200)
-    assert rxn.active == False
-    assert rxn.temp == 200
-
-
-
-def test_constructor_ReactionOneStep():
-    rxn = ReactionOneStep()
-    assert rxn.active == True
-    assert rxn.reversible == True
-    assert rxn.kF is None
-    assert rxn.K is None
-
-
-    rxn = ReactionOneStep(kF=10, kR=2, delta_H=-3000)
-    assert rxn.active == True
-    assert rxn.reversible == True
-    assert rxn.kF == 10
-    assert rxn.kR == 2
-    assert rxn.delta_H == -3000
-    assert rxn.delta_S is None
-    assert rxn.K == 5
-
-
-    with pytest.raises(Exception):
-        ReactionOneStep(reversible=False, kF=10, kR=2)   # Irreversible can't have reverse rate
-
-
-    rxn = ReactionOneStep(active=False, reversible=False, kF=10, kR=0)
-    assert rxn.active == False
-    assert rxn.reversible == False
-    assert rxn.kF == 10
-    assert rxn.kR == 0
-    assert rxn.K is None
-
-
-
-
-########################   ReactionUnimolecular    #########################################################
-
-def test_constructor_ReactionUnimolecular():
-    with pytest.raises(Exception):
-        ReactionUnimolecular()      # Missing arguments
-
-    with pytest.raises(Exception):
-        ReactionUnimolecular(reactant=123, product="B")     # Bad reactant
-
-    with pytest.raises(Exception):
-        ReactionUnimolecular(reactant="A", product=True)    # Bad product
-
-    rxn = ReactionUnimolecular(reactant="A", product="B")
-    assert rxn.active == True
-    assert rxn.reversible == True
-    assert rxn.kF is None
-    assert rxn.K is None
-    assert rxn.delta_S is None
-    assert rxn.reactant == "A"
-    assert rxn.product == "B"
-
-
-    rxn = ReactionUnimolecular(reversible=False, reactant="A", product="B",
-                               kF=20)
-    assert rxn.active == True
-    assert rxn.reversible == False
-    assert rxn.kF == 20
-    assert rxn.kR is None
-    assert rxn.K is None
-    assert rxn.delta_S is None
-    assert rxn.reactant == "A"
-    assert rxn.product == "B"
-
-
-    rxn = ReactionUnimolecular(active=False, reactant="A", product="B",
-                               kF=20, kR=4)
-    assert rxn.active == False
-    assert rxn.reversible == True
-    assert rxn.kF == 20
-    assert rxn.kR == 4
-    assert rxn.K == 5
-    assert rxn.delta_S is None
-    assert rxn.reactant == "A"
-    assert rxn.product == "B"
-
-
-
-def test_determine_reaction_rate_ReactionUnimolecular():
-    rxn = ReactionUnimolecular(reactant="A", product="B",
-                               kF=20., kR=2., reversible=True)
-
-    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
-    assert np.allclose(result, 20. * 5. - 2. * 8.)  # 84.0
-
-    rxn.reversible = False
-
-    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
-    assert np.allclose(result, 20. * 5.)            # 100.0
-
-
-
-########################   ReactionSynthesis    #########################################################
-
-def test_determine_reaction_rate_ReactionSynthesis():
-    # Reaction A + B <-> C
-    rxn = ReactionSynthesis(reactants=["A", "B"], product="C",
-                            kF=20., reversible=False)
-
-    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
-    assert np.allclose(result, 20. * 5. * 8.)
-
-    rxn.reversible = True
-    rxn.kR = 2.
-
-    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
-    assert np.allclose(result, 20. * 5. * 8. - 2. * 3.)
-
-
-
-########################   ReactionDecomposition    #########################################################
-
-def test_determine_reaction_rate_ReactionDecomposition():
-    # Reaction A <-> B + C
-    rxn = ReactionDecomposition(reactant="A", products=["B", "C"],
-                                kF=20., reversible=False)
-
-    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
-    assert np.allclose(result, 20. * 5.)
-
-    rxn.reversible = True
-    rxn.kR = 2.
-
-    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8., "C": 3})
-    assert np.allclose(result, 20. * 5.  - 2. * 8. * 3.)
