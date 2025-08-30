@@ -98,13 +98,8 @@ chem_data.all_chemicals()
 uc = UniformCompartment(chem_data=chem_data, preset="slower")
 
 # %%
-# Reaction E + S <-> ES , with 1st-order kinetics, 
-uc.add_reaction(reactants=["E", "S"], products="ES",
-                forward_rate=18., reverse_rate=100.) 
-
-# Reaction ES <-> E + P , with 1st-order kinetics, ignoring the reverse reaction
-uc.add_reaction(reactants="ES", products=["E", "P"],
-                forward_rate=49., reverse_rate=0) 
+uc.add_reaction(reactants="S", products="P", enzyme="E",
+                k1_F=18., k1_R=100., k2_F=49.)
 
 uc.describe_reactions()
 

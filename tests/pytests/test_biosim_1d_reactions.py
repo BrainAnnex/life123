@@ -47,13 +47,13 @@ def test_reaction_step_1b():
     bio.set_uniform_concentration(chem_index=1, conc=50.)
 
 
-    # Reaction A <-> B , with 1st-order kinetics in both directions
-    bio.reactions.add_reaction(reactants=["A"], products=["B"], kF=3., kR=2., temp=298.15)
+    # Elementary Unimolecular Reaction A <-> B
+    bio.reactions.add_reaction(reactants="A", products="B", kF=3., kR=2., temp=298.15)
 
     assert bio.reactions.number_of_reactions() == 1
     result = bio.reactions.multiple_reactions_describe()
 
-    assert result == ["0: A <-> B  (kF = 3 / kR = 2 / delta_G = -1,005.1 / K = 1.5) | 1st order in all reactants & products"]
+    assert result == ["0: A <-> B  (Elementary Unimolecular reaction)  (kF = 3 / kR = 2 / delta_G = -1,005.1 / K = 1.5 / Temp = 25 C)"]
     assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
 
     # First step

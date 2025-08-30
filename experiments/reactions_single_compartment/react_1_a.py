@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ### A MINIMALIST, "get-started", demonstration of the reaction `A <-> B`,
+# ### A MINIMALIST, "get-started", demonstration of the unimolecular elementary reaction `A <-> B`,
 # with 1st-order kinetics in both directions, taken to equilibrium.
 #
 # **"No frills!"**  Please see other experiments for advanced graphics, analysis, diagnostics, fine-tuning, etc.

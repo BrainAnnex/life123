@@ -131,6 +131,18 @@ def test_reaction_quotient_ReactionUnimolecular():
 
 
 
+def test_step_simulation_ReactionUnimolecular():
+    # Reaction : A <-> B
+    rxn = ReactionUnimolecular(reactant="A", product="B", kF=3., kR=2.)
+    result = rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50})
+    assert result[0] == {'A': 7, 'B': -7}
+    assert result[1] == -70
+
+
+
+
+
+
 ########################   ReactionSynthesis    #########################################################
 
 def test_determine_reaction_rate_ReactionSynthesis():
@@ -168,6 +180,21 @@ def test_reaction_quotient_ReactionSynthesis():
 
 
 
+def test_step_simulation_ReactionSynthesis():
+    # Reaction : A + B <-> C
+    rxn = ReactionSynthesis(reactants=["A" , "B"], product="C", kF=5., kR=2.)
+
+    result = rxn.step_simulation(delta_time=0.002, conc_dict={"A": 10, "B": 50, "C": 20})
+    assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
+    assert result[1] == 5*10*50 - 2 * 20        # 2460
+
+
+    # Reaction  2A <-> B , with 2nd-order kinetics in forward reaction, and 1st-order in reverse
+    with pytest.raises(Exception):
+        ReactionSynthesis(reactants=["A" , "A"], product="B", kF=5., kR=2.)     # For now, not allowed
+
+
+
 
 ########################   ReactionDecomposition    #########################################################
 
@@ -195,6 +222,17 @@ def test_determine_reaction_quotient_ReactionDecomposition():
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
     assert np.allclose(0.8, quotient)
     assert formula == '([A][A]) / [B]'
+
+
+
+def test_step_simulation_ReactionDecomposition():
+    # Reaction : C <-> A + B
+    rxn = ReactionDecomposition(reactant="C", products=["A" , "B"], kF=2., kR=5.)
+
+    result = rxn.step_simulation(delta_time=0.002, conc_dict={"A": 10, "B": 50, "C": 20})
+    assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
+    assert result[1] == -2460
+
 
 
 
@@ -375,11 +413,11 @@ def test_describe():
 
     rxn = ReactionGeneric(reactants=[(2, "D", 3)], products=[(1, "C", 2)], kF=11., kR=13., temp=200)
     assert rxn.describe(concise=True) == "2 D <-> C"
-    assert rxn.describe(concise=False) == "2 D <-> C  (kF = 11 / kR = 13 / delta_G = 277.79 / K = 0.84615) | 3-th order in reactant D | 2-th order in product C"
+    assert rxn.describe(concise=False) == "2 D <-> C  (kF = 11 / kR = 13 / delta_G = 277.79 / K = 0.84615 / Temp = -73.15 C) | 3-th order in reactant D | 2-th order in product C"
 
     rxn = ReactionGeneric(reactants=["A", (2, "B", 1)], products=[(3, "C", 2), "D"], kF=5., kR=1., temp=200)
     assert rxn.describe(concise=True) == "A + 2 B <-> 3 C + D"
-    assert rxn.describe(concise=False) == "A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2,676.3 / K = 5) | 2-th order in product C"
+    assert rxn.describe(concise=False) == "A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2,676.3 / K = 5 / Temp = -73.15 C) | 2-th order in product C"
 
 
 
@@ -413,34 +451,34 @@ def test_extract_chemicals_in_reaction():
 
 
 
-def test_extract_reactant_names():
+def test_extract_reactant_labels():
     rxn = ReactionGeneric(reactants="A", products="B")
-    assert rxn.extract_reactant_names() == ["A"]
+    assert rxn.extract_reactant_labels() == ["A"]
 
     rxn = ReactionGeneric(reactants=["A", "B"], products="C")
-    assert rxn.extract_reactant_names() == ["A", "B"]
+    assert rxn.extract_reactant_labels() == ["A", "B"]
 
     rxn = ReactionGeneric(reactants=["A", "B"], products=["B", "C"])               # B acts as catalyst
-    assert rxn.extract_reactant_names() == ["A", "B"]
+    assert rxn.extract_reactant_labels() == ["A", "B"]
 
     rxn = ReactionGeneric(reactants=[(2, "D"), "C"], products=["C", (3, "E")])     # C acts as catalyst
-    assert rxn.extract_reactant_names() == ["D", "C"]
+    assert rxn.extract_reactant_labels() == ["D", "C"]
 
 
 
 def test_extract_product_names():
     rxn = ReactionGeneric(reactants="A", products="B")
-    assert rxn.extract_product_names() == ["B"]
+    assert rxn.extract_product_labels() == ["B"]
 
     rxn = ReactionGeneric(reactants=["A", "B"], products="C")
-    assert rxn.extract_product_names() == ["C"]
+    assert rxn.extract_product_labels() == ["C"]
 
 
     rxn = ReactionGeneric(reactants=["A", "B"], products=["B", "C"])               # B acts as catalyst
-    assert rxn.extract_product_names() == ["B", "C"]
+    assert rxn.extract_product_labels() == ["B", "C"]
 
     rxn = ReactionGeneric(reactants=[(2, "D"), "C"], products=["C", (3, "E")])     # C acts as catalyst
-    assert rxn.extract_product_names() == ["C", "E"]
+    assert rxn.extract_product_labels() == ["C", "E"]
 
 
 

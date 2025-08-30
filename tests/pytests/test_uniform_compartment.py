@@ -284,7 +284,7 @@ def test_reaction_step_common_fixed_step_2():
 
 
 
-def test__reaction_elemental_step():
+def test__reaction_elemental_step_1():
     uc = UniformCompartment(names=["A", "B"])
 
     uc.set_conc(conc=[10., 50.], snapshot=False)
@@ -309,41 +309,6 @@ def test__reaction_elemental_step():
 
 
     uc.clear_reactions()       # Re-start with a blank slate of reactions
-    # Reaction 2A <-> 3B , with 1st-order kinetics in both directions.
-    # Based on experiment "1D/reactions/reaction3"
-    uc.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
-
-    result = uc._reaction_elemental_step(delta_time=0.1)
-    assert np.allclose(result, [10., -15.])
-    assert result[0]/2 == - result[1] /3   # From the stoichiometry
-
-
-
-def test__reaction_elemental_step_1():
-    uc = UniformCompartment(names=["A", "B"])
-
-    uc.set_conc(conc=[10., 50.], snapshot=False)
-
-    # Reaction A <-> B , with 1st-order kinetics in both directions.
-    # Based on experiment "reactions_single_compartment/react_1"
-    uc.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-
-    result = uc._reaction_elemental_step(delta_time=0.1)
-    assert np.allclose(result, [ 7. , -7.])
-    assert result[0] == - result[1]         # From the stoichiometry
-
-
-    uc.clear_reactions()   # Re-start with a blank slate of reactions
-    # Reaction A <-> 3B , with 1st-order kinetics in both directions.
-    # Based on experiment "1D/reactions/reaction2"
-    uc.add_reaction(reactants=["A"], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
-
-    result = uc._reaction_elemental_step(delta_time=0.1)
-    assert np.allclose(result, [5. , -15.])
-    assert -3 * result[0] == result[1]      # From the stoichiometry
-
-
-    uc.clear_reactions()   # Re-start with a blank slate of reactions
     # Reaction 2A <-> 3B , with 1st-order kinetics in both directions.
     # Based on experiment "1D/reactions/reaction3"
     uc.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)

@@ -465,6 +465,7 @@ class UniformCompartment:
         :return:        Integer index of the newly-added reaction
         """
         if self.temp:
+            # If a temperature is set for the uniform compartment, pass it to the reaction
             return self.reactions.add_reaction(temp=self.temp, **kwargs)
         else:
             return self.reactions.add_reaction(**kwargs)
@@ -1234,7 +1235,7 @@ class UniformCompartment:
                                                                       conc_dict=conc_dict)
             # EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
 
-            rates_dict[rxn_index] = rxn_rate                    # Save the value
+            rates_dict[rxn_index] = rxn_rate       # Save the value [TODO: currently 0 for enzyme reactions]
 
             for (chem_label, delta_conc) in increment_dict_single_rxn.items():
                 chem_index = self.chem_data.get_index(chem_label)
@@ -1336,7 +1337,7 @@ class UniformCompartment:
         #rxn_rate = ReactionKinetics.compute_reaction_rate_OBSOLETE(rxn=rxn, conc_dict=conc_dict)
         rxn_rate = rxn.determine_reaction_rate(conc_dict=conc_dict)
 
-        delta_rxn = rxn_rate * delta_time
+        delta_rxn = rxn_rate * delta_time      # forward reaction - reverse reaction
 
 
         # TODO: adapt the following to simpler reactions
@@ -2202,12 +2203,12 @@ class UniformCompartment:
                 s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
                 all_applicable_concs.append(s)
             '''
-            reactants = rxn.extract_reactant_names()
+            reactants = rxn.extract_reactant_labels()
             for species_name in reactants:
                 s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
                 all_applicable_concs.append(s)
 
-            products = rxn.extract_product_names()
+            products = rxn.extract_product_labels()
             for species_name in products:
                 if species_name not in reactants:           # Don't report the same concentration twice!
                     s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[B] = 0.3"

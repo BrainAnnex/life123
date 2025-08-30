@@ -75,7 +75,7 @@ class ReactionOneStep(ReactionCommon):
     Typically NOT instantiated by the user.
     """
     def __init__(self, reversible=True, kF=None, kR=None,
-                 delta_H=None, delta_S=None, delta_G=None, temp=None, **kwargs):
+                 delta_H=None, delta_S=None, delta_G=None, **kwargs):
         """
         :param reversible:
         :param kF:
@@ -83,14 +83,12 @@ class ReactionOneStep(ReactionCommon):
         :param delta_H:
         :param delta_S:
         :param delta_G:
-        :param temp:
         :param kwargs:
         """
 
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
         self.reversible = reversible
-        self.temp = temp
 
         if not self.reversible:
             assert not kR, \
@@ -108,13 +106,14 @@ class ReactionOneStep(ReactionCommon):
 
         # Process the kinetic and thermodynamic data, and update various object attributes accordingly
         self._set_kinetic_and_thermodynamic(forward_rate=kF, reverse_rate=kR,
-                                            delta_H=delta_H, delta_S=delta_S, delta_G=delta_G, temp=temp)
+                                            delta_H=delta_H, delta_S=delta_S, delta_G=delta_G, temp=self.temp)
 
 
 
     def reaction_details(self) -> str:
         """
-
+        Return a string with some details about the parameters of this reaction
+        
         :return:    EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13 / Temp = 25 C)"
         """
         details = []
@@ -124,13 +123,14 @@ class ReactionOneStep(ReactionCommon):
 
         description = ""
 
-        if details:
-            description = ' / '.join(details)    # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
-
         if self.temp:
-            return f"  ({description} / Temp = {self.temp - 273.15:,.4g} C)"
-        else:
-            return f"  ({description})"
+            details.append(f"Temp = {self.temp - 273.15:,.4g} C")          # EXAMPLE: "Temp = 25 C"
+
+        if details:
+            description = "  (" + ' / '.join(details) + ")"   # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
+
+
+        return description
 
 
 
@@ -376,8 +376,11 @@ class ReactionUnimolecular(ReactionOneStep):
 
 
 
-    def extract_reactant_names(self) -> [str]:
-        # TODO: maybe rename to extract_reactant_labels()
+    def extract_reactant_labels(self) -> [str]:
+        """
+
+        :return:
+        """
         return [self.reactant]
 
 
@@ -392,7 +395,7 @@ class ReactionUnimolecular(ReactionOneStep):
 
 
 
-    def extract_product_names(self) -> [str]:
+    def extract_product_labels(self) -> [str]:
         return [self.product]
 
 
@@ -471,6 +474,7 @@ class ReactionUnimolecular(ReactionOneStep):
                                 - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
                                                             during this step
                                 - rxn_rate                  is the reaction rate ("velocity") for this reaction
+                                                            (rate of change of the product)
                                 EXAMPLE of increment_dict_single_rxn: {"B": -0.2, "F": 0.2}
         """
 
@@ -480,19 +484,19 @@ class ReactionUnimolecular(ReactionOneStep):
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
         rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
 
-        delta_rxn = rxn_rate * delta_time
+        delta_rxn = rxn_rate * delta_time   # forward reaction - reverse reaction
 
 
         # Determine the concentration adjustments as a result of this reaction step:
 
-        # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
+        # The reactant DECREASES based on the quantity delta_rxn
         r = self.reactant           # EXAMPLE: "B"
         # stoichiometry = 1
         delta_conc = - delta_rxn    # Increment to this reactant from the reaction step
         increment_dict_single_rxn[r] = delta_conc
 
 
-        # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
+        # The reaction product INCREASES based on the quantity delta_rxn
         p = self.product            # EXAMPLE: "F"
         # stoichiometry = 1
         delta_conc = delta_rxn      # Increment to this reaction product from the reaction step
@@ -524,6 +528,10 @@ class ReactionSynthesis(ReactionOneStep):
         assert (r1 != product) and (r2 != product), \
             "ReactionSynthesis instantiation: the `product` cannot be identical to any of the reactants"
 
+        assert (r1 != r2), \
+            "ReactionSynthesis instantiation: the 2 reactants cannot be the same. Use ReactionGeneric instead"
+            #TODO: maybe overcome this restriction
+
         self.reactant_1 = r1
         self.reactant_2 = r2
         self.product = product
@@ -552,8 +560,11 @@ class ReactionSynthesis(ReactionOneStep):
 
 
 
-    def extract_reactant_names(self) -> [str]:
-        # TODO: maybe rename to extract_reactant_labels()
+    def extract_reactant_labels(self) -> [str]:
+        """
+
+        :return:
+        """
         return [self.reactant_1, self.reactant_2]
 
 
@@ -568,7 +579,7 @@ class ReactionSynthesis(ReactionOneStep):
 
 
 
-    def extract_product_names(self) -> [str]:
+    def extract_product_labels(self) -> [str]:
         return [self.product]
 
 
@@ -650,6 +661,7 @@ class ReactionSynthesis(ReactionOneStep):
                                 - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
                                                             during this step
                                 - rxn_rate                  is the reaction rate ("velocity") for this reaction
+                                                            (rate of change of the product)
                                 EXAMPLE of increment_dict_single_rxn: "A": -1.3, "B": 2.9, "C": -1.6
         """
 
@@ -659,12 +671,12 @@ class ReactionSynthesis(ReactionOneStep):
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
         rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
 
-        delta_rxn = rxn_rate * delta_time
+        delta_rxn = rxn_rate * delta_time   # forward reaction - reverse reaction
 
 
         # Determine the concentration adjustments as a result of this reaction step:
 
-        # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
+        # The reactants DECREASE based on the quantity delta_rxn
         for r in [self.reactant_1, self.reactant_2]:
             # EXAMPLE of r: "A"
             # stoichiometry = 1
@@ -672,7 +684,7 @@ class ReactionSynthesis(ReactionOneStep):
             increment_dict_single_rxn[r] = delta_conc
 
 
-        # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
+        # The reaction product INCREASES based on the quantity delta_rxn
         p = self.product            # EXAMPLE: "F"
         # stoichiometry = 1
         delta_conc = delta_rxn      # Increment to this reaction product from the reaction step
@@ -695,15 +707,19 @@ class ReactionDecomposition(ReactionOneStep):
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
         assert type(products) == list or type(products) == tuple, \
-            "ReactionSynthesis instantiation: argument `reactants` must be a list or tuple"
+            "ReactionDecomposition instantiation: argument `reactants` must be a list or tuple"
         assert len(products) == 2, \
-            "ReactionSynthesis instantiation: argument `reactants` must be a pair"
+            "ReactionDecomposition instantiation: argument `reactants` must be a pair"
         assert type(reactant) == str, \
-            "ReactionSynthesis instantiation: argument `product` must be a string"
+            "ReactionDecomposition instantiation: argument `product` must be a string"
 
         (p1, p2) = products
         assert (p1 != reactant) and (p2 != reactant), \
-            "ReactionSynthesis instantiation: the `reactant` cannot be identical to any of the reaction products"
+            "ReactionDecomposition instantiation: the `reactant` cannot be identical to any of the reaction products"
+
+        assert (p1 != p2), \
+            "ReactionDecomposition instantiation: the 2 reaction products cannot be the same. Use ReactionGeneric instead"
+            #TODO: maybe overcome this restriction
 
         self.reactant = reactant
         self.product_1 = p1
@@ -733,8 +749,11 @@ class ReactionDecomposition(ReactionOneStep):
 
 
 
-    def extract_reactant_names(self) -> [str]:
-        # TODO: maybe rename to extract_reactant_labels()
+    def extract_reactant_labels(self) -> [str]:
+        """
+
+        :return:
+        """
         return [self.reactant]
 
 
@@ -749,7 +768,7 @@ class ReactionDecomposition(ReactionOneStep):
 
 
 
-    def extract_product_names(self) -> [str]:
+    def extract_product_labels(self) -> [str]:
         return [self.product_1, self.product_2]
 
 
@@ -831,6 +850,7 @@ class ReactionDecomposition(ReactionOneStep):
                                 - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
                                                             during this step
                                 - rxn_rate                  is the reaction rate ("velocity") for this reaction
+                                                            (rate of change of either of the products)
                                 EXAMPLE of increment_dict_single_rxn: "A": -1.3, "B": 2.9, "C": -1.6
         """
 
@@ -840,21 +860,20 @@ class ReactionDecomposition(ReactionOneStep):
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
         rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
 
-        delta_rxn = rxn_rate * delta_time
+        delta_rxn = rxn_rate * delta_time      # forward reaction - reverse reaction
 
 
         # Determine the concentration adjustments as a result of this reaction step:
 
-        # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
+        # The reactant DECREASES based on the quantity delta_rxn
         r = self.reactant            # EXAMPLE: "F"
-        # EXAMPLE of r: "A"
         # stoichiometry = 1
         delta_conc = - delta_rxn    # Increment to this reactant from the reaction step
         increment_dict_single_rxn[r] = delta_conc
 
 
-        # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
-        for p in [self.product_1, self.product_1]:
+        # The reaction products INCREASE based on the quantity delta_rxn
+        for p in [self.product_1, self.product_2]:
             # EXAMPLE of p: "B"
             # stoichiometry = 1
             delta_conc = delta_rxn      # Increment to this reaction product from the reaction step
@@ -884,8 +903,8 @@ class ReactionEnzyme(ReactionCommon):
                  kM=None, kcat=None, **kwargs):
         """
         :param enzyme:      The label for the chemical acting as enzyme
-        :param substrate:
-        :param product:
+        :param substrate:   The reactant
+        :param product:     The final reaction product
         :param k1_F:
         :param k1_R:
         :param k2_F:
@@ -895,8 +914,12 @@ class ReactionEnzyme(ReactionCommon):
         """
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
+        assert (substrate != product), \
+            "ReactionEnzyme instantiation: the `substrate` cannot be the same as the `product`"
+
         self.enzyme = enzyme
         self.substrate = substrate
+        self.intermediate = enzyme + substrate      # Allow for alternate user-specified names
         self.product = product
 
         self.k1_F = k1_F
@@ -922,6 +945,83 @@ class ReactionEnzyme(ReactionCommon):
                 assert np.allclose(self.kcat, kcat), \
                     f"Inconsistent values passed during instantiation of ReactionEnz.  " \
                     f"The passed kcat value ({kcat}) doesn't the value ({self.kcat}) of the given k2_F reaction rate constants"
+
+
+
+
+    def describe(self, concise=False) -> str:
+        """
+        Return as a string, a user-friendly plain-text form of the reaction
+
+        :param concise:     If True, less detail is shown
+        :return:            A string with a description of the specified reaction
+        """
+        description = f"{self.enzyme} + {self.substrate} <-> {self.intermediate} -> {self.enzyme} + {self.product}"
+
+        if not concise:
+            description += "  (Enzymatic reaction)"
+
+            description += f"  (k1_F = {self.k1_F} / k1_R = {self.k1_R} / k2_F = {self.k2_F})"
+            # TODO: add thermodynamic data, if available
+
+        return description
+
+
+
+    def extract_reactant_labels(self) -> [str]:
+        """
+
+        :return:
+        """
+        return [self.substrate]
+
+
+    def extract_reactants(self) -> [(int, str, int)]:
+        """
+        Return a list of triplets with details of the reactants of the given reaction,
+        incl. their stoichiometry, chemical label, and reaction order
+
+        :return:    A list of triplets of the form (stoichiometry, chemical label, reaction order)
+        """
+        return [(1, self.substrate, 1)]
+
+
+
+    def extract_product_labels(self) -> [str]:
+        """
+
+        :return:
+        """
+        return [self.product]
+
+
+    def extract_products(self) -> [(int, str, int)]:
+        """
+        Return a list of triplet with details of the products of the given reaction,
+        incl. their stoichiometry, chemical label, and reaction order
+
+        :return:    A list of triplets of the form (stoichiometry, chemical label, reaction order)
+        """
+        return [(1, self.product, 1)]
+
+
+
+    def extract_chemicals_in_reaction(self) -> Set[str]:
+        """
+        Return a SET of the chemical labels of all the chemicals appearing in this reaction.
+
+        :return:    A SET of the labels of the chemicals involved in this reaction
+                        Note: being a set, it's NOT in any particular order
+        """
+        return {self.enzyme, self.substrate, self.intermediate, self.product}
+
+
+
+    def extract_rxn_properties(self) -> {}:
+        """
+        Create a dictionary with the numerical properties of the given reaction
+        """
+        return {'k1_F': self.k1_F, 'k1_R': self.k1_R, 'k2_F': self.k2_F}    # TODO: possibly add more
 
 
 
@@ -1046,6 +1146,88 @@ class ReactionEnzyme(ReactionCommon):
         :return:
         """
         return kcat / kM
+
+
+
+
+    def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
+        """
+        Simulate the enzymatic reaction E + S <-> ES -> E + P, over the specified time interval,
+        using the "Forward Euler" method
+
+        :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
+                                concentration won't vary significantly during this span
+        :param conc_dict:   A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in the given reaction
+                                EXAMPLE:  {"E": 1.5, "S": 31.6, "ES": 0.4, "P": 19.9}
+
+        :return:            The pair (increment_dict_single_rxn, rxn_rate)
+                                - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
+                                                            during this step
+                                - rxn_rate                  0 (UNUSED for now)
+                                EXAMPLE of increment_dict_single_rxn: {"E": 0, "S": -2.9, "ES": 0.1, "P": 2.8}
+        """
+
+        increment_dict_single_rxn = {}      # The keys are the chemical labels,
+                                            # and the values are their respective concentration changes as a result of this reaction
+
+        # Compute the reaction rate ("velocity"), at the current system chemical concentrations,
+        # for the 2 parts of this reaction:
+        # 1) E + S <-> ES   (synthesis reaction of the "intermediate" species ES)
+        # 2) ES -> E + P    (irreversible decomposition reaction)
+
+        rxn_rate_1 = ReactionKinetics.compute_reaction_rate_first_order(reactants = [self.enzyme, self.substrate],
+                                                                  products=[self.intermediate],
+                                                                  kF = self.k1_F, kR=self.k1_R, reversible=True,
+                                                                  conc_dict=conc_dict)
+
+        rxn_rate_2 = ReactionKinetics.compute_reaction_rate_first_order(reactants = [self.intermediate],
+                                                                  products=[self.enzyme, self.product],
+                                                                  kF = self.k2_F, kR=0, reversible=False,
+                                                                  conc_dict=conc_dict)
+
+
+        # PART 1 - Determine the concentration adjustments as a result of the 1st reaction:  E + S <-> ES
+
+        delta_rxn = rxn_rate_1 * delta_time         # forward reaction - reverse reaction
+
+        # The reactants DECREASE based on the quantity delta_rxn
+        for r in [self.enzyme, self.substrate]:
+            # stoichiometry = 1
+            delta_conc = - delta_rxn    # Increment to this reactant from the reaction step
+            increment_dict_single_rxn[r] = delta_conc
+
+
+        # The reaction product INCREASES based on the quantity delta_rxn
+        p = self.intermediate      # EXAMPLE: "ES"
+        # stoichiometry = 1
+        delta_conc = delta_rxn      # Increment to this reaction product from the reaction step
+        increment_dict_single_rxn[p] = delta_conc
+
+
+
+        # PART 2 - Determine the concentration adjustments as a result of the 2nd reaction:  ES -> E + P
+
+        delta_rxn = rxn_rate_2 * delta_time         # forward reaction only
+
+        # The reactant DECREASES based on the quantity delta_rxn
+        r = self.intermediate            # EXAMPLE: "ES"
+        # stoichiometry = 1
+        delta_conc = - delta_rxn    # Increment to this reactant from the reaction step
+        increment_dict_single_rxn[r] = delta_conc
+
+
+        # The reaction products INCREASE based on the quantity delta_rxn
+        for p in [self.enzyme, self.product]:
+            # stoichiometry = 1
+            delta_conc = delta_rxn      # Increment to this reaction product from the reaction step
+            increment_dict_single_rxn[p] = delta_conc
+
+
+        assert np.allclose(increment_dict_single_rxn[self.enzyme], 0), \
+            "step_simulation() internal error: The enzyme is changing!"
+
+        return (increment_dict_single_rxn, 0)    # TODO: unclear how to best return multiple rates
 
 
 
@@ -1289,11 +1471,10 @@ class ReactionGeneric(ReactionOneStep):
 
 
 
-    def extract_reactant_names(self) -> [str]:
+    def extract_reactant_labels(self) -> [str]:
         """
         In the order in which they appear when the reaction was first defined
 
-        :param exclude_enzyme:  If True, any enzyme, if present, won't be included
         :return:                List of chemical names
         """
         reactants = self.extract_reactants()
@@ -1302,11 +1483,10 @@ class ReactionGeneric(ReactionOneStep):
         return reactant_names
 
 
-    def extract_product_names(self) -> [str]:
+    def extract_product_labels(self) -> [str]:
         """
         In the order in which they appear when the reaction was first defined
 
-        :param exclude_enzyme:  If True, any enzyme, if present, won't be included
         :return:                List of chemical names
         """
         products = self.extract_products()
@@ -1351,16 +1531,10 @@ class ReactionGeneric(ReactionOneStep):
 
 
         # If we get this far, we're looking for a more detailed description
-        details = []
-        rxn_properties = self.extract_rxn_properties()
-        for k,v in rxn_properties.items():
-            details.append(f"{k} = {v:,.5g}")          # EXAMPLE: "kF = 3"
-
-        if details:
-            rxn_description += "  (" + ' / '.join(details) + ")"    # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
+        rxn_description += self.reaction_details()
 
 
-        # If an ENZYME is involved, show it
+        # If a CATALYST is involved, show it
         if self.catalyst is not None:
             rxn_description += f" | Enzyme: {self.catalyst}"
 
@@ -1471,7 +1645,7 @@ class ReactionGeneric(ReactionOneStep):
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
         rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
 
-        delta_rxn = rxn_rate * delta_time
+        delta_rxn = rxn_rate * delta_time      # forward reaction - reverse reaction
 
 
         reactants = self.extract_reactants() # A list of triplets of the form (stoichiometry, species name, reaction order)
@@ -1483,7 +1657,7 @@ class ReactionGeneric(ReactionOneStep):
         for this individual reaction being considered
         """
 
-        # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
+        # The reactants DECREASE based on the quantity delta_rxn
         for r in reactants:
             # Unpack data from the reactant r
             species_name = self.extract_species_name(r)
@@ -1498,7 +1672,7 @@ class ReactionGeneric(ReactionOneStep):
             increment_dict_single_rxn[species_name] = increment_dict_single_rxn.get(species_name,0) + delta_conc
 
 
-        # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
+        # The reaction products INCREASE based on the quantity delta_rxn
         for p in products:
             # Unpack data from the reactant r
             species_name = self.extract_species_name(p)
@@ -1885,14 +2059,14 @@ class ReactionRegistry:
         self.reaction_list.append(rxn)
 
         # Register any newly-encountered reactant not already registered
-        rxn_reactants = rxn.extract_reactant_names()
+        rxn_reactants = rxn.extract_reactant_labels()
         for label in rxn_reactants:
             if not self.chem_data.label_exists(label):
                 self.chem_data.add_chemical(name=label)
 
         # Register any newly-encountered reaction product not already registered
         # (reactants are done first, because that's typically a more appealing order of appearance)
-        rxn_products = rxn.extract_product_names()
+        rxn_products = rxn.extract_product_labels()
         for label in rxn_products:
             if not self.chem_data.label_exists(label):
                 self.chem_data.add_chemical(name=label)
@@ -1908,6 +2082,7 @@ class ReactionRegistry:
 
     def add_reaction(self, reactants :Union[int, str, list], products :Union[int, str, list],
                      kF=None, forward_rate=None, kR=None, reverse_rate=None,
+                     enzyme=None, k1_F=None, k1_R=None, k2_F=None,
                      reaction_type=None, **kwargs) -> int:
         """
         Create and register a new SINGLE chemical reaction,
@@ -1962,7 +2137,11 @@ class ReactionRegistry:
         if reaction_type is None:
             reaction_type = "ReactionGeneric"   # Start with the default; change it, below, if some conditions are met
 
-            if type(reactants) == str:
+            if enzyme is not None:
+                reaction_type = "ReactionEnzyme"
+
+            elif type(reactants) == str:
+                # TODO: also catch 1-element lists
                 if type(products) == str:
                     reaction_type = "ReactionUnimolecular"
                 elif (type(products) == list) and (len(products) == 2) and (type(products[0]) == str and type(products[1]) == str):
@@ -1973,7 +2152,10 @@ class ReactionRegistry:
                     reaction_type = "ReactionSynthesis"
 
 
-        if reaction_type == "ReactionUnimolecular":
+        if reaction_type == "ReactionEnzyme":
+            rxn = ReactionEnzyme(enzyme=enzyme, substrate=reactants, product=products,
+                                 k1_F=k1_F, k1_R=k1_R, k2_F=k2_F, **kwargs)
+        elif reaction_type == "ReactionUnimolecular":
             rxn = ReactionUnimolecular(reactant=reactants, product=products, kF=kF, kR=kR, **kwargs)
         elif reaction_type == "ReactionDecomposition":
             rxn = ReactionDecomposition(reactant=reactants, products=products, kF=kF, kR=kR, **kwargs)
@@ -1988,14 +2170,14 @@ class ReactionRegistry:
         self.reaction_list.append(rxn)
 
         # Register any newly-encountered reactant not already registered
-        rxn_reactants = rxn.extract_reactant_names()
+        rxn_reactants = rxn.extract_reactant_labels()
         for label in rxn_reactants:
             if not self.chem_data.label_exists(label):
                 self.chem_data.add_chemical(name=label)
 
         # Register any newly-encountered reaction product not already registered
         # Note: reactants are done first, because that's typically a more appealing order of appearance
-        rxn_products = rxn.extract_product_names()
+        rxn_products = rxn.extract_product_labels()
         for label in rxn_products:
             if not self.chem_data.label_exists(label):
                 self.chem_data.add_chemical(name=label)
@@ -2070,10 +2252,10 @@ class ReactionRegistry:
         If wanting to describe just 1 reaction, use single_reaction_describe()
 
         EXAMPLE (not concise):
-            Number of reactions: 2 (at temp. 25 C)
+            Number of reactions: 2
             (0) CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products
             (1) A + B <-> C  (kF = 5.0 / kR = 1.0 / Delta_G =  / K = 5.0) | 1st order in all reactants & products
-            Set of chemicals involved in the above reactions: {'CH4', 'O2', 'H2O', 'A', 'B', 'C'}
+            Chemicals involved in the above reactions: {'CH4', 'O2', 'H2O', 'A', 'B', 'C'}
 
         :param concise:     If True, less detail is shown
         :return:            None

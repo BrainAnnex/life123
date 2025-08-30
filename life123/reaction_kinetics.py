@@ -340,7 +340,7 @@ class ReactionKinetics:
         :param reactant_data:   List of PAIRS of the form (label of reactant , order of reaction with respect to it)
         :param product_data:    List of PAIRS of the form (label of reaction product , order of reaction with respect to it)
         :param kF:              Forward reaction rate
-        :param kR:              Reverse reaction rate
+        :param kR:              Reverse reaction rate; ignored if irreversible
         :param reversible:      True if the reaction is reversible; False otherwise
         :param conc_dict:       A dict mapping chemical labels to their concentrations,
                                     for all the chemicals involved in the given reaction
@@ -383,7 +383,7 @@ class ReactionKinetics:
         :param reactants:   List of labels of the reactants
         :param products:    List of labels of the products of the reaction
         :param kF:          Forward reaction rate
-        :param kR:          Reverse reaction rate
+        :param kR:          Reverse reaction rate; ignored if irreversible
         :param reversible:  True if the reaction is reversible; False otherwise
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
                                 for all the chemicals involved in the given reaction
