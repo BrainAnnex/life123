@@ -37,7 +37,7 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Aug. 30, 2025"
+LAST_REVISED = "Sep. 1, 2025"
 LIFE123_VERSION = "1.0.0rc5"         # Library version this experiment is based on
 
 # %%
@@ -157,14 +157,14 @@ rates
 # Let's take a look at how the reaction rate varies with time
 PlotlyHelper.plot_pandas(df=rates, 
                          title="Reaction rate, dP/dt, over time",
-                         x_var="SYSTEM TIME", fields="rxn1_rate", 
+                         x_var="SYSTEM TIME", fields="rxn0_rate_2", 
                          x_label="time", y_label="dP/dt")
 
 # %%
 # A closer peek at its maximum value
 PlotlyHelper.plot_pandas(df=rates, 
                          title="Reaction rate, dP/dt, over time (DETAIL at early times)",
-                         x_var="SYSTEM TIME", fields="rxn1_rate", 
+                         x_var="SYSTEM TIME", fields="rxn0_rate_2", 
                          range_x=[0,0.05], range_y=[33., 34.5])
 
 # %% [markdown]
@@ -183,10 +183,7 @@ PlotlyHelper.plot_pandas(df=rates,
 # for background reference, see:  https://vallance.chem.ox.ac.uk/pdfs/KineticsLectureNotes.pdf (p. 20)
 
 # %%
-rxn = ReactionEnzyme(enzyme="E", substrate="S", product="P",
-                     k1_F=uc.get_reactions().get_forward_rate(0),
-                     k1_R=uc.get_reactions().get_reverse_rate(0),
-                     k2_F=uc.get_reactions().get_forward_rate(1))
+rxn = uc.get_single_reaction(0)
 
 # %%
 rxn.kM          #  For the data in this experiment, it comes out to (49. + 100.) / 18.
@@ -215,7 +212,7 @@ initial_rxn_rate
 # First, we'll merge the concentration history and and the rate history into a single dataframe `df`
 
 # %%
-df = uc.add_rate_to_conc_history(rate_name="rxn1_rate", new_rate_name="P_rate")
+df = uc.add_rate_to_conc_history(rate_name="rxn0_rate_2", new_rate_name="P_rate")
 df
 
 # %%
