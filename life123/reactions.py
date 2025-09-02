@@ -515,7 +515,12 @@ class ReactionSynthesis(ReactionOneStep):
     """
 
     def __init__(self, reactants :(str, str), product :str, **kwargs):
+        """
 
+        :param reactants:
+        :param product:
+        :param kwargs:
+        """
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
         assert type(reactants) == list or type(reactants) == tuple, \
@@ -554,7 +559,7 @@ class ReactionSynthesis(ReactionOneStep):
             else:
                 description += "  (Elementary Synthesis Irreversible reaction)"
 
-                description += self.reaction_details()
+            description += self.reaction_details()
 
         return description
 
@@ -704,6 +709,12 @@ class ReactionDecomposition(ReactionOneStep):
     """
 
     def __init__(self, reactant :str, products :(str, str), **kwargs):
+        """
+
+        :param reactant:
+        :param products:
+        :param kwargs:
+        """
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
         assert type(products) == list or type(products) == tuple, \

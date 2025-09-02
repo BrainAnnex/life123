@@ -13,16 +13,14 @@
 # ---
 
 # %% [markdown]
-# # **Enzyme Kinetics** : 
-# #### _Accurate numerical solution_ -  which gets compared to the **Michaelis-Menten** model approximation and to the alternative **Morrison** model.
+# # **Enzyme Kinetics**
+# ### An _accurate numerical solution_ of an enzymatic reaction `E + S <-> ES -> E + P` is computed - and then it gets compared to the **Michaelis-Menten model** approximation and to the alternative **Morrison model**.
 #
-# #### Two Coupled Reactions: `E + S <-> ES`, and  `ES -> E + P` , using real-life kinetic parameters.  
+# #### Real-life kinetic parameters are being used.  
 # #### Scenario with **_small amount of Enzyme_**, relative to the initial Substrate concentration.
-# In the follow-up experiments `enzyme_1_b` and `enzyme_1_c`, the enzyme concentration gets progressively increased.
 #
-# Two other reactions being assumed negligible, and not included, are :  
-# 1) the reverse direction of the 2nd reaction  
-# 2) the non-catalyzed E + S <-> P reaction
+# * In the follow-up experiments `enzyme_1_b` and `enzyme_1_c`, the enzyme concentration gets progressively increased.   
+# * A side-tour in experiment `enzyme_1_a_technical` takes an under-the-hood look at how the enzymatic reaction is internally modeled with 2 coupled elementary reactions
 
 # %% [markdown]
 # ### THE REACTION:  
@@ -37,8 +35,8 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Jan. 12, 2025"
-LIFE123_VERSION = "1.0.0rc2"         # Library version this experiment is based on
+LAST_REVISED = "Sep. 2, 2025"
+LIFE123_VERSION = "1.0.0rc5"         # Library version this experiment is based on
 
 # %%
 #import set_path                     # Using MyBinder?  Uncomment this before running the next cell!
@@ -54,7 +52,7 @@ import pandas as pd
 from life123 import check_version, ChemData, UniformCompartment, ReactionEnzyme, GraphicLog, PlotlyHelper
 
 # %%
-check_version(LIFE123_VERSION)
+check_version(LIFE123_VERSION)    # To check compatibility
 
 # %%
 # Initialize the HTML logging (for the graphics)
@@ -71,7 +69,7 @@ GraphicLog.config(filename=log_file,
 # %%
 
 # %% [markdown]
-# # 1. Accurate numerical solution
+# # PART 1. Accurate numerical solution
 
 # %%
 chem_data = ChemData(names=["P", "ES"], plot_colors=["green", "red"])
@@ -98,13 +96,9 @@ chem_data.all_chemicals()
 uc = UniformCompartment(chem_data=chem_data, preset="slower")
 
 # %%
-# Reaction E + S <-> ES , with 1st-order kinetics, 
-uc.add_reaction(reactants=["E", "S"], products="ES",
-                forward_rate=18., reverse_rate=100.) 
-
-# Reaction ES <-> E + P , with 1st-order kinetics, ignoring the reverse reaction
-uc.add_reaction(reactants="ES", products=["E", "P"],
-                forward_rate=49., reverse_rate=0) 
+# Here we use native support for enzymatic reactions
+uc.add_reaction(reactants="S", products="P", enzyme="E",
+                k1_F=18., k1_R=100., k2_F=49.)
 
 uc.describe_reactions()
 
@@ -152,7 +146,8 @@ uc.plot_history(title_prefix="DETAIL at early times",
 
 # %% [markdown]
 # ### What is the initial rate of production of the final reaction product `P`?   
-# One could take the numerical derivative (gradient) of the time values of [P] - but no need to!  **Reaction rates are computed in the course of the simulation, and stored in a rate-history dataframe**
+# One could take the numerical derivative (gradient) of the time values of [P] - but no need to!  **Reaction rates are computed in the course of the simulation, and stored in a rate-history dataframe**.  
+# #### Note the enzymatic reactions have 2 rates
 
 # %%
 rates = uc.get_rate_history()   # We'll be interested in rxn1_rate (the reaction that leads to `P`)
@@ -162,14 +157,14 @@ rates
 # Let's take a look at how the reaction rate varies with time
 PlotlyHelper.plot_pandas(df=rates, 
                          title="Reaction rate, dP/dt, over time",
-                         x_var="SYSTEM TIME", fields="rxn1_rate", 
+                         x_var="SYSTEM TIME", fields="rxn0_rate_2", 
                          x_label="time", y_label="dP/dt")
 
 # %%
 # A closer peek at its maximum value
 PlotlyHelper.plot_pandas(df=rates, 
                          title="Reaction rate, dP/dt, over time (DETAIL at early times)",
-                         x_var="SYSTEM TIME", fields="rxn1_rate", 
+                         x_var="SYSTEM TIME", fields="rxn0_rate_2", 
                          range_x=[0,0.05], range_y=[33., 34.5])
 
 # %% [markdown]
@@ -181,17 +176,14 @@ PlotlyHelper.plot_pandas(df=rates,
 # %%
 
 # %% [markdown]
-# # 2. Comparing the results to the Michaelis-Menten model approximation
+# # PART 2. Comparing the results to the Michaelis-Menten model approximation
 
 # %% [markdown]
 # ### Let's compute some parameters used by the Michaelis-Menten model   
 # for background reference, see:  https://vallance.chem.ox.ac.uk/pdfs/KineticsLectureNotes.pdf (p. 20)
 
 # %%
-rxn = ReactionEnzyme(enzyme="E", substrate="S", product="P",
-                     k1_F=uc.get_reactions().get_forward_rate(0),
-                     k1_R=uc.get_reactions().get_reverse_rate(0),
-                     k2_F=uc.get_reactions().get_forward_rate(1))
+rxn = uc.get_single_reaction(0)
 
 # %%
 rxn.kM          #  For the data in this experiment, it comes out to (49. + 100.) / 18.
@@ -220,7 +212,7 @@ initial_rxn_rate
 # First, we'll merge the concentration history and and the rate history into a single dataframe `df`
 
 # %%
-df = uc.add_rate_to_conc_history(rate_name="rxn1_rate", new_rate_name="P_rate")
+df = uc.add_rate_to_conc_history(rate_name="rxn0_rate_2", new_rate_name="P_rate")
 df
 
 # %%
@@ -250,10 +242,11 @@ PlotlyHelper.plot_pandas(df=df, x_var="S", fields=["P_rate", "Michaelis_rate"],
 # %%
 
 # %% [markdown]
-# # 3. Comparing the results to the Morrison model
+# # PART 3. Comparing the results to the Morrison model
 
 # %% [markdown]
-# #### Following section 7.1 of _"Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023_, we'll test out an the alternative **Morrison** approach, which is expected to perform better than the **Michaelis-Menten** model when the Enzyme concentration isn't so small.  But, in this scenario, we only have small amounts of enzyme - and we'll see below that no significant improvement is gained by switching model.
+# #### Following section 7.1 of _"Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023_, we'll test out an the alternative **Morrison** approach, which is expected to perform better than the **Michaelis-Menten** model when the Enzyme concentration isn't so small.  
+# But, in this scenario, we only have small amounts of enzyme - and we'll see below that no significant improvement is gained by switching model.
 
 # %%
 df["Morrison_rate"] = rxn.compute_rate_morrison(E_tot=E0,
