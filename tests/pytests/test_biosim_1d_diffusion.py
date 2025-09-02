@@ -38,7 +38,7 @@ def test_diffuse_step_4():
     bio = BioSim1D(n_bins=2, chem_data=chem_data)
 
     bio.inject_conc_to_bin(bin_address=0, chem_index=0, delta_conc=10.)
-    bio.describe_state()
+    #bio.describe_state()
     """
     2 bins and 1 species:
     Species 0. Diff rate: 1.0. Conc:  [10.  0.]
@@ -47,8 +47,8 @@ def test_diffuse_step_4():
     for i in range(4):
         bio.diffuse_step(time_step=.3)
         bio.system += bio.delta_diffusion
-        print(f"At end of step {i+1}:")
-        bio.describe_state()
+        #print(f"At end of step {i+1}:")
+        #bio.describe_state()
 
     assert np.allclose(bio.lookup_species(0), [5.128, 4.872])
 
@@ -90,8 +90,8 @@ def test_diffuse_step_6():
     for i in range(20):
         bio.diffuse_step(time_step=0.6666)
         bio.system += bio.delta_diffusion
-        print(f"At end of step {i+1}:")
-        print(bio.lookup_species(0))
+        #print(f"At end of step {i+1}:")
+        #print(bio.lookup_species(0))
 
     assert np.allclose(bio.lookup_species(0), [2.23752027, 2.14678423, 1.99998594, 1.85320708, 1.76250248])
 
@@ -280,7 +280,7 @@ def test_diffuse_4():
 
     # Do 1 step
     bio.diffuse(time_step = 0.01, n_steps = 1)
-    #bio.describe_state(concise=True)
+    #bio.describe_state()(concise=True)
     """
     DIFFUSION STEP 0:
     [[95.  5.  0.]
@@ -290,7 +290,7 @@ def test_diffuse_4():
 
     # Repeat 1 step
     bio.diffuse(time_step = 0.01, n_steps = 1)
-    bio.describe_state(concise=True)
+    #bio.describe_state()(concise=True)
     """
     DIFFUSION STEP 0:
     [[ 9.25 81.5   9.25]
@@ -302,7 +302,7 @@ def test_diffuse_4():
     # Reset the system
     bio.set_species_conc(chem_index=0, conc_list=[0, 100, 0])
     bio.set_species_conc(chem_index=1, conc_list=[10, 20, 50])
-    bio.describe_state()
+    #bio.describe_state()
     # Re-take the 2 steps
     bio.diffuse(time_step = 0.01, n_steps = 2)
     assert np.allclose(bio.system, [[9.25, 81.5, 9.25] , [14.4, 25.6, 40.]])

@@ -54,7 +54,7 @@ def test_constructor():
     # New test
     rxn = UniformCompartment(names=["A", "B", "C"])
     bio = BioSim1D(n_bins=5, reaction_handler=rxn)
-    bio.describe_state()
+    #bio.describe_state()
     assert bio.n_bins == 5
     assert bio.n_species == 3
     expected = np.zeros((3, 5), dtype=float)

@@ -1,6 +1,9 @@
 import pytest
 import numpy as np
-from life123.reactions import ReactionCommon, ReactionOneStep, ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionGeneric
+from collections import Counter
+from life123.reactions import ReactionCommon, ReactionOneStep, \
+        ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition,\
+        ReactionEnzyme, ReactionGeneric
 
 
 
@@ -160,6 +163,7 @@ def test_determine_reaction_rate_ReactionSynthesis():
     assert np.allclose(result, 20. * 5. * 8. - 2. * 3.)
 
 
+
 def test_reaction_quotient_ReactionSynthesis():
     # Reaction :  A + B <-> C
     rxn = ReactionSynthesis(reactants=["A" , "B"], product="C")
@@ -171,12 +175,8 @@ def test_reaction_quotient_ReactionSynthesis():
 
 
     # Reaction :  2A <-> B
-    rxn = ReactionSynthesis(reactants=["A" , "A"], product="B")
-    c = {'A': 4., 'B': 20.}
-    assert np.allclose(1.25, rxn.reaction_quotient(conc=c, explain=False))
-    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
-    assert np.allclose(1.25, quotient)
-    assert formula == '[B] / ([A][A])'
+    with pytest.raises(Exception):
+        ReactionSynthesis(reactants=["A" , "A"], product="B")   # Not allowed for now
 
 
 
@@ -216,12 +216,8 @@ def test_determine_reaction_rate_ReactionDecomposition():
 
 def test_determine_reaction_quotient_ReactionDecomposition():
     # Reaction :  B <-> 2A
-    rxn = ReactionDecomposition(reactant="B", products=["A", "A"])
-    c = {'A': 4., 'B': 20.}
-    assert np.allclose(0.8, rxn.reaction_quotient(conc=c, explain=False))
-    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
-    assert np.allclose(0.8, quotient)
-    assert formula == '([A][A]) / [B]'
+    with pytest.raises(Exception):
+        rxn = ReactionDecomposition(reactant="B", products=["A", "A"])  # Not allowed for now
 
 
 
@@ -232,6 +228,75 @@ def test_step_simulation_ReactionDecomposition():
     result = rxn.step_simulation(delta_time=0.002, conc_dict={"A": 10, "B": 50, "C": 20})
     assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
     assert result[1] == -2460
+
+
+
+
+########################   ReactionEnzyme    #########################################################
+
+def test_initialize_ReactionEnzyme():
+    rxn = ReactionEnzyme(enzyme="E", substrate="S", product="P",
+                         k1_F=10., k1_R=2., k2_F=5.)
+    assert rxn.enzyme == "E"
+    assert rxn.substrate == "S"
+    assert rxn.product == "P"
+    # TODO: more testing
+
+
+
+def test_step_simulation_ReactionEnzyme_1():
+    # E + S <-> ES -> E + P
+    initial_conc = {"S": 20, "E": 1, "P": 0, "ES": 0}
+    dt = 0.002
+
+    rxn = ReactionEnzyme(enzyme="E", substrate="S", product="P",
+                         k1_F=18., k1_R=100., k2_F=49.)
+    result = rxn.step_simulation(delta_time=dt, conc_dict=initial_conc)
+    assert result[0] == {'E': -0.72, 'S': -0.72, 'ES': 0.72, 'P': 0.0}
+    assert result[1] == (360, 0)
+
+
+
+def test_step_simulation_ReactionEnzyme_2():
+    # E + S <-> ES -> E + P
+    initial_conc = {"S": 20, "E": 1, "P": 0, "ES": 0}
+    dt = 0.002
+    print()
+    conc = initial_conc
+
+    for _ in range(3):
+        # Compare the results given by ReactionEnzyme with those
+        # given by simulating the 2 reactions separately
+        rxn = ReactionEnzyme(enzyme="E", substrate="S", product="P",
+                             k1_F=18., k1_R=100., k2_F=49.)
+        result = rxn.step_simulation(delta_time=dt, conc_dict=conc)
+        #print(result)
+
+        # Simulate the 2 elementary reactions separately
+        rxn1 = ReactionSynthesis(reactants=["E", "S"], product="ES",
+                                 kF=18., kR=100.)
+        result1 = rxn1.step_simulation(delta_time=dt, conc_dict=conc)
+
+        rxn2 = ReactionDecomposition(reactant="ES", products=["E", "P"],
+                                     kF=49., kR=0)
+        result2 = rxn2.step_simulation(delta_time=dt, conc_dict=conc)
+
+        # Check the increment dictionary
+        c = Counter(result1[0])
+        c.update(result2[0])                # Sum up dict values whenever the keys match
+        incr_dict = dict(c)
+        assert incr_dict == result[0]
+
+         # Check the reaction rates
+        assert result[1] == (result1[1], result2[1])
+
+        # Update the system concentrations (advancing the simulation)
+        for k, v in incr_dict.items():
+            conc[k] += v
+
+        #print("conc:", conc)
+
+
 
 
 

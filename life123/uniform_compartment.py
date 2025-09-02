@@ -127,7 +127,9 @@ class UniformCompartment:
                                                                         # 'SYSTEM TIME', 'A', 'B', ..., 'comments'
 
         self.system_rxn_rates = {}      # Keys are the reaction indexes.  Reaction rates for the last (current) step of all reactions
-                                        # EXAMPLE: {0: 0.42, 1: 4.26}
+                                        # Note that reactions natively supported that contain multiple elementary reactions (such as
+                                        #       enzymatic reactions) will have tuples of all the individual rates
+                                        # EXAMPLE: {0: 0.42, 1: (4.26, 6.2), 2: -3.7}
 
         self.rate_history = HistoryReactionRate(active=True)        # Object used to store user-requested snapshots
                                                                     # of (some of) the chemical reaction rates:
@@ -1219,8 +1221,6 @@ class UniformCompartment:
             rxn_list = self.reactions.active_reaction_indices()
 
 
-        name_mapping = self.chem_data.get_label_mapping()
-
         # For each applicable reaction, find the needed adjustments ("deltas")
         #   to the concentrations of the reactants and products,
         #   based on the forward and reverse rates of the reaction
@@ -1235,7 +1235,7 @@ class UniformCompartment:
                                                                       conc_dict=conc_dict)
             # EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
 
-            rates_dict[rxn_index] = rxn_rate       # Save the value [TODO: currently 0 for enzyme reactions]
+            rates_dict[rxn_index] = rxn_rate       # Save the value (may be single float, or a pair of them)
 
             for (chem_label, delta_conc) in increment_dict_single_rxn.items():
                 chem_index = self.chem_data.get_index(chem_label)
@@ -1251,35 +1251,11 @@ class UniformCompartment:
                 increment_vector[chem_index] += delta_conc  # Accumulate  all the increments from this reaction
 
 
-            '''
-            # START OF OLD APPROACH
-            increment_dict_single_rxn, rxn_rate = \
-                self._inner_reaction_loop(rxn=rxn, delta_time=delta_time,
-                                          conc_dict=conc_dict)
-            # EXAMPLE of increment_dict_single_rxn: {0: 3.2, 6: -3.2}
-
-            # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
-            # for any of the proposed concentration changes for this reaction.
-            # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
-            #       Further testing done upstream
-            for (species_index, delta_conc) in increment_dict_single_rxn.items():
-                self.validate_increment(delta_conc=delta_conc, baseline_conc=self.system[species_index],
-                                        rxn_index=rxn_index, species_index=species_index, delta_time=delta_time)
-
-
-            rates_dict[rxn_index] = rxn_rate                    # Save the value
-
-            # Accumulate the increment vector from the chemicals in this reaction
-            for (chem_index, delta_conc) in increment_dict_single_rxn.items():
-                increment_vector[chem_index] += delta_conc  # Accumulate  all the increments from this reaction
-            '''
-
             if self.diagnostics_enabled:
                 self.diagnostics.save_rxn_data(rxn_index=rxn_index,
                                                system_time=self.system_time, time_step=delta_time,
                                                increment_dict_single_rxn=increment_dict_single_rxn,
-                                               rate=rxn_rate)   # TODO: drop the rate?
-                                               # increment_vector_single_rxn=increment_vector_single_rxn,
+                                               rate=rxn_rate)
         # END for (over rxn_list)
 
         self.system_rxn_rates = rates_dict
@@ -1850,12 +1826,15 @@ class UniformCompartment:
     def capture_rate_snapshot(self, step_count=None, caption=None,
                              force=False, system_time=None) -> None:
         """
+        Take the reaction rates for the last (current) step of all reactions,
+        stored as a dict in the object property `self.system_rxn_rates`,
+        and save them in the ongoing table storing the "rate history"
 
-        :param step_count:
-        :param caption:
-        :param force:           [OPTIONAL] If True, take a snapshot regardless of step_count; default is False
-        :param system_time:
-        :return:                None
+        :param step_count:  [OPTIONAL] Step count in the simulation; used to possibly pare down the frequency of snapshot saving
+        :param caption:     [OPTIONAL] String to save as a caption field, alongside the rate fields
+        :param force:       [OPTIONAL] If True, take a snapshot regardless of step_count; default is False
+        :param system_time: [OPTIONAL] If not specified, use the current SYSTEM TIME
+        :return:            None
         """
         if not force and not self.rate_history.to_capture(step_count):
             return
@@ -1865,7 +1844,12 @@ class UniformCompartment:
 
         data_snapshot = {}     # rxn_rates_snapshot
         for k, v in self.system_rxn_rates.items():
-            data_snapshot[f"rxn{k}_rate"] = v      # EXAMPLE:  "rxn4_rate" = 18.2
+            if type(v) == tuple:
+                # Only pairs are currently used (for sub-reactions of enzymatic reactions)
+                data_snapshot[f"rxn{k}_rate_1"] = v[0]      # EXAMPLE:  "rxn4_rate_1" = 18.2
+                data_snapshot[f"rxn{k}_rate_2"] = v[1]      # EXAMPLE:  "rxn4_rate_2" = 5.52
+            else:
+                data_snapshot[f"rxn{k}_rate"] = v      # EXAMPLE:  "rxn4_rate" = 18.2
         '''
            EXAMPLE of data_snapshot:
                 {"rxn1_rate": 6.3, "rxn2_rate": 14.3}        

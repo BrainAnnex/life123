@@ -113,7 +113,7 @@ class ReactionOneStep(ReactionCommon):
     def reaction_details(self) -> str:
         """
         Return a string with some details about the parameters of this reaction
-        
+
         :return:    EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13 / Temp = 25 C)"
         """
         details = []
@@ -1149,7 +1149,6 @@ class ReactionEnzyme(ReactionCommon):
 
 
 
-
     def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
         """
         Simulate the enzymatic reaction E + S <-> ES -> E + P, over the specified time interval,
@@ -1164,7 +1163,7 @@ class ReactionEnzyme(ReactionCommon):
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
                                 - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
                                                             during this step
-                                - rxn_rate                  0 (UNUSED for now)
+                                - rxn_rate pair             one value for each elementary reaction
                                 EXAMPLE of increment_dict_single_rxn: {"E": 0, "S": -2.9, "ES": 0.1, "P": 2.8}
         """
 
@@ -1191,43 +1190,28 @@ class ReactionEnzyme(ReactionCommon):
 
         delta_rxn = rxn_rate_1 * delta_time         # forward reaction - reverse reaction
 
-        # The reactants DECREASE based on the quantity delta_rxn
-        for r in [self.enzyme, self.substrate]:
-            # stoichiometry = 1
-            delta_conc = - delta_rxn    # Increment to this reactant from the reaction step
-            increment_dict_single_rxn[r] = delta_conc
+        # The reactants (enzyme and substrate) DECREASE based on the quantity delta_rxn  (stoichiometry = 1)
+        increment_dict_single_rxn[self.enzyme] = - delta_rxn
+        increment_dict_single_rxn[self.substrate] = - delta_rxn
 
-
-        # The reaction product INCREASES based on the quantity delta_rxn
-        p = self.intermediate      # EXAMPLE: "ES"
-        # stoichiometry = 1
-        delta_conc = delta_rxn      # Increment to this reaction product from the reaction step
-        increment_dict_single_rxn[p] = delta_conc
-
+        # The reaction product (the intermediate species) INCREASES based on the quantity delta_rxn (stoichiometry = 1)
+        increment_dict_single_rxn[self.intermediate] = delta_rxn
 
 
         # PART 2 - Determine the concentration adjustments as a result of the 2nd reaction:  ES -> E + P
 
-        delta_rxn = rxn_rate_2 * delta_time         # forward reaction only
+        delta_rxn = rxn_rate_2 * delta_time         # forward reaction only (since irreversible)
 
-        # The reactant DECREASES based on the quantity delta_rxn
-        r = self.intermediate            # EXAMPLE: "ES"
-        # stoichiometry = 1
-        delta_conc = - delta_rxn    # Increment to this reactant from the reaction step
-        increment_dict_single_rxn[r] = delta_conc
+        # The reactant (the intermediate species) DECREASES based on the quantity delta_rxn (stoichiometry = 1)
+        increment_dict_single_rxn[self.intermediate] -= delta_rxn  # Notice the "-=", because the intermediate also occurred in previous reaction
 
-
-        # The reaction products INCREASE based on the quantity delta_rxn
-        for p in [self.enzyme, self.product]:
-            # stoichiometry = 1
-            delta_conc = delta_rxn      # Increment to this reaction product from the reaction step
-            increment_dict_single_rxn[p] = delta_conc
+        # The reaction products (enzyme and product) INCREASE based on the quantity delta_rxn (stoichiometry = 1)
+        increment_dict_single_rxn[self.enzyme] += delta_rxn        # Notice the "+=", because the enzyme also occurred in previous reaction
+        increment_dict_single_rxn[self.product] = delta_rxn
 
 
-        assert np.allclose(increment_dict_single_rxn[self.enzyme], 0), \
-            "step_simulation() internal error: The enzyme is changing!"
-
-        return (increment_dict_single_rxn, 0)    # TODO: unclear how to best return multiple rates
+        return (increment_dict_single_rxn,
+                (rxn_rate_1, rxn_rate_2))
 
 
 

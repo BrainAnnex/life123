@@ -58,21 +58,21 @@ class Diagnostics:
                       increment_dict_single_rxn=None,
                       aborted=False,
                       rate=None,
-                      caption="") -> None: # increment_vector_single_rxn: Union[np.array, None],
+                      caption="") -> None:
         """
         Save up diagnostic data for 1 reaction, for a simulation step
-        (by convention, regardless of whether the step is completed or aborted)
+        (by our convention, regardless of whether the step is completed or aborted)
 
         :param rxn_index:                   The integer index (0-based) to identify the reaction of interest
         :param system_time:                 The START time of the reaction step
-        :param time_step:                   The duration of the current simulation step
-        :param increment_dict_single_rxn:   A dict mapping chemical labels to their concentrations,
+        :param time_step:                   The duration of the simulation step
+        :param increment_dict_single_rxn:   A dict mapping chemical labels to their concentration CHANGES during the simulation step,
                                                 for all the chemicals involved in the given reaction
-                                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+                                                EXAMPLE:  {"B": 1.5, "F": -31.6, "D": 19.9}
         :param aborted:                     True is the current reaction step was aborted (i.e. will get repeated);
                                                 False (default) for normal situations
         :param rate:                        [OPTIONAL] The value of the reaction rate (aka reaction velocity) at this step
-        :param caption:                     [OPTIONAL] string to describe the snapshot
+        :param caption:                     [OPTIONAL] String to describe the snapshot
         :return:                            None
         """
         # Validate the reaction index
@@ -109,7 +109,12 @@ class Diagnostics:
                 data_snapshot["Delta " + chem_label] = increment_dict_single_rxn[chem_label]
 
         if rate is not None:
-            data_snapshot["rate"] = rate
+            if type(rate) == tuple:
+                # Only pairs are currently used (for sub-reactions of enzymatic reactions)
+                data_snapshot["rate_1"] = rate[0]
+                data_snapshot["rate_2"] = rate[1]
+            else:
+                data_snapshot["rate"] = rate
 
         self.diagnostic_rxn_data[rxn_index].store(par=system_time,
                                                   data_snapshot=data_snapshot, caption=caption)
