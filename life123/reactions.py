@@ -822,7 +822,7 @@ class ReactionDecomposition(ReactionOneStep):
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
         return ReactionKinetics.compute_reaction_quotient(reactant_data=[(self.reactant, 1)],
-                                                          product_data=[(self.product_1, 1) , (self.product_1, 1)],
+                                                          product_data=[(self.product_1, 1) , (self.product_2, 1)],
                                                           conc=conc, explain=explain)
 
 
@@ -925,12 +925,17 @@ class ReactionEnzyme(ReactionCommon):
         """
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
-        assert (substrate != product), \
-            "ReactionEnzyme instantiation: the `substrate` cannot be the same as the `product`"
+        if substrate:
+            assert (substrate != product), \
+                "ReactionEnzyme instantiation: the `substrate` cannot be the same as the `product`"
 
         self.enzyme = enzyme
         self.substrate = substrate
-        self.intermediate = enzyme + substrate      # Allow for alternate user-specified names
+
+        self.intermediate = None
+        if enzyme and substrate:
+            self.intermediate = enzyme + substrate      # TODO: Allow for alternate user-specified names
+
         self.product = product
 
         self.k1_F = k1_F
@@ -971,9 +976,12 @@ class ReactionEnzyme(ReactionCommon):
 
         if not concise:
             description += "  (Enzymatic reaction)"
+            description += f"  (k1_F = {self.k1_F:,.5g} / k1_R = {self.k1_R:,.5g} / k2_F = {self.k2_F:,.5g}"
+            if self.temp:
+                 description += f" / Temp = {self.temp - 273.15:,.4g} C"
 
-            description += f"  (k1_F = {self.k1_F} / k1_R = {self.k1_R} / k2_F = {self.k2_F})"
-            # TODO: add thermodynamic data, if available
+            description += ")"
+            # TODO: add more thermodynamic data, if available
 
         return description
 

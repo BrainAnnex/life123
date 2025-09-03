@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -25,31 +25,32 @@
 # ### TAGS :  "uniform compartment", "chemistry", "enzymes"
 
 # %%
-LAST_REVISED = "Dec. 15, 2024"
-LIFE123_VERSION = "1.0-rc.1"        # Library version this experiment is based on
+LAST_REVISED = "Sep. 2, 2025"
+LIFE123_VERSION = "1.0.0rc5"         # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
-# %% tags=[]
+# %%
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from experiments.get_notebook_info import get_notebook_basename
+import ipynbname
 
 from life123 import check_version, ChemData, ReactionRegistry, UniformCompartment, CollectionTabular, GraphicLog
 
 import pandas as pd
 
 # %%
-check_version(LIFE123_VERSION)
+check_version(LIFE123_VERSION)    # To check compatibility
 
 # %%
 
-# %% tags=[]
-# Initialize the HTML logging
-log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
+# %%
+# Initialize the HTML logging (for the graphics)
+log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
+                                            # IN CASE OF PROBLEMS, set manually to any desired name
 
 # Set up the use of some specified graphic (Vue) components
 GraphicLog.config(filename=log_file,
@@ -69,18 +70,18 @@ rxns = ReactionRegistry(chem_data=chem_data)
 # Reaction S <-> P , with 1st-order kinetics, favorable thermodynamics in the forward direction, 
 # and a forward rate that is much slower than it would be with the enzyme - as seen in the next reaction, below
 rxns.add_reaction(reactants="S", products="P",
-                  forward_rate=1., delta_G=-3989.73)
+                  kF=1., delta_G=-3989.73, temp=298.15)
 
      
 # Reaction E + S <-> ES , with 1st-order kinetics, and a forward rate that is much faster than it was without the enzyme
 # Thermodynamically, the forward direction is at a disadvantage (higher energy state) because of the activation barrier in forming the transient state ES
 rxns.add_reaction(reactants=["E", "S"], products="ES",
-                  forward_rate=100., delta_G=2000)                           
+                  kF=100., delta_G=2000, temp=298.15)                           
                                                       
 # Reaction ES <-> E + P , with 1st-order kinetics, and a forward rate that is much faster than it was without the enzyme
 # Thermodynamically, the total energy change of this reaction and the previous one adds up to the same value as the reaction without the enzyme (-3989.73)
 rxns.add_reaction(reactants="ES", products=["E", "P"],
-                  forward_rate=200., delta_G=-5989.73)
+                  kF=200., delta_G=-5989.73, temp=298.15)
 
 rxns.describe_reactions()
 
@@ -95,14 +96,14 @@ rxns.plot_reaction_network("vue_cytoscape_2")
 # %%
 
 # %% [markdown]
-# # 1. Set the initial concentrations of all the chemicals - starting with no enzyme
+# # PART 1. Set the initial concentrations of all the chemicals - starting with no enzyme
 
 # %%
 uc = UniformCompartment(reactions=rxns, preset="mid")
 uc.set_conc(conc={"S": 20.})      # Initially, no enzyme `E`
 uc.describe_state()
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ### Advance the reactions (for now without enzyme) to equilibrium
 
 # %%
@@ -145,7 +146,7 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 # %%
 
 # %% [markdown]
-# # 2. Re-start all the reactions from the same initial concentrations - except for now having a tiny amount of enzyme (two orders of magnitude less than the starting [S])
+# # PART 2. Re-start all the reactions from the same initial concentrations - except for now having a tiny amount of enzyme (two orders of magnitude less than the starting [S])
 
 # %%
 E_init = 0.2     # A tiny bit of enzyme `E`: 1/100 of the initial [S]
@@ -163,7 +164,7 @@ uc.single_compartment_react(duration=1.3,
 
 # %%
 # Verify that the reactions have reached equilibrium
-uc.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(explain=False)
 
 # %%
 # Locate the intersection of the curves for [S] and [P]:
@@ -220,8 +221,8 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
 # %%
 
-# %% [markdown] tags=[]
-# # 3. Keep increasing the initial [E]
+# %% [markdown]
+# # PART 3. Keep increasing the initial [E]
 
 # %%
 E_init = 1.0
@@ -239,7 +240,7 @@ uc.single_compartment_react(duration=0.4,
 
 # %%
 # Verify that the reactions have reached equilibrium
-uc.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(explain=False)
 
 # %%
 uc.plot_history(show_intervals=True, 
@@ -286,8 +287,8 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
 # %%
 
-# %% [markdown] tags=[]
-# # 4. Keep increasing the initial [E]
+# %% [markdown]
+# # PART 4. Keep increasing the initial [E]
 
 # %%
 E_init = 2.0      # 1/10 of the initial [S]
@@ -305,7 +306,7 @@ uc.single_compartment_react(duration=0.2,
 
 # %%
 # Verify that the reactions have reached equilibrium
-uc.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(explain=False)
 
 # %%
 uc.plot_history(show_intervals=True, 
@@ -352,8 +353,8 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
 # %%
 
-# %% [markdown] tags=[]
-# # 5. Keep increasing the initial [E]
+# %% [markdown]
+# # PART 5. Keep increasing the initial [E]
 
 # %%
 E_init = 10.0      # 1/2 of the initial [S]
@@ -371,7 +372,7 @@ uc.single_compartment_react(duration=0.05,
 
 # %%
 # Verify that the reactions have reached equilibrium
-uc.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(explain=False)
 
 # %%
 uc.plot_history(show_intervals=True, 
@@ -421,8 +422,8 @@ uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
 # %%
 
-# %% [markdown] tags=[]
-# # 6. Keep increasing the initial [E]
+# %% [markdown]
+# # PART 6. Keep increasing the initial [E]
 
 # %%
 E_init = 20.0      # Same as the initial [S]
@@ -440,7 +441,7 @@ uc.single_compartment_react(duration=0.02,
 
 # %%
 # Verify that the reactions have reached equilibrium
-uc.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(explain=False)
 
 # %%
 uc.plot_history(show_intervals=True, 
@@ -482,15 +483,15 @@ P_70_threshold
 # %%
 uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # #### The time at which we reach the 70% threshold of the equilibrium value of P continues to decrease with increasing initial [E]
 
 # %%
 
 # %%
 
-# %% [markdown] tags=[]
-# # 7. Keep increasing the initial [E]
+# %% [markdown]
+# # PART 7. Keep increasing the initial [E]
 
 # %%
 E_init = 30.0      # 50% higher than the initial [S]
@@ -508,7 +509,7 @@ uc.single_compartment_react(duration=0.01,
 
 # %%
 # Verify that the reactions have reached equilibrium
-uc.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(explain=False)
 
 # %%
 uc.plot_history(show_intervals=True, 
@@ -550,15 +551,15 @@ P_70_threshold
 # %%
 uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # #### The time at which we reach the 70% threshold of the equilibrium value of P continues to decrease with increasing initial [E]
 
 # %%
 
 # %%
 
-# %% [markdown] tags=[]
-# # 8. Keep increasing the initial [E]
+# %% [markdown]
+# # PART 8. Keep increasing the initial [E]
 
 # %%
 E_init = 60.0      # Triple the initial [S]
@@ -576,7 +577,7 @@ uc.single_compartment_react(duration=0.005,
 
 # %%
 # Verify that the reactions have reached equilibrium
-uc.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(explain=False)
 
 # %%
 uc.plot_history(show_intervals=True, 
@@ -609,15 +610,15 @@ P_70_threshold
 # %%
 uc.reach_threshold(chem="P", threshold=P_70_threshold)
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # #### The time at which we reach the 70% threshold of the equilibrium value of P continues to decrease with increasing initial [E]
 
 # %%
 
 # %%
 
-# %% [markdown] tags=[]
-# # 9. Keep increasing the initial [E]
+# %% [markdown]
+# # PART 9. Keep increasing the initial [E]
 
 # %%
 E_init = 100.0      # Quintuple the initial [S]
@@ -635,7 +636,7 @@ uc.single_compartment_react(duration=0.003,
 
 # %%
 # Verify that the reactions have reached equilibrium
-uc.is_in_equilibrium(verbose=False)
+uc.is_in_equilibrium(explain=False)
 
 # %%
 uc.plot_history(show_intervals=True, 

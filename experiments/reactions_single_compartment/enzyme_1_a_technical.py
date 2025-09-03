@@ -52,7 +52,7 @@ LIFE123_VERSION = "1.0.0rc5"         # Library version this experiment is based 
 import ipynbname
 import pandas as pd
 
-from life123 import check_version, ChemData, UniformCompartment, ReactionEnzyme, GraphicLog, PlotlyHelper
+from life123 import check_version, ChemData, UniformCompartment, GraphicLog, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)    # To check compatibility
