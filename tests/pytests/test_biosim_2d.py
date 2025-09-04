@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from life123 import BioSim2D, Reactions, UniformCompartment, ChemData
+from life123 import BioSim2D, ReactionRegistry, UniformCompartment, ChemData
 
 
 
@@ -44,7 +44,7 @@ def test_constructor():
     assert bio.chem_data == chem_data
     expected = np.zeros((4, 3, 5), dtype=float)
     assert np.allclose(bio.system, expected)
-    assert type(bio.reactions) == Reactions
+    assert type(bio.reactions) == ReactionRegistry
     assert type(bio.reaction_dynamics) == UniformCompartment
 
 
@@ -63,7 +63,7 @@ def test_constructor():
     assert bio.n_species == 3
     expected = np.zeros((3, 4, 2), dtype=float)
     assert np.allclose(bio.system, expected)
-    assert type(bio.reactions) == Reactions
+    assert type(bio.reactions) == ReactionRegistry
     assert type(bio.reaction_dynamics) == UniformCompartment
     assert type(bio.chem_data) == ChemData
 
@@ -83,7 +83,7 @@ def test_set_bin_conc():
     bio = BioSim2D(x_bins=3, y_bins=4, chem_data=chem_data)
 
     bio.set_bin_conc(bin_address=(0,2), chem_label="A", conc=0.2)
-    bio.describe_state()
+    #bio.describe_state()
 
     expected_0 = np.array([
                             [0.,  0.,  0.2, 0.],
@@ -98,7 +98,7 @@ def test_set_bin_conc():
 
 
     bio.set_bin_conc(bin_address=(2,3), chem_label="B", conc=1.23)
-    bio.describe_state()
+    #bio.describe_state()
 
     expected_1 = np.array([
         [0.,  0.,  0. , 0.],
@@ -115,7 +115,7 @@ def test_set_bin_conc_all_species():
     bio = BioSim2D(x_bins=3, y_bins=4, chem_data=chem_data)
 
     bio.set_bin_conc_all_species(bin_address=(0,2), conc_list=[0.02, 1.02])
-    bio.describe_state()
+    #bio.describe_state()
 
     expected_0 = np.array([
         [0.,  0.,  0.02, 0.],
@@ -187,22 +187,22 @@ def test_react():
     bio = BioSim2D(x_bins=3, y_bins=4, chem_data=chem_data)
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
-    bio.reactions.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    bio.reactions.add_reaction(reactants=["A"], products=["B"], kF=3., kR=2.)
 
     bio.set_bin_conc_all_species(bin_address=(0,0), conc_list=[10.,50.])
     bio.set_bin_conc_all_species(bin_address=(0,1), conc_list=[20.,35.])
     bio.set_bin_conc_all_species(bin_address=(2,3), conc_list=[5.,100.])
-    bio.describe_state()
+    #bio.describe_state()
 
     bio.react(time_step=0.1, n_steps=1)
-    bio.describe_state()
+    #bio.describe_state()
 
     assert np.allclose(bio.system[0], [[ 17., 21., 0., 0.] , [ 0., 0., 0., 0.] , [ 0., 0., 0., 23.5]])
     assert np.allclose(bio.system[1], [[43., 34., 0., 0.] , [ 0., 0., 0., 0.] , [ 0., 0., 0., 81.5]])
 
     # Continue to equilibrium
     bio.react(time_step=0.1, n_steps=20)
-    bio.describe_state()
+    #bio.describe_state()
 
     assert np.allclose(bio.system[1, 0, 0] / bio.system[0, 0, 0], 1.5)  # From the ration forward/back reaction rates
     assert np.allclose(bio.system[1, 0, 1] / bio.system[0, 0, 1], 1.5)
@@ -216,7 +216,7 @@ def test_reaction_step():
     bio = BioSim2D(x_bins=3, y_bins=4, chem_data=chem_data)
 
     # Reaction A <-> B , with 1st-order kinetics in both directions
-    bio.reactions.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    bio.reactions.add_reaction(reactants=["A"], products=["B"], kF=3., kR=2.)
 
     bio.set_bin_conc_all_species(bin_address=(0,0), conc_list=[10.,50.])
     bio.set_bin_conc_all_species(bin_address=(0,1), conc_list=[20.,35.])

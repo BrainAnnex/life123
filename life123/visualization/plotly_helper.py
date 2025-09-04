@@ -28,6 +28,7 @@ class PlotlyHelper:
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
+
     @classmethod
     def plot_curves(cls, x, y, title="", range_x=None, x_label="", y_label="", curve_labels=None, legend_title=None,
                     colors=None, show=False) -> pgo.Figure:
@@ -251,7 +252,7 @@ class PlotlyHelper:
             if range_x:
                 step = 1    # Always show all vertical lines if a range on the x-axis was specified
             else:
-                # Possibly limit the number of vertical lines shown
+                # Possibly, limit the number of vertical lines shown
                 step = 1 + len(vertical_lines_to_add) // MAX_NUMBER_VERTICAL_LINES
                 if step > 1:
                     print(f"plot_pandas() NOTICE: Excessive number of vertical lines ({len(vertical_lines_to_add)}) - only showing 1 every {step} lines")
@@ -269,7 +270,7 @@ class PlotlyHelper:
                            'yref': 'y domain'
                            }
                 vline_list.append(vline)
-                # Strangely, a direct call to fig.add_vline(), as done below, dramatically slows things down in case
+                # Strangely, a direct call to fig.add_vline(), as done in the comment below, dramatically slows things down in case
                 # of a large number of vertical lines; so, we'll be directly modifying the data structure of the "fig" dictionary
                 #fig.add_vline(x=xi, line_width=1, line_dash="dot", line_color="gray")
             # END for
@@ -284,22 +285,30 @@ class PlotlyHelper:
 
 
     @classmethod
-    def combine_plots(cls, fig_list :Union[list, tuple], layout_index=None,
-                      title="", x_label=None, y_label=None,
+    def combine_plots(cls, fig_list :Union[list, tuple], title=None, modify=None,
+                      layout_index=None,
+                      x_label=None, y_label=None,
                       xrange=None, legend_title=None, curve_labels=None, show=False) -> pgo.Figure:
         """
-        Combine together several existing Plotly plots into a single one (with combined axes)
+        Combine together several existing Plotly plots into a single one (with COMBINED axes)
 
         EXAMPLE:
                     from life123 import PlotlyHelper
                     plot_1 = PlotlyHelper.plot_pandas(various args, show=False)
                     plot_2 = PlotlyHelper.plot_pandas(various args, show=False)
-                    PlotlyHelper.combine_plots([plot_1, plot_2], other optional args)
+                    PlotlyHelper.combine_plots( [plot_1, plot_2] , other optional args)
 
-        :param fig_list:    List or tuple of plotly "Figure" objects (as returned by several functions)
+        :param fig_list:    List or tuple of plotly "Figure" objects (as returned by graphic functions)
+        :param title:       [OPTIONAL] The title to use for the overall plot
+        :param modify:      [OPTIONAL] Dictionary of plot-style changes to permanently apply to some individual plots
+                                (indexed by their position in `fig_list`) before they get combined.
+                                Allowed values: "dash", "dot", "solid", "dashdot", "longdash", "longdashdot"
+                                EXAMPLE:  {0 : "dash", 4: "dot"}
+                                Note: the modification will alter the original plot
+
         :param layout_index:[OPTIONAL] If given, the layout of the "Figure" object with the given index
                                 (in `fig_list`) is used as is - and all the layout parameters below are ignored
-        :param title:       [OPTIONAL] The title to use for the overall plot
+
         :param x_label:     [OPTIONAL] Caption to use for the x-axis; if not specified, use that of the 1st plot
         :param y_label:     [OPTIONAL] Caption to use for the y-axis; if not specified, use that of the 1st plot
         :param xrange:      [OPTIONAL] list of the form [t_start, t_end], to initially only show a part of the timeline.
@@ -325,21 +334,26 @@ class PlotlyHelper:
 
         # Put together the data from all the various individual plots
         combined_data = []
-        for fig in fig_list:
+        for i, fig in enumerate(fig_list):
             combined_data += fig.data      # concatenating lists
+            if modify and i in modify:
+                dash_type = modify[i]    # EXAMPLE: "dash"
+                fig.update_traces(line=dict(dash=dash_type))
 
 
         if layout_index is not None:
+            # The layout of the "Figure" object with the given index (in `fig_list`) is used as is
             assert 0 <= layout_index < len(fig_list), \
                 f"combine_plots(): argument {layout_index} must be an integer between 0 and {len(fig_list)-1}, inclusive"
 
             figure_providing_layout = fig_list[layout_index]
             all_fig = pgo.Figure(data=combined_data, layout = figure_providing_layout.layout)
-        else:
-            all_fig = pgo.Figure(data=combined_data)    # Note that the + is concatenating lists
 
-            all_fig.update_layout(title=title,
-                                  xaxis_title=x_label,
+        else:
+            # Create an all-new layout for the combined "Figure" object
+            all_fig = pgo.Figure(data=combined_data)
+
+            all_fig.update_layout(xaxis_title=x_label,
                                   yaxis_title=y_label)
 
             if legend_title:
@@ -359,6 +373,9 @@ class PlotlyHelper:
                     all_fig.data[i]['hovertemplate'] = f"{fig.layout.title.text}<br>" + all_fig.data[i]['hovertemplate']
 
 
+        if title is not None:
+            all_fig.update_layout(title=title)
+
         if show:
             all_fig.show()  # Actually display the plot
 
@@ -375,6 +392,7 @@ class PlotlyHelper:
     def ________SUBPLOTS________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
+
 
     @classmethod
     def combine_in_vertical_grid(cls, fig1, fig2, title1 :str, title2 :str,
@@ -452,6 +470,7 @@ class PlotlyHelper:
 
 
 
+
     #####################################################################################################
 
     '''                                    ~   HEATMAPS   ~                                           '''
@@ -459,6 +478,7 @@ class PlotlyHelper:
     def ________HEATMAPS________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
+
 
     @classmethod
     def heatmap_stack_1D(cls, data_matrix, labels :[str],
@@ -916,3 +936,37 @@ class PlotlyHelper:
         )
 
         return fig
+
+
+
+
+
+    #####################################################################################################
+
+    '''                                    ~   GENERAL UTILITIES   ~                                           '''
+
+    def ________GENERA_UTILITIES________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
+    @classmethod
+    def assemble_title(cls, title :str, title_prefix=None) -> str:
+        """
+
+        :param title:       The main part of the title, to appear on the last line
+        :param title_prefix:[OPTIONAL] Prefix to the auto-generated title;
+                                either a string,
+                                or a list/tuple (2 entries) max to insert on separate lines
+        :return:            A string with the final title to use in a plot
+        """
+        if title_prefix is not None:
+            if type(title_prefix) == list or type(title_prefix) == tuple:
+                assert len(title_prefix) <= 2, \
+                    "max number of entries in argument `title_prefix` is 2"
+                title_prefix = "<br>".join(title_prefix)    # Put together the strings on separate lines
+
+            title = title_prefix + "<br>" + title
+
+        return title
+

@@ -28,8 +28,8 @@
 # ### TAGS :  "reactions 1D", "diffusion 1D", "quick-start"
 
 # %%
-LAST_REVISED = "May 19, 2025"
-LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
+LAST_REVISED = "Aug. 10, 2025"
+LIFE123_VERSION = "1.0.0rc5"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!

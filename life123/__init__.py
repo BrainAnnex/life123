@@ -10,11 +10,11 @@
     :license:       MIT.  See LICENSE file for more details.
 """
 
-__version__ = "1.0.0rc4"
+__version__ = "1.0.0rc5"
 
 
-from life123.bio_sim_1d import BioSim1D
-from life123.bio_sim_2d import BioSim2D
+from life123.bio_sim_1d import (System1D, Membranes1D, Diffusion1D, BioSim1D)
+from life123.bio_sim_2d import (BioSim2D, Membranes2D)
 from life123.bio_sim_3d import BioSim3D
 from life123.chem_data import ChemData
 from life123.html_log import HtmlLog
@@ -29,7 +29,7 @@ from life123.history import (
     HistoryReactionRate
 )
 from life123.numerical import Numerical
-from life123.reactions import ReactionGeneric, ReactionEnz, Reactions
+from life123.reactions import ReactionGeneric, ReactionEnzyme, ReactionRegistry
 from life123.thermodynamics import ThermoDynamics
 from life123.uniform_compartment import UniformCompartment
 from life123.reaction_kinetics import (ReactionKinetics, VariableTimeSteps)
@@ -50,14 +50,18 @@ __all__ = [
     'CollectionArray',
     'Collection',
     'Colors',
+    'Diffusion1D',
     'HistoryBinConcentration',
     'HistoryUniformConcentration',
     'HistoryReactionRate',
+    'Membranes1D',
+    'Membranes2D',
     'Numerical',
     'ReactionGeneric',
-    'Reactions',
-    'ReactionEnz',
+    'ReactionRegistry',
+    'ReactionEnzyme',
     'ReactionKinetics',
+    'System1D',
     'ThermoDynamics',
     'VariableTimeSteps',
     'UniformCompartment',

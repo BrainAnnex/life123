@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -37,21 +37,21 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Jan. 12, 2025"
-LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based on
+LAST_REVISED = "Sep. 2, 2025"
+LIFE123_VERSION = "1.0.0rc5"         # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
-# %% tags=[]
+# %%
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import check_version, ChemData, Reactions, UniformCompartment, ReactionEnz, PlotlyHelper
+from life123 import check_version, ChemData, ReactionRegistry, UniformCompartment, ReactionEnzyme, PlotlyHelper
 
 # %%
-check_version(LIFE123_VERSION)
+check_version(LIFE123_VERSION)    # To check compatibility
 
 # %%
 
@@ -81,7 +81,7 @@ E0 = 1.
 # %%
 
 # %% [markdown]
-# # 1. Using the known, exact values for `k1_forward` and `k1_reverse`  
+# # PART 1. Using the known, exact values for `k1_forward` and `k1_reverse`  
 #
 # Source: *page 16 of "Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023*
 
@@ -105,16 +105,12 @@ chem_data.all_chemicals()
 # ### Specify the Kinetic Parameters
 
 # %%
-rxns = Reactions(chem_data=chem_data)
+rxns = ReactionRegistry(chem_data=chem_data)
 
-# %% tags=[]
-# Elementary Reaction E + S <-> ES
-rxns.add_reaction(reactants=["E", "S"], products=["ES"],
-                  forward_rate=k1_forward, reverse_rate=k1_reverse) 
-
-# Elementary Reaction ES <-> E + P 
-rxns.add_reaction(reactants=["ES"], products=["E", "P"],
-                  forward_rate=kcat, reverse_rate=0)
+# %%
+# Enzymatic reaction `E + S <-> ES -> E + P` 
+rxns.add_reaction(reactants="S", products="P", enzyme="E",
+                  k1_F=k1_forward, k1_R=k1_reverse, k2_F=kcat)
 
 rxns.describe_reactions()
 
@@ -150,7 +146,7 @@ rates_exact
 # Let's take a look at how the reaction rate varies with time
 PlotlyHelper.plot_pandas(df=rates_exact, colors="blue",
                          title="Reaction rate, dP/dt, over time",
-                         x_var="SYSTEM TIME", fields="rxn1_rate", 
+                         x_var="SYSTEM TIME", fields="rxn0_rate_2", 
                          x_label="time", y_label="dP/dt")
 
 # %%
@@ -158,10 +154,10 @@ PlotlyHelper.plot_pandas(df=rates_exact, colors="blue",
 # %%
 
 # %% [markdown]
-# # 2. Guessing a SMALLER value of `k1_forward` (UNDER-ESTIMATED)
+# # PART 2. Guessing a SMALLER value of `k1_forward` (UNDER-ESTIMATED)
 
 # %%
-enz = ReactionEnz()
+enz = uc.get_single_reaction(0)
 
 # %%
 enz.min_k1_forward(kM=kM, kcat=kcat)   # The smallest possible value
@@ -181,18 +177,14 @@ chem_data.all_chemicals()   # Nothing changed here; same chemicals as before
 # %%
 
 # %%
-rxns_underest = Reactions(chem_data=chem_data)   # New set of reactions
+rxns_underest = ReactionRegistry(chem_data=chem_data)   # New set of reactions
 
-# %% tags=[]
-# Reaction E + S <-> ES , with 1st-order kinetics, 
-# and a forward rate that is much faster than its revers one
-rxns_underest.add_reaction(reactants=["E", "S"], products=["ES"],
-                           forward_rate=k1_forward, reverse_rate=k1_reverse) 
-
-# Reaction ES <-> E + P , with 1st-order kinetics
-rxns_underest.add_reaction(reactants=["ES"], products=["E", "P"],
-                           forward_rate=kcat, reverse_rate=0)
-
+# %%
+# Enzymatic reaction `E + S <-> ES -> E + P` 
+# In first part of the reaction, a forward rate that is much faster than its revers one
+rxns_underest.add_reaction(reactants="S", products="P", enzyme="E",
+                           k1_F=k1_forward, k1_R=k1_reverse, k2_F=kcat)
+                  
 rxns_underest.describe_reactions()
 
 # %%
@@ -224,7 +216,7 @@ rates_underest
 # Let's take a look at how the reaction rate varies with time
 PlotlyHelper.plot_pandas(df=rates_underest, colors="blue",
                          title="Reaction rate, dP/dt, over time",
-                         x_var="SYSTEM TIME", fields="rxn1_rate", 
+                         x_var="SYSTEM TIME", fields="rxn0_rate_2", 
                          x_label="time", y_label="dP/dt")
 
 # %%
@@ -232,7 +224,7 @@ PlotlyHelper.plot_pandas(df=rates_underest, colors="blue",
 # %%
 
 # %% [markdown]
-# # 3. Guessing a LARGER value of `k1_forward` (OVER-ESTIMATED)
+# # PART 3. Guessing a LARGER value of `k1_forward` (OVER-ESTIMATED)
 
 # %%
 k1_forward = 40.    # Well above the known value of 18.
@@ -249,17 +241,13 @@ chem_data.all_chemicals()   # Nothing changed here; same chemicals as before
 # %%
 
 # %%
-rxns_overest = Reactions(chem_data=chem_data)   # New set of reactions
+rxns_overest = ReactionRegistry(chem_data=chem_data)   # New set of reactions
 
-# %% tags=[]
-# Reaction E + S <-> ES , with 1st-order kinetics, 
-# and a forward rate that is much faster than its revers one
-rxns_overest.add_reaction(reactants=["E", "S"], products=["ES"],
-                          forward_rate=k1_forward, reverse_rate=k1_reverse) 
-
-# Reaction ES <-> E + P , with 1st-order kinetics
-rxns_overest.add_reaction(reactants=["ES"], products=["E", "P"],
-                          forward_rate=kcat, reverse_rate=0)
+# %%
+# Enzymatic reaction `E + S <-> ES -> E + P` 
+# In first part of the reaction, a forward rate that is much faster than its reverse one
+rxns_overest.add_reaction(reactants="S", products="P", enzyme="E",
+                          k1_F=k1_forward, k1_R=k1_reverse, k2_F=kcat)
 
 rxns_overest.describe_reactions()
 
@@ -292,7 +280,7 @@ rates_overest
 # Let's take a look at how the reaction rate varies with time
 PlotlyHelper.plot_pandas(df=rates_overest, colors="blue",
                          title="Reaction rate, dP/dt, over time",
-                         x_var="SYSTEM TIME", fields="rxn1_rate", 
+                         x_var="SYSTEM TIME", fields="rxn0_rate_2", 
                          x_label="time", y_label="dP/dt")
 
 # %%
@@ -300,6 +288,10 @@ PlotlyHelper.plot_pandas(df=rates_overest, colors="blue",
 # %%
 history_overest = uc.get_history()
 history_overest
+
+# %%
+
+# %%
 
 # %% [markdown]
 # # Comparing the 3 scenarios
@@ -362,19 +354,19 @@ PlotlyHelper.combine_plots([p_under, p_exact, p_over],
 # %%
 r1_under = PlotlyHelper.plot_pandas(df=rates_underest, 
                          title="underestimated k1_forward",
-                         x_var="SYSTEM TIME", fields="rxn1_rate", 
+                         x_var="SYSTEM TIME", fields="rxn0_rate_2", 
                          x_label="time", y_label="dP/dt", colors = "yellow")
 
 # %%
 r1_exact = PlotlyHelper.plot_pandas(df=rates_exact, 
                          title="exact k1_forward",
-                         x_var="SYSTEM TIME", fields="rxn1_rate", 
+                         x_var="SYSTEM TIME", fields="rxn0_rate_2", 
                          x_label="time", y_label="dP/dt", colors = "blue")
 
 # %%
 r1_over = PlotlyHelper.plot_pandas(df=rates_overest, 
                          title="overestimated k1_forward",
-                         x_var="SYSTEM TIME", fields="rxn1_rate", 
+                         x_var="SYSTEM TIME", fields="rxn0_rate_2", 
                          x_label="time", y_label="dP/dt", colors = "purple")
 
 # %%

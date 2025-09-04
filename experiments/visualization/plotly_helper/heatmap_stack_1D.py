@@ -15,9 +15,12 @@
 # %% [markdown]
 # # Tests and showcase of `PlotlyHelper.heatmap_stack_1D()`
 
+# %% [markdown]
+# ### TAGS :  "visualization"
+
 # %%
-LAST_REVISED = "Apr. 30, 2025"
-LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
+LAST_REVISED = "June 1, 2025"
+LIFE123_VERSION = "1.0.0rc5"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!

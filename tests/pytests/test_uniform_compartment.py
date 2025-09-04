@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
-from life123 import ChemData, UniformCompartment, Reactions
+from life123 import ChemData, UniformCompartment
+from life123.reactions import ReactionRegistry, ReactionUnimolecular, ReactionSynthesis
 
 
 
@@ -11,13 +12,14 @@ def test_constructor():
     with pytest.raises(Exception):
         UniformCompartment(chem_data=chem_data, names=names)
 
-    rxns = Reactions(chem_data=chem_data)
+    rxns = ReactionRegistry(chem_data=chem_data)
 
     with pytest.raises(Exception):
         UniformCompartment(reactions=rxns, names=names)
 
+    alt_chem_data = ChemData()
     with pytest.raises(Exception):
-        UniformCompartment(reactions=rxns, chem_data=chem_data)
+        UniformCompartment(reactions=rxns, chem_data=alt_chem_data) # inconsistent
 
 
     uc = UniformCompartment(reactions=rxns)
@@ -33,6 +35,11 @@ def test_constructor():
     uc = UniformCompartment(names=names)
     assert uc.chem_data.get_all_labels() == names
     assert uc.reactions.number_of_reactions() == 0
+
+    uc = UniformCompartment(reactions=rxns, chem_data=chem_data)
+    assert uc.reactions == rxns
+    assert uc.chem_data == chem_data
+    assert uc.chem_data.get_all_labels() == names
 
 
 
@@ -108,6 +115,8 @@ def test_get_conc_dict():
 
     with pytest.raises(Exception):
         rxn.get_conc_dict(species="C")                      # Wrong data type
+
+    with pytest.raises(Exception):
         rxn.get_conc_dict(system_data=np.array([1, 2]))     # Wrong number of entries
 
     result = rxn.get_conc_dict(system_data=np.array([1, 2, 3, 4]))
@@ -144,19 +153,19 @@ def test_single_compartment_react():
 
     # Test based on experiment "cycles_1"
     chem_data = ChemData(names=["A", "B", "C", "E_high", "E_low"])
-    rxns = Reactions(chem_data=chem_data)
+    rxns = ReactionRegistry(chem_data=chem_data)
 
     # Reaction A <-> B, mostly in forward direction (favored energetically)
     rxns.add_reaction(reactants="A", products="B",
-                      forward_rate=9., reverse_rate=3.)
+                      kF=9., kR=3.)
 
     # Reaction B <-> C, also favored energetically
     rxns.add_reaction(reactants="B", products="C",
-                      forward_rate=8., reverse_rate=4.)
+                      kF=8., kR=4.)
 
     # Reaction C + E_High <-> A + E_Low, also favored energetically, but kinetically slow
     rxns.add_reaction(reactants=["C" , "E_high"], products=["A", "E_low"],
-                      forward_rate=1., reverse_rate=0.2)
+                      kF=1., kR=0.2)
 
     initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
 
@@ -164,49 +173,125 @@ def test_single_compartment_react():
 
     uc.set_conc(conc=initial_conc, snapshot=True)
 
-    uc.adaptive_steps.set_step_factors(error=0.5)       # Will be used by an overly-large first step
-                                                        # leading to a hard abort
 
-    uc.single_compartment_react(initial_step=0.0010, target_end_time=0.0035, variable_steps=False)
+    uc.single_compartment_react(initial_step=0.0005, target_end_time=0.0035, variable_steps=False)
 
     run1 = uc.get_system_conc()
 
-    assert np.allclose(run1, [9.69124339e+01, 3.06982519e+00, 1.77408783e-02, 9.99985757e+02, 1.42431633e-02])
     assert np.allclose(uc.system_time, 0.0035)
+    assert np.allclose(run1, [9.69252541e+01, 3.05696280e+00, 1.77831454e-02, 9.99980686e+02, 1.93144884e-02])
     assert uc.diagnostics.explain_time_advance(return_times=True, silent=True) == \
-               ([0.0, 0.002, 0.0025, 0.0035],
-                [0.001, 0.0005, 0.001])
+               ([0.0, 0.0035], [0.0005])
 
-    # The above computation automatically took 2 normal steps, 1 half-size step and 1 normal step;
-    # now repeat the process manually
+
+    # Now repeat the process, step-by-step
 
     uc2 = UniformCompartment(reactions=rxns, enable_diagnostics=True)
 
     uc2.set_conc(conc=initial_conc, snapshot=True)
 
-    uc2.single_compartment_react(initial_step=0.0010, n_steps=2, variable_steps=False)
-    uc2.single_compartment_react(initial_step=0.0005, n_steps=1, variable_steps=False)
-    uc2.single_compartment_react(initial_step=0.0010, n_steps=1, variable_steps=False)
+    for _ in range(7):
+        uc2.single_compartment_react(initial_step=0.0005, n_steps=1, variable_steps=False)
+
     run2 = uc.get_system_conc()
     assert np.allclose(run2, run1)      # Same result as before
     assert np.allclose(uc2.system_time, 0.0035)
-    assert uc2.diagnostics.explain_time_advance(return_times=True) == \
-           ([0.0, 0.002, 0.0025, 0.0035],
-            [0.001, 0.0005, 0.001])
-    # The time advance is now different, because multiple calls to single_compartment_react() break up the counting
-    # (just a convention)
+
+    print(uc2.diagnostics.explain_time_advance(return_times=True))
+    assert uc.diagnostics.explain_time_advance(return_times=True, silent=True) == \
+               ([0.0, 0.0035], [0.0005])
 
 
 
-def test_single_reaction_fixed_step():
-    chem_data = ChemData(names=["A", "B"])
-    uc = UniformCompartment(chem_data=chem_data)
+def test_reaction_step_common_fixed_step_1():
+    uc = UniformCompartment(names=["A", "B"])
 
     uc.set_conc(conc=[10., 50.], snapshot=False)
 
     # Reaction A <-> B , with 1st-order kinetics in both directions.
     # Based on experiment "reactions_single_compartment/react_1"
-    uc.add_reaction(reactants="A", products="B", forward_rate=3., reverse_rate=2.)
+    uc.add_reaction(reactants="A", products="B", kF=3., kR=2.)
+
+    result = uc.reaction_step_common_fixed_step(delta_time=0.1)
+    assert np.allclose(result, [ 7. , -7.])     # The increment vector
+
+    # Reset the system concentration to their original values, and repeat
+    uc.set_conc(conc=[10., 50.], snapshot=False)
+    result = uc.reaction_step_common_fixed_step(delta_time=0.1)
+    assert np.allclose(result, [ 7. , -7.])
+
+    uc.set_conc(conc=[10., 50.], snapshot=False)
+    result = uc.reaction_step_common_fixed_step(delta_time=0.2)
+    assert np.allclose(result, [ 14. , -14.])     # The increment vector has doubled
+
+    uc.set_conc(conc=[10., 50.], snapshot=False)
+    result = uc.reaction_step_common_fixed_step(delta_time=0.7142857)
+    assert np.allclose(result, [49.999999, -49.999999])     # The increment vector is a hair from making [B] negative
+
+    uc.set_conc(conc=[10., 50.], snapshot=False)
+    with pytest.raises(Exception):
+        uc.reaction_step_common_fixed_step(delta_time=0.71429)  # A step so large that it would make [B] negative
+
+
+
+def test_reaction_step_common_fixed_step_2():
+
+    uc = UniformCompartment(names=["A", "B", "C"])
+
+    uc.set_conc(conc=[10., 50., 20.], snapshot=False)
+
+    # Reaction A + B <-> C , with 1st-order kinetics for each species.
+    # Based on experiment "1D/reactions/reaction4"
+    uc.add_reaction(reactants=["A" , "B"], products="C",
+                    kF=5., kR=2.)
+
+    result = uc.reaction_step_common_fixed_step(delta_time=0.002)
+    assert np.allclose(result, [-4.92, -4.92, 4.92])
+
+    result = uc.reaction_step_common_fixed_step(delta_time=0.00406504)
+    assert np.allclose(result, [-9.9999984, -9.9999984,  9.9999984])   # A hair from making [A] negative
+
+    with pytest.raises(Exception):
+        uc.reaction_step_common_fixed_step(delta_time=0.0040651)    # A step so large that it would make [A] negative
+
+
+    # Now let's consider a different system, with a reaction A <-> B , with 1st-order kinetics in both directions
+    uc = UniformCompartment(names=["A", "B", "C"])
+    uc.add_reaction(reactants="A", products="B", kF=300., kR=2.)
+
+    uc.set_conc(conc=[10., 50., 20.], snapshot=False)
+
+    result = uc.reaction_step_common_fixed_step(delta_time=0.002)
+    # 10 * 300 * .002 - 50 * 2 * .002 = 5.8
+    assert np.allclose(result, [-5.8,  5.8,  0.])   # C isn't affected by this reaction; hence, 0 change
+
+
+    # Add the reaction we saw earlier, A + B <-> C, and reset the concentrations
+    uc.add_reaction(reactants=["A" , "B"], products="C",
+                    kF=5., kR=2.)
+    uc.set_conc(conc=[10., 50., 20.], snapshot=False)
+
+    # We now have 2 reaction
+    assert uc.number_of_reactions() == 2
+
+    # We saw in earlier runs, with our initial concentrations, that
+    # over a delta_time=0.02, one reaction causes a change in [A] of -4.92,
+    # and the other a change of -5.8
+    # Individually, neither is problematic, given that [A] is initially 10,
+    # but combined (-10.72) they would make [A] negative!
+    with pytest.raises(Exception):
+        uc.reaction_step_common_fixed_step(delta_time=0.002)
+
+
+
+def test__reaction_elemental_step_1():
+    uc = UniformCompartment(names=["A", "B"])
+
+    uc.set_conc(conc=[10., 50.], snapshot=False)
+
+    # Reaction A <-> B , with 1st-order kinetics in both directions.
+    # Based on experiment "reactions_single_compartment/react_1"
+    uc.add_reaction(reactants="A", products="B", kF=3., kR=2.)
 
     result = uc._reaction_elemental_step(delta_time=0.1)
     assert np.allclose(result, [ 7. , -7.])
@@ -216,7 +301,7 @@ def test_single_reaction_fixed_step():
     uc.clear_reactions()       # Re-start with a blank slate of reactions
     # Reaction A <-> 3B , with 1st-order kinetics in both directions.
     # Based on experiment "1D/reactions/reaction2"
-    uc.add_reaction(reactants="A", products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
+    uc.add_reaction(reactants="A", products=[(3,"B",1)], kF=5., kR=2.)
 
     result = uc._reaction_elemental_step(delta_time=0.1)
     assert np.allclose(result, [5. , -15.])
@@ -226,7 +311,7 @@ def test_single_reaction_fixed_step():
     uc.clear_reactions()       # Re-start with a blank slate of reactions
     # Reaction 2A <-> 3B , with 1st-order kinetics in both directions.
     # Based on experiment "1D/reactions/reaction3"
-    uc.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
+    uc.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], kF=5., kR=2.)
 
     result = uc._reaction_elemental_step(delta_time=0.1)
     assert np.allclose(result, [10., -15.])
@@ -234,51 +319,14 @@ def test_single_reaction_fixed_step():
 
 
 
-def test_single_reaction_variable_step_1():
-    chem_data = ChemData(names=["A", "B"])
-    uc = UniformCompartment(chem_data=chem_data)
-
-    uc.set_conc(conc=[10., 50.], snapshot=False)
-
-    # Reaction A <-> B , with 1st-order kinetics in both directions.
-    # Based on experiment "reactions_single_compartment/react_1"
-    uc.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
-
-    result = uc._reaction_elemental_step(delta_time=0.1)
-    assert np.allclose(result, [ 7. , -7.])
-    assert result[0] == - result[1]         # From the stoichiometry
-
-
-    uc.clear_reactions()   # Re-start with a blank slate of reactions
-    # Reaction A <-> 3B , with 1st-order kinetics in both directions.
-    # Based on experiment "1D/reactions/reaction2"
-    uc.add_reaction(reactants=["A"], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
-
-    result = uc._reaction_elemental_step(delta_time=0.1)
-    assert np.allclose(result, [5. , -15.])
-    assert -3 * result[0] == result[1]      # From the stoichiometry
-
-
-    uc.clear_reactions()   # Re-start with a blank slate of reactions
-    # Reaction 2A <-> 3B , with 1st-order kinetics in both directions.
-    # Based on experiment "1D/reactions/reaction3"
-    uc.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
-
-    result = uc._reaction_elemental_step(delta_time=0.1)
-    assert np.allclose(result, [10., -15.])
-    assert result[0]/2 == - result[1] /3   # From the stoichiometry
-
-
-
-def test_single_reaction_step_2():
-    chem_data = ChemData(names=["A", "B", "C"])
-    uc = UniformCompartment(chem_data=chem_data)
+def test__reaction_elemental_step_2():
+    uc = UniformCompartment(names=["A", "B", "C"])
 
     uc.set_conc(conc=[10., 50., 20.], snapshot=False)
 
     # Reaction A <-> B , with 1st-order kinetics in both directions.
     # # Based on experiment "reactions_single_compartment/react_1"
-    uc.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    uc.add_reaction(reactants="A", products="B", kF=3., kR=2.)
 
     result = uc._reaction_elemental_step(delta_time=0.1)
     assert np.allclose(result, [ 7. , -7. , 0.])    # Chemical "C" not participating in this reaction; its delta conc. is 0
@@ -288,8 +336,8 @@ def test_single_reaction_step_2():
     uc.reactions.clear_reactions_data()   # Re-start with a blank slate of reactions
     # Reaction A + B <-> C , with 1st-order kinetics for each species.
     # Based on experiment "1D/reactions/reaction4"
-    uc.add_reaction(reactants=[("A") , ("B")], products=[("C")],
-                     forward_rate=5., reverse_rate=2.)
+    uc.add_reaction(reactants=["A" , "B"], products="C",
+                     kF=5., kR=2.)
 
     result = uc._reaction_elemental_step(delta_time=0.002)
     assert np.allclose(result, [-4.92, -4.92, 4.92])
@@ -298,16 +346,15 @@ def test_single_reaction_step_2():
 
 
 
-def test_single_reaction_step_3():
-    chem_data = ChemData(names=["A", "C", "D"])
-    uc = UniformCompartment(chem_data=chem_data)
+def test__reaction_elemental_step_3():
+    uc = UniformCompartment(names=["A", "C", "D"])
 
     uc.set_conc(conc=[4., 7., 2.], snapshot=False)
 
     # Reaction A <-> 2C + D , with 1st-order kinetics for each species.
     # Based on experiment "1D/reactions/reaction5"
     uc.add_reaction(reactants=[("A")], products=[(2, "C", 1) , ("D")],
-                    forward_rate=5., reverse_rate=2.)
+                    kF=5., kR=2.)
 
     result = uc._reaction_elemental_step(delta_time=0.05)
     assert np.allclose(result, [0.4 , -0.8 , -0.4])
@@ -316,16 +363,15 @@ def test_single_reaction_step_3():
 
 
 
-def test_single_reaction_step_4():
-    chem_data = ChemData(names=["A", "B", "C", "D"])
-    uc = UniformCompartment(chem_data=chem_data)
+def test__reaction_elemental_step_4():
+    uc = UniformCompartment(names=["A", "B", "C", "D"])
 
     uc.set_conc(conc=[4., 7., 5., 2.], snapshot=False)
 
     # Reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species.
     # Based on experiment "1D/reactions/reaction6"
     uc.add_reaction(reactants=[(2,"A",1) , (5,"B",1)], products=[(4,"C",1) , (3,"D",1)],
-                     forward_rate=5., reverse_rate=2.)
+                     kF=5., kR=2.)
 
     result = uc._reaction_elemental_step(delta_time=0.001)
     assert np.allclose(result, [-0.24 , -0.6 , 0.48, 0.36])
@@ -335,15 +381,14 @@ def test_single_reaction_step_4():
 
 
 
-def test_single_reaction_step_5():
-    chem_data = ChemData(names=["A", "B"])
-    uc = UniformCompartment(chem_data=chem_data)
+def test__reaction_elemental_step_5():
+    uc = UniformCompartment(names=["A", "B"])
 
     uc.set_conc(conc=[3., 5.], snapshot=False)
 
     # Reaction  2A <-> B , with 2nd-order kinetics in forward reaction, and 1st-order in reverse.
     # Based on experiment "1D/reactions/reaction7"
-    uc.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
+    uc.add_reaction(reactants=[(2, "A", 2)], products=["B"], kF=5., kR=2.)
 
     result = uc._reaction_elemental_step(delta_time=0.02)
     assert np.allclose(result, [-1.4 , 0.7])
@@ -351,16 +396,15 @@ def test_single_reaction_step_5():
 
 
 
-def test_single_reaction_step_6():
-    chem_data = ChemData(names=["A", "B", "C", "D", "E"])
-    uc = UniformCompartment(chem_data=chem_data)
+def test__reaction_elemental_step_6():
+    uc = UniformCompartment(names=["A", "B", "C", "D", "E"])
 
     uc.set_conc(conc=[3., 5., 1., 0.4, 0.1], snapshot=False)
 
     # Coupled reactions A + B <-> C  and  C + D <-> E , with 1st-order kinetics for each species.
     # Based on experiment "1D/reactions/reaction8"
-    uc.add_reaction(reactants=["A", "B"], products=["C"], forward_rate=5., reverse_rate=2.)
-    uc.add_reaction(reactants=["C", "D"], products=["E"], forward_rate=8., reverse_rate=4.)
+    uc.add_reaction(reactants=["A", "B"], products=["C"], kF=5., kR=2.)
+    uc.add_reaction(reactants=["C", "D"], products=["E"], kF=8., kR=4.)
     assert uc.number_of_reactions() == 2
 
     result = uc._reaction_elemental_step(delta_time=0.02)
@@ -382,11 +426,11 @@ def test_single_compartment_react_variable_steps_1():
 
     # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
     uc.add_reaction(reactants=[(2, "S", 1)], products="U",
-                           forward_rate=8., reverse_rate=2.)
+                           kF=8., kR=2.)
 
     # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
     uc.add_reaction(reactants="S", products="X",
-                           forward_rate=6., reverse_rate=3.)
+                           kF=6., kR=3.)
      
     uc.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
@@ -426,51 +470,34 @@ def test_single_compartment_correct_neg_conc():
 
     # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
     uc.add_reaction(reactants=[(2, "S", 1)], products="U",
-                           forward_rate=8., reverse_rate=2.)
+                    kF=8., kR=2.)
 
     # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
     uc.add_reaction(reactants="S", products="X",
-                           forward_rate=6., reverse_rate=3.)    
+                    kF=6., kR=3.)
     
     uc.set_conc(conc={"U": 50., "X": 100., "S": 0.})
 
     uc.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-    uc.adaptive_steps.thresholds = [{"norm": "norm_A", "low": 0.5, "high": 0.8, "abort": 1.44},
-                                          {"norm": "norm_B", "low": 0.08, "high": 0.5, "abort": 1.5}]
-    uc.adaptive_steps.step_factors = {"upshift": 1.5, "downshift": 0.5, "abort": 0.5, "error": 0.5}
+    uc.single_compartment_react(initial_step=0.25, n_steps=1, variable_steps=False)
 
-    uc.single_compartment_react(initial_step=0.1, target_end_time=0.8, variable_steps=False)
-    # Note: negative concentrations that would arise from the given step size, get automatically intercepted - and
-    #       the step sizes get reduced as needed
+    assert np.allclose(uc.system_time, 0.25)
+    assert np.allclose(uc.system, [ 25.,  25., 125.])
 
-    df = uc.get_history()
-    #print(df)
-    assert len(df) == 11
+    with pytest.raises(Exception):
+        # This step would make [S] negative
+        uc.single_compartment_react(initial_step=0.25, n_steps=1, variable_steps=False)
 
-    assert np.allclose(df.iloc[0][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
-                       [0.0000,  50.000000,  100.000000,  0.000000])
+    # Nothing has changed, since that last step wasn't actually taken
+    assert np.allclose(uc.system_time, 0.25)
+    assert np.allclose(uc.system, [ 25.,  25., 125.])
 
-    assert np.allclose(df.iloc[1][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
-                       [0.1,  40, 70, 50], rtol=1e-03)
+    # A smaller step saves the day!
+    uc.single_compartment_react(initial_step=0.03, n_steps=1, variable_steps=False)
+    assert np.allclose(uc.system_time, 0.28)    # 0.25 + 0.03
+    assert np.allclose(uc.system, [53.5,  45.25, 47.75])
 
-    assert np.allclose(df.iloc[2][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
-                       [0.15,  56, 74.50, 13.5], rtol=1e-03)        # Notice the halved step size
-
-    assert np.allclose(df.iloc[3][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
-                       [0.25,  55.6, 60.25, 28.55], rtol=1e-03)        # Back to the requested step size
-
-    assert np.allclose(df.iloc[5][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
-                       [0.45,  58.7, 45.1465, 37.4535], rtol=1e-03)
-
-    assert np.allclose(df.iloc[6][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
-                       [0.5,  67.8114, 49.610575, 14.766625], rtol=1e-03)        # Notice another instance of halved step size
-
-    assert np.allclose(df.iloc[7][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
-                       [0.6,  66.062420, 43.587378, 24.287783], rtol=1e-03)        # Back to the requested step size
-
-    assert np.allclose(df.iloc[10][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),
-                       [0.9,  76.895206, 44.446655,	1.762933], rtol=1e-03)        # Final step
 
 
 
@@ -478,61 +505,34 @@ def test_single_compartment_correct_neg_conc():
 ###########################  LOWER-LEVEL METHODS  ###########################
 
 
-def test_compute_all_reaction_rates():
-    chem_data = ChemData(names=["A", "B", "C", "D"])
+def test__fetch_concs_for_rnx():
+    chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
     uc = UniformCompartment(chem_data=chem_data)
+    rxns = uc.get_reactions()
 
-    # Start with reaction A <-> B , with 1st-order kinetics in both directions
-    uc.add_reaction(reactants="A", products="B", forward_rate=20., reverse_rate=2.)  # Reaction 0
-    uc.set_conc(conc=[5., 8., 0, 0], snapshot=False)
+    uc.set_conc({"A": 12, "B": 1, "C": 31, "D": 19, "E": 2, "F": 3})
 
-    result = uc.compute_all_reaction_rates()    # {0: 84.}
-    assert len(result) == 1
-    assert np.allclose(result[0], 84.)
+    uc.add_reaction(reactants="D", products="F")
+    r = uc.get_single_reaction(0)
+    result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
+    assert result == {"D": 19, "F": 3}
 
-    # Add reaction 2B <-> 3C , with 1st-order kinetics in both directions
-    uc.add_reaction(reactants=[(2, "B", 1)], products=[(3, "C", 1)],
-                           forward_rate=10., reverse_rate=25.)   # Rxn 1
-    uc.set_conc(conc=[5., 8., 15., 0], snapshot=False)
-    result = uc.compute_all_reaction_rates()  # {0: 84., 1: -295.}
-    assert len(result) == 2
-    assert np.allclose(result[0], 84.)
-    assert np.allclose(result[1], -295.)
+    uc.add_reaction(reactants=["A", "F"], products="C")
+    r = uc.get_single_reaction(1)
+    result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
+    assert result == {"A": 12, "C": 31, "F": 3}
 
-    # Add reaction 2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
-    uc.add_reaction(reactants=[(2,"A",1) , (5,"B",1)], products=[(4,"C",1) , (3,"D",1)],
-                     forward_rate=5., reverse_rate=2.)          # Rxn 2
-    uc.set_conc(conc=[5., 8., 15.,  7.], snapshot=False)
-    result = uc.compute_all_reaction_rates()    # {0: 84., 1: -295., 2: -10.}
-    assert len(result) == 3
-    assert np.allclose(result[0], 84.)
-    assert np.allclose(result[1], -295.)
-    assert np.allclose(result[2], -10.)
+    r_uni = ReactionUnimolecular(reactant="C", product="A")
+    rxns.register_reaction(r_uni)
+    r = uc.get_single_reaction(2)
+    result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
+    assert result == {"A": 12, "C": 31}
 
-    # Add reaction  2A <-> B , with 2nd-order kinetics in the forward direction
-    uc.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=3., reverse_rate=2.)
-    result = uc.compute_all_reaction_rates()    # {0: 84., 1: -295., 2: -10., 3: 59.}
-    assert len(result) == 4
-    assert np.allclose(result[0], 84.)
-    assert np.allclose(result[1], -295.)
-    assert np.allclose(result[2], -10.)
-    assert np.allclose(result[3], 59.)
-
-    # This time, only process reactions 0 and 2
-    result_0_2 = uc.compute_all_reaction_rates(rxn_list=[0, 2])   # {0: 84., 2: -10.}
-    assert len(result_0_2) == 2
-    assert np.allclose(result_0_2[0], 84.)
-    assert np.allclose(result_0_2[2], -10.)
-
-
-    # FLUSH OUT ALL REACTIONS (to start over)
-    uc.clear_reactions()
-    # Start with reaction A <-> B , with 1st-order kinetics in both directions
-    uc.add_reaction(reactants="A", products="B", forward_rate=20., reverse_rate=2.)   # Rxn 0
-    uc.set_conc(conc=[5., 8., 0, 0], snapshot=False)
-    result = uc.compute_all_reaction_rates()   #  {0: 84.}
-    assert len(result) == 1
-    assert np.allclose(result[0], 84.)
+    r_syn = ReactionSynthesis(reactants=["C", "D"], product="B")
+    rxns.register_reaction(r_syn)
+    r = uc.get_single_reaction(3)
+    result = uc._fetch_concs_for_rnx(rxn=r, conc_array=uc.get_system_conc())
+    assert result == {"B": 1, "C": 31, "D": 19}
 
 
 
@@ -541,13 +541,13 @@ def test_is_in_equilibrium():
     uc = UniformCompartment(chem_data=chem_data)
 
     # Reaction 0 : A <-> B
-    uc.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    uc.add_reaction(reactants=["A"], products=["B"], kF=3., kR=2.)
     c = {'A': 23.9931640625, 'B': 36.0068359375}
     assert uc.is_in_equilibrium(rxn_index = 0, conc=c, explain=False, tolerance=1)
     assert uc.is_in_equilibrium(conc=c, explain=False, tolerance=1)      # Testing ALL reactions
 
     # Reaction 1 : A <-> F
-    uc.add_reaction(reactants=["A"], products=["F"], forward_rate=20, reverse_rate=2.)
+    uc.add_reaction(reactants=["A"], products=["F"], kF=20, kR=2.)
     c = {'A': 3, 'F': 32.999}
     assert uc.is_in_equilibrium(rxn_index=1, conc=c, explain=False, tolerance=10)   # The deviation is just below the 10% tolerance
 
@@ -578,42 +578,42 @@ def test_reaction_in_equilibrium():
     uc = UniformCompartment(chem_data=chem_data)
 
     # Reaction 0 : A <-> B
-    uc.add_reaction(reactants=["A"], products=["B"], forward_rate=3., reverse_rate=2.)
+    uc.add_reaction(reactants=["A"], products=["B"], kF=3., kR=2.)
     c = {'A': 23.9931640625, 'B': 36.0068359375}
     assert uc.reaction_in_equilibrium(rxn_index = 0, conc=c, explain=False, tolerance=1)
 
     # Reaction 1 : A <-> F
-    uc.add_reaction(reactants=["A"], products=["F"], forward_rate=20, reverse_rate=2.)
+    uc.add_reaction(reactants=["A"], products=["F"], kF=20, kR=2.)
     c = {'A': 3, 'F': 32.999}
     assert uc.reaction_in_equilibrium(rxn_index = 1, conc=c, explain=False, tolerance=10)   # Just below the 10% tolerance
     c = {'A': 3, 'F': 33.001}
     assert not uc.reaction_in_equilibrium(rxn_index = 1, conc=c, explain=False, tolerance=10)  # Just above the 10% tolerance
 
     # Reaction 2 : A <-> 3B
-    uc.add_reaction(reactants=["A"], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
+    uc.add_reaction(reactants=["A"], products=[(3,"B",1)], kF=5., kR=2.)
     c = {'A': 14.54545455, 'B': 36.36363636}
     assert uc.reaction_in_equilibrium(rxn_index = 2, conc=c, explain=False, tolerance=1)
 
     # Reaction 3:  2A <-> 3B
-    uc.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
+    uc.add_reaction(reactants=[(2,"A",1)], products=[(3,"B",1)], kF=5., kR=2.)
     c = {'A': 16.25, 'B': 40.625}
     assert uc.reaction_in_equilibrium(rxn_index = 3, conc=c, explain=False, tolerance=1)
 
     # Reaction 4:  A + B <-> C , with 1st-order kinetics for each species
     uc.add_reaction(reactants=["A" , "B"], products=[("C")],
-                     forward_rate=5., reverse_rate=2.)
+                     kF=5., kR=2.)
     c = {'A': 0.29487741, 'B': 40.29487741, 'C': 29.70512259}
     assert uc.reaction_in_equilibrium(rxn_index = 4, conc=c, explain=False, tolerance=1)
 
     # Reaction 5:  A <-> 2C + D , with 1st-order kinetics for each species
     uc.add_reaction(reactants=["A"], products=[(2, "C", 1) , ("D")],
-                     forward_rate=5., reverse_rate=2.)
+                     kF=5., kR=2.)
     c = {'A': 4.31058733, 'C': 6.37882534, 'D': 1.68941267}
     assert uc.reaction_in_equilibrium(rxn_index = 5, conc=c, explain=False, tolerance=1)
 
     # Reaction 6:  2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
     uc.add_reaction(reactants=[(2,"A",1) , (5,"B",1)], products=[(4,"C",1) , (3,"D",1)],
-                     forward_rate=5., reverse_rate=2.)
+                     kF=5., kR=2.)
     c = {'A': 2.80284552, 'B': 4.00711381, 'C': 7.39430896, 'D': 3.79573172}
     assert uc.reaction_in_equilibrium(rxn_index = 6, conc=c, explain=False, tolerance=1)
 
@@ -621,17 +621,17 @@ def test_reaction_in_equilibrium():
     uc.clear_reactions()   # This will reset the reaction count to 0
 
     # Reaction 0:  2A <-> B , with 1st-order kinetics in both directions
-    uc.add_reaction(reactants=[(2, "A", 1)], products=["B"], forward_rate=5., reverse_rate=2.)
+    uc.add_reaction(reactants=[(2, "A", 1)], products=["B"], kF=5., kR=2.)
     c = {'A': 2.16928427, 'B': 5.41535786}
     assert uc.reaction_in_equilibrium(rxn_index = 0, conc=c, explain=False, tolerance=1)
 
     # Reaction 1:  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction
-    uc.add_reaction(reactants=[(2, "A", 2)], products=["B"], forward_rate=5., reverse_rate=2.)
+    uc.add_reaction(reactants=[(2, "A", 2)], products=["B"], kF=5., kR=2.)
     c = {'A': 1.51554944, 'B': 5.74222528}
     assert uc.reaction_in_equilibrium(rxn_index = 1, conc=c, tolerance=1, explain=False)
 
     # Reaction 2:  A + B <-> C + D
-    uc.add_reaction(reactants=["A", "B"], products=["C", "D"], forward_rate=5., reverse_rate=2.)
+    uc.add_reaction(reactants=["A", "B"], products=["C", "D"], kF=5., kR=2.)
 
     # with zero concentrations of a reactant, it won't be an equilibrium...
     c = {'A': 15.2, 'B': 0, 'C': 21.3, 'D': 4.1}
@@ -649,16 +649,17 @@ def test_reaction_in_equilibrium():
 
 
 def test_validate_increment():
-    chem_data = ChemData(names=["A", "B", "C"])
-    uc = UniformCompartment(chem_data=chem_data)
+    uc = UniformCompartment(names=["A", "B", "C"])
 
-    uc.add_reaction(reactants=["A"], products=["B"])
+    uc.add_reaction(reactants="A", products="B")
 
     uc.validate_increment(delta_conc=50., baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.02)
     uc.validate_increment(delta_conc=-9.99, baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.02)
 
     with pytest.raises(Exception):      # Would lead to a negative concentration
-        uc.validate_increment(delta_conc=-10.01, baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.02)
+        uc.validate_increment(delta_conc=-10.001, baseline_conc=10., rxn_index=0, species_index=2, delta_time=0.97)
+
+    # TODO: test that diagnostic data, if enabled, gets saved as needed
 
 
 
@@ -686,14 +687,24 @@ def test_sigmoid():
 
 
 def test_logistic():
-    rxn = UniformCompartment(None)
+    uc = UniformCompartment()
 
     #print(rxn.logistic(-10))
-    assert np.allclose(rxn.logistic(-100), 0)
-    assert np.allclose(rxn.logistic(-10), 0.00004539786)
-    assert np.allclose(rxn.logistic(0), 0.5)
-    assert np.allclose(rxn.logistic(10), 0.99995460213)
-    assert np.allclose(rxn.logistic(100), 1)
+    assert np.allclose(uc.logistic(-100), 0)
+    assert np.allclose(uc.logistic(-10), 0.00004539786)
+    assert np.allclose(uc.logistic(0), 0.5)
+    assert np.allclose(uc.logistic(10), 0.99995460213)
+    assert np.allclose(uc.logistic(100), 1)
+
+
+
+def test_set_temp():
+    uc = UniformCompartment()
+    uc.set_temp(123)
+    assert uc.temp == 123
+
+    uc.set_temp(0, "C")
+    assert np.allclose(uc.temp, 273.15)
 
 
 

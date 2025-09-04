@@ -4,7 +4,8 @@ import math
 import cmath
 import numpy as np
 import plotly.graph_objects as pgo
-from life123.reactions import ReactionGeneric
+from typing import Union, Tuple
+#from life123.reactions import ReactionGeneric
 from life123.numerical import Numerical
 from life123.visualization.plotly_helper import PlotlyHelper
 
@@ -19,7 +20,7 @@ class ReactionKinetics:
 
 
     @classmethod
-    def solve_exactly(cls, rxn :ReactionGeneric, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
+    def solve_exactly(cls, rxn, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
         """
         Return the exact solution of the given reaction,
         PROVIDED that it is a 1st Order Reaction of the type A <=> B.
@@ -29,7 +30,7 @@ class ReactionKinetics:
 
         For details, see https://life123.science/reactions
 
-        :param rxn:     Object of type "Reaction", containing data for the reaction of interest
+        :param rxn:     Object of type "ReactionGeneric", containing data for the reaction of interest
         :param A0:      Initial concentration of the reactant A
         :param B0:      Initial concentration of the product B
         :param t_arr:   A Numpy array with the desired times at which the solutions are desired
@@ -322,45 +323,172 @@ class ReactionKinetics:
 
 
     @classmethod
-    def compute_reaction_rate(cls, rxn, conc_array :np.ndarray, name_mapping :dict) -> float:
+    def compute_reaction_rate(cls, reactant_data :[(str, int)], product_data :[(str, int)],
+                              kF :float, kR :float, reversible :bool,
+                              conc_dict :dict) -> float:
         """
-        For the SINGLE given reaction, and the specified concentrations of chemicals,
+        Given a SINGLE reaction, and the specified concentrations of chemicals,
         compute its initial reaction's "rate" (aka "velocity"),
         i.e. its "forward rate" minus its "reverse rate",
         at the start of the time step.
 
-        This function is to be used for elementary, or non-elementary, reactions that follow the familiar "Rate Laws",
-        with forward and reverse rate constants stored in the passed "Reaction" object,
-        and with reaction orders, for the various Reactants and Products, also stored in that "Reaction" object.
+        This function is to be used for elementary, or non-elementary,
+        reactions that follow the familiar "Rate Laws".
 
         For background info:  https://life123.science/reactions
 
-        :param rxn:         An object of type "Reaction", with the details of the reaction
-        :param conc_array:  Numpy array of concentrations of ALL chemical, in their index order
-        :param name_mapping:A dict with all the mappings of the chemical names to the registered index
+        :param reactant_data:   List of PAIRS of the form (label of reactant , order of reaction with respect to it)
+        :param product_data:    List of PAIRS of the form (label of reaction product , order of reaction with respect to it)
+        :param kF:              Forward reaction rate
+        :param kR:              Reverse reaction rate; ignored if irreversible
+        :param reversible:      True if the reaction is reversible; False otherwise
+        :param conc_dict:       A dict mapping chemical labels to their concentrations,
+                                    for all the chemicals involved in the given reaction
+                                    EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+
         :return:            The differences between the reaction's forward and reverse rates
         """
-        reactants, products, fwd_rate_constant, rev_rate_constant = rxn.unpack_for_dynamics()
-
-        forward_rate = fwd_rate_constant        # The initial multiplicative factor
-        for r in reactants:
-            # Unpack data from the reactant r
-            species_name = rxn.extract_species_name(r)
-            order = rxn.extract_rxn_order(r)
-            species_index = name_mapping[species_name]
-            conc = conc_array[species_index]
+        forward_rate = kF        # The initial multiplicative factor
+        for (r, order) in reactant_data:
+            # Process the unpacked data from the list of reactants
+            conc = conc_dict[r]
             forward_rate *= conc ** order       # Raise to power
 
-        reverse_rate = rev_rate_constant        # The initial multiplicative factor
-        for p in products:
-            # Unpack data from the reaction product p
-            species_name = rxn.extract_species_name(p)
-            order = rxn.extract_rxn_order(p)
-            species_index = name_mapping[species_name]
-            conc = conc_array[species_index]
+
+        if not reversible:
+            return forward_rate
+
+
+        reverse_rate = kR        # The initial multiplicative factor
+        for (p, order) in product_data:
+            # Process the unpacked data from the list of the reaction products
+            conc = conc_dict[p]
             reverse_rate *= conc ** order     # Raise to power
 
         return forward_rate - reverse_rate
+
+
+
+    @classmethod
+    def compute_reaction_rate_first_order(cls, reactants :[str], products :[str],
+                                          kF :float, kR :float, reversible :bool,
+                                          conc_dict :dict) -> float:
+        """
+        Given a SINGLE reaction, in 1st order to all its chemical species,
+        and the specified concentrations of chemicals,
+        compute its initial reaction's "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate",
+        at the start of the time step.
+
+        :param reactants:   List of labels of the reactants
+        :param products:    List of labels of the products of the reaction
+        :param kF:          Forward reaction rate
+        :param kR:          Reverse reaction rate; ignored if irreversible
+        :param reversible:  True if the reaction is reversible; False otherwise
+        :param conc_dict:   A dict mapping chemical labels to their concentrations,
+                                for all the chemicals involved in the given reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+
+        :return:            The differences between the reaction's forward and reverse rates
+        """
+        forward_rate = kF        # The initial multiplicative factor
+        for r in reactants:
+            # Process all the reactants
+            conc = conc_dict[r]
+            forward_rate *= conc
+
+        if not reversible:
+            return forward_rate
+
+        reverse_rate = kR        # The initial multiplicative factor
+        for p in products:
+            # Process all the reaction products
+            conc = conc_dict[p]
+            reverse_rate *= conc
+
+        return forward_rate - reverse_rate
+
+
+
+    @classmethod
+    def compute_reaction_quotient(cls, reactant_data :[(str, int)], product_data :[(str, int)],
+                                  conc, explain=False) -> Union[np.double, Tuple[np.double, str]]:
+        """
+        Compute the "Reaction Quotient" (aka "Mass–action Ratio"),
+        for the reaction with the specified parameters,
+        given the concentrations of chemicals involved in the reaction
+
+        :param reactant_data:   List of PAIRS of the form (label of reactant , order of reaction with respect to it)
+        :param product_data:    List of PAIRS of the form (label of reaction product , order of reaction with respect to it)
+        :param conc:            Dictionary with the concentrations of the species involved in the reaction.
+                                The keys are the chemical labels
+                                    EXAMPLE: {'A': 23.9, 'B': 36.1}
+        :param explain:         If True, it also returns the math formula being used for the computation
+                                    EXAMPLES:   "([C][D]) / ([A][B])"
+                                                "[B] / [A]^2"
+
+        :return:                If explain is False, return value for the "Reaction Quotient" (aka "Mass–action Ratio");
+                                    if True, return a pair with that quotient and a string with the math formula that was used.
+                                    Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
+        """
+        # TODO: also accept strings, in lieu of pairs (when order is 1)
+        numerator = np.double(1)    # The product of all the concentrations of the reaction products (adjusted for reaction order)
+        denominator = np.double(1)  # The product of all the concentrations of the reactants (also adjusted for reaction order)
+
+        numerator_text = ""      # First part of the textual explanation
+        denominator_text = ""    # Second part of the textual explanation
+
+
+        # Compute the numerator of the "Reaction Quotient"
+        for (p, order) in product_data:
+            # Loop over the reaction products
+            species_name = p
+            rxn_order = order
+
+            species_conc = conc.get(p)
+            assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
+                                             f"concentration of `{species_name}` was not provided"
+
+            numerator *= (species_conc ** rxn_order)
+            if explain:
+                numerator_text += f"[{species_name}]"
+                if rxn_order > 1:
+                    numerator_text += f"^{rxn_order} "
+
+        if explain and len(product_data) > 1:
+            numerator_text = f"({numerator_text})"  # In case of multiple terms, enclose them in parenthesis
+
+
+        # Compute the denominator of the "Reaction Quotient"
+        for (r, order) in reactant_data:
+            # Loop over the reactants
+            species_name =  r
+            rxn_order =  order
+
+            species_conc = conc.get(species_name)
+            assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
+                                             f"concentration of `{species_name}` was not provided"
+
+            denominator *= (species_conc ** rxn_order)
+            if explain:
+                denominator_text += f"[{species_name}]"
+                if rxn_order > 1:
+                    denominator_text += f"^{rxn_order} "
+
+        if explain and len(reactant_data) > 1:
+            denominator_text = f"({denominator_text})"  # In case of multiple terms, enclose them in parenthesis
+
+
+        with np.errstate(divide='ignore', invalid='ignore'):
+            # It might be np.inf (if just the denominator is zero) or np.nan (if both are zero)
+            quotient = numerator / denominator
+
+        if explain:
+            formula = f"{numerator_text} / {denominator_text}"
+            return (quotient, formula)
+
+        return quotient
+
 
 
 

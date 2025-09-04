@@ -21,11 +21,11 @@
 # See also the experiment _"reactions_single_compartment/react_3"_  
 
 # %% [markdown]
-# ### TAGS :  "reactions 1D"
+# ### TAGS :  "reactions 1D", "basic"
 
 # %%
-LAST_REVISED = "May 4, 2025"
-LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based on
+LAST_REVISED = "June 6, 2025"
+LIFE123_VERSION = "1.0.0rc5"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -128,7 +128,7 @@ bio.describe_state()
 
 # %%
 # Verify that the reaction has reached equilibrium
-bio.reaction_dynamics.is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
+bio.get_reaction_handler().is_in_equilibrium(rxn_index=0, conc=bio.bin_snapshot(bin_address = 0))
 
 # %%
 bio.get_bin_history(bin_address=0)
@@ -141,7 +141,7 @@ bio.get_bin_history(bin_address=0)
 
 # %%
 bio.plot_history_single_bin(bin_address=0, 
-                            title="Reaction  A + B <-> C . Concentrations at bin 0")
+                            title_prefix="Reaction  `A + B <-> C`")
 
 # %% [markdown]
 # ## For more in-depth analysis of this reaction, including variable time steps, see the experiment _"reactions_single_compartment/react_3"_ 

@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -25,13 +25,13 @@
 # #### involving adaptive variable time steps
 
 # %%
-LAST_REVISED = "Nov. 9, 2024"
-LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
+LAST_REVISED = "Aug. 29, 2024"
+LIFE123_VERSION = "1.0.0rc5"      # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
-# %% tags=[]
+# %%
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
@@ -44,7 +44,7 @@ from life123 import check_version, UniformCompartment, PlotlyHelper, GraphicLog
 # %%
 check_version(LIFE123_VERSION)
 
-# %% tags=[]
+# %%
 # Initialize the HTML logging (for the graphics)
 log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
                                             # IN CASE OF PROBLEMS, set manually to any desired name
@@ -61,13 +61,12 @@ GraphicLog.config(filename=log_file,
 # %% [markdown]
 # # PART 1 - simulation of the reaction
 
-# %% tags=[]
+# %%
 # Instantiate the simulator and specify the chemicals
 uc = UniformCompartment()
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-uc.add_reaction(reactants="A", products="B", 
-                forward_rate=3., reverse_rate=2.)
+uc.add_reaction(reactants="A", products="B", kF=3., kR=2.)
 
 print("Number of reactions: ", uc.number_of_reactions())
 
@@ -107,7 +106,7 @@ uc.find_equilibrium_conc(rxn_index=0)    # This is an EXACT equilibrium solution
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ### Run the reaction
 
 # %%
@@ -122,8 +121,7 @@ uc.get_history()
 
 # %%
 # Numerous more fixed steps
-uc.single_compartment_react(initial_step=0.1, n_steps=10, variable_steps=False, 
-                            snapshots={"initial_caption": "2nd round of simulation"})
+uc.single_compartment_react(initial_step=0.1, n_steps=10, variable_steps=False)  # Again, fixed steps used
 
 # %%
 uc.get_history()
@@ -153,7 +151,7 @@ uc.is_in_equilibrium()
 # %% [markdown]
 # ### As noted earlier, because of the high initial concentration of B relative to A, the overall reaction has proceeded IN REVERSE
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ## Plots of changes of concentration with time
 
 # %%

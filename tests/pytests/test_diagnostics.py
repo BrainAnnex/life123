@@ -4,12 +4,12 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 from life123 import ChemData, CollectionTabular
 from life123.diagnostics import Diagnostics
-from life123.reactions import Reactions
+from life123.reactions import ReactionRegistry
 
 
 
 def test_explain_time_advance():
-    diag = Diagnostics(Reactions(ChemData()))   # Argument isn't actually used, but it's required
+    diag = Diagnostics(ReactionRegistry(ChemData()))   # Argument isn't actually used, but it's required
 
     # Start out with uniform steps
     diag.diagnostic_conc_data.store(par=20.,
@@ -74,7 +74,7 @@ def test_explain_time_advance():
 
 def test__delta_names():
     chem_data = ChemData(names=["A", "B", "X"])
-    diag = Diagnostics(Reactions(chem_data))
+    diag = Diagnostics(ReactionRegistry(chem_data))
 
     assert diag._delta_names() == ["Delta A", "Delta B", "Delta X"]
 
@@ -82,7 +82,7 @@ def test__delta_names():
 
 def test__delta_conc_dict():
     chem_data = ChemData(names=["A", "B", "X"])
-    diag = Diagnostics(Reactions(chem_data))
+    diag = Diagnostics(ReactionRegistry(chem_data))
 
     assert diag._delta_conc_dict(np.array([10, 20, 30])) == \
            {"Delta A": 10, "Delta B": 20, "Delta X": 30}
@@ -94,23 +94,23 @@ def test__delta_conc_dict():
 
 def test_save_diagnostic_rxn_data():
     chem_data = ChemData(names=["A", "B", "C", "X"])
-    rxns = Reactions(chem_data=chem_data)
+    rxns = ReactionRegistry(chem_data=chem_data)
 
     # Add 3 reactions
-    rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)
-    rxns.add_reaction(reactants="A", products="X", forward_rate=5., reverse_rate=2.)
-    rxns.add_reaction(reactants=["A", "B"], products="X", forward_rate=5., reverse_rate=2.)
+    rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)        # Rxn 0
+    rxns.add_reaction(reactants="A", products="X", forward_rate=5., reverse_rate=2.)        # Rxn 1
+    rxns.add_reaction(reactants=["A", "B"], products="X", forward_rate=5., reverse_rate=2.) # Rxn 2
 
     diag = Diagnostics(reactions=rxns)
     assert len(diag.diagnostic_rxn_data) == 0
 
     with pytest.raises(Exception):
         diag.save_rxn_data(rxn_index=0, system_time=100, time_step=4,
-                           increment_vector_single_rxn=np.array([2, -2]))     # Wrong size of Numpy array
+                           increment_dict_single_rxn={"A": 2})     # Wrong size of dict
 
     # Add data for reaction index 0
     diag.save_rxn_data(rxn_index=0, system_time=100, time_step=4,
-                       increment_vector_single_rxn=np.array([2, -2, 0, 0]))
+                       increment_dict_single_rxn={"A": 2, "B": -2})   # np.array([2, -2, 0, 0]))
 
     assert len(diag.diagnostic_rxn_data) == 1
 
@@ -127,7 +127,7 @@ def test_save_diagnostic_rxn_data():
 
     # Add data for reaction index 1
     diag.save_rxn_data(system_time=100, rxn_index=1, time_step=4,
-                       increment_vector_single_rxn=np.array([7, 0, 0, -7]))
+                       increment_dict_single_rxn={"A": 7, "X": -7})       # np.array([7, 0, 0, -7]
 
     assert len(diag.diagnostic_rxn_data) == 2       # 2 reactions added so far
     df_0 = diagnostic_data_rxn_0.get_dataframe()
@@ -143,7 +143,7 @@ def test_save_diagnostic_rxn_data():
 
     # Add data for reaction index 2
     diag.save_rxn_data(system_time=100, rxn_index=2, time_step=4,
-                       increment_vector_single_rxn=np.array([-8, -8, 0, 8]),
+                       increment_dict_single_rxn={"A": -8, "B": -8, "X": 8},      # np.array([-8, -8, 0, 8])
                        caption="I'm a caption")
 
     assert len(diag.diagnostic_rxn_data) == 3       # 3 reactions added so far
@@ -160,7 +160,7 @@ def test_save_diagnostic_rxn_data():
 
     # Add more data for reaction index 0
     diag.save_rxn_data(rxn_index=0, system_time=104, time_step=6,
-                       increment_vector_single_rxn=np.array([-1, 1, 0, 0]), caption="my comment")
+                       increment_dict_single_rxn={"A": -1, "B": 1}, caption="my comment")     # np.array([-1, 1, 0, 0])
 
     assert len(diag.diagnostic_rxn_data) == 3       # Still 3 reactions
 
@@ -175,17 +175,18 @@ def test_save_diagnostic_rxn_data():
 
     # Add a 3rd entry for reaction index 0, this time with rate information
     diag.save_rxn_data(rxn_index=0, system_time=110, time_step=12,
-                       increment_vector_single_rxn=np.array([-4, 4, 0, 0]),
+                       increment_dict_single_rxn={"A": -4, "B": 4},       # np.array([-4, 4, 0, 0]
                        caption="start recording rate", rate=3)
 
 
     df_0 = diagnostic_data_rxn_0.get_dataframe()
-    expected_df_0 = pd.DataFrame([[100,  4,  False, 2, -2, "", np.nan],
+    expected_df_0 = pd.DataFrame([[100,  4, False,  2, -2, "", np.nan],
                                   [104,  6, False, -1,  1, "my comment", np.nan],
                                   [110, 12, False, -4,  4, "start recording rate", 3.0]
                                   ],
                                   columns = ["START_TIME", "time_step", "aborted", "Delta A", "Delta B", "caption", "rate"])
-                                  # Notice "retroactively" addind NaN's to the earlier rows that didn't save a rate value
+                                  # Notice "retroactively" adding NaN's to the earlier rows that didn't save a rate value
+
     assert_frame_equal(df_0, expected_df_0, check_dtype=False)
 
     #TODO: more test adding multiple entries for any reaction
@@ -194,7 +195,7 @@ def test_save_diagnostic_rxn_data():
 
 def test_save_diagnostic_aborted_rxns():
     chem_data = ChemData(names=["A", "B", "C", "X"])
-    rxns = Reactions(chem_data=chem_data)
+    rxns = ReactionRegistry(chem_data=chem_data)
 
     # Add 3 reactions
     rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)
@@ -226,19 +227,19 @@ def test_save_diagnostic_aborted_rxns():
 
 def test_get_diagnostic_rxn_data():
     chem_data = ChemData(names=["A", "B", "C", "X"])
-    rxns = Reactions(chem_data=chem_data)
+    rxns = ReactionRegistry(chem_data=chem_data)
 
     # Add 3 reactions
-    rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)
-    rxns.add_reaction(reactants=["A"], products=["X"], forward_rate=5., reverse_rate=2.)
-    rxns.add_reaction(reactants=["A", "B"], products=["X"], forward_rate=5., reverse_rate=2.)
+    rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)        # Rxn 0
+    rxns.add_reaction(reactants=["A"], products="X", forward_rate=5., reverse_rate=2.)      # Rxn 1
+    rxns.add_reaction(reactants=["A", "B"], products="X", forward_rate=5., reverse_rate=2.) # Rxn 2
 
     diag = Diagnostics(reactions=rxns)
 
 
     # Add data for reaction index 0
     diag.save_rxn_data(system_time=100, rxn_index=0, time_step=4,
-                       increment_vector_single_rxn=np.array([2, -2, 0, 0]))
+                       increment_dict_single_rxn={"A": 2, "B": -2})   # np.array([2, -2, 0, 0])
 
     df_0 = diag.get_rxn_data(rxn_index=0, print_reaction=False)
 
@@ -254,7 +255,7 @@ def test_get_diagnostic_rxn_data():
 
     # Add data for reaction index 1
     diag.save_rxn_data(system_time=100, rxn_index=1, time_step=4,
-                       increment_vector_single_rxn=np.array([7, 0, 0, -7]))
+                       increment_dict_single_rxn={"A": 7, "X": -7})       #np.array([7, 0, 0, -7])
 
     df_1 = diag.get_rxn_data(rxn_index=1, print_reaction=False)
 
@@ -271,7 +272,7 @@ def test_get_diagnostic_rxn_data():
 
     # Add data for reaction index 2
     diag.save_rxn_data(system_time=100, rxn_index=2, time_step=4,
-                       increment_vector_single_rxn=np.array([-8, -8, 0, 8]),
+                       increment_dict_single_rxn={"A": -8, "B": -8, "X": 8},      # np.array([-8, -8, 0, 8])
                        caption="I'm a caption")
 
     df_2 = diag.get_rxn_data(rxn_index=2, print_reaction=False, tail=1) # With just one row, tail=1 won't make a difference
@@ -289,7 +290,7 @@ def test_get_diagnostic_rxn_data():
 
     # Add a 2nd data row for reaction 2
     diag.save_rxn_data(system_time=104, rxn_index=2, time_step=4,
-                       increment_vector_single_rxn=np.array([-11, -11, 0, 11]),
+                       increment_dict_single_rxn={"A": -11, "B": -11, "X": 11},       # np.array([-11, -11, 0, 11])
                        caption="2nd row")
 
     df_2 = diag.get_rxn_data(rxn_index=2, print_reaction=False)
@@ -329,7 +330,7 @@ def test_get_diagnostic_rxn_data():
 
 def test_stoichiometry_checker():
     chem_data = ChemData(names=["A", "B", "C", "D"])
-    rxns = Reactions(chem_data=chem_data)
+    rxns = ReactionRegistry(chem_data=chem_data)
 
     diag = Diagnostics(reactions=rxns)
 

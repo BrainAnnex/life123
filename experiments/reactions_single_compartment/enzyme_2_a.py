@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -32,13 +32,13 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Dec. 15, 2024"
-LIFE123_VERSION = "1.0-rc.1"      # Library version this experiment is based on
+LAST_REVISED = "Sep. 2, 2025"
+LIFE123_VERSION = "1.0.0rc5"         # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
-# %% tags=[]
+# %%
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
@@ -46,10 +46,10 @@ LIFE123_VERSION = "1.0-rc.1"      # Library version this experiment is based on
 import numpy as np
 import plotly.express as px
 
-from life123 import check_version, ReactionEnz
+from life123 import check_version, ReactionEnzyme
 
 # %%
-check_version(LIFE123_VERSION)
+check_version(LIFE123_VERSION)    # To check compatibility
 
 # %%
 
@@ -80,10 +80,10 @@ k2_forward
 #
 # We'll explore fixing a guess for `k1_forward`, and then computing the corresponding `k1_reverse` - or vice versa.  
 #
-# The Life123 class `ReactionEnz` conveniently provides the necessary transformations.
+# The Life123 class `ReactionEnzyme` conveniently provides the necessary transformations.
 
 # %%
-enz = ReactionEnz()
+enz = ReactionEnzyme()
 
 # %%
 # Example, using the k1_forward=18. from experiment `enzyme_1_a`, to determine k1_reverse
@@ -105,9 +105,9 @@ k1_forward
 # %%
 
 # %% [markdown]
-# ### 1. Let's try a variety of values for `k1_reverse`, and determine the corresponding values for `k1_forward`
+# ### PART 1. Let's try a variety of values for `k1_reverse`, and determine the corresponding values for `k1_forward`
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # #### `k1_reverse` must be non-negative because it's a reaction rate constant, but in other respects there's no conceptual restriction on its value, as plugged into our equation:
 # `kM = (kcat + k1_reverse) / k1_forward`
 
@@ -132,10 +132,12 @@ fig.add_scatter(x=[100.], y=[18.],
 
 # %%
 
-# %% [markdown]
-# ### 2. Conversely, let's try a variety of values for `k1_forward`, and determine the corresponding values for `k1_reverse`
+# %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
+# ### PART 2. Conversely, let's try a variety of values for `k1_forward`, and determine the corresponding values for `k1_reverse`
+
+# %% [markdown]
 # #### There's an extra consideration in pursuing the converse approach, namely we cannot simply give `k1_forward` any non-negative value as we please, because exessively small values would cause `k1_reverse` to become negative, as may be observed from our equation:
 # `kM = (kcat + k1_reverse) / k1_forward`   
 # which can be re-written as:  

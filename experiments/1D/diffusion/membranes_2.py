@@ -18,7 +18,7 @@
 # #### Simple scenarios with 1 chemical
 
 # %% [markdown]
-# ### TAGS :  "membranes 1D", "basic", "quick-start", "diffusion 1D"
+# ### TAGS :  "membranes 1D", "basic", "quick-start", "diffusion 1D", "under-the-hood"
 
 # %%
 LAST_REVISED = "May 19, 2025"
@@ -80,7 +80,7 @@ bio.system_heatmaps()
 bio.set_membranes(membranes=[ (1,2) ])    # By default impermeable
 
 # %%
-bio.membranes
+bio.membranes_obj
 
 # %%
 bio.describe_state()
