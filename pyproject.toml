@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "life123"
-version = "1.0-rc.5"
+version = "1.0-rc.6"
 authors = [
   { name = "Julian West Life123.science" },
 ]
@@ -21,7 +21,6 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-	"neoaccess==4.4.1",
 	"numpy~=1.26.4",
 	"scipy~=1.13.1",
 	"pandas~=1.5.3",

@@ -13,6 +13,4 @@ dependencies:
   - scipy=1.13.1
   - pip
   - pip:
-      - neo4j==4.4.11
-      - neoaccess==4.4.1
       - ipynbname==2024.1.0.0
