@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
-from life123 import ChemData
-from life123.reactions import ReactionRegistry, ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionGeneric
+from life123 import ChemData, ReactionRegistry, ReactionUnimolecular, ReactionGeneric
 from tests.utilities.comparisons import *
 
 

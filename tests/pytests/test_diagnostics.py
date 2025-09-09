@@ -4,7 +4,7 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 from life123 import ChemData, CollectionTabular
 from life123.diagnostics import Diagnostics
-from life123.reactions import ReactionRegistry
+from life123.reaction_registry import ReactionRegistry
 
 
 

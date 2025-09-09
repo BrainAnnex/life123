@@ -10,7 +10,7 @@
     :license:       MIT.  See LICENSE file for more details.
 """
 
-__version__ = "1.0.0rc6"
+__version__ = "1.0.0rc7"        # IN_PROGRESS
 
 
 from life123.bio_sim_1d import (System1D, Membranes1D, Diffusion1D, BioSim1D)
@@ -30,13 +30,13 @@ from life123.history import (
 )
 from life123.numerical import Numerical
 from life123.reactions import (
+    ReactionDecomposition,
     ReactionGeneric,
     ReactionEnzyme,
     ReactionUnimolecular,
-    ReactionSynthesis,
-    ReactionDecomposition,
-    ReactionRegistry
+    ReactionSynthesis
 )
+from life123.reaction_registry import ReactionRegistry
 from life123.thermodynamics import ThermoDynamics
 from life123.uniform_compartment import UniformCompartment
 from life123.reaction_kinetics import (ReactionKinetics, VariableTimeSteps)
@@ -64,12 +64,12 @@ __all__ = [
     'Membranes1D',
     'Membranes2D',
     'Numerical',
+    'ReactionDecomposition',
+    'ReactionEnzyme',
     'ReactionGeneric',
     'ReactionUnimolecular',
     'ReactionSynthesis',
-    'ReactionDecomposition',
     'ReactionRegistry',
-    'ReactionEnzyme',
     'ReactionKinetics',
     'System1D',
     'ThermoDynamics',

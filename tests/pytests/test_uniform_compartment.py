@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
-from life123 import ChemData, UniformCompartment
-from life123.reactions import ReactionRegistry, ReactionUnimolecular, ReactionSynthesis
+from life123 import ChemData, UniformCompartment, ReactionRegistry, \
+                    ReactionUnimolecular, ReactionSynthesis
 
 
 

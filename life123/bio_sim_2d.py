@@ -12,7 +12,8 @@ from life123.visualization.colors import Colors
 
 class BioSim2D:
     """
-    2D simulations of diffusion and reactions
+    2D simulations of diffusion and reactions.
+    Early implementation of membranes.
 
     TODO: reorganize by splitting, as done for BioSim1D
     """
