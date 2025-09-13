@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -24,6 +24,9 @@
 #
 # **Background**: please see experiments `react_2_a` and `react_2_b`   
 
+# %% [markdown]
+# ### TAGS : "numerical", "uniform compartment"
+
 # %%
 LAST_REVISED = "Nov. 11, 2024"
 LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
@@ -31,7 +34,7 @@ LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based o
 # %%
 #import set_path              # Using MyBinder?  Uncomment this before running the next cell!
 
-# %% tags=[]
+# %%
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
@@ -53,7 +56,7 @@ check_version(LIFE123_VERSION)
 # %% [markdown]
 # ## Common set up for the chemicals and the reaction (used by all the simulations)
 
-# %% tags=[]
+# %%
 # Instantiate the simulator and specify the chemicals
 chem_data = ChemData()
 
@@ -80,7 +83,7 @@ dynamics_variable.set_conc({"A": 10., "B": 50.})
 
 dynamics_variable.describe_state()
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ### Run the reaction (VARIABLE adaptive time steps)
 
 # %%
@@ -97,7 +100,7 @@ dynamics_variable.get_history()   # The system's history, saved during the run o
 # %%
 dynamics_variable.plot_history(colors=['darkturquoise', 'green'], show_intervals=True)
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # #### Notice how the reaction proceeds in smaller steps in the early times, when [A] and [B] are changing much more rapidly
 # That resulted from passing the flag _variable_steps=True_ to single_compartment_react()
 
@@ -164,7 +167,7 @@ fig_exact = PlotlyHelper.plot_curves(x=t_arr, y=[A_exact, B_exact], title="EXACT
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # # PART 4 - Comparing Variable Steps, Fixed Steps and Exact Solution   
 # #### To avoid clutter, we'll just plot [A]
 
@@ -193,7 +196,7 @@ PlotlyHelper.combine_plots(fig_list=[fig_fixed, fig_variable, fig_exact],
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # # PART 5 - Repeating Part 4 with a coarser grid
 # #### The advantage of adaptive variable step will be even more prominent
 

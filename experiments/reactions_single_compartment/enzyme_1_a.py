@@ -32,7 +32,7 @@
 # Source of kinetic parameters:  *page 16 of "Analysis of Enzyme Reaction Kinetics, Vol. 1", by F. Xavier Malcata, Wiley, 2023*
 
 # %% [markdown]
-# ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
+# ### TAGS :  "uniform compartment", "numerical", "enzymes"
 
 # %%
 LAST_REVISED = "Sep. 2, 2025"

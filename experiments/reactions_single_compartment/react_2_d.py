@@ -20,7 +20,7 @@
 # compared with **exact analytical solution**
 
 # %% [markdown]
-# ### TAGS :  "uniform compartment", "chemistry", "numerical", "quick-start", "basic", "under-the-hood"
+# ### TAGS :  "uniform compartment", "numerical", "quick-start", "basic", "under-the-hood"
 
 # %%
 LAST_REVISED = "Aug. 29, 2025"

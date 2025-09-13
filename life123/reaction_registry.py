@@ -2,16 +2,18 @@ from typing import Union, Set, Tuple
 from life123.visualization.py_graph_visual import PyGraphVisual
 from life123.visualization.graphic_log import GraphicLog
 from life123.html_log import HtmlLog as log
-from life123.reactions import ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionGeneric
+from life123.reactions import ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionEnzyme, ReactionGeneric
 
 
 
 class ReactionRegistry:
     """
-    Manage the reaction-specific classes,
+    Manage a list of reactions, and reaction-specific classes,
     such as ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionGeneric, ReactionEnzyme, etc.
 
-    (this class was formerly called "Reactions")
+    This class is typically instantiated for the benefit of UniformCompartment objects.
+    A ReactionRegistry object may be shared by multiple UniformCompartment objects IF the latter all make use
+    of ALL the registered reactions  (i.e. no "pick and choose" some of the reactions.)
     """
 
     def __init__(self, chem_data):
@@ -23,33 +25,34 @@ class ReactionRegistry:
         # TODO: consider adding to arguments   "=None, labels=None"
         """
         assert (chem_data is not None) or (labels is not None), \
-            "Reactions() instantiation: exactly one of the arguments `chem_data` or `labels` must be provided"
+            "ReactionRegistry() instantiation: exactly one of the arguments `chem_data` or `labels` must be provided"
 
         assert (chem_data is None) or (labels is None), \
-            "Reactions() instantiation: cannot specify both the arguments `chem_data` and `labels`"
+            "ReactionRegistry() instantiation: cannot specify both the arguments `chem_data` and `labels`"
 
         if labels is not None:
             chem_data = ChemData(labels=labels)
         """
 
         assert chem_data is not None, \
-            "Reactions() instantiation: the arguments `chem_data` must be provided, and cannot be None"
+            "ReactionRegistry() instantiation: the arguments `chem_data` must be provided, and cannot be None"
 
         self.chem_data = chem_data
 
         self.reaction_list = []     # List of objects of the various individual reaction classes,
-                                    # such as "ReactionGeneric" and "ReactionEnz"
+                                    # such as "ReactionGeneric" and "ReactionEnzyme"
 
 
-        self.active_chemicals = set()   # Set of the names of the chemicals - not counting pure catalysts - involved
+        self.active_chemicals = set()   # Set of the labels of the chemicals - not counting pure catalysts - involved
                                         # in any of the registered reactions
                                         # CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
-                                        #          the reactions are simulated
+                                        #          the reactions are simulated.  TODO: it might better belong to UniformCompartment
 
-        self.active_enzymes = set()     # Set of the names of the enzymes (catalysts) involved
+        self.active_enzymes = set()     # Set of the labels of the enzymes (catalysts) involved
                                         # in any of the registered reactions
                                         # CAUTION: the concept of "active enzyme" might change in future versions, where only SOME of
-                                        #          the reactions are simulated
+                                        #          the reactions are simulated.  TODO: it might better belong to UniformCompartment
+
 
 
 
@@ -253,28 +256,43 @@ class ReactionRegistry:
         :param rxn: One of the specific Reaction classes, such as
                         ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition,
                         ReactionEnz, ReactionGeneric
+        :param temp:Temperature in degree Kelvin
+
         :return:    Integer index of the newly-added reaction
                         (in the list self.reaction_list, stored as object variable)
         """
         self.reaction_list.append(rxn)
 
         # Register any newly-encountered reactant not already registered
+        # for aesthetic reasons, we'll do 1) catalyst, 2) reactants, 3) products
+
+        catalyst = rxn.extract_catalyst()
+
+        if catalyst:
+            # Register the catalyst, if not already registered
+            self.chem_data.add_chemical(name=catalyst, skip_duplicates=True)
+
+        # Register any newly-encountered reactant not already registered
         rxn_reactants = rxn.extract_reactant_labels()
         for label in rxn_reactants:
-            if not self.chem_data.label_exists(label):
-                self.chem_data.add_chemical(name=label)
+            self.chem_data.add_chemical(name=label, skip_duplicates=True)
 
         # Register any newly-encountered reaction product not already registered
-        # (reactants are done first, because that's typically a more appealing order of appearance)
         rxn_products = rxn.extract_product_labels()
         for label in rxn_products:
-            if not self.chem_data.label_exists(label):
-                self.chem_data.add_chemical(name=label)
+            self.chem_data.add_chemical(name=label, skip_duplicates=True)
 
 
-        self.active_chemicals = self.active_chemicals | set(rxn_reactants) | set(rxn_products)     # Union of sets
+        involved_chemicals = set(rxn_reactants) | set(rxn_products)  # Union of sets
 
-        rxn.set_thermodynamic_data(temp=temp)
+        if catalyst is not None:
+            involved_chemicals = involved_chemicals - {catalyst}    # Difference between sets
+            self.active_enzymes.add(rxn.catalyst)                   # Add the new entry to a set
+
+        # Update the set of "active chemicals"
+        self.active_chemicals = self.active_chemicals | involved_chemicals  # Union of sets
+
+        rxn.set_thermodynamic_data(temp=temp)   # TODO: unclear if this is the best place to do this
 
         return len(self.reaction_list) - 1
 
@@ -283,6 +301,7 @@ class ReactionRegistry:
     def add_reaction(self, reactants :Union[int, str, list], products :Union[int, str, list],
                      kF=None, forward_rate=None, kR=None, reverse_rate=None,
                      enzyme=None, k1_F=None, k1_R=None, k2_F=None,
+                     temp=None,
                      reaction_type=None, **kwargs) -> int:
         """
         Create and register a new SINGLE chemical reaction,
@@ -354,45 +373,20 @@ class ReactionRegistry:
 
         if reaction_type == "ReactionEnzyme":
             rxn = ReactionEnzyme(enzyme=enzyme, substrate=reactants, product=products,
-                                 k1_F=k1_F, k1_R=k1_R, k2_F=k2_F, **kwargs)
+                                 k1_F=k1_F, k1_R=k1_R, k2_F=k2_F, temp=temp, **kwargs)
         elif reaction_type == "ReactionUnimolecular":
-            rxn = ReactionUnimolecular(reactant=reactants, product=products, kF=kF, kR=kR, **kwargs)
+            rxn = ReactionUnimolecular(reactant=reactants, product=products, kF=kF, kR=kR, temp=temp, **kwargs)
         elif reaction_type == "ReactionDecomposition":
-            rxn = ReactionDecomposition(reactant=reactants, products=products, kF=kF, kR=kR, **kwargs)
+            rxn = ReactionDecomposition(reactant=reactants, products=products, kF=kF, kR=kR, temp=temp, **kwargs)
         elif reaction_type == "ReactionSynthesis":
-            rxn = ReactionSynthesis(reactants=reactants, product=products, kF=kF, kR=kR, **kwargs)
+            rxn = ReactionSynthesis(reactants=reactants, product=products, kF=kF, kR=kR, temp=temp, **kwargs)
         elif reaction_type == "ReactionGeneric":
-            rxn = ReactionGeneric(reactants, products, kF=kF, kR=kR, **kwargs)
+            rxn = ReactionGeneric(reactants, products, kF=kF, kR=kR, temp=temp, **kwargs)
         else:
             raise Exception(f"add_reaction(): Unknown value for reaction_type: '{reaction_type}'")
 
 
-        self.reaction_list.append(rxn)
-
-        # Register any newly-encountered reactant not already registered
-        rxn_reactants = rxn.extract_reactant_labels()
-        for label in rxn_reactants:
-            if not self.chem_data.label_exists(label):
-                self.chem_data.add_chemical(name=label)
-
-        # Register any newly-encountered reaction product not already registered
-        # Note: reactants are done first, because that's typically a more appealing order of appearance
-        rxn_products = rxn.extract_product_labels()
-        for label in rxn_products:
-            if not self.chem_data.label_exists(label):
-                self.chem_data.add_chemical(name=label)
-
-
-        # TODO: since we already have rxn_reactants, rxn_products and rxn.enzyme, the following could be simplified!
-        involved_chemicals = rxn.extract_chemicals_in_reaction()
-
-        if hasattr(rxn, "catalyst") and rxn.catalyst is not None:
-            involved_chemicals = involved_chemicals - {rxn.catalyst}     # Difference between sets
-            self.active_enzymes.add(rxn.catalyst)       # Add the new entry to a set
-
-        self.active_chemicals = self.active_chemicals.union(involved_chemicals)     # Union of sets
-
-        return len(self.reaction_list) - 1
+        return self.register_reaction(rxn=rxn, temp=temp)
 
 
 
@@ -462,7 +456,7 @@ class ReactionRegistry:
         """
         print(f"Number of reactions: {self.number_of_reactions()}")
 
-        # Print a concise description of each reaction in turn
+        # Print a concise description of EACH REACTION IN TURN
         for description in self.multiple_reactions_describe(concise=concise):
             print(description)
 
@@ -526,7 +520,7 @@ class ReactionRegistry:
         """
         rxn = self.get_reaction(rxn_index)
 
-        return rxn.describe(concise)
+        return rxn.describe(concise)    # Invoke the individual reaction object
 
 
 

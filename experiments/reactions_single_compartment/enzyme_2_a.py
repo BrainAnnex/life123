@@ -32,8 +32,8 @@
 # ### TAGS :  "uniform compartment", "chemistry", "numerical", "enzymes"
 
 # %%
-LAST_REVISED = "Sep. 2, 2025"
-LIFE123_VERSION = "1.0.0rc6"         # Library version this experiment is based on
+LAST_REVISED = "Sep. 10, 2025"
+LIFE123_VERSION = "1.0.0rc7"         # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -83,10 +83,10 @@ k2_forward
 # The Life123 class `ReactionEnzyme` conveniently provides the necessary transformations.
 
 # %%
-enz = ReactionEnzyme()
+enz = ReactionEnzyme(enzyme="E", substrate="S", product="P")
 
 # %%
-# Example, using the k1_forward=18. from experiment `enzyme_1_a`, to determine k1_reverse
+# Example, using the k1_forward=18. from experiment `enzyme_1_a` (together with the kM and kcat we were given), to determine k1_reverse
 
 k1_reverse = enz.compute_k1_reverse(kM=kM, kcat=kcat, k1_forward = 18.)
 k1_reverse
@@ -178,6 +178,6 @@ fig.add_scatter(x=[18.], y=[100.],
 # Note that smallest value of `k1_forward` is NOT zero, but rather about 5.92, as discussed earlier
 
 # %% [markdown]
-# ### In the continuation experiment, `enzyme_2_b`, we'll explore how variations of `k1_forward` and `k1_reverse` (guesses consistent with `kM` and `kcat`) affect the kinetics of our enzymatic reaction...
+# ### In the continuation experiment, `enzyme_2_b`, we'll explore how variations of `k1_forward` and `k1_reverse` (i.e. using guesses consistent with `kM` and `kcat`) affect the kinetics of our enzymatic reaction...
 
 # %%

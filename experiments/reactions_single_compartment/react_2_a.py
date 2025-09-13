@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## An `A <-> B` reaction  
+# ## `A <-> B` unimolecular reaction  
 # with 1st-order kinetics in both directions, taken to equilibrium,
 # using a simple, **coarse fixed-timestep simulation.**  
 #
@@ -23,6 +23,9 @@
 #
 # #### This experiment gets repeated in _"react_2_b"_ , with a more sophisticated approach, 
 # #### involving adaptive variable time steps
+
+# %% [markdown]
+# ### TAGS :  "basic", "uniform compartment"
 
 # %%
 LAST_REVISED = "Aug. 29, 2024"

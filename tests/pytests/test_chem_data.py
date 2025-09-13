@@ -44,8 +44,8 @@ def test_get_index():
 
 
 
-def test_name_exists():
-    chem_data = ChemData(names=['A', 'B', 'C'])
+def test_label_exists():
+    chem_data = ChemData(labels=['A', 'B', 'C']) # Names and labels are by default identical
     assert chem_data.label_exists("A")
     assert chem_data.label_exists("C")
     assert not chem_data.label_exists("X")
@@ -54,6 +54,53 @@ def test_name_exists():
     assert chem_data.label_exists("X")
 
     assert not chem_data.label_exists("Z")
+
+
+    chem_data = ChemData(labels=['A', 'B', 'C'],
+                         names=['A dioxide', 'B chloride', 'C amino'])
+
+    assert chem_data.label_exists("A")
+    assert chem_data.label_exists("C")
+    assert not chem_data.label_exists("X")
+
+    chem_data.add_chemical(name="X")
+    assert chem_data.label_exists("X")
+
+    assert not chem_data.label_exists("Z")
+
+    assert not chem_data.label_exists("A dioxide")  # This is a name, not a label
+    assert not chem_data.label_exists("B chloride")
+    assert not chem_data.label_exists("C amino")
+
+
+
+def test_name_exists():
+    chem_data = ChemData(names=['A', 'B', 'C'])  # Names and labels are by default identical
+    assert chem_data.name_exists("A")
+    assert chem_data.name_exists("C")
+    assert not chem_data.name_exists("X")
+
+    chem_data.add_chemical(name="X")
+    assert chem_data.name_exists("X")
+
+    assert not chem_data.name_exists("Z")
+
+
+    chem_data = ChemData(labels=['A', 'B', 'C'],
+                         names=['A dioxide', 'B chloride', 'C amino'])
+
+    assert chem_data.name_exists("A dioxide")
+    assert chem_data.name_exists("C amino")
+    assert not chem_data.name_exists("X")
+
+    chem_data.add_chemical(name="X")
+    assert chem_data.name_exists("X")
+
+    assert not chem_data.name_exists("Z")
+
+    assert not chem_data.name_exists("A")   # This is a label, not a name
+    assert not chem_data.name_exists("B")
+    assert not chem_data.name_exists("C")
 
 
 
@@ -111,14 +158,20 @@ def test_add_chemical():
     assert chem_data.number_of_chemicals() == 0
     assert chem_data.chemical_data == []
 
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name=123)    # Name is not a string
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name="")     # Missing name
+
     result = chem_data.add_chemical(name="A")
     assert result == 0
     assert chem_data.number_of_chemicals() == 1
-    assert chem_data.chemical_data == [{"name": "A", "label": "A"}]
+    assert chem_data.chemical_data == [{"name": "A", "label": "A"}]     # The label was by default same as name
     assert chem_data.label_dict == {"A": 0}
 
     with pytest.raises(Exception):
-        chem_data.add_chemical(name="A")     # Duplicate!
+        chem_data.add_chemical(name="A")     # Duplicate name
 
     result = chem_data.add_chemical(name="B", note="some note")
     assert result == 1
@@ -138,29 +191,30 @@ def test_add_chemical():
     result = chem_data.add_chemical(name="Some long name", label="D")
     assert result == 3
     assert chem_data.number_of_chemicals() == 4
-    assert chem_data.chemical_data == [{"name": "A", "label": "A"},
-                                       {"name": "B", "label": "B", "note": "some note"},
-                                       {"name": "C", "label": "C"},
-                                       {"name": "Some long name", "label": "D"}]
+    expected_chem_data = [{"name": "A", "label": "A"},
+                          {"name": "B", "label": "B", "note": "some note"},
+                          {"name": "C", "label": "C"},
+                          {"name": "Some long name", "label": "D"}]
+    assert chem_data.chemical_data == expected_chem_data
     assert chem_data.label_dict == {"A": 0, "B": 1, "C": 2, "D": 3}
 
     with pytest.raises(Exception):
         chem_data.add_chemical(name="Some long name")   # Duplicate name!
 
-    with pytest.raises(Exception):
-        chem_data.add_chemical(name="D")                # Name cannot be same as an existing label!
+    chem_data.add_chemical(name="Some long name", skip_duplicates=True) # No action taken (duplicate name)
+    assert chem_data.chemical_data == expected_chem_data                # Nothing has changed
 
     with pytest.raises(Exception):
         chem_data.add_chemical(name="Z", label="A")     # Duplicate label!
 
+    chem_data.add_chemical(name="Z", label="A", skip_duplicates=True)   # No action taken (duplicate label)
+    assert chem_data.chemical_data == expected_chem_data                # Nothing has changed
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name="D")                            # Name cannot be same as an existing label!
+
     with pytest.raises(Exception):
         chem_data.add_chemical(name="Z", label="Some long name")    # Label cannot be same as an existing name!
-
-    with pytest.raises(Exception):
-        chem_data.add_chemical(name=123)    # Name is not a string
-
-    with pytest.raises(Exception):
-        chem_data.add_chemical(name="")     # Missing name
 
 
     # Re-start
@@ -169,7 +223,8 @@ def test_add_chemical():
     result = chem_data.add_chemical("Y", note="test")
     assert result == 1
     assert chem_data.number_of_chemicals() == 2
-    assert chem_data.chemical_data == [{"name": "X", "label": "X"}, {"name": "Y", "label": "Y", "note": "test"}]
+    assert chem_data.chemical_data == [{"name": "X", "label": "X"},
+                                       {"name": "Y", "label": "Y", "note": "test"}]
     assert chem_data.label_dict == {"X": 0, "Y": 1}
 
     result = chem_data.add_chemical(label="Z", name="CH3OH")

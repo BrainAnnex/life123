@@ -28,7 +28,7 @@ class ChemCore:
         self.chemical_data = [] # Basic data for all chemicals, *except* water and macro-molecules.
                                 # Each list entry represents 1 chemical,
                                 # and is a dict required to contain the keys "label" and "name";
-                                # it may also contain other arbitrary other keys ("notes" is a commonly-used one)
+                                # it may also contain arbitrary other keys ("notes" is a commonly-used one)
                                 # EXAMPLE: [{"label": "A",   "name": "A"},
                                 #           {"label": "NAD", "name": "Nicotinamide adenine dinucleotide", "note": "some note"},
                                 #           {"label": "B",   "name": "B"]
@@ -108,13 +108,28 @@ class ChemCore:
 
     def label_exists(self, label :str) -> bool:
         """
-        Return True if the chemical with the given name exists (i.e. was registered),
+        Return True if the chemical with the given label exists (i.e. was registered),
         or False otherwise
 
         :param label:   The label of a chemical
-        :return:        True if it exists, or False otherwise
+        :return:        True if it was already registered, or False otherwise
         """
         return label in self.label_dict.keys()
+
+
+    def name_exists(self, name :str) -> bool:
+        """
+        Return True if the chemical with the given name exists (i.e. was registered),
+        or False otherwise
+
+        :param name:    The name (full name) of a chemical
+        :return:        True if it was already registered, or False otherwise
+        """
+        for chem in self.chemical_data:
+            if name == chem["name"]:
+                return True     # Located in existing data
+
+        return False    # Not found
 
 
 
@@ -179,7 +194,8 @@ class ChemCore:
 
 
 
-    def add_chemical(self, name :str, label=None, note=None, plot_color=None, **kwargs) -> int:
+    def add_chemical(self, name :str, label=None, note=None, skip_duplicates=False,
+                    plot_color=None, **kwargs) -> Union[int, None]:
         """
         Register a new chemical species, with a name
         and (optionally) :
@@ -194,15 +210,19 @@ class ChemCore:
         Note: if also wanting to set the diffusion rate in a single function call,
               use ChemData.add_chemical_with_diffusion() instead
 
-        :param name:        Name of the new chemical species to register; names must be unique -
+        :param name:        (Long) name of the new chemical species to register; names must be unique -
                                an Exception will be raised if the name was already registered as a name or as a label
         :param label:       [OPTIONAL] Typically, a short version of the name, or a stand-in for it.
                                 If provided, it must be unique, and cannot be identical to the name of another chemical;
                                 if not provided, the name will be used as a label
         :param note:        [OPTIONAL] String with note to attach to the chemical
+        :param skip_duplicates: [OPTIONAL] Normally, duplicate labels or duplicate names raise Exception;
+                                                however, if True, any such duplicate is silently skipped
         :param plot_color:  [OPTIONAL] String with color value to attach to the chemical for visualizations
         :param kwargs:      [OPTIONAL] Dictionary of named arguments (with any desired names)
+
         :return:            The integer index assigned to the newly-added chemical
+                                (or None in case of a duplicate that was skipped)
         """
         # Validate
         assert type(name) == str, \
@@ -210,27 +230,38 @@ class ChemCore:
             f"What was passed ({name}) was of type {type(name)}"
 
         assert name != "", \
-            "add_chemical(): the chemical's name cannot be a blank string"
+            "add_chemical(): the chemical's name cannot be a blank string"  # TODO: strip blanks first
 
-        assert name not in self.label_dict.keys(), \
-            f"add_chemical(): the requested name (`{name}`) is ALREADY registered"
+        if self.name_exists(name):
+            if skip_duplicates:
+                return
+            raise Exception(f"add_chemical(): the requested name (`{name}`) is ALREADY registered")
 
-        for chem in self.chemical_data:
-            assert name != chem["name"], \
-                f"add_chemical(): the requested name (`{name}`) is ALREADY registered"
+        for l in self.label_dict.keys():
+            assert name != l, \
+                f"add_chemical(): the requested name (`{name}`) is ALREADY registered as the label of another chemical"
 
 
         if not label:
-            label = name    # Use the (full) name as a label, if no full label is provided
+            label = name    # Use the (full) name as a label, if no label was provided
         else:
+            # If a label was passed
             assert type(label) == str, \
                 f"add_chemical(): a chemical's label, if provided, must be a string value.  " \
                 f"What was passed ({label}) was of type {type(label)}"
-            assert label not in self.label_dict.keys(), \
-                f"add_chemical(): the requested name (`{label}`) is ALREADY registered"
+
+            assert label != "", \
+                "add_chemical(): the chemical's label cannot be a blank string"  # TODO: strip blanks first
+
+            if self.label_exists(label):
+                if skip_duplicates:
+                    return
+                raise Exception(f"add_chemical(): the requested label (`{label}`) is ALREADY registered")
+
             for chem in self.chemical_data:
                 assert label != chem["name"], \
                     f"add_chemical(): the requested label (`{label}`) is ALREADY registered as the name of another chemical"
+
 
         index = len(self.chemical_data)     # The next available index number (list position)
         self.label_dict[label] = index

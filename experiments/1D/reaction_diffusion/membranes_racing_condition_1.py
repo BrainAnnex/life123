@@ -60,8 +60,8 @@ chem_data = ChemData(names=["A", "B", "C"],
 
 rxns = ReactionRegistry(chem_data=chem_data)
 
-# Reaction A + B <-> C , with 1st-order kinetics for each species; note that it's mostly in the forward direction
-# The reaction is mostly in the forward direction
+# Reaction A + B <-> C , with 1st-order kinetics for each species
+# Note that the reaction is mostly in the forward direction
 rxns.add_reaction(reactants=["A", "B"], products="C", kF=0.1, kR=0.02)
 rxns.describe_reactions()
 

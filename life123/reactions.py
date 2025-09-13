@@ -13,9 +13,24 @@ from life123.reaction_kinetics import ReactionKinetics
 
 class ReactionCommon:
     """
-    Base class for all individual reactions.
+    Foundational base class for ALL individual reactions.
 
     Typically NOT instantiated by the user.
+
+    Individual reactions classes need to provide the following methods [TODO: partial list]:
+        extract_reactant_labels()   Incl. enzyme, if applicable
+        extract_reactants()
+
+        extract_product_labels()    Incl. enzyme, if applicable
+        extract_products()
+        extract_catalyst()
+        extract_chemicals_in_reaction()
+
+        extract_rxn_properties()     A dict
+
+        set_thermodynamic data()
+        step_simulation()
+        etc.
     """
 
     def __init__(self, active=True, temp=None):
@@ -23,14 +38,16 @@ class ReactionCommon:
         :param active:  [NOT YET IMPLEMENTED] If False, the reaction is regarded as inactive
         :param temp:    In Kelvins
         """
-        self.active = active            # TODO: not yet in use
-        self.temp = temp                # In Kelvins
+        self.active = active        # TODO: not yet in use
+        self.temp = temp            # In Kelvins
+        self.catalyst = None        # The label of a chemical that catalyzes this reaction, if applicable (at most 1)
+
 
 
 
     def extract_stoichiometry(self, term :(int, str, int)) -> int:
         """
-        Return the stoichiometry coefficient, from a reaction TERM
+        Return the stoichiometry coefficient, from a reaction "TERM"
 
         :param term:    A triplet (int, str, int) representing a reaction term
         :return:        An integer with the stoichiometry coefficient
@@ -40,22 +57,32 @@ class ReactionCommon:
 
     def extract_species_name(self, term :(int, str, int)) -> str:
         """
-        Return the name of the chemical species, from a reaction TERM
+        Return the name of the chemical species, from a reaction "TERM"
 
         :param term:    A triplet (int, str, int) representing a reaction term
         :return:        The name of the chemical species in the term
         """
+        # TODO: rename to extract_chem_label()
         return term[1]
 
 
     def extract_rxn_order(self, term :(int, str, int)) -> int:
         """
-        Return the reaction order, from a reaction TERM
+        Return the reaction order, from a reaction "TERM"
 
         :param term:    A triplet (int, str, int) representing a reaction term
         :return:        An integer with the reaction order for this term
         """
         return term[2]
+
+
+
+    def extract_catalyst(self) -> Union[str, None]:
+        """
+
+        :return:
+        """
+        return self.catalyst
 
 
 
@@ -333,18 +360,29 @@ class ReactionOneStep(ReactionCommon):
         return self.K
 
 
+
+
+
 ###################################################################################################################
 
 class ReactionUnimolecular(ReactionOneStep):
     """
     Reactions of type A <-> B
     """
+
     def __init__(self, reactant :str, product :str, **kwargs):
+        """
+
+        :param reactant:    String with the label of the reaction's single reactant
+        :param product:     String with the label of the reaction's single product
+        :param kwargs:      Other named arguments to pass to the parent class
+        """
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
         assert type(reactant) == str, "ReactionUnimolecular instantiation: argument `reactant` must be a string"
         assert type(product) == str, "ReactionUnimolecular instantiation: argument `product` must be a string"
-        assert reactant != product, "ReactionUnimolecular instantiation: the `reactant` and the `product` cannot be identical"
+        assert reactant != product, \
+            f"ReactionUnimolecular instantiation: the `reactant` and the `product` cannot be identical (`{reactant}`)"
 
         self.reactant = reactant
         self.product = product
@@ -375,6 +413,7 @@ class ReactionUnimolecular(ReactionOneStep):
 
     def extract_reactant_labels(self) -> [str]:
         """
+        Return the list of ALL the reactant labels in this reaction
 
         :return:
         """
@@ -393,6 +432,11 @@ class ReactionUnimolecular(ReactionOneStep):
 
 
     def extract_product_labels(self) -> [str]:
+        """
+        Return the list of the labels ALL the products of this reaction
+
+        :return:
+        """
         return [self.product]
 
 
@@ -409,7 +453,7 @@ class ReactionUnimolecular(ReactionOneStep):
 
     def extract_chemicals_in_reaction(self) -> Set[str]:
         """
-        Return a SET of the chemical labels of all the chemicals appearing in this reaction.
+        Return a SET of the labels of ALL the chemicals appearing in this reaction
 
         :return:    A SET of the labels of the chemicals involved in this reaction
                         Note: being a set, it's NOT in any particular order
@@ -564,6 +608,7 @@ class ReactionSynthesis(ReactionOneStep):
 
     def extract_reactant_labels(self) -> [str]:
         """
+        Return the list of ALL the reactant labels in this reaction
 
         :return:
         """
@@ -582,6 +627,11 @@ class ReactionSynthesis(ReactionOneStep):
 
 
     def extract_product_labels(self) -> [str]:
+        """
+        Return the list of the labels ALL the products of this reaction
+
+        :return:
+        """
         return [self.product]
 
 
@@ -598,7 +648,7 @@ class ReactionSynthesis(ReactionOneStep):
 
     def extract_chemicals_in_reaction(self) -> Set[str]:
         """
-        Return a SET of the chemical labels of all the chemicals appearing in this reaction.
+        Return a SET of the labels of ALL the chemicals appearing in this reaction
 
         :return:    A SET of the labels of the chemicals involved in this reaction
                         Note: being a set, it's NOT in any particular order
@@ -759,6 +809,7 @@ class ReactionDecomposition(ReactionOneStep):
 
     def extract_reactant_labels(self) -> [str]:
         """
+        Return the list of ALL the reactant labels in this reaction
 
         :return:
         """
@@ -777,6 +828,11 @@ class ReactionDecomposition(ReactionOneStep):
 
 
     def extract_product_labels(self) -> [str]:
+        """
+        Return the list of the labels ALL the products of this reaction
+
+        :return:
+        """
         return [self.product_1, self.product_2]
 
 
@@ -793,7 +849,7 @@ class ReactionDecomposition(ReactionOneStep):
 
     def extract_chemicals_in_reaction(self) -> Set[str]:
         """
-        Return a SET of the chemical labels of all the chemicals appearing in this reaction.
+        Return a SET of the labels of ALL the chemicals appearing in this reaction
 
         :return:    A SET of the labels of the chemicals involved in this reaction
                         Note: being a set, it's NOT in any particular order
@@ -906,32 +962,43 @@ class ReactionEnzyme(ReactionCommon):
         P : Product
     """
 
-    def __init__(self, enzyme=None, substrate=None, product=None,
+    def __init__(self, enzyme :str, substrate :str, product :str, intermediate=None,
                  k1_F=None, k1_R=None, k2_F=None, k2_R=None,
                  kM=None, kcat=None, **kwargs):
         """
         :param enzyme:      The label for the chemical acting as enzyme
         :param substrate:   The reactant
         :param product:     The final reaction product
-        :param k1_F:
-        :param k1_R:
-        :param k2_F:
-        :param k2_R:        TODO: drop
-        :param kM:          Michaelis constant
-        :param kcat:
+        :param intermediate:[OPTIONAL] The label for the reaction intermediate;
+                                if not specified, the labels of the enzyme and substrate get concatenated.
+                                EXAMPLE: "ES"
+        :param k1_F:        [OPTIONAL]The forward reaction rate of the 1st part of the reaction
+        :param k1_R:        [OPTIONAL]The reverse reaction rate of the 1st part of the reaction
+        :param k2_F:        [OPTIONAL]The forward reaction rate of the 2nd part of the reaction
+        :param k2_R:        [NOT IN USE]
+        :param kM:          [OPTIONAL]"Michaelis constant"
+        :param kcat:        [OPTIONAL]"Catalytic rate constant" aka "Turnover number" aka "Collective rate constant"
+                            (equal to k2_F)
         """
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
-        if substrate:
-            assert (substrate != product), \
-                "ReactionEnzyme instantiation: the `substrate` cannot be the same as the `product`"
+        assert type(enzyme) == str, "ReactionEnzyme instantiation: argument `enzyme` must be a string"
+        assert type(substrate) == str, "ReactionEnzyme instantiation: argument `substrate` must be a string"
+        assert type(product) == str, "ReactionEnzyme instantiation: argument `product` must be a string"
+        # TODO: assert that the strings are valid labels (not just empty space, etc); create function in ChemData
+
+        assert (substrate != product), \
+            "ReactionEnzyme instantiation: the `substrate` cannot be the same as the `product`"
 
         self.enzyme = enzyme
+        self.catalyst = enzyme      # "catalyst" is a more generic concept, shared with other types of reactions
         self.substrate = substrate
 
-        self.intermediate = None
-        if enzyme and substrate:
-            self.intermediate = enzyme + substrate      # TODO: Allow for alternate user-specified names
+
+        self.intermediate = intermediate
+        if intermediate is None:
+            # Concatenate the labels of the enzyme and the substrate.  EXAMPLE: "ES"
+            self.intermediate = enzyme + substrate
 
         self.product = product
 
@@ -949,15 +1016,15 @@ class ReactionEnzyme(ReactionCommon):
             self.kM = (k2_F + k1_R) / k1_F
             if kM is not None:
                 assert np.allclose(self.kM, kM), \
-                    f"Inconsistent values passed during instantiation of ReactionEnz.  " \
-                    f"The passed kM value ({kM}) doesn't the value ({self.kM}) inferred from the given reaction rate constants"
+                    f"ReactionEnzyme instantiation: inconsistent arguments.  " \
+                    f"The passed `kM` value ({kM}) doesn't match the value ({self.kM}) inferred from the given reaction rate constants"
 
         if k2_F is not None:
             self.kcat = k2_F
             if kcat is not None:
                 assert np.allclose(self.kcat, kcat), \
-                    f"Inconsistent values passed during instantiation of ReactionEnz.  " \
-                    f"The passed kcat value ({kcat}) doesn't the value ({self.kcat}) of the given k2_F reaction rate constants"
+                    f"ReactionEnzyme instantiation: inconsistent arguments.  " \
+                    f"The passed `kcat` value ({kcat}) doesn't match the value ({self.kcat}) of the given `k2_F` reaction rate constants"
 
 
 
@@ -973,7 +1040,7 @@ class ReactionEnzyme(ReactionCommon):
 
         if not concise:
             description += "  (Enzymatic reaction)"
-            description += f"  (k1_F = {self.k1_F:,.5g} / k1_R = {self.k1_R:,.5g} / k2_F = {self.k2_F:,.5g}"
+            description += f"  (k1_F = {self.k1_F:,.5g} / k1_R = {self.k1_R:,.5g} / k2_F = {self.k2_F:,.5g} / kM = {self.kM:,.5g} / kcat = {self.kcat:,.5g}"
             if self.temp:
                  description += f" / Temp = {self.temp - 273.15:,.4g} C"
 
@@ -986,29 +1053,34 @@ class ReactionEnzyme(ReactionCommon):
 
     def extract_reactant_labels(self) -> [str]:
         """
+        Return the list of ALL the reactant labels in this reaction,
+        (including the enzyme)
 
         :return:
         """
-        return [self.substrate]
+        return [self.substrate, self.enzyme]
 
 
     def extract_reactants(self) -> [(int, str, int)]:
         """
-        Return a list of triplets with details of the reactants of the given reaction,
-        incl. their stoichiometry, chemical label, and reaction order
+        Return a list of triplets with details of ALL the reactants of the given reaction
+        (including the enzyme)
+        Each triplet contains stoichiometry, chemical label, and reaction order
 
         :return:    A list of triplets of the form (stoichiometry, chemical label, reaction order)
         """
-        return [(1, self.substrate, 1)]
+        return [(1, self.substrate, 1), (1, self.enzyme, 1)]
 
 
 
     def extract_product_labels(self) -> [str]:
         """
+        Return the list of the labels of ALL the products of this reaction,
+        (including the enzyme)
 
         :return:
         """
-        return [self.product]
+        return [self.product, self.enzyme]
 
 
     def extract_products(self) -> [(int, str, int)]:
@@ -1018,13 +1090,14 @@ class ReactionEnzyme(ReactionCommon):
 
         :return:    A list of triplets of the form (stoichiometry, chemical label, reaction order)
         """
-        return [(1, self.product, 1)]
+        return [(1, self.product, 1), (1, self.enzyme, 1)]
 
 
 
     def extract_chemicals_in_reaction(self) -> Set[str]:
         """
-        Return a SET of the chemical labels of all the chemicals appearing in this reaction.
+        Return a SET of the labels of ALL the chemicals appearing in this reaction,
+        including enzyme and intermediate
 
         :return:    A SET of the labels of the chemicals involved in this reaction
                         Note: being a set, it's NOT in any particular order
@@ -1165,6 +1238,18 @@ class ReactionEnzyme(ReactionCommon):
 
 
 
+    def set_thermodynamic_data(self, temp :float) -> None:
+        """
+        Set all the thermodynamic data derivable from the given temperature,
+        and all previously passed kinetic and thermodynamic data.
+        Raise an Exception if any inconsistency is detected.
+
+        :param temp:    System temperature in Kelvins.
+        """
+        pass    # TODO
+
+
+
     def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
         """
         Simulate the enzymatic reaction E + S <-> ES -> E + P, over the specified time interval,
@@ -1242,14 +1327,19 @@ class ReactionGeneric(ReactionOneStep):
     arbitrary stoichiometry,
     and arbitrary kinetic reaction orders for each participating chemical.
 
+    IMPORTANT:  Use only for reactions whose dynamics can be satisfactorily modeled with kinetics involving
+                the chemical concentrations raised to given powers.
+                Do *NOT* use ReactionGeneric to model typical biochemistry enzymatic reactions
+                of the type E + S -> E + P   (use the "ReactionEnzyme" class instead!)
+
+    NOTE:   Simpler, more specific classes are available for Unimolecular Reactions (A <-> B),
+            Synthesis Reactions (A + B <-> C), and Decomposition Reactions (A <-> B + C)
+
     Included:
         - stoichiometry
         - kinetic data (reaction rates, reaction orders)
         - thermodynamic data (temperature, changes in enthalpy/entropy/Gibbs Free Energy)
-        - list of involved enzymes
-
-
-    (Note: this data will eventually be stored in a graph database)
+        - list of involved catalysts
 
     Each reaction contains:
             "reactants"
@@ -1297,17 +1387,11 @@ class ReactionGeneric(ReactionOneStep):
         :param delta_H:     [OPTIONAL] Change in Enthalpy (from reactants to products)
         :param delta_S:     [OPTIONAL] Change in Entropy (from reactants to products)
         :param delta_G:     [OPTIONAL] Change in Free Energy (from reactants to products), in Joules
-        :param temp:        [OPTIONAL] Temperature in Kelvins.  For now, assumed constant everywhere,
-                                and unvarying (or very slowly varying)
         """
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
         self.reactants = None       # A list of triplets (stoichiometry, species name, reaction order)
         self.products = None        # A list of triplets (stoichiometry, species name, reaction order)
-
-        self.catalyst = None        # The INDEX of a chemical that catalyzes this reaction, if applicable (at most 1)
-                                    #   Note: enzymes are automatically extracted from the reaction formula
-
 
         self.macro_enzyme = None    # The pair (macromolecule name, binding site number)
                                     #   EXAMPLE: ("M2", 5)          TODO: maybe turn into a data object
@@ -1322,8 +1406,8 @@ class ReactionGeneric(ReactionOneStep):
             products = [products]
 
 
-        reactant_list = [self._parse_reaction_term(r, "reactant") for r in reactants]   # A list of triples of integers
-        product_list = [self._parse_reaction_term(r, "product") for r in products]      # A list of triples of integers
+        reactant_list = [self._parse_reaction_term(r, "reactant") for r in reactants]   # A list of triplets of integers
+        product_list = [self._parse_reaction_term(r, "product") for r in products]      # A list of triplets of integers
 
         # Catch identical reaction sides, even if terms are reshuffled
         assert set(reactant_list) != set(product_list), \
@@ -1331,7 +1415,7 @@ class ReactionGeneric(ReactionOneStep):
             f"Same reactants and products: {self._standard_form_chem_eqn(reactant_list)}"
 
 
-        # Locate any enzymes (catalysts) that might be present - though for now a warning is issued if more than 1
+        # Locate any catalysts that might be present - though for now a warning is issued if more than 1
         enzyme_list = []
         for reactant in reactant_list:
             if reactant in product_list:
@@ -1348,17 +1432,13 @@ class ReactionGeneric(ReactionOneStep):
         self.products = product_list
 
         if number_enzymes >= 1:
-            self.catalyst = enzyme_list[0]    # In the irregular scenarios that there appear to be multiple enzymes, only one
-                                            #   is considered, and a warning is printed out (the other apparent enzyme
+            self.catalyst = enzyme_list[0]  # In the irregular scenarios that there appear to be multiple catalyst, only one
+                                            #   is considered, and a warning is printed out (the other catalysts
                                             #   will be treated as any other reagent/product)
         if number_enzymes > 1:
-            print(f"Reaction(): WARNING - the reaction appears to have multiple enzymes:"
+            print(f"ReactionGeneric(): WARNING - the reaction appears to have multiple enzymes:"
                   f" {enzyme_list}")
 
-
-        # Process the kinetic and thermodynamic data, and update various object attributes accordingly
-        #self._set_kinetic_and_thermodynamic(forward_rate=kF, reverse_rate=kR,
-                                            #delta_H=delta_H, delta_S=delta_S, delta_G=delta_G, temp=temp)
 
 
 
@@ -1445,37 +1525,22 @@ class ReactionGeneric(ReactionOneStep):
 
     def extract_chemicals_in_reaction(self) -> Set[str]:
         """
-        Return a SET of the chemical labels of all the chemicals appearing in this reaction.
+        Return a SET of the labels of ALL the chemicals appearing in this reaction
 
-        Optionally, exclude any that participate in a catalytic role
-        (appearing identically on both sides of the reaction)
-
-        :param exclude_enzyme:  If True, any enzyme, if present, won't be included
-        :return:                A SET of the labels of the chemicals involved in this reaction
-                                Note: being a set, it's NOT in any particular order
+        :return:    A SET of the labels of ALL the chemicals involved in this reaction
+                    Note: being a set, it's NOT in any particular order
         """
-        chem_set = set()    # Running set being built
-
-        reactants = self.extract_reactants()
-        products = self.extract_products()
-
-        for r in reactants:
-            species_name = self.extract_species_name(r)
-            chem_set.add(species_name)
-
-        for p in products:
-            species_name = self.extract_species_name(p)
-            chem_set.add(species_name)
-
-        return chem_set
+        return set(self.extract_reactant_labels()) | set(self.extract_product_labels())   # Union of sets
 
 
 
     def extract_reactant_labels(self) -> [str]:
         """
-        In the order in which they appear when the reaction was first defined
+        Return the list of the labels of ALL the reactant in this reaction,
+        (including any catalysts, if applicable),
+        in the order in which they appear when the reaction was first defined
 
-        :return:                List of chemical names
+        :return:    List of chemical labels
         """
         reactants = self.extract_reactants()
         reactant_names = [self.extract_species_name(r) for r in reactants]
@@ -1485,9 +1550,11 @@ class ReactionGeneric(ReactionOneStep):
 
     def extract_product_labels(self) -> [str]:
         """
-        In the order in which they appear when the reaction was first defined
+        Return the list of the labels of ALL the reaction products,
+        (including any catalysts, if applicable),
+        in the order in which they appear when the reaction was first defined
 
-        :return:                List of chemical names
+        :return:    List of chemical labels
         """
         products = self.extract_products()
         product_names = [self.extract_species_name(r) for r in products]
