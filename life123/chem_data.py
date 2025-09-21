@@ -36,7 +36,7 @@ class ChemCore:
                                 #          in out example above, "A" has index 0, while "NAD" has index 1
                                 # Labels must be unique; likewise, names must be unique.
                                 # The name of any chemical cannot be the same as the label of a different one.
-                                # TODO: maybe use a Pandas dataframe
+                                # TODO: maybe use a Pandas dataframe?
 
 
         self.label_dict = {}    # To map assigned chemical labels to their positional index
@@ -174,26 +174,6 @@ class ChemCore:
 
 
 
-    def all_chemicals(self) -> pd.DataFrame:
-        """
-        Returns a Pandas dataframe with all the known information
-        about all the registered chemicals (not counting macro-molecules),
-        in their registration index order
-
-        :return:    A Pandas dataframe
-        """
-        df = pd.DataFrame(self.chemical_data)
-
-        # Add a column for plot colors, if any were registered
-        if self.color_dict != {}:
-            color_df = pd.DataFrame(list(self.color_dict.items()), columns=["label", "plot_color"])
-            df = pd.merge(df, color_df, on="label", how="left") # All rows from df and matching rows from color_df
-            df["plot_color"] = df["plot_color"].fillna("")      # Turn any NaN in the 'plot_color' column into a blank
-
-        return df
-
-
-
     def add_chemical(self, name :str, label=None, note=None, skip_duplicates=False,
                     plot_color=None, **kwargs) -> Union[int, None]:
         """
@@ -285,7 +265,8 @@ class ChemCore:
 
     def get_plot_color(self, label :str) -> Union[str, None]:
         """
-        Return the name of the plot color previously associated to the given chemical
+        Return the name of the plot color previously associated to the given chemical,
+        or None if no color association was registered
 
         :param label:   A string to identify a particular chemical
         :return:        The name of the associated plot color, or None if not found
@@ -443,13 +424,14 @@ class Diffusion(ChemCore):
         Return the diffusion rate of the specified chemical species.
         If no value was assigned (but the chemical exists), return None.
 
-        :param name:            Name of the chemical of interest
+        :param name:         Label of the chemical of interest
         :param chem_index:   Alternate way to specify the chemical, using its zero-based index (order
-                                    in which it was registered);
-                                    `name` and `species_index` cannot be both specified, or an Exception will be raised
-        :return:                The value of the diffusion rate for the species with the given index if present,
-                                    or None if not
+                                in which it was registered);
+                                `name` and `species_index` cannot be both specified, or an Exception will be raised
+        :return:            The value of the diffusion rate for the species with the given index if present,
+                                or None if not
         """
+        #TODO: rename arg `name` to `chem_label`
         assert (name is None) or (chem_index is None), \
             "get_diffusion_rate(): cannot specify BOTH `name` and `species_index`"
 
@@ -921,6 +903,32 @@ class ChemData(Macromolecules):
                 assert type(color) == str, \
                     f"ChemData instantiation: all the colors must be strings.  The passed value ({color}) is of type {type(color)}"
                 self.color_dict[l] = color
+
+
+
+
+    def all_chemicals(self) -> pd.DataFrame:
+        """
+        Returns a Pandas dataframe with all the known information
+        about all the registered chemicals (not counting macro-molecules),
+        including labels, names, diffusion rates, plot colors, and optional extra fields,
+        in their registration-index order
+
+        :return:    A Pandas dataframe
+        """
+        df = pd.DataFrame(self.chemical_data)   # Get labels, names and optional extra fields
+
+        # Add a column for plot colors, if any were registered
+        if self.color_dict != {}:
+            color_df = pd.DataFrame(list(self.color_dict.items()), columns=["label", "plot_color"])
+            df = pd.merge(df, color_df, on="label", how="left") # All rows from df and matching rows from color_df
+            df["plot_color"] = df["plot_color"].fillna("")      # Turn any NaN in the 'plot_color' column into a blank
+
+
+        # Insert a column with the diffusion rates, after the first 2 columns (with labels and names)
+        df.insert(2, "Diff rate", self.get_all_diffusion_rates()) # Missing values will show up as None
+
+        return df
 
 
 

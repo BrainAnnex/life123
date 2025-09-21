@@ -251,7 +251,8 @@ class ReactionRegistry:
         and set all its kinetic and/or thermodynamic data from the available information,
         including the value of the temperature (stored in object variable.)
 
-        All the involved chemicals can be either previously registered, or not.
+        All the involved chemicals can be either previously registered, or not;
+        if not, they will get automatically registered.
 
         :param rxn: One of the specific Reaction classes, such as
                         ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition,
@@ -282,8 +283,23 @@ class ReactionRegistry:
         for label in rxn_products:
             self.chem_data.add_chemical(name=label, skip_duplicates=True)
 
+        # Register any newly-encountered reaction intermediates not already registered
+        rxn_intermediates = rxn.extract_intermediates()
+        for label in rxn_intermediates:
+            new_index = self.chem_data.add_chemical(name=label, skip_duplicates=True)
+            if new_index is not None:
+                print(f"register_reaction() INFO: a reaction intermediates (`{label}`), not explicitly registered, was automatically added to the chemical registry")
+            if self.chem_data.get_diffusion_rate(name=label) is None:
+                D_enzyme = self.chem_data.get_diffusion_rate(name=catalyst)
+                D_substrate = self.chem_data.get_diffusion_rate(name=rxn.substrate)
+                # TODO: this might best belong elsewhere
+                if (D_enzyme is not None) and (D_substrate is not None):
+                    D_ES_rough_estimate = min(D_enzyme, D_substrate) * 0.9
+                    print(f"register_reaction() INFO: diffusion rate for the reaction intermediates (`{label}`), not yet specified, roughly estimated as {D_ES_rough_estimate}")
+                    self.chem_data.set_diffusion_rate(chem_label=label, diff_rate=D_ES_rough_estimate)
 
-        involved_chemicals = set(rxn_reactants) | set(rxn_products)  # Union of sets
+
+        involved_chemicals = set(rxn_reactants) | set(rxn_products) | set(rxn_intermediates) # Union of sets
 
         if catalyst is not None:
             involved_chemicals = involved_chemicals - {catalyst}    # Difference between sets
@@ -478,8 +494,14 @@ class ReactionRegistry:
             print(f"Chemicals involved in the above reactions: {chem_labels}")
         else:
             print(f"Chemicals involved in the above reactions (not counting enzymes): {chem_labels}")
-            print(f"Enzymes involved in the above reactions: "
-                  f"{self.names_of_enzymes()}")
+
+            print(f"Enzymes involved in the above reactions: ")
+            for enz in self.names_of_enzymes():
+                enzyme_color = self.chem_data.get_plot_color(enz)
+                if enzyme_color:
+                    print(f'  "{enz}" ({enzyme_color})')
+                else:
+                    print(f'  "{enz}"')
 
 
 
@@ -580,7 +602,7 @@ class ReactionRegistry:
         """
         Return the set of the names of the enzymes (catalysts) involved
         in any of the registered reactions
-        (regardless of whether they might participate in a non-enzymatic role in other reactions)
+        (regardless of whether they might participate in a non-enzymatic role in OTHER reactions)
         """
         return self.active_enzymes
 

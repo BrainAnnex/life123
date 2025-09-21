@@ -158,7 +158,7 @@ class System1D:
         df = pd.DataFrame(self.system, columns=[f"Bin {i}" for i in range(self.n_bins)])
 
         df.insert(0, "Species", self.chem_data.get_all_labels())
-        df.insert(1, "Diff rate", self.chem_data.get_all_diffusion_rates()) # Unset values will show up as None
+        df.insert(1, "Diff rate", self.chem_data.get_all_diffusion_rates()) # Missing values will show up as None
 
         return df
 

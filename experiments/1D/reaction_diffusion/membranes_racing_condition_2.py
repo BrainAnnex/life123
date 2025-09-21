@@ -13,17 +13,17 @@
 # ---
 
 # %% [markdown]
-# ## A chemical that can cross membranes, if not diffusing fast enough thru the length of an organelle, will get converted by an organelle enzyme into a form that cannot cross membranes, and thus gets trapped by the organelle.  
+# ## A chemical that can cross membranes, if not diffusing fast enough thru the length of a compartment, will get converted by a compartment enzyme into a form that cannot cross membranes, and thus gets trapped inside.  
 #
 # As in experiment `membranes_racing_condition_1`, **a racing condition between diffusion and reaction.**   
 # Like before, the "window of opportunity to escape" closes fast!  
-# This time, however, the initial concentration of `A` is outside the organelle, and the reaction is an enzyme-catalyed unimolecular `A + E -> B + E` .  The enzyme `E` cannot cross membranes.   
+# This time, however, the initial concentration of `A` is outside the compartment, and the reaction is an enzyme-catalyed unimolecular `A + E -> B + E` .  The enzyme `E` cannot cross membranes.   
 #
-# If, metaphorically speaking, we think of `A` as a "traveler":
+# If, metaphorically speaking, we think of `A` as a "traveler", then:
 #
-# #### SCENARIO 1 ("The Hotel California") - `A` diffuses so **slowly** that, in its journey across the organelle, it "falls under the spell of the enzyme" (gets converted into a form `B` that cannot cross membranes), and thus "can never leave"...
+# #### SCENARIO 1 ("The Hotel California") - `A` diffuses so **slowly** that, in its journey across the compartment, it "falls under the spell of the enzyme" (gets converted into a form `B` that cannot cross membranes), and thus **"can never leave"**...
 #
-# #### SCENARIO 2 ("Ulysses' escape") - `A` diffuses so **fast** that it stays "a step ahead of trouble", and is largely out of the organelle  prior to getting entangled into it by the "magic spell" (reaction) that would have "trapped it into the island"
+# #### SCENARIO 2 ("Ulysses' escape") - `A` diffuses so **fast** that it **"stays a step ahead of trouble"**, and is largely out of the compartment  prior to getting entangled into it by the "magic spell" (reaction) that would have "trapped it into the island"
 #
 # **Recommended background:**  
 #
@@ -33,7 +33,7 @@
 # ### TAGS : "reactions 1D", "diffusion 1D", "membranes 1D"
 
 # %%
-LAST_REVISED = "Sep. 10, 2025"
+LAST_REVISED = "Sep. 20, 2025"
 LIFE123_VERSION = "1.0.0rc7"       # Library version this experiment is based on
 
 # %%
@@ -52,33 +52,35 @@ check_version(LIFE123_VERSION)
 # %%
 
 # %% [markdown]
-# ## Initialize the Chemical Data and the Reactions.  They will be re-used in both scenarios
+# ## Initialize the Chemical Data and the Reactions.  They will be RE-USED (except for a change in the diffusion rate of `A`) in both scenarios
 
 # %%
-# Initialize the chemical data
+# Initialize the chemical data.  
+# The enzyme `E`, typically a large molecule, is given a relatively sall diffusion rate (not too important,
+# because of our initial condition later, of `E` already uniformly diffused)
 chem_data = ChemData(names=["A", "B", "E"], 
-                     diffusion_rates=[100., 0, 80.],        # The diffusion rate of `A` will later be increased in scenario 2
-                     plot_colors=["red", "green", "purple"]) 
+                     diffusion_rates=[200., 250., 80.],        # The diffusion rate of `A` will later be increased in scenario 2
+                     plot_colors=["red", "green", "cyan"]) 
 
 rxns = ReactionRegistry(chem_data=chem_data)
 
-# Enzymatic reaction A + E <-> B + E
+# Enzymatic reaction A + E -> B + E
 r = ReactionEnzyme(substrate="A", product="B", enzyme="E", 
-                  k1_F=10., k1_R=2., k2_F=5.)
+                   k1_F=10., k1_R=2., k2_F=50.)
 
 rxns.register_reaction(r)
 
 rxns.describe_reactions()
 
 # %%
+chem_data.all_chemicals()
 
 # %%
-rxns.labels_of_active_chemicals()      # TODO: FIX!!!
 
 # %%
 
 # %% [markdown]
-# # SCENARIO 1 - `A` diffuses slowly, relatively to the Enzymatic reaction A + E <-> B + E
+# # SCENARIO 1 - `A` diffuses slowly, relatively to the Enzymatic reaction `A + E -> B + E`
 
 # %% [markdown]
 # ### Initialize the 1D System, including Membranes
@@ -92,7 +94,7 @@ bio.membranes().membrane_list
 
 # %%
 # We'll use 1/2 of the diffusion rate of `A` as its membrane permeability (by passive transport)
-# The conversion product `B` and the enzyne `E`, by constrast, keeps their default 0 permeability (i.e., can't cross membranes)
+# The conversion product `B` and the enzyne `E`, by constrast, keep their default 0 permeability (i.e., can't cross membranes)
 bio.membranes().change_permeability("A", 50.)
 
 # %%
@@ -108,7 +110,10 @@ bio.membranes().change_permeability("A", 50.)
 bio.inject_bell_curve(chem_label="A", center=0.166666, sd=0.05, max_amplitude=200., bias=0., clip=(0,9))
 
 # %%
-# The enzyme `E`, by contrast, is uniformly distributed within the organelle
+# *********************** TODO: method that streamlines this **************************
+
+
+# The enzyme `E`, by contrast, is uniformly distributed within the membranes of the 1st (and only) compartment
 for addr in range (11, 21):
     bio.set_bin_conc(bin_address=addr, conc=15., chem_label="E")
 
@@ -117,7 +122,9 @@ for addr in range (11, 21):
 bio.system_heatmaps(title_prefix="Initial strong, localized transient of chemical `A` (membranes shown in brown)")
 
 # %% [markdown]
-# ### The initial transient of `A` is localized to the left of the compartment (organelle) that spans the space between bins 10 and 20
+# ### The initial transient of `A` is localized to the left of the compartment that spans the space between bins 10 and 20  
+# The enzyme `E` is uniformly localized in that compartment.  
+# `B` and the reaction intermerdiate `EA` are not present anywhere.
 
 # %%
 # Visualize the system state so far
@@ -145,14 +152,21 @@ bio.enable_history(bins=[5,15,25], frequency=15, take_snapshot=True)
 
 # %%
 
+# %%
+bio.get_chem_data().set_diffusion_rate(chem_label="EA", diff_rate=0.1)
+
+# %%
+
+# %%
+
 # %% [markdown]
 # ## Start the simulation of the reaction-diffusion
 
 # %%
 # The first round of reaction-diffusion, over a small time duration
-bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
-bio.visualize_system(title_prefix=["The localized transient `A` starts turning into `C` by `A + B <-> C`, ",
-                                   "before it can diffuse away much.  Notice the production of `C`, which can't cross the membrane"])
+bio.react_diffuse(total_duration=0.05, fraction_max_step=0.5, show_status=True)
+bio.visualize_system(title_prefix=["The localized transient `A` starts turning into `B` by `A + E -> B + E`, ",
+                                   "before it can diffuse away much.  Notice the production of `B`, which can't cross the membrane"])
 
 # %%
 # SAME IN HEATMAP VIEW
@@ -165,18 +179,7 @@ bio.system_heatmaps(title_prefix=["The localized transient `A` starts turning in
 # ### Let's continue the reaction-diffusion
 
 # %%
-bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
-
-# %% [markdown]
-# ### `A` is crossing to some extent the nearby left membrane, but not making it in time to reach the right membrane, before getting consumed   
-
-# %%
-bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
-
-# %%
-bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
+bio.react_diffuse(total_duration=0.05, fraction_max_step=0.5, show_status=True)
 bio.visualize_system()
 
 # %%
@@ -184,12 +187,27 @@ bio.react_diffuse(total_duration=0.05, fraction_max_step=0.5, show_status=True)
 bio.visualize_system()
 
 # %%
-bio.react_diffuse(total_duration=0.15, fraction_max_step=0.5, show_status=True)
+bio.react_diffuse(total_duration=0.05, fraction_max_step=0.5, show_status=True)
 bio.visualize_system()
 
 # %%
-bio.react_diffuse(total_duration=1.2, fraction_max_step=0.9, show_status=True)
+bio.react_diffuse(total_duration=0.1, fraction_max_step=0.5, show_status=True)
 bio.visualize_system()
+
+# %%
+bio.react_diffuse(total_duration=0.2, fraction_max_step=0.5, show_status=True)
+bio.visualize_system()
+
+# %%
+bio.react_diffuse(total_duration=1, fraction_max_step=0.5, show_status=True)
+bio.visualize_system()
+
+# %%
+bio.react_diffuse(total_duration=1.5, fraction_max_step=0.5, show_status=True)
+bio.visualize_system()
+
+# %% [markdown]
+# ### `A` is crossing to some extent the nearby left membrane, but not making it in time to reach the right membrane, before getting consumed   
 
 # %%
 bio.system_heatmaps()
@@ -200,27 +218,20 @@ bio.system_heatmaps()
 # ### Now, let's look at a few individual bins, and their concentration change with time
 
 # %%
-bio.plot_history_single_bin(title_prefix=["Diffusion, membrane passive transport, and reaction `A + B <-> C`",
+bio.plot_history_single_bin(title_prefix=["Diffusion, membrane passive transport, and reaction `A + E -> B + E`",
                                           "Bin where the transient originates."], 
-                             bin_address=6)
+                             bin_address=5)
 
 # %%
-bio.plot_history_single_bin(title_prefix=["Diffusion, membrane passive transport, and reaction `A + B <-> C`",
-                                          "At left-most edge of system."], 
-                            bin_address=0)
-
-# %% [markdown]
-# #### Only a small amount of `A` reaches bin 0 early on, and later converts to `C`
+bio.plot_history_single_bin(title_prefix=["TBA"], 
+                            bin_address=25)
 
 # %%
-# Save this plot, for later comparison with the counterpart from scenario 2
-scenario_1 = bio.plot_history_single_bin(title_prefix=["Diffusion, membrane passive transport, and reaction `A + B <-> C`",
-                                                       "Faraway bin."], 
-                                         bin_address=29)
-scenario_1 
+bio.plot_history_single_bin(title_prefix=["TBA"], 
+                            bin_address=25)
 
 # %% [markdown]
-# ## Virtually no `A` ever reaches the faraway bins!
+# ## Only PUNY amounts of `A` ever reach the faraway bins on the far side of the compartment!
 
 # %%
 

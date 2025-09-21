@@ -158,6 +158,15 @@ class ReactionOneStep(ReactionCommon):
 
 
 
+    def extract_intermediates(self) -> [str]:
+        """
+
+        :return:
+        """
+        return []   # There are no intermediates
+
+
+
     def _set_kinetic_and_thermodynamic(self, forward_rate, reverse_rate,
                                        delta_H, delta_S, delta_G, temp) -> None:
         """
@@ -1070,6 +1079,15 @@ class ReactionEnzyme(ReactionCommon):
         :return:    A list of triplets of the form (stoichiometry, chemical label, reaction order)
         """
         return [(1, self.substrate, 1), (1, self.enzyme, 1)]
+
+
+
+    def extract_intermediates(self) -> [str]:
+        """
+
+        :return:
+        """
+        return [self.intermediate]
 
 
 
