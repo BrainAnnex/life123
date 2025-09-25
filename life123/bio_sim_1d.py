@@ -20,9 +20,9 @@ class System1D:
     """
     The foundational structure of 1D systems,
     including bins, system state (concentrations and system time),
-    and the underlying "ChemData" object.
+    and the underlying "ChemData" and "Membranes1D" objects.
 
-    This base class does NOT know about membranes or reactions;
+    This base class does NOT know about reactions;
     nor does it handle any simulation.
     End users will typically instantiate the derived class BioSim1D
     """
@@ -485,6 +485,24 @@ class System1D:
             f"set_uniform_concentration(): the concentration must be a positive number or zero (the requested value was {conc})"
 
         self.system[chem_index] = np.full(self.n_bins, conc, dtype=float)
+
+
+
+    def set_compartment_uniform_concentration(self, compartment_id :int, chem_label :str, conc :float) -> None:
+        """
+        Set the concentration of all the bins inside the requested compartment to the same given value,
+        for the specified chemical.
+        Any previous concentration value will be over-ridden.
+
+        :param compartment_id:  An integer >= 0 to identify the desired compartment
+        :param chem_label:      A string to identify the chemical of interest
+        :param conc:            The desired concentration value to set
+        :return:                None
+        """
+        l, r = self.membranes_obj.get_compartment(compartment_id)
+
+        for addr in range (l, r):
+            self.set_bin_conc(bin_address=addr, conc=conc, chem_label=chem_label)
 
 
 
@@ -1917,7 +1935,7 @@ class BioSim1D(System1D):
         in the concentration values of the specified chemical species.
         A Discrete Fourier Transform is used for the computation.
 
-        :param chem_label:  The name of the chemical whose concentration we want to analyze
+        :param chem_label:  The label of the chemical whose concentration we want to analyze
         :param threshold:   Minimum amplitudes of the frequency components to be considered non-zero
                                 (NOTE: these are the raw values returned by the DFT - not the normalized ones.)
         :param n_largest:   If specified, only the rows with the given number of largest amplitudes gets returned
@@ -1997,17 +2015,18 @@ class BioSim1D(System1D):
 
 class Membranes1D():
     """
-    This class supports the underlying foundational class System1D, to provide modeling of membranes (barriers)
+    This class supports the foundational class System1D, to provide modeling of membranes (barriers)
+
+    * Membranes exist at the boundary between System bins
 
     * Only CLOSED membranes are modeled.
-        In 1D, that's not well-defined, but we'll consider a PAIR of membranes (with no other membrane between them)
+        In 1D, that's not particularly well-defined,
+        but we'll consider a PAIR of membranes (with no other membrane between them)
         to constitute a "closed membrane" for our purposes.
 
-    * Membranes exist at the boundary between System bins.
-
-    * Conceptually, a membrane is a list of "sides".
+    * Conceptually, a close membrane ("compartment") is a list of "sides".
         Those "sides" collectively encompass a portion of the System space,
-        and trace the  boundary of the closed membrane ("organelle")
+        and trace the boundary of the closed membrane ("compartment")
 
     * "Sides":
         In 1D, the "sides" are points; in 2D, they are adjacent segments, and in 3D, rectangles.
@@ -2019,11 +2038,11 @@ class Membranes1D():
         of the same membrane or of any other membrane.
 
     * Implementation:
-        In 1D, a membrane is a list of exactly 2 points.
+        In 1D, a membrane "side" is a list of exactly 2 points.
         Each point is identified by the coordinate of bin immediately to the RIGHT of it
         (or, if at the rightmost edge of the System, by the next integer of the coordinate of the bin to its left.)
         So, the "side" of a membrane at the leftmost position in the system will have the value 0.
-        All integers must be between 0 and the total number of bins, both inclusive
+        All integers must be between 0 and the total number of bins, both inclusive.
 
         In 2D, a membrane "side" is a segment, and a membrane is a closed polygon.
         Each point of the polygon is identified by the coordinates
@@ -2038,7 +2057,7 @@ class Membranes1D():
     def __init__(self, n_bins :int):
         """
 
-        :param n_bins:  The number of compartments (bins) to model our 1D system
+        :param n_bins:  The number of compartments (bins) used to model our 1D system
         """
         assert type(n_bins) == int, \
             "Membranes1D instantiation: argument `n_bins` must be an integer"
@@ -2051,8 +2070,8 @@ class Membranes1D():
                                 # In 1D, a membrane "side" is a point,
                                 #   identified by the index of the bin to their RIGHT side ("index after").
                                 # EXAMPLE:  [
-                                #               [0, 8] ,    # <-- Membrane 1
-                                #               [17, 31]    # <-- Membrane 2
+                                #               [0, 8] ,    # <-- Closed Membrane ("compartment") 0
+                                #               [17, 31]    # <-- Closed Membrane ("compartment") 1
                                 #           ]
                                 # The position of the elements in the outer list is their "membrane ID"
                                 # Note: in 1D, all integers in the flattened array are required
@@ -2215,6 +2234,17 @@ class Membranes1D():
 
         return False
 
+
+
+    def get_compartment(self, compartment_id :int) -> [int, int]:
+        """
+        Note that compartment numbering starts at zero
+
+        :param compartment_id:  An integer >= 0
+        :return:                A list with 2 bin addresses: the left and right sides of the requested compartment
+        """
+        # TODO: add validation an pytest
+        return self.membrane_list[compartment_id]
 
 
 

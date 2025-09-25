@@ -419,29 +419,28 @@ class Diffusion(ChemCore):
 
 
 
-    def get_diffusion_rate(self, chem_index=None, name=None) -> Union[float, int, None]:
+    def get_diffusion_rate(self, chem_index=None, chem_label=None) -> Union[float, int, None]:
         """
         Return the diffusion rate of the specified chemical species.
         If no value was assigned (but the chemical exists), return None.
 
-        :param name:         Label of the chemical of interest
-        :param chem_index:   Alternate way to specify the chemical, using its zero-based index (order
+        :param chem_label:  Label of the chemical of interest
+        :param chem_index:  Alternate way to specify the chemical, using its zero-based index (order
                                 in which it was registered);
                                 `name` and `species_index` cannot be both specified, or an Exception will be raised
         :return:            The value of the diffusion rate for the species with the given index if present,
                                 or None if not
         """
-        #TODO: rename arg `name` to `chem_label`
-        assert (name is None) or (chem_index is None), \
+        assert (chem_label is None) or (chem_index is None), \
             "get_diffusion_rate(): cannot specify BOTH `name` and `species_index`"
 
-        if name is None:
-            name = self.get_label(chem_index)
+        if chem_label is None:
+            chem_label = self.get_label(chem_index)
         else:
-            assert self.label_exists(name), \
-                f"get_diffusion_rate(): No chemical named `{name}` exists"
+            assert self.label_exists(chem_label), \
+                f"get_diffusion_rate(): No chemical named `{chem_label}` exists"
 
-        return self.diffusion_rates.get(name)      # If not present, None is returned
+        return self.diffusion_rates.get(chem_label)      # If not present, None is returned
 
 
 
@@ -926,7 +925,8 @@ class ChemData(Macromolecules):
 
 
         # Insert a column with the diffusion rates, after the first 2 columns (with labels and names)
-        df.insert(2, "Diff rate", self.get_all_diffusion_rates()) # Missing values will show up as None
+        df.insert(2, "diff rate", self.get_all_diffusion_rates())
+        # Note: missing diffusion values are returned as None, and will be turned into NaN in the dataframe
 
         return df
 

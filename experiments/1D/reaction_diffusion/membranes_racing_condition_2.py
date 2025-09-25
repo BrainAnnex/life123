@@ -33,7 +33,7 @@
 # ### TAGS : "reactions 1D", "diffusion 1D", "membranes 1D"
 
 # %%
-LAST_REVISED = "Sep. 20, 2025"
+LAST_REVISED = "Sep. 21, 2025"
 LIFE123_VERSION = "1.0.0rc7"       # Library version this experiment is based on
 
 # %%
@@ -110,12 +110,8 @@ bio.membranes().change_permeability("A", 50.)
 bio.inject_bell_curve(chem_label="A", center=0.166666, sd=0.05, max_amplitude=200., bias=0., clip=(0,9))
 
 # %%
-# *********************** TODO: method that streamlines this **************************
-
-
 # The enzyme `E`, by contrast, is uniformly distributed within the membranes of the 1st (and only) compartment
-for addr in range (11, 21):
-    bio.set_bin_conc(bin_address=addr, conc=15., chem_label="E")
+bio.set_compartment_uniform_concentration(compartment_id=0, chem_label="E", conc=15.)
 
 # %%
 # Show as heatmap (including the membranes, shown in brown)
@@ -130,6 +126,13 @@ bio.system_heatmaps(title_prefix="Initial strong, localized transient of chemica
 # Visualize the system state so far
 bio.visualize_system(title_prefix=["Initial strong, localized transient of chemical `A` (membranes shown in brown).", 
                                    "Notice that the enzyme `E` is found inside the organelle"])
+
+# %%
+### TODO: smooth curve
+
+# %%
+
+# %%
 
 # %%
 df = bio.describe_state()

@@ -289,9 +289,11 @@ class ReactionRegistry:
             new_index = self.chem_data.add_chemical(name=label, skip_duplicates=True)
             if new_index is not None:
                 print(f"register_reaction() INFO: a reaction intermediates (`{label}`), not explicitly registered, was automatically added to the chemical registry")
-            if self.chem_data.get_diffusion_rate(name=label) is None:
-                D_enzyme = self.chem_data.get_diffusion_rate(name=catalyst)
-                D_substrate = self.chem_data.get_diffusion_rate(name=rxn.substrate)
+
+            if self.chem_data.get_diffusion_rate(chem_label=label) is None:
+                # Attempt to estimate the diffusion rate constant of the reaction intermediate
+                D_enzyme = self.chem_data.get_diffusion_rate(chem_label=catalyst)
+                D_substrate = self.chem_data.get_diffusion_rate(chem_label=rxn.substrate)
                 # TODO: this might best belong elsewhere
                 if (D_enzyme is not None) and (D_substrate is not None):
                     D_ES_rough_estimate = min(D_enzyme, D_substrate) * 0.9
@@ -660,7 +662,7 @@ class ReactionRegistry:
                 # Add each product to the graph as a node (if not already present)
                 graph.add_node( node_id=chemical_id, labels="Chemical",
                                 data={'name': species_name,
-                                      'diff_rate': self.chem_data.get_diffusion_rate(name=species_name)
+                                      'diff_rate': self.chem_data.get_diffusion_rate(chem_label=species_name)
                                       })
 
                 # Append edge from "reaction node" to "product node"
@@ -678,7 +680,7 @@ class ReactionRegistry:
                 # Add each reactant to the graph as a node (if not already present)
                 graph.add_node(node_id=chemical_id, labels="Chemical",
                                data={'name': species_name,
-                                     'diff_rate': self.chem_data.get_diffusion_rate(name=species_name)
+                                     'diff_rate': self.chem_data.get_diffusion_rate(chem_label=species_name)
                                      })
 
                 # Append edge from "reactant node" to "reaction node"

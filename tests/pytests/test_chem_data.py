@@ -138,21 +138,6 @@ def test_get_all_names():
 
 
 
-def test_all_chemicals():
-    chem_data = ChemData(names=['A', 'B'])
-    chem_data.add_chemical(label="C", note="this is C", name="CH4", cost="200")
-    chem_data.add_chemical_with_diffusion("D", diff_rate=10, note="this is D")
-
-    result = chem_data.all_chemicals()
-    expected_recordset = [{'name': 'A', 'label': 'A'}, {'name': 'B', 'label': 'B'},
-                          {'name': 'CH4', 'label': 'C', 'note': 'this is C', 'cost': '200'},
-                          {'name': 'D', 'label': 'D', 'note': 'this is D'}]
-    expected_df = pd.DataFrame(expected_recordset)
-
-    assert expected_df.equals(result)
-
-
-
 def test_add_chemical():
     chem_data = ChemData()
     assert chem_data.number_of_chemicals() == 0
@@ -301,26 +286,26 @@ def test_assert_valid_diffusion():
 def test_get_diffusion_rate():
     chem_data = ChemData(names=["A", "B", "C"], diffusion_rates=[10, 11, 12])
 
-    assert chem_data.get_diffusion_rate(name="A") == 10
+    assert chem_data.get_diffusion_rate(chem_label="A") == 10
     assert chem_data.get_diffusion_rate(chem_index=0) == 10
     with pytest.raises(Exception):
-        assert chem_data.get_diffusion_rate(name="A", chem_index=0)
+        assert chem_data.get_diffusion_rate(chem_label="A", chem_index=0)
 
-    assert chem_data.get_diffusion_rate(name="C") == 12
+    assert chem_data.get_diffusion_rate(chem_label="C") == 12
     assert chem_data.get_diffusion_rate(chem_index=2) == 12
 
     with pytest.raises(Exception):
-        chem_data.get_diffusion_rate(name="X")          # X doesn't exist
+        chem_data.get_diffusion_rate(chem_label="X")          # X doesn't exist
 
     with pytest.raises(Exception):
         chem_data.get_diffusion_rate(chem_index=3)   # Index 3 doesn't exist
 
     chem_data.add_chemical(name="Z")                    # This will be given index 3
-    assert chem_data.get_diffusion_rate(name="Z") is None       # No diffusion value assigned
+    assert chem_data.get_diffusion_rate(chem_label="Z") is None       # No diffusion value assigned
     assert chem_data.get_diffusion_rate(chem_index=3) is None
 
     chem_data.set_diffusion_rate(chem_label="Z", diff_rate=8)
-    assert chem_data.get_diffusion_rate(name="Z") == 8
+    assert chem_data.get_diffusion_rate(chem_label="Z") == 8
     assert chem_data.get_diffusion_rate(chem_index=3) == 8
 
 
@@ -557,9 +542,26 @@ def test_constructor():
 
 
 
+def test_all_chemicals():
+    chem_data = ChemData(names=['A', 'B'])
+    chem_data.add_chemical(label="C", note="this is C", name="CH4", cost="200")
+    chem_data.add_chemical_with_diffusion("D", diff_rate=10, note="this is D")
+
+    result = chem_data.all_chemicals()  # A Pandas dataframe
+    expected_recordset = [{'name': 'A', 'label': 'A'},
+                          {'name': 'B', 'label': 'B'},
+                          {'name': 'CH4', 'label': 'C', 'diff rate': None, 'note': 'this is C', 'cost': '200'},
+                          {'name': 'D', 'label': 'D', 'diff rate': 10, 'note': 'this is D'}]
+    expected_df = pd.DataFrame(expected_recordset)
+
+    assert expected_df.equals(result)
 
 
-##########  MACRO-MOLECULES  ##########
+
+
+
+
+###################  MACRO-MOLECULES  ###################
 
 def test_add_macromolecules():
     chem_data = ChemData()
