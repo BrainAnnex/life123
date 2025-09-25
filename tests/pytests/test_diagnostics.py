@@ -97,9 +97,9 @@ def test_save_diagnostic_rxn_data():
     rxns = ReactionRegistry(chem_data=chem_data)
 
     # Add 3 reactions
-    rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)        # Rxn 0
-    rxns.add_reaction(reactants="A", products="X", forward_rate=5., reverse_rate=2.)        # Rxn 1
-    rxns.add_reaction(reactants=["A", "B"], products="X", forward_rate=5., reverse_rate=2.) # Rxn 2
+    rxns.add_reaction(reactants="A", products="B", kF=5., kR=2.)        # Rxn 0
+    rxns.add_reaction(reactants="A", products="X", kF=5., kR=2.)        # Rxn 1
+    rxns.add_reaction(reactants=["A", "B"], products="X", kF=5., kR=2.) # Rxn 2
 
     diag = Diagnostics(reactions=rxns)
     assert len(diag.diagnostic_rxn_data) == 0
@@ -198,9 +198,9 @@ def test_save_diagnostic_aborted_rxns():
     rxns = ReactionRegistry(chem_data=chem_data)
 
     # Add 3 reactions
-    rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)
-    rxns.add_reaction(reactants="A", products="X", forward_rate=5., reverse_rate=2.)
-    rxns.add_reaction(reactants=["A", "B"], products="X", forward_rate=5., reverse_rate=2.)
+    rxns.add_reaction(reactants="A", products="B", kF=5., kR=2.)
+    rxns.add_reaction(reactants="A", products="X", kF=5., kR=2.)
+    rxns.add_reaction(reactants=["A", "B"], products="X", kF=5., kR=2.)
 
     diag = Diagnostics(reactions=rxns)
 
@@ -230,9 +230,9 @@ def test_get_diagnostic_rxn_data():
     rxns = ReactionRegistry(chem_data=chem_data)
 
     # Add 3 reactions
-    rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)        # Rxn 0
-    rxns.add_reaction(reactants=["A"], products="X", forward_rate=5., reverse_rate=2.)      # Rxn 1
-    rxns.add_reaction(reactants=["A", "B"], products="X", forward_rate=5., reverse_rate=2.) # Rxn 2
+    rxns.add_reaction(reactants="A", products="B", kF=5., kR=2.)        # Rxn 0
+    rxns.add_reaction(reactants=["A"], products="X", kF=5., kR=2.)      # Rxn 1
+    rxns.add_reaction(reactants=["A", "B"], products="X", kF=5., kR=2.) # Rxn 2
 
     diag = Diagnostics(reactions=rxns)
 

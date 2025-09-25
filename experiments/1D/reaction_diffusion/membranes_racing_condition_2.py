@@ -33,7 +33,7 @@
 # ### TAGS : "reactions 1D", "diffusion 1D", "membranes 1D"
 
 # %%
-LAST_REVISED = "Sep. 21, 2025"
+LAST_REVISED = "Sep. 24, 2025"
 LIFE123_VERSION = "1.0.0rc7"       # Library version this experiment is based on
 
 # %%
@@ -60,7 +60,7 @@ check_version(LIFE123_VERSION)
 # because of our initial condition later, of `E` already uniformly diffused)
 chem_data = ChemData(names=["A", "B", "E"], 
                      diffusion_rates=[200., 250., 80.],        # The diffusion rate of `A` will later be increased in scenario 2
-                     plot_colors=["red", "green", "cyan"]) 
+                     plot_colors=["red", "green", "violet"]) 
 
 rxns = ReactionRegistry(chem_data=chem_data)
 
@@ -117,6 +117,8 @@ bio.set_compartment_uniform_concentration(compartment_id=0, chem_label="E", conc
 # Show as heatmap (including the membranes, shown in brown)
 bio.system_heatmaps(title_prefix="Initial strong, localized transient of chemical `A` (membranes shown in brown)")
 
+# %%
+
 # %% [markdown]
 # ### The initial transient of `A` is localized to the left of the compartment that spans the space between bins 10 and 20  
 # The enzyme `E` is uniformly localized in that compartment.  
@@ -126,13 +128,6 @@ bio.system_heatmaps(title_prefix="Initial strong, localized transient of chemica
 # Visualize the system state so far
 bio.visualize_system(title_prefix=["Initial strong, localized transient of chemical `A` (membranes shown in brown).", 
                                    "Notice that the enzyme `E` is found inside the organelle"])
-
-# %%
-### TODO: smooth curve
-
-# %%
-
-# %%
 
 # %%
 df = bio.describe_state()
@@ -155,26 +150,23 @@ bio.enable_history(bins=[5,15,25], frequency=15, take_snapshot=True)
 
 # %%
 
-# %%
-bio.get_chem_data().set_diffusion_rate(chem_label="EA", diff_rate=0.1)
-
-# %%
-
-# %%
-
 # %% [markdown]
 # ## Start the simulation of the reaction-diffusion
 
 # %%
 # The first round of reaction-diffusion, over a small time duration
 bio.react_diffuse(total_duration=0.05, fraction_max_step=0.5, show_status=True)
-bio.visualize_system(title_prefix=["The localized transient `A` starts turning into `B` by `A + E -> B + E`, ",
-                                   "before it can diffuse away much.  Notice the production of `B`, which can't cross the membrane"])
+bio.visualize_system(title_prefix=["The transient `A` starts diffusing into the compartment, and turning into `B` by `A + E -> B + E` ",
+                                   "Notice the production of `B`, which can't cross the membranes"])
+
+# %% [markdown]
+# At this point, some of the enzyme `E` is in the form of the intermediate `EA`, especially in the left of the compartment (near bin 11), where `A` is diffusing in from the left, and initiating the reaction
 
 # %%
 # SAME IN HEATMAP VIEW
-bio.system_heatmaps(title_prefix=["The localized transient `A` starts turning into `C` by `A + B <-> C`, ",
-                                  "before it can diffuse away much.  Notice the production of `C`, which can't cross the membrane"])
+bio.system_heatmaps(title_prefix=["The transient `A` starts diffusing into the compartment, and turning into `B` by `A + E -> B + E`"])
+
+# %%
 
 # %%
 
@@ -198,16 +190,20 @@ bio.react_diffuse(total_duration=0.1, fraction_max_step=0.5, show_status=True)
 bio.visualize_system()
 
 # %%
+bio.react_diffuse(total_duration=0.1, fraction_max_step=0.5, show_status=True)
+bio.visualize_system(title_prefix="Here we turned off the curve smoothing in the plot", smoothed=False)
+
+# %%
 bio.react_diffuse(total_duration=0.2, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)
 
 # %%
 bio.react_diffuse(total_duration=1, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)
 
 # %%
 bio.react_diffuse(total_duration=1.5, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)
 
 # %% [markdown]
 # ### `A` is crossing to some extent the nearby left membrane, but not making it in time to reach the right membrane, before getting consumed   
@@ -216,6 +212,7 @@ bio.visualize_system()
 bio.system_heatmaps()
 
 # %%
+#####################
 
 # %% [markdown]
 # ### Now, let's look at a few individual bins, and their concentration change with time

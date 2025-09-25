@@ -2,13 +2,14 @@
 5 classes:
     * ChemCore
     * Diffusion (which extends ChemCore)
-    * Macromolecutes (which extends Diffusion)
-    * ChemDate (which extends Macromolecutes) : THIS IS THE CLASS TYPICALLY INSTANTIATED BY THE USER
+    * Macromolecules (which extends Diffusion)
+    * ChemDate (which extends Macromolecules) : THIS IS THE CLASS TYPICALLY INSTANTIATED BY THE USER
 
     * ChemicalAffinity (derived from NamedTuple)
 """
 
 from typing import Union, List, NamedTuple
+from life123.visualization.colors import Colors
 import numpy as np
 import pandas as pd
 import string
@@ -275,33 +276,6 @@ class ChemCore:
 
 
 
-    def get_registered_colors(self, chem_labels :Union[None, list[str]]) -> Union[None, list[str]]:
-        """
-        Return a list of the colors registered for the specified chemicals or, if not specified, for all chemicals.
-        If not a single color is registered, return None
-
-        :param chem_labels: List of chemical labels; use None to mean ALL chemicals
-        :return:            List of color names, with as many entries as the chemicals of interest;
-                                any of the entries might be None.
-                                However, if zero colors are found, return None
-        """
-        if chem_labels is None:
-            chem_labels = self.get_all_labels()
-
-        # Attempt to use the colors registered for individual chemicals, if present
-        registered_colors = []
-        for label in chem_labels:
-            stored_color = self.get_plot_color(label)     # Will be None if no color was registered for this chemical
-            registered_colors.append(stored_color)
-
-        if set(registered_colors) == {None}:    #  If all elements of the list registered_colors are None
-            return None
-
-        return registered_colors        # List of color names, with as many entries as the chemicals of interest;
-                                        # any of the entries might be None
-
-
-
     def get_color_mapping_by_label(self) -> dict:
         """
         EXAMPLE: {"A": "red", "B": "orange", "C": "green"}
@@ -320,13 +294,90 @@ class ChemCore:
         return   {self.label_dict[k]: v for k, v in self.color_dict.items()}
 
 
-    def get_all_colors(self) -> list:
+    def get_all_colors(self) -> list[str]:
         """
 
-        :return:    A list of all colors, in the index position of their respective chemicals
+        :return:    A list of all color names, in the index position of their respective chemicals
         """
         return list(self.color_dict.values())
 
+
+
+    def set_color(self, chem_label :str, color :str):
+        """
+
+        :param chem_label:
+        :param color:
+        :return:
+        """
+        self.color_dict[chem_label] = color
+
+
+
+    def assign_colors(self, chem_labels=None) -> list[str]:
+        """
+        Return a list of the colors registered for the requested chemicals or, if not specified, for all chemicals.
+        If any chemicals lack registered colors, assign new ones from a palette of default colors,
+        and register the new assignments for future use.
+
+        :param chem_labels: List of chemical labels; use None to mean ALL chemicals
+        :return:            List of color names, with as many entries as the chemicals of interest,
+                                and in their same order
+                                EXAMPLE:   ["blue", "yellow", "cyan"]
+        """
+        if chem_labels is None:
+            chem_labels = self.get_all_labels()
+
+        # Attempt to use the colors registered for the individual chemicals;
+        # if not already present, assign new ones
+        registered_colors = []
+        fallback_colors = None  # A list that will be created if needed
+        new_color_index = 0
+        for label in chem_labels:
+            stored_color = self.get_plot_color(label)     # Will be None if no color was registered for this chemical
+            if stored_color is not None:
+                registered_colors.append(stored_color)
+            else:   # In case no previously-registered color for this chemical
+                if fallback_colors is None:
+                    fallback_colors = Colors.assign_default_colors(len(chem_labels))
+
+                new_color = fallback_colors[new_color_index]
+                new_color_index += 1
+                registered_colors.append(new_color)
+                self.set_color(chem_label=label, color=new_color)
+
+
+        return registered_colors        # List of color names, with as many entries as the chemicals of interest;
+
+
+
+    def get_registered_colors(self, chem_labels :Union[None, list[str]]) -> Union[None, list[str]]:
+        """
+        Return a list of the colors registered for the specified chemicals or, if not specified, for all chemicals.
+        If not colors are registered for any of our chemicals of interest, return None
+
+        :param chem_labels: List of chemical labels; use None to mean ALL chemicals
+        :return:            List of color names, with as many entries as the chemicals of interest,
+                                and in their same order;
+                                any of the entries might be None.
+                                However, if zero colors are found, return None
+                                EXAMPLES:   ["blue", None, "yellow", "cyan", None]
+                                            None
+        """
+        if chem_labels is None:
+            chem_labels = self.get_all_labels()
+
+        # Attempt to use the colors registered for individual chemicals, if present
+        registered_colors = []
+        for label in chem_labels:
+            stored_color = self.get_plot_color(label)     # Will be None if no color was registered for this chemical
+            registered_colors.append(stored_color)
+
+        if set(registered_colors) == {None}:    #  If all elements of the list registered_colors are None
+            return None
+
+        return registered_colors        # List of color names, with as many entries as the chemicals of interest;
+                                        # any of the entries might be None
 
 
 
@@ -901,7 +952,7 @@ class ChemData(Macromolecules):
                 color = plot_colors[i]
                 assert type(color) == str, \
                     f"ChemData instantiation: all the colors must be strings.  The passed value ({color}) is of type {type(color)}"
-                self.color_dict[l] = color
+                self.color_dict[l] = color      # TODO: use set_color()
 
 
 

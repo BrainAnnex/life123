@@ -1113,7 +1113,8 @@ class System1D:
     #####################################################################################################
 
 
-    def visualize_system(self, title_prefix=None, colors=None, plot_bg_color="oldlace", show=False) -> pgo.Figure:
+    def visualize_system(self, title_prefix=None, colors=None, plot_bg_color="oldlace",
+                         smoothed=True, show=False) -> pgo.Figure:
         """
         Visualize the current state of the system of all the chemicals as a combined line plot,
         using plotly.
@@ -1129,6 +1130,8 @@ class System1D:
                                 or the hardwired defaults as a last resort
         :param plot_bg_color:[OPTIONAL] The color inside the axes.  The default color used here is different from
                                 Plotly standard color, to visually differentiate this kind of plots from other type
+        :param smoothed:    [OPTIONAL] If True (default), a spline is used to smooth the lines;
+                                otherwise, line segments are used
         :param show:        [OPTIONAL] If True, the plot will be shown.
                                 Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
                                       leads to it being automatically shown
@@ -1143,12 +1146,14 @@ class System1D:
         chem_labels = self.chem_data.get_all_labels()
         n_chem = len(chem_labels)
 
+
         if colors is None:
-            # Attempt to make use of the previously-registered colors, if available
-            colors = self.chem_data.get_registered_colors(chem_labels)
-            if colors is None:
-                # Fallback to default colors
-                colors = Colors.assign_default_colors(n_chem)
+            # Attempt to make use of previously-registered colors, if available;
+            # or assign new default colors as needed
+            colors = self.chem_data.assign_colors(chem_labels)
+
+
+        line_shape = "spline" if smoothed else "linear"
 
 
         # Handle differently the scenarios with just 1 chemical in the system, vs. multiple ones
@@ -1158,13 +1163,15 @@ class System1D:
             fig = px.line(y=self.lookup_species(chem_label=chem_name),
                           title= title,
                           color_discrete_sequence = colors,
-                          labels={"x":"Bin number", "y": f"[{chem_name}]"}
+                          labels={"x":"Bin number", "y": f"[{chem_name}]"},
+                          line_shape=line_shape
                           )
         else:
             fig = px.line(data_frame=self.system_snapshot(), y=chem_labels,
                           title= title,
                           color_discrete_sequence = colors,
-                          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"}
+                          labels={"value":"concentration", "variable":"Chemical", "index":"Bin number"},
+                          line_shape=line_shape
                           )
 
 
@@ -1206,16 +1213,15 @@ class System1D:
         title = PlotlyHelper.assemble_title(title, title_prefix)
 
 
-        if chem_labels is None:
-            chem_labels = self.chem_data.get_all_labels()
+        #if chem_labels is None:
+        # TODO: for now, it's always ALL chemicals that get shown
+        chem_labels = self.chem_data.get_all_labels()
 
 
         if colors is None:
-            # Attempt to make use of the previously-registered colors, if available
-            colors = self.chem_data.get_registered_colors(chem_labels)
-            if (colors is None) and len(chem_labels) > 1:
-                # Fall back to default colors (but don't bother if just 1 chemical)
-                colors = Colors.assign_default_colors(len(chem_labels))
+            # Attempt to make use of previously-registered colors, if available;
+            # or assign new default colors as needed
+            colors = self.chem_data.assign_colors(chem_labels)
 
 
         conc_matrix = self.system

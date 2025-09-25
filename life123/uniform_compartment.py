@@ -1716,14 +1716,9 @@ class UniformCompartment:
         df = self.get_history()         # A Pandas dataframe that contains a column named "SYSTEM TIME"
 
         if colors is None:
-            # TODO: switch to  colors = self.chem_data.get_registered_colors(chemicals)
-            # Attempt to use the colors registered for individual chemicals, if present
-            registered_colors = []
-            for label in chemicals:
-                stored_color = self.chem_data.get_plot_color(label)     # Will be None if no color was registered for this chemical
-                registered_colors.append(stored_color)
-            colors = registered_colors      # List of colors, with as many entries as the chemicals of interest;
-                                            # any of the entries might be None
+            # Attempt to make use of the previously-registered colors, if available
+            colors = self.chem_data.get_registered_colors(chemicals)
+
 
         return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=chemicals,
                                         colors=colors, title=title, title_prefix=title_prefix,
