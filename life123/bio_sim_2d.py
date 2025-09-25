@@ -1071,7 +1071,7 @@ class BioSim2D:
             title = f"{title_prefix}.  {title}"
 
         if colors is None:  # Attempt to make use of the previously-registered colors, if available
-            colors = self.chem_data.get_registered_colors(chem_labels)
+            colors = self.chem_data.assign_colors(chem_labels)
 
         return PlotlyHelper.heatmap_grid(array_list=data, labels=chem_labels, title=title,
                                          height=height, colors=colors, z_name="Conc.", max_n_cols=4,
@@ -1119,7 +1119,7 @@ class BioSim2D:
             raise Exception(df)
 
         if colors is None:  # Attempt to make sure of the previously-registered colors, if available
-            colors = self.chem_data.get_registered_colors(self.conc_history.restrict_chemicals)
+            colors = self.chem_data.assign_colors(self.conc_history.restrict_chemicals)
 
         return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
                                         colors=colors, legend_header="Chemical", title=title,

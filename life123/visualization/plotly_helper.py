@@ -197,21 +197,6 @@ class PlotlyHelper:
         elif type(colors) == str:
             # Turn colors into a list, if it was a single entry
             colors = [colors]
-        else:
-            # If we get here, we were given a list; replace any missing (None) entry with a default color
-            number_none = colors.count(None)    # Number of None entries
-            if number_none > 0:
-                replacement_colors = Colors.assign_default_colors(number_none)   # Get all the replacements in bulk
-                colors_adjusted = []
-                i = 0
-                for c in colors:
-                    if c is None:
-                        colors_adjusted.append(replacement_colors[i])
-                        i += 1
-                    else:
-                        colors_adjusted.append(c)
-
-                colors = colors_adjusted
 
 
         if title_prefix is not None:

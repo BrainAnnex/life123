@@ -1717,7 +1717,7 @@ class UniformCompartment:
 
         if colors is None:
             # Attempt to make use of the previously-registered colors, if available
-            colors = self.chem_data.get_registered_colors(chemicals)
+            colors = self.chem_data.assign_colors(chemicals)
 
 
         return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=chemicals,

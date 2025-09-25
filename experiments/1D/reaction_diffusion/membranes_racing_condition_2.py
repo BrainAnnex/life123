@@ -33,7 +33,7 @@
 # ### TAGS : "reactions 1D", "diffusion 1D", "membranes 1D"
 
 # %%
-LAST_REVISED = "Sep. 24, 2025"
+LAST_REVISED = "Sep. 25, 2025"
 LIFE123_VERSION = "1.0.0rc7"       # Library version this experiment is based on
 
 # %%
@@ -73,7 +73,7 @@ rxns.register_reaction(r)
 rxns.describe_reactions()
 
 # %%
-chem_data.all_chemicals()
+chem_data.all_chemicals()   # We'll let a color for `EA` get automatically assigned later
 
 # %%
 
@@ -96,6 +96,9 @@ bio.membranes().membrane_list
 # We'll use 1/2 of the diffusion rate of `A` as its membrane permeability (by passive transport)
 # The conversion product `B` and the enzyne `E`, by constrast, keep their default 0 permeability (i.e., can't cross membranes)
 bio.membranes().change_permeability("A", 50.)
+
+# %%
+bio.membranes().show_permeability()   # Values not shown mean 0
 
 # %%
 
@@ -127,7 +130,7 @@ bio.system_heatmaps(title_prefix="Initial strong, localized transient of chemica
 # %%
 # Visualize the system state so far
 bio.visualize_system(title_prefix=["Initial strong, localized transient of chemical `A` (membranes shown in brown).", 
-                                   "Notice that the enzyme `E` is found inside the organelle"])
+                                   "Notice that the enzyme `E` is found inside the compartment"])
 
 # %%
 df = bio.describe_state()
@@ -142,9 +145,10 @@ df[df.columns[4:24]]  # Zoom in where the action is
 # ### Request history-keeping for some bins
 
 # %%
-# Request to save the concentration history at the bins with the initial concentration injection, 
-# and the bins at, or near, both ends of the system
-bio.enable_history(bins=[5,15,25], frequency=15, take_snapshot=True)    
+# Request to save the concentration history 
+# at the bin with the initial concentration injection, on the left of the system, 
+# plus 2 bins inside the compartment, and one on the far side on the right
+bio.enable_history(bins=[5,11,15,25], frequency=15, take_snapshot=True)     
 
 # %%
 
@@ -168,8 +172,6 @@ bio.system_heatmaps(title_prefix=["The transient `A` starts diffusing into the c
 
 # %%
 
-# %%
-
 # %% [markdown]
 # ### Let's continue the reaction-diffusion
 
@@ -178,20 +180,12 @@ bio.react_diffuse(total_duration=0.05, fraction_max_step=0.5, show_status=True)
 bio.visualize_system()
 
 # %%
-bio.react_diffuse(total_duration=0.05, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
-
-# %%
-bio.react_diffuse(total_duration=0.05, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
-
-# %%
 bio.react_diffuse(total_duration=0.1, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+bio.visualize_system(title_prefix="Here we turned off the curve smoothing in the plot!",smoothed=False)
 
 # %%
-bio.react_diffuse(total_duration=0.1, fraction_max_step=0.5, show_status=True)
-bio.visualize_system(title_prefix="Here we turned off the curve smoothing in the plot", smoothed=False)
+bio.react_diffuse(total_duration=0.2, fraction_max_step=0.5, show_status=True)
+bio.visualize_system(smoothed=False)
 
 # %%
 bio.react_diffuse(total_duration=0.2, fraction_max_step=0.5, show_status=True)
@@ -202,7 +196,7 @@ bio.react_diffuse(total_duration=1, fraction_max_step=0.5, show_status=True)
 bio.visualize_system(smoothed=False)
 
 # %%
-bio.react_diffuse(total_duration=1.5, fraction_max_step=0.5, show_status=True)
+bio.react_diffuse(total_duration=1.4, fraction_max_step=0.5, show_status=True)
 bio.visualize_system(smoothed=False)
 
 # %% [markdown]
@@ -212,26 +206,35 @@ bio.visualize_system(smoothed=False)
 bio.system_heatmaps()
 
 # %%
-#####################
 
 # %% [markdown]
 # ### Now, let's look at a few individual bins, and their concentration change with time
 
 # %%
 bio.plot_history_single_bin(title_prefix=["Diffusion, membrane passive transport, and reaction `A + E -> B + E`",
-                                          "Bin where the transient originates."], 
+                                          "Time evolution at bin where the transient originates."], 
                              bin_address=5)
 
 # %%
-bio.plot_history_single_bin(title_prefix=["TBA"], 
-                            bin_address=25)
+bio.plot_history_single_bin(title_prefix=["Time evolution inside the compartment, at the very left of it"], 
+                            bin_address=11)
+
+# %% [markdown]
+# ### Notice the arrival of `A`, albeit short-lasting.  Also notice the transient buildup of the intermediary `EA` (and its corresponding transient dip in `E`)
 
 # %%
-bio.plot_history_single_bin(title_prefix=["TBA"], 
+bio.plot_history_single_bin(title_prefix=["Time evolution at a bin in the middle of the compartment"], 
+                            bin_address=15)
+
+# %% [markdown]
+# ### `A` enters the compartment from the left (bin 11), thru passive transport across the membrane), but barely has a chance to diffuse even to the middle of the compartment (bin 15) because of its quick conversion to `B`
+
+# %%
+bio.plot_history_single_bin(title_prefix=["Time evolution several bins to the right of the compartment"], 
                             bin_address=25)
 
 # %% [markdown]
-# ## Only PUNY amounts of `A` ever reach the faraway bins on the far side of the compartment!
+# ## Only PUNY amounts of `A` ever reach the faraway bins to the right of the compartment!
 
 # %%
 
@@ -244,32 +247,51 @@ bio.plot_history_single_bin(title_prefix=["TBA"],
 # Let's repeat, starting like before, but with a much higher diffusion rate of `A`
 
 # %%
-# Initial conditioned just like before
+# Initial conditioned just like before, with same reaction, membrane layoyt and concentrations
 
 bio = BioSim1D(n_bins=30, chem_data=chem_data, reactions=rxns)
 
-bio.membranes().set_membranes(membranes=[ (2, 18) ])
+bio.membranes().set_membranes(membranes=[ (11, 21) ])
 
-bio.inject_bell_curve(chem_label="A", center=0.2, sd=0.05, max_amplitude=200., bias=0., clip=(2,17))
-bio.set_uniform_concentration(chem_label="B", conc=80.)
+bio.inject_bell_curve(chem_label="A", center=0.166666, sd=0.05, max_amplitude=200., bias=0., clip=(0,9))
+bio.set_compartment_uniform_concentration(compartment_id=0, chem_label="E", conc=15.)
+
+# %%
+# Re-using all the chemical data from before, EXCEPT for substantially increasing the diffusion rate of `A`
+# and its membrane permeability, compared to the earlier scenario
 
 # %%
 # 15 times faster diffusion rate of 'A', and of its membrane permeability, than before
 
-chem_data.set_diffusion_rate(chem_label="A", diff_rate = 1500)  # **** x15 from scenario 1
+chem_data.set_diffusion_rate(chem_label="A", diff_rate = 3000)  # **** x15 from scenario 1
 
-bio.membranes().change_permeability("A", 750.)  # **** x15 from scenario 1 
-bio.membranes().change_permeability("B", 400.)  # Same as before
-# `C` keeps the default 0 permeability (i.e., can't cross membranes)
+bio.membranes().change_permeability("A", 750.)                 # **** x15 from scenario 1 
 
 # %%
-# Request history-keeping for some bins
-bio.enable_history(bins=[0, 6, 29], frequency=15, take_snapshot=True)   
+chem_data.all_chemicals()   # Notice that the plot_color for `EA` was automatically-assigned earlier
+
+# %%
+bio.membranes().membrane_list
+
+# %%
+bio.membranes().show_permeability()   # Values not shown mean 0
+
+# %%
+
+# %%
+# Request to save the concentration history 
+# at the bin with the initial concentration injection, on the left of the system, 
+# plus 2 bins inside the compartment, and one on the far side on the right
+bio.enable_history(bins=[5,11,15,25], frequency=15, take_snapshot=True)    
+
+# %%
+
+# %%
 
 # %%
 # Visualize the system state so far
-bio.visualize_system(title_prefix=["Initial strong, localized transient of chemical `A` (membranes shown in brown)", 
-                                   "Same as in the earlier scenario."])
+bio.visualize_system(title_prefix=["Initial strong, localized transient of chemical `A` (membranes shown in brown).", 
+                                   "Notice that the enzyme `E` is found inside the compartment"])
 
 # %%
 
@@ -278,64 +300,54 @@ bio.visualize_system(title_prefix=["Initial strong, localized transient of chemi
 
 # %%
 # The first round of reaction-diffusion, over a small time duration
-bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
-bio.visualize_system(title_prefix=["This time, the localized transient `A` diffuses more substantially across the membrane,",
-                                   "before being converted into `C`, which can't cross the membrane"])
+bio.react_diffuse(total_duration=0.05, fraction_max_step=0.5, show_status=True)
+bio.visualize_system(title_prefix=["The transient `A` starts diffusing into the compartment, and turning into `B` by `A + E -> B + E` ",
+                                   "Notice the production of `B`, which can't cross the membranes"])
 
 # %%
-bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+# SAME IN HEATMAP VIEW
+bio.system_heatmaps(title_prefix=["The transient `A` starts diffusing into the compartment, and turning into `B` by `A + E -> B + E`"])
+
+# %%
 
 # %% [markdown]
-# ### In this scenario, `A` is managing to cross both membranes, to some extent, before getting consumed   
-
-# %%
-bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
-
-# %%
-bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+# ### Let's continue the reaction-diffusion
 
 # %%
 bio.react_diffuse(total_duration=0.05, fraction_max_step=0.5, show_status=True)
 bio.visualize_system()
 
 # %%
-bio.react_diffuse(total_duration=0.15, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
-
-# %% [markdown]
-# #### The increasingly prominent `C` (green) on the right is from `A` that managed to cross the membrane, and then converted to `C`
+bio.react_diffuse(total_duration=0.1, fraction_max_step=0.5, show_status=True)
+bio.visualize_system(title_prefix="Here we turned off the curve smoothing in the plot!",smoothed=False)
 
 # %%
-bio.react_diffuse(total_duration=1.2, fraction_max_step=0.9, show_status=True)
-bio.visualize_system()
+bio.react_diffuse(total_duration=2.8, fraction_max_step=0.5, show_status=True)
+bio.visualize_system(smoothed=False)
 
 # %%
+bio.system_heatmaps()
 
 # %%
 
 # %% [markdown]
-# ### Now, let's look at the faraway bin 29, and it concentration change with time
+# ### Now, let's look at a few individual bins, and their concentration change with time
 
 # %%
-scenario_2 = bio.plot_history_single_bin(title_prefix=["Diffusion, membrane passive transport, and reaction `A + B <-> C`",
-                                                       "Faraway bin."], 
-                                         bin_address=29)
-scenario_2
-
-# %% [markdown]
-# ## A lot more `A` (eventually converted into `C`) reaches the faraway bins, compared to the earlier scenario!
+bio.plot_history_single_bin(title_prefix=["Diffusion, membrane passive transport, and reaction `A + E -> B + E`",
+                                          "Time evolution at bin where the transient originates."], 
+                             bin_address=5)
 
 # %%
-PlotlyHelper.combine_plots(fig_list = [scenario_1, scenario_2], 
-                           title="Diffusion, membrane passive transport, and reaction `A + B <-> C`<br>Concentrations in faraway bin 29<br>Comparison of scenario 1 (dotted) and 2 (solid)", 
-                           layout_index=0, modify = {0: "dot"})
+bio.plot_history_single_bin(title_prefix=["Time evolution inside the compartment, at the very left of it"], 
+                            bin_address=11)
 
-# %% [markdown]
-# Magnify plot to separate the red and green dots (very close to each other)!  
-#
-# Side note: `B` eventually equilibrates to the same value under either scenario - since `B` diffuses freely across membranes, and is the excess reactant: it diffuses throughout to bind to `A`, wherever `A` might be...
+# %%
+bio.plot_history_single_bin(title_prefix=["Time evolution at a bin in the middle of the compartment"], 
+                            bin_address=15)
+
+# %%
+bio.plot_history_single_bin(title_prefix=["Time evolution several bins to the right of the compartment"], 
+                            bin_address=25)
 
 # %%

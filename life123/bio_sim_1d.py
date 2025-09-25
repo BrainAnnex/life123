@@ -1376,7 +1376,7 @@ class System1D:
         chem_labels = self.conc_history.restrict_chemicals  # The chemicals for which history was kept
 
         if colors is None:  # Attempt to make use of the previously-registered colors, if available
-            colors = self.chem_data.get_registered_colors(chem_labels)
+            colors = self.chem_data.assign_colors(chem_labels)
 
         return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
                                         colors=colors, legend_header="Chemical", title=title,
@@ -2094,6 +2094,7 @@ class Membranes1D():
 
 
 
+
     def uses_membranes(self) -> bool:
         """
         Return True if membranes are part of the system
@@ -2158,6 +2159,16 @@ class Membranes1D():
         # END for
 
         self.membrane_list = membranes
+
+
+
+    def show_permeability(self) -> dict:
+        """
+
+        :return:    Dict mapping chemical labels to permeability
+                    If not listed, taken to be zero (unable to diffuse across membranes)
+        """
+        return self.permeability
 
 
 
@@ -2249,7 +2260,7 @@ class Membranes1D():
         :param compartment_id:  An integer >= 0
         :return:                A list with 2 bin addresses: the left and right sides of the requested compartment
         """
-        # TODO: add validation an pytest
+        # TODO: add validation and pytest
         return self.membrane_list[compartment_id]
 
 
