@@ -824,6 +824,7 @@ class ChemData(Macromolecules):
 
         :param diffusion_rates: [OPTIONAL] A non-negative number, or a list/tuple/Numpy array with the diffusion rates of the chemicals,
                                     in the same order as the names/labels (if provided).
+                                    None values (meaning "to be set later") are allowed for individual entries.
 
         :param plot_colors:     [OPTIONAL] A single name, or list or tuple of names, of the plotting colors for the chemicals,
                                     in the same order as the names/labels (if provided).
@@ -915,9 +916,10 @@ class ChemData(Macromolecules):
                 self.add_chemical(name=chem_name, label=l)
             else:
                 diff = diffusion_rates[i]
-                self.assert_valid_diffusion(diff)
                 self.add_chemical(name=chem_name, label=l)
-                self.set_diffusion_rate(chem_label=l, diff_rate=diff)
+                if diff is not None:
+                    self.assert_valid_diffusion(diff)
+                    self.set_diffusion_rate(chem_label=l, diff_rate=diff)
 
             if plot_colors is not None:
                 color = plot_colors[i]
