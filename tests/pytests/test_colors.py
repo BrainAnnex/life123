@@ -51,4 +51,4 @@ def test_lighten_color():
 
 def test_assign_default_colors():
     assert Colors.assign_default_colors(1) == ['darkturquoise']
-    assert Colors.assign_default_colors(2) == ['darkturquoise', 'green']
+    assert Colors.assign_default_colors(2) == ['darkturquoise', 'orange']

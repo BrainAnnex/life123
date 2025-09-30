@@ -48,7 +48,7 @@ bio = BioSim1D(n_bins=200, chem_data=chem_data)
 
 # %%
 # Set up the initial bell-shape concentration, with the peak close to one end of the system
-bio.inject_bell_curve(chem_label="A", mean=0.25, sd=0.1, amplitude=20., bias=0)
+bio.inject_bell_curve(chem_label="A", center=0.25, sd=0.1, amplitude=20., bias=0)
 
 # %%
 # Visualize the system state so far

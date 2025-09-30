@@ -454,7 +454,7 @@ def test_diffuse_step_3_1_stencil_F():
     
     bio.inject_gradient(chem_label="A", conc_left = 10., conc_right = 1000.)
     bio.inject_sine_conc(chem_label="A", number_cycles=4, amplitude=350, bias=20, phase=60, zero_clip = True)
-    bio.inject_bell_curve(chem_label="A", mean=0.8, sd=0.15, amplitude=2.3, bias=18)
+    bio.inject_bell_curve(chem_label="A", center=0.8, sd=0.15, amplitude=2.3, bias=18)
     #print(bio.system)
     initial_concs = bio.lookup_species(chem_index=0)
 
@@ -505,11 +505,11 @@ def test_diffuse_step_3_1_stencil_G():
 
     bio.inject_gradient(chem_label="A", conc_left = 20., conc_right = 800.)
     bio.inject_sine_conc(chem_label="A", number_cycles=5, amplitude=450, bias=10, phase=90, zero_clip = True)
-    bio.inject_bell_curve(chem_label="A", mean=0.7, sd=0.25, amplitude=13.3, bias=18)
+    bio.inject_bell_curve(chem_label="A", center=0.7, sd=0.25, amplitude=13.3, bias=18)
     initial_concs_A = bio.lookup_species(chem_index=0)
 
     bio.inject_gradient(chem_label="B", conc_left = 500., conc_right = 18.)
-    bio.inject_bell_curve(chem_label="B", mean=0.2, sd=0.45, amplitude=53.3, bias=68)
+    bio.inject_bell_curve(chem_label="B", center=0.2, sd=0.45, amplitude=53.3, bias=68)
     bio.inject_sine_conc(chem_label="B", number_cycles=7, amplitude=350, bias=2, phase=123, zero_clip = True)
     #print(bio.system)
     initial_concs_B = bio.lookup_species(chem_index=1)
@@ -563,10 +563,10 @@ def test_diffuse_step_3_1_stencil_H():
 
     bio.inject_gradient(chem_label="A", conc_left = 120., conc_right = 800.)
     bio.inject_sine_conc(chem_label="A", number_cycles=3, amplitude=450, bias=20, phase=210, zero_clip = True)
-    bio.inject_bell_curve(chem_label="A", mean=0.2, sd=0.5, amplitude=53.3, bias=18)
+    bio.inject_bell_curve(chem_label="A", center=0.2, sd=0.5, amplitude=53.3, bias=18)
 
     bio.inject_gradient(chem_label="B", conc_left = 500., conc_right = 28.)
-    bio.inject_bell_curve(chem_label="B", mean=0.4, sd=0.35, amplitude=23.3, bias=68)
+    bio.inject_bell_curve(chem_label="B", center=0.4, sd=0.35, amplitude=23.3, bias=68)
     bio.inject_sine_conc(chem_label="B", number_cycles=8, amplitude=350, bias=2, phase=123, zero_clip = True)
     #print(bio.system)
 

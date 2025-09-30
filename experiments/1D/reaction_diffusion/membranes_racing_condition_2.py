@@ -33,7 +33,7 @@
 # ### TAGS : "reactions 1D", "diffusion 1D", "membranes 1D"
 
 # %%
-LAST_REVISED = "Sep. 25, 2025"
+LAST_REVISED = "Sep. 29, 2025"
 LIFE123_VERSION = "1.0.0rc7"       # Library version this experiment is based on
 
 # %%
@@ -118,16 +118,15 @@ bio.membranes().show_permeability()   # Values not shown mean 0
 def initialize_initial_concs():
     # Set up the initial bell-shape concentration of `U` ("Ulysses"), 
     # with a narrow peak close to the left end of the system,
-    # centered at 16.7% of the width of the system, i.e. at bin 6
-    bio.inject_bell_curve(chem_label="U", center=0.166666, sd=0.05, max_amplitude=200., bias=0., clip=(0,9))
+    # centered at bin 5
+    bio.inject_bell_curve(chem_label="U", center_bin=5, sd=0.05, max_amplitude=200., bias=0., clip=(0,9))
 
     # The enzyme `E`, by contrast, is uniformly distributed within the membranes of the 1st (and only) compartment
     bio.set_compartment_uniform_concentration(compartment_id=0, chem_label="E", conc=15.)
 
     # Set up the initial bell-shape concentration of `P` ("Penelope"), 
-    # with a narrow peak close to the right end of the system,
-    # centered at 83.3% of the width of the system, i.e. at bin 25
-    bio.inject_bell_curve(chem_label="P", center=0.83333, sd=0.05, max_amplitude=30., bias=0., clip=(21,29))
+    # with a narrow peak close to the right end of the system, at bin 25
+    bio.inject_bell_curve(chem_label="P", center_bin=25, sd=0.05, max_amplitude=30., bias=0., clip=(21,29))
     #for bin in range(21, 30):
         #bio.set_bin_conc(bin_address=bin, conc=10, chem_label="P")
 

@@ -139,15 +139,53 @@ def test_set_dimensions():
 
 def test_x_coord():
     chem_data = ChemData(names=["A"])
-    bio = System1D(n_bins=4, chem_data=chem_data)
+    sys = System1D(n_bins=4, chem_data=chem_data)
 
     with pytest.raises(Exception):
-        bio.x_coord(0)      # must first call set_dimensions()
+        sys.x_coord(0)      # must first call set_dimensions()
 
-    bio.set_dimensions(21.)
-    assert np.allclose(bio.x_coord(0), 0.)
-    assert np.allclose(bio.x_coord(1), 7.)
-    assert np.allclose(bio.x_coord(3), 21.)
+    sys.set_dimensions(21.)
+    assert np.allclose(sys.x_coord(0), 0.)
+    assert np.allclose(sys.x_coord(1), 7.)
+    assert np.allclose(sys.x_coord(3), 21.)
+
+
+
+def test_bin_to_system_coord():
+    chem_data = ChemData(names=["A"])
+
+    sys = System1D(n_bins=5, chem_data=chem_data)
+    assert np.allclose(sys.bin_to_system_coord(0), 0.)
+
+    assert np.allclose(sys.bin_to_system_coord(4), 1.)
+    assert np.allclose(sys.bin_to_system_coord(1), .25)
+    assert np.allclose(sys.bin_to_system_coord(2), .5)
+    assert np.allclose(sys.bin_to_system_coord(3), .75)
+
+    sys = System1D(n_bins=6, chem_data=chem_data)
+    assert np.allclose(sys.bin_to_system_coord(0), 0.)
+    assert np.allclose(sys.bin_to_system_coord(5), 1.)
+    assert np.allclose(sys.bin_to_system_coord(2), .4)
+    assert np.allclose(sys.bin_to_system_coord(3), .6)
+
+
+
+def test_system_to_bin_coord():
+    chem_data = ChemData(names=["A"])
+
+    sys = System1D(n_bins=5, chem_data=chem_data)
+    assert sys.system_to_bin_coord(0.) == 0
+    assert sys.system_to_bin_coord(1.) == 4
+    assert sys.system_to_bin_coord(.25) == 1
+    assert sys.system_to_bin_coord(.5) == 2
+    assert sys.system_to_bin_coord(.75) == 3
+
+    sys = System1D(n_bins=6, chem_data=chem_data)
+    assert sys.system_to_bin_coord(0.) == 0
+    assert sys.system_to_bin_coord(1.) == 5
+    assert sys.system_to_bin_coord(.5) == 2
+
+
 
 
 

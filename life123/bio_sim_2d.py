@@ -233,7 +233,7 @@ class BioSim2D:
         """
         Return the concentration at the requested bin of the specified chemical species
 
-        :param bin_address:     A pair of integers identifying the bin of interest
+        :param bin_address:     A pair of (zero-based) integers identifying the bin of interest in the 2D system
         :param species_index:   The index order of the chemical species of interest
         :param species_label:   [OPTIONAL] If provided, it over-rides the value for species_index
         :return:                A concentration value at the indicated bin, for the requested species
@@ -307,8 +307,8 @@ class BioSim2D:
         as a Numpy array in the index order of the species
         EXAMPLE: np.array([10., 50.)]
 
-        :param bin_address:     A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
-        :return:                A Numpy array  of concentration values, in the index order of the species
+        :param bin_address:     A pair of (zero-based) integers identifying the bin of interest in the 2D system
+        :return:                A Numpy array  of concentration values, in the index order of the chemical species
         """
         bin_x, bin_y = bin_address      # Unpack the bin address
 
@@ -375,7 +375,7 @@ class BioSim2D:
         """
         Raise an Exception if the given bin address isn't valid
 
-        :param bin_address: A pair of integers identifying a bin in the 2D system
+        :param bin_address: A pair of (zero-based) integers identifying the bin of interest in the 2D system
         :return:            None
         """
         assert type(bin_address) == tuple, \
@@ -409,7 +409,7 @@ class BioSim2D:
         Assign the requested concentration value to the bin with the given address,
         for the specified chemical species
 
-        :param bin_address: A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
+        :param bin_address: A pair of (zero-based) integers identifying the bin of interest in the 2D system
         :param chem_label:  String with the label to identify the chemical of interest
         :param conc:        The desired concentration value to assign to the specified location
         :return:            None
@@ -430,7 +430,7 @@ class BioSim2D:
         """
         Add the requested concentration to the cell with the given address, for the specified chemical species
 
-        :param bin_address: A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
+        :param bin_address: A pair of (zero-based) integers identifying the bin of interest in the 2D system
         :param chem_index:  Zero-based index to identify a specific chemical species
         :param delta_conc:  The concentration to add to the specified location
         :param zero_clip:   If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
@@ -460,7 +460,7 @@ class BioSim2D:
         Assign the requested concentration values to the cell with the given index,
         for all the chemical species in their index order
 
-        :param bin_address: A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
+        :param bin_address: A pair of (zero-based) integers identifying the bin of interest in the 2D system
         :param conc_list:   A list with the desired concentration values to assign to the specified location
         :return:            None
         """

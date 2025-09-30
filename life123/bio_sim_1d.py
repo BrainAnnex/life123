@@ -12,7 +12,6 @@ import plotly.graph_objects as pgo
 from life123.html_log import HtmlLog as log
 from life123.visualization.graphic_log import GraphicLog
 from life123.visualization.plotly_helper import PlotlyHelper
-from life123.visualization.colors import Colors
 
 
 
@@ -25,6 +24,9 @@ class System1D:
     This base class does NOT know about reactions;
     nor does it handle any simulation.
     End users will typically instantiate the derived class BioSim1D
+
+    "bin coordinates": integers from 0 to (n_bins-1)
+    "system coordinates": real numbers in the interval [0-1]
     """
 
     def __init__(self, n_bins :int, chem_data):
@@ -308,8 +310,9 @@ class System1D:
         Set the overall length of the system.
         Doing so, will permit to convert bin numbers to positional values
 
-        :param length:
-        :return:
+        :param length:  The linear extension of the system,
+                            from the middle of the leftmost bin to the middle of the rightmost one.
+        :return:        None
         """
         assert (type(length) == float) or (type(length) == int), "set_dimensions(): length must be a number"
         assert length > 0, "set_dimensions(): length must be positive"
@@ -319,15 +322,44 @@ class System1D:
 
 
 
-    def x_coord(self, bin_address):
+    def x_coord(self, bin_address :int) -> float:
         """
         Return the x coordinate of the middle of the specified bin.
         By convention, for the leftmost bin, it's zero,
-        and for the rightmost, it's the overall length of the system
+        and for the rightmost, it's the overall "length" of the system
+
+        :param bin_address: A zero-based integer identifying the bin of interest in the 1D system
+        :return:            A value in the interval [0-1]
         """
         assert self.system_length, "x_coord(): must first call set_dimensions()"
 
         return bin_address * self.global_Dx
+
+
+
+    def bin_to_system_coord(self, bin_address :int) -> float:
+        """
+        Convert from "bin coordinates" to "system coordinates".
+
+        Mapping that sends bin 0 to 0., and the max bin number (n_bins-1) to 1.
+
+        :param bin_address: A zero-based integer identifying the bin of interest in the 1D system
+        :return:            A value in the interval [0-1]
+        """
+        return bin_address / (self.n_bins-1)
+
+
+
+    def system_to_bin_coord(self, x :float) -> int:
+        """
+        Convert from "system coordinates" to "bin coordinates".
+
+        Mapping that sends x=0. to bin 0, and x=1. to the max bin number (n_bins-1)
+
+        :param x:   A relative spatial coordinate (where 0. is the leftmost bin, and 1. the rightmost one)
+        :return:    A bin address (integer between 0 and (n_bins-1), inclusive
+        """
+        return int(x * (self.n_bins-1))
 
 
 
@@ -396,8 +428,6 @@ class System1D:
     def decrease_spatial_resolution(self, factor:int) -> None:
         """
 
-        TODO: eliminate the restriction that the number of bins must be a multiple of factor
-
         EXAMPLE: if the system is
                         [[10., 20., 30., 40., 50., 60.]
                          [ 2., 8.,   5., 15., 4.,   2.]]
@@ -408,8 +438,13 @@ class System1D:
         :param factor:
         :return:
         """
-        assert type(factor) == int, "The argument `factor` must be an integer"
-        assert self.n_bins % factor == 0, f"The number of bins (currently {self.n_bins}) must be a multiple of the requested scaling factor"
+        #TODO: eliminate the restriction that the number of bins must be a multiple of the factor
+
+        assert type(factor) == int, \
+            "decrease_spatial_resolution(): The argument `factor` must be an integer"
+        assert self.n_bins % factor == 0, \
+            f"decrease_spatial_resolution(): The number of bins (currently {self.n_bins}) " \
+            f"must be a multiple of the requested scaling factor"
 
         reduced_n_bins = int(self.n_bins / factor)
         # The result matrix will have the same number of chemical species, but fewer bins
@@ -435,7 +470,7 @@ class System1D:
                         [[10., 15., 20., 25., 30.]
                          [ 2.,  5.,  8.,  6.,  4.]]
 
-        :return:
+        :return:    None
         """
         n_bins = self.n_bins
         new_n_bins = n_bins * 2 - 1     # The final number of bins
@@ -468,7 +503,8 @@ class System1D:
 
     def set_uniform_concentration(self, conc: float, chem_index=None, chem_label=None) -> None:
         """
-        Assign the given concentration to all the bins of the specified chemical (identified by its index or name.)
+        Assign the given concentration of the specified chemical (identified by its index or name)
+        to ALL the bins.
         Any previous values get over-written
 
         :param conc:        The desired value of chemical concentration for the above species
@@ -485,6 +521,22 @@ class System1D:
             f"set_uniform_concentration(): the concentration must be a positive number or zero (the requested value was {conc})"
 
         self.system[chem_index] = np.full(self.n_bins, conc, dtype=float)
+
+
+
+    def set_all_uniform_concentrations(self, conc_list: Union[list, tuple]) -> None:
+        """
+        Set the concentrations of all chemical species at once, uniformly across all bins
+
+        :param conc_list:   List or tuple of concentration values for each of the chemical species,
+                                in their index order
+        :return:            None
+        """
+        assert len(conc_list) == self.chem_data.number_of_chemicals(), \
+            f"set_all_uniform_concentrations(): the argument must be a list or tuple of size {self.chem_data.number_of_chemicals()}"
+
+        for i, conc in enumerate(conc_list):
+            self.set_uniform_concentration(chem_index=i, conc=conc)
 
 
 
@@ -505,28 +557,11 @@ class System1D:
             self.set_bin_conc(bin_address=addr, conc=conc, chem_label=chem_label)
 
 
-
-    def set_all_uniform_concentrations(self, conc_list: Union[list, tuple]) -> None:
-        """
-        Set the concentrations of all chemical species at once, uniformly across all bins
-
-        :param conc_list:   List or tuple of concentration values for each of the chemical species,
-                                in their index order
-        :return:            None
-        """
-        assert len(conc_list) == self.chem_data.number_of_chemicals(), \
-            f"set_all_uniform_concentrations(): the argument must be a list or tuple of size {self.chem_data.number_of_chemicals()}"
-
-        for i, conc in enumerate(conc_list):
-            self.set_uniform_concentration(chem_index=i, conc=conc)
-
-
-
     def set_bin_conc(self, bin_address: int, conc: float, chem_index=None, chem_label=None) -> None:
         """
         Assign the requested concentration value to the given bin, for the specified chemical species.
 
-        :param bin_address:     The zero-based bin number of the desired compartment
+        :param bin_address:     A zero-based integer identifying the bin of interest in the 1D system
         :param conc:            The desired concentration value to assign to the specified location
         :param chem_index:      DEPRECATED.  Zero-based index to identify a specific chemical species
         :param chem_label:      [OPTIONAL] If provided, it over-rides the value for chem_index
@@ -537,7 +572,6 @@ class System1D:
 
         assert conc >= 0., \
             f"set_bin_conc(): the concentration must be a positive number or zero (the requested value was {conc})"
-
 
         if chem_label is not None:
             chem_index = self.chem_data.get_index(chem_label)
@@ -589,7 +623,7 @@ class System1D:
         """
         Add the requested concentration to the cell with the given address, for the specified chem species
 
-        :param bin_address: The zero-based bin number of the desired cell
+        :param bin_address: A zero-based integer identifying the bin of interest in the 1D system
         :param chem_label:  String to identify the chemical of interest
         :param chem_index:  DEPRECATED.  Alternate way to identify the chemical of interest, with a zero-based index
         :param delta_conc:  The concentration to add to the specified location
@@ -623,12 +657,12 @@ class System1D:
 
 
 
-    def inject_gradient(self, chem_label, conc_left = 0., conc_right = 0.) -> None:
+    def inject_gradient(self, chem_label :str, conc_left = 0., conc_right = 0.) -> None:
         """
         Add to the concentrations of the specified chemical species a linear gradient spanning across all bins,
         with the indicated values at the endpoints of the system.
 
-        :param chem_label:  The name of the chemical whose concentration we're modifying
+        :param chem_label:  The label of the chemical whose concentration we're modifying
         :param conc_left:   The desired amount of concentration to add to the leftmost bin (the start of the gradient)
         :param conc_right:  The desired amount of concentration to add to the rightmost bin (the end of the gradient)
         :return:            None
@@ -651,7 +685,7 @@ class System1D:
 
 
 
-    def inject_sine_conc(self, chem_label, number_cycles, amplitude, bias=0, phase=0, zero_clip = False) -> None:
+    def inject_sine_conc(self, chem_label :str, number_cycles, amplitude, bias=0, phase=0, zero_clip = False) -> None:
         """
         Add to the current concentrations of the specified chemical species
         a sinusoidal signal across all bins.
@@ -661,7 +695,7 @@ class System1D:
 
         In Mathematica:  Plot[Sin[B x - C] /. {B -> 2 Pi, C -> 0} , {x, 0, 1}, GridLines -> Automatic]
 
-        :param chem_label:       The name of the chemical whose concentration we're modifying
+        :param chem_label:      The label of the chemical whose concentration we're modifying
         :param number_cycles:   Number of full waves along the length of the system
         :param amplitude:       Amplitude of the Sine wave.  Note that peak-to-peak values are double the amplitude
         :param bias:            Amount to be added to all values (akin to "DC bias" in electrical circuits)
@@ -689,18 +723,22 @@ class System1D:
 
 
 
-    def inject_bell_curve(self, chem_label, center=None, mean=0.5, sd=0.15,
+    def inject_bell_curve(self, chem_label, center=0.5, center_bin=None, sd=0.15,
                           amplitude=None, max_amplitude=None, bias=0, clip=None) -> None:
         """
-        Add to the current concentrations of the specified chemical species a signal across all bins in the shape of a Bell curve.
-        The default values provide bell shape centered in the middle of the system, and fairly spread out
+        Add to the current concentrations of the specified chemicals
+        a signal across bins in the shape of a Bell curve.
+        The default values provide a bell shape centered in the middle of the system, and fairly spread out
         (but pretty close to zero at the endpoints)
 
         :param chem_label:  The name of the chemical species whose concentration we're modifying
         :param center:      A value, generally between 0 and 1, indication the spatial position of the mean
-                                relative to the bin system;
+                                relative to the bin system (i.e. in "system coordinates");
                                 if less than 0 or greater than 1, only one tail of the curve will be seen
-        :param mean:        [DEPRECATED: use `center` instead]
+        :param center_bin:  [OPTIONAL] Alternate way to specify the center, in "bin coordinates";
+                                it must be an integer in the interval [0 , n_bins-1].
+                                If the center of the bell curve needs be outside the system, use `center` instead.
+                                Specifying both `center` and `center_bin`, the latter will take priority
         :param sd:          Standard deviation, in units of the system length
         :param amplitude:   Amount by which to multiply the standard normal curve signal,
                                 before adding it to current concentrations
@@ -710,18 +748,20 @@ class System1D:
                                 if neither is specified, `amplitude` is set to 1
         :param bias:        Positive amount to be added to all values (akin to "DC bias" in electrical circuits)
         :param clip:        [OPTIONAL] Pair of integers; any bin to the left of the 1st value,
-                                or to the right of the 2nd value, will be left unmodified
+                                or to the right of the 2nd value, will be left unmodified (i.e. no signal added)
         :return:            None
         """
         if center is not None:
+            assert 0 <= center <= 1, \
+                    "inject_bell_curve(): the `center` value must be a number between 0. and 1."
             mean = center
-        else:
-            print("inject_bell_curve(): argument `mean` is deprecated; use `center` instead")
 
-        assert 0 <= mean <= 1, "inject_bell_curve(): the `center` value must be a number between 0. and 1."
+        if center_bin is not None:
+            mean = self.bin_to_system_coord(bin_address=center_bin)
 
         assert bias >= 0, \
             f"System1D.inject_bell_curve(): the value for the `bias` ({bias}) cannot be negative"
+
 
         if amplitude is None:
             if max_amplitude is None:
@@ -730,7 +770,7 @@ class System1D:
                 # Tha analytica max of a bell curve is:  MAX_AMPLITUDE = A /(σ sqrt(2π)) ;
                 # solve for A
                 amplitude = max_amplitude * sd * math.sqrt(2*math.pi)
-                #print("*** DERIVED AMPLITUDE:", amplitude)
+                #print("inject_bell_curve(): DERIVED AMPLITUDE = ", amplitude)
 
         else:       # if a value for `amplitude` was provided
             assert max_amplitude is None, \
@@ -873,7 +913,7 @@ class System1D:
         """
         Return the concentration at the requested bin of the specified chemical species
 
-        :param bin_address: The bin number
+        :param bin_address: A zero-based integer identifying the bin of interest in the 1D system
         :param chem_index:  DEPRECATED.  The index order of the chemical species of interest
         :param chem_label:  If provided, it over-rides the value for chem_index
         :return:            A concentration value at the indicated bin, for the requested species
@@ -893,7 +933,7 @@ class System1D:
         as a dict whose keys are the names of the species
         EXAMPLE:  {'A': 10.0, 'B': 50.0}
 
-        :param bin_address: An integer with the bin number
+        :param bin_address: A zero-based integer identifying the bin of interest in the 1D system
         :return:            A dict of concentration values; the keys are the names of the species
         """
         self.assert_valid_bin(bin_address)
@@ -914,7 +954,7 @@ class System1D:
         as a Numpy array in the index order of the species
         EXAMPLE: np.array([10., 50.)]
 
-        :param bin_address: An integer with the bin number
+        :param bin_address: A zero-based integer identifying the bin of interest in the 1D system
         :return:            A Numpy array  of concentration values, in the index order of the species
         """
         self.assert_valid_bin(bin_address)
@@ -1516,7 +1556,7 @@ class BioSim1D(System1D):
         Ascertain whether the given system concentrations are in equilibrium at the given bin,
         for the specified reactions (by default, check all reactions)
 
-        :param bin_address: The zero-based bin number of the desired compartment
+        :param bin_address: A zero-based integer identifying the bin of interest in the 1D system
         :param rxn_index:   The integer index (0-based) to identify the reaction of interest;
                                 if None, then check all the reactions
         :param tolerance:   Allowable relative tolerance, as a PERCENTAGE,
@@ -2222,7 +2262,7 @@ class Membranes1D():
         """
         Return True if there's a membrane to the immediate left of the given bin (specified by its index)
 
-        :param bin_address:
+        :param bin_address: A zero-based integer identifying the bin of interest in the 1D system
         :return:
         """
         if self.membrane_list == []:
@@ -2239,7 +2279,7 @@ class Membranes1D():
         """
         Return True if there's a membrane to the immediate right of the given bin (specified by its index)
 
-        :param bin_address:
+        :param bin_address: A zero-based integer identifying the bin of interest in the 1D system
         :return:
         """
         if self.membrane_list == []:

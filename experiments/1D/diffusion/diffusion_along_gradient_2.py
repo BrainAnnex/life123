@@ -114,9 +114,9 @@ bio.system_heatmaps(title_prefix="Diffusion")
 # ## Inject a bell-shape concentration
 
 # %%
-# Now that the system is at a steady statem, 
+# Now that the system is at a steady state,
 # inject a bell-shape concentration, with the peak close to one end of the system
-bio.inject_bell_curve(chem_label="A", mean=0.25, sd=0.1, amplitude=30., bias=0)
+bio.inject_bell_curve(chem_label="A", center=0.25, sd=0.1, amplitude=30., bias=0)
 
 # %%
 # Visualize the system state at this stage
