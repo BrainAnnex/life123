@@ -1,9 +1,10 @@
 """
-5 classes:
+5 classes about the chemicals and their properties - EXCEPT reactions:
+
     * ChemCore
     * Diffusion (which extends ChemCore)
     * Macromolecules (which extends Diffusion)
-    * ChemDate (which extends Macromolecules) : THIS IS THE CLASS TYPICALLY INSTANTIATED BY THE USER
+    * ChemData (which extends Macromolecules) : THIS IS THE CLASS TYPICALLY INSTANTIATED BY THE USER
 
     * ChemicalAffinity (derived from NamedTuple)
 """
@@ -19,7 +20,7 @@ import string
 class ChemCore:
     """
     Core data about the chemical species, such as their names, labels
-    and indexes (position in their listing)
+    indexes (position in their registration listing), and plotting color
 
     Note: End users will typically utilize the class ChemData, which extends this one
     """
@@ -64,10 +65,10 @@ class ChemCore:
 
     def assert_valid_chem_index(self, chem_index: int) -> None:
         """
-        Raise an Exception if the specified species_index (meant to identify a chemical) isn't valid
+        Raise an Exception if the specified chem_index (meant to identify a chemical) isn't valid
 
-        :param chem_index:   An integer that indexes the chemical of interest (numbering starts at 0)
-        :return:                None
+        :param chem_index:  An integer that indexes the chemical of interest (numbering starts at 0)
+        :return:            None
         """
         n_species = self.number_of_chemicals()
         assert type(chem_index) == int, f"The specified chemical index ({chem_index}) must be an integer: " \
@@ -81,7 +82,8 @@ class ChemCore:
 
     def get_label_mapping(self) -> dict:
         """
-        Return a dict with all the mappings of the chemical names to the registered index
+        Return a dict with all the mappings of the chemical names
+        to their (zero-based) registered index position
 
         :return:
         """
@@ -264,6 +266,21 @@ class ChemCore:
 
 
 
+    def set_color(self, chem_label :str, color :str) -> None:
+        """
+        Associate the given chemical with a color for plots.
+
+        :param chem_label:  The label of a previously-registered chemical
+        :param color:
+        :return:            None
+        """
+        assert self.label_exists(chem_label), \
+            f"set_color(): no chemical with the label `{chem_label}` is currently registered"
+
+        self.color_dict[chem_label] = color
+
+
+
     def get_plot_color(self, label :str) -> Union[str, None]:
         """
         Return the name of the plot color previously associated to the given chemical,
@@ -303,17 +320,6 @@ class ChemCore:
 
 
 
-    def set_color(self, chem_label :str, color :str):
-        """
-
-        :param chem_label:
-        :param color:
-        :return:
-        """
-        self.color_dict[chem_label] = color
-
-
-
     def assign_colors(self, chem_labels=None) -> list[str]:
         """
         Return a list of the colors registered for the requested chemicals or, if not specified, for all chemicals.
@@ -327,11 +333,17 @@ class ChemCore:
         """
         if chem_labels is None:
             chem_labels = self.get_all_labels()
+        elif type(chem_labels) == str:
+            chem_labels = [chem_labels]
+        else:
+            assert type(chem_labels) == list, \
+                f"assign_colors(): argument `chem_labels` must be a string or a list of strings; instead, it was {type(chem_labels)}"
+
 
         # Attempt to use the colors registered for the individual chemicals;
         # if not already present, assign new ones
         registered_colors = []
-        fallback_colors = None  # A list that will be created if needed
+        fallback_colors = None      # A list that will be created if needed
         new_color_index = 0
         for label in chem_labels:
             stored_color = self.get_plot_color(label)     # Will be None if no color was registered for this chemical

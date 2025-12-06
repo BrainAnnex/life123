@@ -2,12 +2,20 @@ import pytest
 import numpy as np
 import pandas as pd
 from life123 import ChemData
-from life123.chem_data import Diffusion
+from life123.chem_data import ChemCore, Diffusion
 from life123.visualization.colors import Colors
 from tests.utilities.comparisons import *
 
 
 #############  ChemCore  #############
+
+def test_constructor_ChemCore():
+    chem_core = ChemCore()
+    assert chem_core.chemical_data == []
+    assert chem_core.label_dict == {}
+    assert chem_core.color_dict == {}
+
+
 
 def test_number_of_chemicals():
     chem_data = ChemData(names=['A', 'B', 'C'])
@@ -18,7 +26,16 @@ def test_number_of_chemicals():
 
 
 
-def test_assert_valid_species_index():
+def test_get_label_mapping():
+    chem_data = ChemData(names=['A', 'B', 'C'])
+    assert chem_data.get_label_mapping() == {'A': 0, 'B': 1, 'C': 2}
+
+    chem_data = ChemData(names=[])
+    assert chem_data.get_label_mapping() == {}
+
+
+
+def test_assert_valid_chem_index():
     chem_data = ChemData(names=['A', 'B', 'C'])
     chem_data.assert_valid_chem_index(0)
     chem_data.assert_valid_chem_index(1)
@@ -105,7 +122,7 @@ def test_name_exists():
 
 
 
-def test_get_name():
+def test_get_label():
     chem_data = ChemData(names=['A', 'B', 'C'])
     assert chem_data.get_label(0) == 'A'
     assert chem_data.get_label(1) == 'B'
@@ -122,7 +139,7 @@ def test_get_name():
 
 
 
-def test_get_all_names():
+def test_get_all_labels():
     chem_data = ChemData(names=['A', 'B', 'C'])
     assert chem_data.get_all_labels() == ['A', 'B', 'C']
 
@@ -220,6 +237,136 @@ def test_add_chemical():
                                        {"name": "Y", "label": "Y", "note": "test"},
                                        {"name": "CH3OH", "label": "Z"}]
     assert chem_data.label_dict == {"X": 0, "Y": 1, "Z": 2}
+
+
+
+def test_set_color():
+    chem_core = ChemCore()
+
+    with pytest.raises(Exception):
+        chem_core.set_color(chem_label="A", color="yellow")  # `A` isn't registered
+
+    chem_core.add_chemical("A")
+    chem_core.set_color(chem_label="A", color="yellow")
+    assert chem_core.get_plot_color("A") == "yellow"
+
+    chem_core.add_chemical("B")
+    assert chem_core.get_plot_color("B") is None
+    chem_core.set_color(chem_label="B", color="cyan")
+    assert chem_core.get_plot_color("B") == "cyan"
+
+    assert chem_core.color_dict == {"A": "yellow", "B": "cyan"}
+
+
+
+def test_get_plot_color():
+    chem_core = ChemCore()
+
+    assert chem_core.get_plot_color("A") is None
+
+    chem_data = ChemData(names=['A', 'B', 'C'], plot_colors = ['red', 'green', 'blue'])
+    assert chem_data.get_plot_color("A") == "red"
+    assert chem_data.get_plot_color("B") == "green"
+    assert chem_data.get_plot_color("C") == "blue"
+
+
+
+def test_get_color_mapping_by_label():
+    chem_core = ChemCore()
+    assert chem_core.get_color_mapping_by_label() == {}
+
+    chem_data = ChemData(names=['A', 'B', 'C'], plot_colors = ['red', 'green', 'blue'])
+    assert chem_data.get_color_mapping_by_label() == {"A": "red", "B": "green", "C": "blue"}
+
+
+
+def test_get_color_mapping_by_index():
+    chem_core = ChemCore()
+    assert chem_core.get_color_mapping_by_index() == {}
+
+    chem_data = ChemData(names=['A', 'B', 'C'], plot_colors = ['red', 'green', 'blue'])
+    assert chem_data.get_color_mapping_by_index() == {0: "red", 1: "green", 2: "blue"}
+
+
+
+def test_get_all_colors():
+    chem_core = ChemCore()
+    assert chem_core.get_all_colors() == []
+
+    chem_data = ChemData(names=['A', 'B', 'C'], plot_colors = ['red', 'green', 'blue'])
+    assert chem_data.get_all_colors() == ["red", "green", "blue"]
+
+
+
+def test_assign_colors():
+    chem_core = ChemCore()
+
+    with pytest.raises(Exception):
+        chem_core.assign_colors(123)
+
+    with pytest.raises(Exception):
+        chem_core.assign_colors("Unknown")
+
+
+    # Make a note of the first 3 default colors
+    default_col_1, default_col_2, default_col_3 = Colors.assign_default_colors(3)
+
+    chem_data = ChemData(names="A", plot_colors="red")
+    result = chem_data.assign_colors("A")
+    assert result == ["red"]
+    assert chem_data.color_dict == {"A": "red"}
+
+    chem_data = ChemData(names="A")
+    result = chem_data.assign_colors(["A"])
+    assert result == [default_col_1]
+    assert chem_data.color_dict == {"A": default_col_1}   # Was made into a permanent assignment
+
+
+    chem_data = ChemData(names=["A", "B"], plot_colors=["red", "blue"])
+    result = chem_data.assign_colors(["A", "B"])
+    assert result == ["red", "blue"]
+    assert chem_data.color_dict == {"A": "red", "B": "blue"}
+
+    chem_data = ChemData(names="A", plot_colors="red")
+    chem_data.add_chemical(name="B")
+    result = chem_data.assign_colors(["A", "B"])
+    assert result == ["red", default_col_1]
+    assert chem_data.color_dict == {"A": "red", "B": default_col_1}
+
+    chem_data = ChemData(names=["A", "B"])
+    chem_data.set_color(chem_label="B", color="yellow")
+    result = chem_data.assign_colors(["A", "B"])
+    assert result == [default_col_1, "yellow"]
+    assert chem_data.color_dict == {"A": default_col_1, "B": "yellow"}
+
+    chem_data = ChemData(names=["A", "B"])
+    result = chem_data.assign_colors(["A", "B"])
+    assert result == [default_col_1, default_col_2]
+    assert chem_data.color_dict == {"A": default_col_1, "B": default_col_2}
+
+    chem_data = ChemData(names=["A", "B"])
+    result = chem_data.assign_colors()
+    assert result == [default_col_1, default_col_2]
+    assert chem_data.color_dict == {"A": default_col_1, "B": default_col_2}
+
+    chem_data = ChemData(names=["A", "B", "C"])
+    chem_data.set_color(chem_label="A", color="red")
+    chem_data.set_color(chem_label="C", color="yellow")
+    result = chem_data.assign_colors(["A", "B", "C"])
+    assert result == ["red", default_col_1, "yellow"]
+    assert chem_data.color_dict == {"A": "red", "B": default_col_1, "C": "yellow"}
+
+    chem_data = ChemData(names=["A", "B", "C", "D", "E"])
+    result = chem_data.assign_colors(["B", "C", "D"])
+    assert result == [default_col_1, default_col_2, default_col_3]
+    assert chem_data.color_dict == {"B": default_col_1, "C": default_col_2, "D": default_col_3}
+
+    chem_data = ChemData(names=["A", "B", "C", "D", "E"])
+    chem_data.set_color(chem_label="B", color="red")
+    chem_data.set_color(chem_label="D", color="yellow")
+    result = chem_data.assign_colors(["B", "C", "D"])
+    assert result == ["red", default_col_1, "yellow"]
+    assert chem_data.color_dict == { "B": "red", "C": default_col_1, "D": "yellow"}
 
 
 
@@ -556,69 +703,6 @@ def test_all_chemicals():
     expected_df = pd.DataFrame(expected_recordset)
 
     assert expected_df.equals(result)
-
-
-
-def test_assign_colors():
-    default_col_1, default_col_2, default_col_3 = Colors.assign_default_colors(3)
-
-    chem_data = ChemData(names="A", plot_colors="red")
-    result = chem_data.assign_colors(["A"])
-    assert result == ["red"]
-    assert chem_data.color_dict == {"A": "red"}
-
-    chem_data = ChemData(names="A")
-    result = chem_data.assign_colors(["A"])
-    assert result == [default_col_1]      # This might be different, if the defaults ever change!
-    assert chem_data.color_dict == {"A": default_col_1}   # Was made into a permanent assignment
-
-
-    chem_data = ChemData(names=["A", "B"], plot_colors=["red", "blue"])
-    result = chem_data.assign_colors(["A", "B"])
-    assert result == ["red", "blue"]
-    assert chem_data.color_dict == {"A": "red", "B": "blue"}
-
-    chem_data = ChemData(names="A", plot_colors="red")
-    chem_data.add_chemical(name="B")
-    result = chem_data.assign_colors(["A", "B"])
-    assert result == ["red", default_col_1]
-    assert chem_data.color_dict == {"A": "red", "B": default_col_1}
-
-    chem_data = ChemData(names=["A", "B"])
-    chem_data.set_color(chem_label="B", color="yellow")
-    result = chem_data.assign_colors(["A", "B"])
-    assert result == [default_col_1, "yellow"]
-    assert chem_data.color_dict == {"A": default_col_1, "B": "yellow"}
-
-    chem_data = ChemData(names=["A", "B"])
-    result = chem_data.assign_colors(["A", "B"])
-    assert result == [default_col_1, default_col_2]
-    assert chem_data.color_dict == {"A": default_col_1, "B": default_col_2}
-
-    chem_data = ChemData(names=["A", "B"])
-    result = chem_data.assign_colors()
-    assert result == [default_col_1, default_col_2]
-    assert chem_data.color_dict == {"A": default_col_1, "B": default_col_2}
-
-    chem_data = ChemData(names=["A", "B", "C"])
-    chem_data.set_color(chem_label="A", color="red")
-    chem_data.set_color(chem_label="C", color="yellow")
-    result = chem_data.assign_colors(["A", "B", "C"])
-    assert result == ["red", default_col_1, "yellow"]
-    assert chem_data.color_dict == {"A": "red", "B": default_col_1, "C": "yellow"}
-
-    chem_data = ChemData(names=["A", "B", "C", "D", "E"])
-    result = chem_data.assign_colors(["B", "C", "D"])
-    assert result == [default_col_1, default_col_2, default_col_3]
-    assert chem_data.color_dict == { "B": default_col_1, "C": default_col_2, "D": default_col_3}
-
-    chem_data = ChemData(names=["A", "B", "C", "D", "E"])
-    chem_data.set_color(chem_label="B", color="red")
-    chem_data.set_color(chem_label="D", color="yellow")
-    result = chem_data.assign_colors(["B", "C", "D"])
-    assert result == ["red", default_col_1, "yellow"]
-    assert chem_data.color_dict == { "B": "red", "C": default_col_1, "D": "yellow"}
-
 
 
 

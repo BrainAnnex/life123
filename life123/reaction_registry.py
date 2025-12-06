@@ -625,6 +625,8 @@ class ReactionRegistry:
         ready to be passed to the front end, for network-diagram visualization with the Cytoscape.js library
         (in the graph module "vue_cytoscape")
 
+        3 parts are generated, and assembled together as a dictionary with 3 keys: 'structure', 'color_mapping', 'caption_mapping'
+
         EXAMPLE of the graph structure part of the returned object for an  A <-> B reaction:
            [{'id': 'C-0', 'labels': ['Chemical'], 'name': 'A', 'diff_rate': None},
             {'id': 'C-1', 'labels': ['Chemical'], 'name': 'B', 'diff_rate': None},
@@ -634,6 +636,9 @@ class ReactionRegistry:
             {'id': 'edge-1', 'name': 'produces', 'source': 'R-0', 'target': 'C-1', 'stoich': 1, 'rxn_order': 1},
             {'id': 'edge-2', 'name': 'reacts',   'source': 'C-0', 'target': 'R-0', 'stoich': 1, 'rxn_order': 1}
            ]
+
+        EXAMPLE of `color_mapping`:     {'Chemical': '#8DCC92', 'Reaction': '#D9C8AD'},
+        EXAMPLE of `caption_mapping`:   {'Chemical': 'name', 'Reaction': 'name'}}
 
         :return:    A dictionary with 3 keys: 'structure', 'color_mapping', 'caption_mapping'
         """

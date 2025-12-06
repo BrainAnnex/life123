@@ -41,13 +41,19 @@ from life123.thermodynamics import ThermoDynamics
 from life123.uniform_compartment import UniformCompartment
 from life123.reaction_kinetics import (ReactionKinetics, VariableTimeSteps)
 
-from life123.visualization.graphic_log import GraphicLog
+from life123.visualization.graphic_log import GraphicLog, DisplayNetwork
 from life123.visualization.plotly_helper import PlotlyHelper
 from life123.visualization.py_graph_visual import PyGraphVisual
 from life123.visualization.colors import Colors
 
 
 __all__ = [
+    'GraphicLog',
+    'DisplayNetwork',
+    'PlotlyHelper',
+    'PyGraphVisual',
+
+
     'BioSim1D',
     'BioSim2D',
     'BioSim3D',
@@ -74,10 +80,7 @@ __all__ = [
     'System1D',
     'ThermoDynamics',
     'VariableTimeSteps',
-    'UniformCompartment',
-    'GraphicLog',
-    'PlotlyHelper',
-    'PyGraphVisual'
+    'UniformCompartment'
 ]
 
 

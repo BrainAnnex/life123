@@ -3,12 +3,15 @@ from typing import Union
 
 class PyGraphVisual:
     """
-    Facilitate data preparation for graph visualization using the Cytoscape.js library
+    Facilitate data preparation for graph visualization using the Cytoscape.js library.
+
+    NOTE: this is a fork of a class by the same name in the sister project BrainAnnex.org (where the leading
+          development for this module takes place)
     """
 
 
     def __init__(self, db=None):
-        self.db = db                    # Object of "NeoAccess" class
+        self.db = db                    # Object of "GraphAccess" class
 
         self.structure = []             # The data that defines a graph to visualize.
                                         #   A list of dicts defining nodes, and possibly edges as well.
@@ -203,7 +206,7 @@ class PyGraphVisual:
     def prepare_graph(self, result_dataset :[dict], add_edges=True) -> [int]:
         """
         Given a list of dictionary data about graph-database nodes - for example,
-        as returned by NeoAccess.get_nodes() - construct and save visualization data for them.
+        as returned by GraphAccess.get_nodes() - construct and save visualization data for them.
 
         Each dictionary entry is expected to have a key named "internal_id";
         if not present, it will be silently ignored.
