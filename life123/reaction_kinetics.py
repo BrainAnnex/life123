@@ -54,7 +54,7 @@ class ReactionKinetics:
     @staticmethod
     def exact_advance_unimolecular_irreversible(kF, A0, P0, t) -> (float, float):
         """
-        Exactly advance the irreversible 1st Order Reaction A => P,
+        Exactly advance the concentrations in the irreversible 1st Order Reaction A => P,
         from time 0 to time t,
         with the specified parameters.
 
@@ -74,10 +74,11 @@ class ReactionKinetics:
 
         return (A_t, P_t)
 
+
     @staticmethod
     def exact_solution_unimolecular_irreversible(kF, A0, B0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray):
         """
-        DEPRECATED
+        DEPRECATED!
         Return the exact solution of the irreversible 1st Order Reaction A => B,
         with the specified parameters,
         sampled at the given times.
@@ -105,7 +106,7 @@ class ReactionKinetics:
     @staticmethod
     def exact_advance_unimolecular_reversible(kF, kR, A0, P0, t) -> (float, float):
         """
-        Exactly advance the reversible 1st Order Reaction A <=> P,
+        Exactly advance the concentrations in the reversible 1st Order Reaction A <=> P,
         from time 0 to time t,
         with the specified parameters.
 

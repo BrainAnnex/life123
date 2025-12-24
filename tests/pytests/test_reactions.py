@@ -227,15 +227,17 @@ def test_reaction_quotient_ReactionSynthesis():
     # Reaction :  A + B <-> C
     rxn = ReactionSynthesis(reactants=["A" , "B"], product="C")
     c = {'A': 3., 'B': 4., 'C': 12.}
-    assert np.allclose(1., rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
     assert np.allclose(1., quotient)
     assert formula == '[C] / ([A][B])'
 
 
-    # Reaction :  2A <-> B
-    with pytest.raises(Exception):
-        ReactionSynthesis(reactants=["A" , "A"], product="B")   # Not allowed for now
+    # Reaction :  2A <-> P
+    rxn = ReactionSynthesis(reactants=["A" , "A"], product="P")
+    c = {'A': 2., 'P': 20.}
+    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
+    assert np.allclose(5., quotient)
+    assert formula == '[P] / ([A][A])'
 
 
 
@@ -247,10 +249,6 @@ def test_step_simulation_ReactionSynthesis():
     assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
     assert result[1] == 5*10*50 - 2 * 20        # 2460
 
-
-    # Reaction  2A <-> B , with 2nd-order kinetics in forward reaction, and 1st-order in reverse
-    with pytest.raises(Exception):
-        ReactionSynthesis(reactants=["A" , "A"], product="B", kF=5., kR=2.)     # For now, not allowed
 
 
 
@@ -295,9 +293,20 @@ def test_determine_reaction_rate_ReactionDecomposition():
 
 
 def test_determine_reaction_quotient_ReactionDecomposition():
+    # Reaction :  C <-> A + B
+    rxn = ReactionDecomposition(reactant="C", products=["A" , "B"])
+    c = {'A': 3., 'B': 4., 'C': 12.}
+    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
+    assert np.allclose(1., quotient)
+    assert formula == '([A][B]) / [C]'
+
+
     # Reaction :  B <-> 2A
-    with pytest.raises(Exception):
-        rxn = ReactionDecomposition(reactant="B", products=["A", "A"])  # Not allowed for now
+    rxn = ReactionDecomposition(reactant="B", products=["A" , "A"])
+    c = {'A': 2., 'B': 20.}
+    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
+    assert np.allclose(1/5., quotient)
+    assert formula == '([A][A]) / [B]'
 
 
 

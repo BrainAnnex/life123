@@ -26,14 +26,17 @@ def test_exact_advance_unimolecular_irreversible():
     a, p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.005)
     assert np.allclose(a, 78.808955168245)
     assert np.allclose(p, 11.191044831754994)
+    assert np.allclose(a+p, 90)
 
     a, p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.31739)
     assert np.allclose(a, 30.87221642701797)
     assert np.allclose(p, 59.127783572982025)
+    assert np.allclose(a+p, 90)
 
     a, p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=1.12)
     assert np.allclose(a, 2.778820715579084)
     assert np.allclose(p, 87.22117928442091)
+    assert np.allclose(a+p, 90)
 
     a, p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=100.)
     assert np.allclose(a, 0)
@@ -53,12 +56,32 @@ def test_exact_solution_unimolecular_irreversible():
 
 
 def test_exact_advance_unimolecular_reversible():
-    pass
+    a, p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0)
+    assert np.allclose(a, 80.)
+    assert np.allclose(p, 10.)
 
+    a, p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0.005)
+    assert np.allclose(a, 78.91363613)
+    assert np.allclose(p, 11.08636387)
+    assert np.allclose(a+p, 90)
+
+    a, p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0.31739)
+    assert np.allclose(a, 45.)
+    assert np.allclose(p, 45.)
+    assert np.allclose(a+p, 90)
+
+    a, p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=1.12)
+    assert np.allclose(a, 36.162706)
+    assert np.allclose(p, 53.837294)
+    assert np.allclose(a+p, 90)
+
+    a, p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=100.)
+    assert np.allclose(a, 36.)
+    assert np.allclose(p, 54.)
+    assert np.allclose(a+p, 90)
 
 
 def test_exact_solution_unimolecular_reversible():
-
     t = np.array([0, 0.005, 0.31739, 1.12, 100.])
 
     A_exact, B_exact = ReactionKinetics.exact_solution_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t_arr=t)
