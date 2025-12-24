@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
-from life123.reactions import ReactionGeneric
+from life123.reactions import ReactionGeneric, ReactionUnimolecular
 from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
-from life123.chem_data import ChemData
+
 
 
 
@@ -12,6 +12,56 @@ def test_solve_exactly():
     t = np.array([0, 0.005, 0.31739, 1.12, 100.])
 
     A_exact, B_exact = ReactionKinetics.solve_exactly(rxn=rxn, A0=80., B0=10., t_arr=t)
+
+    assert np.allclose(A_exact, [80, 78.91363613, 45.0, 36.162706, 36])
+    assert np.allclose(B_exact, [10, 11.08636387, 45.0, 53.837294, 54])
+
+
+
+def test_exact_advance_unimolecular_irreversible():
+    a, p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0)
+    assert np.allclose(a, 80.)
+    assert np.allclose(p, 10.)
+
+    a, p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.005)
+    assert np.allclose(a, 78.808955168245)
+    assert np.allclose(p, 11.191044831754994)
+
+    a, p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.31739)
+    assert np.allclose(a, 30.87221642701797)
+    assert np.allclose(p, 59.127783572982025)
+
+    a, p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=1.12)
+    assert np.allclose(a, 2.778820715579084)
+    assert np.allclose(p, 87.22117928442091)
+
+    a, p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=100.)
+    assert np.allclose(a, 0)
+    assert np.allclose(p, 90)
+
+
+
+def test_exact_solution_unimolecular_irreversible():
+
+    t = np.array([0, 0.005, 0.31739, 1.12, 100.])
+
+    A_exact, B_exact = ReactionKinetics.exact_solution_unimolecular_irreversible(kF=3., A0=80., B0=10., t_arr=t)
+
+    assert np.allclose(A_exact, [80, 78.808955168245,    30.87221642701797,   2.778820715579084, 0])
+    assert np.allclose(B_exact, [10, 11.191044831754994, 59.127783572982025, 87.22117928442091, 90])
+
+
+
+def test_exact_advance_unimolecular_reversible():
+    pass
+
+
+
+def test_exact_solution_unimolecular_reversible():
+
+    t = np.array([0, 0.005, 0.31739, 1.12, 100.])
+
+    A_exact, B_exact = ReactionKinetics.exact_solution_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t_arr=t)
 
     assert np.allclose(A_exact, [80, 78.91363613, 45.0, 36.162706, 36])
     assert np.allclose(B_exact, [10, 11.08636387, 45.0, 53.837294, 54])

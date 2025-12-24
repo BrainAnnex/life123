@@ -8,10 +8,10 @@ from life123.reactions import ReactionUnimolecular, ReactionSynthesis, ReactionD
 
 class ReactionRegistry:
     """
-    Manage a list of reactions, and reaction-specific classes,
+    Manage a list of reactions, and reaction-specific classes (in reactions.py file),
     such as ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionGeneric, ReactionEnzyme, etc.
 
-    This class is typically instantiated for the benefit of UniformCompartment objects.
+    Instances of this class are typically used by UniformCompartment objects.
     A ReactionRegistry object may be shared by multiple UniformCompartment objects IF the latter all make use
     of ALL the registered reactions  (i.e. no "pick and choose" some of the reactions.)
     """

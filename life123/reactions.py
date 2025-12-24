@@ -376,15 +376,14 @@ class ReactionOneStep(ReactionCommon):
 
 class ReactionUnimolecular(ReactionOneStep):
     """
-    Reactions of type A <-> B
+    Reactions of type A <-> P, of first order in A and P
     """
 
     def __init__(self, reactant :str, product :str, **kwargs):
         """
-
-        :param reactant:    String with the label of the reaction's single reactant
-        :param product:     String with the label of the reaction's single product
-        :param kwargs:      Other named arguments to pass to the parent class
+        :param reactant:    Label of the reaction's single reactant
+        :param product:     Label of the reaction's single product (cannot be the same as the reactant)
+        :param kwargs:      Other named arguments to pass thru to the parent class
         """
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
@@ -495,9 +494,8 @@ class ReactionUnimolecular(ReactionOneStep):
     def determine_reaction_rate(self, conc_dict :dict) -> float:
         """
         For the specified concentrations of the chemicals in the unimolecular reaction,
-        determine its initial reaction's "rate" (aka "velocity"),
-        i.e. its "forward rate" minus its "reverse rate",
-        at the start of the time step.
+        determine its current reaction's "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate".
 
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
                                 for all the chemicals involved in the given reaction
@@ -512,7 +510,8 @@ class ReactionUnimolecular(ReactionOneStep):
 
     def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
         """
-        Simulate the unimolecular reaction, over the specified time interval
+        Simulate the unimolecular reaction A <-> P, over the specified time interval,
+        using the "Forward Euler" method
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
                                 concentration won't vary significantly during this span
@@ -523,15 +522,18 @@ class ReactionUnimolecular(ReactionOneStep):
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
                                 - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
                                                             during this step
-                                - rxn_rate                  is the reaction rate ("velocity") for this reaction
-                                                            (rate of change of the product)
-                                EXAMPLE of increment_dict_single_rxn: {"B": -0.2, "F": 0.2}
-        """
+                                                            EXAMPLE: {"B": -0.2, "F": 0.2}
 
+                                - rxn_rate                  is the reaction rate ("velocity") for this reaction
+                                                            (rate of change of the product), at the START of the simulation step
+                                                            EXAMPLE: 3.5
+
+        """
         increment_dict_single_rxn = {}      # The keys are the chemical labels,
                                             # and the values are their respective concentration changes as a result of this reaction
 
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
+        # In the "forward Euler" approximation, this rate is taken to remain unvaried during the entire (small) time step
         rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
 
         delta_rxn = rxn_rate * delta_time   # forward reaction - reverse reaction
@@ -541,14 +543,12 @@ class ReactionUnimolecular(ReactionOneStep):
 
         # The reactant DECREASES based on the quantity delta_rxn
         r = self.reactant           # EXAMPLE: "B"
-        # stoichiometry = 1
         delta_conc = - delta_rxn    # Increment to this reactant from the reaction step
         increment_dict_single_rxn[r] = delta_conc
 
 
         # The reaction product INCREASES based on the quantity delta_rxn
         p = self.product            # EXAMPLE: "F"
-        # stoichiometry = 1
         delta_conc = delta_rxn      # Increment to this reaction product from the reaction step
         increment_dict_single_rxn[p] = delta_conc
 
@@ -557,19 +557,20 @@ class ReactionUnimolecular(ReactionOneStep):
 
 
 
+
 #######################################################################################################################
 
 class ReactionSynthesis(ReactionOneStep):
     """
-    Reactions of type A + B <-> C
+    Bimolecular reactions of type A + B <-> P,
+    of first order for each participating chemical.
     """
 
     def __init__(self, reactants :(str, str), product :str, **kwargs):
         """
-
-        :param reactants:
-        :param product:
-        :param kwargs:
+        :param reactants:   Pair with the labels of the 2 reactants (possibly the same)
+        :param product:     Label of the reaction's single product (cannot be the same as any of the reactants)
+        :param kwargs:      Other named arguments to pass thru to the parent class
         """
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
@@ -583,9 +584,11 @@ class ReactionSynthesis(ReactionOneStep):
         assert (r1 != product) and (r2 != product), \
             "ReactionSynthesis instantiation: the `product` cannot be identical to any of the reactants"
 
+        '''
         assert (r1 != r2), \
             "ReactionSynthesis instantiation: the 2 reactants cannot be the same. Use ReactionGeneric instead"
             #TODO: maybe overcome this restriction
+        '''
 
         self.reactant_1 = r1
         self.reactant_2 = r2
@@ -761,15 +764,15 @@ class ReactionSynthesis(ReactionOneStep):
 
 class ReactionDecomposition(ReactionOneStep):
     """
-    Reactions of type A <-> B + C
+    Bimolecular reactions of type A <-> B + C
+    of first order for each participating chemical.
     """
 
     def __init__(self, reactant :str, products :(str, str), **kwargs):
         """
-
-        :param reactant:
-        :param products:
-        :param kwargs:
+        :param reactant:    Label of the reaction's single reactant (cannot be the same as any of the products)
+        :param products:    Pair with the labels of the 2 reaction products (possibly the same)
+        :param kwargs:      Other named arguments to pass thru to the parent class
         """
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
@@ -784,9 +787,11 @@ class ReactionDecomposition(ReactionOneStep):
         assert (p1 != reactant) and (p2 != reactant), \
             "ReactionDecomposition instantiation: the `reactant` cannot be identical to any of the reaction products"
 
+        '''
         assert (p1 != p2), \
             "ReactionDecomposition instantiation: the 2 reaction products cannot be the same. Use ReactionGeneric instead"
             #TODO: maybe overcome this restriction
+        '''
 
         self.reactant = reactant
         self.product_1 = p1
@@ -1340,6 +1345,8 @@ class ReactionEnzyme(ReactionCommon):
 
 class ReactionGeneric(ReactionOneStep):
     """
+    DEPRECATED!  May be eliminated...
+
     Data about a generic SINGLE reaction of the most general type,
     with arbitrary number of reactants and products,
     arbitrary stoichiometry,

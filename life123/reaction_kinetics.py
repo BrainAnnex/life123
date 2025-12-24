@@ -14,13 +14,11 @@ from life123.visualization.plotly_helper import PlotlyHelper
 class ReactionKinetics:
     """
     Static methods about reactions kinetics
-
-    TODO: change @classmethod to @staticmethod , and ditch the cls's
     """
 
 
-    @classmethod
-    def solve_exactly(cls, rxn, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
+    @staticmethod
+    def solve_exactly(rxn, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
         """
         Return the exact solution of the given reaction,
         PROVIDED that it is a 1st Order Reaction of the type A <=> B.
@@ -49,42 +47,37 @@ class ReactionKinetics:
             "Currently only works for `A <-> B` reactions"
         # TODO: should also verify the reaction orders to be 1
 
-        return cls.exact_solution_unimolecular_reversible(kF, kR, A0, B0, t_arr)
+        return ReactionKinetics.exact_solution_unimolecular_reversible(kF, kR, A0, B0, t_arr)
 
 
 
-    @classmethod
-    def exact_solution_unimolecular_reversible(cls, kF, kR, A0, B0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray):
+    @staticmethod
+    def exact_advance_unimolecular_irreversible(kF, A0, P0, t) -> (float, float):
         """
-        Return the exact solution of the reversible 1st Order Reaction A <=> B,
-        with the specified parameters,
-        sampled at the given times.
+        Exactly advance the irreversible 1st Order Reaction A => P,
+        from time 0 to time t,
+        with the specified parameters.
 
         For details, see https://life123.science/reactions
 
-        :param kF:      Forward reaction rate constant
-        :param kR:      Reverse reaction rate constant
-        :param A0:      Initial concentration of the reactant A
-        :param B0:      Initial concentration of the product B
-        :param t_arr:   A Numpy array with the desired times at which the solutions are to be determined
-
-        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
-                            at the times given by the argument t_arr
+        :param kF:  Forward reaction rate constant (the reverse one is taken to be zero)
+        :param A0:  Initial concentration of the reactant A
+        :param P0:  Initial concentration of the product P
+        :param t:   The end time of the reaction
+        :return:    A pair with, respectively, the concentrations of A and P at time t
         """
-        TOT = A0 + B0
-        # Formula is:  A(t) = (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
+        TOT = A0 + P0
 
-        sum_rates = kF + kR
-        ratio = (kR * TOT) / sum_rates
-        A_arr = (A0 - ratio) * np.exp(-sum_rates * t_arr) + ratio
-        B_arr = TOT - A_arr
+        # Formula is:  A(t) = A0 Exp(-kF t)
+        A_t = A0 * np.exp(-kF * t)
+        P_t = TOT - A_t     # From mass conservation
 
-        return (A_arr, B_arr)
+        return (A_t, P_t)
 
-
-    @classmethod
-    def exact_solution_unimolecular_irreversible(cls, kF, A0, B0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray):
+    @staticmethod
+    def exact_solution_unimolecular_irreversible(kF, A0, B0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray):
         """
+        DEPRECATED
         Return the exact solution of the irreversible 1st Order Reaction A => B,
         with the specified parameters,
         sampled at the given times.
@@ -109,8 +102,70 @@ class ReactionKinetics:
 
 
 
-    @classmethod
-    def approx_solution_synthesis_rxn(cls, kF, kR, A0, B0, C0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray):
+    @staticmethod
+    def exact_advance_unimolecular_reversible(kF, kR, A0, P0, t) -> (float, float):
+        """
+        Exactly advance the reversible 1st Order Reaction A <=> P,
+        from time 0 to time t,
+        with the specified parameters.
+
+        For details, see https://life123.science/reactions
+
+        :param kF:  Forward reaction rate constant
+        :param kR:  Reverse reaction rate constant
+        :param A0:  Initial concentration of the reactant A
+        :param P0:  Initial concentration of the product P
+        :param t:   The end time of the reaction
+        :return:    A pair with, respectively, the concentrations of A and P at time t
+        """
+        TOT = A0 + P0
+
+        sum_rates = kF + kR
+        ratio = (kR * TOT) / sum_rates
+
+        # Formula is:  A(t) = (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
+        A_t = (A0 - ratio) * math.exp(-sum_rates * t) + ratio
+        B_t = TOT - A_t     # From mass conservation
+
+        return (A_t, B_t)
+
+
+
+    @staticmethod
+    def exact_solution_unimolecular_reversible(kF, kR, A0, B0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray):
+        """
+        DEPRECATED
+        Return the exact solution of the reversible 1st Order Reaction A <=> B,
+        with the specified parameters,
+        sampled at the given times.
+
+        For details, see https://life123.science/reactions
+
+        :param kF:      Forward reaction rate constant
+        :param kR:      Reverse reaction rate constant
+        :param A0:      Initial concentration of the reactant A
+        :param B0:      Initial concentration of the product B
+        :param t_arr:   A Numpy array with the desired times at which the solutions are to be determined
+
+        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
+                            at the times given by the argument t_arr
+        """
+        TOT = A0 + B0
+
+        sum_rates = kF + kR
+        ratio = (kR * TOT) / sum_rates
+
+        # Formula is:  A(t) = (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
+        A_arr = (A0 - ratio) * np.exp(-sum_rates * t_arr) + ratio
+        B_arr = TOT - A_arr
+
+        return (A_arr, B_arr)
+
+
+
+
+    @staticmethod
+    def approx_solution_synthesis_rxn(kF, kR, A0, B0, C0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray, np.ndarray):
         """
         Return the approximate analytical solution, by way of exponentials,
         of the reversible 2nd Order Reaction A + B <=> C,
@@ -155,8 +210,8 @@ class ReactionKinetics:
 
 
 
-    @classmethod
-    def exact_solution_synthesis_rxn(cls, kF, kR, A0, B0, C0, t_arr) -> (np.ndarray, np.ndarray, np.ndarray):
+    @staticmethod
+    def exact_solution_synthesis_rxn(kF, kR, A0, B0, C0, t_arr) -> (np.ndarray, np.ndarray, np.ndarray):
         """
         Return the exact solution of the reversible 2nd Order Reaction A + B <=> C,
         with the specified parameters,
@@ -209,8 +264,8 @@ class ReactionKinetics:
 
 
 
-    @classmethod
-    def estimate_rate_constants_simple(cls, t :np.ndarray,
+    @staticmethod
+    def estimate_rate_constants_simple(t :np.ndarray,
                                        A_conc :np.ndarray, B_conc :np.ndarray,
                                        reactant_name="Reactant", product_name="Product"):
         """
@@ -283,8 +338,8 @@ class ReactionKinetics:
 
 
 
-    @classmethod
-    def estimate_rate_constants_synthesis(cls, t :np.ndarray,
+    @staticmethod
+    def estimate_rate_constants_synthesis(t :np.ndarray,
                                           A_conc :np.ndarray, B_conc :np.ndarray, C_conc :np.ndarray,
                                           reactants :[str, str], product :str) -> pgo.Figure:
         """
@@ -322,8 +377,8 @@ class ReactionKinetics:
 
 
 
-    @classmethod
-    def compute_reaction_rate(cls, reactant_data :[(str, int)], product_data :[(str, int)],
+    @staticmethod
+    def compute_reaction_rate(reactant_data :[(str, int)], product_data :[(str, int)],
                               kF :float, kR :float, reversible :bool,
                               conc_dict :dict) -> float:
         """
@@ -369,8 +424,8 @@ class ReactionKinetics:
 
 
 
-    @classmethod
-    def compute_reaction_rate_first_order(cls, reactants :[str], products :[str],
+    @staticmethod
+    def compute_reaction_rate_first_order(reactants :[str], products :[str],
                                           kF :float, kR :float, reversible :bool,
                                           conc_dict :dict) -> float:
         """
@@ -410,8 +465,8 @@ class ReactionKinetics:
 
 
 
-    @classmethod
-    def compute_reaction_quotient(cls, reactant_data :[(str, int)], product_data :[(str, int)],
+    @staticmethod
+    def compute_reaction_quotient(reactant_data :[(str, int)], product_data :[(str, int)],
                                   conc, explain=False) -> Union[np.double, Tuple[np.double, str]]:
         """
         Compute the "Reaction Quotient" (aka "Mass–action Ratio"),
