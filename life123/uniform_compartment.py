@@ -9,7 +9,7 @@ from life123.chem_data import ChemData
 from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
 from life123.reaction_registry import ReactionRegistry
-from life123.reaction_kinetics import VariableTimeSteps
+from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
 
@@ -44,7 +44,7 @@ class UniformCompartment:
         """
         Note: AT MOST 1 of the following 3 arguments can be passed
 
-        :param reactions:   [OPTIONAL 1] Object of type "Reactions", with data about the reactions and the chemicals.
+        :param reactions:   [OPTIONAL 1] Object of type "ReactionRegistry", with data about the reactions and the chemicals.
                                 If passed, cannot pass either of the args `chem_data` nor `names` (those are both part of the "Reactions" object);
                                 if not passed, the reactions can be added later, with calls to add_reaction()
 
@@ -74,7 +74,7 @@ class UniformCompartment:
 
         if chem_data and reactions:
             assert reactions.get_chem_data() == chem_data, \
-                "BioSim1D() instantiation: the argument `reactions` is based " \
+                "UniformCompartment() instantiation: the argument `reactions` is based " \
                 "on a 'ChemData' object that doesn't match the one passed by the argument `chem_data`"
 
         if reactions is not None:
@@ -402,11 +402,11 @@ class UniformCompartment:
                 state_str = " | ".join(state_list)                                      # EXAMPLE: "3: 0.1 (A) | "8: 0.6 (B)"
                 print(f"     {mm} || {state_str}")
 
-        if self.reactions.active_enzymes == set():    # If no enzymes were involved in any reaction
-            print(f"Chemicals involved in reactions: {self.reactions.labels_of_active_chemicals()}")
-        else:
-            print(f"Chemicals involved in reactions (not counting enzymes): {self.reactions.labels_of_active_chemicals()}")
-            print(f"Enzymes involved in reactions: {self.reactions.names_of_enzymes()}")
+        #if self.reactions.active_enzymes == set():    # If no enzymes were involved in any reaction
+        print(f"Chemicals involved in reactions: {self.reactions.labels_of_active_chemicals()}")
+        #else:
+            #print(f"Chemicals involved in reactions (not counting enzymes): {self.reactions.labels_of_active_chemicals()}")
+            #print(f"Enzymes involved in reactions: {self.reactions.names_of_enzymes()}")
 
 
 
@@ -1573,7 +1573,7 @@ class UniformCompartment:
 
 
 
-    def logistic(self, x: float, x0 = 0., k = 1.) -> float:
+    def logistic(self, x :float, x0 = 0., k = 1.) -> float:
         """
         Compute the value of the Logistic function, in the range (0, 1), at the given point
         See: https://en.wikipedia.org/wiki/Logistic_function
@@ -2177,11 +2177,7 @@ class UniformCompartment:
             # Prepare a concise listing from the given concentrations,
             # only including the concentrations that are applicable to this reaction
             all_applicable_concs = []
-            '''
-            for species_name in rxn.extract_chemicals_in_reaction():
-                s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
-                all_applicable_concs.append(s)
-            '''
+
             reactants = rxn.extract_reactant_labels()
             for species_name in reactants:
                 s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
@@ -2235,9 +2231,13 @@ class UniformCompartment:
         participating in the specified reversible reaction, given their current concentrations,
         IN THE ABSENCE of any other reaction.
 
-        RESTRICTIONS:  currently limited to just aA + bB <-> cC + dD reversible reactions,
-                       first-order in all chemicals (some of the terms may be missing.)
-                       An Exception will be raised in all other cases!
+        RESTRICTIONS:   currently limited to just aA + bB <-> cC + dD reversible reactions,
+                        as supported by the class ReactionGeneric
+                        first-order in all chemicals (some of the terms may be missing),
+                        for which the kinetic rate function is
+                        ReactionKinetics.compute_rate_pseudo_elementary(), i.e. the "standard ratelaw".
+                        (Note: generally, this will be a very hypothetical scenario!)
+                        An Exception will be raised in all other cases!
 
         :param rxn_index:   The integer index (0-based) to identify the reaction of interest
         :return:            A dictionary of the equilibrium concentrations of the
@@ -2247,6 +2247,10 @@ class UniformCompartment:
         #TODO: handle scenarios where kF or kR is zero
 
         rxn = self.reactions.get_reaction(rxn_index)    # Look up the requested reaction
+
+        assert rxn.kinetic_rate_function == ReactionKinetics.compute_rate_pseudo_elementary, \
+            "find_equilibrium_conc(): unsupported scenario where the reaction " \
+            "doesn't follow the 'standard rate law' (function ReactionKinetics.compute_rate_pseudo_elementary)"
 
         reactants = rxn.extract_reactants()
         products = rxn.extract_products()
@@ -2291,10 +2295,9 @@ class UniformCompartment:
         for i, r in enumerate(reactants):
             # Loop over the reactants
             species_name =  rxn.extract_species_name(r)
-            rxn_order =  rxn.extract_rxn_order(r)
             coefficient = rxn.extract_stoichiometry(r)
 
-            assert rxn_order == 1, \
+            assert coefficient == 1, \
                 "find_equilibrium_conc(): Currently only implemented for 1st order reactions"
 
             if i == 0:
@@ -2315,10 +2318,9 @@ class UniformCompartment:
         for i, p in enumerate(products):
             # Loop over the reaction products
             species_name =  rxn.extract_species_name(p)
-            rxn_order =  rxn.extract_rxn_order(p)
             coefficient = rxn.extract_stoichiometry(p)
 
-            assert rxn_order == 1, "find_equilibrium_conc(): Currently only implemented for 1st order reactions"
+            assert coefficient == 1, "find_equilibrium_conc(): Currently only implemented for 1st order reactions"
 
             if i == 0:
                 name_map["C"] = species_name

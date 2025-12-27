@@ -36,6 +36,7 @@ class ReactionKinetics:
                             at the times given by the argument t_arr
         """
         # TODO: also include synthesis reaction
+        # TODO: deprecated?
 
         reactants, products, kF, kR = rxn.unpack_for_dynamics()
 
@@ -54,7 +55,8 @@ class ReactionKinetics:
     @staticmethod
     def exact_advance_unimolecular_irreversible(kF, A0, P0, t) -> (float, float):
         """
-        Exactly advance the concentrations in the irreversible 1st Order Reaction A => P,
+        Exactly advance the concentrations
+        in the ir-reversible 1st Order Reaction A => P,
         from time 0 to time t,
         with the specified parameters.
 
@@ -106,7 +108,8 @@ class ReactionKinetics:
     @staticmethod
     def exact_advance_unimolecular_reversible(kF, kR, A0, P0, t) -> (float, float):
         """
-        Exactly advance the concentrations in the reversible 1st Order Reaction A <=> P,
+        Exactly advance the concentrations
+        in the reversible 1st Order Reaction A <=> P,
         from time 0 to time t,
         with the specified parameters.
 
@@ -379,62 +382,19 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def compute_reaction_rate(reactant_data :[(str, int)], product_data :[(str, int)],
-                              kF :float, kR :float, reversible :bool,
-                              conc_dict :dict) -> float:
+    def compute_rate_elementary(reactants :[str], products :[str],
+                                kF :float, kR :float, reversible :bool,
+                                conc_dict :dict) -> float:
         """
-        Given a SINGLE reaction, and the specified concentrations of chemicals,
-        compute its initial reaction's "rate" (aka "velocity"),
-        i.e. its "forward rate" minus its "reverse rate",
-        at the start of the time step.
-
-        This function is to be used for elementary, or non-elementary,
-        reactions that follow the familiar "Rate Laws".
-
-        For background info:  https://life123.science/reactions
-
-        :param reactant_data:   List of PAIRS of the form (label of reactant , order of reaction with respect to it)
-        :param product_data:    List of PAIRS of the form (label of reaction product , order of reaction with respect to it)
-        :param kF:              Forward reaction rate
-        :param kR:              Reverse reaction rate; ignored if irreversible
-        :param reversible:      True if the reaction is reversible; False otherwise
-        :param conc_dict:       A dict mapping chemical labels to their concentrations,
-                                    for all the chemicals involved in the given reaction
-                                    EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
-
-        :return:            The differences between the reaction's forward and reverse rates
-        """
-        forward_rate = kF        # The initial multiplicative factor
-        for (r, order) in reactant_data:
-            # Process the unpacked data from the list of reactants
-            conc = conc_dict[r]
-            forward_rate *= conc ** order       # Raise to power
-
-
-        if not reversible:
-            return forward_rate
-
-
-        reverse_rate = kR        # The initial multiplicative factor
-        for (p, order) in product_data:
-            # Process the unpacked data from the list of the reaction products
-            conc = conc_dict[p]
-            reverse_rate *= conc ** order     # Raise to power
-
-        return forward_rate - reverse_rate
-
-
-
-    @staticmethod
-    def compute_reaction_rate_first_order(reactants :[str], products :[str],
-                                          kF :float, kR :float, reversible :bool,
-                                          conc_dict :dict) -> float:
-        """
-        Given a SINGLE reaction, in 1st order to all its chemical species,
+        Given a SINGLE elementary reaction, in 1st order to all its chemical species,
         and the specified concentrations of chemicals,
         compute its initial reaction's "rate" (aka "velocity"),
         i.e. its "forward rate" minus its "reverse rate",
         at the start of the time step.
+
+        Warning: even though arbitrary lists of reactants and products are accepted as arguments,
+                 this kinetic model will generally only hold for unimolecular reactions A <-> P,
+                 synthesis reactions A + B <-> P, and decomposition reactions A <-> B + C
 
         :param reactants:   List of labels of the reactants
         :param products:    List of labels of the products of the reaction
@@ -447,6 +407,20 @@ class ReactionKinetics:
 
         :return:            The differences between the reaction's forward and reverse rates
         """
+        issue_warning = False
+        if len(reactants) > 2 or len(products) > 2:
+            issue_warning = True
+
+        if len(reactants) == 2 and len(products) > 1:
+            issue_warning = True
+
+        if len(products) == 2 and len(reactants) > 1:
+            issue_warning = True
+
+        if issue_warning:
+            print("compute_rate_elementary(): WARNING - using 1st order kinetic modeling "
+                  "for a reaction that's probably not elementary")
+
         forward_rate = kF        # The initial multiplicative factor
         for r in reactants:
             # Process all the reactants
@@ -463,6 +437,88 @@ class ReactionKinetics:
             reverse_rate *= conc
 
         return forward_rate - reverse_rate
+
+
+
+    @staticmethod
+    def compute_rate_pseudo_elementary(reactant_terms :[(int, str)], product_terms :[(int, str)],
+                                       kF :float, kR :float,
+                                       conc_dict :dict) -> float:
+        """
+        Given a SINGLE arbitrary complex reaction,
+        and the specified concentrations of its chemicals,
+        compute its initial reaction "rate" (aka "velocity"),
+        i.e. its "forward rate" minus its "reverse rate",
+        at the start of the time step,
+        when the reaction kinetics can be modeled as if it were an elementary reaction.
+
+        This function is largely a convenient default function for testing,
+        in scenarios (and hypothetical scenarios) where the the reaction's kinetics
+        follow the familiar "Rate Laws",
+        with the order of the reaction with respect to its reactant and products
+        equals their respective stoichiometric coefficients -
+        in other words an elementary reaction or one (hypothetically) modeled as such.
+
+        For example, if the reaction is aA + bB <-> pP + qQ,
+        then this function returns:  kF [P]^p [Q]^q - kR [A]^a [B]^b
+
+        Warning: generally speaking, this is NOT a valid kinetic modeling
+        of any reaction that isn't elementary
+
+        For background info:  https://life123.science/reactions
+
+        :param reactant_terms:  A list of pairs (stoichiometry coefficient , label) for the reactants
+        :param product_terms:   A list of pairs (stoichiometry coefficient , label) for the products
+        :param kF:              Forward reaction rate
+        :param kR:              Reverse reaction rate; zero if the reaction is irreversible
+
+        :param conc_dict:       A dict mapping chemical labels to their concentrations,
+                                    for all the chemicals involved in this reaction
+                                    EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+
+        :return:            The differences between the reaction's forward and reverse rates
+        """
+        forward_rate = kF        # The initial multiplicative factor
+        for order, reactant_label in reactant_terms:     # The stoichiometry coeff. of each reactant is taken to be its reaction order
+            conc = conc_dict.get(reactant_label)
+            assert conc is not None, \
+                f"compute_rate_pseudo_elementary(): missing concentration value for reactant chemical with label `{reactant_label}`"
+            forward_rate *= conc ** order       # Raise to power
+
+
+        if kR == 0:
+            return forward_rate                 # If there's no reverse reaction (i.e., if reaction is irreversible)
+
+
+        reverse_rate = kR        # The initial multiplicative factor
+        for order, product_label in product_terms:      # The stoichiometry coeff. of each product is taken to be its reaction order
+            conc = conc_dict.get(product_label)
+            assert conc is not None, \
+                f"compute_rate_pseudo_elementary(): missing concentration value for product chemical with label `{product_label}`"
+            reverse_rate *= conc ** order       # Raise to power
+
+        return forward_rate - reverse_rate
+
+
+    @staticmethod
+    def compute_rate_first_order(reactant_terms :[(int, str)], product_terms :[(int, str)],
+                                       kF :float, kR :float,
+                                       conc_dict :dict) -> float:
+        """
+        If the reactions isn't elementary, this is a HYPOTHETICAL scenario (mostly for testing and analysis)
+        where the reaction is first order in all reactants and products
+
+        :param reactant_terms:
+        :param product_terms:
+        :param kF:
+        :param kR:
+        :param conc_dict:
+        :return:
+        """
+        # Pretend that the reaction is an elementary one
+        reactants = [t[1] for t in reactant_terms]
+        products  = [t[1] for t in product_terms]
+        return ReactionKinetics.compute_rate_elementary(reactants=reactants, products=products, kF=kF, kR=kR, reversible=True, conc_dict=conc_dict)
 
 
 

@@ -48,7 +48,7 @@ class ReactionRegistry:
                                         # CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
                                         #          the reactions are simulated.  TODO: it might better belong to UniformCompartment
 
-        self.active_enzymes = set()     # Set of the labels of the enzymes (catalysts) involved
+        #self.active_enzymes = set()     # Set of the labels of the enzymes (catalysts) involved
                                         # in any of the registered reactions
                                         # CAUTION: the concept of "active enzyme" might change in future versions, where only SOME of
                                         #          the reactions are simulated.  TODO: it might better belong to UniformCompartment
@@ -130,12 +130,12 @@ class ReactionRegistry:
 
 
 
-    def get_reactants(self, i :int) -> [(int, int, int)]:
+    def get_reactants(self, i :int) -> [(int, str)]:
         """
-        Return a list of triplets with details of the reactants of the i-th reaction
+        Return a list of pairs with details of the reactants of the i-th reaction
 
         :param i:   The index (0-based) to identify the reaction of interest
-        :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
+        :return:    A list of triplets of the form (stoichiometry, chem labels)
         """
         rxn = self.get_reaction(i)
         return rxn.extract_reactants()
@@ -254,7 +254,7 @@ class ReactionRegistry:
         All the involved chemicals can be either previously registered, or not;
         if not, they will get automatically registered.
 
-        :param rxn: One of the specific Reaction classes, such as
+        :param rxn: Object of one of the specific Reaction classes, such as
                         ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition,
                         ReactionEnz, ReactionGeneric
         :param temp:Temperature in degree Kelvin
@@ -267,11 +267,11 @@ class ReactionRegistry:
         # Register any newly-encountered reactant not already registered
         # for aesthetic reasons, we'll do 1) catalyst, 2) reactants, 3) products
 
-        catalyst = rxn.extract_catalyst()
+        #catalyst = rxn.extract_catalyst()
 
-        if catalyst:
+        #if catalyst:
             # Register the catalyst, if not already registered
-            self.chem_data.add_chemical(name=catalyst, skip_duplicates=True)
+            #self.chem_data.add_chemical(name=catalyst, skip_duplicates=True)
 
         # Register any newly-encountered reactant not already registered
         rxn_reactants = rxn.extract_reactant_labels()
@@ -284,28 +284,30 @@ class ReactionRegistry:
             self.chem_data.add_chemical(name=label, skip_duplicates=True)
 
         # Register any newly-encountered reaction intermediates not already registered
-        rxn_intermediates = rxn.extract_intermediates()
-        for label in rxn_intermediates:
-            new_index = self.chem_data.add_chemical(name=label, skip_duplicates=True)
+        rxn_intermediate = rxn.extract_intermediate()
+        if rxn_intermediate:
+            new_index = self.chem_data.add_chemical(name=rxn_intermediate, skip_duplicates=True)
             if new_index is not None:
-                print(f"register_reaction() INFO: a reaction intermediates (`{label}`), not explicitly registered, was automatically added to the chemical registry")
+                print(f"register_reaction() INFO: a reaction intermediates (`{rxn_intermediate}`), not explicitly registered, was automatically added to the chemical registry")
 
-            if self.chem_data.get_diffusion_rate(chem_label=label) is None:
+            if self.chem_data.get_diffusion_rate(chem_label=rxn_intermediate) is None:
                 # Attempt to estimate the diffusion rate constant of the reaction intermediate
-                D_enzyme = self.chem_data.get_diffusion_rate(chem_label=catalyst)
+                D_enzyme = self.chem_data.get_diffusion_rate(chem_label=rxn_intermediate)
                 D_substrate = self.chem_data.get_diffusion_rate(chem_label=rxn.substrate)
                 # TODO: this might best belong elsewhere
                 if (D_enzyme is not None) and (D_substrate is not None):
                     D_ES_rough_estimate = min(D_enzyme, D_substrate) * 0.9
-                    print(f"register_reaction() INFO: diffusion rate for the reaction intermediates (`{label}`), not yet specified, roughly estimated as {D_ES_rough_estimate}")
-                    self.chem_data.set_diffusion_rate(chem_label=label, diff_rate=D_ES_rough_estimate)
+                    print(f"register_reaction() INFO: diffusion rate for the reaction intermediates (`{rxn_intermediate}`), not yet specified, roughly estimated as {D_ES_rough_estimate}")
+                    self.chem_data.set_diffusion_rate(chem_label=rxn_intermediate, diff_rate=D_ES_rough_estimate)
 
 
-        involved_chemicals = set(rxn_reactants) | set(rxn_products) | set(rxn_intermediates) # Union of sets
+        involved_chemicals = set(rxn_reactants) | set(rxn_products)  # Union of sets
+        if  rxn_intermediate:
+             involved_chemicals = involved_chemicals | {rxn_intermediate}     # Union of sets
 
-        if catalyst is not None:
-            involved_chemicals = involved_chemicals - {catalyst}    # Difference between sets
-            self.active_enzymes.add(rxn.catalyst)                   # Add the new entry to a set
+        #if catalyst is not None:
+            #involved_chemicals = involved_chemicals - {catalyst}    # Difference between sets
+            #self.active_enzymes.add(rxn.catalyst)                   # Add the new entry to a set
 
         # Update the set of "active chemicals"
         self.active_chemicals = self.active_chemicals | involved_chemicals  # Union of sets
@@ -316,11 +318,84 @@ class ReactionRegistry:
 
 
 
-    def add_reaction(self, reactants :Union[int, str, list], products :Union[int, str, list],
-                     kF=None, forward_rate=None, kR=None, reverse_rate=None,
+    def _parse_reaction_term(self, term :str|tuple|list, name="term") -> (int, str):
+        """
+        Accept various ways to specify a reaction term, and return a standardized triplet form for it.
+
+        NOTE: if the stoichiometry coefficient isn't specified, it defaults to 1
+
+        In the passed tuples or lists:
+            - required 1st entry is the stoichiometry
+            - required 2nd entry is the chemical name
+
+        If just a string is being passed, it is taken to be the chemical name,
+        with stoichiometry coefficient of 1
+
+        EXAMPLES:
+            "F"          gets turned into:  (1, "F")   - defaults used for stoichiometry
+            (2, "F")                        (2, "F")
+            It's equally acceptable to use LISTS in lieu of tuples
+
+        :param term:    A string (a chemical name)
+                            OR  a pair (stoichiometry coeff, name)
+        :param name:    An optional nickname, handy to refer to this term in error messages if needed
+                            (for example, "reactant" or "product")
+        :return:        A standardized pair of the form (stoichiometry, species_label),
+                            where stoichiometry is an integer, while species_label is a string
+        """
+        if type(term) == str:
+            return  (1, term)    # Accept simply the chemical name as a shortcut,
+                                    # for when the stoichiometry coefficient and reaction order are both 1
+
+        if type(term) != tuple and type(term) != list:
+            raise Exception(f"_parse_reaction_term(): {name} must be either a string (a chemical name), "
+                            f"or a pair (stoichiometry coeff, name). "
+                            f"Instead, it is `{term}` (of type {type(term)})")
+
+        # If we get thus far, term is either a tuple or a list
+        assert len(term) == 2,  \
+            f"_parse_reaction_term(): Unexpected length for {name} tuple/list: it should be 2. " \
+            f"Instead, it is {len(term)}"
+
+        stoichiometry = term[0]
+        assert type(stoichiometry) == int, \
+            f"_parse_reaction_term(): The stoichiometry coefficient must be an integer. Instead, it is {stoichiometry}"
+
+        chem_label = term[1]
+        assert type(chem_label) == str, \
+                            f"_parse_reaction_term(): The chemical name must be a string. " \
+                            f"Instead, it is `{chem_label}` (of type {type(chem_label)})"
+
+
+        return (stoichiometry, chem_label)
+
+
+
+    def _standardize_reaction_side(self, terms :str|list, arg_name :str):
+        """
+
+        :param terms:
+        :param arg_name:
+        :return:
+        """
+        assert terms is not None, \
+            f"standardize_reaction_side(): the argument `{arg_name}` is a required one; it can't be None"
+
+        if type(terms) == str:
+            terms = [terms]
+        else:
+            assert type(terms) == list, \
+                f"standardize_reaction_side(): the argument `{arg_name}` must be a string or a list; the passed value was {type(terms)}"
+
+        return [self._parse_reaction_term(r, "reactant") for r in terms]   # A list of pairs
+
+
+
+    def add_reaction(self, reactants :str|list, products :str|list,
+                     kF=None, kR=None,
                      enzyme=None, k1_F=None, k1_R=None, k2_F=None,
                      temp=None,
-                     reaction_type=None, **kwargs) -> int:
+                     **kwargs) -> int:
         """
         Create and register a new SINGLE chemical reaction,
         optionally including its kinetic and/or thermodynamic data.
@@ -332,77 +407,77 @@ class ReactionRegistry:
               stoichiometry coefficients.
 
               The full structure of each term in the list of reactants and of products
-              is the triplet:  (stoichiometry coefficient, name, reaction order)
+              is the triplet:  (stoichiometry coefficient, chemical label)
 
               EXAMPLES of formats to use for each term in the lists of the reactants and of the products:
-                "F"         is taken to mean (1, "F", 1) - default stoichiometry and reaction order
-                (2, "F")    is taken to mean (2, "F", 2) - stoichiometry coefficient used as default for reaction order
-                (2, "F", 1) means stoichiometry coefficient 2 and reaction order 1 - no defaults invoked
-              It's equally acceptable to use LISTS in lieu of tuples for the pair or triplets
+                "F"         is taken to mean (1, "F") - default stoichiometry and reaction order
+                (2, "F")    is taken to mean (2, "F") - stoichiometry coefficient used as default for reaction order
 
-        :param reactants:       A list of triplets (stoichiometry, species name, reaction order),
-                                    or simplified terms in various formats; for details, see above.
-                                    If not a list, it will get turned into one
-        :param products:        A list of triplets (stoichiometry, species name, reaction order of REVERSE reaction),
-                                    or simplified terms in various formats; for details, see above.
-                                    If not a list, it will get turned into one
+              It's equally acceptable to use LISTS in lieu of tuples for the pairs
+
+        :param reactants:       A string or list of pairs (stoichiometry, species name),
+                                    or simplified terms in various formats; for details, see above
+        :param products:        A string or list of pairs (stoichiometry, species name),
+                                    or simplified terms in various formats; for details, see above
 
         :param kF:              [OPTIONAL] Forward reaction rate constant
-        :param forward_rate:    [OPTIONAL] DEPRECATED name for kF
-
         :param kR:              [OPTIONAL] Reverse reaction rate constant
-        :param reverse_rate:    [OPTIONAL] DEPRECATED name for kR
 
         :param delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
         :param delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
         :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
-        :param reaction_type:   [OPTIONAL]
 
         :return:                Integer index of the newly-added reaction
                                     (in the list self.reaction_list, stored as object variable)
         """
-        if kF is None and forward_rate is not None:
-            kF = forward_rate
-            print("*** INFORMATION: `forward_rate` is deprecated; use `kF` instead")
-
-        if kR is None and reverse_rate is not None:
-            kR = reverse_rate
-            print("*** INFORMATION: `reverse_rate` is deprecated; use `kR` instead")
-
-
-        # Determine the type of the reaction, if not explicitly specified by the user
-        if reaction_type is None:
-            reaction_type = "ReactionGeneric"   # Start with the default; change it, below, if some conditions are met
-
-            if enzyme is not None:
-                reaction_type = "ReactionEnzyme"
-
-            elif type(reactants) == str:
-                # TODO: also catch 1-element lists
-                if type(products) == str:
-                    reaction_type = "ReactionUnimolecular"
-                elif (type(products) == list) and (len(products) == 2) and (type(products[0]) == str and type(products[1]) == str):
-                    reaction_type = "ReactionDecomposition"
-
-            elif type(products) == str:
-                if (type(reactants) == list) and (len(reactants) == 2) and (type(reactants[0]) == str and type(reactants[1]) == str):
-                    reaction_type = "ReactionSynthesis"
-
-
-        if reaction_type == "ReactionEnzyme":
+        # Determine and assign the specific type of reaction, and instantiate an object of that class
+        if enzyme is not None:
+            reaction_type = "ReactionEnzyme"
+            assert type(reactants) == str
+            assert type(products) == str
             rxn = ReactionEnzyme(enzyme=enzyme, substrate=reactants, product=products,
-                                 k1_F=k1_F, k1_R=k1_R, k2_F=k2_F, temp=temp, **kwargs)
-        elif reaction_type == "ReactionUnimolecular":
-            rxn = ReactionUnimolecular(reactant=reactants, product=products, kF=kF, kR=kR, temp=temp, **kwargs)
-        elif reaction_type == "ReactionDecomposition":
-            rxn = ReactionDecomposition(reactant=reactants, products=products, kF=kF, kR=kR, temp=temp, **kwargs)
-        elif reaction_type == "ReactionSynthesis":
-            rxn = ReactionSynthesis(reactants=reactants, product=products, kF=kF, kR=kR, temp=temp, **kwargs)
-        elif reaction_type == "ReactionGeneric":
-            rxn = ReactionGeneric(reactants, products, kF=kF, kR=kR, temp=temp, **kwargs)
+                                     k1_F=k1_F, k1_R=k1_R, k2_F=k2_F, temp=temp, **kwargs)
         else:
-            raise Exception(f"add_reaction(): Unknown value for reaction_type: '{reaction_type}'")
+            reactant_list = self._standardize_reaction_side(reactants, arg_name="reactants")
+            product_list = self._standardize_reaction_side(products, arg_name="products")
 
+            single_reactant = None
+            if len(reactant_list) == 1 and reactant_list[0][0] == 1:    # A single reactant, with stoichiometry 1
+                single_reactant = reactant_list[0][1]
+
+            single_product = None
+            if len(product_list) == 1 and product_list[0][0] == 1:      # A single product, with stoichiometry 1
+                single_product = product_list[0][1]
+
+            reaction_type = "ReactionGeneric"       # Default value, possibly changed below
+
+            if single_reactant:    # A single reactant, with stoichiometry 1
+                if single_product:      # A single product, with stoichiometry 1
+                    reaction_type = "ReactionUnimolecular"
+                    rxn = ReactionUnimolecular(reactant=single_reactant, product=single_product, kF=kF, kR=kR, temp=temp, **kwargs)
+                elif len(product_list) == 2 and product_list[0][0] == 1 and product_list[1][0] == 1:      # Two products, both with stoichiometry 1
+                    reaction_type = "ReactionDecomposition"
+                    rxn = ReactionDecomposition(reactant=single_reactant, products=[product_list[0][1], product_list[1][1]],
+                                                kF=kF, kR=kR, temp=temp, **kwargs)
+                elif len(product_list) == 1 and product_list[0][0] == 2:      # A product with stoichiometry 2  (EXAMPLE : A <-> 2 B)
+                    reaction_type = "ReactionDecomposition"
+                    rxn = ReactionDecomposition(reactant=single_reactant, products=[product_list[0][1], product_list[0][1]],
+                                                kF=kF, kR=kR, temp=temp, **kwargs)
+            elif single_product:
+                if len(reactant_list) == 2 and reactant_list[0][0] == 1 and reactant_list[1][0] == 1:      # Two reactants, both with stoichiometry 1
+                    reaction_type = "ReactionSynthesis"
+                    rxn = ReactionSynthesis(reactants=[reactant_list[0][1], reactant_list[1][1]],
+                                            product=single_product, kF=kF, kR=kR, temp=temp, **kwargs)
+                elif len(reactant_list) == 1 and reactant_list[0][0] == 2:  # A reactant with stoichiometry 2  (EXAMPLE : 2A <-> P)
+                    reaction_type = "ReactionSynthesis"
+                    rxn = ReactionSynthesis(reactants=[reactant_list[0][1], reactant_list[0][1]],
+                                            product=single_product, kF=kF, kR=kR, temp=temp, **kwargs)
+
+            if reaction_type == "ReactionGeneric":
+                 rxn = ReactionGeneric(reactants=reactant_list, products=product_list, kF=kF, kR=kR, temp=temp, **kwargs)
+
+
+        print("detected reaction_type: ", reaction_type)
 
         return self.register_reaction(rxn=rxn, temp=temp)
 
@@ -417,7 +492,7 @@ class ReactionRegistry:
         """
         self.reaction_list = []
         self.active_chemicals = set()
-        self.active_enzymes = set()
+        #self.active_enzymes = set()
 
 
 
@@ -436,14 +511,14 @@ class ReactionRegistry:
 
         # Re-construct self.active_chemicals and self.active_enzymes
         self.active_chemicals = set()
-        self.active_enzymes = set()
+        #self.active_enzymes = set()
 
         for rxn in self.reaction_list:
             involved_chemicals = rxn.extract_chemicals_in_reaction()
             involved_chemicals = involved_chemicals - {rxn.catalyst}        # Set difference
             self.active_chemicals = self.active_chemicals.union(involved_chemicals)     # Union of sets
-            if rxn.catalyst is not None:
-                self.active_enzymes.add(rxn.catalyst)       # Add the new entry to a set
+            #if rxn.catalyst is not None:
+                #self.active_enzymes.add(rxn.catalyst)       # Add the new entry to a set
 
 
 
@@ -492,8 +567,9 @@ class ReactionRegistry:
             chem_labels = "{" + ", ".join(chem_labels_with_colors) + "}"
 
 
-        if self.active_enzymes == set():    # If no enzymes were involved in any reaction
-            print(f"Chemicals involved in the above reactions: {chem_labels}")
+        #if self.active_enzymes == set():    # If no enzymes were involved in any reaction
+        print(f"Chemicals involved in the above reactions: {chem_labels}")
+        '''
         else:
             print(f"Chemicals involved in the above reactions (not counting enzymes): {chem_labels}")
 
@@ -504,6 +580,7 @@ class ReactionRegistry:
                     print(f'  "{enz}" ({enzyme_color})')
                 else:
                     print(f'  "{enz}"')
+        '''
 
 
 
@@ -600,6 +677,7 @@ class ReactionRegistry:
 
 
 
+    '''
     def names_of_enzymes(self) -> Set[str]:
         """
         Return the set of the names of the enzymes (catalysts) involved
@@ -607,6 +685,7 @@ class ReactionRegistry:
         (regardless of whether they might participate in a non-enzymatic role in OTHER reactions)
         """
         return self.active_enzymes
+    '''
 
 
 
@@ -672,9 +751,7 @@ class ReactionRegistry:
 
                 # Append edge from "reaction node" to "product node"
                 graph.add_edge(from_node=rxn_id, to_node=chemical_id, name="produces",
-                               data={'stoich': rxn.extract_stoichiometry(term),
-                                     'rxn_order': rxn.extract_rxn_order(term)
-                                     })
+                               data={'stoich': rxn.extract_stoichiometry(term)})
 
 
             # Process all the REACTANTS of this reaction
@@ -690,9 +767,7 @@ class ReactionRegistry:
 
                 # Append edge from "reactant node" to "reaction node"
                 graph.add_edge(from_node=chemical_id, to_node=rxn_id, name="reacts",
-                               data={'stoich': rxn.extract_stoichiometry(term),
-                                     'rxn_order': rxn.extract_rxn_order(term)
-                                     })
+                               data={'stoich': rxn.extract_stoichiometry(term)})
 
 
         graph.assign_color_mapping(label='Chemical', color='graph_green')

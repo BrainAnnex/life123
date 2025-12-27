@@ -343,7 +343,7 @@ def test_stoichiometry_checker():
 
 
     rxns.clear_reactions_data()
-    rxns.add_reaction(reactants=[(2, "A")], products=["B"])         # Reaction 0:   2A <--> B
+    rxns.add_reaction(reactants=[(2, "A")], products=["B"])         # Reaction 0:   2A <--> B  (Synthesis)
 
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([80, 10, 0, 0]))

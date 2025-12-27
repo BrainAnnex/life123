@@ -3,7 +3,7 @@ import numpy as np
 from collections import Counter
 from life123.reactions import ReactionCommon, ReactionOneStep, \
         ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition,\
-        ReactionEnzyme, ReactionGeneric
+        ReactionEnzyme, ReactionGeneric, ReactionKinetics
 
 
 
@@ -122,10 +122,6 @@ def test_extract_chemicals_in_reaction_ReactionUnimolecular():
     assert rxn.extract_chemicals_in_reaction() == {"A", "B"}
 
 
-def test_extract_catalyst_ReactionUnimolecular():
-    rxn = ReactionUnimolecular(reactant="A", product="B")
-    assert rxn.extract_catalyst() is None
-
 
 
 def test_describe_ReactionUnimolecular():
@@ -201,11 +197,6 @@ def test_extract_chemicals_in_reaction_ReactionSynthesis():
     assert rxn.extract_chemicals_in_reaction() == {"A", "B", "C"}
 
 
-def test_extract_catalyst_ReactionSynthesis():
-    rxn = ReactionSynthesis(reactants=["A", "B"], product="C")
-    assert rxn.extract_catalyst() is None
-
-
 
 def test_determine_reaction_rate_ReactionSynthesis():
     # Reaction A + B <-> C
@@ -268,11 +259,6 @@ def test_extract_product_labels_ReactionDecomposition():
 def test_extract_chemicals_in_reaction_ReactionDecomposition():
     rxn = ReactionDecomposition(reactant="A", products=["B", "C"])
     assert rxn.extract_chemicals_in_reaction() == {"A", "B", "C"}
-
-
-def test_extract_catalyst_ReactionDecomposition():
-    rxn = ReactionDecomposition(reactant="A", products=["B", "C"])
-    assert rxn.extract_catalyst() is None
 
 
 
@@ -369,11 +355,6 @@ def test_extract_chemicals_in_reaction_ReactionEnzyme():
     assert rxn.extract_chemicals_in_reaction() == {"S", "P", "E", "ES"}
 
 
-def test_extract_catalyst_ReactionEnzyme():
-    rxn = ReactionEnzyme(enzyme="E", substrate="S", product="P")
-    assert rxn.extract_catalyst() == "E"
-
-
 
 def test_step_simulation_ReactionEnzyme_1():
     # E + S <-> ES -> E + P
@@ -436,15 +417,14 @@ def test_step_simulation_ReactionEnzyme_2():
 def test_initialize():
     rxn = ReactionGeneric(reactants="A", products="B")
 
-    assert rxn.reactants == [(1, "A", 1)]
-    assert rxn.products == [(1, "B", 1)]
+    assert rxn.reactants == [(1, "A")]
+    assert rxn.products == [(1, "B")]
     assert rxn.kF is None
     assert rxn.kR is None
     assert rxn.delta_H is None
     assert rxn.delta_S is None
     assert rxn.delta_G is None
     assert rxn.K is None
-    assert rxn.catalyst is None
 
 
     # More complex scenarios
@@ -463,11 +443,7 @@ def test_initialize():
     with pytest.raises(Exception):
         ReactionGeneric(reactants=["A"], products=[(1, "A")])
     with pytest.raises(Exception):
-        ReactionGeneric(reactants=["A"], products=[(1, "A", 1)])
-    with pytest.raises(Exception):
         ReactionGeneric(reactants=[(2, "B")], products=[(2, "B")])
-    with pytest.raises(Exception):
-        ReactionGeneric(reactants=[(2, "B")], products=[(2, "B", 2)])
     with pytest.raises(Exception):
         ReactionGeneric(reactants=["A", "B"], products=["A", "B"])
     with pytest.raises(Exception):
@@ -483,53 +459,53 @@ def test_initialize():
     assert np.allclose(rxn.extract_forward_rate() , 3.)
     assert np.allclose(rxn.extract_reverse_rate() , 2.)
     assert np.allclose(rxn.K , 3./2.)
-    assert rxn.extract_reactants() == [(1, "A", 1)]
-    assert rxn.extract_products() == [(1, "B", 1)]
+    assert rxn.extract_reactants() == [(1, "A")]
+    assert rxn.extract_products() == [(1, "B")]
     assert rxn.delta_H is None
     assert rxn.delta_S is None
     assert rxn.delta_G is None
 
-    assert rxn.extract_reactants() == [(1, "A", 1)]
+    assert rxn.extract_reactants() == [(1, "A")]
     assert rxn.extract_reactants_formula() == "A"
 
-    assert rxn.extract_products() == [(1, "B", 1)]
+    assert rxn.extract_products() == [(1, "B")]
     assert rxn.extract_products_formula() == "B"
  
 
     # Another reaction
-    rxn = ReactionGeneric(reactants=[(2, "B", 1)], products=[(5, "C", 1)], kF=9., kR=7.)
+    rxn = ReactionGeneric(reactants=[(2, "B")], products=[(5, "C")], kF=9., kR=7.)
 
     assert np.allclose(rxn.extract_forward_rate() , 9.)
     assert np.allclose(rxn.extract_reverse_rate() , 7.)
     assert np.allclose(rxn.K , 9./7.)
-    assert rxn.extract_reactants() == [(2, "B", 1)]
-    assert rxn.extract_products() == [(5, "C", 1)]
+    assert rxn.extract_reactants() == [(2, "B")]
+    assert rxn.extract_products() == [(5, "C")]
     assert rxn.delta_H is None
     assert rxn.delta_S is None
     assert rxn.delta_G is None
 
 
     # Add another reaction.  This time, first set the temperature
-    rxn = ReactionGeneric(reactants=[(2, "D", 3)], products=[(1, "C", 2)], kF=11., kR=13., temp=200)
+    rxn = ReactionGeneric(reactants=[(2, "D")], products=[(1, "C")], kF=11., kR=13., temp=200)
 
     assert np.allclose(rxn.extract_forward_rate() , 11.)
     assert np.allclose(rxn.extract_reverse_rate() , 13.)
     assert np.allclose(rxn.K , 11./13.)
-    assert rxn.extract_reactants() == [(2, "D", 3)]
-    assert rxn.extract_products() == [(1, "C", 2)]
+    assert rxn.extract_reactants() == [(2, "D")]
+    assert rxn.extract_products() == [(1, "C")]
     assert rxn.delta_H is None
     assert rxn.delta_S is None
     assert np.allclose(rxn.delta_G, 277.7928942715384)   # - RT log(K)
 
 
     # Add a multi-term reaction
-    rxn = ReactionGeneric(reactants=["A", (2, "B", 1)], products=[(3, "C", 2), "D"], kF=5., kR=1., temp=200)
+    rxn = ReactionGeneric(reactants=["A", (2, "B")], products=[(3, "C"), "D"], kF=5., kR=1., temp=200)
 
     assert np.allclose(rxn.extract_forward_rate() , 5.)
     assert np.allclose(rxn.extract_reverse_rate() , 1.)
     assert np.allclose(rxn.K , 5./1.)
-    assert rxn.extract_reactants() == [(1, "A", 1), (2, "B", 1)]
-    assert rxn.extract_products() == [(3, "C", 2), (1, "D", 1)]
+    assert rxn.extract_reactants() == [(1, "A"), (2, "B")]
+    assert rxn.extract_products() == [(3, "C"), (1, "D")]
     assert rxn.delta_H is None
     assert rxn.delta_S is None
     assert np.allclose(rxn.delta_G, -2676.321364705849)   # - RT log(K)
@@ -537,11 +513,11 @@ def test_initialize():
 
     # Add a reaction with thermodynamic data;
     # the reverse reaction rate will get computed from the thermodynamic data
-    rxn = ReactionGeneric(reactants=["A"], products=[(2, "B", 1)], kF=10.,
+    rxn = ReactionGeneric(reactants=["A"], products=[(2, "B")], kF=10.,
                           delta_H= 5., delta_S= 0.4, temp=200)
 
-    assert rxn.extract_reactants() == [(1, "A", 1)]
-    assert rxn.extract_products() == [(2, "B", 1)]
+    assert rxn.extract_reactants() == [(1, "A")]
+    assert rxn.extract_products() == [(2, "B")]
     assert rxn.delta_H == 5.
     assert rxn.delta_S == 0.4
     assert np.allclose(rxn.delta_G, -75.0)         # 5 - 200 * 0.4
@@ -562,7 +538,7 @@ def test_set_macro_enzyme():
 def test_extract_reactants():
     rxn = ReactionGeneric(reactants=["CH4", (2, "O2")],
                           products=["CO2", (2, "H2O")])
-    assert rxn.extract_reactants() == [(1, "CH4", 1), (2, "O2", 2)]
+    assert rxn.extract_reactants() == [(1, "CH4"), (2, "O2")]
 
 
 def test_extract_reactants_formula():
@@ -575,7 +551,7 @@ def test_extract_reactants_formula():
 def test_extract_products():
     rxn = ReactionGeneric(reactants=["CH4", (2, "O2")],
                           products=["CO2", (2, "H2O")])
-    assert rxn.extract_products() == [(1, "CO2", 1), (2, "H2O", 2)]
+    assert rxn.extract_products() == [(1, "CO2"), (2, "H2O")]
 
 
 def test_extract_products_formula():
@@ -589,30 +565,34 @@ def test_extract_products_formula():
 #########  TO DESCRIBE THE DATA  #########
 
 def test_describe():
-    rxn = ReactionGeneric(reactants=["CH4", (2, "O2", 1)], products=["CO2", (2, "H2O", 1)])
+    rxn = ReactionGeneric(reactants=["CH4", (2, "O2")], products=["CO2", (2, "H2O")])
 
     assert rxn.describe(concise=True) == "CH4 + 2 O2 <-> CO2 + 2 H2O"
-    assert rxn.describe(concise=False) == "CH4 + 2 O2 <-> CO2 + 2 H2O | 1st order in all reactants & products"
+    assert rxn.describe(concise=False) == "CH4 + 2 O2 <-> CO2 + 2 H2O | No kinetic rate function provided"
+
+    rxn.set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)
+
+    assert rxn.describe(concise=False) == "CH4 + 2 O2 <-> CO2 + 2 H2O | Kinetic rate function : `compute_rate_pseudo_elementary()`"
 
 
     # Start over
 
     rxn = ReactionGeneric(reactants=["A"], products=["B"], kF=3., kR=2.)
     assert rxn.describe(concise=True) == "A <-> B"
-    assert rxn.describe(concise=False) == "A <-> B  (kF = 3 / kR = 2 / K = 1.5) | 1st order in all reactants & products"
+    assert rxn.describe(concise=False) == "A <-> B  (kF = 3 / kR = 2 / K = 1.5) | No kinetic rate function provided"
 
-    rxn = ReactionGeneric(reactants=[(2, "B", 1)], products=[(5, "C", 1)], kF=9., kR=7.)
+    rxn = ReactionGeneric(reactants=[(2, "B")], products=[(5, "C")], kF=9., kR=7.)
     assert rxn.describe(concise=True) == "2 B <-> 5 C"
-    assert rxn.describe(concise=False) == "2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.2857) | 1st order in all reactants & products"
+    assert rxn.describe(concise=False) == "2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.2857) | No kinetic rate function provided"
 
 
-    rxn = ReactionGeneric(reactants=[(2, "D", 3)], products=[(1, "C", 2)], kF=11., kR=13., temp=200)
+    rxn = ReactionGeneric(reactants=[(2, "D")], products=[(1, "C")], kF=11., kR=13., temp=200)
     assert rxn.describe(concise=True) == "2 D <-> C"
-    assert rxn.describe(concise=False) == "2 D <-> C  (kF = 11 / kR = 13 / delta_G = 277.79 / K = 0.84615 / Temp = -73.15 C) | 3-th order in reactant D | 2-th order in product C"
+    assert rxn.describe(concise=False) == "2 D <-> C  (kF = 11 / kR = 13 / delta_G = 277.79 / K = 0.84615 / Temp = -73.15 C) | No kinetic rate function provided"
 
-    rxn = ReactionGeneric(reactants=["A", (2, "B", 1)], products=[(3, "C", 2), "D"], kF=5., kR=1., temp=200)
+    rxn = ReactionGeneric(reactants=["A", (2, "B")], products=[(3, "C"), "D"], kF=5., kR=1., temp=200)
     assert rxn.describe(concise=True) == "A + 2 B <-> 3 C + D"
-    assert rxn.describe(concise=False) == "A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2,676.3 / K = 5 / Temp = -73.15 C) | 2-th order in product C"
+    assert rxn.describe(concise=False) == "A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2,676.3 / K = 5 / Temp = -73.15 C) | No kinetic rate function provided"
 
 
 
@@ -673,27 +653,15 @@ def test_extract_chemicals_in_reaction_ReactionGeneric():
     assert rxn.extract_chemicals_in_reaction() == {"C", "D", "E"}
 
 
-def test_extract_catalyst_ReactionGeneric():
-    rxn = ReactionGeneric(reactants="A", products="B")
-    assert rxn.extract_catalyst() is None
-
-    rxn = ReactionGeneric(reactants=["A", "B"], products="C")
-    assert rxn.extract_catalyst() is None
-
-    rxn = ReactionGeneric(reactants=["A", "B"], products=["B", "C"])               # B acts as catalyst
-    assert rxn.extract_catalyst() == "B"
-
-    rxn = ReactionGeneric(reactants=[(2, "D"), "C"], products=["C", (3, "E")])     # C acts as catalyst
-    assert rxn.extract_catalyst() == "C"
 
 
 
-
-#######  For ANALYSIS  #######
+#############  For ANALYSIS  #############
 
 def test_reaction_quotient():
     # Reaction : A <-> B
     rxn = ReactionGeneric(reactants="A", products="B")
+    rxn.set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)
     c = {'A': 24., 'B': 36.}
     assert np.allclose(1.5, rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
@@ -703,6 +671,7 @@ def test_reaction_quotient():
 
     # Reaction : A <-> F
     rxn = ReactionGeneric(reactants="A", products="F")
+    rxn.set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)
     c = {'A': 3., 'F': 33.}
     assert np.allclose(11., rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
@@ -710,26 +679,19 @@ def test_reaction_quotient():
     assert formula == '[F] / [A]'
 
 
-    # Reaction : A <-> 3B
-    rxn = ReactionGeneric(reactants=["A"], products=[(3, "B", 1)])   # 1st order
-    c = {'A': 3., 'B': 12.}
-    assert np.allclose(4., rxn.reaction_quotient(conc=c, explain=False))
+    # Reaction : A <-> 3B, hypothetically treated as an elementary reaction
+    rxn = ReactionGeneric(reactants=["A"], products=[(3, "B")])
+    rxn.set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)
+    c = {'A': 5., 'B': 10.}
+    assert np.allclose(200., rxn.reaction_quotient(conc=c, explain=False))  # 10^3 / 5
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
-    assert np.allclose(4., quotient)
-    assert formula == '[B] / [A]'
-
-
-    # Reaction :  2A <-> 3B
-    rxn = ReactionGeneric(reactants=[(2, "A", 1)], products=[(3, "B", 1)])   # 1st order
-    c = {'A': 3., 'B': 12.}
-    assert np.allclose(4., rxn.reaction_quotient(conc=c, explain=False))
-    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
-    assert np.allclose(4., quotient)
-    assert formula == '[B] / [A]'
+    assert np.allclose(200., quotient)    # 10^3 / 5
+    assert formula == '[B]^3  / [A]'
 
 
     # Reaction :  A + B <-> C , with 1st-order kinetics for each species
     rxn = ReactionGeneric(reactants=["A" , "B"], products=["C"])
+    rxn.set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)
     c = {'A': 3., 'B': 4., 'C': 12.}
     assert np.allclose(1., rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
@@ -737,44 +699,19 @@ def test_reaction_quotient():
     assert formula == '[C] / ([A][B])'
 
 
-    # Reaction :  A <-> 2C + D , with 1st-order kinetics for each species
-    rxn = ReactionGeneric(reactants=["A"], products=[(2, "C" , 1) , "D"])
-    c = {'A': 2., 'C': 4., 'D': 8.}
-    assert np.allclose(16., rxn.reaction_quotient(conc=c, explain=False))
-    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
-    assert np.allclose(16., quotient)
-    assert formula == '([C][D]) / [A]'
-
-
-    # Reaction :  2A + 5B <-> 4C + 3D , with 1st-order kinetics for each species
-    rxn = ReactionGeneric(reactants=[(2, "A", 1) , (5, "B", 1)], products=[(4, "C", 1) , (3, "D", 1)])
-    c = {'A': 2., 'B': 1., 'C': 4., 'D': 8.}
-    assert np.allclose(16., rxn.reaction_quotient(conc=c, explain=False))
-    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
-    assert np.allclose(16., quotient)
-    assert formula == '([C][D]) / ([A][B])'
-
-
-    # Reaction :  2A <-> B , with 1st-order kinetics in both directions
-    rxn = ReactionGeneric(reactants=[(2, "A", 1)], products=["B"])
+    # Reaction :  2A <-> B
+    rxn = ReactionGeneric(reactants=[(2, "A")], products="B")
+    rxn.set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)
     c = {'A': 4., 'B': 20.}
-    assert np.allclose(5., rxn.reaction_quotient(conc=c, explain=False))
+    assert np.allclose(1.25, rxn.reaction_quotient(conc=c, explain=False))  # 20 / 4^2
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
-    assert np.allclose(5., quotient)
-    assert formula == '[B] / [A]'
-
-
-    # Reaction :  2A <-> B , NOW WITH 2nd-order kinetics in the forward direction
-    rxn = ReactionGeneric(reactants=[(2, "A", 2)], products="B")
-    c = {'A': 4., 'B': 20.}
-    assert np.allclose(1.25, rxn.reaction_quotient(conc=c, explain=False))
-    quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
-    assert np.allclose(1.25, quotient)
+    assert np.allclose(1.25, quotient)  # 20 / 4^2
     assert formula == '[B] / [A]^2 '
 
 
     # Reaction :  A <-> 2B , with 2nd-order kinetics in the reverse direction
     rxn = ReactionGeneric(reactants="A", products=[(2, "B")])
+    rxn.set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)
     c = {'A': 4., 'B': 20.}
     assert np.allclose(100., rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
@@ -784,6 +721,7 @@ def test_reaction_quotient():
 
     # Reaction :  A + B <-> C + D
     rxn = ReactionGeneric(reactants=["A", "B"], products=["C", "D"])
+    rxn.set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)
 
     # with zero concentrations of a reaction product (and non-zero reactants), the reaction quotient will be zero
     c = {'A': 15.2, 'B': 21.3, 'C': 0 , 'D': 4.1}
@@ -805,9 +743,9 @@ def test_reaction_quotient():
 def test__standard_form_chem_eqn():
     rxn = ReactionGeneric(reactants="A", products="B")     # Won't actually use reactants/products
 
-    assert rxn._standard_form_chem_eqn([(1, "Fe", 1), (2, "Cl", 1)]) == "Fe + 2 Cl"
+    assert rxn._standard_form_chem_eqn([(1, "Fe"), (2, "Cl")]) == "Fe + 2 Cl"
 
-    assert rxn._standard_form_chem_eqn([(3, "Fe", 1), (5, "G", 2)]) == "3 Fe + 5 G"
+    assert rxn._standard_form_chem_eqn([(3, "Fe"), (5, "G")]) == "3 Fe + 5 G"
 
 
 
@@ -817,20 +755,20 @@ def test__parse_reaction_term():
     with pytest.raises(Exception):
         rxn._parse_reaction_term(5)    # The argument is not a string nor a tuple nor a list
 
-    assert rxn._parse_reaction_term("F") == (1, "F", 1)
+    assert rxn._parse_reaction_term("F") == (1, "F")
 
 
     with pytest.raises(Exception):
         rxn._parse_reaction_term( (2, 5) )   # The last item in the pair is not a string
 
-    assert rxn._parse_reaction_term( (2, "F") ) == (2, "F", 2)    # order defaults to stoichiometry
-    assert rxn._parse_reaction_term( [2, "F"] ) == (2, "F", 2)
+    assert rxn._parse_reaction_term( (2, "F") ) == (2, "F")    # order defaults to stoichiometry
+    assert rxn._parse_reaction_term( [2, "F"] ) == (2, "F")
 
     with pytest.raises(Exception):
-        rxn._parse_reaction_term( (2, 5, 1) )   # The mid-item in the triplet is not a string
+        rxn._parse_reaction_term( (2, 5) )   # The mid-item in the triplet is not a string
 
-    assert rxn._parse_reaction_term( (2, "F", 1) ) == (2, "F", 1)
-    assert rxn._parse_reaction_term( [2, "F", 1] ) == (2, "F", 1)
+    assert rxn._parse_reaction_term( (2, "F") ) == (2, "F")
+    assert rxn._parse_reaction_term( [2, "F"] ) == (2, "F")
 
     with pytest.raises(Exception):
         rxn._parse_reaction_term( (3, "F", 2, 123) )     # Extra element in tuple
