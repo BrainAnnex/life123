@@ -741,7 +741,7 @@ class ReactionRegistry:
             # Process all the PRODUCTS of this reaction
             products = rxn.extract_products()
             for term in products:
-                species_name = rxn.extract_species_name(term)
+                species_name = rxn.extract_chem_label(term)
                 chemical_id = f"C-{self.chem_data.get_index(species_name)}"      # Example: "C-12"
                 # Add each product to the graph as a node (if not already present)
                 graph.add_node( node_id=chemical_id, labels="Chemical",
@@ -757,7 +757,7 @@ class ReactionRegistry:
             # Process all the REACTANTS of this reaction
             reactants = rxn.extract_reactants()
             for term in reactants:
-                species_name = rxn.extract_species_name(term)
+                species_name = rxn.extract_chem_label(term)
                 chemical_id = f"C-{self.chem_data.get_index(species_name)}"      # Example: "C-34"
                 # Add each reactant to the graph as a node (if not already present)
                 graph.add_node(node_id=chemical_id, labels="Chemical",

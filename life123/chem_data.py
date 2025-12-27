@@ -819,7 +819,7 @@ class ChemData(Macromolecules):
         Macro-molecules, if applicable, need to be added later.
 
         If no names nor labels are provided, but diffusion rates or plot colors are given,
-        the strings "A", "B", ..., "Z", "Z2", "Z3", .... are used
+        the strings "A", "B", ..., "Z", "Z2", "Z3", .... are automatically assigned.
 
         :param names:           [OPTIONAL] A single name, or list or tuple of names, of the chemicals.
                                     If not provided, the names are made equal to the labels.

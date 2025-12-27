@@ -615,7 +615,7 @@ class Diagnostics:
         # Pick (arbitrarily) the first reactant,
         # to establish a baseline change in concentration relative to its stoichiometric coefficient
         baseline_term = reactants[0]
-        baseline_species_name = rxn.extract_species_name(baseline_term)
+        baseline_species_name = rxn.extract_chem_label(baseline_term)
         baseline_species_index = self.chem_data.get_index(baseline_species_name)
         baseline_stoichiometry = rxn.extract_stoichiometry(baseline_term)
         baseline_ratio =  (delta_arr[baseline_species_index]) / baseline_stoichiometry
@@ -623,7 +623,7 @@ class Diagnostics:
 
         for i, term in enumerate(reactants):
             if i != 0:
-                species_name = rxn.extract_species_name(term)
+                species_name = rxn.extract_chem_label(term)
                 species_index = self.chem_data.get_index(species_name)
                 stoichiometry = rxn.extract_stoichiometry(term)
                 ratio =  (delta_arr[species_index]) / stoichiometry
@@ -632,7 +632,7 @@ class Diagnostics:
                     return False
 
         for term in products:
-            species_name = rxn.extract_species_name(term)
+            species_name = rxn.extract_chem_label(term)
             species_index = self.chem_data.get_index(species_name)
             stoichiometry = rxn.extract_stoichiometry(term)
             ratio =  - (delta_arr[species_index]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn

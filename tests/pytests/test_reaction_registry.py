@@ -487,25 +487,31 @@ def test_indexes_of_active_chemicals():
     assert rxns.indexes_of_active_chemicals() == [0, 1, 2, 3, 4, 5]    # All
 
 
-'''
-def test_names_of_enzymes():
-    chem_data = ChemData(names=['A', 'B', 'C', 'X', 'Y'])
-    rxns = ReactionRegistry(chem_data)
 
-    assert rxns.names_of_enzymes() == set()    # No enzymes yet
+def test__parse_reaction_term():
+    rxn = ReactionRegistry(chem_data=ChemData())     # Won't actually use the reactants/products
 
-    rxns.add_reaction(reactants="A", products="B")
-    assert rxns.names_of_enzymes() == set()     # No enzymes yet
+    with pytest.raises(Exception):
+        rxn._parse_reaction_term(5)    # The argument is not a string nor a tuple nor a list
 
-    rxns.add_reaction(reactants=["B", "X"], products=["C", "X"])
-    assert rxns.names_of_enzymes() == {"X"}     # "X" is an enzyme
+    assert rxn._parse_reaction_term("F") == (1, "F")
 
-    rxns.add_reaction(reactants="X", products="Y")
-    assert rxns.names_of_enzymes() == {"X"}      # "X" is an enzyme in SOME reaction
 
-    rxns.add_reaction(reactants=["A", "B", "Z"], products=["C", "Z"])
-    assert rxns.names_of_enzymes() == {"X", "Z"}
-'''
+    with pytest.raises(Exception):
+        rxn._parse_reaction_term( (2, 5) )   # The last item in the pair is not a string
+
+    assert rxn._parse_reaction_term( (2, "F") ) == (2, "F")    # order defaults to stoichiometry
+    assert rxn._parse_reaction_term( [2, "F"] ) == (2, "F")
+
+    with pytest.raises(Exception):
+        rxn._parse_reaction_term( (2, 5) )   # The mid-item in the triplet is not a string
+
+    assert rxn._parse_reaction_term( (2, "F") ) == (2, "F")
+    assert rxn._parse_reaction_term( [2, "F"] ) == (2, "F")
+
+    with pytest.raises(Exception):
+        rxn._parse_reaction_term( (3, "F", 2, 123) )     # Extra element in tuple
+
 
 
 

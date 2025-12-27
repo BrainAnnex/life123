@@ -21,6 +21,32 @@ def test_constructor_ReactionCommon():
 
 
 
+def test_extract_stoichiometry():
+    rxn = ReactionCommon()
+    term = (2, "A")
+    assert rxn.extract_stoichiometry(term) == 2
+
+    with pytest.raises(Exception):
+        rxn.extract_stoichiometry(8)
+
+    with pytest.raises(Exception):
+        rxn.extract_stoichiometry( () )
+
+
+
+def test_extract_chem_label():
+    rxn = ReactionCommon()
+    term = (2, "A")
+    assert rxn.extract_chem_label(term) == "A"
+
+    with pytest.raises(Exception):
+        rxn.extract_chem_label(8)
+
+    with pytest.raises(Exception):
+        rxn.extract_chem_label( (2, ) )
+
+
+
 
 #######################   ReactionOneStep   ###################################################################
 
@@ -52,6 +78,229 @@ def test_constructor_ReactionOneStep():
     assert rxn.kF == 10
     assert rxn.kR == 0
     assert rxn.K is None
+
+
+
+def test_reaction_details():
+    rxn = ReactionOneStep(kF=10, kR=2, delta_H=-3000)
+
+    assert rxn.reaction_details() == "  (kF = 10 / kR = 2 / delta_H = -3,000 / K = 5)"
+
+
+
+def test_extract_rxn_properties():
+    rxn = ReactionOneStep(kF=10, kR=2, delta_H=-3000)
+    assert rxn.extract_rxn_properties() == {'kF': 10, 'kR': 2, 'delta_H': -3000, 'K': 5}
+
+
+
+def test__set_kinetic_and_thermodynamic():
+    rxn = ReactionOneStep()
+    rxn._set_kinetic_and_thermodynamic(forward_rate=6, reverse_rate=None,
+                                       delta_H=None, delta_S=None, delta_G=None, temp=None)
+    assert rxn.kF == 6
+    assert rxn.kR is None
+    assert rxn.K is None
+    assert rxn.delta_H is None
+    assert rxn.delta_S is None
+    assert rxn.delta_G is None
+
+
+    rxn = ReactionOneStep()
+    rxn._set_kinetic_and_thermodynamic(forward_rate=6,  reverse_rate=2,
+                                       delta_H=None, delta_S=None, delta_G=None, temp=None)
+    assert rxn.kF == 6
+    assert rxn.kR == 2
+    assert rxn.K == 3
+    assert rxn.delta_H is None
+    assert rxn.delta_S is None
+    assert rxn.delta_G is None
+
+
+    rxn = ReactionOneStep()
+    rxn._set_kinetic_and_thermodynamic(forward_rate=6,  reverse_rate=2,
+                                       delta_H=None, delta_S=None, delta_G=None, temp=100)
+    assert rxn.kF == 6
+    assert rxn.kR == 2
+    assert rxn.K == 3
+    assert rxn.delta_H is None
+    assert rxn.delta_S is None
+    assert np.allclose(rxn.delta_G, -913.437080597)
+
+    rxn = ReactionOneStep()
+    with pytest.raises(Exception):
+        # Inconsistent kinetic data and passed thermo data
+        rxn._set_kinetic_and_thermodynamic(forward_rate=6,  reverse_rate=2,
+                                           delta_H=None, delta_S=None, delta_G=666., temp=100)
+
+
+    rxn = ReactionOneStep()
+    rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=None,
+                                       delta_H=500, delta_S=-3, delta_G=None, temp=None)
+    assert rxn.kF is None
+    assert rxn.kR is None
+    assert rxn.K is None
+    assert rxn.delta_H == 500
+    assert rxn.delta_S == -3
+    assert rxn.delta_G is None
+
+
+    rxn = ReactionOneStep()
+    rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=None,
+                                       delta_H=500, delta_S=-3, delta_G=None, temp=100)
+    assert rxn.kF is None
+    assert rxn.kR is None
+    assert np.allclose(rxn.K, 0.38205953171)
+    assert rxn.delta_H == 500
+    assert rxn.delta_S == -3
+    assert rxn.delta_G == 800
+
+
+    rxn = ReactionOneStep()
+    with pytest.raises(Exception):
+        # Inconsistent thermo data
+        rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=None,
+                                           delta_H=500, delta_S=-3, delta_G=999, temp=100)
+
+
+    rxn = ReactionGeneric(reactants=["A"], products=["B"])
+    rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=10,
+                                       delta_H=500, delta_S=-3, delta_G=None, temp=100)
+    assert np.allclose(rxn.kF, 3.8205953171)
+    assert rxn.kR == 10
+    assert np.allclose(rxn.K, 0.38205953171)
+    assert rxn.delta_H == 500
+    assert rxn.delta_S == -3
+    assert rxn.delta_G == 800
+
+
+    rxn = ReactionOneStep()
+    rxn._set_kinetic_and_thermodynamic(forward_rate=3.8205953171,  reverse_rate=None,
+                                       delta_H=500, delta_S=-3, delta_G=None, temp=100)
+    assert np.allclose(rxn.kF, 3.8205953171)
+    assert np.allclose(rxn.kR, 10)
+    assert np.allclose(rxn.K, 0.38205953171)
+    assert rxn.delta_H == 500
+    assert rxn.delta_S == -3
+    assert rxn.delta_G == 800
+
+
+    rxn = ReactionOneStep()
+    with pytest.raises(Exception):
+        # Inconsistent kinetic / thermo
+        rxn._set_kinetic_and_thermodynamic(forward_rate=10,  reverse_rate=10,
+                                           delta_H=500, delta_S=-3, delta_G=None, temp=100)
+
+
+    rxn = ReactionGeneric(reactants=["A"], products=["B"])
+    rxn._set_kinetic_and_thermodynamic(forward_rate=3.8205953171,  reverse_rate=10,
+                                       delta_H=500, delta_S=-3, delta_G=None, temp=100)
+    assert np.allclose(rxn.kF, 3.8205953171)
+    assert rxn.kR == 10
+    assert np.allclose(rxn.K, 0.38205953171)
+    assert rxn.delta_H == 500
+    assert rxn.delta_S == -3
+    assert np.allclose(rxn.delta_G, 800.)
+
+
+    rxn = ReactionOneStep()
+    rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=None,
+                                       delta_H=None, delta_S=None, delta_G=800, temp=None)
+    assert rxn.kF is None
+    assert rxn.kR is None
+    assert rxn.K is None
+    assert rxn.delta_H is None
+    assert rxn.delta_S is None
+    assert rxn.delta_G == 800
+
+
+    rxn = ReactionOneStep()
+    rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=None,
+                                       delta_H=None, delta_S=None, delta_G=800, temp=100)
+    assert rxn.kF is None
+    assert rxn.kR is None
+    assert np.allclose(rxn.K, 0.38205953171)
+    assert rxn.delta_H is None
+    assert rxn.delta_S is None
+    assert rxn.delta_G == 800
+
+
+    rxn = ReactionOneStep()
+    rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=10,
+                                       delta_H=None, delta_S=None, delta_G=800, temp=100)
+    assert np.allclose(rxn.kF, 3.8205953171)
+    assert rxn.kR == 10
+    assert np.allclose(rxn.K, 0.38205953171)
+    assert rxn.delta_H is None
+    assert rxn.delta_S is None
+    assert rxn.delta_G == 800
+
+
+    rxn = ReactionOneStep()
+    rxn._set_kinetic_and_thermodynamic(forward_rate=3.8205953171,  reverse_rate=None,
+                                       delta_H=None, delta_S=None, delta_G=800, temp=100)
+    assert np.allclose(rxn.kF, 3.8205953171)
+    assert np.allclose(rxn.kR, 10)
+    assert np.allclose(rxn.K, 0.38205953171)
+    assert rxn.delta_H is None
+    assert rxn.delta_S is None
+    assert rxn.delta_G == 800
+
+
+    rxn = ReactionOneStep()
+    rxn._set_kinetic_and_thermodynamic(forward_rate=3.8205953171,  reverse_rate=None,
+                                       delta_H=700, delta_S=None, delta_G=800, temp=100)
+    assert np.allclose(rxn.kF, 3.8205953171)
+    assert np.allclose(rxn.kR, 10)
+    assert np.allclose(rxn.K, 0.38205953171)
+    assert rxn.delta_H == 700
+    assert rxn.delta_S == -1
+    assert rxn.delta_G == 800
+
+
+    rxn = ReactionOneStep()
+    rxn._set_kinetic_and_thermodynamic(forward_rate=3.8205953171,  reverse_rate=None,
+                                       delta_H=None, delta_S=-1, delta_G=800, temp=100)
+    assert np.allclose(rxn.kF, 3.8205953171)
+    assert np.allclose(rxn.kR, 10)
+    assert np.allclose(rxn.K, 0.38205953171)
+    assert rxn.delta_H == 700
+    assert rxn.delta_S == -1
+    assert rxn.delta_G == 800
+
+
+
+def test_set_thermodynamic_data():
+    rxn = ReactionOneStep()
+    rxn._set_kinetic_and_thermodynamic(forward_rate=6,  reverse_rate=2,
+                                       delta_H=None, delta_S=None, delta_G=None, temp=None)
+    rxn.set_thermodynamic_data(temp=100)
+    assert rxn.kF == 6
+    assert rxn.kR == 2
+    assert rxn.K == 3
+    assert rxn.delta_H is None
+    assert rxn.delta_S is None
+    assert np.allclose(rxn.delta_G, -913.437080597)
+
+
+    rxn = ReactionOneStep()
+    rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=None,
+                                       delta_H=500, delta_S=-3, delta_G=None, temp=None)
+    rxn.set_thermodynamic_data(temp=100)
+    assert rxn.kF is None
+    assert rxn.kR is None
+    assert np.allclose(rxn.K, 0.38205953171)
+    assert rxn.delta_H == 500
+    assert rxn.delta_S == -3
+    assert rxn.delta_G == 800
+
+
+
+def test_extract_intermediate():
+    rxn = ReactionOneStep(kF=10, kR=2, delta_H=-3000)
+
+    assert rxn.extract_intermediate() is None
+
 
 
 
@@ -596,7 +845,7 @@ def test_describe():
 
 
 
-def test_extract_rxn_properties():
+def test_extract_rxn_properties_ReactionGeneric():
     rxn = ReactionGeneric(reactants=["A"], products=["B"], kF=3., kR=2., temp = 298.15)
 
     result = rxn.extract_rxn_properties()
@@ -746,205 +995,3 @@ def test__standard_form_chem_eqn():
     assert rxn._standard_form_chem_eqn([(1, "Fe"), (2, "Cl")]) == "Fe + 2 Cl"
 
     assert rxn._standard_form_chem_eqn([(3, "Fe"), (5, "G")]) == "3 Fe + 5 G"
-
-
-
-def test__parse_reaction_term():
-    rxn = ReactionGeneric(reactants="A", products="B")     # Won't actually use the reactants/products
-
-    with pytest.raises(Exception):
-        rxn._parse_reaction_term(5)    # The argument is not a string nor a tuple nor a list
-
-    assert rxn._parse_reaction_term("F") == (1, "F")
-
-
-    with pytest.raises(Exception):
-        rxn._parse_reaction_term( (2, 5) )   # The last item in the pair is not a string
-
-    assert rxn._parse_reaction_term( (2, "F") ) == (2, "F")    # order defaults to stoichiometry
-    assert rxn._parse_reaction_term( [2, "F"] ) == (2, "F")
-
-    with pytest.raises(Exception):
-        rxn._parse_reaction_term( (2, 5) )   # The mid-item in the triplet is not a string
-
-    assert rxn._parse_reaction_term( (2, "F") ) == (2, "F")
-    assert rxn._parse_reaction_term( [2, "F"] ) == (2, "F")
-
-    with pytest.raises(Exception):
-        rxn._parse_reaction_term( (3, "F", 2, 123) )     # Extra element in tuple
-
-
-
-def test__set_kinetic_and_thermodynamic():
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    rxn._set_kinetic_and_thermodynamic(forward_rate=6,  reverse_rate=None,
-                                       delta_H=None, delta_S=None, delta_G=None, temp=None)
-    assert rxn.kF == 6
-    assert rxn.kR is None
-    assert rxn.K is None
-    assert rxn.delta_H is None
-    assert rxn.delta_S is None
-    assert rxn.delta_G is None
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    rxn._set_kinetic_and_thermodynamic(forward_rate=6,  reverse_rate=2,
-                                       delta_H=None, delta_S=None, delta_G=None, temp=None)
-    assert rxn.kF == 6
-    assert rxn.kR == 2
-    assert rxn.K == 3
-    assert rxn.delta_H is None
-    assert rxn.delta_S is None
-    assert rxn.delta_G is None
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    rxn._set_kinetic_and_thermodynamic(forward_rate=6,  reverse_rate=2,
-                                       delta_H=None, delta_S=None, delta_G=None, temp=100)
-    assert rxn.kF == 6
-    assert rxn.kR == 2
-    assert rxn.K == 3
-    assert rxn.delta_H is None
-    assert rxn.delta_S is None
-    assert np.allclose(rxn.delta_G, -913.437080597)
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    with pytest.raises(Exception):
-        # Inconsistent kinetic data and passed thermo data
-        rxn._set_kinetic_and_thermodynamic(forward_rate=6,  reverse_rate=2,
-                                           delta_H=None, delta_S=None, delta_G=666., temp=100)
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=None,
-                                       delta_H=500, delta_S=-3, delta_G=None, temp=None)
-    assert rxn.kF is None
-    assert rxn.kR is None
-    assert rxn.K is None
-    assert rxn.delta_H == 500
-    assert rxn.delta_S == -3
-    assert rxn.delta_G is None
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=None,
-                                       delta_H=500, delta_S=-3, delta_G=None, temp=100)
-    assert rxn.kF is None
-    assert rxn.kR is None
-    assert np.allclose(rxn.K, 0.38205953171)
-    assert rxn.delta_H == 500
-    assert rxn.delta_S == -3
-    assert rxn.delta_G == 800
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    with pytest.raises(Exception):
-        # Inconsistent thermo data
-        rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=None,
-                                           delta_H=500, delta_S=-3, delta_G=999, temp=100)
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=10,
-                                       delta_H=500, delta_S=-3, delta_G=None, temp=100)
-    assert np.allclose(rxn.kF, 3.8205953171)
-    assert rxn.kR == 10
-    assert np.allclose(rxn.K, 0.38205953171)
-    assert rxn.delta_H == 500
-    assert rxn.delta_S == -3
-    assert rxn.delta_G == 800
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    rxn._set_kinetic_and_thermodynamic(forward_rate=3.8205953171,  reverse_rate=None,
-                                       delta_H=500, delta_S=-3, delta_G=None, temp=100)
-    assert np.allclose(rxn.kF, 3.8205953171)
-    assert np.allclose(rxn.kR, 10)
-    assert np.allclose(rxn.K, 0.38205953171)
-    assert rxn.delta_H == 500
-    assert rxn.delta_S == -3
-    assert rxn.delta_G == 800
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    with pytest.raises(Exception):
-        # Inconsistent kinetic / thermo
-        rxn._set_kinetic_and_thermodynamic(forward_rate=10,  reverse_rate=10,
-                                           delta_H=500, delta_S=-3, delta_G=None, temp=100)
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    rxn._set_kinetic_and_thermodynamic(forward_rate=3.8205953171,  reverse_rate=10,
-                                       delta_H=500, delta_S=-3, delta_G=None, temp=100)
-    assert np.allclose(rxn.kF, 3.8205953171)
-    assert rxn.kR == 10
-    assert np.allclose(rxn.K, 0.38205953171)
-    assert rxn.delta_H == 500
-    assert rxn.delta_S == -3
-    assert np.allclose(rxn.delta_G, 800.)
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=None,
-                                       delta_H=None, delta_S=None, delta_G=800, temp=None)
-    assert rxn.kF is None
-    assert rxn.kR is None
-    assert rxn.K is None
-    assert rxn.delta_H is None
-    assert rxn.delta_S is None
-    assert rxn.delta_G == 800
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=None,
-                                       delta_H=None, delta_S=None, delta_G=800, temp=100)
-    assert rxn.kF is None
-    assert rxn.kR is None
-    assert np.allclose(rxn.K, 0.38205953171)
-    assert rxn.delta_H is None
-    assert rxn.delta_S is None
-    assert rxn.delta_G == 800
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    rxn._set_kinetic_and_thermodynamic(forward_rate=None,  reverse_rate=10,
-                                       delta_H=None, delta_S=None, delta_G=800, temp=100)
-    assert np.allclose(rxn.kF, 3.8205953171)
-    assert rxn.kR == 10
-    assert np.allclose(rxn.K, 0.38205953171)
-    assert rxn.delta_H is None
-    assert rxn.delta_S is None
-    assert rxn.delta_G == 800
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    rxn._set_kinetic_and_thermodynamic(forward_rate=3.8205953171,  reverse_rate=None,
-                                       delta_H=None, delta_S=None, delta_G=800, temp=100)
-    assert np.allclose(rxn.kF, 3.8205953171)
-    assert np.allclose(rxn.kR, 10)
-    assert np.allclose(rxn.K, 0.38205953171)
-    assert rxn.delta_H is None
-    assert rxn.delta_S is None
-    assert rxn.delta_G == 800
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    rxn._set_kinetic_and_thermodynamic(forward_rate=3.8205953171,  reverse_rate=None,
-                                       delta_H=700, delta_S=None, delta_G=800, temp=100)
-    assert np.allclose(rxn.kF, 3.8205953171)
-    assert np.allclose(rxn.kR, 10)
-    assert np.allclose(rxn.K, 0.38205953171)
-    assert rxn.delta_H == 700
-    assert rxn.delta_S == -1
-    assert rxn.delta_G == 800
-
-
-    rxn = ReactionGeneric(reactants=["A"], products=["B"])
-    rxn._set_kinetic_and_thermodynamic(forward_rate=3.8205953171,  reverse_rate=None,
-                                       delta_H=None, delta_S=-1, delta_G=800, temp=100)
-    assert np.allclose(rxn.kF, 3.8205953171)
-    assert np.allclose(rxn.kR, 10)
-    assert np.allclose(rxn.K, 0.38205953171)
-    assert rxn.delta_H == 700
-    assert rxn.delta_S == -1
-    assert rxn.delta_G == 800

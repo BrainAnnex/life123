@@ -20,7 +20,7 @@ class ReactionCommon:
     Individual reactions classes need to provide the following methods:
 
         extract_stoichiometry()
-        extract_species_name()
+        extract_chem_label()
 
         reaction_details()
         extract_intermediate()
@@ -62,19 +62,25 @@ class ReactionCommon:
         :param term:    A pair (int, str) representing a reaction term
         :return:        An integer with the stoichiometry coefficient
         """
-        return term[0]
+        try:
+            return term[0]
+        except Exception:
+            raise Exception(f"extract_stoichiometry(): the argument must be a pair consisting of an integer and a string; "
+                            f"the passed value was {term}")
 
 
-    def extract_species_name(self, term :(int, str)) -> str:
+    def extract_chem_label(self, term :(int, str)) -> str:
         """
         Return the label of the chemical species, from a reaction "TERM"
 
         :param term:    A pair (int, str) representing a reaction term
         :return:        The name of the chemical species in the term
         """
-        # TODO: rename to extract_chem_label()
-        return term[1]
-
+        try:
+            return term[1]
+        except Exception:
+            raise Exception(f"extract_chem_label(): the argument must be a pair consisting of an integer and a string; "
+                            f"the passed value was {term}")
 
 
 
@@ -145,18 +151,7 @@ class ReactionOneStep(ReactionCommon):
         if details:
             description = "  (" + ' / '.join(details) + ")"   # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
 
-
         return description
-
-
-
-    def extract_intermediate(self) -> str | None:
-        """
-
-        :return:
-        """
-        return None   # There are no intermediates
-
 
 
 
@@ -190,6 +185,7 @@ class ReactionOneStep(ReactionCommon):
             properties['K'] = self.K
 
         return properties
+
 
 
     def _set_kinetic_and_thermodynamic(self, forward_rate, reverse_rate,
@@ -358,6 +354,14 @@ class ReactionOneStep(ReactionCommon):
         :return:    The value of the equilibrium constant for this reaction
         """
         return self.K
+
+
+    def extract_intermediate(self) -> str | None:
+        """
+
+        :return:
+        """
+        return None   # There are no intermediates
 
 
 
@@ -1478,12 +1482,12 @@ class ReactionGeneric(ReactionOneStep):
 
               It's equally acceptable to use LISTS in lieu of tuples for the pairs
 
-        :param reactants:   A list of pairs (stoichiometry coefficient , chemical label),
-                                or simplified terms in various formats; for details, see above.
-                                If not a list, it will get turned into one
-        :param products:    A list of pairs (stoichiometry coefficient , chemical label),
-                                or simplified terms in various formats; for details, see above.
-                                If not a list, it will get turned into one
+        :param reactants:   A list of terms that are either chemicals labels (with implied stoichiometry 1),
+                                or pairs (stoichiometry coefficient , chemical label).
+                                If not a list, it will first get turned into one
+        :param products:    A list of terms that are either chemicals labels (with implied stoichiometry 1),
+                                or pairs (stoichiometry coefficient , chemical label).
+                                If not a list, it will first get turned into one
         :param kF:          [OPTIONAL] Forward reaction rate constant
         :param kR:          [OPTIONAL] Reverse reaction rate constant
         :param delta_H:     [OPTIONAL] Change in Enthalpy (from reactants to products)
@@ -1515,14 +1519,15 @@ class ReactionGeneric(ReactionOneStep):
         if type(reactants) != list:
             reactants = [reactants]
 
-
         assert products is not None, "ReactionGeneric(): the argument `products` is a required one; it can't be None"
         if type(products) != list:
             products = [products]
 
+        reactant_list = [(1, r) if type(r) == str else r
+                            for r in reactants]   # A list of pairs
+        product_list =  [(1, p) if type(p) == str else p
+                            for p in products]   # A list of pairs
 
-        reactant_list = [self._parse_reaction_term(r, "reactant") for r in reactants]   # A list of pairs
-        product_list = [self._parse_reaction_term(r, "product") for r in products]      # A list of pairs
 
         # Catch identical reaction sides, even if terms are reshuffled
         assert set(reactant_list) != set(product_list), \
@@ -1534,7 +1539,7 @@ class ReactionGeneric(ReactionOneStep):
         enzyme_list = []
         for reactant in reactant_list:
             if reactant in product_list:
-                enzyme_list.append(self.extract_species_name(reactant))
+                enzyme_list.append(self.extract_chem_label(reactant))
 
         number_enzymes = len(enzyme_list)
 
@@ -1667,7 +1672,7 @@ class ReactionGeneric(ReactionOneStep):
         :return:    List of chemical labels
         """
         reactants = self.extract_reactants()
-        reactant_names = [self.extract_species_name(r) for r in reactants]
+        reactant_names = [self.extract_chem_label(r) for r in reactants]
 
         return reactant_names
 
@@ -1681,7 +1686,7 @@ class ReactionGeneric(ReactionOneStep):
         :return:    List of chemical labels
         """
         products = self.extract_products()
-        product_names = [self.extract_species_name(r) for r in products]
+        product_names = [self.extract_chem_label(r) for r in products]
 
         return product_names
 
@@ -1772,11 +1777,11 @@ class ReactionGeneric(ReactionOneStep):
             "reaction_quotient(): the reaction quotient can only be computed when the reaction follows the 'standard rate law'; " \
             "consider a call to set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)"
 
-        reactants_and_order = [(self.extract_species_name(r) , self.extract_stoichiometry(r))
+        reactants_and_order = [(self.extract_chem_label(r) , self.extract_stoichiometry(r))
                                 for r in self.reactants]        # The stoichiometry coefficient is taken to be the rxn order
                                                                 # because this reaction is (hypothetically) following the 'standard rate law'
 
-        products_and_order = [(self.extract_species_name(p) , self.extract_stoichiometry(p))
+        products_and_order = [(self.extract_chem_label(p) , self.extract_stoichiometry(p))
                                for p in self.products]          # The stoichiometry coefficient is taken to be the rxn order
 
         return ReactionKinetics.compute_reaction_quotient(reactant_data=reactants_and_order,
@@ -1866,7 +1871,7 @@ class ReactionGeneric(ReactionOneStep):
         # The reactants DECREASE based on the quantity delta_rxn
         for r in reactants:
             # Unpack data from the reactant r
-            species_name = self.extract_species_name(r)
+            species_name = self.extract_chem_label(r)
             #if species_name == self.catalyst:
                 #print(f"*** SKIPPING reactant CATALYST {species_name} in reaction")
                 #continue    # Skip if r is a catalyst for this reaction
@@ -1881,7 +1886,7 @@ class ReactionGeneric(ReactionOneStep):
         # The reaction products INCREASE based on the quantity delta_rxn
         for p in products:
             # Unpack data from the reactant r
-            species_name = self.extract_species_name(p)
+            species_name = self.extract_chem_label(p)
             #if species_name == self.catalyst:
                 #print(f"*** SKIPPING product CATALYST {species_name} in reaction")
                 #continue    # Skip if p is a catalyst for this reaction
@@ -1935,7 +1940,7 @@ class ReactionGeneric(ReactionOneStep):
         formula_list = []
         for t in eqn_side:
             stoichiometry = self.extract_stoichiometry(t)
-            species_name = self.extract_species_name(t)
+            species_name = self.extract_chem_label(t)
 
             if stoichiometry == 1:
                 term = species_name
@@ -1945,57 +1950,3 @@ class ReactionGeneric(ReactionOneStep):
             formula_list.append(term)
 
         return " + ".join(formula_list)
-
-
-
-    def _parse_reaction_term(self, term :str|tuple|list, name="term") -> (int, str):
-        """
-        Accept various ways to specify a reaction term, and return a standardized triplet form for it.
-
-        NOTE: if the stoichiometry coefficient isn't specified, it defaults to 1
-
-        In the passed tuples or lists:
-            - required 1st entry is the stoichiometry
-            - required 2nd entry is the chemical name
-
-        If just a string is being passed, it is taken to be the chemical name,
-        with stoichiometry coefficient of 1
-
-        EXAMPLES:
-            "F"          gets turned into:  (1, "F")   - defaults used for stoichiometry
-            (2, "F")                        (2, "F")
-            It's equally acceptable to use LISTS in lieu of tuples
-
-        :param term:    A string (a chemical name)
-                            OR  a pair (stoichiometry coeff, name)
-        :param name:    An optional nickname, handy to refer to this term in error messages if needed
-                            (for example, "reactant" or "product")
-        :return:        A standardized pair of the form (stoichiometry, species_label),
-                            where stoichiometry is an integer, while species_label is a string
-        """
-        if type(term) == str:
-            return  (1, term)    # Accept simply the chemical name as a shortcut,
-                                    # for when the stoichiometry coefficient and reaction order are both 1
-
-        if type(term) != tuple and type(term) != list:
-            raise Exception(f"_parse_reaction_term(): {name} must be either a string (a chemical name), "
-                            f"or a pair (stoichiometry coeff, name). "
-                            f"Instead, it is `{term}` (of type {type(term)})")
-
-        # If we get thus far, term is either a tuple or a list
-        assert len(term) == 2,  \
-            f"_parse_reaction_term(): Unexpected length for {name} tuple/list: it should be 2. " \
-            f"Instead, it is {len(term)}"
-
-        stoichiometry = term[0]
-        assert type(stoichiometry) == int, \
-            f"_parse_reaction_term(): The stoichiometry coefficient must be an integer. Instead, it is {stoichiometry}"
-
-        chem_label = term[1]
-        assert type(chem_label) == str, \
-                            f"_parse_reaction_term(): The chemical name must be a string. " \
-                            f"Instead, it is `{chem_label}` (of type {type(chem_label)})"
-
-
-        return (stoichiometry, chem_label)
-

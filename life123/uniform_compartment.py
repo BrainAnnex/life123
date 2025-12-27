@@ -1329,7 +1329,7 @@ class UniformCompartment:
         # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
         for r in reactants:
             # Unpack data from the reactant r
-            species_name = rxn.extract_species_name(r)
+            species_name = rxn.extract_chem_label(r)
             species_index = self.chem_data.get_index(species_name)
             if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING reactant ENZYME {species_index} in reaction {rxn_index}")
@@ -1345,7 +1345,7 @@ class UniformCompartment:
         # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
         for p in products:
             # Unpack data from the reactant r
-            species_name = rxn.extract_species_name(p)
+            species_name = rxn.extract_chem_label(p)
             species_index = self.chem_data.get_index(species_name)
             if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING product ENZYME {species_index} in reaction {rxn_index}")
@@ -2294,7 +2294,7 @@ class UniformCompartment:
         # Look at the denominator of the "Reaction Quotient"
         for i, r in enumerate(reactants):
             # Loop over the reactants
-            species_name =  rxn.extract_species_name(r)
+            species_name =  rxn.extract_chem_label(r)
             coefficient = rxn.extract_stoichiometry(r)
 
             assert coefficient == 1, \
@@ -2317,7 +2317,7 @@ class UniformCompartment:
         # Look at the numerator of the "Reaction Quotient"
         for i, p in enumerate(products):
             # Loop over the reaction products
-            species_name =  rxn.extract_species_name(p)
+            species_name =  rxn.extract_chem_label(p)
             coefficient = rxn.extract_stoichiometry(p)
 
             assert coefficient == 1, "find_equilibrium_conc(): Currently only implemented for 1st order reactions"
