@@ -53,10 +53,10 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def exact_advance_unimolecular_irreversible(kF, A0, P0, t) -> (float, float):
+    def exact_advance_unimolecular_irreversible(kF, A0, B0, t, incremental=False) -> (float, float):
         """
         Exactly advance the concentrations
-        in the ir-reversible 1st Order Reaction A => P,
+        in the ir-reversible 1st Order Reaction A => B,
         from time 0 to time t,
         with the specified parameters.
 
@@ -64,17 +64,28 @@ class ReactionKinetics:
 
         :param kF:  Forward reaction rate constant (the reverse one is taken to be zero)
         :param A0:  Initial concentration of the reactant A
-        :param P0:  Initial concentration of the product P
+        :param B0:  Initial concentration of the product P
         :param t:   The end time of the reaction
-        :return:    A pair with, respectively, the concentrations of A and P at time t
+        :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
+                                rather than the final ones.  Default: False
+
+        :return:    A pair with, respectively, the concentrations of R and P at time t (if `incremental` is False)
+                        or their concentration changes during the time interval (if `incremental` is True)
         """
-        TOT = A0 + P0
 
         # Formula is:  A(t) = A0 Exp(-kF t)
-        A_t = A0 * np.exp(-kF * t)
-        P_t = TOT - A_t     # From mass conservation
 
-        return (A_t, P_t)
+        if incremental:
+            A_incr = A0 * (np.exp(-kF * t) - 1)
+            B_incr = - A_incr   # From mass conservation
+            return A_incr, B_incr
+
+
+        TOT = A0 + B0
+        A_t = A0 * np.exp(-kF * t)
+        B_t = TOT - A_t     # From mass conservation
+
+        return (A_t, B_t)
 
 
     @staticmethod
@@ -106,10 +117,10 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def exact_advance_unimolecular_reversible(kF, kR, A0, P0, t) -> (float, float):
+    def exact_advance_unimolecular_reversible(kF, kR, A0, B0, t, incremental=False) -> (float, float):
         """
         Exactly advance the concentrations
-        in the reversible 1st Order Reaction A <=> P,
+        in the reversible 1st Order Reaction A <=> B,
         from time 0 to time t,
         with the specified parameters.
 
@@ -118,18 +129,27 @@ class ReactionKinetics:
         :param kF:  Forward reaction rate constant
         :param kR:  Reverse reaction rate constant
         :param A0:  Initial concentration of the reactant A
-        :param P0:  Initial concentration of the product P
+        :param B0:  Initial concentration of the product P
         :param t:   The end time of the reaction
-        :return:    A pair with, respectively, the concentrations of A and P at time t
+        :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
+                                rather than the final ones.  Default: False
+
+        :return:    A pair with, respectively, the concentrations of R and P at time t (if `incremental` is False)
+                        or their concentration changes during the time interval (if `incremental` is True)
         """
-        TOT = A0 + P0
+        TOT = A0 + B0
+
+        # Formula is:  A(t) = (A0 - [(kR TOT) / (kF + kR)]) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
+        # In python:          (A0 - (kR * TOT) / (kF + kR)) * math.exp(-(kF + kR) * t) + kR * TOT / (kF + kR)
 
         sum_rates = kF + kR
         ratio = (kR * TOT) / sum_rates
 
-        # Formula is:  A(t) = (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
         A_t = (A0 - ratio) * math.exp(-sum_rates * t) + ratio
         B_t = TOT - A_t     # From mass conservation
+
+        if incremental:
+            return (A_t - A0, B_t - B0)
 
         return (A_t, B_t)
 

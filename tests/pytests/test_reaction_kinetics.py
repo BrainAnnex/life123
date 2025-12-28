@@ -19,28 +19,42 @@ def test_solve_exactly():
 
 
 def test_exact_advance_unimolecular_irreversible():
-    a, p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0)
+    # Reaction A -> B
+    a, b = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=0)
     assert np.allclose(a, 80.)
-    assert np.allclose(p, 10.)
+    assert np.allclose(b, 10.)
 
-    a, p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.005)
+    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=0, incremental=True)
+    assert np.allclose(incr, [0,0])
+
+
+    a, b = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=0.005)
     assert np.allclose(a, 78.808955168245)
-    assert np.allclose(p, 11.191044831754994)
-    assert np.allclose(a+p, 90)
+    assert np.allclose(b, 11.191044831754994)
+    assert np.allclose(a+b, 90)
 
-    a, p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.31739)
+    a, b = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=0.31739)
     assert np.allclose(a, 30.87221642701797)
-    assert np.allclose(p, 59.127783572982025)
-    assert np.allclose(a+p, 90)
+    assert np.allclose(b, 59.127783572982025)
+    assert np.allclose(a+b, 90)
 
-    a, p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=1.12)
+    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=0.31739, incremental=True)
+    assert np.allclose(incr, [-49.127783572982025 , 49.127783572982025])
+    assert np.allclose(incr[0] + incr[1], 0)
+
+
+    a, b = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=1.12)
     assert np.allclose(a, 2.778820715579084)
-    assert np.allclose(p, 87.22117928442091)
-    assert np.allclose(a+p, 90)
+    assert np.allclose(b, 87.22117928442091)
+    assert np.allclose(a+b, 90)
 
-    a, p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=100.)
+    a, b = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=100.)
     assert np.allclose(a, 0)
-    assert np.allclose(p, 90)
+    assert np.allclose(b, 90)
+
+    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=100., incremental=True)
+    assert np.allclose(incr, [-80, 80])
+    assert np.allclose(incr[0] + incr[1], 0)
 
 
 
@@ -56,29 +70,44 @@ def test_exact_solution_unimolecular_irreversible():
 
 
 def test_exact_advance_unimolecular_reversible():
-    a, p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0)
+    # Reaction A <-> B
+    a, b = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=0)
     assert np.allclose(a, 80.)
-    assert np.allclose(p, 10.)
+    assert np.allclose(b, 10.)
 
-    a, p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0.005)
+    incr = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=0, incremental=True)
+    assert np.allclose(incr, [0,0])
+
+
+    a, b = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=0.005)
     assert np.allclose(a, 78.91363613)
-    assert np.allclose(p, 11.08636387)
-    assert np.allclose(a+p, 90)
+    assert np.allclose(b, 11.08636387)
+    assert np.allclose(a+b, 90)
 
-    a, p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0.31739)
+    a, b = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=0.31739)
     assert np.allclose(a, 45.)
-    assert np.allclose(p, 45.)
-    assert np.allclose(a+p, 90)
+    assert np.allclose(b, 45.)
+    assert np.allclose(a+b, 90)
 
-    a, p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=1.12)
+    a, b = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=1.12)
     assert np.allclose(a, 36.162706)
-    assert np.allclose(p, 53.837294)
-    assert np.allclose(a+p, 90)
+    assert np.allclose(b, 53.837294)
+    assert np.allclose(a+b, 90)
 
-    a, p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=100.)
+    incr = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=1.12, incremental=True)
+    assert np.allclose(incr, [-43.837294, 43.837294])
+    assert np.allclose(incr[0] + incr[1], 0)
+
+
+    a, b = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=100.)
     assert np.allclose(a, 36.)
-    assert np.allclose(p, 54.)
-    assert np.allclose(a+p, 90)
+    assert np.allclose(b, 54.)
+    assert np.allclose(a+b, 90)
+
+    incr = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=100., incremental=True)
+    assert np.allclose(incr, [-44., 44.])
+    assert np.allclose(incr[0] + incr[1], 0)
+
 
 
 def test_exact_solution_unimolecular_reversible():

@@ -404,9 +404,9 @@ class ReactionUnimolecular(ReactionOneStep):
 
         if not concise:
             if self.reversible:
-                description += "  (Elementary Unimolecular reaction)"
+                description += "  Elementary Unimolecular reaction"
             else:
-                description += "  (Elementary Unimolecular Irreversible reaction)"
+                description += "  Elementary Unimolecular Irreversible reaction"
 
             description += self.reaction_details()
 
@@ -418,7 +418,7 @@ class ReactionUnimolecular(ReactionOneStep):
         """
         Return the list of ALL the reactant labels in this reaction
 
-        :return:
+        :return:    A list of ALL the reactant labels in this reaction
         """
         return [self.reactant]
 
@@ -521,51 +521,70 @@ class ReactionUnimolecular(ReactionOneStep):
 
 
 
-    def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
+    def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> (dict, float):
         """
-        Simulate the unimolecular reaction A <-> P, over the specified time interval,
-        using the "Forward Euler" method
+        Simulate the unimolecular reaction R <-> P, over the specified time interval,
+        using either the exact analytical solution, or the "Forward Euler" approximation method
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
                                 concentration won't vary significantly during this span
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
                                 for all the chemicals involved in the given reaction
-                                EXAMPLE:  {"B": 1.5, "F": 31.6}
+                                EXAMPLE:  {"R": 1.5, "P": 31.6}
+        :param exact:       [OPTIONAL] If True, use the exact analytical solution;
+                                if False (default), use the "Forward Euler" approximation method
 
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
-                                - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
+                                - increment_dict_single_rxn is the mapping of chemical label to their concentration CHANGES
                                                             during this step
-                                                            EXAMPLE: {"B": -0.2, "F": 0.2}
+                                                            EXAMPLE: {"R": -0.2, "P": 0.2}
+                                                                     (meaning [R] decreases by 0.2 and [P] increases by the same amount)
 
                                 - rxn_rate                  is the reaction rate ("velocity") for this reaction
                                                             (rate of change of the product), at the START of the simulation step
                                                             EXAMPLE: 3.5
-
         """
         increment_dict_single_rxn = {}      # The keys are the chemical labels,
                                             # and the values are their respective concentration changes as a result of this reaction
 
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
-        # In the "forward Euler" approximation, this rate is taken to remain unvaried during the entire (small) time step
+
         rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
 
+        r = self.reactant           # EXAMPLE: "R"
+        p = self.product            # EXAMPLE: "P"
+
+        if exact:
+            R0 = conc_dict[r]
+            P0 = conc_dict[p]
+            if self.reversible:
+                increment_pair = ReactionKinetics.exact_advance_unimolecular_reversible(kF=self.kF, kR=self.kR,
+                                    A0=R0, B0=P0, t=delta_time, incremental=True)
+            else:
+                increment_pair = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=self.kF,
+                                    A0=R0, B0=P0, t=delta_time, incremental=True)
+
+            increment_dict_single_rxn = {r: increment_pair[0], p: increment_pair[1]}
+            return (increment_dict_single_rxn, rxn_rate)
+
+
+        # In the "forward Euler" approximation, this rate is taken to remain unvaried during the entire (small) time step
         delta_rxn = rxn_rate * delta_time   # forward reaction - reverse reaction
 
 
-        # Determine the concentration adjustments as a result of this reaction step:
+        # Determine the concentration adjustments as a result of this reaction step
 
         # The reactant DECREASES based on the quantity delta_rxn
-        r = self.reactant           # EXAMPLE: "B"
         delta_conc = - delta_rxn    # Increment to this reactant from the reaction step
         increment_dict_single_rxn[r] = delta_conc
 
 
         # The reaction product INCREASES based on the quantity delta_rxn
-        p = self.product            # EXAMPLE: "F"
         delta_conc = delta_rxn      # Increment to this reaction product from the reaction step
         increment_dict_single_rxn[p] = delta_conc
 
         return (increment_dict_single_rxn, rxn_rate)
+
 
 
 
@@ -616,9 +635,9 @@ class ReactionSynthesis(ReactionOneStep):
 
         if not concise:
             if self.reversible:
-                description += "  (Elementary Synthesis reaction)"
+                description += "  Elementary Synthesis reaction"
             else:
-                description += "  (Elementary Synthesis Irreversible reaction)"
+                description += "  Elementary Synthesis Irreversible reaction"
 
             description += self.reaction_details()
 
@@ -848,9 +867,9 @@ class ReactionDecomposition(ReactionOneStep):
 
         if not concise:
             if self.reversible:
-                description += "  (Elementary Decomposition reaction)"
+                description += "  Elementary Decomposition reaction"
             else:
-                description += "  (Elementary Decomposition Irreversible reaction)"
+                description += "  Elementary Decomposition Irreversible reaction"
 
             description += self.reaction_details()
 

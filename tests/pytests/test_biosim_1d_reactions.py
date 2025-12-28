@@ -53,7 +53,7 @@ def test_reaction_step_1b():
     assert bio.reactions.number_of_reactions() == 1
     result = bio.reactions.multiple_reactions_describe()
 
-    assert result == ["0: A <-> B  (Elementary Unimolecular reaction)  (kF = 3 / kR = 2 / delta_G = -1,005.1 / K = 1.5 / Temp = 25 C)"]
+    assert result == ["0: A <-> B  Elementary Unimolecular reaction  (kF = 3 / kR = 2 / delta_G = -1,005.1 / K = 1.5 / Temp = 25 C)"]
     assert np.allclose(bio.system, [[10., 10., 10.] , [50., 50., 50.]])
 
     # First step

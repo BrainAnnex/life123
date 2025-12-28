@@ -69,7 +69,7 @@ def test_constructor_ReactionOneStep():
 
 
     with pytest.raises(Exception):
-        ReactionOneStep(reversible=False, kF=10, kR=2)   # Irreversible can't have reverse rate
+        ReactionOneStep(reversible=False, kF=10, kR=2)   # Irreversible reactions can't have reverse rate
 
 
     rxn = ReactionOneStep(active=False, reversible=False, kF=10, kR=0)
@@ -356,44 +356,63 @@ def test_constructor_ReactionUnimolecular():
 
 
 
+def test_describe_ReactionUnimolecular():
+    rxn = ReactionUnimolecular(reactant="A", product="B")
+    assert rxn.describe(concise=True) == "A <-> B"
+    assert rxn.describe(concise=False) == "A <-> B  Elementary Unimolecular reaction"
+
+    rxn = ReactionUnimolecular(reactant="A", product="B", kF=20, kR=4)
+    assert rxn.describe(concise=True) == "A <-> B"
+    assert rxn.describe(concise=False) == "A <-> B  Elementary Unimolecular reaction  (kF = 20 / kR = 4 / K = 5)"
+
+    rxn = ReactionUnimolecular(reactant="A", product="B",
+                               kF=20, reversible=False)
+    assert rxn.describe(concise=True) == "A <-> B"
+    assert rxn.describe(concise=False) == "A <-> B  Elementary Unimolecular Irreversible reaction  (kF = 20)"
+
+    rxn = ReactionUnimolecular(reactant="R", product="P",
+                               kF=10, kR=2, delta_H=-3000)
+    assert rxn.describe(concise=True) == "R <-> P"
+    assert rxn.describe(concise=False) == "R <-> P  Elementary Unimolecular reaction  (kF = 10 / kR = 2 / delta_H = -3,000 / K = 5)"
+
+    rxn = ReactionUnimolecular(reactant="R", product="P",
+                               kF=10, delta_H=500, delta_S=-3, delta_G=None, temp=100)
+    assert rxn.describe(concise=True) == "R <-> P"
+    assert rxn.describe(concise=False) == "R <-> P  Elementary Unimolecular reaction  (kF = 10 / kR = 26.174 / delta_H = 500 / delta_S = -3 / delta_G = 800 / K = 0.38206 / Temp = -173.1 C)"
+
+
+
 def test_extract_reactant_labels_ReactionUnimolecular():
     rxn = ReactionUnimolecular(reactant="A", product="B")
     assert rxn.extract_reactant_labels() == ["A"]
+
+def test_extract_reactants_ReactionUnimolecular():
+    rxn = ReactionUnimolecular(reactant="A", product="B")
+    assert rxn.extract_reactants() == [(1, "A")]
+
+def test_extract_reactants_formula_ReactionUnimolecular():
+    rxn = ReactionUnimolecular(reactant="A", product="B")
+    assert rxn.extract_reactants_formula() == "A"
+
 
 
 def test_extract_product_labels_ReactionUnimolecular():
     rxn = ReactionUnimolecular(reactant="A", product="B")
     assert rxn.extract_product_labels() == ["B"]
 
+def test_extract_products_ReactionUnimolecular():
+    rxn = ReactionUnimolecular(reactant="A", product="B")
+    assert rxn.extract_products() == [(1, "B")]
+
+def test_extract_products_formula_ReactionUnimolecular():
+    rxn = ReactionUnimolecular(reactant="A", product="B")
+    assert rxn.extract_products_formula() == "B"
+
+
 
 def test_extract_chemicals_in_reaction_ReactionUnimolecular():
     rxn = ReactionUnimolecular(reactant="A", product="B")
     assert rxn.extract_chemicals_in_reaction() == {"A", "B"}
-
-
-
-
-def test_describe_ReactionUnimolecular():
-    rxn = ReactionUnimolecular(reactant="A", product="B")
-
-    assert rxn.describe(concise=True) == "A <-> B"
-    assert rxn.describe(concise=False) == "A <-> B  (Elementary Unimolecular reaction)"
-
-    # TODO: more tests with temp and kinetic pars
-
-
-
-def test_determine_reaction_rate_ReactionUnimolecular():
-    rxn = ReactionUnimolecular(reactant="A", product="B",
-                               kF=20., kR=2., reversible=True)
-
-    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
-    assert np.allclose(result, 20. * 5. - 2. * 8.)  # 84.0
-
-    rxn.reversible = False
-
-    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
-    assert np.allclose(result, 20. * 5.)            # 100.0
 
 
 
@@ -417,14 +436,63 @@ def test_reaction_quotient_ReactionUnimolecular():
 
 
 
+def test_determine_reaction_rate_ReactionUnimolecular():
+    rxn = ReactionUnimolecular(reactant="A", product="B",
+                               kF=20., kR=2., reversible=True)
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5. - 2. * 8.)  # 84.0
+
+    rxn.reversible = False
+
+    result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
+    assert np.allclose(result, 20. * 5.)            # 100.0
+
+
+
 def test_step_simulation_ReactionUnimolecular():
     # Reaction : A <-> B
     rxn = ReactionUnimolecular(reactant="A", product="B", kF=3., kR=2.)
+
+    # Euler approx
     result = rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50})
     assert result[0] == {'A': 7, 'B': -7}
+    assert result[1] == -70     # Rate = 3. * 10. - 2. * 50 .  Reaction is in reverse
+
+    result = rxn.step_simulation(delta_time=0.8, conc_dict={"A": 10, "B": 50})
+    assert result[0] == {'A': 56, 'B': -56}                                 # Note: these increments would make [B] negative!
+    assert result[1] == -70
+
+    # Exact solution
+    result = rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50}, exact=True)
+    assert result[0] == {'A': 5.508570764023132, 'B': -5.508570764023133}
+    assert result[1] == -70
+
+    result = rxn.step_simulation(delta_time=0.8, conc_dict={"A": 10, "B": 50}, exact=True)
+    assert result[0] == {'A': 13.743581055557723, 'B': -13.743581055557726} # Note: far more sensible than Euler method!
     assert result[1] == -70
 
 
+    # Reaction : A -> B
+    rxn = ReactionUnimolecular(reactant="A", product="B", kF=3., reversible=False)
+
+    # Euler approx
+    result = rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50})
+    assert result[0] == {'A': -3, 'B': 3}
+    assert result[1] == 30    # Rate = 3. * 10.     Reaction is now forward
+
+    result = rxn.step_simulation(delta_time=0.4, conc_dict={"A": 10, "B": 50})
+    assert result[0] == {'A': -12, 'B': 12}         # Note: these increments would make [A] negative!
+    assert result[1] == 30
+
+    # Exact solution
+    result = rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50}, exact=True)
+    assert result[0] == {'A': -2.5918177931828215, 'B': 2.5918177931828215}
+    assert result[1] == 30    # Rate = 3. * 10.
+
+    result = rxn.step_simulation(delta_time=0.4, conc_dict={"A": 10, "B": 50}, exact=True)
+    assert result[0] == {'A': -6.98805788087798, 'B': 6.98805788087798} # Note: far more sensible than Euler method!
+    assert result[1] == 30    # Rate = 3. * 10.
 
 
 
