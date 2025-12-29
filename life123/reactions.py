@@ -761,7 +761,7 @@ class ReactionSynthesis(ReactionOneStep):
 
 
 
-    def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
+    def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> (dict, float):
         """
         Simulate the synthesis reaction A + B <-> C, over the specified time interval,
         using the "Forward Euler" method
@@ -993,7 +993,7 @@ class ReactionDecomposition(ReactionOneStep):
 
 
 
-    def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
+    def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> (dict, float):
         """
         Simulate the decomposition reaction A <-> B + C, over the specified time interval,
         using the "Forward Euler" method
@@ -1376,7 +1376,7 @@ class ReactionEnzyme(ReactionCommon):
 
 
 
-    def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
+    def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> (dict, float):
         """
         Simulate the enzymatic reaction E + S <-> ES -> E + P, over the specified time interval,
         using the "Forward Euler" method
@@ -1852,7 +1852,7 @@ class ReactionGeneric(ReactionOneStep):
 
 
 
-    def step_simulation(self, delta_time, conc_dict :dict) -> (dict, float):
+    def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> (dict, float):
         """
         Simulate the generic reaction, over the specified time interval
 

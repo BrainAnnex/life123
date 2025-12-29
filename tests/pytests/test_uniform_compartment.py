@@ -455,7 +455,6 @@ def test_single_compartment_react_variable_steps_1():
                                       variable_steps=True)
 
     df = uc.get_history()
-    #print(df)
     assert len(df) == 23
 
     assert np.allclose(df.iloc[0][['SYSTEM TIME', 'U', 'X', 'S']].to_numpy(dtype='float16'),

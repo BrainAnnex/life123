@@ -477,7 +477,7 @@ class ReactionRegistry:
                  rxn = ReactionGeneric(reactants=reactant_list, products=product_list, kF=kF, kR=kR, temp=temp, **kwargs)
 
 
-        print("detected reaction_type: ", reaction_type)
+        print(f"add_reaction(): detected reaction type `{reaction_type}`")
 
         return self.register_reaction(rxn=rxn, temp=temp)
 

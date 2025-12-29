@@ -40,7 +40,8 @@ class UniformCompartment:
     This might be thought of as a "zero-dimensional system"
     """
 
-    def __init__(self, reactions=None, chem_data=None, names=None, preset="mid", enable_diagnostics=False, temp = 298.15):
+    def __init__(self, reactions=None, chem_data=None, names=None,
+                       preset="mid", exact=False, enable_diagnostics=False, temp=298.15):
         """
         Note: AT MOST 1 of the following 3 arguments can be passed
 
@@ -57,12 +58,19 @@ class UniformCompartment:
                                 If passed, cannot pass either of the args `reactions` nor `chem_data` (both those object contain the chemical names)
 
 
-        :param preset:      [OPTIONAL] String with code that can be adjusted make the time resolution finer or coarser;
-                                it will stay in effect from now on, unless explicitly changed later
+        :param preset:      [OPTIONAL] String with name of a standard preset
+                                that can be specified to make the time resolution finer or coarser;
+                                it will stay in effect from now on, unless explicitly changed later.
+                                Available values (in generally-increasing speed):
+                                    'heavy_brakes', 'slower', 'slow', 'mid' (default), 'fast'
+
+        :param exact:       [OPTIONAL] If True, use exact analytical solutions whenever possible;
+                                if False (default), always use the "Forward Euler" approximation method
 
         :param enable_diagnostics:  [OPTIONAL] If True, the diagnostics mode is turned on - and will remain on unless explicitly
                                         disabled by a call to pause_diagnostics();
                                         if False (default), no action taken
+        :param temp:        [OPTIONAL] Temperature in Kelvins.  Default is 298.15 K (25 C)
         """
 
         self.chem_data = None       # Object of type "ChemData" (with data about the chemicals and their reactions,
@@ -71,6 +79,10 @@ class UniformCompartment:
 
         self.temp = temp            # Temperature in Kelvins.  (By default, 298.15 K, the equivalent of 25 C)
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
+
+        self.exact = exact          # If True, use exact analytical solutions whenever possible;
+                                    # if False, always use the "Forward Euler" approximation method
+
 
         if chem_data and reactions:
             assert reactions.get_chem_data() == chem_data, \
@@ -355,6 +367,30 @@ class UniformCompartment:
                 "set_temp(): allowable values for `units` are 'K' and 'C'"
 
         self.temp = temp
+
+
+    def set_preset(self, preset :str) -> None:
+        """
+
+        :param preset:  String with name of a standard preset
+                            that can be specified to make the time resolution finer or coarser;
+                            it will stay in effect unless explicitly changed later.
+                            Available values (in generally-increasing speed):
+                                'heavy_brakes', 'slower', 'slow', 'mid' (default), 'fast'
+        :return:        None
+        """
+        self.adaptive_steps.use_adaptive_preset(preset)
+
+
+    def set_exact_mode(self, exact :bool) -> None:
+        """
+
+        :param exact:   If True, use exact analytical solutions whenever possible;
+                                if False (default), always use the "Forward Euler" approximation method
+        :return:        None
+        """
+        self.exact = exact
+
 
 
 
@@ -672,17 +708,19 @@ class UniformCompartment:
         report_interval *= 60.      # Convert to seconds
 
 
-        '''
-        TODO: explore a main loop of the form:
-        
+
+        #TODO: testing out the following main loop...
         try:
-            [MAIN LOOP BODY]
+            step_count = self._single_compartment_react_main_loop(step_count=step_count, max_steps=max_steps, n_steps=n_steps, variable_steps=variable_steps,
+                                                                  time_step=time_step, target_end_time=target_end_time, stop=stop,
+                                                                  t_start=t_start, t_report=t_report, report_interval=report_interval,
+                                                                  explain_variable_steps=explain_variable_steps, silent=silent)
         
         except KeyboardInterrupt:
             print("\n*** KeyboardInterrupt exception caught")
+
+
         '''
-
-
         # MAIN LOOP
         while True:
             # Check various criteria for termination
@@ -775,6 +813,7 @@ class UniformCompartment:
                 time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
 
         # --- END while ---
+        '''
 
 
         # We're now at the end of the computation
@@ -793,6 +832,7 @@ class UniformCompartment:
             # Print out a summary, at the termination of the run
             t_now = time.perf_counter()
             step_type_str = "variable " if variable_steps else "fixed "
+            t_now = time.perf_counter()
             time_taken = t_now - t_start
             if time_taken < 60:
                 display_time_taken = f"{time_taken:.3f} sec"
@@ -814,6 +854,110 @@ class UniformCompartment:
 
         # Add a caption to the very last entry in the system history
         self.conc_history.set_caption_last_snapshot(final_step_caption)
+
+
+
+    def _single_compartment_react_main_loop(self, step_count, max_steps, n_steps, variable_steps,
+                                            time_step, target_end_time, stop,
+                                            t_start, t_report, report_interval,
+                                            explain_variable_steps, silent) -> int:
+        while True:
+            # Check various criteria for termination
+            if (max_steps is not None) and (step_count >= max_steps):
+                print(f"single_compartment_react(): computation stopped because max # of steps ({max_steps}) reached")
+                break       # We have reached the max allowable number of steps
+
+            if (target_end_time is not None) and (self.system_time >= target_end_time):
+                break       # The system time has reached the target endtime
+
+            if (stop is not None):
+                (termination_keyword, termination_parameter) = stop
+                if termination_keyword == "conc_below":
+                    chem_name, conc_threshold = termination_parameter
+                    if self.get_chem_conc(chem_name) < conc_threshold:
+                        break   # The concentration of the specified chemical has dropped the requested threshold
+                elif termination_keyword == "conc_above":
+                    chem_name, conc_threshold = termination_parameter
+                    if self.get_chem_conc(chem_name) > conc_threshold:
+                        break   # The concentration of the specified chemical has risen above the requested threshold
+
+            if (not variable_steps) and (step_count == n_steps)\
+                    and (target_end_time is not None) and np.allclose(self.system_time, target_end_time):
+                break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
+                            #   the System Time is below the target_end_time because of roundoff error
+
+
+            # ----------  CORE OPERATION OF MAIN LOOP  ----------
+            if variable_steps:
+                delta_concentrations, step_actually_taken, recommended_next_step = \
+                    self.reaction_step_common(delta_time=time_step,
+                                              variable_steps=variable_steps, explain_variable_steps=explain_variable_steps,
+                                              step_counter=step_count)
+            else:
+                # Fixed steps
+                delta_concentrations = \
+                    self.reaction_step_common_fixed_step(delta_time=time_step, step_counter=step_count)
+                step_actually_taken = time_step
+                recommended_next_step = time_step
+
+
+            # Update the System State
+            self.previous_system = self.system.copy()
+            self.system += delta_concentrations
+            if min(self.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
+                print(f"***********  SYSTEM STATE ERROR: FAILED TO CATCH negative concentration "
+                      f"upon advancing reactions from system time t={self.system_time:,.5g}")
+
+
+            # Preserve the RATES data, as requested (part1, BEFORE updating the System Time, because reaction rates are
+            # based on the *start* time of the simulation step)
+            if step_count == 0:
+                self.capture_rate_snapshot(force=True, step_count=0)    # Always save the initial rate
+            else:
+                self.capture_rate_snapshot(step_count=step_count)       # Save historical rate values (if enabled)
+
+            # UPDATE THE SYSTEM TIME (now we're at the END of the current time step)
+            self.system_time += step_actually_taken
+
+
+            # Preserve the CONCENTRATION data, as requested (part2, AFTER updating the System Time, because current concentrations
+            # refer to the System Time, just updated at the end of the simulation step)
+            self.capture_conc_snapshot(step_count=step_count+1) # Save historical concentration values (if enabled)
+                                                                # It's +1 because we save the conc. values at the END of the step
+
+
+            step_count += 1
+
+            if (n_steps is not None) and (step_count > 1000 * n_steps):  # Another approach to catch infinite loops
+                raise Exception("single_compartment_react(): "
+                                "the computation is taking a very large number of steps, probably from automatically trying to correct instability;"
+                                " trying reducing the time_step")   # TODO: is the explanation correctly phrased?
+
+            if self.diagnostics_enabled:
+                # Save up the current time and System State as "diagnostic 'concentration' data"
+                system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
+                self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
+
+            t_now = time.perf_counter()
+            t_elapsed = t_now - t_report    # Time elapsed since the last report
+            if (not silent) and (t_elapsed > report_interval):
+                if variable_steps:
+                    info_on_step = f"(doing step size {time_step:,.2g})"
+                else:
+                    info_on_step = ""
+                print(f"... running : currently at System Time {self.system_time:,.4g} {info_on_step} after running for {(t_now - t_start)/60:.1f} min")
+                t_report = t_now            # Reset
+
+            if variable_steps:
+                time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
+
+        # --- END while ---
+
+        return step_count
+
+
+
+
 
 
 
@@ -1228,11 +1372,11 @@ class UniformCompartment:
             rxn = self.reactions.get_reaction(rxn_index)
 
             conc_dict = self._fetch_concs_for_rnx(rxn=rxn, conc_array=self.system)
-            # For the chems in this rxn only.  EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+            # For the chemicals in this rxn only.  EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
 
             # ********** START OF NEW APPROACH
             increment_dict_single_rxn, rxn_rate = rxn.step_simulation(delta_time=delta_time,
-                                                                      conc_dict=conc_dict)
+                                                                      conc_dict=conc_dict, exact=self.exact)
             # EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
 
             rates_dict[rxn_index] = rxn_rate       # Save the value (may be single float, or a pair of them)
