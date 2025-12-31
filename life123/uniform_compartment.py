@@ -2281,6 +2281,8 @@ class UniformCompartment:
 
     def find_equilibrium_conc(self, rxn_index :int) -> dict:
         """
+        #TODO: OBSOLETE!  Replace with new versions in various reaction classes
+
         Determine the equilibrium concentrations that would be reached by the chemicals
         participating in the specified reversible reaction, given their current concentrations,
         IN THE ABSENCE of any other reaction.
@@ -2298,9 +2300,6 @@ class UniformCompartment:
                                 chemicals involved in the specified reaction
                             EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8}
         """
-        #TODO: handle scenarios where kF or kR is zero
-
-
         rxn = self.reactions.get_reaction(rxn_index)    # Look up the requested reaction
 
         assert np.allclose(rxn.ge)

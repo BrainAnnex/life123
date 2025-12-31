@@ -583,7 +583,7 @@ class ReactionKinetics:
 
             species_conc = conc.get(p)
             assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
-                                             f"concentration of `{species_name}` was not provided"
+                                             f"concentration of product `{species_name}` was not provided"
 
             numerator *= (species_conc ** rxn_order)
             if explain:
@@ -604,7 +604,7 @@ class ReactionKinetics:
 
             species_conc = conc.get(species_name)
             assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
-                                             f"concentration of `{species_name}` was not provided"
+                                             f"concentration of reactant `{species_name}` was not provided"
 
             denominator *= (species_conc ** rxn_order)
             if explain:
@@ -630,131 +630,98 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def find_equilibrium_conc(kF, kR, a=0, b=0, c=0, d=0, A0=1, B0=1, C0=1, D0=1) -> dict:
+    def compute_equilibrium_conc(kF, kR, a=0, b=0, c=0, d=0, A0=1, B0=1, C0=1, D0=1) -> dict:
         """
-        Determine the equilibrium concentrations that would be reached by the chemicals
-        participating in the reversible reaction:
+        Determine the equilibrium concentrations that would be eventually reached
+        by the chemicals participating in the reversible reaction:
             aA + bB <-> cC + dD
-        first-order in all chemicals (some of the terms may be missing),
-        given their current concentrations,
+        that is FIRST ORDER in all chemicals (some of the terms may be missing),
+        given the specified initial concentrations,
         IN THE ABSENCE of any other reaction.
 
         Note:  we're using "concentrations" instead of "chemical activities";
                concentrations approximates the activities of solutes
 
-        :return:            A dictionary of the equilibrium concentrations of the
-                                chemicals involved in the specified reaction
-                            EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8, 'D': 0.3}
+        :param kF:  The reaction's forward rate constant
+        :param kR:  The reaction's reverse rate constant
+        :param a:   The stoichiometry coefficient of chemical A in the reaction
+        :param b:
+        :param c:
+        :param d:
+        :param A0:  The initial concentration of chemical A
+        :param B0:
+        :param C0:
+        :param D0:
+        :return:    A dictionary of the equilibrium concentrations of the
+                        chemicals involved in the specified reaction
+                        EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8, 'D': 0.3}
         """
         '''
         For (hypothetical) reactions of the form aA + bB <-> cC + dD  
-        that are FIRST-ORDER in all chemicals,
-        the equilibrium equation equates the forward and reverse rate 
+        that are FIRST-ORDER in all chemicals, and with the given initial condition,
+        the equilibrium equation equates the reaction's forward and reverse rates 
         after the reaction has advanced by m moles 
         (which consumes reagents in proportion to their stoichiometric coefficients, and 
         generates products similarly):
                   
-            kF [(A0 - a*m) (B0 - b*m)] = kR [(C0 + c*m) (D0 + d*m)] 
+            kF [(A0 - a*m) (B0 - b*m)] = kR [(C0 + c*m) (D0 + d*m)]     # Forward rate = Reverse rate
         
         where m (to be solved for) is the number of "moles/liter of forward reaction" 
 
         Generalization 1: 
-        The above equation can also be made to handle reaction terms that aren't present 
+        The above equilibrium equation can also be made to handle reaction terms that aren't present 
         (for example the "D" part in the reaction A + B <-> C), 
-        by simply using 0 for the "stoichiometry coefficient" and 1 for the "initial concentration"
+        by simply using 1 for the "initial concentration" and 0 for the "stoichiometry coefficient"
         of any missing term;
-        such a trick will make its corresponding multiplicative term (of the form X0 + x*m) i
-        to be identical equal to 1, and thus have no effect on the solution of the equation.
+        such a trick will make its corresponding multiplicative term to become (1 + 0*m) ,
+        i.e. identically equal to 1 , and thus have no effect on the solution of the equation.
         
         Generalization 2:
-        The above equation can also be made to handle scenarios where 2 terms refer to the same chemical,
+        The equilibrium equation can also be made to handle scenarios where 2 terms refer to the same chemical,
         such as in the reaction 2 A <-> C , with 2nd order with respect to A, 
         by setting B0 = A0, a=2, b=2,
         which will produce the multiplicative term that we need, namely:
             kF [(A0 - 2*m) **2]
         
         
+        SOLUTION -
         Our equilibrium equation can be expanded into a standard quadratic form for the unknown m :
         
                 alpha * m**2 + beta * m + gamma = 0
-                
-        and then solved for m.  In case of two solution for the quadratic, we'll pick the one that
+        
+        (where alpha, beta and gamma are as computed below), and then solved for m.  
+        In case of two solution for the quadratic, we'll pick the one that
         leads to physically-possible results (non-negative concentrations of all the chemicals.)
         '''
 
+        alpha = (kF * a * b - kR * c * d)
+        beta = -kF * (b*A0 + a*B0) -kR * (d*C0 + c*D0)
+        gamma = kF * A0 * B0 - kR * C0 * D0
+
         #print("alpha, beta, gamma : ", alpha, beta, gamma)
 
-
-        if np.allclose(kF, 0):
-            print("kF is zero")
-            '''
-            Equation becomes:
-            [(C0 + c*m) (D0 + d*m)] / [(A0 - a*m) (B0 - b*m)]  =  0
-            i.e.: (C0 + c*m) (D0 + d*m) = 0,
-            which has 2 solutions, each making one of factors equal to zero
-            '''
-            m1 = -C0 / c
-            if d != 0:
-                m2 = -D0 / d
-            else:
-                m2 = m1
-
-        elif np.allclose(kR, 0):
-            print("kR is zero")
-            '''
-            Equation becomes:
-            [(A0 - a*m) (B0 - b*m)] / [(C0 + c*m) (D0 + d*m)]
-            i.e.: (A0 - a*m) (B0 - b*m) = 0,
-            which has 2 solutions, each making one of factors equal to zero
-            '''
-            m1 = A0 / a
-            if b != 0:
-                m2 = B0 / b
-            else:
-                m2 = m1
-
+        if np.allclose(alpha, 0):
+            # The quadratic reduces to the linear equation:  beta * m + gamma = 0
+            m1 = -gamma / beta
+            m2 = m1
         else:
-            # General case
-            K = kF/kR
-            alpha = (c * d - K * a * b)
-            beta = d * C0 + c * D0 + K * (A0 * b + B0 * a)
-            gamma = C0 * D0 - K * A0 * B0
-
-            if alpha == 0:
-                # The quadratic reduces to the linear equation:  beta * m + gamma = 0
-                m1 = -gamma / beta
-                m2 = m1
-            else:
-                sqrt_discriminant = math.sqrt(beta**2 - 4 * alpha * gamma)
-                m1 = (-beta + sqrt_discriminant) / (2 * alpha)
-                m2 = (-beta - sqrt_discriminant) / (2 * alpha)
-                print("m1, m2 : ", m1, m2)
-
+            sqrt_discriminant = math.sqrt(beta**2 - 4 * alpha * gamma)
+            m1 = (-beta - sqrt_discriminant) / (2 * alpha)
+            m2 = (-beta + sqrt_discriminant) / (2 * alpha)
+            #print("m1, m2 : ", m1, m2)
 
         m = m1  # Let's start with one of the 2 possible solutions of the quadratic equation
 
         # After m "moles of forward reaction", the concentration of the reactant "A"
         # in aA + bB <-> cC + dD gets reduced by a*m . Likewise for the other terms.
         # Reaction products get increased.  Values for missing terms will be meaningless
-        std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "C" : C0 + c*m, "D" : D0 + d*m}
+        std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "C" : C0 + c*m, "D" : D0 + d*m}   # TENTATIVE values!
 
         if min(std_result.values()) < 0:    # If there's any negative value in the concentrations...
-            # ...then repeat the computation using the other solution to the quadratic
+            # ...then repeat the computation using the other solution of the quadratic
             m = m2
             print("Using 2nd solution: m = ", m)
             std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "C" : C0 + c*m, "D" : D0 + d*m}
-
-        '''
-        # Let's translate our standard names A, B, C, D into the actual names,
-        # and also drop any missing term
-        result = {}
-        for k, v in std_result.items():
-            actual_name = name_map.get(k)
-            if actual_name:     # Missing terms will get dropped out
-                result[actual_name] = v
-
-        return result
-        '''
 
         return std_result
 

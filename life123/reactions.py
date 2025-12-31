@@ -366,173 +366,6 @@ class ReactionOneStep(ReactionCommon):
 
 
 
-    def find_equilibrium_conc(self) -> dict:
-        """
-        Determine the equilibrium concentrations that would be reached by the chemicals
-        participating in the specified reversible reaction, given their current concentrations,
-        IN THE ABSENCE of any other reaction.
-
-        RESTRICTIONS:   currently limited to just aA + bB <-> cC + dD reversible reactions,
-                        as supported by the class ReactionGeneric
-                        first-order in all chemicals (some of the terms may be missing),
-                        for which the kinetic rate function is
-                        ReactionKinetics.compute_rate_pseudo_elementary(), i.e. the "standard ratelaw".
-                        (Note: generally, this will be a very hypothetical scenario!)
-                        An Exception will be raised in all other cases!
-
-        :return:            A dictionary of the equilibrium concentrations of the
-                                chemicals involved in the specified reaction
-                            EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8}
-        """
-        #TODO: handle scenarios where kF or kR is zero
-        if self.reversible or np.allclose(self.kR, 0):
-            pass # TODO
-
-        if np.allclose(self.kF, 0):
-            pass # TODO
-
-        assert self.kinetic_rate_function == ReactionKinetics.compute_rate_pseudo_elementary, \
-            "find_equilibrium_conc(): unsupported scenario of a generic reaction " \
-            "doesn't follow the 'standard rate law' (function ReactionKinetics.compute_rate_pseudo_elementary)"
-
-        reactants = rxn.extract_reactants()
-        products = rxn.extract_products()
-        K = rxn.extract_equilibrium_constant()
-
-
-        assert len(reactants) <= 2, \
-                "find_equilibrium_conc(): Currently only implemented " \
-                "for reactions with at most 2 reactants and 2 products"
-        assert len(products) <= 2, \
-                "find_equilibrium_conc(): Currently only implemented " \
-                "for reactions with at most 2 reactants and 2 products"
-
-        '''
-        For reactions of the form aA + bB <-> cC + dD  that are first-order in all chemicals,
-        the equilibrium equation is:  
-                [(C0 + c*m) (D0 + d*m)] / [(A0 - a*m) (B0 - b*m)]  =  K
-            
-        where K is the Equilibrium constant (kF/kR),
-        and the unknown m (to be solved for) is the number of "moles/liter of forward reaction"
-        (i.e. the the Product concentration change)
-        from the starting point to the equilibrium point
-        
-        For reaction terms that aren't present (for example the "D" part in the reaction A + B <-> C),
-        we'll use 0 for the "stoichiometry coefficient" and 1 for the "initial concentration";
-        that's a hack to make the multiplicative terms of the form X0 + x*m  (where the X's are the A,B,C,D and the x's are the a,b,c,d)
-        to be identical equal to 1, and thus have no effect on the solution of the above equation
-        '''
-        a = 0
-        b = 0
-        c = 0
-        d = 0
-        A0 = 1
-        B0 = 1
-        C0 = 1
-        D0 = 1
-
-
-        name_map = {}   # To transform the A, B, C, D into the actual names
-
-        # Look at the denominator of the "Reaction Quotient"
-        for i, r in enumerate(reactants):
-            # Loop over the reactants
-            species_name =  rxn.extract_chem_label(r)
-            coefficient = rxn.extract_stoichiometry(r)
-
-            assert coefficient == 1, \
-                "find_equilibrium_conc(): Currently only implemented for 1st order reactions"
-
-            if i == 0:
-                name_map["A"] = species_name
-                a = coefficient
-                A0 = self.get_chem_conc(species_name)
-                assert A0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
-                                       f"concentration of `{species_name}` was not provided"
-            else:
-                name_map["B"] = species_name
-                b = coefficient
-                B0 = self.get_chem_conc(species_name)
-                assert B0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
-                                       f"concentration of `{species_name}` was not provided"
-
-
-        # Look at the numerator of the "Reaction Quotient"
-        for i, p in enumerate(products):
-            # Loop over the reaction products
-            species_name =  rxn.extract_chem_label(p)
-            coefficient = rxn.extract_stoichiometry(p)
-
-            assert coefficient == 1, "find_equilibrium_conc(): Currently only implemented for 1st order reactions"
-
-            if i == 0:
-                name_map["C"] = species_name
-                c = coefficient
-                C0 = self.get_chem_conc(species_name)
-                assert C0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
-                                       f"concentration of `{species_name}` was not provided"
-            else:
-                name_map["D"] = species_name
-                d = coefficient
-                D0 = self.get_chem_conc(species_name)
-                assert D0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
-                                       f"concentration of `{species_name}` was not provided"
-
-
-        #print("Initial values: ", A0, B0, C0, D0)
-        #print("Stoichiometry coefficients: ", a, b, c, d)
-
-        '''
-        The equation we saw earlier,
-                [(C0 + c*m) (D0 + d*m)] / [(A0 - a*m) (B0 - b*m)]  =  K
-                
-        can be expanded into a standard quadratic form for the unknown m :
-        
-                alpha * m**2 + beta * m + gamma = 0
-                
-        and then solved for m    
-        '''
-        alpha = (c * d - K * a * b)
-        beta = d * C0 + c * D0 + K * (A0 * b + B0 * a)
-        gamma = C0 * D0 - K * A0 * B0
-
-        #print(name_map)
-        #print("alpha, beta, gamma : ", alpha, beta, gamma)
-
-        if alpha == 0:
-            # The quadratic reduces to the linear equation:  beta * m + gamma = 0
-            m = -gamma / beta
-        else:
-            sqrt_discriminant = math.sqrt(beta**2 - 4 * alpha * gamma)
-            m1 = (-beta + sqrt_discriminant) / (2 * alpha)
-            m2 = (-beta - sqrt_discriminant) / (2 * alpha)
-            #print("m1, m2 : ", m1, m2)
-            m = m1  # Let's start with one of the 2 possible solutions of the quadratic equation
-
-
-        # After m "moles of forward reaction", the concentration of the reactant "A"
-        # in aA + bB <-> cC + dD gets reduced by a*m . Likewise for the other terms.
-        # Reaction products get increased.  Values for missing terms will be meaningless
-        std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "C" : C0 + c*m, "D" : D0 + d*m}
-
-        if min(std_result.values()) < 0:    # If there's any negative value in the concentrations...
-            # ...then repeat the computation using the other solution to the quadratic
-            m = m2
-            std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "C" : C0 + c*m, "D" : D0 + d*m}
-
-
-        # Let's translate our standard names A, B, C, D into the actual names,
-        # and also drop any missing term
-        result = {}
-        for k, v in std_result.items():
-            actual_name = name_map.get(k)
-            if actual_name:     # Missing terms will get dropped out
-                result[actual_name] = v
-
-        return result
-
-
-
 
 
 
@@ -758,6 +591,10 @@ class ReactionUnimolecular(ReactionOneStep):
 
     def find_equilibrium_conc(self, conc_dict :dict) -> dict:
         """
+        Determine the equilibrium concentrations that would be eventually reached
+        by the chemicals of this reaction,
+        given the specified concentrations,
+        IN THE ABSENCE of any other reaction.
 
         :param conc_dict:   A dict mapping chemical labels to their initial concentrations,
                                 for all the chemicals involved in this reaction
@@ -765,17 +602,18 @@ class ReactionUnimolecular(ReactionOneStep):
 
         :return:            A dict mapping the above chemical labels to their equilibrium concentrations
         """
-        # A <-> C
+        # To conform with ReactionKinetics.compute_equilibrium_conc, we'll express the reaction in the form A <-> C
         A0 = conc_dict.get(self.reactant)
-        assert A0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
+        assert A0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
                                        f"concentration of the reactant `{self.reactant}` was not provided"
 
         C0 = conc_dict.get(self.product)
-        assert C0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
+        assert C0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
                                        f"concentration of the produce `{self.product}` was not provided"
 
-        eq_dict = ReactionKinetics.find_equilibrium_conc(K=self.K, a=self.reactant, c=self.product,
-                                                        A0=A0, C0=0)  # dict with keys "A", "B", "C", "D"
+        eq_dict = ReactionKinetics.compute_equilibrium_conc(kF=self.kF, kR=self.kR,
+                                                            a=self.reactant, c=self.product,
+                                                            A0=A0, C0=0)  # dict with keys "A", "B", "C", "D"
         # Translate the standard names A, B, C, D into the actual names, and also drop any missing term
         return  {self.reactant: eq_dict["A"], self.product: eq_dict["C"]}
 

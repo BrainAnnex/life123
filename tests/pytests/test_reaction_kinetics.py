@@ -253,34 +253,45 @@ def test_compute_reaction_quotient():
 
 
 
-def test_find_equilibrium_conc():
+def test_compute_equilibrium_conc():
     # Unimolecular reaction A <-> C
-    result = ReactionKinetics.find_equilibrium_conc(kF=3., kR=2., a=1, c=1, A0=80., C0=10.)
+    result = ReactionKinetics.compute_equilibrium_conc(kF=3., kR=2., a=1, c=1, A0=80., C0=10.)
     assert np.allclose(result["A"], 36)
     assert np.allclose(result["C"], 54)
+    # Further verify
+    q = ReactionKinetics.compute_reaction_quotient(reactant_data=[("A",1)], product_data=[("C",1)],
+                                                   conc={"A": 36, "C": 54})
+    assert np.allclose(q, 3./2.)    # At the equilibrium concentrations, the reaction quotient equals kF/kR
 
-    # Only forward reaction
-    result = ReactionKinetics.find_equilibrium_conc(kF=3., kR=0, a=1, c=1, A0=80., C0=10.)
+    # Only the forward reaction
+    result = ReactionKinetics.compute_equilibrium_conc(kF=3., kR=0, a=1, c=1, A0=80., C0=10.)
     assert np.allclose(result["A"], 0)
     assert np.allclose(result["C"], 90)
 
-    # Only reverse reaction
-    result = ReactionKinetics.find_equilibrium_conc(kF=0, kR=2., a=1, c=1, A0=80., C0=10.)
+    # Only the reverse reaction
+    result = ReactionKinetics.compute_equilibrium_conc(kF=0, kR=2., a=1, c=1, A0=80., C0=10.)
     assert np.allclose(result["A"], 90)
     assert np.allclose(result["C"], 0)
 
     # A + B <-> C
-    result = ReactionKinetics.find_equilibrium_conc(kF=5., kR=2., a=1, b=1, c=1, A0=10., B0=50., C0=20.)
+    result = ReactionKinetics.compute_equilibrium_conc(kF=5., kR=2., a=1, b=1, c=1, A0=10., B0=50., C0=20.)
     assert np.allclose(result["A"], 0.2948774087575341)
     assert np.allclose(result["B"], 40.294877408757536)
     assert np.allclose(result["C"], 29.705122591242464)
+    # Further verify
+    q = ReactionKinetics.compute_reaction_quotient(reactant_data=[("A",1), ("B",1)], product_data=[("C",1)],
+                                                   conc={"A": 0.2948774087575341, "B": 40.294877408757536, "C": 29.705122591242464})
+    assert np.allclose(q, 5./2.)    # At the equilibrium concentrations, the reaction quotient equals kF/kR
 
     # 2 A <-> C  (A + A <-> C)
-    result = ReactionKinetics.find_equilibrium_conc(kF=3., kR=2., a=2, b=2, c=1, A0=200., B0=200., C0=40.)
+    result = ReactionKinetics.compute_equilibrium_conc(kF=3., kR=2., a=2, b=2, c=1, A0=200., B0=200., C0=40.)
     assert np.allclose(result["A"], 9.49568869375716)
     assert np.allclose(result["C"], 135.2521556531214)
+    # Further verify
+    q = ReactionKinetics.compute_reaction_quotient(reactant_data=[("A",2)], product_data=[("C",1)],
+                                                   conc={"A": 9.49568869375716, "C": 135.2521556531214})
+    assert np.allclose(q, 3./2.)    # At the equilibrium concentrations, the reaction quotient equals kF/kR
 
-    #TODO: add more tests
 
 
 
