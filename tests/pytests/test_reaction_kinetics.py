@@ -57,7 +57,6 @@ def test_exact_advance_unimolecular_irreversible():
     assert np.allclose(incr[0] + incr[1], 0)
 
 
-
 def test_exact_solution_unimolecular_irreversible():
 
     t = np.array([0, 0.005, 0.31739, 1.12, 100.])
@@ -109,7 +108,6 @@ def test_exact_advance_unimolecular_reversible():
     assert np.allclose(incr[0] + incr[1], 0)
 
 
-
 def test_exact_solution_unimolecular_reversible():
     t = np.array([0, 0.005, 0.31739, 1.12, 100.])
 
@@ -120,7 +118,7 @@ def test_exact_solution_unimolecular_reversible():
 
 
 
-def test_approx_solution_combination_rxn():
+def test_approx_solution_synthesis_rxn():
     #rxn = Reaction(reactants = ["A", "B"], products="C", forward_rate=3., reverse_rate=2.)
 
     t = np.array([0, 0.000864, 0.001555, 0.009850, 0.067400])
@@ -133,7 +131,7 @@ def test_approx_solution_combination_rxn():
 
 
 
-def test_exact_solution_combination_rxn():
+def test_exact_solution_synthesis_rxn():
     #rxn = Reaction(reactants = ["A", "B"], products="C", forward_rate=3., reverse_rate=2.)
 
     t = np.array([0, 0.0001, 0.0003, 0.0004, 0.0005, 0.0007, 0.001, 0.0015, 0.002, 0.003, 0.005, 0.008, 0.01, 1.])
@@ -150,6 +148,15 @@ def test_exact_solution_combination_rxn():
 
     assert np.allclose(np.min(result[1] + result[2]), 70)
     assert np.allclose(np.max(result[1] + result[2]), 70)
+
+
+
+def test_estimate_rate_constants_simple():
+    pass    # TODO
+
+
+def test_estimate_rate_constants_synthesis():
+    pass    # TODO
 
 
 
@@ -217,10 +224,68 @@ def test_compute_rate_pseudo_elementary():
     assert np.allclose(result,  -10.)
 
 
+def test_compute_rate_first_order():
+    pass    #TODO
 
 
 
-#########################################################################################################
+def test_compute_reaction_quotient():
+    # Reaction : A <-> B
+    q = ReactionKinetics.compute_reaction_quotient(reactant_data=[("A",1)], product_data=[("B",1)],
+                                                   conc={'A': 24., 'B': 36.}, explain=False)
+    assert np.allclose(q, 1.5)
+    q, formula = ReactionKinetics.compute_reaction_quotient(reactant_data=[("A",1)], product_data=[("B",1)],
+                                                            conc={'A': 24., 'B': 36.}, explain=True)
+    assert np.allclose(q, 1.5)
+    assert formula == '[B] / [A]'
+
+    # Reaction: R + S <-> P + Q, hypothetically first order in all chemicals
+    q, formula = ReactionKinetics.compute_reaction_quotient(reactant_data=[("R",1), ("S",1)], product_data=[("P",1), ("Q",1)],
+                                                            conc={'R': 10., 'S': 4., 'P': 5., 'Q': 20.}, explain=True)
+    assert np.allclose(q, 2.5)    #  (5 * 20) / (10 * 4)
+    assert formula == '([P][Q]) / ([R][S])'
+
+    # Same reaction, but hypothetically 2nd order in P, and 3rd order in S
+    q, formula = ReactionKinetics.compute_reaction_quotient(reactant_data=[("R",1), ("S",3)], product_data=[("P",2), ("Q",1)],
+                                                            conc={'R': 10., 'S': 4., 'P': 5., 'Q': 20.}, explain=True)
+    assert np.allclose(q, 0.78125)    #  (5**2 * 20) / (10 * 4**3)
+    assert formula == '( [P]^2 [Q]) / ([R] [S]^3 )'
+
+
+
+def test_find_equilibrium_conc():
+    # Unimolecular reaction A <-> C
+    result = ReactionKinetics.find_equilibrium_conc(kF=3., kR=2., a=1, c=1, A0=80., C0=10.)
+    assert np.allclose(result["A"], 36)
+    assert np.allclose(result["C"], 54)
+
+    # Only forward reaction
+    result = ReactionKinetics.find_equilibrium_conc(kF=3., kR=0, a=1, c=1, A0=80., C0=10.)
+    assert np.allclose(result["A"], 0)
+    assert np.allclose(result["C"], 90)
+
+    # Only reverse reaction
+    result = ReactionKinetics.find_equilibrium_conc(kF=0, kR=2., a=1, c=1, A0=80., C0=10.)
+    assert np.allclose(result["A"], 90)
+    assert np.allclose(result["C"], 0)
+
+    # A + B <-> C
+    result = ReactionKinetics.find_equilibrium_conc(kF=5., kR=2., a=1, b=1, c=1, A0=10., B0=50., C0=20.)
+    assert np.allclose(result["A"], 0.2948774087575341)
+    assert np.allclose(result["B"], 40.294877408757536)
+    assert np.allclose(result["C"], 29.705122591242464)
+
+    # 2 A <-> C  (A + A <-> C)
+    result = ReactionKinetics.find_equilibrium_conc(kF=3., kR=2., a=2, b=2, c=1, A0=200., B0=200., C0=40.)
+    assert np.allclose(result["A"], 9.49568869375716)
+    assert np.allclose(result["C"], 135.2521556531214)
+
+    #TODO: add more tests
+
+
+
+
+########    class VariableTimeSteps    ###########################################################################
 
 def test_set_thresholds():
     rd = VariableTimeSteps()

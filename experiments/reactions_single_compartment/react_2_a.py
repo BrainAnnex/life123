@@ -13,11 +13,11 @@
 # ---
 
 # %% [markdown]
-# ## `A <-> B` unimolecular reaction  
+# ## `A <-> B` elementary unimolecular reaction  
 # with 1st-order kinetics in both directions, taken to equilibrium,
 # using a simple, **coarse fixed-timestep simulation.**  
 #
-# In Part 2, below, perform some analysis of the results: in particular, examine the **reaction rates**. 
+# In Part 2, below, we perform some analysis of the results: in particular, we examine the **reaction rates**. 
 #
 # (See also the experiment _"1D/reactions/reaction_1"_ for a multi-compartment version)  
 #
@@ -28,8 +28,8 @@
 # ### TAGS :  "basic", "uniform compartment"
 
 # %%
-LAST_REVISED = "Aug. 29, 2024"
-LIFE123_VERSION = "1.0.0rc6"        # Library version this experiment is based on
+LAST_REVISED = "Dec. 29, 2024"
+LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -54,7 +54,7 @@ log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for
 
 # Set up the use of some specified graphic (Vue) components
 GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_2"],
+                  components=["vue_cytoscape_3"],
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%

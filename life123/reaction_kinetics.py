@@ -5,7 +5,6 @@ import cmath
 import numpy as np
 import plotly.graph_objects as pgo
 from typing import Union, Tuple
-#from life123.reactions import ReactionGeneric
 from life123.numerical import Numerical
 from life123.visualization.plotly_helper import PlotlyHelper
 
@@ -152,7 +151,6 @@ class ReactionKinetics:
             return (A_t - A0, B_t - B0)
 
         return (A_t, B_t)
-
 
 
     @staticmethod
@@ -544,26 +542,32 @@ class ReactionKinetics:
 
     @staticmethod
     def compute_reaction_quotient(reactant_data :[(str, int)], product_data :[(str, int)],
-                                  conc, explain=False) -> Union[np.double, Tuple[np.double, str]]:
+                                  conc, explain=False) -> np.double | Tuple[np.double, str]:
         """
-        Compute the "Reaction Quotient" (aka "Mass–action Ratio"),
+        Compute the "Reaction Quotient" Q (aka "Mass–action Ratio"),
         for the reaction with the specified parameters,
-        given the concentrations of chemicals involved in the reaction
+        given the concentrations of chemicals involved in the reaction.
 
-        :param reactant_data:   List of PAIRS of the form (label of reactant , order of reaction with respect to it)
-        :param product_data:    List of PAIRS of the form (label of reaction product , order of reaction with respect to it)
+        Note: in a heterogeneous mixture, solids, pure liquids and solvents have an activity that has a fixed value of 1,
+              and should be omitted from the parameters passed to this function
+
+        :param reactant_data:   List of PAIRS of the form (label of reactant , order of reaction with respect to it);
+                                    in elementary reactions, the orders will be equal to their respective stoichiometry coefficients
+        :param product_data:    List of PAIRS of the form (label of reaction product , order of reaction with respect to it);
+                                    in elementary reactions, the orders will be equal to their respective stoichiometry coefficients
         :param conc:            Dictionary with the concentrations of the species involved in the reaction.
                                 The keys are the chemical labels
                                     EXAMPLE: {'A': 23.9, 'B': 36.1}
         :param explain:         If True, it also returns the math formula being used for the computation
                                     EXAMPLES:   "([C][D]) / ([A][B])"
-                                                "[B] / [A]^2"
+                                                "[B] /  [A]^2 "
 
         :return:                If explain is False, return value for the "Reaction Quotient" (aka "Mass–action Ratio");
                                     if True, return a pair with that quotient and a string with the math formula that was used.
                                     Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        # TODO: also accept strings, in lieu of pairs (when order is 1)
+        # TODO: maybe also accept strings, in lieu of pairs
+        # TODO: could be tidier in avoiding unnecessary blanks in the explanations
         numerator = np.double(1)    # The product of all the concentrations of the reaction products (adjusted for reaction order)
         denominator = np.double(1)  # The product of all the concentrations of the reactants (also adjusted for reaction order)
 
@@ -583,9 +587,10 @@ class ReactionKinetics:
 
             numerator *= (species_conc ** rxn_order)
             if explain:
-                numerator_text += f"[{species_name}]"
                 if rxn_order > 1:
-                    numerator_text += f"^{rxn_order} "
+                    numerator_text += f" [{species_name}]^{rxn_order} "
+                else:
+                    numerator_text += f"[{species_name}]"
 
         if explain and len(product_data) > 1:
             numerator_text = f"({numerator_text})"  # In case of multiple terms, enclose them in parenthesis
@@ -603,9 +608,10 @@ class ReactionKinetics:
 
             denominator *= (species_conc ** rxn_order)
             if explain:
-                denominator_text += f"[{species_name}]"
                 if rxn_order > 1:
-                    denominator_text += f"^{rxn_order} "
+                    denominator_text += f" [{species_name}]^{rxn_order} "
+                else:
+                    denominator_text += f"[{species_name}]"
 
         if explain and len(reactant_data) > 1:
             denominator_text = f"({denominator_text})"  # In case of multiple terms, enclose them in parenthesis
@@ -620,6 +626,137 @@ class ReactionKinetics:
             return (quotient, formula)
 
         return quotient
+
+
+
+    @staticmethod
+    def find_equilibrium_conc(kF, kR, a=0, b=0, c=0, d=0, A0=1, B0=1, C0=1, D0=1) -> dict:
+        """
+        Determine the equilibrium concentrations that would be reached by the chemicals
+        participating in the reversible reaction:
+            aA + bB <-> cC + dD
+        first-order in all chemicals (some of the terms may be missing),
+        given their current concentrations,
+        IN THE ABSENCE of any other reaction.
+
+        Note:  we're using "concentrations" instead of "chemical activities";
+               concentrations approximates the activities of solutes
+
+        :return:            A dictionary of the equilibrium concentrations of the
+                                chemicals involved in the specified reaction
+                            EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8, 'D': 0.3}
+        """
+        '''
+        For (hypothetical) reactions of the form aA + bB <-> cC + dD  
+        that are FIRST-ORDER in all chemicals,
+        the equilibrium equation equates the forward and reverse rate 
+        after the reaction has advanced by m moles 
+        (which consumes reagents in proportion to their stoichiometric coefficients, and 
+        generates products similarly):
+                  
+            kF [(A0 - a*m) (B0 - b*m)] = kR [(C0 + c*m) (D0 + d*m)] 
+        
+        where m (to be solved for) is the number of "moles/liter of forward reaction" 
+
+        Generalization 1: 
+        The above equation can also be made to handle reaction terms that aren't present 
+        (for example the "D" part in the reaction A + B <-> C), 
+        by simply using 0 for the "stoichiometry coefficient" and 1 for the "initial concentration"
+        of any missing term;
+        such a trick will make its corresponding multiplicative term (of the form X0 + x*m) i
+        to be identical equal to 1, and thus have no effect on the solution of the equation.
+        
+        Generalization 2:
+        The above equation can also be made to handle scenarios where 2 terms refer to the same chemical,
+        such as in the reaction 2 A <-> C , with 2nd order with respect to A, 
+        by setting B0 = A0, a=2, b=2,
+        which will produce the multiplicative term that we need, namely:
+            kF [(A0 - 2*m) **2]
+        
+        
+        Our equilibrium equation can be expanded into a standard quadratic form for the unknown m :
+        
+                alpha * m**2 + beta * m + gamma = 0
+                
+        and then solved for m.  In case of two solution for the quadratic, we'll pick the one that
+        leads to physically-possible results (non-negative concentrations of all the chemicals.)
+        '''
+
+        #print("alpha, beta, gamma : ", alpha, beta, gamma)
+
+
+        if np.allclose(kF, 0):
+            print("kF is zero")
+            '''
+            Equation becomes:
+            [(C0 + c*m) (D0 + d*m)] / [(A0 - a*m) (B0 - b*m)]  =  0
+            i.e.: (C0 + c*m) (D0 + d*m) = 0,
+            which has 2 solutions, each making one of factors equal to zero
+            '''
+            m1 = -C0 / c
+            if d != 0:
+                m2 = -D0 / d
+            else:
+                m2 = m1
+
+        elif np.allclose(kR, 0):
+            print("kR is zero")
+            '''
+            Equation becomes:
+            [(A0 - a*m) (B0 - b*m)] / [(C0 + c*m) (D0 + d*m)]
+            i.e.: (A0 - a*m) (B0 - b*m) = 0,
+            which has 2 solutions, each making one of factors equal to zero
+            '''
+            m1 = A0 / a
+            if b != 0:
+                m2 = B0 / b
+            else:
+                m2 = m1
+
+        else:
+            # General case
+            K = kF/kR
+            alpha = (c * d - K * a * b)
+            beta = d * C0 + c * D0 + K * (A0 * b + B0 * a)
+            gamma = C0 * D0 - K * A0 * B0
+
+            if alpha == 0:
+                # The quadratic reduces to the linear equation:  beta * m + gamma = 0
+                m1 = -gamma / beta
+                m2 = m1
+            else:
+                sqrt_discriminant = math.sqrt(beta**2 - 4 * alpha * gamma)
+                m1 = (-beta + sqrt_discriminant) / (2 * alpha)
+                m2 = (-beta - sqrt_discriminant) / (2 * alpha)
+                print("m1, m2 : ", m1, m2)
+
+
+        m = m1  # Let's start with one of the 2 possible solutions of the quadratic equation
+
+        # After m "moles of forward reaction", the concentration of the reactant "A"
+        # in aA + bB <-> cC + dD gets reduced by a*m . Likewise for the other terms.
+        # Reaction products get increased.  Values for missing terms will be meaningless
+        std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "C" : C0 + c*m, "D" : D0 + d*m}
+
+        if min(std_result.values()) < 0:    # If there's any negative value in the concentrations...
+            # ...then repeat the computation using the other solution to the quadratic
+            m = m2
+            print("Using 2nd solution: m = ", m)
+            std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "C" : C0 + c*m, "D" : D0 + d*m}
+
+        '''
+        # Let's translate our standard names A, B, C, D into the actual names,
+        # and also drop any missing term
+        result = {}
+        for k, v in std_result.items():
+            actual_name = name_map.get(k)
+            if actual_name:     # Missing terms will get dropped out
+                result[actual_name] = v
+
+        return result
+        '''
+
+        return std_result
 
 
 

@@ -708,112 +708,63 @@ class UniformCompartment:
         report_interval *= 60.      # Convert to seconds
 
 
-
-        #TODO: testing out the following main loop...
         try:
-            step_count = self._single_compartment_react_main_loop(step_count=step_count, max_steps=max_steps, n_steps=n_steps, variable_steps=variable_steps,
-                                                                  time_step=time_step, target_end_time=target_end_time, stop=stop,
-                                                                  t_start=t_start, t_report=t_report, report_interval=report_interval,
-                                                                  explain_variable_steps=explain_variable_steps, silent=silent)
-        
+            while True:     # Loop until one of various criteria becomes applicable
+
+                # Check various criteria for termination
+                if (max_steps is not None) and (step_count >= max_steps):
+                    print(f"single_compartment_react(): computation stopped because max # of steps ({max_steps}) reached")
+                    break       # We have reached the max allowable number of steps
+
+                if (target_end_time is not None) and (self.system_time >= target_end_time):
+                    break       # The system time has reached the target endtime
+
+                if (stop is not None):
+                    (termination_keyword, termination_parameter) = stop
+                    if termination_keyword == "conc_below":
+                        chem_name, conc_threshold = termination_parameter
+                        if self.get_chem_conc(chem_name) < conc_threshold:
+                            break   # The concentration of the specified chemical has dropped the requested threshold
+                    elif termination_keyword == "conc_above":
+                        chem_name, conc_threshold = termination_parameter
+                        if self.get_chem_conc(chem_name) > conc_threshold:
+                            break   # The concentration of the specified chemical has risen above the requested threshold
+
+                if (not variable_steps) and (step_count == n_steps)\
+                        and (target_end_time is not None) and np.allclose(self.system_time, target_end_time):
+                    break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
+                                #   the System Time is below the target_end_time because of roundoff error
+
+
+                # ---  CORE OPERATION OF MAIN LOOP  ---
+                step_count, recommended_next_step = self._single_compartment_react_main_loop(step_count=step_count, n_steps=n_steps,
+                                                                    variable_steps=variable_steps, time_step=time_step,
+                                                                    explain_variable_steps=explain_variable_steps)
+
+
+                if self.diagnostics_enabled:
+                    # Save up the current time and System State as "diagnostic 'concentration' data"
+                    system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
+                    self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
+
+                t_now = time.perf_counter()
+                t_elapsed = t_now - t_report    # Time elapsed since the last report
+                if (not silent) and (t_elapsed > report_interval):
+                    if variable_steps:
+                        info_on_step = f"(doing step size {time_step:,.2g})"
+                    else:
+                        info_on_step = ""
+                    print(f"... running : currently at System Time {self.system_time:,.4g} {info_on_step} after running for {(t_now - t_start)/60:.1f} min")
+                    t_report = t_now            # Reset
+
+                if variable_steps:
+                    time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
+
+        # --- END while ---
+
         except KeyboardInterrupt:
             print("\n*** KeyboardInterrupt exception caught")
 
-
-        '''
-        # MAIN LOOP
-        while True:
-            # Check various criteria for termination
-            if (max_steps is not None) and (step_count >= max_steps):
-                print(f"single_compartment_react(): computation stopped because max # of steps ({max_steps}) reached")
-                break       # We have reached the max allowable number of steps
-
-            if (target_end_time is not None) and (self.system_time >= target_end_time):
-                break       # The system time has reached the target endtime
-
-            if (stop is not None):
-                (termination_keyword, termination_parameter) = stop
-                if termination_keyword == "conc_below":
-                    chem_name, conc_threshold = termination_parameter
-                    if self.get_chem_conc(chem_name) < conc_threshold:
-                        break   # The concentration of the specified chemical has dropped the requested threshold
-                elif termination_keyword == "conc_above":
-                    chem_name, conc_threshold = termination_parameter
-                    if self.get_chem_conc(chem_name) > conc_threshold:
-                        break   # The concentration of the specified chemical has risen above the requested threshold
-
-            if (not variable_steps) and (step_count == n_steps)\
-                    and (target_end_time is not None) and np.allclose(self.system_time, target_end_time):
-                break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
-                            #   the System Time is below the target_end_time because of roundoff error
-
-
-            # ----------  CORE OPERATION OF MAIN LOOP  ----------
-            if variable_steps:
-                delta_concentrations, step_actually_taken, recommended_next_step = \
-                    self.reaction_step_common(delta_time=time_step,
-                                              variable_steps=variable_steps, explain_variable_steps=explain_variable_steps,
-                                              step_counter=step_count)
-            else:
-                # Fixed steps
-                delta_concentrations = \
-                    self.reaction_step_common_fixed_step(delta_time=time_step, step_counter=step_count)
-                step_actually_taken = time_step
-                recommended_next_step = time_step
-
-
-            # Update the System State
-            self.previous_system = self.system.copy()
-            self.system += delta_concentrations
-            if min(self.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
-                print(f"***********  SYSTEM STATE ERROR: FAILED TO CATCH negative concentration "
-                      f"upon advancing reactions from system time t={self.system_time:,.5g}")
-
-
-            # Preserve the RATES data, as requested (part1, BEFORE updating the System Time, because reaction rates are
-            # based on the *start* time of the simulation step)
-            if step_count == 0:
-                self.capture_rate_snapshot(force=True, step_count=0)    # Always save the initial rate
-            else:
-                self.capture_rate_snapshot(step_count=step_count)       # Save historical rate values (if enabled)
-
-            # UPDATE THE SYSTEM TIME (now we're at the END of the current time step)
-            self.system_time += step_actually_taken
-
-
-            # Preserve the CONCENTRATION data, as requested (part2, AFTER updating the System Time, because current concentrations
-            # refer to the System Time, just updated at the end of the simulation step)
-            self.capture_conc_snapshot(step_count=step_count+1) # Save historical concentration values (if enabled)
-                                                                # It's +1 because we save the conc. values at the END of the step
-
-
-            step_count += 1
-
-            if (n_steps is not None) and (step_count > 1000 * n_steps):  # Another approach to catch infinite loops
-                raise Exception("single_compartment_react(): "
-                                "the computation is taking a very large number of steps, probably from automatically trying to correct instability;"
-                                " trying reducing the time_step")   # TODO: is the explanation correctly phrased?
-
-            if self.diagnostics_enabled:
-                # Save up the current time and System State as "diagnostic 'concentration' data"
-                system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
-                self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
-
-            t_now = time.perf_counter()
-            t_elapsed = t_now - t_report    # Time elapsed since the last report
-            if (not silent) and (t_elapsed > report_interval):
-                if variable_steps:
-                    info_on_step = f"(doing step size {time_step:,.2g})"
-                else:
-                    info_on_step = ""
-                print(f"... running : currently at System Time {self.system_time:,.4g} {info_on_step} after running for {(t_now - t_start)/60:.1f} min")
-                t_report = t_now            # Reset
-
-            if variable_steps:
-                time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
-
-        # --- END while ---
-        '''
 
 
         # We're now at the end of the computation
@@ -832,7 +783,6 @@ class UniformCompartment:
             # Print out a summary, at the termination of the run
             t_now = time.perf_counter()
             step_type_str = "variable " if variable_steps else "fixed "
-            t_now = time.perf_counter()
             time_taken = t_now - t_start
             if time_taken < 60:
                 display_time_taken = f"{time_taken:.3f} sec"
@@ -857,107 +807,67 @@ class UniformCompartment:
 
 
 
-    def _single_compartment_react_main_loop(self, step_count, max_steps, n_steps, variable_steps,
-                                            time_step, target_end_time, stop,
-                                            t_start, t_report, report_interval,
-                                            explain_variable_steps, silent) -> int:
-        while True:
-            # Check various criteria for termination
-            if (max_steps is not None) and (step_count >= max_steps):
-                print(f"single_compartment_react(): computation stopped because max # of steps ({max_steps}) reached")
-                break       # We have reached the max allowable number of steps
+    def _single_compartment_react_main_loop(self, step_count, n_steps, variable_steps,
+                                            time_step, explain_variable_steps) -> (int, float):
+        """
+        Helper function to single_compartment_react(), for its main loop.
+        Perform the reaction step (either fixed or variable step, as appropriate),
+        then update the System State, and preserve the RATES data.
+        If the number of steps taken so far is getting excessive, raise an Exception
 
-            if (target_end_time is not None) and (self.system_time >= target_end_time):
-                break       # The system time has reached the target endtime
-
-            if (stop is not None):
-                (termination_keyword, termination_parameter) = stop
-                if termination_keyword == "conc_below":
-                    chem_name, conc_threshold = termination_parameter
-                    if self.get_chem_conc(chem_name) < conc_threshold:
-                        break   # The concentration of the specified chemical has dropped the requested threshold
-                elif termination_keyword == "conc_above":
-                    chem_name, conc_threshold = termination_parameter
-                    if self.get_chem_conc(chem_name) > conc_threshold:
-                        break   # The concentration of the specified chemical has risen above the requested threshold
-
-            if (not variable_steps) and (step_count == n_steps)\
-                    and (target_end_time is not None) and np.allclose(self.system_time, target_end_time):
-                break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
-                            #   the System Time is below the target_end_time because of roundoff error
-
-
-            # ----------  CORE OPERATION OF MAIN LOOP  ----------
-            if variable_steps:
-                delta_concentrations, step_actually_taken, recommended_next_step = \
-                    self.reaction_step_common(delta_time=time_step,
-                                              variable_steps=variable_steps, explain_variable_steps=explain_variable_steps,
-                                              step_counter=step_count)
-            else:
-                # Fixed steps
-                delta_concentrations = \
-                    self.reaction_step_common_fixed_step(delta_time=time_step, step_counter=step_count)
-                step_actually_taken = time_step
-                recommended_next_step = time_step
+        :param step_count:
+        :param n_steps:
+        :param variable_steps:
+        :param time_step:
+        :param explain_variable_steps:
+        :return:                        The pair (step_count, recommended_next_step)
+        """
+        # ----------  CORE OPERATION OF MAIN LOOP  ----------
+        if variable_steps:
+            delta_concentrations, step_actually_taken, recommended_next_step = \
+                self.reaction_step_common(delta_time=time_step,
+                                          variable_steps=variable_steps, explain_variable_steps=explain_variable_steps,
+                                          step_counter=step_count)
+        else:
+            # Fixed steps
+            delta_concentrations = \
+                self.reaction_step_common_fixed_step(delta_time=time_step, step_counter=step_count)
+            step_actually_taken = time_step
+            recommended_next_step = time_step
 
 
-            # Update the System State
-            self.previous_system = self.system.copy()
-            self.system += delta_concentrations
-            if min(self.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
-                print(f"***********  SYSTEM STATE ERROR: FAILED TO CATCH negative concentration "
-                      f"upon advancing reactions from system time t={self.system_time:,.5g}")
+        # Update the System State
+        self.previous_system = self.system.copy()
+        self.system += delta_concentrations
+        if min(self.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
+            print(f"***********  SYSTEM STATE ERROR: FAILED TO CATCH negative concentration "
+                  f"upon advancing reactions from system time t={self.system_time:,.5g}")
 
 
-            # Preserve the RATES data, as requested (part1, BEFORE updating the System Time, because reaction rates are
-            # based on the *start* time of the simulation step)
-            if step_count == 0:
-                self.capture_rate_snapshot(force=True, step_count=0)    # Always save the initial rate
-            else:
-                self.capture_rate_snapshot(step_count=step_count)       # Save historical rate values (if enabled)
+        # Preserve the RATES data, as requested (part1, BEFORE updating the System Time, because reaction rates are
+        # based on the *start* time of the simulation step)
+        if step_count == 0:
+            self.capture_rate_snapshot(force=True, step_count=0)    # Always save the initial rate
+        else:
+            self.capture_rate_snapshot(step_count=step_count)       # Save historical rate values (if enabled)
 
-            # UPDATE THE SYSTEM TIME (now we're at the END of the current time step)
-            self.system_time += step_actually_taken
-
-
-            # Preserve the CONCENTRATION data, as requested (part2, AFTER updating the System Time, because current concentrations
-            # refer to the System Time, just updated at the end of the simulation step)
-            self.capture_conc_snapshot(step_count=step_count+1) # Save historical concentration values (if enabled)
-                                                                # It's +1 because we save the conc. values at the END of the step
+        # UPDATE THE SYSTEM TIME (now we're at the END of the current time step)
+        self.system_time += step_actually_taken
 
 
-            step_count += 1
+        # Preserve the CONCENTRATION data, as requested (part2, AFTER updating the System Time, because current concentrations
+        # refer to the System Time, just updated at the end of the simulation step)
+        self.capture_conc_snapshot(step_count=step_count+1) # Save historical concentration values (if enabled)
+                                                            # It's +1 because we save the conc. values at the END of the step
 
-            if (n_steps is not None) and (step_count > 1000 * n_steps):  # Another approach to catch infinite loops
-                raise Exception("single_compartment_react(): "
-                                "the computation is taking a very large number of steps, probably from automatically trying to correct instability;"
-                                " trying reducing the time_step")   # TODO: is the explanation correctly phrased?
+        step_count += 1
 
-            if self.diagnostics_enabled:
-                # Save up the current time and System State as "diagnostic 'concentration' data"
-                system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
-                self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
+        if (n_steps is not None) and (step_count > 1000 * n_steps):  # Another approach to catch infinite loops
+            raise Exception("single_compartment_react(): "
+                            "the computation is taking a very large number of steps, probably from automatically trying to correct instability;"
+                            " trying reducing the time_step")   # TODO: is the explanation correctly phrased?
 
-            t_now = time.perf_counter()
-            t_elapsed = t_now - t_report    # Time elapsed since the last report
-            if (not silent) and (t_elapsed > report_interval):
-                if variable_steps:
-                    info_on_step = f"(doing step size {time_step:,.2g})"
-                else:
-                    info_on_step = ""
-                print(f"... running : currently at System Time {self.system_time:,.4g} {info_on_step} after running for {(t_now - t_start)/60:.1f} min")
-                t_report = t_now            # Reset
-
-            if variable_steps:
-                time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
-
-        # --- END while ---
-
-        return step_count
-
-
-
-
+        return step_count, recommended_next_step
 
 
 
@@ -2390,7 +2300,10 @@ class UniformCompartment:
         """
         #TODO: handle scenarios where kF or kR is zero
 
+
         rxn = self.reactions.get_reaction(rxn_index)    # Look up the requested reaction
+
+        assert np.allclose(rxn.ge)
 
         assert rxn.kinetic_rate_function == ReactionKinetics.compute_rate_pseudo_elementary, \
             "find_equilibrium_conc(): unsupported scenario where the reaction " \

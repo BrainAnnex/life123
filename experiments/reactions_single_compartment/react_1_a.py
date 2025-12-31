@@ -22,7 +22,7 @@
 # ### TAGS :   "quick-start", "uniform compartment"
 
 # %%
-LAST_REVISED = "Dec. 28, 2025"
+LAST_REVISED = "Dec. 29, 2025"
 LIFE123_VERSION = "1.0.0rc7"         # Library version this experiment is based on
 
 # %%
@@ -50,8 +50,7 @@ life123.check_version(LIFE123_VERSION)    # To check compatibility
 uc = life123.UniformCompartment()  
 
 # Elementary Reaction A <-> B
-uc.add_reaction(reactants="A", products="B", 
-                kF=3., kR=2.)
+uc.add_reaction(reactants="A", products="B", kF=3., kR=2.)
 
 uc.describe_reactions()
 

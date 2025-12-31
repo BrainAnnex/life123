@@ -336,7 +336,7 @@ def test_constructor_ReactionUnimolecular():
     assert rxn.active == True
     assert rxn.reversible == False
     assert rxn.kF == 20
-    assert rxn.kR is None
+    assert rxn.kR == 0
     assert rxn.K is None
     assert rxn.delta_S is None
     assert rxn.reactant == "A"
@@ -368,7 +368,7 @@ def test_describe_ReactionUnimolecular():
     rxn = ReactionUnimolecular(reactant="A", product="B",
                                kF=20, reversible=False)
     assert rxn.describe(concise=True) == "A <-> B"
-    assert rxn.describe(concise=False) == "A <-> B  Elementary Unimolecular Irreversible reaction  (kF = 20)"
+    assert rxn.describe(concise=False) == "A <-> B  Elementary Unimolecular Irreversible reaction  (kF = 20 / kR = 0)"
 
     rxn = ReactionUnimolecular(reactant="R", product="P",
                                kF=10, kR=2, delta_H=-3000)
@@ -1003,7 +1003,7 @@ def test_reaction_quotient():
     assert np.allclose(200., rxn.reaction_quotient(conc=c, explain=False))  # 10^3 / 5
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
     assert np.allclose(200., quotient)    # 10^3 / 5
-    assert formula == '[B]^3  / [A]'
+    assert formula == ' [B]^3  / [A]'
 
 
     # Reaction :  A + B <-> C , with 1st-order kinetics for each species
@@ -1023,7 +1023,7 @@ def test_reaction_quotient():
     assert np.allclose(1.25, rxn.reaction_quotient(conc=c, explain=False))  # 20 / 4^2
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
     assert np.allclose(1.25, quotient)  # 20 / 4^2
-    assert formula == '[B] / [A]^2 '
+    assert formula == '[B] /  [A]^2 '
 
 
     # Reaction :  A <-> 2B , with 2nd-order kinetics in the reverse direction
@@ -1033,7 +1033,7 @@ def test_reaction_quotient():
     assert np.allclose(100., rxn.reaction_quotient(conc=c, explain=False))
     quotient, formula = rxn.reaction_quotient(conc=c, explain=True)
     assert np.allclose(100., quotient)
-    assert formula == '[B]^2  / [A]'
+    assert formula == ' [B]^2  / [A]'
 
 
     # Reaction :  A + B <-> C + D
