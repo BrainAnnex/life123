@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
-from life123.reactions import ReactionGeneric, ReactionUnimolecular
+from life123.reactions import ReactionGeneric
 from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
-
+from life123 import ThermoDynamics
 
 
 
@@ -229,68 +229,73 @@ def test_compute_rate_first_order():
 
 
 
-def test_compute_reaction_quotient():
-    # Reaction : A <-> B
-    q = ReactionKinetics.compute_reaction_quotient(reactant_data=[("A",1)], product_data=[("B",1)],
-                                                   conc={'A': 24., 'B': 36.}, explain=False)
-    assert np.allclose(q, 1.5)
-    q, formula = ReactionKinetics.compute_reaction_quotient(reactant_data=[("A",1)], product_data=[("B",1)],
-                                                            conc={'A': 24., 'B': 36.}, explain=True)
-    assert np.allclose(q, 1.5)
-    assert formula == '[B] / [A]'
-
-    # Reaction: R + S <-> P + Q, hypothetically first order in all chemicals
-    q, formula = ReactionKinetics.compute_reaction_quotient(reactant_data=[("R",1), ("S",1)], product_data=[("P",1), ("Q",1)],
-                                                            conc={'R': 10., 'S': 4., 'P': 5., 'Q': 20.}, explain=True)
-    assert np.allclose(q, 2.5)    #  (5 * 20) / (10 * 4)
-    assert formula == '([P][Q]) / ([R][S])'
-
-    # Same reaction, but hypothetically 2nd order in P, and 3rd order in S
-    q, formula = ReactionKinetics.compute_reaction_quotient(reactant_data=[("R",1), ("S",3)], product_data=[("P",2), ("Q",1)],
-                                                            conc={'R': 10., 'S': 4., 'P': 5., 'Q': 20.}, explain=True)
-    assert np.allclose(q, 0.78125)    #  (5**2 * 20) / (10 * 4**3)
-    assert formula == '( [P]^2 [Q]) / ([R] [S]^3 )'
-
-
-
 def test_compute_equilibrium_conc():
     # Unimolecular reaction A <-> C
-    result = ReactionKinetics.compute_equilibrium_conc(kF=3., kR=2., a=1, c=1, A0=80., C0=10.)
+    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=2., a=1, c=1, A0=80., C0=10.)
     assert np.allclose(result["A"], 36)
     assert np.allclose(result["C"], 54)
     # Further verify
-    q = ReactionKinetics.compute_reaction_quotient(reactant_data=[("A",1)], product_data=[("C",1)],
-                                                   conc={"A": 36, "C": 54})
-    assert np.allclose(q, 3./2.)    # At the equilibrium concentrations, the reaction quotient equals kF/kR
+    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"C")],
+                                                 conc={"A": 36, "C": 54})
+    assert np.allclose(K, 3./2.)    # At the equilibrium concentrations, the reaction quotient of elementary equations equals kF/kR
 
     # Only the forward reaction
-    result = ReactionKinetics.compute_equilibrium_conc(kF=3., kR=0, a=1, c=1, A0=80., C0=10.)
+    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=0, a=1, c=1, A0=80., C0=10.)
     assert np.allclose(result["A"], 0)
     assert np.allclose(result["C"], 90)
 
     # Only the reverse reaction
-    result = ReactionKinetics.compute_equilibrium_conc(kF=0, kR=2., a=1, c=1, A0=80., C0=10.)
+    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=0, kR=2., a=1, c=1, A0=80., C0=10.)
     assert np.allclose(result["A"], 90)
     assert np.allclose(result["C"], 0)
 
+
     # A + B <-> C
-    result = ReactionKinetics.compute_equilibrium_conc(kF=5., kR=2., a=1, b=1, c=1, A0=10., B0=50., C0=20.)
+    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=5., kR=2., a=1, b=1, c=1, A0=10., B0=50., C0=20.)
     assert np.allclose(result["A"], 0.2948774087575341)
     assert np.allclose(result["B"], 40.294877408757536)
     assert np.allclose(result["C"], 29.705122591242464)
     # Further verify
-    q = ReactionKinetics.compute_reaction_quotient(reactant_data=[("A",1), ("B",1)], product_data=[("C",1)],
+    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A"), (1,"B")], product_data=[(1,"C")],
                                                    conc={"A": 0.2948774087575341, "B": 40.294877408757536, "C": 29.705122591242464})
-    assert np.allclose(q, 5./2.)    # At the equilibrium concentrations, the reaction quotient equals kF/kR
+    assert np.allclose(K, 5./2.)    # At the equilibrium concentrations, the reaction quotient of elementary equations equals kF/kR
 
-    # 2 A <-> C  (A + A <-> C)
-    result = ReactionKinetics.compute_equilibrium_conc(kF=3., kR=2., a=2, b=2, c=1, A0=200., B0=200., C0=40.)
+    # 2 A <-> C  (expressed as A + A <-> C)
+    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=2., a=2, b=2, c=1, A0=200., B0=200., C0=40.)
     assert np.allclose(result["A"], 9.49568869375716)
     assert np.allclose(result["C"], 135.2521556531214)
-    # Further verify
-    q = ReactionKinetics.compute_reaction_quotient(reactant_data=[("A",2)], product_data=[("C",1)],
-                                                   conc={"A": 9.49568869375716, "C": 135.2521556531214})
-    assert np.allclose(q, 3./2.)    # At the equilibrium concentrations, the reaction quotient equals kF/kR
+
+    # Further verify.  Compute the reaction quotient with the equilibrium concentrations, i.e. the thermodynamic equilibrium constant
+    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(2,"A")], product_data=[(1,"C")],
+                                                 conc={"A": 9.49568869375716, "C": 135.2521556531214})
+    assert np.allclose(K, 3./2.)    # At the equilibrium concentrations, the reaction quotient of elementary equations equals kF/kR
+
+    # HYPOTHETICAL 1st order reaction A + B <-> C + D
+    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=10., kR=2., a=1, b=1, c=1, d=1, A0=1., B0=2., C0=3., D0=4.)
+    expected = {'A': 1.0894541729001368, 'B': 2.089454172900137, 'C': 2.910545827099863, 'D': 3.910545827099863}
+    for key in result.keys():
+        assert np.allclose(result[key], expected[key])
+
+    # Further verify.  Compute the reaction quotient with the equilibrium concentrations, i.e. the thermodynamic equilibrium constant
+    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A"), (1,"B")], product_data=[(1,"C"), (1,"D")],
+                                                   conc=expected)
+    assert np.allclose(K, 10./2.)    # Non-elementary reaction, but still with kinetics following mass-action: the equilibrium constant equals to kF/kR
+
+
+    # HYPOTHETICAL reaction A + 2 B <-> C + 3 D, 1st order in all chemicals
+    # This is a scenario of generalized kinetics (non-mass-action with respect to the stoichiometry),
+    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=10., kR=2., a=1, b=2, c=1, d=3, A0=1., B0=2., C0=3., D0=4.)
+    expected = {'A': 1.0598463308126616, 'B': 2.119692661625323, 'C': 2.9401536691873384, 'D': 3.8204610075620153}
+    for key in result.keys():
+        assert np.allclose(result[key], expected[key])
+
+    # Further verify.  Compute the reaction quotient with the equilibrium concentrations, i.e. the thermodynamic equilibrium constant
+    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A"), (2,"B")], product_data=[(1,"C"), (3,"D")],
+                                                 conc=expected)
+    corrective_factor = (result["B"] / result["D"]**2)      # Needed because we're dealing with generalized kinetics
+                                                            # (non-mass-action with respect to the stoichiometry)
+    assert np.allclose(K * corrective_factor, 10./2.)    # The "corrected" equilibrium constant equals to kF/kR
+
 
 
 

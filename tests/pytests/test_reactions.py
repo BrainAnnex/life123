@@ -496,6 +496,29 @@ def test_step_simulation_ReactionUnimolecular():
 
 
 
+def test_find_equilibrium_conc_ReactionUnimolecular():
+    # Unimolecular reaction A <-> C
+    rxn = ReactionUnimolecular(reactant="A", product="C", kF=3., kR=2.)
+    result = rxn.find_equilibrium_conc(conc_dict={"A":80., "C":10.})
+    assert np.allclose(result["A"], 36)
+    assert np.allclose(result["C"], 54)
+
+    # Only the forward reaction
+    rxn = ReactionUnimolecular(reactant="A", product="C", kF=3., reversible=False)
+    result = rxn.find_equilibrium_conc(conc_dict={"A":80., "C":10.})
+    assert np.allclose(result["A"], 0)
+    assert np.allclose(result["C"], 90)
+
+    # Only the reverse reaction
+    rxn = ReactionUnimolecular(reactant="A", product="C", kF=0, kR=2.)
+    result = rxn.find_equilibrium_conc(conc_dict={"A":80., "C":10.})
+    assert np.allclose(result["A"], 90)
+    assert np.allclose(result["C"], 0)
+
+
+
+
+
 
 ########################   ReactionSynthesis    #########################################################
 
@@ -559,6 +582,22 @@ def test_step_simulation_ReactionSynthesis():
 
 
 
+def test_find_equilibrium_conc_ReactionSynthesis():
+    # Reaction X + Y <-> Z
+    rxn = ReactionSynthesis(reactants=["X", "Y"], product="Z", kF=5., kR=2.)
+    result = rxn.find_equilibrium_conc(conc_dict={"X":10., "Y": 50, "Z":20.})
+    assert np.allclose(result["X"], 0.2948774087575341)
+    assert np.allclose(result["Y"], 40.294877408757536)
+    assert np.allclose(result["Z"], 29.705122591242464)
+
+    # 2 A <-> C
+    rxn = ReactionSynthesis(reactants=["A", "A"], product="C", kF=3., kR=2.)
+    result = rxn.find_equilibrium_conc(conc_dict={"A":200., "C": 40.})
+    assert np.allclose(result["A"], 9.49568869375716)
+    assert np.allclose(result["C"], 135.2521556531214)
+
+
+
 
 
 ########################   ReactionDecomposition    #########################################################
@@ -595,7 +634,7 @@ def test_determine_reaction_rate_ReactionDecomposition():
 
 
 
-def test_determine_reaction_quotient_ReactionDecomposition():
+def test_reaction_quotient_ReactionDecomposition():
     # Reaction :  C <-> A + B
     rxn = ReactionDecomposition(reactant="C", products=["A" , "B"])
     c = {'A': 3., 'B': 4., 'C': 12.}
@@ -620,6 +659,23 @@ def test_step_simulation_ReactionDecomposition():
     result = rxn.step_simulation(delta_time=0.002, conc_dict={"A": 10, "B": 50, "C": 20})
     assert result[0] == {'A': -4.92, 'B': -4.92, 'C': 4.92}
     assert result[1] == -2460
+
+
+
+def test_find_equilibrium_conc_ReactionDecomposition():
+    # Reaction Z <-> X + Y
+    rxn = ReactionDecomposition(reactant="Z", products=["X", "Y"], kF=2., kR=5.)
+    result = rxn.find_equilibrium_conc(conc_dict={"X":10., "Y": 50, "Z":20.})
+    assert np.allclose(result["X"], 0.2948774087575341)
+    assert np.allclose(result["Y"], 40.294877408757536)
+    assert np.allclose(result["Z"], 29.705122591242464)
+
+    # C <-> 2 A
+    rxn = ReactionDecomposition(reactant="C", products=["A", "A"], kF=2., kR=3.)
+    result = rxn.find_equilibrium_conc(conc_dict={"A":200., "C": 40.})
+    assert np.allclose(result["A"], 9.49568869375716)
+    assert np.allclose(result["C"], 135.2521556531214)
+
 
 
 
@@ -975,7 +1031,7 @@ def test_extract_chemicals_in_reaction_ReactionGeneric():
 
 #############  For ANALYSIS  #############
 
-def test_reaction_quotient():
+def test_reaction_quotient_ReactionGeneric():
     # Reaction : A <-> B
     rxn = ReactionGeneric(reactants="A", products="B")
     rxn.set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)
@@ -1051,6 +1107,22 @@ def test_reaction_quotient():
     # with zero concentrations of both a reactant and a reaction product, it will be undefined (nan)
     c = {'A': 15.2, 'B': 0, 'C': 0 , 'D': 4.1}
     assert np.isnan(rxn.reaction_quotient(conc=c, explain=False))
+
+
+
+def test_find_equilibrium_conc_ReactionGeneric():
+    rxn = ReactionGeneric(reactants=["A", "B"], products=["C", "D"], kF=10., kR=2.)
+
+    with pytest.raises(Exception):  # Lacking kinetic rate function
+        rxn.find_equilibrium_conc(conc_dict={"A": 1, "B": 2, "C": 3, "D": 4})
+
+    rxn.set_rate_function(ReactionKinetics.compute_rate_first_order)
+
+    result = rxn.find_equilibrium_conc(conc_dict={"A": 1, "B": 2, "C": 3, "D": 4})
+    expected = {'A': 1.0894541729001368, 'B': 2.089454172900137, 'C': 2.910545827099863, 'D': 3.910545827099863}
+    for key in result.keys():
+        assert np.allclose(result[key], expected[key])
+
 
 
 

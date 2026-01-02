@@ -4,7 +4,6 @@ import math
 import cmath
 import numpy as np
 import plotly.graph_objects as pgo
-from typing import Union, Tuple
 from life123.numerical import Numerical
 from life123.visualization.plotly_helper import PlotlyHelper
 
@@ -541,117 +540,47 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def compute_reaction_quotient(reactant_data :[(str, int)], product_data :[(str, int)],
-                                  conc, explain=False) -> np.double | Tuple[np.double, str]:
-        """
-        Compute the "Reaction Quotient" Q (aka "Mass–action Ratio"),
-        for the reaction with the specified parameters,
-        given the concentrations of chemicals involved in the reaction.
-
-        Note: in a heterogeneous mixture, solids, pure liquids and solvents have an activity that has a fixed value of 1,
-              and should be omitted from the parameters passed to this function
-
-        :param reactant_data:   List of PAIRS of the form (label of reactant , order of reaction with respect to it);
-                                    in elementary reactions, the orders will be equal to their respective stoichiometry coefficients
-        :param product_data:    List of PAIRS of the form (label of reaction product , order of reaction with respect to it);
-                                    in elementary reactions, the orders will be equal to their respective stoichiometry coefficients
-        :param conc:            Dictionary with the concentrations of the species involved in the reaction.
-                                The keys are the chemical labels
-                                    EXAMPLE: {'A': 23.9, 'B': 36.1}
-        :param explain:         If True, it also returns the math formula being used for the computation
-                                    EXAMPLES:   "([C][D]) / ([A][B])"
-                                                "[B] /  [A]^2 "
-
-        :return:                If explain is False, return value for the "Reaction Quotient" (aka "Mass–action Ratio");
-                                    if True, return a pair with that quotient and a string with the math formula that was used.
-                                    Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
-        """
-        # TODO: maybe also accept strings, in lieu of pairs
-        # TODO: could be tidier in avoiding unnecessary blanks in the explanations
-        numerator = np.double(1)    # The product of all the concentrations of the reaction products (adjusted for reaction order)
-        denominator = np.double(1)  # The product of all the concentrations of the reactants (also adjusted for reaction order)
-
-        numerator_text = ""      # First part of the textual explanation
-        denominator_text = ""    # Second part of the textual explanation
-
-
-        # Compute the numerator of the "Reaction Quotient"
-        for (p, order) in product_data:
-            # Loop over the reaction products
-            species_name = p
-            rxn_order = order
-
-            species_conc = conc.get(p)
-            assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
-                                             f"concentration of product `{species_name}` was not provided"
-
-            numerator *= (species_conc ** rxn_order)
-            if explain:
-                if rxn_order > 1:
-                    numerator_text += f" [{species_name}]^{rxn_order} "
-                else:
-                    numerator_text += f"[{species_name}]"
-
-        if explain and len(product_data) > 1:
-            numerator_text = f"({numerator_text})"  # In case of multiple terms, enclose them in parenthesis
-
-
-        # Compute the denominator of the "Reaction Quotient"
-        for (r, order) in reactant_data:
-            # Loop over the reactants
-            species_name =  r
-            rxn_order =  order
-
-            species_conc = conc.get(species_name)
-            assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
-                                             f"concentration of reactant `{species_name}` was not provided"
-
-            denominator *= (species_conc ** rxn_order)
-            if explain:
-                if rxn_order > 1:
-                    denominator_text += f" [{species_name}]^{rxn_order} "
-                else:
-                    denominator_text += f"[{species_name}]"
-
-        if explain and len(reactant_data) > 1:
-            denominator_text = f"({denominator_text})"  # In case of multiple terms, enclose them in parenthesis
-
-
-        with np.errstate(divide='ignore', invalid='ignore'):
-            # It might be np.inf (if just the denominator is zero) or np.nan (if both are zero)
-            quotient = numerator / denominator
-
-        if explain:
-            formula = f"{numerator_text} / {denominator_text}"
-            return (quotient, formula)
-
-        return quotient
-
-
-
-    @staticmethod
-    def compute_equilibrium_conc(kF, kR, a=0, b=0, c=0, d=0, A0=1, B0=1, C0=1, D0=1) -> dict:
+    def compute_equilibrium_conc_first_order(kF, kR, a, A0, c, C0, b=0, B0=1, d=0, D0=1) -> dict:
         """
         Determine the equilibrium concentrations that would be eventually reached
-        by the chemicals participating in the reversible reaction:
+        by the chemicals participating in a reversible reaction of the form:
             aA + bB <-> cC + dD
-        that is FIRST ORDER in all chemicals (some of the terms may be missing),
+        whose kinetics are (hypothetically) FIRST ORDER in all the chemicals
+        (some of the terms may be missing),
         given the specified initial concentrations,
         IN THE ABSENCE of any other reaction.
 
-        Note:  we're using "concentrations" instead of "chemical activities";
-               concentrations approximates the activities of solutes
+        In other words, this applies to reactions that can be modeled kinetically as:
+            vF = kF [A] [B]  ,  vR = kR [C] [D]    (some of the terms may be missing)
+        where vF and vR are, respectively, the forward and reverse reaction velocities (rates).
+        If the reaction isn't elementary, kF will be a composite "kF effective"; likewise for kR.
 
-        :param kF:  The reaction's forward rate constant
-        :param kR:  The reaction's reverse rate constant
+        CAUTION: since all reaction orders are taken to be 1,
+                 if any of stoichiometry coefficients of the involved chemicals aren't 1,
+                 then it's a scenario of "generalized kinetics"
+                 (non-mass-action with respect to the stoichiometry)
+
+        Note:  we're using "concentrations" instead of "chemical activities";
+               concentrations approximate the activities of ideal dilute solutions
+
+        :param kF:  The reaction's forward rate constant.
+                        If the reaction isn't elementary, this value will be a composite "kF effective"
+        :param kR:  The reaction's reverse rate constant.
+                        If the reaction isn't elementary, this value will be a composite "kR effective"
+
         :param a:   The stoichiometry coefficient of chemical A in the reaction
-        :param b:
-        :param c:
-        :param d:
         :param A0:  The initial concentration of chemical A
-        :param B0:
-        :param C0:
-        :param D0:
+        :param b:   [OPTIONAL] The stoichiometry coefficient of chemical B in the reaction;
+                        if not present, accept the default value
+        :param B0:  [OPTIONAL] The initial concentration of chemical B;
+                        if not present, accept the default value
+        :param c:   The stoichiometry coefficient of chemical C in the reaction
+        :param C0:  The initial concentration of chemical C
+        :param d:   [OPTIONAL] The stoichiometry coefficient of chemical D in the reaction;
+                        if not present, accept the default value
+        :param D0:  [OPTIONAL] The initial concentration of chemical B;
+                        if not present, accept the default value
+
         :return:    A dictionary of the equilibrium concentrations of the
                         chemicals involved in the specified reaction
                         EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8, 'D': 0.3}
@@ -659,7 +588,7 @@ class ReactionKinetics:
         '''
         For (hypothetical) reactions of the form aA + bB <-> cC + dD  
         that are FIRST-ORDER in all chemicals, and with the given initial condition,
-        the equilibrium equation equates the reaction's forward and reverse rates 
+        the equilibrium equation needs to equate the reaction's forward and reverse rates 
         after the reaction has advanced by m moles 
         (which consumes reagents in proportion to their stoichiometric coefficients, and 
         generates products similarly):
@@ -693,6 +622,12 @@ class ReactionKinetics:
         In case of two solution for the quadratic, we'll pick the one that
         leads to physically-possible results (non-negative concentrations of all the chemicals.)
         '''
+        assert kR is not None, \
+            "compute_equilibrium_conc_first_order(): a value must be passed for argument `kR` (currently None)"
+
+        assert kF is not None, \
+            "compute_equilibrium_conc_first_order(): a value must be passed for argument `kF` (currently None)"
+
 
         alpha = (kF * a * b - kR * c * d)
         beta = -kF * (b*A0 + a*B0) -kR * (d*C0 + c*D0)

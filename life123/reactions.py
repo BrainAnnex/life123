@@ -454,9 +454,9 @@ class ReactionUnimolecular(ReactionOneStep):
         return [self.product]
 
 
-    def extract_products(self) -> [(int, str, int)]:
+    def extract_products(self) -> [(int, str)]:
         """
-        Return a list of triplet with details of the products of the given reaction,
+        Return a list of pairs with details of the products of the given reaction,
         incl. their stoichiometry and chemical label
 
         :return:    A list of pairs of the form (stoichiometry, chemical label)
@@ -501,8 +501,8 @@ class ReactionUnimolecular(ReactionOneStep):
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        return ReactionKinetics.compute_reaction_quotient(reactant_data=[(self.reactant, 1)], product_data=[(self.product, 1)],
-                                                          conc=conc, explain=explain)
+        return ThermoDynamics.compute_reaction_quotient(reactant_data=[(1, self.reactant)], product_data=[(1, self.product)],
+                                                        conc=conc, explain=explain)
 
 
 
@@ -602,19 +602,22 @@ class ReactionUnimolecular(ReactionOneStep):
 
         :return:            A dict mapping the above chemical labels to their equilibrium concentrations
         """
-        # To conform with ReactionKinetics.compute_equilibrium_conc, we'll express the reaction in the form A <-> C
+        # To conform with ReactionKinetics.compute_equilibrium_conc,
+        # we'll express the reaction in the form A <-> C
         A0 = conc_dict.get(self.reactant)
         assert A0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
-                                       f"concentration of the reactant `{self.reactant}` was not provided"
+                               f"concentration of the reactant `{self.reactant}` was not provided"
 
         C0 = conc_dict.get(self.product)
         assert C0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
-                                       f"concentration of the produce `{self.product}` was not provided"
+                               f"concentration of the produce `{self.product}` was not provided"
 
-        eq_dict = ReactionKinetics.compute_equilibrium_conc(kF=self.kF, kR=self.kR,
-                                                            a=self.reactant, c=self.product,
-                                                            A0=A0, C0=0)  # dict with keys "A", "B", "C", "D"
-        # Translate the standard names A, B, C, D into the actual names, and also drop any missing term
+        eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
+                                                                        a=1, c=1,
+                                                                        A0=A0, C0=C0)
+
+        # eq_dict contains the keys "A", "B", "C", "D";
+        # translate the standard names A, B, C, D into the actual names, and also drop any missing term
         return  {self.reactant: eq_dict["A"], self.product: eq_dict["C"]}
 
 
@@ -722,7 +725,7 @@ class ReactionSynthesis(ReactionOneStep):
 
     def extract_products(self) -> [(int, str)]:
         """
-        Return a list of triplet with details of the products of the given reaction,
+        Return a list of pairs with details of the products of the given reaction,
         incl. their stoichiometry and chemical label
 
         :return:    A list of pairs of the form (stoichiometry, chemical label)
@@ -767,9 +770,9 @@ class ReactionSynthesis(ReactionOneStep):
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        return ReactionKinetics.compute_reaction_quotient(reactant_data=[(self.reactant_1, 1) , (self.reactant_2, 1)],
-                                                          product_data= [(self.product, 1)],
-                                                          conc=conc, explain=explain)
+        return ThermoDynamics.compute_reaction_quotient(reactant_data=[(1, self.reactant_1) , (1, self.reactant_2)],
+                                                        product_data= [(1, self.product)],
+                                                        conc=conc, explain=explain)
 
 
 
@@ -842,6 +845,49 @@ class ReactionSynthesis(ReactionOneStep):
         increment_dict_single_rxn[p] = delta_conc
 
         return (increment_dict_single_rxn, rxn_rate)
+
+
+
+    def find_equilibrium_conc(self, conc_dict :dict) -> dict:
+        """
+        Determine the equilibrium concentrations that would be eventually reached
+        by the chemicals of this reaction,
+        given the specified concentrations,
+        IN THE ABSENCE of any other reaction.
+
+        :param conc_dict:   A dict mapping chemical labels to their initial concentrations,
+                                for all the chemicals involved in this reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6}
+
+        :return:            A dict mapping the above chemical labels to their equilibrium concentrations
+        """
+        # To conform with ReactionKinetics.compute_equilibrium_conc,
+        # we'll express the reaction in the form A + B <-> C
+        A0 = conc_dict.get(self.reactant_1)
+        assert A0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                                       f"concentration of the reactant `{self.reactant_1}` was not provided"
+
+        B0 = conc_dict.get(self.reactant_2)
+        assert B0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                               f"concentration of the reactant `{self.reactant_2}` was not provided"
+
+        C0 = conc_dict.get(self.product)
+        assert C0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                               f"concentration of the produce `{self.product}` was not provided"
+
+        if self.reactant_1 == self.reactant_2:
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
+                                                                        a=2, b=2, c=1,
+                                                                        A0=A0, B0=B0, C0=C0)
+        else:
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
+                                                                        a=1, b=1, c=1,
+                                                                        A0=A0, B0=B0, C0=C0)
+
+        # eq_dict contains the keys "A", "B", "C", "D";
+        # translate the standard names A, B, C, D into the actual names, and also drop any missing term
+        return  {self.reactant_1: eq_dict["A"], self.reactant_2: eq_dict["B"], self.product: eq_dict["C"]}
+
 
 
 
@@ -946,9 +992,9 @@ class ReactionDecomposition(ReactionOneStep):
         return [self.product_1, self.product_2]
 
 
-    def extract_products(self) -> [(int, str, int)]:
+    def extract_products(self) -> [(int, str)]:
         """
-        Return a list of triplet with details of the products of the given reaction,
+        Return a list of pairs with details of the products of the given reaction,
         incl. their stoichiometry and chemical label
 
         :return:    A list of pairs of the form (stoichiometry, chemical label)
@@ -999,9 +1045,9 @@ class ReactionDecomposition(ReactionOneStep):
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        return ReactionKinetics.compute_reaction_quotient(reactant_data=[(self.reactant, 1)],
-                                                          product_data=[(self.product_1, 1) , (self.product_2, 1)],
-                                                          conc=conc, explain=explain)
+        return ThermoDynamics.compute_reaction_quotient(reactant_data=[(1, self.reactant)],
+                                                        product_data=[(1, self.product_1) , (1, self.product_2)],
+                                                        conc=conc, explain=explain)
 
 
 
@@ -1075,6 +1121,49 @@ class ReactionDecomposition(ReactionOneStep):
 
 
         return (increment_dict_single_rxn, rxn_rate)
+
+
+
+    def find_equilibrium_conc(self, conc_dict :dict) -> dict:
+        """
+        Determine the equilibrium concentrations that would be eventually reached
+        by the chemicals of this reaction,
+        given the specified concentrations,
+        IN THE ABSENCE of any other reaction.
+
+        :param conc_dict:   A dict mapping chemical labels to their initial concentrations,
+                                for all the chemicals involved in this reaction
+                                EXAMPLE:  {"B": 1.5, "F": 31.6}
+
+        :return:            A dict mapping the above chemical labels to their equilibrium concentrations
+        """
+        # To conform with ReactionKinetics.compute_equilibrium_conc,
+        # we'll express the reaction in the form A <-> C + D
+        A0 = conc_dict.get(self.reactant)
+        assert A0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                                       f"concentration of the reactant `{self.reactant}` was not provided"
+
+        C0 = conc_dict.get(self.product_1)
+        assert C0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                               f"concentration of the reactant `{self.product_1}` was not provided"
+
+        D0 = conc_dict.get(self.product_2)
+        assert D0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                               f"concentration of the produce `{self.product_2}` was not provided"
+
+        if self.product_1 == self.product_2:
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
+                                                                        a=1, c=2, d=2,
+                                                                        A0=A0, C0=C0, D0=D0)
+        else:
+            eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
+                                                                        a=1, c=1, d=1,
+                                                                        A0=A0, C0=C0, D0=D0)
+
+        # eq_dict contains the keys "A", "B", "C", "D";
+        # translate the standard names A, B, C, D into the actual names, and also drop any missing term
+        return  {self.reactant: eq_dict["A"], self.product_1: eq_dict["C"], self.product_2: eq_dict["D"]}
+
 
 
 
@@ -1195,7 +1284,7 @@ class ReactionEnzyme(ReactionCommon):
         """
         Return a list of pairs with details of ALL the reactants of the given reaction
         (including the enzyme)
-        Each triplet contains stoichiometry and chemical label
+        Each pair contains stoichiometry and chemical label
 
         :return:    A list of pairs of the form (stoichiometry, chemical label)
         """
@@ -1508,9 +1597,8 @@ class ReactionGeneric(ReactionOneStep):
             plus thermodynamic data: delta_H, delta_S, delta_G, K (equilibrium constant) -
                                      for details see class "ThermoDynamics"
 
-    Internally, each Reactant and each Product is a triplet of the form: (stoichiometry, species index, reaction order).
-    The "reaction order" in that triplet refers to the forward reaction for reactants, and to the reverse reaction for products.
-    Note that any reactant and products might be catalysts
+    Internally, each Reactant and each Product is a pair of the form: (stoichiometry coefficient, species label).
+    Note that any reactant and products might act as catalyst.
     """
 
     def __init__(self, reactants :str|list, products :str|list, **kwargs):
@@ -1525,7 +1613,7 @@ class ReactionGeneric(ReactionOneStep):
               stoichiometry coefficients.
 
               The full structure of each term in the list of reactants and of products
-              is the triplet:  (stoichiometry coefficient, name, reaction order)
+              is the pair:  (stoichiometry coefficient, chemical label
 
               EXAMPLES of formats to use for each term in the lists of the reactants and of the products:
                 "F"         is taken to mean (1, "F) - default stoichiometry coefficient of 1
@@ -1670,7 +1758,7 @@ class ReactionGeneric(ReactionOneStep):
 
     def extract_products(self) -> [(int, str)]:
         """
-        Return a list of triplet with details of the products of the given reaction,
+        Return a list of pairs with details of the products of the given reaction,
         incl. their stoichiometry and chemical label
 
         :return:    A list of pairs of the form (stoichiometry, chemical label)
@@ -1827,16 +1915,15 @@ class ReactionGeneric(ReactionOneStep):
             "reaction_quotient(): the reaction quotient can only be computed when the reaction follows the 'standard rate law'; " \
             "consider a call to set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)"
 
-        reactants_and_order = [(self.extract_chem_label(r) , self.extract_stoichiometry(r))
-                                for r in self.reactants]        # The stoichiometry coefficient is taken to be the rxn order
-                                                                # because this reaction is (hypothetically) following the 'standard rate law'
+        reactant_data = [(self.extract_stoichiometry(r), self.extract_chem_label(r))
+                         for r in self.reactants]
 
-        products_and_order = [(self.extract_chem_label(p) , self.extract_stoichiometry(p))
-                               for p in self.products]          # The stoichiometry coefficient is taken to be the rxn order
+        product_data = [(self.extract_stoichiometry(p), self.extract_chem_label(p) )
+                               for p in self.products]
 
-        return ReactionKinetics.compute_reaction_quotient(reactant_data=reactants_and_order,
-                                                          product_data=products_and_order,
-                                                          conc=conc, explain=explain)
+        return ThermoDynamics.compute_reaction_quotient(reactant_data=reactant_data,
+                                                        product_data=product_data,
+                                                        conc=conc, explain=explain)
 
 
 
@@ -1959,6 +2046,70 @@ class ReactionGeneric(ReactionOneStep):
         assert len(increment_dict_single_rxn) == len(self.extract_chemicals_in_reaction())  # TODO: temp test
 
         return (increment_dict_single_rxn, rxn_rate)
+
+
+
+    def find_equilibrium_conc(self, conc_dict :dict) -> dict:
+        """
+        Determine the equilibrium concentrations that would be eventually reached
+        by the chemicals of this reaction,
+        given the specified concentrations,
+        IN THE ABSENCE of any other reaction.
+
+        :param conc_dict:   A dict mapping chemical labels to their initial concentrations,
+                                for all the chemicals involved in this reaction
+                                EXAMPLE:  {"X": 4.3, "Y": 1.5, "F": 31.6, "G": 3.6}
+
+        :return:            A dict mapping the above chemical labels to their equilibrium concentrations
+        """
+        assert self.kinetic_rate_function == ReactionKinetics.compute_rate_first_order, \
+            "find_equilibrium_conc(): only implemented for reactions whose kinetic rate function is `ReactionKinetics.compute_rate_first_order` \n" \
+            "if that's the case, make sure to first invoke:   set_rate_function(ReactionKinetics.compute_rate_first_order)"
+
+        # To conform with ReactionKinetics.compute_equilibrium_conc,
+        # we'll express the reaction in the form aA + bB <-> bC + dD
+
+        reactants = self.extract_reactants()
+        products = self.extract_products()
+
+        assert len(reactants) == 2, \
+            f"find_equilibrium_conc(): only implemented for reactions with 2 reactants (we have {len(reactants)})"
+
+        assert len(products) == 2, \
+            f"find_equilibrium_conc(): only implemented for reactions with 2 products (we have {len(products)})"
+
+        r1, r2 = reactants
+        p1, p2 = products
+
+        A0 = conc_dict.get(self.extract_chem_label(r1))
+        assert A0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                               f"concentration of the reactant `{self.extract_chem_label(r1)}` was not provided"
+
+        B0 = conc_dict.get(self.extract_chem_label(r2))
+        assert B0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                               f"concentration of the reactant `{self.extract_chem_label(r2)}` was not provided"
+
+
+        C0 = conc_dict.get(self.extract_chem_label(p1))
+        assert C0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                               f"concentration of the produce `{self.extract_chem_label(p1)}` was not provided"
+
+        D0 = conc_dict.get(self.extract_chem_label(p2))
+        assert D0 is not None, f"find_equilibrium_conc(): unable to proceed because the " \
+                               f"concentration of the produce `{self.extract_chem_label(p2)}` was not provided"
+
+
+
+        eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
+                                                                        a=self.extract_stoichiometry(r1), b=self.extract_stoichiometry(r2),
+                                                                        c=self.extract_stoichiometry(p1), d=self.extract_stoichiometry(p1),
+                                                                        A0=A0, B0=B0, C0=C0, D0=D0)
+
+        # eq_dict contains the keys "A", "B", "C", "D";
+        # translate the standard names A, B, C, D into the actual names, and also drop any missing term
+        return  {self.extract_chem_label(r1): eq_dict["A"], self.extract_chem_label(r2): eq_dict["B"],
+                 self.extract_chem_label(p1): eq_dict["C"], self.extract_chem_label(p2): eq_dict["D"]}
+
 
 
 

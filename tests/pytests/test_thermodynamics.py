@@ -107,3 +107,30 @@ def test_delta_S_from_gibbs():
     assert np.allclose(delta_S, 20.)
     # Get back the original delta_G
     assert np.allclose(3000. , ThermoDynamics.delta_G_from_enthalpy(delta_H=5000, delta_S=delta_S, temp=100))
+
+
+
+def test_compute_reaction_quotient():
+    # Reaction : A <-> B
+    q = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"B")],
+                                                 conc={'A': 24., 'B': 36.}, explain=False)
+    assert np.allclose(q, 1.5)
+    q, formula = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"B")],
+                                                          conc={'A': 24., 'B': 36.}, explain=True)
+    assert np.allclose(q, 1.5)
+    assert formula == '[B] / [A]'
+
+    # Reaction: R + S <-> P + Q
+    q, formula = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"R"), (1,"S")],
+                                                          product_data=[(1,"P"), (1,"Q")],
+                                                          conc={'R': 10., 'S': 4., 'P': 5., 'Q': 20.}, explain=True)
+    assert np.allclose(q, 2.5)    #  (5 * 20) / (10 * 4)
+    assert formula == '([P][Q]) / ([R][S])'
+
+    # Reaction: R + 3 S <-> 2 P + Q
+    q, formula = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"R"), (3,"S")],
+                                                          product_data=[(2,"P"), (1,"Q")],
+                                                          conc={'R': 10., 'S': 4., 'P': 5., 'Q': 20.}, explain=True)
+    assert np.allclose(q, 0.78125)    #  (5**2 * 20) / (10 * 4**3)
+    assert formula == '( [P]^2 [Q]) / ([R] [S]^3 )'
+
