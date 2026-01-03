@@ -458,7 +458,7 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def compute_rate_pseudo_elementary(reactant_terms :[(int, str)], product_terms :[(int, str)],
+    def compute_rate_mass_action_kinetics(reactant_terms :[(int, str)], product_terms :[(int, str)],
                                        kF :float, kR :float,
                                        conc_dict :dict) -> float:
         """
@@ -499,7 +499,7 @@ class ReactionKinetics:
         for order, reactant_label in reactant_terms:     # The stoichiometry coeff. of each reactant is taken to be its reaction order
             conc = conc_dict.get(reactant_label)
             assert conc is not None, \
-                f"compute_rate_pseudo_elementary(): missing concentration value for reactant chemical with label `{reactant_label}`"
+                f"compute_rate_mass_action_kinetics(): missing concentration value for reactant chemical with label `{reactant_label}`"
             forward_rate *= conc ** order       # Raise to power
 
 
@@ -511,7 +511,7 @@ class ReactionKinetics:
         for order, product_label in product_terms:      # The stoichiometry coeff. of each product is taken to be its reaction order
             conc = conc_dict.get(product_label)
             assert conc is not None, \
-                f"compute_rate_pseudo_elementary(): missing concentration value for product chemical with label `{product_label}`"
+                f"compute_rate_mass_action_kinetics(): missing concentration value for product chemical with label `{product_label}`"
             reverse_rate *= conc ** order       # Raise to power
 
         return forward_rate - reverse_rate

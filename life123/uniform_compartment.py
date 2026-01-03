@@ -2291,7 +2291,7 @@ class UniformCompartment:
                         as supported by the class ReactionGeneric
                         first-order in all chemicals (some of the terms may be missing),
                         for which the kinetic rate function is
-                        ReactionKinetics.compute_rate_pseudo_elementary(), i.e. the "standard ratelaw".
+                        ReactionKinetics.compute_rate_mass_action_kinetics(), i.e. the "standard ratelaw".
                         (Note: generally, this will be a very hypothetical scenario!)
                         An Exception will be raised in all other cases!
 
@@ -2304,9 +2304,9 @@ class UniformCompartment:
 
         assert np.allclose(rxn.ge)
 
-        assert rxn.kinetic_rate_function == ReactionKinetics.compute_rate_pseudo_elementary, \
+        assert rxn.kinetic_rate_function == ReactionKinetics.compute_rate_mass_action_kinetics, \
             "find_equilibrium_conc(): unsupported scenario where the reaction " \
-            "doesn't follow the 'standard rate law' (function ReactionKinetics.compute_rate_pseudo_elementary)"
+            "doesn't follow the 'standard rate law' (function ReactionKinetics.compute_rate_mass_action_kinetics)"
 
         reactants = rxn.extract_reactants()
         products = rxn.extract_products()

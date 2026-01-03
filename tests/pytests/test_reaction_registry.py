@@ -13,7 +13,7 @@ def test_constructor():
     assert rxns.reaction_list == []
 
     assert rxns.active_chemicals == set()       # Empty set
-    #assert rxns.active_enzymes == set()         # Empty set
+    #assert rxns.active_enzymes == set()        # Empty set
 
 
 
@@ -263,9 +263,9 @@ def test_add_reaction():
     # Check the descriptions we has so far
     rxn_info = rxns.multiple_reactions_describe()
     assert rxn_info[0] == '0: A <-> B  Elementary Unimolecular reaction  (kF = 3 / kR = 2 / K = 1.5)'
-    assert rxn_info[1] == '1: 2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.2857) | No kinetic rate function provided'
+    assert rxn_info[1] == '1: 2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.2857) | Kinetic rate function : `compute_rate_mass_action_kinetics()`'
     assert rxn_info[2] == '2: 2 D  <-> C  Elementary Synthesis reaction  (kF = 11 / kR = 13 / delta_G = 277.79 / K = 0.84615 / Temp = -73.15 C)'
-    assert rxn_info[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2,676.3 / K = 5 / Temp = -73.15 C) | No kinetic rate function provided'
+    assert rxn_info[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2,676.3 / K = 5 / Temp = -73.15 C) | Kinetic rate function : `compute_rate_mass_action_kinetics()`'
 
 
     # Add another reaction (reaction index 4), this time with thermodynamic data;
@@ -352,7 +352,7 @@ def test_determine_reaction_rate_ReactionGeneric():
     # Reaction A <-> B
     rxn = ReactionGeneric(reactants="A", products="B",
                           kF=20., kR=2., reversible=True)
-    rxn.set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)  # "standard rate law"
+    rxn.set_rate_function(ReactionKinetics.compute_rate_mass_action_kinetics)  # "standard rate law"
     result = rxn.determine_reaction_rate(conc_dict={"A": 5., "B": 8.})
     assert np.allclose(result, 20. * 5. - 2. * 8.)  # 84.0
 
@@ -391,7 +391,7 @@ def test_determine_reaction_rate_ReactionGeneric():
     # Reaction  2A <-> B , with 2nd-ORDER kinetics in the forward direction
     rxn = ReactionGeneric(reactants=[(2, "A")], products="B",
                           kF=5., kR=2., reversible=True)
-    rxn.set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)  # "standard rate law"
+    rxn.set_rate_function(ReactionKinetics.compute_rate_mass_action_kinetics)  # "standard rate law"
     result = rxn.determine_reaction_rate(conc_dict={"A": 4.5, "B": 6.})
     assert np.allclose(result, 5. * 4.5 **2 - 2. * 6.)  # 89.25
 
@@ -407,7 +407,7 @@ def test_determine_reaction_rate_ReactionGeneric():
 
     # Reaction  B <-> 2C , with 2nd-ORDER kinetics in the reverse direction
     rxn = ReactionGeneric(reactants="B", products=[(2, "C")], kF=4., kR=2.)
-    rxn.set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)  # "standard rate law"
+    rxn.set_rate_function(ReactionKinetics.compute_rate_mass_action_kinetics)  # "standard rate law"
     result = rxn.determine_reaction_rate(conc_dict={"B": 5., "C": 4})
     assert np.allclose(result, 4. * 5. - 2. * 4. **2)           # -12.0
 

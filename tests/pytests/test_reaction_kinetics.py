@@ -190,35 +190,35 @@ def test_compute_rate_elementary():
 
 
 
-def test_compute_rate_pseudo_elementary():
+def test_compute_rate_mass_action_kinetics():
 
     # Reaction  2A <-> B , with 2nd-ORDER kinetics in the forward direction
-    result = ReactionKinetics.compute_rate_pseudo_elementary(reactant_terms=[(2, "A")], product_terms=[(1, "B")],
+    result = ReactionKinetics.compute_rate_mass_action_kinetics(reactant_terms=[(2, "A")], product_terms=[(1, "B")],
                                                     kF=5., kR=2.,
                                                     conc_dict={"A": 4.5, "B": 6.})
     assert np.allclose(result, 5. * 4.5 **2 - 2. * 6.)      # 89.25
 
-    result = ReactionKinetics.compute_rate_pseudo_elementary(reactant_terms=[(2, "A")], product_terms=[(1, "B")],
+    result = ReactionKinetics.compute_rate_mass_action_kinetics(reactant_terms=[(2, "A")], product_terms=[(1, "B")],
                                                     kF=5., kR=0,
                                                     conc_dict={"A": 4.5, "B": 6.})
     assert np.allclose(result, 5. * 4.5 **2)                # 101.25   (irreversible reaction)
 
 
-    result = ReactionKinetics.compute_rate_pseudo_elementary(reactant_terms=[(2, "A")], product_terms=[(1, "B")],
+    result = ReactionKinetics.compute_rate_mass_action_kinetics(reactant_terms=[(2, "A")], product_terms=[(1, "B")],
                                                     kF=3., kR=2.,
                                                     conc_dict={"A": 5., "B": 8.})
     assert np.allclose(result, 59.)
 
 
     # Reaction  B <-> 2C , with 2nd-ORDER kinetics in the reverse direction
-    result = ReactionKinetics.compute_rate_pseudo_elementary(reactant_terms=[(1, "B")], product_terms=[(2, "C")],
+    result = ReactionKinetics.compute_rate_mass_action_kinetics(reactant_terms=[(1, "B")], product_terms=[(2, "C")],
                                                 kF=4., kR=2.,
                                                 conc_dict={"B": 5., "C": 4})
     assert np.allclose(result, 4. * 5. - 2. * 4. **2)       # -12.0
 
 
     # Reaction A + B <-> C + D , with 1st-order kinetics for each species
-    result = ReactionKinetics.compute_rate_pseudo_elementary(reactant_terms=[(1, "A"), (1, "B")], product_terms=[(1, "C"), (1, "D")],
+    result = ReactionKinetics.compute_rate_mass_action_kinetics(reactant_terms=[(1, "A"), (1, "B")], product_terms=[(1, "C"), (1, "D")],
                                             kF=5., kR=2.,
                                             conc_dict={"A": 5., "B": 8., "C": 15., "D": 7.})
     assert np.allclose(result,  -10.)

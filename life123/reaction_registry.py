@@ -312,7 +312,8 @@ class ReactionRegistry:
         # Update the set of "active chemicals"
         self.active_chemicals = self.active_chemicals | involved_chemicals  # Union of sets
 
-        rxn.set_thermodynamic_data(temp=temp)   # TODO: unclear if this is the best place to do this
+        if temp is not None:
+            rxn.set_thermodynamic_data(temp=temp)   # TODO: unclear if this is the best place to do this
 
         return len(self.reaction_list) - 1
 

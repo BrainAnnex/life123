@@ -192,3 +192,63 @@ class ThermoDynamics:
             return (quotient, formula)
 
         return quotient
+
+
+
+    @classmethod
+    def extract_thermodynamic_data(cls, temp, K=None, delta_H=None, delta_S=None, delta_G=None) -> dict:
+        """
+
+        :param temp:                System's temperature, in degree Kelvins
+        :param K:       [OPTIONAL]
+        :param delta_H: [OPTIONAL]
+        :param delta_S: [OPTIONAL]
+        :param delta_G: [OPTIONAL]
+
+        :return:        A dict with the 4 keys  "K", "delta_H", "delta_S", "delta_G"
+        """
+        #print(f"In extract_thermodynamic_data(): temp={temp}, K={K}, delta_H={delta_H}, delta_S={delta_S}, delta_G={delta_G}")
+
+        assert temp is not None, \
+            "extract_thermodynamic_data(): a temperature value (in K) must be passed to argument `temp`"
+
+
+        if (K is not None):
+            # If the temperature is set, compute the change in Gibbs Free Energy
+            delta_G_derived = cls.delta_G_from_K(K = K, temp = temp)
+            if delta_G is None:
+                delta_G = delta_G_derived
+            else:   # If already present (passed as argument), make sure that the two match!
+                assert np.allclose(delta_G_derived, delta_G), \
+                    f"extract_thermodynamic_data(): inconsistency between the derived ({delta_G_derived}) " \
+                    f"and the passed ({delta_G}) values of Delta_G"
+
+
+        if (delta_H is not None) and (delta_S is not None):
+            # If all the thermodynamic data (possibly except delta_G) is available...
+
+            # Compute the change in Gibbs Free Energy from delta_H and delta_S, at the current temperature
+            delta_G_derived = cls.delta_G_from_enthalpy(delta_H = delta_H, delta_S = delta_S, temp = temp)
+
+            if delta_G is None:
+                delta_G = delta_G_derived
+            else:  # If already present (passed as argument), make sure that the two match!
+                assert np.allclose(delta_G_derived, delta_G), \
+                    f"extract_thermodynamic_data(): inconsistency between the value of Delta_G ({delta_G_derived}) " \
+                    f"derived from enthalpy/entropy, and the its value ({delta_G}) passed as argument or derived from K"
+
+
+        if delta_G is not None:
+            if K is None:
+                # Compute the equilibrium constant (from the thermodynamic data)
+                # Note: no need to do it if K is present, because we ALREADY checked for consistency
+                K = ThermoDynamics.K_from_delta_G(delta_G = delta_G, temp = temp)
+
+            # If either Enthalpy or Entropy is missing, but the other one is known, compute the missing one
+            if (delta_H is None) and (delta_S is not None):
+                delta_H = ThermoDynamics.delta_H_from_gibbs(delta_G=delta_G, delta_S=delta_S, temp=temp)
+            elif (delta_H is not None) and (delta_S is None):
+                delta_S = ThermoDynamics.delta_S_from_gibbs(delta_G=delta_G, delta_H=delta_H, temp=temp)
+
+
+        return {"K": K, "delta_H": delta_H, "delta_S": delta_S, "delta_G": delta_G}

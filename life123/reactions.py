@@ -55,6 +55,34 @@ class ReactionCommon:
 
 
 
+
+    def reaction_details(self, rxn_properties :dict) -> str:
+        """
+        Return a string with some details about the parameters of this reaction
+
+        :param rxn_properties:  A dictionary with numerical properties of interest for the reaction
+                                    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': -1005.13, 'K': 1.5}
+
+        :return:                A string with some details about the parameters of this reaction
+                                    EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13 / Temp = 25 C)"
+        """
+        details = []
+        #rxn_properties = self.extract_rxn_properties()
+        for k,v in rxn_properties.items():
+            details.append(f"{k} = {v:,.5g}")          # EXAMPLE: "kF = 3"
+
+        description = ""
+
+        if self.temp:
+            details.append(f"Temp = {self.temp - 273.15:,.4g} C")          # EXAMPLE: "Temp = 25 C"
+
+        if details:
+            description = "  (" + ' / '.join(details) + ")"   # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
+
+        return description
+
+
+
     def extract_stoichiometry(self, term :(int, str)) -> int:
         """
         Return the stoichiometry coefficient, from a reaction "TERM"
@@ -89,7 +117,7 @@ class ReactionCommon:
 ###################################################################################################################
 
 
-class ReactionOneStep(ReactionCommon):
+class ReactionElementary(ReactionCommon):
     """
     Base class for all reactions that can be modeled kinetically as happening in 1 step
     (i.e. with no intermediaries).
@@ -114,45 +142,89 @@ class ReactionOneStep(ReactionCommon):
 
         if not self.reversible:
             assert not kR, \
-                f"ReactionOneStep instantiation: irreversible reactions cannot have a value for the reverse rate constant (kR = {kR})"
+                f"ReactionElementary instantiation: irreversible reactions " \
+                f"cannot have a value for the reverse rate constant (kR = {kR})"
             kR = 0
 
         self.kF = kF                # Forward rate constant
         self.kR = kR                # Reverse rate constant
+        self.K = None               # Forward–reverse rate constant ratio (Kinetic parameter ratio)
+
+        # Process the kinetic  data
+        self.equilibrium_constant_from_kinetic_data(kF=kF, kR=kR) # This will set self.K if possible
+
         self.delta_H = delta_H
         self.delta_S = delta_S
         self.delta_G = delta_G
-        self.K = None               # Forward–reverse rate constant ratio (Kinetic parameter ratio)
 
-        if (kR is not None) and not np.allclose(self.kR, 0):
+        if self.temp is not None:
+            # Process the thermodynamic data, and update various object attributes accordingly
+            thermo_data = ThermoDynamics.extract_thermodynamic_data(K=self.K,
+                                                                delta_H=delta_H, delta_S=delta_S, delta_G=delta_G,
+                                                                temp=self.temp)
+            #print(f"thermo_data : {thermo_data}")
+            self.K = thermo_data["K"]
+            self.delta_H = thermo_data["delta_H"]
+            self.delta_S = thermo_data["delta_S"]
+            self.delta_G = thermo_data["delta_G"]
+
+            self.set_rate_constants_from_equilibrium_constant(K=self.K)
+
+
+
+
+    def equilibrium_constant_from_kinetic_data(self, K=None, kF=None, kR=None):
+        """
+        True for Elementary reactions
+        (and, more generally, for any reaction that follows mass-action kinetics)
+
+        :param K:
+        :param kF:
+        :param kR:
+        :return:
+        """
+        print(f"In equilibrium_constant_from_kinetic_data() : kF={kF}, kR={kR}")
+        if (self.K is None) and (kF is not None) and (kR is not None) and (not np.allclose(self.kR, 0)):
             self.K = kF / kR
+            return
 
-        # Process the kinetic and thermodynamic data, and update various object attributes accordingly
-        self._set_kinetic_and_thermodynamic(forward_rate=kF, reverse_rate=kR,
-                                            delta_H=delta_H, delta_S=delta_S, delta_G=delta_G, temp=self.temp)
+        if (self.kR is None) and (kF is not None) and (K is not None):
+            self.kR = kF / K
+            return
+
+        if (self.kF is None) and (K is not None) and (kR is not None):
+            self.kF = K * kR
 
 
 
-    def reaction_details(self) -> str:
+    def set_rate_constants_from_equilibrium_constant(self, K) -> None:
         """
-        Return a string with some details about the parameters of this reaction
+        Set, as needed, a missing reaction rate constant (kF or kR)
+        from the other one and the given equilibrium constant K.
+        If all values already exist, and an inconsistency is detected, an Exception will be raised.
 
-        :return:    EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13 / Temp = 25 C)"
+        Note: the reaction's equilibrium constant and its kinetic rate constants are
+              in the relationship K = kF / kR for any
+              (and, more generally, for any reaction that follows mass-action kinetics)
+
+        :param K:   The reaction's equilibrium constant
+        :return:    None
         """
-        details = []
-        rxn_properties = self.extract_rxn_properties()
-        for k,v in rxn_properties.items():
-            details.append(f"{k} = {v:,.5g}")          # EXAMPLE: "kF = 3"
+        if self.K is None:
+            return
 
-        description = ""
+        if (self.kR is None) and (self.kF is not None):
+            self.kR = self.kF / K
+            return
 
-        if self.temp:
-            details.append(f"Temp = {self.temp - 273.15:,.4g} C")          # EXAMPLE: "Temp = 25 C"
+        if (self.kF is None) and (self.kR is not None):
+            self.kF = K * self.kR
+            return
 
-        if details:
-            description = "  (" + ' / '.join(details) + ")"   # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
-
-        return description
+        if (self.kF is not None) and (self.kR is not None):
+            assert np.allclose(K, self.kF / self.kR), \
+                f"set_rate_constants_from_equilibrium_constant(): values for kR and kR already exist, " \
+                f"and are inconsistent with the passed value of K ({K})"
 
 
 
@@ -189,83 +261,6 @@ class ReactionOneStep(ReactionCommon):
 
 
 
-    def _set_kinetic_and_thermodynamic(self, forward_rate, reverse_rate,
-                                       delta_H, delta_S, delta_G, temp) -> None:
-        """
-        Set all the kinetic and thermodynamic data derivable - directly or indirectly - from the passed arguments,
-        storing it in object attributes.
-        Raise an Exception if any inconsistency is detected.
-
-        :param forward_rate:
-        :param reverse_rate:
-        :param delta_H:
-        :param delta_S:
-        :param delta_G:
-        :param temp:
-        :return:                None
-        """
-        self.kF = forward_rate
-        self.kR = reverse_rate
-        self.delta_H = delta_H
-        self.delta_S = delta_S
-        self.delta_G = delta_G
-
-
-        # Process kinetic data, if available
-        #       (extracting thermodynamic data when feasible)
-        if (self.kF is not None) and (self.kR is not None) and not np.allclose(self.kR, 0):
-            # If all the kinetic data is available...
-            self.K = self.kF / self.kR    # ...compute the equilibrium constant (from kinetic data)
-
-            if temp:
-                # If the temperature is set, compute the change in Gibbs Free Energy
-                delta_G_kinetic = ThermoDynamics.delta_G_from_K(K = self.K, temp = temp)
-                if self.delta_G is None:
-                    self.delta_G = delta_G_kinetic
-                else:   # If already present (passed as argument), make sure that the two match!
-                    assert np.allclose(delta_G_kinetic, self.delta_G), \
-                        f"_set_kinetic_and_thermodynamic(): Kinetic data (leading to Delta_G={delta_G_kinetic}) " \
-                        f"is inconsistent with the passed value of Delta_G={self.delta_G})"
-
-
-        if (self.delta_H is not None) and (self.delta_S is not None) and (temp is not None):
-            # If all the thermodynamic data (possibly except delta_G) is available...
-
-            # Compute the change in Gibbs Free Energy from delta_H and delta_S, at the current temperature
-            delta_G_thermo = ThermoDynamics.delta_G_from_enthalpy(delta_H = self.delta_H, delta_S = self.delta_S, temp = temp)
-
-            if self.delta_G is None:
-                self.delta_G = delta_G_thermo
-            else:  # If already present (passed as argument or was set from kinetic data), make sure that the two match!
-                if not np.allclose(delta_G_thermo, self.delta_G):
-                    if delta_G is not None:
-                        raise Exception(f"_set_kinetic_and_thermodynamic(): thermodynamic data (leading to Delta_G={delta_G_thermo}) "
-                                        f"is inconsistent with the passed value of delta_G={delta_G})")
-                    else:
-                        raise Exception(f"_set_kinetic_and_thermodynamic(): thermodynamic data (leading to Delta_G={delta_G_thermo}) "
-                                        f"is inconsistent with kinetic data (leading to Delta_G={self.delta_G})")
-
-
-        if self.delta_G is not None:
-            if (self.K is None) and (temp is not None):
-                # If the temperature is known, compute the equilibrium constant (from the thermodynamic data)
-                # Note: no need to do it if self.K is present, because we ALREADY handled that case
-                self.K = ThermoDynamics.K_from_delta_G(delta_G = self.delta_G, temp = temp)
-
-                # If only one of the Forward or Reverse rates was provided, compute the other one
-                if (self.kF is None) and (self.kR is not None):
-                    self.kF = self.K * self.kR
-                if (self.kR is None) and (self.kF is not None):
-                    self.kR = self.kF / self.K
-
-            if temp is not None:
-                # If either Enthalpy or Entropy is missing, but the other one is known, compute the missing one
-                if (self.delta_H is None) and (self.delta_S is not None):
-                    self.delta_H = ThermoDynamics.delta_H_from_gibbs(delta_G=self.delta_G, delta_S=self.delta_S, temp=temp)
-                elif (self.delta_H is not None) and (self.delta_S is None):
-                    self.delta_S = ThermoDynamics.delta_S_from_gibbs(delta_G=self.delta_G, delta_H=self.delta_H, temp=temp)
-
-
     def set_thermodynamic_data(self, temp :float) -> None:
         """
         Set all the thermodynamic data derivable from the given temperature,
@@ -277,59 +272,18 @@ class ReactionOneStep(ReactionCommon):
                             If the temp gradually changes, periodically call this method.
         :return:        None
         """
+        # Process the thermodynamic data, and update various object attributes accordingly
+        thermo_data = ThermoDynamics.extract_thermodynamic_data(K=self.K,
+                                                  delta_H=self.delta_H, delta_S=self.delta_S, delta_G=self.delta_G,
+                                                  temp=temp)
 
-        if not temp:
-            return      # There's nothing to do
+        #print(f"thermo_data : {thermo_data}")
+        self.K = thermo_data["K"]
+        self.delta_H = thermo_data["delta_H"]
+        self.delta_S = thermo_data["delta_S"]
+        self.delta_G = thermo_data["delta_G"]
 
-        # Process kinetic data, if available,
-        #       extracting thermodynamic data when feasible
-        if self.K:
-            # If the temperature is set, compute the change in Gibbs Free Energy
-            delta_G_kinetic = ThermoDynamics.delta_G_from_K(K = self.K, temp = temp)
-            if self.delta_G is None:
-                self.delta_G = delta_G_kinetic
-            else:   # If already present (passed as argument), make sure that the two match!
-                assert np.allclose(delta_G_kinetic, self.delta_G), \
-                    f"set_thermodynamic_data(): Kinetic data (leading to Delta_G={delta_G_kinetic}) " \
-                    f"is inconsistent with the passed value of Delta_G={self.delta_G})"
-
-
-        if (self.delta_H is not None) and (self.delta_S is not None):
-            # If all the thermodynamic data (possibly except delta_G) is available...
-
-            # Compute the change in Gibbs Free Energy from delta_H and delta_S, at the current temperature
-            delta_G_thermo = ThermoDynamics.delta_G_from_enthalpy(delta_H = self.delta_H, delta_S = self.delta_S, temp = temp)
-
-            if self.delta_G is None:
-                self.delta_G = delta_G_thermo
-            else:  # If already present (passed as argument or was set from kinetic data), make sure that the two match!
-                if not np.allclose(delta_G_thermo, self.delta_G):
-                    if self.delta_G is not None:
-                        raise Exception(f"set_thermodynamic_data(): thermodynamic data (leading to Delta_G={delta_G_thermo}) "
-                                        f"is inconsistent with the passed value of delta_G={self.delta_G})")
-                    else:
-                        raise Exception(f"set_thermodynamic_data(): thermodynamic data (leading to Delta_G={delta_G_thermo}) "
-                                        f"is inconsistent with kinetic data (leading to Delta_G={self.delta_G})")
-
-
-        if self.delta_G is not None:
-            if self.K is None:
-                # If the temperature is known, compute the equilibrium constant (from the thermodynamic data)
-                # Note: no need to do it if self.K is present, because we ALREADY handled that case
-                self.K = ThermoDynamics.K_from_delta_G(delta_G = self.delta_G, temp = temp)
-
-                # If only one of the Forward or Reverse rates was provided, compute the other one
-                if (self.kF is None) and (self.kR is not None):
-                    self.kF = self.K * self.kR
-                if (self.kR is None) and (self.kF is not None):
-                    self.kR = self.kF / self.K
-
-
-            # If either Enthalpy or Entropy is missing, but the other one is known, compute the missing one
-            if (self.delta_H is None) and (self.delta_S is not None):
-                self.delta_H = ThermoDynamics.delta_H_from_gibbs(delta_G=self.delta_G, delta_S=self.delta_S, temp=temp)
-            elif (self.delta_H is not None) and (self.delta_S is None):
-                self.delta_S = ThermoDynamics.delta_S_from_gibbs(delta_G=self.delta_G, delta_H=self.delta_H, temp=temp)
+        self.set_rate_constants_from_equilibrium_constant(K=self.K)
 
 
 
@@ -371,7 +325,7 @@ class ReactionOneStep(ReactionCommon):
 
 ###################################################################################################################
 
-class ReactionUnimolecular(ReactionOneStep):
+class ReactionUnimolecular(ReactionElementary):
     """
     Reactions of type A <-> P, of first order in A and P
     """
@@ -410,7 +364,7 @@ class ReactionUnimolecular(ReactionOneStep):
             else:
                 description += "  Elementary Unimolecular Irreversible reaction"
 
-            description += self.reaction_details()
+            description += self.reaction_details(self.extract_rxn_properties())
 
         return description
 
@@ -626,7 +580,7 @@ class ReactionUnimolecular(ReactionOneStep):
 
 #######################################################################################################################
 
-class ReactionSynthesis(ReactionOneStep):
+class ReactionSynthesis(ReactionElementary):
     """
     Bimolecular reactions of type A + B <-> P,
     of first order for each participating chemical.
@@ -673,7 +627,7 @@ class ReactionSynthesis(ReactionOneStep):
             else:
                 description += "  Elementary Synthesis Irreversible reaction"
 
-            description += self.reaction_details()
+            description += self.reaction_details(self.extract_rxn_properties())
 
         return description
 
@@ -895,7 +849,7 @@ class ReactionSynthesis(ReactionOneStep):
 
 #######################################################################################################################
 
-class ReactionDecomposition(ReactionOneStep):
+class ReactionDecomposition(ReactionElementary):
     """
     Bimolecular reactions of type A <-> B + C
     of first order for each participating chemical.
@@ -948,7 +902,7 @@ class ReactionDecomposition(ReactionOneStep):
             else:
                 description += "  Elementary Decomposition Irreversible reaction"
 
-            description += self.reaction_details()
+            description += self.reaction_details(self.extract_rxn_properties())
 
         return description
 
@@ -1566,7 +1520,7 @@ class ReactionEnzyme(ReactionCommon):
 
 ###################################################################################################################
 
-class ReactionGeneric(ReactionOneStep):
+class ReactionGeneric(ReactionCommon):
     """
     Data about a generic SINGLE reaction of the most general type,
     with arbitrary number of reactants and products,
@@ -1601,7 +1555,11 @@ class ReactionGeneric(ReactionOneStep):
     Note that any reactant and products might act as catalyst.
     """
 
-    def __init__(self, reactants :str|list, products :str|list, **kwargs):
+    def __init__(self, reactants :str|list, products :str|list,
+                 reversible=True, kF=None, kR=None,
+                 delta_H=None, delta_S=None, delta_G=None,
+                 kinetic_rate_function=ReactionKinetics.compute_rate_mass_action_kinetics,
+                 **kwargs):
         """
         Create the structure for a new SINGLE chemical reaction,
         optionally including its kinetic and/or thermodynamic data.
@@ -1631,6 +1589,7 @@ class ReactionGeneric(ReactionOneStep):
         :param delta_H:     [OPTIONAL] Change in Enthalpy (from reactants to products)
         :param delta_S:     [OPTIONAL] Change in Entropy (from reactants to products)
         :param delta_G:     [OPTIONAL] Change in Free Energy (from reactants to products), in Joules
+        :param kinetic_rate_function:  [OPTIONAL] Note - the current default will be removed in later versions
         """
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
@@ -1643,15 +1602,48 @@ class ReactionGeneric(ReactionOneStep):
         #self.catalyst = None       # The label of a chemical that catalyzes this reaction, if applicable (at most 1)
                                     # TODO: deprecate
 
-        self.kinetic_rate_function = None   # A function used to estimate the reaction rate(aka "velocity"),
-                                            # at the start of the time step.
-                                            # It takes the following args:
-                                            #       reactant_terms :[(int, str)] , product_terms :[(int, str)],
-                                            #       kF :float, kR :float,
-                                            #       conc_dict :dict
-                                            #  and return a float
-                                            # EXAMPLES:  ReactionKinetics.compute_rate_pseudo_elementary  (the generalized "standard rate law")
-                                            #            ReactionKinetics.compute_rate_first_order (reaction is first order in all reactants and products)
+        self.kinetic_rate_function = kinetic_rate_function
+                                    # A function used to estimate the reaction rate(aka "velocity"),
+                                    # at the start of the time step.
+                                    # It takes the following args:
+                                    #       reactant_terms :[(int, str)] , product_terms :[(int, str)],
+                                    #       kF :float, kR :float,
+                                    #       conc_dict :dict
+                                    #  and return a float
+                                    # EXAMPLES:  ReactionKinetics.compute_rate_mass_action_kinetics  (the generalized "standard rate law")
+                                    #            ReactionKinetics.compute_rate_first_order (reaction is first order in all reactants and products)
+
+        self.reversible = reversible
+        self.kF = kF                # Forward rate constant
+        self.kR = kR                # Reverse rate constant
+        self.delta_H = delta_H
+        self.delta_S = delta_S
+        self.delta_G = delta_G
+        self.K = None
+
+        if (self.kinetic_rate_function == ReactionKinetics.compute_rate_mass_action_kinetics) \
+                                and (kF is not None) and (kR is not None) and (not np.allclose(self.kR, 0)):
+            self.K = kF / kR    # True for reactions that follows mass-action kinetics
+
+        if self.temp is not None:
+            thermo_data = ThermoDynamics.extract_thermodynamic_data(K=self.K,
+                                                                delta_H=delta_H, delta_S=delta_S, delta_G=delta_G,
+                                                                temp=self.temp)
+            self.K = thermo_data["K"]
+            self.delta_H = thermo_data["delta_H"]
+            self.delta_S = thermo_data["delta_S"]
+            self.delta_G = thermo_data["delta_G"]
+
+            if (self.kinetic_rate_function == ReactionKinetics.compute_rate_mass_action_kinetics) \
+                    and (self.K is not None):
+                # True for reactions that follows mass-action kinetics
+                # This following is what the function set_rate_constants_from_equilibrium_constant() does for elementary reactions
+                if (self.kR is None) and (kF is not None):
+                    self.kR = kF / self.K
+
+                elif (self.kF is None) and (kR is not None):
+                    self.kF = self.K * kR
+
 
         assert reactants is not None, "ReactionGeneric(): the argument `reactants` is a required one; it can't be None"
         if type(reactants) != list:
@@ -1697,6 +1689,65 @@ class ReactionGeneric(ReactionOneStep):
             print(f"ReactionGeneric(): WARNING - the reaction appears to have multiple enzymes:"
                   f" {enzyme_list}")
 
+
+
+
+    def extract_forward_rate(self) -> float:
+        """
+
+        :return:    The value of the forward rate constant for this reaction
+        """
+        return self.kF
+
+
+    def extract_reverse_rate(self) -> float:
+        """
+
+        :return:    The value of the reverse (back) rate constant for this reaction
+        """
+        return self.kR
+
+
+
+    def extract_rxn_properties(self) -> {}:
+        """
+        Create a dictionary with the numerical properties of the given reaction
+        (skipping any lists or None values)
+        Possible values include:
+            forward and reverse reaction rates, ΔH, ΔS, ΔG, K (equilibrium constant)
+
+        :return:    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': -1005.1305052750387, 'K': 1.5}
+        """
+        properties = {}
+
+        if self.kF is not None:
+            properties['kF'] = self.kF
+
+        if self.kR is not None:
+            properties['kR'] = self.kR
+
+        if self.delta_H is not None:
+            properties['delta_H'] = self.delta_H
+
+        if self.delta_S is not None:
+            properties['delta_S'] = self.delta_S
+
+        if self.delta_G is not None:
+            properties['delta_G'] = self.delta_G
+
+        if self.K is not None:
+            properties['K'] = self.K
+
+        return properties
+
+
+
+    def extract_intermediate(self) -> str | None:
+        """
+
+        :return:
+        """
+        return None   # There are no intermediates
 
 
 
@@ -1865,7 +1916,7 @@ class ReactionGeneric(ReactionOneStep):
 
 
         # If we get this far, we're looking for a more detailed description
-        rxn_description += self.reaction_details()
+        rxn_description += self.reaction_details(self.extract_rxn_properties())
 
 
         # If a CATALYST is involved, show it
@@ -1911,9 +1962,9 @@ class ReactionGeneric(ReactionOneStep):
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        assert self.kinetic_rate_function == ReactionKinetics.compute_rate_pseudo_elementary, \
+        assert self.kinetic_rate_function == ReactionKinetics.compute_rate_mass_action_kinetics, \
             "reaction_quotient(): the reaction quotient can only be computed when the reaction follows the 'standard rate law'; " \
-            "consider a call to set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)"
+            "consider a call to set_rate_function(ReactionKinetics.compute_rate_mass_action_kinetics)"
 
         reactant_data = [(self.extract_stoichiometry(r), self.extract_chem_label(r))
                          for r in self.reactants]
@@ -1938,12 +1989,39 @@ class ReactionGeneric(ReactionOneStep):
                         kF :float, kR :float,
                         conc_dict :dict
                     and return a float
-                    EXAMPLE:  ReactionKinetics.compute_rate_pseudo_elementary
+                    EXAMPLE:  ReactionKinetics.compute_rate_mass_action_kinetics
                               # Generalized "standard rate law"
 
         :return:    None
         """
         self.kinetic_rate_function = f
+
+
+
+    def set_thermodynamic_data(self, temp :float) -> None:
+        """
+        Set all the thermodynamic data derivable from the given temperature,
+        and all previously passed kinetic and thermodynamic data.
+        Raise an Exception if any inconsistency is detected.
+
+        :param temp:    System temperature in Kelvins.  For now, assumed constant everywhere,
+                            and unvarying (or very slowly varying).
+                            If the temp gradually changes, periodically call this method.
+        :return:        None
+        """
+        # Process the thermodynamic data, and update various object attributes accordingly
+        thermo_data = ThermoDynamics.extract_thermodynamic_data(K=self.K,
+                                                  delta_H=self.delta_H, delta_S=self.delta_S, delta_G=self.delta_G,
+                                                  temp=temp)
+
+        #print(f"thermo_data : {thermo_data}")
+        self.K = thermo_data["K"]
+        self.delta_H = thermo_data["delta_H"]
+        self.delta_S = thermo_data["delta_S"]
+        self.delta_G = thermo_data["delta_G"]
+
+        self.set_rate_constants_from_equilibrium_constant(K=self.K)
+
 
 
 
@@ -1967,6 +2045,41 @@ class ReactionGeneric(ReactionOneStep):
         return function_to_call(reactant_terms=self.reactants, product_terms=self.products,
                                                       kF = self.kF, kR=self.kR,
                                                       conc_dict=conc_dict)                        # Carry out the function call
+
+
+
+    def set_rate_constants_from_equilibrium_constant(self, K) -> None:
+        """
+        Set, as needed, a missing reaction rate constant (kF or kR)
+        from the other one and the given equilibrium constant K.
+        If all values already exist, and an inconsistency is detected, an Exception will be raised.
+
+        Note: the reaction's equilibrium constant and its kinetic rate constants are
+              in the relationship K = kF / kR for any reaction that follows "mass-action kinetics",
+              i.e. whose reaction rates are proportional to the product of the reactants’ concentrations 
+              raised to their stoichiometric coefficients
+
+        :param K:   The reaction's equilibrium constant
+        :return:    None
+        """
+        if self.K is None:
+            return
+
+        if self.kinetic_rate_function != ReactionKinetics.compute_rate_mass_action_kinetics:
+            return
+
+        if (self.kR is None) and (self.kF is not None):
+            self.kR = self.kF / K
+            return
+
+        if (self.kF is None) and (self.kR is not None):
+            self.kF = K * self.kR
+            return
+
+        if (self.kF is not None) and (self.kR is not None):
+            assert np.allclose(K, self.kF / self.kR), \
+                f"set_rate_constants_from_equilibrium_constant(): values for kR and kR already exist, " \
+                f"and are inconsistent with the passed value of K ({K})"
 
 
 

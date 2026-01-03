@@ -168,7 +168,7 @@ def test_single_compartment_react():
     index = rxns.add_reaction(reactants=["C" , "E_high"], products=["A", "E_low"],
                               kF=1., kR=0.2)
     r = rxns.get_reaction(index)
-    r.set_rate_function(ReactionKinetics.compute_rate_pseudo_elementary)
+    r.set_rate_function(ReactionKinetics.compute_rate_mass_action_kinetics)
 
     initial_conc = {"A": 100., "B": 0., "C": 0., "E_high": 1000., "E_low": 0.}
 
