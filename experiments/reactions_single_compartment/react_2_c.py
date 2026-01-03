@@ -61,8 +61,7 @@ check_version(LIFE123_VERSION)
 chem_data = ChemData()
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-chem_data.add_reaction(reactants="A", products="B", 
-                       forward_rate=3., reverse_rate=2.)
+chem_data.add_reaction(reactants="A", products="B", kF=3., kR=2.)
 
 chem_data.describe_reactions()
 
@@ -88,7 +87,8 @@ dynamics_variable.describe_state()
 
 # %%
 dynamics_variable.single_compartment_react(initial_step=0.1, target_end_time=1.2,
-                                  variable_steps=True)
+                                           variable_steps=True)
+# Specifying variable_steps=True for emphasis; it's the default
 
 # %% [markdown]
 # #### The flag _variable_steps_ automatically adjusts up or down the time steps
@@ -215,7 +215,7 @@ dynamics_variable_new.single_compartment_react(initial_step=0.1, target_end_time
 
 # %%
 fig_variable = dynamics_variable_new.plot_history(chemicals='A', colors='darkturquoise', title="VARIABLE time steps",
-                                              show_intervals=True, show=True)
+                                                  show_intervals=True, show=True)
 
 # %%
 # Now, a coarser version of the fixed-step simulation of Part 2

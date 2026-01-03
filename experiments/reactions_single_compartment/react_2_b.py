@@ -25,11 +25,11 @@
 # ### TAGS :  "basic", "under-the-hood", "uniform compartment"
 
 # %%
-LAST_REVISED = "Nov. 10, 2024"
-LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
+LAST_REVISED = "Jan. 2, 2026"
+LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
 
 # %%
-#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %%
 #import sys
@@ -69,8 +69,7 @@ GraphicLog.config(filename=log_file,
 uc = UniformCompartment(names=["A", "B"], preset="mid", enable_diagnostics=True)
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-uc.add_reaction(reactants="A", products="B", 
-                forward_rate=3., reverse_rate=2.)
+uc.add_reaction(reactants="A", products="B", kF=3., kR=2.)
 
 uc.describe_reactions()
 
@@ -91,6 +90,8 @@ uc.get_history()
 # a particular PRESET applicable to the adaptive time steps; 
 # let's take a look at the value assigned by that preset
 uc.adaptive_steps.show_adaptive_parameters() 
+
+# %%
 
 # %% [markdown]
 # ## Run the reaction   
@@ -213,7 +214,7 @@ baseline_conc
 # %%
 # Computes some measures of how large delta_concentrations is, and propose a course of action
 uc.adaptive_steps.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=baseline_conc,
-                                  n_chems=2, indexes_of_active_chemicals=uc.chem_data.indexes_of_active_chemicals())  
+                                  n_chems=2, indexes_of_active_chemicals=uc.get_reactions().indexes_of_active_chemicals())  
 
 # %% [markdown]
 # #### The above analysis indicates that the time step is just about right, and the simulations should STAY on that course : that's based on the shown computed norms (indicating the extent of the change taking place.)  
@@ -254,7 +255,7 @@ baseline_conc
 # %%
 # Computes a measure of how large delta_concentrations is, and propose a course of action
 uc.adaptive_steps.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=baseline_conc,
-                                  n_chems=2, indexes_of_active_chemicals=uc.chem_data.indexes_of_active_chemicals())  
+                                  n_chems=2, indexes_of_active_chemicals=uc.get_reactions().indexes_of_active_chemicals())  
 
 # %% [markdown]
 # #### The above analysis indicates that the time step is on the "LOW" side, and the simulations should increase it by a factor 1.2 : again, that's based on the shown computed norms (indicating the extent of the change taking place.)  

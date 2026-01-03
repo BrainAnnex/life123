@@ -96,7 +96,7 @@ class ThermoDynamics:
 
 
     @classmethod
-    def compute_reaction_quotient(cls, reactant_data :str|Tuple[int, str], product_data :str|Tuple[int, str],
+    def compute_reaction_quotient(cls, reactant_data :[str|Tuple[int, str]], product_data :[str|Tuple[int, str]],
                                   conc :dict, explain=False) -> np.double | Tuple[np.double, str]:
         """
         Compute the "Reaction Quotient" Q (aka "Mass–action Ratio"),
@@ -112,10 +112,10 @@ class ThermoDynamics:
               We're using the term "concentrations" instead of "chemical activities";
               concentrations approximate the activities of ideal dilute solutions
 
-        :param reactant_data:   List of of STRINGS with the labels of the reactants,
+        :param reactant_data:   List of either STRINGS with the labels of the reactants,
                                     or PAIRS of the form (stoichiometry coefficient, label) of the reactants.
                                     If the stoichiometry coefficient isn't specified, it's taken to be 1
-        :param product_data:    List of of STRINGS with the labels of the products of the reactions,
+        :param product_data:    List of either STRINGS with the labels of the products of the reactions,
                                     or PAIRS of the form (stoichiometry coefficient, label) of the products.
                                     If the stoichiometry coefficient isn't specified, it's taken to be 1
         :param conc:            Dictionary with the concentrations (activities) of the species involved in the reaction.
