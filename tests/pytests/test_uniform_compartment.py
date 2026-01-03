@@ -107,14 +107,14 @@ def test_get_conc_dict():
     result = rxn.get_conc_dict()
     assert result == {"A": 100, "B": 200, "C": 300, "D": 400}
 
-    result = rxn.get_conc_dict(species=["D", "A"])
+    result = rxn.get_conc_dict(chem_labels=["D", "A"])
     assert result == {"A": 100, "D": 400}
 
-    result = rxn.get_conc_dict(species=("C",))      # Tuple with 1 element
+    result = rxn.get_conc_dict(chem_labels=("C",))      # Tuple with 1 element
     assert result == {"C": 300}
 
     with pytest.raises(Exception):
-        rxn.get_conc_dict(species="C")                      # Wrong data type
+        rxn.get_conc_dict(chem_labels="C")                      # Wrong data type
 
     with pytest.raises(Exception):
         rxn.get_conc_dict(system_data=np.array([1, 2]))     # Wrong number of entries
@@ -122,7 +122,7 @@ def test_get_conc_dict():
     result = rxn.get_conc_dict(system_data=np.array([1, 2, 3, 4]))
     assert result == {"A": 1, "B": 2, "C": 3, "D": 4}
 
-    result = rxn.get_conc_dict(species=["B"], system_data=np.array([1, 2, 3, 4]))
+    result = rxn.get_conc_dict(chem_labels=["B"], system_data=np.array([1, 2, 3, 4]))
     assert result == {"B": 2}
 
 

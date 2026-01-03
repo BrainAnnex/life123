@@ -96,7 +96,7 @@ class ThermoDynamics:
 
 
     @classmethod
-    def compute_reaction_quotient(cls, reactant_data :[(int, str)], product_data :[(int, str)],
+    def compute_reaction_quotient(cls, reactant_data :str|Tuple[int, str], product_data :str|Tuple[int, str],
                                   conc :dict, explain=False) -> np.double | Tuple[np.double, str]:
         """
         Compute the "Reaction Quotient" Q (aka "Mass–action Ratio"),
@@ -112,10 +112,12 @@ class ThermoDynamics:
               We're using the term "concentrations" instead of "chemical activities";
               concentrations approximate the activities of ideal dilute solutions
 
-        :param reactant_data:   List of PAIRS of the form (label of reactant , order of reaction with respect to it);
-                                    in elementary reactions, the orders will be equal to their respective stoichiometry coefficients
-        :param product_data:    List of PAIRS of the form (label of reaction product , order of reaction with respect to it);
-                                    in elementary reactions, the orders will be equal to their respective stoichiometry coefficients
+        :param reactant_data:   List of of STRINGS with the labels of the reactants,
+                                    or PAIRS of the form (stoichiometry coefficient, label) of the reactants.
+                                    If the stoichiometry coefficient isn't specified, it's taken to be 1
+        :param product_data:    List of of STRINGS with the labels of the products of the reactions,
+                                    or PAIRS of the form (stoichiometry coefficient, label) of the products.
+                                    If the stoichiometry coefficient isn't specified, it's taken to be 1
         :param conc:            Dictionary with the concentrations (activities) of the species involved in the reaction.
                                 The keys are the chemical labels
                                     EXAMPLE: {'A': 23.9, 'B': 36.1}
@@ -127,7 +129,6 @@ class ThermoDynamics:
                                     if True, return a pair with that quotient and a string with the math formula that was used.
                                     Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        # TODO: maybe also accept strings, in lieu of pairs (for cases where the stoichiometry coefficient is 1)
         # TODO: could be tidier in avoiding unnecessary blanks in the explanations
         numerator = np.double(1)    # The product of all the concentrations of the reaction products (adjusted for reaction order)
         denominator = np.double(1)  # The product of all the concentrations of the reactants (also adjusted for reaction order)
@@ -137,16 +138,22 @@ class ThermoDynamics:
 
 
         # Compute the numerator of the "Reaction Quotient"
-        for (stoich_coeff, p) in product_data:
+        for term in product_data:
             # Loop over the reaction products
-            assert type(stoich_coeff) == int, f"reaction_quotient(): the argument `product_data` " \
-                                              f"must be a list of pairs (integer and string).  `{stoich_coeff}` is not an integer"
-            assert type(p) == str, f"reaction_quotient(): the argument `product_data` " \
-                                   f"must be a list of pairs (integer and string).  {p} is not a string"
+            if type(term) == str:
+                stoich_coeff = 1
+                p = term
+            else:
+                (stoich_coeff, p) = term
+                assert type(stoich_coeff) == int, f"compute_reaction_quotient(): the argument `product_data` " \
+                                                  f"must be a list of pairs (integer and string).  `{stoich_coeff}` is not an integer"
+                assert type(p) == str, f"compute_reaction_quotient(): the argument `product_data` " \
+                                       f"must be a list of pairs (integer and string).  {p} is not a string"
 
             species_name = p
-            species_conc = conc.get(p)
-            assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
+            # TODO: Maybe turn the several next lines into a helper function
+            species_conc = conc.get(species_name)
+            assert species_conc is not None, f"compute_reaction_quotient(): unable to proceed because the " \
                                              f"concentration of product `{species_name}` was not provided"
 
             numerator *= (species_conc ** stoich_coeff)
@@ -161,15 +168,22 @@ class ThermoDynamics:
 
 
         # Compute the denominator of the "Reaction Quotient"
-        for (stoich_coeff, r) in reactant_data:
+        for term in reactant_data:
             # Loop over the reactants
-            assert type(stoich_coeff) == int, f"reaction_quotient(): the argument `reactant_data` " \
-                                              f"must be a list of pairs (integer and string).  `{stoich_coeff}` is not an integer"
-            assert type(r) == str, f"reaction_quotient(): the argument `reactant_data` " \
-                                   f"must be a list of pairs (integer and string).  {r} is not a string"
+            if type(term) == str:
+                stoich_coeff = 1
+                r = term
+            else:
+                (stoich_coeff, r) = term
+                assert type(stoich_coeff) == int, f"compute_reaction_quotient(): the argument `reactant_data` " \
+                                                  f"must be a list of pairs (integer and string).  `{stoich_coeff}` is not an integer"
+                assert type(r) == str, f"compute_reaction_quotient(): the argument `reactant_data` " \
+                                       f"must be a list of pairs (integer and string).  {r} is not a string"
+
             species_name =  r
+            # TODO: Maybe turn the several next lines into a helper function
             species_conc = conc.get(species_name)
-            assert species_conc is not None, f"reaction_quotient(): unable to proceed because the " \
+            assert species_conc is not None, f"compute_reaction_quotient(): unable to proceed because the " \
                                              f"concentration of reactant `{species_name}` was not provided"
 
             denominator *= (species_conc ** stoich_coeff)
@@ -200,10 +214,10 @@ class ThermoDynamics:
         """
 
         :param temp:                System's temperature, in degree Kelvins
-        :param K:       [OPTIONAL]
-        :param delta_H: [OPTIONAL]
-        :param delta_S: [OPTIONAL]
-        :param delta_G: [OPTIONAL]
+        :param K:       [OPTIONAL]  The reaction's equilibrium constant
+        :param delta_H: [OPTIONAL]  The reaction's change in Enthalpy (from reactants to products)
+        :param delta_S: [OPTIONAL]  The reaction's change in Entropy (from reactants to products)
+        :param delta_G: [OPTIONAL]  The reaction's change in Gibbs Free Energy (from reactants to products)
 
         :return:        A dict with the 4 keys  "K", "delta_H", "delta_S", "delta_G"
         """

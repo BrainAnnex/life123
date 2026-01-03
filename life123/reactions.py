@@ -173,17 +173,17 @@ class ReactionElementary(ReactionCommon):
 
 
 
-    def equilibrium_constant_from_kinetic_data(self, K=None, kF=None, kR=None):
+    def equilibrium_constant_from_kinetic_data(self, K=None, kF=None, kR=None) -> None:
         """
         True for Elementary reactions
         (and, more generally, for any reaction that follows mass-action kinetics)
 
-        :param K:
-        :param kF:
-        :param kR:
-        :return:
+        :param K:   The reaction's equilibrium constant
+        :param kF:  The forward reaction's reaction rate constant
+        :param kR:  The reverse reaction's reaction rate constant
+        :return:    None
         """
-        print(f"In equilibrium_constant_from_kinetic_data() : kF={kF}, kR={kR}")
+        #print(f"In equilibrium_constant_from_kinetic_data() : K={K}, kF={kF}, kR={kR}")
         if (self.K is None) and (kF is not None) and (kR is not None) and (not np.allclose(self.kR, 0)):
             self.K = kF / kR
             return

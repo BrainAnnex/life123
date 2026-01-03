@@ -28,7 +28,7 @@
 # ### TAGS :  "basic", "uniform compartment"
 
 # %%
-LAST_REVISED = "Dec. 29, 2024"
+LAST_REVISED = "Jan. 2, 2026"
 LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
 
 # %%
@@ -42,7 +42,7 @@ LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based o
 import numpy as np
 import ipynbname
 
-from life123 import check_version, UniformCompartment, PlotlyHelper, GraphicLog
+from life123 import check_version, UniformCompartment, ThermoDynamics, PlotlyHelper, GraphicLog
 
 # %%
 check_version(LIFE123_VERSION)
@@ -104,8 +104,20 @@ uc.find_equilibrium_conc(rxn_index=0)    # This is an EXACT equilibrium solution
                                          # for 1 reaction (the only reaction)
 
 # %% [markdown]
-# #### The reaction will actually proceed IN REVERSE, because of the large initial concentration of B (which we had set to 50), relative to the small initial concentration of A (10)
+# That's consistent with the 3/2 ratio of forward/reverse rate constants (and the 1st order of the reaction)
+
+# %% [markdown]
+# #### Considering that our initial state is {"A": 10., "B": 50.}, the reaction will actually proceed IN REVERSE (decreasing product), because of the large initial concentration of `B`, relative to the small initial concentration of `A`
+# More precisely, it's because the reaction quotient Q, at the current initial concentrations, is larger than our equilibrium constant K, which is 1.5 :
+
+# %%
+ThermoDynamics.compute_reaction_quotient(reactant_data=["A"], product_data=["B"],
+                                         conc={"A": 10., "B": 50.})
+
+# %% [markdown]
 # Now, let's see the reaction in action!
+
+# %%
 
 # %%
 
@@ -140,11 +152,7 @@ uc.get_history()
 uc.get_system_conc()   # The current concentrations, in the order the chemicals were added 
 
 # %% [markdown]
-# NOTE: Consistent with the 3/2 ratio of forward/reverse rates (and the 1st order of the reactions), the systems settles in the following equilibrium:
-#
-# [A] = 23.99316406
-#  
-# [B] = 36.00683594
+# That's very close to the values we previewed earlier:  {'A': 24.0, 'B': 36.0}
 #
 
 # %%

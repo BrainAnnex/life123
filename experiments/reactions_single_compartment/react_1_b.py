@@ -22,7 +22,7 @@
 # ### TAGS :   "basic", "uniform compartment"
 
 # %%
-LAST_REVISED = "Dec. 29, 2025"
+LAST_REVISED = "Jan. 2, 2026"
 LIFE123_VERSION = "1.0.0rc7"         # Library version this experiment is based on
 
 # %%
