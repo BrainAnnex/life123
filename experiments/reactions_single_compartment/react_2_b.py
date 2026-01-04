@@ -25,7 +25,7 @@
 # ### TAGS :  "basic", "under-the-hood", "uniform compartment"
 
 # %%
-LAST_REVISED = "Jan. 2, 2026"
+LAST_REVISED = "Jan. 3, 2026"
 LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
 
 # %%
@@ -50,7 +50,7 @@ log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for
 
 # Set up the use of some specified graphic (Vue) components
 GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_2"],
+                  components=["vue_cytoscape_3"],
                   extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
@@ -75,7 +75,7 @@ uc.describe_reactions()
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
-uc.plot_reaction_network("vue_cytoscape_2")
+uc.plot_reaction_network("vue_cytoscape_3")
 
 # %%
 # Set the initial concentrations of all the chemicals

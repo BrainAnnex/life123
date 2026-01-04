@@ -6,18 +6,6 @@ from life123 import ThermoDynamics
 
 
 
-def test_solve_exactly():
-    rxn = ReactionGeneric(reactants ="A", products="B", kF=3., kR=2.)
-
-    t = np.array([0, 0.005, 0.31739, 1.12, 100.])
-
-    A_exact, B_exact = ReactionKinetics.solve_exactly(rxn=rxn, A0=80., B0=10., t_arr=t)
-
-    assert np.allclose(A_exact, [80, 78.91363613, 45.0, 36.162706, 36])
-    assert np.allclose(B_exact, [10, 11.08636387, 45.0, 53.837294, 54])
-
-
-
 def test_exact_advance_unimolecular_irreversible():
     # Reaction A -> B
     a, b = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=0)
@@ -55,6 +43,7 @@ def test_exact_advance_unimolecular_irreversible():
     incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=100., incremental=True)
     assert np.allclose(incr, [-80, 80])
     assert np.allclose(incr[0] + incr[1], 0)
+
 
 
 def test_exact_solution_unimolecular_irreversible():

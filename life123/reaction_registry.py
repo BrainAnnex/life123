@@ -1,8 +1,8 @@
-from typing import Union, Set, Tuple
 from life123.visualization.py_graph_visual import PyGraphVisual
 from life123.visualization.graphic_log import GraphicLog
 from life123.html_log import HtmlLog as log
 from life123.reactions import ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionEnzyme, ReactionGeneric
+from life123.chem_data import ChemData
 
 
 
@@ -12,17 +12,18 @@ class ReactionRegistry:
     such as ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionGeneric, ReactionEnzyme, etc.
 
     Instances of this class are typically used by UniformCompartment objects.
-    A ReactionRegistry object may be shared by multiple UniformCompartment objects IF the latter all make use
-    of ALL the registered reactions  (i.e. no "pick and choose" some of the reactions.)
+    A ReactionRegistry object may be shared by multiple UniformCompartment objects
+    IF the latter all make use of ALL the registered reactions  (i.e. no "pick and choose" some of the reactions.)
     """
 
-    def __init__(self, chem_data):
+    def __init__(self, chem_data=None):
 
         """
-        :param chem_data:   Object of type "ChemData"
+        :param chem_data:   [OPTIONAL] Object of type "ChemData"; if not passed, it will get instantiated automatically -
+                                and then it can be obtained by means of the method get_chem_data()
         """
 
-        # TODO: consider adding to arguments   "=None, labels=None"
+        # TODO: consider adding to argument   "=labels=None"
         """
         assert (chem_data is not None) or (labels is not None), \
             "ReactionRegistry() instantiation: exactly one of the arguments `chem_data` or `labels` must be provided"
@@ -34,10 +35,13 @@ class ReactionRegistry:
             chem_data = ChemData(labels=labels)
         """
 
-        assert chem_data is not None, \
-            "ReactionRegistry() instantiation: the arguments `chem_data` must be provided, and cannot be None"
+        #assert chem_data is not None, \
+            #"ReactionRegistry() instantiation: the arguments `chem_data` must be provided, and cannot be None"
 
-        self.chem_data = chem_data
+        if chem_data is None:
+            self.chem_data = ChemData()
+        else:
+            self.chem_data = chem_data
 
         self.reaction_list = []     # List of objects of the various individual reaction classes,
                                     # such as "ReactionGeneric" and "ReactionEnzyme"
@@ -111,6 +115,9 @@ class ReactionRegistry:
 
 
     def get_chem_data(self):
+        """
+        :return:    Object of type "ChemData"
+        """
         return self.chem_data
 
 
@@ -242,80 +249,6 @@ class ReactionRegistry:
         :return:                List of "Reaction" objects
         """
         pass        # TODO: write; also, accept a name
-
-
-
-    def register_reaction(self, rxn, temp=None) -> int:
-        """
-        Register a SINGLE chemical reaction from its reaction-specific object,
-        and set all its kinetic and/or thermodynamic data from the available information,
-        including the value of the temperature (stored in object variable.)
-
-        All the involved chemicals can be either previously registered, or not;
-        if not, they will get automatically registered.
-
-        :param rxn: Object of one of the specific Reaction classes, such as
-                        ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition,
-                        ReactionEnz, ReactionGeneric
-        :param temp:Temperature in degree Kelvin
-
-        :return:    Integer index of the newly-added reaction
-                        (in the list self.reaction_list, stored as object variable)
-        """
-        self.reaction_list.append(rxn)
-
-        # Register any newly-encountered reactant not already registered
-        # for aesthetic reasons, we'll do 1) catalyst, 2) reactants, 3) products
-
-        #catalyst = rxn.extract_catalyst()
-
-        #if catalyst:
-            # Register the catalyst, if not already registered
-            #self.chem_data.add_chemical(name=catalyst, skip_duplicates=True)
-
-        # Register any newly-encountered reactant not already registered
-        rxn_reactants = rxn.extract_reactant_labels()
-        for label in rxn_reactants:
-            self.chem_data.add_chemical(name=label, skip_duplicates=True)
-
-        # Register any newly-encountered reaction product not already registered
-        rxn_products = rxn.extract_product_labels()
-        for label in rxn_products:
-            self.chem_data.add_chemical(name=label, skip_duplicates=True)
-
-        # Register any newly-encountered reaction intermediates not already registered
-        rxn_intermediate = rxn.extract_intermediate()
-        if rxn_intermediate:
-            new_index = self.chem_data.add_chemical(name=rxn_intermediate, skip_duplicates=True)
-            if new_index is not None:
-                print(f"register_reaction() INFO: a reaction intermediates (`{rxn_intermediate}`), not explicitly registered, was automatically added to the chemical registry")
-
-            if self.chem_data.get_diffusion_rate(chem_label=rxn_intermediate) is None:
-                # Attempt to estimate the diffusion rate constant of the reaction intermediate
-                D_enzyme = self.chem_data.get_diffusion_rate(chem_label=rxn_intermediate)
-                D_substrate = self.chem_data.get_diffusion_rate(chem_label=rxn.substrate)
-                # TODO: this might best belong elsewhere
-                if (D_enzyme is not None) and (D_substrate is not None):
-                    D_ES_rough_estimate = min(D_enzyme, D_substrate) * 0.9
-                    print(f"register_reaction() INFO: diffusion rate for the reaction intermediates (`{rxn_intermediate}`), not yet specified, roughly estimated as {D_ES_rough_estimate}")
-                    self.chem_data.set_diffusion_rate(chem_label=rxn_intermediate, diff_rate=D_ES_rough_estimate)
-
-
-        involved_chemicals = set(rxn_reactants) | set(rxn_products)  # Union of sets
-        if  rxn_intermediate:
-             involved_chemicals = involved_chemicals | {rxn_intermediate}     # Union of sets
-
-        #if catalyst is not None:
-            #involved_chemicals = involved_chemicals - {catalyst}    # Difference between sets
-            #self.active_enzymes.add(rxn.catalyst)                   # Add the new entry to a set
-
-        # Update the set of "active chemicals"
-        self.active_chemicals = self.active_chemicals | involved_chemicals  # Union of sets
-
-        if temp is not None:
-            rxn.set_thermodynamic_data(temp=temp)   # TODO: unclear if this is the best place to do this
-
-        return len(self.reaction_list) - 1
 
 
 
@@ -481,6 +414,80 @@ class ReactionRegistry:
         print(f"add_reaction(): detected reaction type `{reaction_type}`")
 
         return self.register_reaction(rxn=rxn, temp=temp)
+
+
+
+    def register_reaction(self, rxn, temp=None) -> int:
+        """
+        Register a SINGLE chemical reaction from its reaction-specific object,
+        and set all its kinetic and/or thermodynamic data from the available information,
+        including the value of the temperature (stored in object variable.)
+
+        All the involved chemicals can be either previously registered, or not;
+        if not, they will get automatically registered.
+
+        :param rxn: Object of one of the specific Reaction classes, such as
+                        ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition,
+                        ReactionEnz, ReactionGeneric
+        :param temp:Temperature in degree Kelvin
+
+        :return:    Integer index of the newly-added reaction
+                        (in the list self.reaction_list, stored as object variable)
+        """
+        self.reaction_list.append(rxn)
+
+        # Register any newly-encountered reactant not already registered
+        # for aesthetic reasons, we'll do 1) catalyst, 2) reactants, 3) products
+
+        #catalyst = rxn.extract_catalyst()
+
+        #if catalyst:
+            # Register the catalyst, if not already registered
+            #self.chem_data.add_chemical(name=catalyst, skip_duplicates=True)
+
+        # Register any newly-encountered reactant not already registered
+        rxn_reactants = rxn.extract_reactant_labels()
+        for label in rxn_reactants:
+            self.chem_data.add_chemical(name=label, skip_duplicates=True)
+
+        # Register any newly-encountered reaction product not already registered
+        rxn_products = rxn.extract_product_labels()
+        for label in rxn_products:
+            self.chem_data.add_chemical(name=label, skip_duplicates=True)
+
+        # Register any newly-encountered reaction intermediates not already registered
+        rxn_intermediate = rxn.extract_intermediate()
+        if rxn_intermediate:
+            new_index = self.chem_data.add_chemical(name=rxn_intermediate, skip_duplicates=True)
+            if new_index is not None:
+                print(f"register_reaction() INFO: a reaction intermediates (`{rxn_intermediate}`), not explicitly registered, was automatically added to the chemical registry")
+
+            if self.chem_data.get_diffusion_rate(chem_label=rxn_intermediate) is None:
+                # Attempt to estimate the diffusion rate constant of the reaction intermediate
+                D_enzyme = self.chem_data.get_diffusion_rate(chem_label=rxn_intermediate)
+                D_substrate = self.chem_data.get_diffusion_rate(chem_label=rxn.substrate)
+                # TODO: this might best belong elsewhere
+                if (D_enzyme is not None) and (D_substrate is not None):
+                    D_ES_rough_estimate = min(D_enzyme, D_substrate) * 0.9
+                    print(f"register_reaction() INFO: diffusion rate for the reaction intermediates (`{rxn_intermediate}`), not yet specified, roughly estimated as {D_ES_rough_estimate}")
+                    self.chem_data.set_diffusion_rate(chem_label=rxn_intermediate, diff_rate=D_ES_rough_estimate)
+
+
+        involved_chemicals = set(rxn_reactants) | set(rxn_products)  # Union of sets
+        if  rxn_intermediate:
+             involved_chemicals = involved_chemicals | {rxn_intermediate}     # Union of sets
+
+        #if catalyst is not None:
+            #involved_chemicals = involved_chemicals - {catalyst}    # Difference between sets
+            #self.active_enzymes.add(rxn.catalyst)                   # Add the new entry to a set
+
+        # Update the set of "active chemicals"
+        self.active_chemicals = self.active_chemicals | involved_chemicals  # Union of sets
+
+        if temp is not None:
+            rxn.set_thermodynamic_data(temp=temp)   # TODO: unclear if this is the best place to do this
+
+        return len(self.reaction_list) - 1
 
 
 

@@ -14,42 +14,6 @@ class ReactionKinetics:
     Static methods about reactions kinetics
     """
 
-
-    @staticmethod
-    def solve_exactly(rxn, A0 :float, B0 :float, t_arr) -> (np.array, np.array):
-        """
-        Return the exact solution of the given reaction,
-        PROVIDED that it is a 1st Order Reaction of the type A <=> B.
-
-        Use the given initial conditions,
-        and return the solutions sampled at the specified times.
-
-        For details, see https://life123.science/reactions
-
-        :param rxn:     Object of type "ReactionGeneric", containing data for the reaction of interest
-        :param A0:      Initial concentration of the reactant A
-        :param B0:      Initial concentration of the product B
-        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
-        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
-                            at the times given by the argument t_arr
-        """
-        # TODO: also include synthesis reaction
-        # TODO: deprecated?
-
-        reactants, products, kF, kR = rxn.unpack_for_dynamics()
-
-        assert len(reactants) == 1, "Currently only works for `A <-> B` reactions"
-        assert len(products) == 1, "Currently only works for `A <-> B` reactions"
-        assert rxn.extract_stoichiometry(reactants[0]) == 1, \
-            "Currently only works for `A <-> B` reactions"
-        assert rxn.extract_stoichiometry(products[0]) == 1, \
-            "Currently only works for `A <-> B` reactions"
-        # TODO: should also verify the reaction orders to be 1
-
-        return ReactionKinetics.exact_solution_unimolecular_reversible(kF, kR, A0, B0, t_arr)
-
-
-
     @staticmethod
     def exact_advance_unimolecular_irreversible(kF, A0, B0, t, incremental=False) -> (float, float):
         """

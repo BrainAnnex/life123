@@ -78,7 +78,7 @@ uc.describe_reactions()
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
-uc.plot_reaction_network("vue_cytoscape_2")
+uc.plot_reaction_network("vue_cytoscape_3")
 
 
 # %%
