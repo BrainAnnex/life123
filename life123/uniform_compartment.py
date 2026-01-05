@@ -458,11 +458,11 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def get_reactions(self):
+    def get_reactions(self) -> ReactionRegistry:
         """
         Return all the reactions associated to this Uniform Compartment
 
-        :return:    Object ot type "Reactions" (with data about all the reactions)
+        :return:    Object ot type "ReactionRegistry" (with data about all the reactions)
         """
         return self.reactions
 
@@ -1654,10 +1654,13 @@ class UniformCompartment:
 
     def enable_diagnostics(self):
         """
-        Turn on the diagnostics mode
+        Turn on the diagnostics mode.
+
+        CAUTION: if not done early enough in the simulation, some desired diagnostic data may be missing
 
         :return: None
         """
+        #TODO: maybe automatically capture a snapshot of the current data
         self.diagnostics_enabled = True
         if not self.diagnostics:
             self.diagnostics = Diagnostics(reactions=self.reactions)
@@ -1673,7 +1676,7 @@ class UniformCompartment:
 
 
 
-    def get_diagnostics(self):
+    def get_diagnostics(self) -> Diagnostics:
         """
 
         :return:    Object of type life123.diagnostics.Diagnostics
@@ -1785,15 +1788,21 @@ class UniformCompartment:
 
     def plot_step_sizes(self, show_intervals=False) -> None:
         """
-        Using plotly, draw the plot of the step sizes vs. time
+        Using Plotly, draw the plot of the step sizes vs. time
         (only meaningful when the variable-step option was used).
         The same scale as plot_history() will be used.
-        This function requires the diagnostics option to be turned on, prior to running the simulation
+
+        IMPORTANT: This function requires the diagnostics option to be turned on,
+                   prior to running the simulation, with a call to enable_diagnostics()
 
         :param show_intervals:  If True, will add to the plot thin vertical dotted gray lines
                                     at the time steps
         :return:                None
         """
+        assert self.diagnostics is not None, \
+                "plot_step_sizes(): no diagnostic data is available. " \
+                "Did you invoke enable_diagnostics() prior to running the simulation?"
+
         (transition_times, step_sizes) = self.diagnostics.explain_time_advance(return_times=True, silent=True)
 
         x=transition_times

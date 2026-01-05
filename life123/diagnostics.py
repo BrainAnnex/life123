@@ -267,6 +267,9 @@ class Diagnostics:
         Note: if the run of an interval step is aborted,
               by convention NO entry is created here
 
+        CAUTION: if diagnostics weren't enabled done early enough in the simulation,
+                 some desired concentration data history may be missing
+
         :return: A Pandas dataframe, with the columns:
                     'TIME' 	'A' 'B' ... 'caption'
                     where 'A', 'B', ... are the labels of all the chemicals
@@ -438,6 +441,9 @@ class Diagnostics:
         EXAMPLE of output:
             From time 0 to 0.0304, in 17 FULL steps of 0.0008
             (for a grand total of 38 FULL steps)
+
+        CAUTION: if diagnostics weren't enabled done early enough in the simulation,
+                 some desired diagnostic data may be missing
 
         :param return_times:    If True, all the critical times (times where the interval steps change)
                                     are saved and returned as a list
