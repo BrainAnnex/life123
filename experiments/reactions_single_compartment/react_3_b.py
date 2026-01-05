@@ -139,7 +139,7 @@ uc_exact.get_history()
 
 # %%
 p1 = uc_fast.plot_history(chemicals="C", colors=['#F5B914'], title="fast (less precise)", show=False)
-p2 = uc_slow.plot_history(chemicals="C", colors=['#DBF514'], title="slow (more precise)", show=False)
+p2 = uc_slow.plot_history(chemicals="C", colors=['#CBE504'], title="slow (more precise)", show=False)
 p3 = uc_exact.plot_history(chemicals="C", colors=['forestgreen'], title="exact",  show=False)
 
 # %%

@@ -50,39 +50,12 @@ class ReactionKinetics:
         return (A_t, B_t)
 
 
-    @staticmethod
-    def exact_solution_unimolecular_irreversible(kF, A0, B0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray):
-        """
-        DEPRECATED!
-        Return the exact solution of the irreversible 1st Order Reaction A => B,
-        with the specified parameters,
-        sampled at the given times.
-
-        For details, see https://life123.science/reactions
-
-        :param kF:      Forward reaction rate constant (the reverse one is taken to be zero)
-        :param A0:      Initial concentration of the reactant A
-        :param B0:      Initial concentration of the product B
-        :param t_arr:   A Numpy array with the desired times at which the solutions are to be determined
-
-        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
-                            at the times given by the argument t_arr
-        """
-        TOT = A0 + B0
-        # Formula is:  A(t) = A0 Exp(-kF t)
-
-        A_arr = A0 * np.exp(-kF * t_arr)
-        B_arr = TOT - A_arr
-
-        return (A_arr, B_arr)
-
-
 
     @staticmethod
     def exact_advance_unimolecular_reversible(kF, kR, A0, B0, t, incremental=False) -> (float, float):
         """
         Exactly advance the concentrations
-        in the reversible 1st Order Reaction A <=> B,
+        in the reversible elementary Reaction A <=> B,
         from time 0 to time t,
         with the specified parameters.
 
@@ -96,7 +69,7 @@ class ReactionKinetics:
         :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
                                 rather than the final ones.  Default: False
 
-        :return:    A pair with, respectively, the concentrations of R and P at time t (if `incremental` is False)
+        :return:    A pair with, respectively, the concentrations of A and B at time t (if `incremental` is False)
                         or their concentration changes during the time interval (if `incremental` is True)
         """
         TOT = A0 + B0
@@ -114,38 +87,6 @@ class ReactionKinetics:
             return (A_t - A0, B_t - B0)
 
         return (A_t, B_t)
-
-
-    @staticmethod
-    def exact_solution_unimolecular_reversible(kF, kR, A0, B0, t_arr :np.ndarray) -> (np.ndarray, np.ndarray):
-        """
-        DEPRECATED
-        Return the exact solution of the reversible 1st Order Reaction A <=> B,
-        with the specified parameters,
-        sampled at the given times.
-
-        For details, see https://life123.science/reactions
-
-        :param kF:      Forward reaction rate constant
-        :param kR:      Reverse reaction rate constant
-        :param A0:      Initial concentration of the reactant A
-        :param B0:      Initial concentration of the product B
-        :param t_arr:   A Numpy array with the desired times at which the solutions are to be determined
-
-        :return:        A pair of Numpy arrays with, respectively, the concentrations of A and B
-                            at the times given by the argument t_arr
-        """
-        TOT = A0 + B0
-
-        sum_rates = kF + kR
-        ratio = (kR * TOT) / sum_rates
-
-        # Formula is:  A(t) = (A0 - (kR TOT) / (kF + kR)) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
-        A_arr = (A0 - ratio) * np.exp(-sum_rates * t_arr) + ratio
-        B_arr = TOT - A_arr
-
-        return (A_arr, B_arr)
-
 
 
 
@@ -196,21 +137,25 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def exact_solution_synthesis_rxn(kF, kR, A0, B0, C0, t_arr) -> (np.ndarray, np.ndarray, np.ndarray):
+    def exact_advance_synthesis_reversible(kF, kR, A0, B0, C0, t, incremental=False) -> (float, float, float):
         """
-        Return the exact solution of the reversible 2nd Order Reaction A + B <=> C,
-        with the specified parameters,
-        sampled at the given times.
+        Exactly advance the concentrations
+        in the reversible elementary Reaction A + B <-> C,
+        from time 0 to time t,
+        with the specified parameters.
 
-        :param kF:      Forward reaction rate constant
-        :param kR:      Reverse reaction rate constant
-        :param A0:      Initial concentration of the 1st reactant A
-        :param B0:      Initial concentration of the 2nd reactant B
-        :param C0:      Initial concentration of the product C
-        :param t_arr:   A Numpy array with the desired times at which the solutions are desired
 
-        :return:        A triplet of Numpy arrays with, respectively, the concentrations of A, B and C
-                            at the times given by the argument t_arr
+        :param kF:  Forward reaction rate constant
+        :param kR:  Reverse reaction rate constant
+        :param A0:  Initial concentration of the 1st reactant A
+        :param B0:  Initial concentration of the 2nd reactant B
+        :param C0:  Initial concentration of the product C
+        :param t:   The end time of the reaction
+        :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
+                                rather than the final ones.  Default: False
+
+        :return:        A triplet with, respectively, the concentrations of A, B and C at time t (if `incremental` is False)
+                        or their concentration changes during the time interval (if `incremental` is True)
         """
         AC_tot = A0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
         BC_tot = B0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
@@ -233,19 +178,22 @@ class ReactionKinetics:
         term = - beta**2 + 4 * alpha * gamma
         sqrt_term = cmath.sqrt(term)
 
-        arctan_arg = (beta - 2 * alpha * C0) / sqrt_term    # This will be the argument to pass to the ArcTan function, below
+        arctan_arg = (beta - 2 * alpha * C0) / sqrt_term    # This will be the argument to pass to the arctan() function, below
         arctan_value = np.arctan(arctan_arg)
         # Note that every variable so far is a constant, NOT dependent on time
 
-        tan_arg = 0.5 * sqrt_term * t_arr - arctan_value     # This will be the argument to pass to the Tan function, below
+        tan_arg = 0.5 * sqrt_term * t - arctan_value     # This will be the argument to pass to the tan() function, below
 
         result = (beta + sqrt_term * np.tan(tan_arg) ) / (2*alpha)
-        C_arr = result.real             # Drop the imaginary components (which ought to be very close to zero)
+        C_t = result.real             # Drop the imaginary components (which ought to be very close to zero)
 
-        A_arr = AC_tot - C_arr
-        B_arr = BC_tot - C_arr
+        if incremental:
+            return (C0 - C_t, C0 - C_t, C_t - C0)
 
-        return (A_arr, B_arr, C_arr)
+        A_t = AC_tot - C_t
+        B_t = BC_tot - C_t
+
+        return (A_t, B_t, C_t)
 
 
 

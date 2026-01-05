@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-from life123.reactions import ReactionGeneric
 from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
 from life123 import ThermoDynamics
 
@@ -46,17 +45,6 @@ def test_exact_advance_unimolecular_irreversible():
 
 
 
-def test_exact_solution_unimolecular_irreversible():
-
-    t = np.array([0, 0.005, 0.31739, 1.12, 100.])
-
-    A_exact, B_exact = ReactionKinetics.exact_solution_unimolecular_irreversible(kF=3., A0=80., B0=10., t_arr=t)
-
-    assert np.allclose(A_exact, [80, 78.808955168245,    30.87221642701797,   2.778820715579084, 0])
-    assert np.allclose(B_exact, [10, 11.191044831754994, 59.127783572982025, 87.22117928442091, 90])
-
-
-
 def test_exact_advance_unimolecular_reversible():
     # Reaction A <-> B
     a, b = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=0)
@@ -97,15 +85,6 @@ def test_exact_advance_unimolecular_reversible():
     assert np.allclose(incr[0] + incr[1], 0)
 
 
-def test_exact_solution_unimolecular_reversible():
-    t = np.array([0, 0.005, 0.31739, 1.12, 100.])
-
-    A_exact, B_exact = ReactionKinetics.exact_solution_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t_arr=t)
-
-    assert np.allclose(A_exact, [80, 78.91363613, 45.0, 36.162706, 36])
-    assert np.allclose(B_exact, [10, 11.08636387, 45.0, 53.837294, 54])
-
-
 
 def test_approx_solution_synthesis_rxn():
     #rxn = Reaction(reactants = ["A", "B"], products="C", forward_rate=3., reverse_rate=2.)
@@ -119,24 +98,95 @@ def test_approx_solution_synthesis_rxn():
     assert np.allclose(result[2], [20., 22.11257633, 23.46603241, 29.11416425, 29.70512254])
 
 
+def test_exact_advance_synthesis_reversible():
+    # Reaction A + B <-> C      TODO: Look into testing 2A -> C
+    D_a, D_b, D_c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0, incremental=True)
+    assert np.allclose(D_a, 0.)
+    assert np.allclose(D_b, 0.)
+    assert np.allclose(D_c, 0.)
 
-def test_exact_solution_synthesis_rxn():
-    #rxn = Reaction(reactants = ["A", "B"], products="C", forward_rate=3., reverse_rate=2.)
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0, incremental=False)
+    assert np.allclose(a, 10.)
+    assert np.allclose(b, 50.)
+    assert np.allclose(c, 20.)
 
-    t = np.array([0, 0.0001, 0.0003, 0.0004, 0.0005, 0.0007, 0.001, 0.0015, 0.002, 0.003, 0.005, 0.008, 0.01, 1.])
 
+    D_a, D_b, D_c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.0001, incremental=True)
+    assert np.allclose(D_a, -D_c)
+    assert np.allclose(D_b, -D_c)
+    assert np.allclose(D_c, 0.24233229989)
 
-    result = ReactionKinetics.exact_solution_synthesis_rxn(kF=5., kR=2., A0=10., B0=50., C0=20., t_arr=t)
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.0001, incremental=False)
+    assert np.allclose(a, 10.-D_c)
+    assert np.allclose(b, 50.-D_c)
+    assert np.allclose(c, 20.24233229989)
 
-    assert np.allclose(result[2],  [20., 20.24233229989, 20.70580471094, 20.927461929486, 21.14272449633, 21.554973213,
-                                    22.130796453845, 22.989395248289, 23.73870897904, 24.9720196494, 26.681100361833,
-                                    28.12354985934, 28.6688498538, 29.705122591242])
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.0003, incremental=False)
+    assert np.allclose(a+c, 30.)    # From stoichiometry
+    assert np.allclose(b+c, 70.)    # From stoichiometry
+    assert np.allclose(c, 20.70580471094)
 
-    assert np.allclose(np.min(result[0] + result[2]), 30)
-    assert np.allclose(np.max(result[0] + result[2]), 30)
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.0004, incremental=False)
+    assert np.allclose(a+c, 30.)
+    assert np.allclose(b+c, 70.)
+    assert np.allclose(c, 20.927461929486)
 
-    assert np.allclose(np.min(result[1] + result[2]), 70)
-    assert np.allclose(np.max(result[1] + result[2]), 70)
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.0005, incremental=False)
+    assert np.allclose(a+c, 30.)
+    assert np.allclose(b+c, 70.)
+    assert np.allclose(c, 21.14272449633)
+
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.0007, incremental=False)
+    assert np.allclose(a+c, 30.)
+    assert np.allclose(b+c, 70.)
+    assert np.allclose(c, 21.554973213)
+
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.001, incremental=False)
+    assert np.allclose(a+c, 30.)
+    assert np.allclose(b+c, 70.)
+    assert np.allclose(c, 22.130796453845)
+
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.0015, incremental=False)
+    assert np.allclose(a+c, 30.)
+    assert np.allclose(b+c, 70.)
+    assert np.allclose(c, 22.989395248289)
+
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.002, incremental=False)
+    assert np.allclose(a+c, 30.)
+    assert np.allclose(b+c, 70.)
+    assert np.allclose(c, 23.73870897904)
+
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.003, incremental=False)
+    assert np.allclose(a+c, 30.)
+    assert np.allclose(b+c, 70.)
+    assert np.allclose(c, 24.9720196494)
+
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.005, incremental=False)
+    assert np.allclose(a+c, 30.)
+    assert np.allclose(b+c, 70.)
+    assert np.allclose(c, 26.681100361833)
+
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.008, incremental=False)
+    assert np.allclose(a+c, 30.)
+    assert np.allclose(b+c, 70.)
+    assert np.allclose(c, 28.12354985934)
+
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.01, incremental=False)
+    assert np.allclose(a+c, 30.)
+    assert np.allclose(b+c, 70.)
+    assert np.allclose(c, 28.6688498538)
+
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=1., incremental=False)
+    assert np.allclose(a+c, 30.)
+    assert np.allclose(b+c, 70.)
+    assert np.allclose(c, 29.705122591242)
+
+    # Verify reaching equilibrium at a large t
+    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=10., incremental=False)
+    eq = ReactionKinetics.compute_equilibrium_conc_first_order(kF=5., kR=2., a=1, A0=10., b=1, B0=50., c=1, C0=20.)
+    assert np.allclose(a, eq["A"])
+    assert np.allclose(b, eq["B"])
+    assert np.allclose(c, eq["C"])
 
 
 

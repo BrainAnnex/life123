@@ -504,7 +504,6 @@ class ReactionUnimolecular(ReactionElementary):
                                             # and the values are their respective concentration changes as a result of this reaction
 
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
-
         rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
 
         r = self.reactant           # EXAMPLE: "R"
@@ -513,6 +512,7 @@ class ReactionUnimolecular(ReactionElementary):
         if exact:
             R0 = conc_dict[r]
             P0 = conc_dict[p]
+            # Compute the respective increments of R0 and P0
             if self.reversible:
                 increment_pair = ReactionKinetics.exact_advance_unimolecular_reversible(kF=self.kF, kR=self.kR,
                                     A0=R0, B0=P0, t=delta_time, incremental=True)
@@ -524,9 +524,10 @@ class ReactionUnimolecular(ReactionElementary):
             return (increment_dict_single_rxn, rxn_rate)
 
 
-        # In the "forward Euler" approximation, this rate is taken to remain unvaried during the entire (small) time step
-        delta_rxn = rxn_rate * delta_time   # forward reaction - reverse reaction
+        # If we get thus far, exact=False
 
+        # In the "forward Euler" approximation, the following rate is taken to remain unvaried during the entire (small) time step
+        delta_rxn = rxn_rate * delta_time   # forward reaction - reverse reaction
 
         # Determine the concentration adjustments as a result of this reaction step
 
@@ -759,6 +760,8 @@ class ReactionSynthesis(ReactionElementary):
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
                                 for all the chemicals involved in the given reaction
                                 EXAMPLE:  {"A": 1.5, "B": 31.6, "C": 19.9}
+        :param exact:       [OPTIONAL] If True, use the exact analytical solution;
+                                if False (default), use the "Forward Euler" approximation method
 
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
                                 - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
@@ -773,6 +776,22 @@ class ReactionSynthesis(ReactionElementary):
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
         rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
 
+        if exact and self.reversible:   # TODO: take care of the ir-reversible case
+            A0 = conc_dict[self.reactant_1]    # TODO: Look into whether this approach will work for 2A -> C
+            B0 = conc_dict[self.reactant_2]
+            C0 = conc_dict[self.product]
+
+            increment_triplet = ReactionKinetics.exact_advance_synthesis_reversible(kF=self.kF, kR=self.kR,
+                                        A0=A0, B0=B0, C0=C0, t=delta_time, incremental=True)
+
+            increment_dict_single_rxn = {self.reactant_1: increment_triplet[0], self.reactant_2: increment_triplet[1],
+                                         self.product: increment_triplet[2]}
+            return (increment_dict_single_rxn, rxn_rate)
+
+
+        # If we get thus far, exact=False
+
+        # In the "forward Euler" approximation, the following rate is taken to remain unvaried during the entire (small) time step
         delta_rxn = rxn_rate * delta_time   # forward reaction - reverse reaction
 
 
