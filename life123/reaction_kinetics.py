@@ -23,7 +23,7 @@ class ReactionKinetics:
         to decrease by half (halfway to the asymptotic state, which happens to be zero)
 
         :param kF:  Forward reaction rate constant
-        :return:
+        :return:    Reaction time taken for reactant concentration to decrease by half
         """
         return 0.6931471805599 / kF     # ln 2 / kF
 
@@ -33,25 +33,26 @@ class ReactionKinetics:
     def half_time_relaxation_unimolecular_reversible(kF, kR) -> float:
         """
         Return the time taken for the reactant concentration in a reversible unimolecular reaction
-        to decrease halfway to the asymptotic equilibrium state
+        to decrease halfway to its asymptotic equilibrium state
 
         :param kF:  Forward reaction rate constant
         :param kR:  Reverse reaction rate constant
-        :return:
+        :return:    Reaction time taken for reactant concentration
+                        to decrease halfway to its asymptotic equilibrium state
         """
-        #TODO: pytest
-        return 0.6931471805599 / (kF + kR)
+        return 0.6931471805599 / (kF + kR)      # ln 2 / (kF + kR)
 
 
     @staticmethod
     def relaxation_time_unimolecular_reversible(kF, kR) -> float:
         """
-        This is the same as the half-time of relation, with a factor of ln2
+        This is the same as the half-time of relaxation, within a factor of ln 2
 
         :param kF:  Forward reaction rate constant
         :param kR:  Reverse reaction rate constant
-        :return:
+        :return:    A quantity named "relaxation time"
         """
+        # TODO: is this method needed?
         return 1. / (kF + kR)
 
 
@@ -505,7 +506,7 @@ class ReactionKinetics:
         Determine the equilibrium concentrations that would be eventually reached
         by the chemicals participating in a reversible reaction of the form:
             aA + bB <-> cC + dD
-        whose kinetics are (hypothetically) FIRST ORDER in all the chemicals
+        whose kinetics are (hypothetically) FIRST ORDER in each of the chemicals
         (some of the terms may be missing),
         given the specified initial concentrations,
         IN THE ABSENCE of any other reaction.
@@ -542,8 +543,11 @@ class ReactionKinetics:
                         if not present, accept the default value
 
         :return:    A dictionary of the equilibrium concentrations of the
-                        chemicals involved in the specified reaction
-                        EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8, 'D': 0.3}
+                        chemicals involved in the specified reaction;
+                        only the applicable entries will be present
+                        EXAMPLES:
+                            {'A': 24.0, 'B': 36.0, 'C': 1.8, 'D': 0.3}
+                            {'A': 35.0, 'C': 18.3}
         """
         '''
         For (hypothetical) reactions of the form aA + bB <-> cC + dD  
@@ -617,6 +621,12 @@ class ReactionKinetics:
             m = m2
             print("Using 2nd solution: m = ", m)
             std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "C" : C0 + c*m, "D" : D0 + d*m}
+
+        # Eliminate entries that don't belong
+        if b == 0:
+            del std_result["B"]
+        if d == 0:
+            del std_result["D"]
 
         return std_result
 

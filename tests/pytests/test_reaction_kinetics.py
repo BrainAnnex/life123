@@ -11,13 +11,26 @@ def test_half_time_unimolecular_irreversible():
     kF=5.
     half_time = ReactionKinetics.half_time_unimolecular_irreversible(kF=kF)
     assert np.allclose(half_time, math.log(2) / kF)
-    a, _ = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=kF, A0=80., B0=10., t=half_time)
-    assert np.allclose(a, 80./2)    # [A] has indeed dropped in half after half_time has elapsed
+
+    a_halftime, _ = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=kF, A0=80., B0=10., t=half_time)
+    assert np.allclose(a_halftime, 80./2)    # [A] has indeed dropped in half after half_time has elapsed
 
 
 
 def test_half_time_relaxation_unimolecular_reversible():
-    pass
+    # Reaction A <-> B , with kF=8 and kR=2
+    kF=8.
+    kR=2.
+    half_time_relaxation = ReactionKinetics.half_time_relaxation_unimolecular_reversible(kF=kF, kR=kR)
+    assert np.allclose(half_time_relaxation, math.log(2) / (kF + kR))
+
+    a_halftime, _ = ReactionKinetics.exact_advance_unimolecular_reversible(kF=kF, kR=kR, A0=80., B0=10., t=half_time_relaxation)
+
+    # In the next line, the reaction is stated as A <-> C
+    equil_concs = ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=80., c=1, C0=10.)
+
+    delta_a = 80. - equil_concs["A"]    # Change in [A] from initial state to equilibrium
+    assert np.allclose(a_halftime, 80. - delta_a/2)    # [A] has indeed dropped by half of the overall delta_a after half_time has elapsed
 
 
 
@@ -295,6 +308,9 @@ def test_compute_equilibrium_conc():
     result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=2., a=1, c=1, A0=80., C0=10.)
     assert np.allclose(result["A"], 36)
     assert np.allclose(result["C"], 54)
+    assert "B" not in result
+    assert "D" not in result
+
     # Further verify
     K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"C")],
                                                  conc={"A": 36, "C": 54})
@@ -304,18 +320,22 @@ def test_compute_equilibrium_conc():
     result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=0, a=1, c=1, A0=80., C0=10.)
     assert np.allclose(result["A"], 0)
     assert np.allclose(result["C"], 90)
+    assert "B" not in result
+    assert "D" not in result
 
     # Only the reverse reaction
     result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=0, kR=2., a=1, c=1, A0=80., C0=10.)
     assert np.allclose(result["A"], 90)
     assert np.allclose(result["C"], 0)
-
+    assert "B" not in result
+    assert "D" not in result
 
     # A + B <-> C
     result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=5., kR=2., a=1, b=1, c=1, A0=10., B0=50., C0=20.)
     assert np.allclose(result["A"], 0.2948774087575341)
     assert np.allclose(result["B"], 40.294877408757536)
     assert np.allclose(result["C"], 29.705122591242464)
+    assert "D" not in result
     # Further verify
     K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A"), (1,"B")], product_data=[(1,"C")],
                                                    conc={"A": 0.2948774087575341, "B": 40.294877408757536, "C": 29.705122591242464})
@@ -325,6 +345,7 @@ def test_compute_equilibrium_conc():
     result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=2., a=2, b=2, c=1, A0=200., B0=200., C0=40.)
     assert np.allclose(result["A"], 9.49568869375716)
     assert np.allclose(result["C"], 135.2521556531214)
+    assert "D" not in result
 
     # Further verify.  Compute the reaction quotient with the equilibrium concentrations, i.e. the thermodynamic equilibrium constant
     K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(2,"A")], product_data=[(1,"C")],
