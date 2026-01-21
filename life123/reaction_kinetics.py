@@ -14,6 +14,48 @@ class ReactionKinetics:
     Static methods about reactions kinetics
     """
 
+
+
+    @staticmethod
+    def half_time_unimolecular_irreversible(kF) -> float:
+        """
+        Return the time taken for the reactant concentration in an irreversible unimolecular reaction
+        to decrease by half (halfway to the asymptotic state, which happens to be zero)
+
+        :param kF:  Forward reaction rate constant
+        :return:
+        """
+        return 0.6931471805599 / kF     # ln 2 / kF
+
+
+
+    @staticmethod
+    def half_time_relaxation_unimolecular_reversible(kF, kR) -> float:
+        """
+        Return the time taken for the reactant concentration in a reversible unimolecular reaction
+        to decrease halfway to the asymptotic equilibrium state
+
+        :param kF:  Forward reaction rate constant
+        :param kR:  Reverse reaction rate constant
+        :return:
+        """
+        #TODO: pytest
+        return 0.6931471805599 / (kF + kR)
+
+
+    @staticmethod
+    def relaxation_time_unimolecular_reversible(kF, kR) -> float:
+        """
+        This is the same as the half-time of relation, with a factor of ln2
+
+        :param kF:  Forward reaction rate constant
+        :param kR:  Reverse reaction rate constant
+        :return:
+        """
+        return 1. / (kF + kR)
+
+
+
     @staticmethod
     def exact_advance_unimolecular_irreversible(kF, A0, B0, t, incremental=False) -> (float, float):
         """
@@ -137,13 +179,17 @@ class ReactionKinetics:
 
 
     @staticmethod
+    def exact_advance_synthesis_irreversible(kF, A0, B0, C0, t, incremental=False) -> (float, float, float):
+        pass        # TODO: implement
+
+
+    @staticmethod
     def exact_advance_synthesis_reversible(kF, kR, A0, B0, C0, t, incremental=False) -> (float, float, float):
         """
         Exactly advance the concentrations
         in the reversible elementary Reaction A + B <-> C,
         from time 0 to time t,
         with the specified parameters.
-
 
         :param kF:  Forward reaction rate constant
         :param kR:  Reverse reaction rate constant
@@ -154,9 +200,11 @@ class ReactionKinetics:
         :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
                                 rather than the final ones.  Default: False
 
-        :return:        A triplet with, respectively, the concentrations of A, B and C at time t (if `incremental` is False)
+        :return:    A triplet with, respectively, the concentrations of A, B and C at time t (if `incremental` is False)
                         or their concentration changes during the time interval (if `incremental` is True)
         """
+        #TODO: maybe simply return delta_C
+
         AC_tot = A0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
         BC_tot = B0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
 

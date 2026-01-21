@@ -1,7 +1,29 @@
 import pytest
 import numpy as np
+import math
 from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
 from life123 import ThermoDynamics
+
+
+
+def test_half_time_unimolecular_irreversible():
+    # Reaction A -> B , with kF=5
+    kF=5.
+    half_time = ReactionKinetics.half_time_unimolecular_irreversible(kF=kF)
+    assert np.allclose(half_time, math.log(2) / kF)
+    a, _ = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=kF, A0=80., B0=10., t=half_time)
+    assert np.allclose(a, 80./2)    # [A] has indeed dropped in half after half_time has elapsed
+
+
+
+def test_half_time_relaxation_unimolecular_reversible():
+    pass
+
+
+
+def test_relaxation_time_unimolecular_reversible():
+    relaxation_time = ReactionKinetics.relaxation_time_unimolecular_reversible(kF=8., kR=2.)
+    assert np.allclose(relaxation_time, 0.1)    # 1 / (8.+2.)
 
 
 
