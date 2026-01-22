@@ -70,7 +70,7 @@ class ReactionKinetics:
         :param kF:  Forward reaction rate constant (the reverse one is taken to be zero)
         :param A0:  Initial concentration of the reactant A
         :param B0:  Initial concentration of the product P
-        :param t:   The end time of the reaction
+        :param t:   The end time of the reaction that started at time zero
         :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
                                 rather than the final ones.  Default: False
 
@@ -106,7 +106,7 @@ class ReactionKinetics:
         :param kR:  Reverse reaction rate constant
         :param A0:  Initial concentration of the reactant A
         :param B0:  Initial concentration of the product P
-        :param t:   The end time of the reaction
+        :param t:   The end time of the reaction that started at time zero
         :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
                                 rather than the final ones.  Default: False
 
@@ -178,33 +178,61 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def exact_advance_synthesis_irreversible(kF, A0, B0, C0, t, incremental=False) -> (float, float, float):
+    def exact_advance_synthesis_irreversible(kF, A0, B0, P0, t, incremental=False) -> float:
         """
         Exactly advance the concentrations
-        in the irreversible elementary Reaction A + B -> C,
+        in the irreversible elementary Reaction A + B -> P,
         from time 0 to time t,
         with the specified parameters.
 
         :param kF:  Forward reaction rate constant
         :param A0:  Initial concentration of the 1st reactant A
         :param B0:  Initial concentration of the 2nd reactant B
-        :param C0:  Initial concentration of the product C
-        :param t:   The end time of the reaction
+        :param P0:  Initial concentration of the product P
+        :param t:   The end time of the reaction that started at time zero
         :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
                                 rather than the final ones.  Default: False
-        :return:
+        :return:    The concentration of P at time t (if `incremental` is False)
+                        or its concentration change during the time interval (if `incremental` is True)
         """
-         # TODO: verify
-        alpha = A0 + C0
-        beta = B0 + C0
-        e = math.exp((B0-A0)* kF * t)
+        # Adapted from "Athel Cornish-Bowden, Fundamentals of Enzyme Kinetics, 4th edn", section 1.2.3
+        '''
+        Starting with the ODE:
+            d P(t) / dt = kF * A(t) * B(t) = kF * (A0 - (P(t)-P0)) * (B0 - (P(t)-P0))
+            
+        The solution for the concentration of the product P at time t is:
+            (A0 * (P0+B0 - P(t))) / (B0 * (P0+A0 - P(t))) = e ^ (B0-A0)*kF*t
+        '''
 
-        eps = B0 / A0 * e
-        C_t = (alpha * eps - beta) / (eps - 1)
+        alpha =  P0 + A0
+        beta =   P0 + B0
+        try:
+            eps = math.exp((B0-A0)* kF * t)
+        except OverflowError:
+            # Overflow occurs if B0 > A0 and t is very large;
+            # in such a case, `A` is the limiting reagent, and fully converts to `P`
+            if incremental:
+                return A0
+            return alpha    # P0 + A0
 
-        C_t_alt = (B0 * alpha * e - A0 * beta) / (B0 * e - A0)
+        ''' 
+        With those variables, and writing P for P(t), the earlier solution can be re-stated as:
+            (A0 * (beta - P)) / (B0 * (alpha - P)) = eps
+            
+        i.e.:
+            (A0 * (beta - P)) = eps * (B0 * (alpha - P))
+            A0 * beta - A0 * P = eps * (B0 * alpha - B0 * P)
+            A0 * beta - A0 * P = B0 * alpha * eps - B0 * eps * P
+            B0 * eps * P - A0 * P = B0 * alpha * eps - A0 * beta
+            (B0 * eps - A0) * P = B0 * alpha * eps - A0 * beta
+        '''
+        #print(f"alpha: {alpha} , beta: {beta} , eps: {eps}")
+        P = (B0 * alpha * eps - A0 * beta) / (B0 * eps - A0)    # Concentration of `P` at time t
 
-        return C_t, C_t_alt
+        if incremental:
+            return P-P0
+
+        return P
 
 
 
@@ -221,7 +249,7 @@ class ReactionKinetics:
         :param A0:  Initial concentration of the 1st reactant A
         :param B0:  Initial concentration of the 2nd reactant B
         :param C0:  Initial concentration of the product C
-        :param t:   The end time of the reaction
+        :param t:   The end time of the reaction that started at time zero
         :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
                                 rather than the final ones.  Default: False
 
@@ -229,6 +257,7 @@ class ReactionKinetics:
                         or their concentration changes during the time interval (if `incremental` is True)
         """
         #TODO: maybe simply return delta_C
+        #TODO: standardize notation to A + B <-> P
 
         AC_tot = A0 + C0        # Quantity conserved thru the rxn, from the stoichiometry
         BC_tot = B0 + C0        # Quantity conserved thru the rxn, from the stoichiometry

@@ -42,6 +42,7 @@ def test_relaxation_time_unimolecular_reversible():
 
 def test_exact_advance_unimolecular_irreversible():
     # Reaction A -> B
+    # Compare against the REVERSIBLE reaction solver with zero reverse rate constant
     a, b = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=0)
     assert np.allclose(a, 80.)
     assert np.allclose(b, 10.)
@@ -82,6 +83,7 @@ def test_exact_advance_unimolecular_irreversible():
 
 def test_exact_advance_unimolecular_reversible():
     # Reaction A <-> B
+    # TODO: compare against very accurate approx solutions
     a, b = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=0)
     assert np.allclose(a, 80.)
     assert np.allclose(b, 10.)
@@ -122,8 +124,6 @@ def test_exact_advance_unimolecular_reversible():
 
 
 def test_approx_solution_synthesis_rxn():
-    #rxn = Reaction(reactants = ["A", "B"], products="C", forward_rate=3., reverse_rate=2.)
-
     t = np.array([0, 0.000864, 0.001555, 0.009850, 0.067400])
 
     result = ReactionKinetics.approx_solution_synthesis_rxn(kF=5., kR=2., A0=10., B0=50., C0=20., t_arr=t)
@@ -134,48 +134,60 @@ def test_approx_solution_synthesis_rxn():
 
 
 def test_exact_advance_synthesis_irreversible():
-    # Reaction A + B -> C      TODO: Look into testing 2A -> C
-    C_t, C_t_alt = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., C0=20., t=0)
-    print(C_t, C_t_alt)
+    # Reaction A + B -> P      TODO: Look into testing 2A -> P
+
+    # No change at time 0
+    P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=0, incremental=False)
+    assert np.allclose(P_t, 20.)
+
+    Delta_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=0, incremental=True)
+    assert np.allclose(Delta_t, 0)
+
+    # Compare against the REVERSIBLE reaction solver with zero reverse rate constant
+    P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=0.01, incremental=False)
+    _, _, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=10., B0=50., C0=20., t=0.01, incremental=False)
+    assert np.allclose(P_t, c)  # 28.8871974442945
+
+    Delta_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=0.01, incremental=True)
+    _, _, D_c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=10., B0=50., C0=20., t=0.01, incremental=True)
+    assert np.allclose(Delta_t, D_c)
+
+    for t  in [0.0003, 0.0004, 0.5, 0.0007, 0.001, 0.0015, 0.002, 0.003, 0.005, 0.008, 0.01, 1.]:
+        P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=t, incremental=False)
+        _, _, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=10., B0=50., C0=20., t=t, incremental=False)
+        assert np.allclose(P_t, c)
 
 
-    C_t, C_t_alt = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., C0=20., t=0.0001)
-    print(C_t, C_t_alt)
+    # A time so large that the reaction has gone to completion (`A` being the limiting reagent)
+    P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=3., incremental=False)
+    assert np.allclose(P_t, 30.)    # All `A`(the limiting reagent) converted to `P`
 
-    _, _, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=10., B0=50., C0=20., t=0.0001, incremental=False)
-    print(c)
-
-
-    C_t, C_t_alt = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., C0=20., t=0.0003)
-    print(C_t, C_t_alt)
-
-    _, _, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=10., B0=50., C0=20., t=0.0003, incremental=False)
-    print(c)
+    # A value of t so ridiculously large that an OverflowError is caused (but caught) in the internal math.exp usage
+    P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=200., incremental=False)
+    assert np.allclose(P_t, 30.)    # All `A`(the limiting reagent) converted to `P`
 
 
-    C_t, C_t_alt = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., C0=20., t=0.5)
-    print(C_t, C_t_alt)
+    # Now, let `B` be the limiting reagent at large times
+    P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=5., P0=20., t=3., incremental=False)
+    assert np.allclose(P_t, 25.)    # All `B`(the limiting reagent) converted to `P`
 
-    _, _, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=10., B0=50., C0=20., t=0.5, incremental=False)
-    print(c)
-
-
-    C_t, C_t_alt = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., C0=20., t=3)
-    print(C_t, C_t_alt)
+    P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=5., P0=20., t=200., incremental=False)
+    assert np.allclose(P_t, 25.)    # All `B`(the limiting reagent) converted to `P`
 
 
-    print()
-    C_t, C_t_alt = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10, B0=0, C0=20., t=0.5)
-    print(C_t, C_t_alt)
+    # If either A0 or B0 is zero, the reaction cannot proceed
+    Delta_P = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=0, B0=50., P0=20., t=1., incremental=True)
+    assert np.allclose(Delta_P, 0)
 
-    _, _, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=10, B0=0, C0=20., t=0.5, incremental=False)
-    print(c)
+    Delta_P = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=0, P0=20., t=1., incremental=True)
+    assert np.allclose(Delta_P, 0)
 
 
 
 
 def test_exact_advance_synthesis_reversible():
     # Reaction A + B <-> C      TODO: Look into testing 2A -> C
+    # TODO: compare against very accurate approx solutions
     D_a, D_b, D_c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0, incremental=True)
     assert np.allclose(D_a, 0.)
     assert np.allclose(D_b, 0.)
