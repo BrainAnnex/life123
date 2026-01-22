@@ -12,6 +12,8 @@ from life123.visualization.plotly_helper import PlotlyHelper
 class ReactionKinetics:
     """
     Static methods about reactions kinetics
+
+    For background, see https://life123.science/reactions
     """
 
 
@@ -61,11 +63,9 @@ class ReactionKinetics:
     def exact_advance_unimolecular_irreversible(kF, A0, B0, t, incremental=False) -> (float, float):
         """
         Exactly advance the concentrations
-        in the ir-reversible 1st Order Reaction A => B,
+        in the ir-reversible 1st Order Reaction A -> B,
         from time 0 to time t,
         with the specified parameters.
-
-        For details, see https://life123.science/reactions
 
         :param kF:  Forward reaction rate constant (the reverse one is taken to be zero)
         :param A0:  Initial concentration of the reactant A
@@ -98,11 +98,9 @@ class ReactionKinetics:
     def exact_advance_unimolecular_reversible(kF, kR, A0, B0, t, incremental=False) -> (float, float):
         """
         Exactly advance the concentrations
-        in the reversible elementary Reaction A <=> B,
+        in the reversible elementary Reaction A <-> B,
         from time 0 to time t,
         with the specified parameters.
-
-        For details, see https://life123.science/reactions
 
         :param kF:  Forward reaction rate constant
         :param kR:  Reverse reaction rate constant
@@ -181,7 +179,33 @@ class ReactionKinetics:
 
     @staticmethod
     def exact_advance_synthesis_irreversible(kF, A0, B0, C0, t, incremental=False) -> (float, float, float):
-        pass        # TODO: implement
+        """
+        Exactly advance the concentrations
+        in the irreversible elementary Reaction A + B -> C,
+        from time 0 to time t,
+        with the specified parameters.
+
+        :param kF:  Forward reaction rate constant
+        :param A0:  Initial concentration of the 1st reactant A
+        :param B0:  Initial concentration of the 2nd reactant B
+        :param C0:  Initial concentration of the product C
+        :param t:   The end time of the reaction
+        :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
+                                rather than the final ones.  Default: False
+        :return:
+        """
+         # TODO: verify
+        alpha = A0 + C0
+        beta = B0 + C0
+        e = math.exp((B0-A0)* kF * t)
+
+        eps = B0 / A0 * e
+        C_t = (alpha * eps - beta) / (eps - 1)
+
+        C_t_alt = (B0 * alpha * e - A0 * beta) / (B0 * e - A0)
+
+        return C_t, C_t_alt
+
 
 
     @staticmethod
@@ -443,8 +467,6 @@ class ReactionKinetics:
         Warning: generally speaking, this is NOT a valid kinetic modeling
         of any reaction that isn't elementary
 
-        For background info:  https://life123.science/reactions
-
         :param reactant_terms:  A list of pairs (stoichiometry coefficient , label) for the reactants
         :param product_terms:   A list of pairs (stoichiometry coefficient , label) for the products
         :param kF:              Forward reaction rate
@@ -501,7 +523,7 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def compute_equilibrium_conc_first_order(kF, kR, a, A0, c, C0, b=0, B0=1, d=0, D0=1) -> dict:
+    def compute_equilibrium_conc_first_order(kF, kR, a, A0, c, C0, b=0, B0=None, d=0, D0=None) -> dict:
         """
         Determine the equilibrium concentrations that would be eventually reached
         by the chemicals participating in a reversible reaction of the form:
@@ -516,7 +538,7 @@ class ReactionKinetics:
         where vF and vR are, respectively, the forward and reverse reaction velocities (rates).
         If the reaction isn't elementary, kF will be a composite "kF effective"; likewise for kR.
 
-        CAUTION: since all reaction orders are taken to be 1,
+        CAUTION: since all reaction orders are expected to be 1,
                  if any of stoichiometry coefficients of the involved chemicals aren't 1,
                  then it's a scenario of "generalized kinetics"
                  (non-mass-action with respect to the stoichiometry)
@@ -525,20 +547,22 @@ class ReactionKinetics:
                concentrations approximate the activities of ideal dilute solutions
 
         :param kF:  The reaction's forward rate constant.
-                        If the reaction isn't elementary, this value will be a composite "kF effective"
+                        If the reaction isn't elementary (but can be modeled as being of 1st order in each of the chemicals),
+                        then this value will be a composite "kF effective"
         :param kR:  The reaction's reverse rate constant.
-                        If the reaction isn't elementary, this value will be a composite "kR effective"
+                        If the reaction isn't elementary (but can be modeled as being of 1st order in each of the chemicals),
+                        then this value will be a composite "kR effective"
 
         :param a:   The stoichiometry coefficient of chemical A in the reaction
         :param A0:  The initial concentration of chemical A
         :param b:   [OPTIONAL] The stoichiometry coefficient of chemical B in the reaction;
                         if not present, accept the default value
         :param B0:  [OPTIONAL] The initial concentration of chemical B;
-                        if not present, accept the default value
+                        if not present, accept the default None
         :param c:   The stoichiometry coefficient of chemical C in the reaction
         :param C0:  The initial concentration of chemical C
         :param d:   [OPTIONAL] The stoichiometry coefficient of chemical D in the reaction;
-                        if not present, accept the default value
+                        if not present, accept the default None
         :param D0:  [OPTIONAL] The initial concentration of chemical B;
                         if not present, accept the default value
 
@@ -592,12 +616,21 @@ class ReactionKinetics:
         assert kF is not None, \
             "compute_equilibrium_conc_first_order(): a value must be passed for argument `kF` (currently None)"
 
+        if b == 0:
+            assert B0 is None, \
+                "compute_equilibrium_conc_first_order(): unexpected concentration value for a chemical not in reaction (B)"
+            B0 = 1      # A trick to reduce to the general equation when b=0
+
+        if d == 0:
+            assert D0 is None, \
+                "compute_equilibrium_conc_first_order(): unexpected concentration value for a chemical not in reaction (D)"
+            D0 = 1      # A trick to reduce to the general equation when d=0
 
         alpha = (kF * a * b - kR * c * d)
         beta = -kF * (b*A0 + a*B0) -kR * (d*C0 + c*D0)
         gamma = kF * A0 * B0 - kR * C0 * D0
 
-        #print("alpha, beta, gamma : ", alpha, beta, gamma)
+        #print("compute_equilibrium_conc_first_order() - alpha, beta, gamma : ", alpha, beta, gamma)
 
         if np.allclose(alpha, 0):
             # The quadratic reduces to the linear equation:  beta * m + gamma = 0
@@ -622,7 +655,7 @@ class ReactionKinetics:
             print("Using 2nd solution: m = ", m)
             std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "C" : C0 + c*m, "D" : D0 + d*m}
 
-        # Eliminate entries that don't belong
+        # Eliminate entries that aren't applicable to the reaction
         if b == 0:
             del std_result["B"]
         if d == 0:

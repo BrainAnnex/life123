@@ -133,6 +133,47 @@ def test_approx_solution_synthesis_rxn():
     assert np.allclose(result[2], [20., 22.11257633, 23.46603241, 29.11416425, 29.70512254])
 
 
+def test_exact_advance_synthesis_irreversible():
+    # Reaction A + B -> C      TODO: Look into testing 2A -> C
+    C_t, C_t_alt = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., C0=20., t=0)
+    print(C_t, C_t_alt)
+
+
+    C_t, C_t_alt = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., C0=20., t=0.0001)
+    print(C_t, C_t_alt)
+
+    _, _, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=10., B0=50., C0=20., t=0.0001, incremental=False)
+    print(c)
+
+
+    C_t, C_t_alt = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., C0=20., t=0.0003)
+    print(C_t, C_t_alt)
+
+    _, _, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=10., B0=50., C0=20., t=0.0003, incremental=False)
+    print(c)
+
+
+    C_t, C_t_alt = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., C0=20., t=0.5)
+    print(C_t, C_t_alt)
+
+    _, _, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=10., B0=50., C0=20., t=0.5, incremental=False)
+    print(c)
+
+
+    C_t, C_t_alt = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., C0=20., t=3)
+    print(C_t, C_t_alt)
+
+
+    print()
+    C_t, C_t_alt = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10, B0=0, C0=20., t=0.5)
+    print(C_t, C_t_alt)
+
+    _, _, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=10, B0=0, C0=20., t=0.5, incremental=False)
+    print(c)
+
+
+
+
 def test_exact_advance_synthesis_reversible():
     # Reaction A + B <-> C      TODO: Look into testing 2A -> C
     D_a, D_b, D_c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0, incremental=True)
@@ -303,8 +344,12 @@ def test_compute_rate_first_order():
 
 
 
-def test_compute_equilibrium_conc():
+def test_compute_equilibrium_conc_first_order():
     # Unimolecular reaction A <-> C
+    with pytest.raises(Exception):
+        ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=2., a=1, c=1, A0=80., C0=10.,
+                                                              b=0, B0=123., d=0, D0=999.)      # Bogus values for B0 and D0
+
     result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=2., a=1, c=1, A0=80., C0=10.)
     assert np.allclose(result["A"], 36)
     assert np.allclose(result["C"], 54)
