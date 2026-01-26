@@ -1237,11 +1237,14 @@ class UniformCompartment:
 
     def _reaction_elemental_step(self, delta_time: float, rxn_list=None) -> np.array:
         """
-        Using the system concentration data of ALL the chemical species,
-        do the specified SINGLE TIME STEP for ONLY the requested reactions (by default all).
+        Using the system concentration data,
+        do the specified SINGLE TIME STEP
+        for ONLY the requested reactions (by default all).
 
         All computations are based on the INITIAL concentrations (prior to this reaction step),
         which are used as the basis for all the reactions (in "forward Euler" approach.)
+
+        If any concentration goes negative, an Exception is raised.
 
         Return the Numpy increment vector for ALL the chemical species concentrations, in their index order
         (whether involved in these reactions or not)

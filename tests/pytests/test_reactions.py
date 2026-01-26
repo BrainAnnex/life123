@@ -753,6 +753,24 @@ def test_extract_products_formula():
 
 
 
+def test_step_simulation_ReactionGeneric():
+    # Reaction A + B <-> P
+    rxn = ReactionGeneric(reactants=["A", "B"], products="P", kF=5., kR=2.)
+    t = 0.0001
+    increment_dict_single_rxn, rxn_rate = \
+        rxn.step_simulation(delta_time=t, conc_dict={"A":10., "B": 50., "P": 20})
+
+    expected_rate = 5 * 10 * 50 - 2 * 20    # kF [A] [B] - kR [P]
+    expected_delta_p = expected_rate * t
+    np.allclose(rxn_rate, expected_rate)
+    np.allclose(increment_dict_single_rxn["P"], expected_delta_p)
+    np.allclose(increment_dict_single_rxn["A"], -expected_delta_p)
+    np.allclose(increment_dict_single_rxn["B"], -expected_delta_p)
+
+
+
+
+
 
 #########  TO DESCRIBE THE DATA  #########
 

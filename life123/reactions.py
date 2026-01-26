@@ -764,7 +764,7 @@ class ReactionSynthesis(ReactionElementary):
                                 if False (default), use the "Forward Euler" approximation method
 
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
-                                - increment_dict_single_rxn is the mapping of chemical labels to their concentration changes
+                                - increment_dict_single_rxn is the mapping of chemical labels to their concentration CHANGES
                                                             during this step
                                 - rxn_rate                  is the reaction rate ("velocity") for this reaction
                                                             (rate of change of the product)
@@ -1055,7 +1055,7 @@ class ReactionDecomposition(ReactionElementary):
                                 EXAMPLE:  {"A": 1.5, "B": 31.6, "C": 19.9}
 
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
-                                - increment_dict_single_rxn is the mapping of chemical labels to their concentration changes
+                                - increment_dict_single_rxn is the mapping of chemical labels to their concentration CHANGES
                                                             during this step
                                 - rxn_rate                  is the reaction rate ("velocity") for this reaction
                                                             (rate of change of either of the products)
@@ -1481,7 +1481,7 @@ class ReactionEnzyme(ReactionCommon):
                                 EXAMPLE:  {"E": 1.5, "S": 31.6, "ES": 0.4, "P": 19.9}
 
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
-                                - increment_dict_single_rxn is the mapping of chemical labels to their concentration changes
+                                - increment_dict_single_rxn is the mapping of chemical labels to their concentration CHANGES
                                                             during this step
                                 - rxn_rate pair             one value for each elementary reaction
                                 EXAMPLE of increment_dict_single_rxn: {"E": 0, "S": -2.9, "ES": 0.1, "P": 2.8}
@@ -2114,9 +2114,10 @@ class ReactionGeneric(ReactionCommon):
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         :param exact:       UNUSED - this option is unavailable
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
-                                - increment_dict_single_rxn is the mapping of chemical labels to their concentration changes
-                                                            during this step
-                                - rxn_rate                  is the reaction rate ("velocity") for this reaction
+                                - increment_dict_single_rxn     The mapping of chemical labels
+                                                                    to their concentration CHANGES
+                                                                    during this step
+                                - rxn_rate                      The reaction rate ("velocity") for this reaction
                                 EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
         """
 

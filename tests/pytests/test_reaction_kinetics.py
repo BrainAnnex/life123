@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import math
 from life123.reaction_kinetics import ReactionKinetics, VariableTimeSteps
-from life123 import ThermoDynamics
+from life123 import ThermoDynamics, ReactionGeneric
 
 
 
@@ -124,6 +124,9 @@ def test_exact_advance_unimolecular_reversible():
     p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0.005)
     assert np.allclose(p, 11.08636387)
 
+    p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0.2)
+    assert np.allclose(p, 37.81330458845654)
+
     p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0.31739)
     assert np.allclose(p, 45.)
 
@@ -152,6 +155,26 @@ def test_exact_advance_unimolecular_reversible_2():
     derivative_p2 = gradient[1]
     rate_at_mid_point = 3 * a2 - 2 * p2     # kF * a2 - kR * p2
     assert np.allclose(derivative_p2, rate_at_mid_point)
+
+
+def test_exact_advance_unimolecular_reversible_3():
+    # Compare the exact solution against a fine-grained forward Euler approximation
+    rxn = ReactionGeneric(reactants="A", products="P", kF=3., kR=2.)
+
+    t_final = 0.2
+    n_steps = 50000
+    t_step = t_final / n_steps
+    a = 80
+    p = 10
+    for i in range(n_steps):
+        increment_dict, _ = \
+            rxn.step_simulation(delta_time=t_step, conc_dict={"A": a, "P": p})
+        delta_p = increment_dict["P"]
+        p += delta_p
+        a -= delta_p
+
+    exact_p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0.2)   # 37.81330458845654
+    assert np.allclose(p, exact_p)
 
 
 
@@ -234,29 +257,12 @@ def test_exact_advance_synthesis_irreversible():
     assert np.allclose(P_t, 25.)    # All `B`(the limiting reagent) converted to `P`
 
 
-    # If either A0 or B0 is zero, the reaction cannot proceed
+    # If either A0 or B0 is zero, the reaction doesn't proceed
     Delta_P = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=0, B0=50., P0=20., t=1., incremental=True)
     assert np.allclose(Delta_P, 0)
 
     Delta_P = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=0, P0=20., t=1., incremental=True)
     assert np.allclose(Delta_P, 0)
-
-
-def test_exact_advance_synthesis_irreversible_2():
-    # Verify that the actual (numerically computed) reaction rate matches what's expected from the rate law,
-    # at the middle point of a 3
-    h = 0.00001
-    t_start = 0.003
-    p1 = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50, P0=20., t=t_start)
-    p2 = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50, P0=20., t=t_start + h)
-    a2 = 10 - (p2 - 20)    # From mass conservation
-    b2 = 50 - (p2 - 20)    # From mass conservation
-    p3 = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50, P0=20., t=t_start + 2 * h)
-    #print(a2, b2, p2)
-    gradient = np.gradient([p1, p2, p3], h)
-    derivative_p2 = gradient[1]
-    rate_at_mid_point = 5 * a2 * b2   # kF * a2 * b2
-    assert np.allclose(derivative_p2, rate_at_mid_point)
 
 
     # Case A0 = B0  (equivalently, 2 A -> P)
@@ -275,6 +281,46 @@ def test_exact_advance_synthesis_irreversible_2():
     # A time so large that the reaction has gone to completion
     P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=30, B0=30, P0=20, t=1000., incremental=False)
     assert np.allclose(P_t, 50.)    # The reagents fully converted to `P`
+
+
+def test_exact_advance_synthesis_irreversible_2():
+    # Verify that the actual (numerically computed) reaction rate matches what's expected from the rate law,
+    # at the middle point of 3
+    h = 0.00001
+    t_start = 0.003
+    p1 = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50, P0=20., t=t_start)
+    p2 = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50, P0=20., t=t_start + h)
+    a2 = 10 - (p2 - 20)    # From mass conservation
+    b2 = 50 - (p2 - 20)    # From mass conservation
+    p3 = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50, P0=20., t=t_start + 2 * h)
+    #print(a2, b2, p2)
+    gradient = np.gradient([p1, p2, p3], h)
+    derivative_p2 = gradient[1]
+    rate_at_mid_point = 5 * a2 * b2   # kF * a2 * b2
+    assert np.allclose(derivative_p2, rate_at_mid_point)
+
+
+def test_exact_advance_synthesis_irreversible_3():
+    # Compare the exact solution against a fine-grained forward Euler approximation
+    # Reaction A + B -> P
+    rxn = ReactionGeneric(reactants=["A", "B"], products="P", kF=5., kR=0)
+
+    t_final = 0.01
+    n_steps = 10000
+    t_step = t_final / n_steps
+    a = 10
+    b = 50
+    p = 20
+    for i in range(n_steps):
+        increment_dict, _ = \
+            rxn.step_simulation(delta_time=t_step, conc_dict={"A": a, "B": b, "P": p})
+        delta_p = increment_dict["P"]
+        p += delta_p
+        a -= delta_p
+        b -= delta_p
+
+    exact_p = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=0.01, incremental=False)   # 28.8871974442945
+    assert np.allclose(p, exact_p)
 
 
 
@@ -332,7 +378,7 @@ def test_exact_advance_synthesis_reversible():
     # Verify reaching equilibrium at a large t
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=10., incremental=False)
     eq = ReactionKinetics.compute_equilibrium_conc_first_order(kF=5., kR=2., a=1, A0=10., b=1, B0=50., p=1, P0=20.)
-    assert np.allclose(P_t, eq["P"])
+    assert np.allclose(P_t, eq["P"])    # 29.705122591242464
 
 
     # Case A0 = B0
@@ -429,6 +475,29 @@ def test_exact_advance_synthesis_reversible_2():
     derivative_middle = gradient[1]
     rate_at_mid_point = kF * a_middle * b_middle - kR * p_middle  # kF [A] [B] - kR [P]
     assert np.allclose(derivative_middle, rate_at_mid_point)
+
+
+def test_exact_advance_synthesis_reversible_3():
+    # Compare the exact solution against a fine-grained forward Euler approximation
+    # Reaction A + B <-> P
+    rxn = ReactionGeneric(reactants=["A", "B"], products="P", kF=5., kR=2.)
+
+    t_final = 0.001
+    n_steps = 2000
+    t_step = t_final / n_steps
+    a = 10
+    b = 50
+    p = 20
+    for i in range(n_steps):
+        increment_dict, _ = \
+            rxn.step_simulation(delta_time=t_step, conc_dict={"A": a, "B": b, "P": p})
+        delta_p = increment_dict["P"]
+        p += delta_p
+        a -= delta_p
+        b -= delta_p
+
+    exact_p = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.001, incremental=False)   # 22.130796453845
+    assert np.allclose(p, exact_p)
 
 
 

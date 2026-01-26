@@ -606,7 +606,7 @@ class ReactionKinetics:
         for order, product_label in product_terms:      # The stoichiometry coeff. of each product is taken to be its reaction order
             conc = conc_dict.get(product_label)
             assert conc is not None, \
-                f"compute_rate_mass_action_kinetics(): missing concentration value for product chemical with label `{product_label}`"
+                f"compute_rate_mass_action_kinetics(): missing concentration value for product chemical `{product_label}`"
             reverse_rate *= conc ** order       # Raise to power
 
         return forward_rate - reverse_rate
