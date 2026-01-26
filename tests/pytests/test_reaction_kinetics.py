@@ -7,27 +7,30 @@ from life123 import ThermoDynamics
 
 
 def test_half_time_unimolecular_irreversible():
-    # Reaction A -> B , with kF=5
+    # Reaction A -> P , with kF=5
     kF=5.
     half_time = ReactionKinetics.half_time_unimolecular_irreversible(kF=kF)
     assert np.allclose(half_time, math.log(2) / kF)
 
-    a_halftime, _ = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=kF, A0=80., B0=10., t=half_time)
-    assert np.allclose(a_halftime, 80./2)    # [A] has indeed dropped in half after half_time has elapsed
+    p_halftime = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=kF, A0=80., P0=10., t=half_time)
+    a_halftime = 80 - (p_halftime - 10)     # From the stoichiometry
+    assert np.allclose(a_halftime, 80./2)   # [A] has indeed dropped in half after half_time has elapsed
 
 
 
 def test_half_time_relaxation_unimolecular_reversible():
-    # Reaction A <-> B , with kF=8 and kR=2
+    # Reaction A <-> P , with kF=8 and kR=2
     kF=8.
     kR=2.
     half_time_relaxation = ReactionKinetics.half_time_relaxation_unimolecular_reversible(kF=kF, kR=kR)
     assert np.allclose(half_time_relaxation, math.log(2) / (kF + kR))
 
-    a_halftime, _ = ReactionKinetics.exact_advance_unimolecular_reversible(kF=kF, kR=kR, A0=80., B0=10., t=half_time_relaxation)
+    # Simulate the reaction to t = half_time_relaxation
+    p_halftime = ReactionKinetics.exact_advance_unimolecular_reversible(kF=kF, kR=kR, A0=80., P0=10., t=half_time_relaxation)
+    a_halftime = 80 - (p_halftime - 10)      # From the stoichiometry
 
-    # In the next line, the reaction is stated as A <-> C
-    equil_concs = ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=80., c=1, C0=10.)
+    # Determine the equilibrium concentrations (the other reference point for the halfway drop)
+    equil_concs = ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=80., p=1, P0=10.)
 
     delta_a = 80. - equil_concs["A"]    # Change in [A] from initial state to equilibrium
     assert np.allclose(a_halftime, 80. - delta_a/2)    # [A] has indeed dropped by half of the overall delta_a after half_time has elapsed
@@ -40,102 +43,156 @@ def test_relaxation_time_unimolecular_reversible():
 
 
 
+def test_half_time_to_equilibrium_synthesis():
+    # Reaction A + B -> P
+    kF=8.
+
+    half_time_relaxation = ReactionKinetics.half_time_to_equilibrium_irreversible_synthesis(kF=kF, A0=15, B0=5)
+    assert np.allclose(half_time_relaxation, 0.006385320297074884)
+
+    #equil_concs = ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=0, a=1, A0=15., b=1, B0=5, p=1, P0=0)
+    #print(equil_concs)
+
+    P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=kF, A0=15., B0=5., P0=0, t=half_time_relaxation)
+    assert np.allclose(P_t, 2.5)    # 2.5 is halfway between P0=0 and the final value of 5,
+                                    # when all the limiting reagent (B) has been consumed
+
+
+    half_time_relaxation = ReactionKinetics.half_time_to_equilibrium_irreversible_synthesis(kF=kF, A0=20, B0=20)
+    print(half_time_relaxation)
+    assert np.allclose(half_time_relaxation, 0.00625)
+    P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=kF, A0=20, B0=20, P0=0, t=half_time_relaxation)
+    print(P_t)
+    assert np.allclose(P_t, 10)     # 10 is halfway between P0=0 and the final value of 20,
+                                    # when the reagents have been consumed
+
+
+
 def test_exact_advance_unimolecular_irreversible():
-    # Reaction A -> B
+    # Reaction A -> P
     # Compare against the REVERSIBLE reaction solver with zero reverse rate constant
-    a, b = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=0)
-    assert np.allclose(a, 80.)
-    assert np.allclose(b, 10.)
+    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0)
+    assert np.allclose(p, 10.)      # No change
 
-    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=0, incremental=True)
-    assert np.allclose(incr, [0,0])
+    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0, incremental=True)
+    assert np.allclose(incr, 0)     # No change
+
+    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.005)
+    assert np.allclose(p, 11.191044831754994)
+
+    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.31739)
+    assert np.allclose(p, 59.127783572982025)
+
+    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.31739, incremental=True)
+    assert np.allclose(incr, p-10)      # P(t) - P0
+
+    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=1.12)
+    assert np.allclose(p, 87.22117928442091)
+
+    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=100.)
+    assert np.allclose(p, 90)
+
+    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=100., incremental=True)
+    assert np.allclose(incr, 80)
 
 
-    a, b = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=0.005)
-    assert np.allclose(a, 78.808955168245)
-    assert np.allclose(b, 11.191044831754994)
-    assert np.allclose(a+b, 90)
+def test_exact_advance_unimolecular_irreversible_2():
+    # Verify that the actual (numerically computed) reaction rate matches what's expected from the rate law, at the middle point
+    h = 0.0005
+    t_start = 0.3
+    p1 = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=t_start)
+    p2 = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=t_start + h)
+    a2 = 90 - p2    # From mass conservation
+    p3 = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=t_start + 2 * h)
 
-    a, b = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=0.31739)
-    assert np.allclose(a, 30.87221642701797)
-    assert np.allclose(b, 59.127783572982025)
-    assert np.allclose(a+b, 90)
-
-    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=0.31739, incremental=True)
-    assert np.allclose(incr, [-49.127783572982025 , 49.127783572982025])
-    assert np.allclose(incr[0] + incr[1], 0)
-
-
-    a, b = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=1.12)
-    assert np.allclose(a, 2.778820715579084)
-    assert np.allclose(b, 87.22117928442091)
-    assert np.allclose(a+b, 90)
-
-    a, b = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=100.)
-    assert np.allclose(a, 0)
-    assert np.allclose(b, 90)
-
-    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., B0=10., t=100., incremental=True)
-    assert np.allclose(incr, [-80, 80])
-    assert np.allclose(incr[0] + incr[1], 0)
+    gradient = np.gradient([p1, p2, p3], h)
+    derivative_p2 = gradient[1]
+    rate_at_mid_point = 3 * a2   # kF * a2
+    assert np.allclose(derivative_p2, rate_at_mid_point)
 
 
 
 def test_exact_advance_unimolecular_reversible():
-    # Reaction A <-> B
-    # TODO: compare against very accurate approx solutions
-    a, b = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=0)
-    assert np.allclose(a, 80.)
-    assert np.allclose(b, 10.)
+    # Reaction A <-> P
+    p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0)
+    assert np.allclose(p, 10.)      # No change
 
-    incr = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=0, incremental=True)
-    assert np.allclose(incr, [0,0])
+    incr = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0, incremental=True)
+    assert np.allclose(incr, 0)     # No change
 
 
-    a, b = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=0.005)
-    assert np.allclose(a, 78.91363613)
-    assert np.allclose(b, 11.08636387)
-    assert np.allclose(a+b, 90)
+    p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0.005)
+    assert np.allclose(p, 11.08636387)
 
-    a, b = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=0.31739)
-    assert np.allclose(a, 45.)
-    assert np.allclose(b, 45.)
-    assert np.allclose(a+b, 90)
+    p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0.31739)
+    assert np.allclose(p, 45.)
 
-    a, b = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=1.12)
-    assert np.allclose(a, 36.162706)
-    assert np.allclose(b, 53.837294)
-    assert np.allclose(a+b, 90)
+    p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=1.12)
+    assert np.allclose(p, 53.837294)
 
-    incr = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=1.12, incremental=True)
-    assert np.allclose(incr, [-43.837294, 43.837294])
-    assert np.allclose(incr[0] + incr[1], 0)
+    incr = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=1.12, incremental=True)
+    assert np.allclose(incr, 53.837294-10)      # P(t) - P0
 
 
-    a, b = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=100.)
-    assert np.allclose(a, 36.)
-    assert np.allclose(b, 54.)
-    assert np.allclose(a+b, 90)
+    p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=100.)
+    assert np.allclose(p, 54.)
 
-    incr = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., B0=10., t=100., incremental=True)
-    assert np.allclose(incr, [-44., 44.])
-    assert np.allclose(incr[0] + incr[1], 0)
+
+def test_exact_advance_unimolecular_reversible_2():
+    # Verify that the actual (numerically computed) reaction rate matches what's expected from the rate law,
+    # at the middle point of 3
+    h = 0.0005
+    t_start = 0.2
+    p1 = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=t_start)
+    p2 = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=t_start + h)
+    a2 = 90 - p2    # From mass conservation
+    p3 = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=t_start + 2 * h)
+    #print(p2)
+    gradient = np.gradient([p1, p2, p3], h)
+    derivative_p2 = gradient[1]
+    rate_at_mid_point = 3 * a2 - 2 * p2     # kF * a2 - kR * p2
+    assert np.allclose(derivative_p2, rate_at_mid_point)
 
 
 
 def test_approx_solution_synthesis_rxn():
+    # Reaction A + B <-> P
+    kF=5.
+    kR=2.
+    A0=10.
+    B0=50.
+    P0=20.
+
+    with pytest.raises(Exception):
+        ReactionKinetics.approx_solution_synthesis_rxn(kF=0, kR=kR, A0=A0, B0=B0, P0=P0, t=0)   # kF cannot be zero
+
+    p = ReactionKinetics.approx_solution_synthesis_rxn(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=0)
+    assert np.allclose(p, P0)      # No change from P0
+
+    #equil = ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=A0, p=1, P0=P0, b=1, B0=B0)
+    #print(equil)       # {'A': 0.2948774087575341, 'B': 40.294877408757536, 'P': 29.705122591242464}
+
+    p = ReactionKinetics.approx_solution_synthesis_rxn(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=0.1)
+    assert np.allclose(p, 29.705122591242464)       # Reaching the equilibrium value after a sufficiently long time
+
+
+    # Process a whole array of times in one call
     t = np.array([0, 0.000864, 0.001555, 0.009850, 0.067400])
+    result = ReactionKinetics.approx_solution_synthesis_rxn(kF=5., kR=2., A0=10., B0=50., P0=20., t=t)
+    assert np.allclose(result, [20., 22.11257633, 23.46603241, 29.11416425, 29.70512254])
 
-    result = ReactionKinetics.approx_solution_synthesis_rxn(kF=5., kR=2., A0=10., B0=50., C0=20., t_arr=t)
+    # Compare against exact solution
+    for t in [0, 0.000864, 0.001555, 0.009850, 0.067400]:
+        p_approx = ReactionKinetics.approx_solution_synthesis_rxn(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=t)
+        p_exact = ReactionKinetics.exact_advance_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=t)
+        assert abs(p_approx - p_exact) / p_exact < 0.02     # Less than 2% discrepancy
 
-    assert np.allclose(result[0], [10., 7.88742367,   6.53396759,  0.88583575,  0.29487746])
-    assert np.allclose(result[1], [50., 47.88742367, 46.53396759, 40.88583575, 40.29487746])
-    assert np.allclose(result[2], [20., 22.11257633, 23.46603241, 29.11416425, 29.70512254])
 
 
 def test_exact_advance_synthesis_irreversible():
-    # Reaction A + B -> P      TODO: Look into testing 2A -> P
+    # Reaction A + B -> P
 
+    # We'll start with `A` as the limiting reagent
     # No change at time 0
     P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=0, incremental=False)
     assert np.allclose(P_t, 20.)
@@ -143,18 +200,20 @@ def test_exact_advance_synthesis_irreversible():
     Delta_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=0, incremental=True)
     assert np.allclose(Delta_t, 0)
 
-    # Compare against the REVERSIBLE reaction solver with zero reverse rate constant
+    # Compare against the REVERSIBLE reaction solver with a near-zero reverse rate constant : not exactly zero, because its
+    # implementation reverts to the irreversible solver when the reverse rate constant is very close to zero
+    eps = 0.00001
     P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=0.01, incremental=False)
-    _, _, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=10., B0=50., C0=20., t=0.01, incremental=False)
+    c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=eps, A0=10., B0=50., P0=20., t=0.01, incremental=False)
     assert np.allclose(P_t, c)  # 28.8871974442945
 
     Delta_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=0.01, incremental=True)
-    _, _, D_c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=10., B0=50., C0=20., t=0.01, incremental=True)
+    D_c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=eps, A0=10., B0=50., P0=20., t=0.01, incremental=True)
     assert np.allclose(Delta_t, D_c)
 
     for t  in [0.0003, 0.0004, 0.5, 0.0007, 0.001, 0.0015, 0.002, 0.003, 0.005, 0.008, 0.01, 1.]:
         P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50., P0=20., t=t, incremental=False)
-        _, _, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=10., B0=50., C0=20., t=t, incremental=False)
+        c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=eps, A0=10., B0=50., P0=20., t=t, incremental=False)
         assert np.allclose(P_t, c)
 
 
@@ -183,98 +242,193 @@ def test_exact_advance_synthesis_irreversible():
     assert np.allclose(Delta_P, 0)
 
 
+def test_exact_advance_synthesis_irreversible_2():
+    # Verify that the actual (numerically computed) reaction rate matches what's expected from the rate law,
+    # at the middle point of a 3
+    h = 0.00001
+    t_start = 0.003
+    p1 = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50, P0=20., t=t_start)
+    p2 = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50, P0=20., t=t_start + h)
+    a2 = 10 - (p2 - 20)    # From mass conservation
+    b2 = 50 - (p2 - 20)    # From mass conservation
+    p3 = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=10., B0=50, P0=20., t=t_start + 2 * h)
+    #print(a2, b2, p2)
+    gradient = np.gradient([p1, p2, p3], h)
+    derivative_p2 = gradient[1]
+    rate_at_mid_point = 5 * a2 * b2   # kF * a2 * b2
+    assert np.allclose(derivative_p2, rate_at_mid_point)
+
+
+    # Case A0 = B0  (equivalently, 2 A -> P)
+
+    # No change at time 0
+    P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=30, B0=30, P0=20, t=0, incremental=False)
+    assert np.allclose(P_t, 20)     # No change
+
+    for t  in [0.0003, 0.0004, 0.5, 0.0007, 0.001, 0.0015, 0.002, 0.003, 0.005, 0.008, 0.01, 1.]:
+        P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=30, B0=30, P0=20, t=t, incremental=False)
+        P_t_approx = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=30, B0=30.000001, P0=20, t=t, incremental=False)
+        c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=eps, A0=30, B0=30, P0=20, t=t, incremental=False)
+        assert np.allclose(P_t, c)
+        assert np.allclose(P_t, P_t_approx)
+
+    # A time so large that the reaction has gone to completion
+    P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=5., A0=30, B0=30, P0=20, t=1000., incremental=False)
+    assert np.allclose(P_t, 50.)    # The reagents fully converted to `P`
+
 
 
 def test_exact_advance_synthesis_reversible():
-    # Reaction A + B <-> C      TODO: Look into testing 2A -> C
-    # TODO: compare against very accurate approx solutions
-    D_a, D_b, D_c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0, incremental=True)
-    assert np.allclose(D_a, 0.)
-    assert np.allclose(D_b, 0.)
-    assert np.allclose(D_c, 0.)
+    # Reaction A + B <-> P
 
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0, incremental=False)
-    assert np.allclose(a, 10.)
-    assert np.allclose(b, 50.)
-    assert np.allclose(c, 20.)
+    Dp = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0, incremental=True)
+    assert np.allclose(Dp, 0.)     # No change
 
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0, incremental=False)
+    assert np.allclose(P_t, 20.)    # No change
 
-    D_a, D_b, D_c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.0001, incremental=True)
-    assert np.allclose(D_a, -D_c)
-    assert np.allclose(D_b, -D_c)
-    assert np.allclose(D_c, 0.24233229989)
+    Dp = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0001, incremental=True)
+    assert np.allclose(Dp, 0.24233229989)
 
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.0001, incremental=False)
-    assert np.allclose(a, 10.-D_c)
-    assert np.allclose(b, 50.-D_c)
-    assert np.allclose(c, 20.24233229989)
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0001, incremental=False)
+    assert np.allclose(P_t, 20.24233229989)
 
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.0003, incremental=False)
-    assert np.allclose(a+c, 30.)    # From stoichiometry
-    assert np.allclose(b+c, 70.)    # From stoichiometry
-    assert np.allclose(c, 20.70580471094)
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0003, incremental=False)
+    assert np.allclose(P_t, 20.70580471094)
 
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.0004, incremental=False)
-    assert np.allclose(a+c, 30.)
-    assert np.allclose(b+c, 70.)
-    assert np.allclose(c, 20.927461929486)
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0004, incremental=False)
+    assert np.allclose(P_t, 20.927461929486)
 
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.0005, incremental=False)
-    assert np.allclose(a+c, 30.)
-    assert np.allclose(b+c, 70.)
-    assert np.allclose(c, 21.14272449633)
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0005, incremental=False)
+    assert np.allclose(P_t, 21.14272449633)
 
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.0007, incremental=False)
-    assert np.allclose(a+c, 30.)
-    assert np.allclose(b+c, 70.)
-    assert np.allclose(c, 21.554973213)
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0007, incremental=False)
+    assert np.allclose(P_t, 21.554973213)
 
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.001, incremental=False)
-    assert np.allclose(a+c, 30.)
-    assert np.allclose(b+c, 70.)
-    assert np.allclose(c, 22.130796453845)
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.001, incremental=False)
+    assert np.allclose(P_t, 22.130796453845)
 
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.0015, incremental=False)
-    assert np.allclose(a+c, 30.)
-    assert np.allclose(b+c, 70.)
-    assert np.allclose(c, 22.989395248289)
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0015, incremental=False)
+    assert np.allclose(P_t, 22.989395248289)
 
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.002, incremental=False)
-    assert np.allclose(a+c, 30.)
-    assert np.allclose(b+c, 70.)
-    assert np.allclose(c, 23.73870897904)
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.002, incremental=False)
+    assert np.allclose(P_t, 23.73870897904)
 
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.003, incremental=False)
-    assert np.allclose(a+c, 30.)
-    assert np.allclose(b+c, 70.)
-    assert np.allclose(c, 24.9720196494)
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.003, incremental=False)
+    assert np.allclose(P_t, 24.9720196494)
 
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.005, incremental=False)
-    assert np.allclose(a+c, 30.)
-    assert np.allclose(b+c, 70.)
-    assert np.allclose(c, 26.681100361833)
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.005, incremental=False)
+    assert np.allclose(P_t, 26.681100361833)
 
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.008, incremental=False)
-    assert np.allclose(a+c, 30.)
-    assert np.allclose(b+c, 70.)
-    assert np.allclose(c, 28.12354985934)
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.008, incremental=False)
+    assert np.allclose(P_t, 28.12354985934)
 
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=0.01, incremental=False)
-    assert np.allclose(a+c, 30.)
-    assert np.allclose(b+c, 70.)
-    assert np.allclose(c, 28.6688498538)
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.01, incremental=False)
+    assert np.allclose(P_t, 28.6688498538)
 
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=1., incremental=False)
-    assert np.allclose(a+c, 30.)
-    assert np.allclose(b+c, 70.)
-    assert np.allclose(c, 29.705122591242)
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=1., incremental=False)
+    assert np.allclose(P_t, 29.705122591242)
 
     # Verify reaching equilibrium at a large t
-    a, b, c = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., C0=20., t=10., incremental=False)
-    eq = ReactionKinetics.compute_equilibrium_conc_first_order(kF=5., kR=2., a=1, A0=10., b=1, B0=50., c=1, C0=20.)
-    assert np.allclose(a, eq["A"])
-    assert np.allclose(b, eq["B"])
-    assert np.allclose(c, eq["C"])
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=10., incremental=False)
+    eq = ReactionKinetics.compute_equilibrium_conc_first_order(kF=5., kR=2., a=1, A0=10., b=1, B0=50., p=1, P0=20.)
+    assert np.allclose(P_t, eq["P"])
+
+
+    # Case A0 = B0
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=35, B0=35, P0=20., t=0.002, incremental=False)
+    assert np.allclose(P_t, 28.99659132780272)
+
+
+    # No reverse reaction
+    P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=30, B0=30, P0=20, t=0.0003, incremental=False)
+    assert np.allclose(P_t, 21.291866028708135)
+
+
+def test_exact_advance_synthesis_reversible_2():
+    # Verify that the actual (numerically computed) reaction rate matches what's expected from the rate law,
+    # at the middle point of 3
+
+    # Case where `A` is the limiting reagent
+    A0=10
+    B0=50
+    P0=20
+    kF=5
+    kR=2
+
+    #print(ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=A0, p=1, P0=P0, b=1, B0=B0))
+    #Equilibrium at {'A': 0.2948774087575341, 'B': 40.294877408757536, 'P': 29.705122591242464}
+
+    h = 0.00001
+    t_start = 0.002
+    times = [t_start + i * h for i in range(3)]
+    p = [ReactionKinetics.exact_advance_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=t)
+            for t in times
+        ]
+    p_middle = p[1]
+    a_middle = A0 - (p_middle - P0)    # From mass conservation
+    b_middle = B0 - (p_middle - P0)    # From mass conservation
+
+    print(a_middle, b_middle, p)        # 6.247301538717998 46.247301538718 [23.738708979042038, 23.752698461282, 23.766650993990154]
+    gradient = np.gradient(p, h)
+    derivative_middle = gradient[1]
+    rate_at_mid_point = kF * a_middle * b_middle - kR * p_middle  # kF [A] [B] - kR [P]
+    assert np.allclose(derivative_middle, rate_at_mid_point)
+
+
+    # Case where `B` is the limiting reagent
+    A0=60
+    B0=30
+    P0=10
+    kF=7
+    kR=3
+
+    #print(ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=A0, p=1, P0=P0, b=1, B0=B0))
+    #Equilibrium at {'A': 30.553318635734474, 'B': 0.5533186357344739, 'P': 39.44668136426553}
+
+    h = 0.00001
+    t_start = 0.002
+    times = [t_start + i * h for i in range(3)]
+    p = [ReactionKinetics.exact_advance_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=t)
+            for t in times
+        ]
+    p_middle = p[1]
+    a_middle = A0 - (p_middle - P0)    # From mass conservation
+    b_middle = B0 - (p_middle - P0)    # From mass conservation
+
+    #print(a_middle, b_middle, p)   44.710779935913656 14.710779935913656 [25.243842573299553, 25.289220064086344, 25.334407842935416]
+    gradient = np.gradient(p, h)
+    derivative_middle = gradient[1]
+    rate_at_mid_point = kF * a_middle * b_middle - kR * p_middle  # kF [A] [B] - kR [P]
+    assert np.allclose(derivative_middle, rate_at_mid_point)
+
+
+    # Case where A0 = B0 (and reaction mostly in reverse)
+    A0=8
+    B0=8
+    P0=30
+    kF=5
+    kR=8
+
+    #print(ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=A0, p=1, P0=P0, b=1, B0=B0))
+    #Equilibrium at {'A': 7.038367176906169, 'B': 7.038367176906169, 'P': 30.96163282309383}
+
+    h = 0.00005
+    t_start = 0.01
+    times = [t_start + i * h for i in range(3)]
+    #print(times)
+    p = [ReactionKinetics.exact_advance_synthesis_reversible(kF=kF, kR=kR, A0=A0, B0=B0, P0=P0, t=t)
+            for t in times
+        ]
+    p_middle = p[1]
+    a_middle = A0 - (p_middle - P0)    # From mass conservation
+    b_middle = B0 - (p_middle - P0)    # From mass conservation
+
+    #print(a_middle, b_middle, p)    # 7.461626205565043 7.461626205565043 [30.536666653790505, 30.538373794434957, 30.54007389774443]
+    gradient = np.gradient(p, h)
+    derivative_middle = gradient[1]
+    rate_at_mid_point = kF * a_middle * b_middle - kR * p_middle  # kF [A] [B] - kR [P]
+    assert np.allclose(derivative_middle, rate_at_mid_point)
 
 
 
@@ -357,81 +511,81 @@ def test_compute_rate_first_order():
 
 
 def test_compute_equilibrium_conc_first_order():
-    # Unimolecular reaction A <-> C
+    # Unimolecular reaction A <-> P
     with pytest.raises(Exception):
-        ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=2., a=1, c=1, A0=80., C0=10.,
-                                                              b=0, B0=123., d=0, D0=999.)      # Bogus values for B0 and D0
+        ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=2., a=1, p=1, A0=80., P0=10.,
+                                                              b=0, B0=123., q=0, Q0=999.)      # Bogus values for B0 and D0
 
-    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=2., a=1, c=1, A0=80., C0=10.)
+    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=2., a=1, p=1, A0=80., P0=10.)
     assert np.allclose(result["A"], 36)
-    assert np.allclose(result["C"], 54)
+    assert np.allclose(result["P"], 54)
     assert "B" not in result
-    assert "D" not in result
+    assert "Q" not in result
 
     # Further verify
-    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"C")],
-                                                 conc={"A": 36, "C": 54})
+    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"P")],
+                                                 conc={"A": 36, "P": 54})
     assert np.allclose(K, 3./2.)    # At the equilibrium concentrations, the reaction quotient of elementary equations equals kF/kR
 
     # Only the forward reaction
-    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=0, a=1, c=1, A0=80., C0=10.)
+    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=0, a=1, p=1, A0=80., P0=10.)
     assert np.allclose(result["A"], 0)
-    assert np.allclose(result["C"], 90)
+    assert np.allclose(result["P"], 90)
     assert "B" not in result
-    assert "D" not in result
+    assert "Q" not in result
 
     # Only the reverse reaction
-    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=0, kR=2., a=1, c=1, A0=80., C0=10.)
+    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=0, kR=2., a=1, p=1, A0=80., P0=10.)
     assert np.allclose(result["A"], 90)
-    assert np.allclose(result["C"], 0)
+    assert np.allclose(result["P"], 0)
     assert "B" not in result
-    assert "D" not in result
+    assert "Q" not in result
 
-    # A + B <-> C
-    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=5., kR=2., a=1, b=1, c=1, A0=10., B0=50., C0=20.)
+    # A + B <-> P
+    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=5., kR=2., a=1, b=1, p=1, A0=10., B0=50., P0=20.)
     assert np.allclose(result["A"], 0.2948774087575341)
     assert np.allclose(result["B"], 40.294877408757536)
-    assert np.allclose(result["C"], 29.705122591242464)
-    assert "D" not in result
+    assert np.allclose(result["P"], 29.705122591242464)
+    assert "Q" not in result
     # Further verify
-    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A"), (1,"B")], product_data=[(1,"C")],
-                                                   conc={"A": 0.2948774087575341, "B": 40.294877408757536, "C": 29.705122591242464})
+    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A"), (1,"B")], product_data=[(1,"P")],
+                                                   conc={"A": 0.2948774087575341, "B": 40.294877408757536, "P": 29.705122591242464})
     assert np.allclose(K, 5./2.)    # At the equilibrium concentrations, the reaction quotient of elementary equations equals kF/kR
 
-    # 2 A <-> C  (expressed as A + A <-> C)
-    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=2., a=2, b=2, c=1, A0=200., B0=200., C0=40.)
+    # 2 A <-> P  (expressed as A + A <-> P)
+    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=2., a=2, b=2, p=1, A0=200., B0=200., P0=40.)
     assert np.allclose(result["A"], 9.49568869375716)
-    assert np.allclose(result["C"], 135.2521556531214)
-    assert "D" not in result
+    assert np.allclose(result["P"], 135.2521556531214)
+    assert "Q" not in result
 
     # Further verify.  Compute the reaction quotient with the equilibrium concentrations, i.e. the thermodynamic equilibrium constant
-    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(2,"A")], product_data=[(1,"C")],
-                                                 conc={"A": 9.49568869375716, "C": 135.2521556531214})
+    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(2,"A")], product_data=[(1,"P")],
+                                                 conc={"A": 9.49568869375716, "P": 135.2521556531214})
     assert np.allclose(K, 3./2.)    # At the equilibrium concentrations, the reaction quotient of elementary equations equals kF/kR
 
-    # HYPOTHETICAL 1st order reaction A + B <-> C + D
-    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=10., kR=2., a=1, b=1, c=1, d=1, A0=1., B0=2., C0=3., D0=4.)
-    expected = {'A': 1.0894541729001368, 'B': 2.089454172900137, 'C': 2.910545827099863, 'D': 3.910545827099863}
+    # HYPOTHETICAL 1st order reaction A + B <-> P + Q
+    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=10., kR=2., a=1, b=1, p=1, q=1, A0=1., B0=2., P0=3., Q0=4.)
+    expected = {'A': 1.0894541729001368, 'B': 2.089454172900137, 'P': 2.910545827099863, 'Q': 3.910545827099863}
     for key in result.keys():
         assert np.allclose(result[key], expected[key])
 
     # Further verify.  Compute the reaction quotient with the equilibrium concentrations, i.e. the thermodynamic equilibrium constant
-    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A"), (1,"B")], product_data=[(1,"C"), (1,"D")],
+    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A"), (1,"B")], product_data=[(1,"P"), (1,"Q")],
                                                    conc=expected)
     assert np.allclose(K, 10./2.)    # Non-elementary reaction, but still with kinetics following mass-action: the equilibrium constant equals to kF/kR
 
 
-    # HYPOTHETICAL reaction A + 2 B <-> C + 3 D, 1st order in all chemicals
+    # HYPOTHETICAL reaction A + 2 B <-> P + 3 Q, 1st order in all chemicals
     # This is a scenario of generalized kinetics (non-mass-action with respect to the stoichiometry),
-    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=10., kR=2., a=1, b=2, c=1, d=3, A0=1., B0=2., C0=3., D0=4.)
-    expected = {'A': 1.0598463308126616, 'B': 2.119692661625323, 'C': 2.9401536691873384, 'D': 3.8204610075620153}
+    result = ReactionKinetics.compute_equilibrium_conc_first_order(kF=10., kR=2., a=1, b=2, p=1, q=3, A0=1., B0=2., P0=3., Q0=4.)
+    expected = {'A': 1.0598463308126616, 'B': 2.119692661625323, 'P': 2.9401536691873384, 'Q': 3.8204610075620153}
     for key in result.keys():
         assert np.allclose(result[key], expected[key])
 
     # Further verify.  Compute the reaction quotient with the equilibrium concentrations, i.e. the thermodynamic equilibrium constant
-    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A"), (2,"B")], product_data=[(1,"C"), (3,"D")],
+    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A"), (2,"B")], product_data=[(1,"P"), (3,"Q")],
                                                  conc=expected)
-    corrective_factor = (result["B"] / result["D"]**2)      # Needed because we're dealing with generalized kinetics
+    corrective_factor = (result["B"] / result["Q"]**2)      # Needed because we're dealing with generalized kinetics
                                                             # (non-mass-action with respect to the stoichiometry)
     assert np.allclose(K * corrective_factor, 10./2.)    # The "corrected" equilibrium constant equals to kF/kR
 

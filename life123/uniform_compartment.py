@@ -1246,7 +1246,8 @@ class UniformCompartment:
         Return the Numpy increment vector for ALL the chemical species concentrations, in their index order
         (whether involved in these reactions or not)
 
-        NOTES:  - the actual System Concentrations and the System Time (stored in object variables) are NOT changed
+        NOTES:  - the actual System Concentrations
+                    and the System Time (stored in object variables) are NOT changed
                 - if any of the concentrations go negative, an Exception is raised
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the

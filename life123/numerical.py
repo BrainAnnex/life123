@@ -433,9 +433,10 @@ class Numerical:
 
 
     @classmethod
-    def gradient_order4_1d(cls, arr :Union[np.array, List, Tuple], dx=1.0, dtype='float') -> np.array:
+    def gradient_order4_1d(cls, arr :np.array|List|Tuple, dx=1.0, dtype='float') -> np.array:
         """
-        Compute the gradient, from UNIT-SPACED x-values and y-values in the given 1-dimensional array,
+        Compute the gradient, from the y-values in the given 1-dimensional array,
+        along EQUALLY-SPACED x-values,
         using the 5-point Central Difference, which produces an accuracy of order 4.
 
         At the boundary, or close to it, different 5-point stencils are used,
@@ -528,6 +529,7 @@ class Numerical:
         :return:        A list of N numpy arrays,
                         each of the same shape as f, and giving the derivative of f with respect to each dimension
         """
+        # TODO: enforce min number of values (5?)
 
         N = len(f.shape)            # Number of dimensions
         n_args = len(varargs)       # Number of arguments passed after the first one (f)
@@ -636,8 +638,8 @@ class Numerical:
         Based on B. Fornberg, "Calculation of Weights in Finite Difference Formulas", 1998
         (https://epubs.siam.org/doi/abs/10.1137/S0036144596322507)
 
-        :param x_values:    A Numpy array of x values (independent variable) that
-                                may be unevenly-spaced
+        :param x_values:    A Numpy array of x values (independent variable),
+                                which may be unevenly-spaced
         :param f:           A Numpy array of the values of the function at the above grid point
         :param stencil:     An integer between 2 and the number of grid points.
         :return:            A Numpy array

@@ -467,7 +467,7 @@ class ReactionUnimolecular(ReactionElementary):
         i.e. its "forward rate" minus its "reverse rate".
 
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
-                                for all the chemicals involved in the given reaction
+                                for all the chemicals involved in this reaction
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         :return:            The differences between the reaction's forward and reverse rates
         """
@@ -483,9 +483,9 @@ class ReactionUnimolecular(ReactionElementary):
         using either the exact analytical solution, or the "Forward Euler" approximation method
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
-                                concentration won't vary significantly during this span
+                                concentrations won't vary significantly during this span
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
-                                for all the chemicals involved in the given reaction
+                                for all the chemicals involved in this reaction
                                 EXAMPLE:  {"R": 1.5, "P": 31.6}
         :param exact:       [OPTIONAL] If True, use the exact analytical solution;
                                 if False (default), use the "Forward Euler" approximation method
@@ -515,10 +515,10 @@ class ReactionUnimolecular(ReactionElementary):
             # Compute the respective increments of R0 and P0
             if self.reversible:
                 increment_pair = ReactionKinetics.exact_advance_unimolecular_reversible(kF=self.kF, kR=self.kR,
-                                    A0=R0, B0=P0, t=delta_time, incremental=True)
+                                                                                        A0=R0, P0=P0, t=delta_time, incremental=True)
             else:
                 increment_pair = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=self.kF,
-                                    A0=R0, B0=P0, t=delta_time, incremental=True)
+                                                                                          A0=R0, P0=P0, t=delta_time, incremental=True)
 
             increment_dict_single_rxn = {r: increment_pair[0], p: increment_pair[1]}
             return (increment_dict_single_rxn, rxn_rate)
@@ -568,8 +568,8 @@ class ReactionUnimolecular(ReactionElementary):
                                f"concentration of the produce `{self.product}` was not provided"
 
         eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
-                                                                        a=1, c=1,
-                                                                        A0=A0, C0=C0)
+                                                                        a=1, p=1,
+                                                                        A0=A0, P0=C0)
 
         # eq_dict contains the keys "A", "B", "C", "D";
         # translate the standard names A, B, C, D into the actual names, and also drop any missing term
@@ -739,7 +739,7 @@ class ReactionSynthesis(ReactionElementary):
         at the start of the time step.
 
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
-                                for all the chemicals involved in the given reaction
+                                for all the chemicals involved in this reaction
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         :return:            The differences between the reaction's forward and reverse rates
         """
@@ -756,15 +756,15 @@ class ReactionSynthesis(ReactionElementary):
         using the "Forward Euler" method
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
-                                concentration won't vary significantly during this span
+                                concentrations won't vary significantly during this span
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
-                                for all the chemicals involved in the given reaction
+                                for all the chemicals involved in this reaction
                                 EXAMPLE:  {"A": 1.5, "B": 31.6, "C": 19.9}
         :param exact:       [OPTIONAL] If True, use the exact analytical solution;
                                 if False (default), use the "Forward Euler" approximation method
 
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
-                                - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
+                                - increment_dict_single_rxn is the mapping of chemical labels to their concentration changes
                                                             during this step
                                 - rxn_rate                  is the reaction rate ("velocity") for this reaction
                                                             (rate of change of the product)
@@ -782,7 +782,7 @@ class ReactionSynthesis(ReactionElementary):
             C0 = conc_dict[self.product]
 
             increment_triplet = ReactionKinetics.exact_advance_synthesis_reversible(kF=self.kF, kR=self.kR,
-                                        A0=A0, B0=B0, C0=C0, t=delta_time, incremental=True)
+                                                                                    A0=A0, B0=B0, P0=C0, t=delta_time, incremental=True)
 
             increment_dict_single_rxn = {self.reactant_1: increment_triplet[0], self.reactant_2: increment_triplet[1],
                                          self.product: increment_triplet[2]}
@@ -850,12 +850,12 @@ class ReactionSynthesis(ReactionElementary):
 
         if self.reactant_1 == self.reactant_2:
             eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
-                                                                        a=2, b=2, c=1,
-                                                                        A0=A0, B0=B0, C0=C0)
+                                                                            a=2, b=2, p=1,
+                                                                            A0=A0, B0=B0, P0=C0)
         else:
             eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
-                                                                        a=1, b=1, c=1,
-                                                                        A0=A0, B0=B0, C0=C0)
+                                                                            a=1, b=1, p=1,
+                                                                            A0=A0, B0=B0, P0=C0)
 
         # eq_dict contains the keys "A", "B", "C", "D";
         # translate the standard names A, B, C, D into the actual names, and also drop any missing term
@@ -1032,7 +1032,7 @@ class ReactionDecomposition(ReactionElementary):
         at the start of the time step.
 
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
-                                for all the chemicals involved in the given reaction
+                                for all the chemicals involved in this reaction
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         :return:            The differences between the reaction's forward and reverse rates
         """
@@ -1049,13 +1049,13 @@ class ReactionDecomposition(ReactionElementary):
         using the "Forward Euler" method
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
-                                concentration won't vary significantly during this span
+                                concentrations won't vary significantly during this span
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
-                                for all the chemicals involved in the given reaction
+                                for all the chemicals involved in this reaction
                                 EXAMPLE:  {"A": 1.5, "B": 31.6, "C": 19.9}
 
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
-                                - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
+                                - increment_dict_single_rxn is the mapping of chemical labels to their concentration changes
                                                             during this step
                                 - rxn_rate                  is the reaction rate ("velocity") for this reaction
                                                             (rate of change of either of the products)
@@ -1126,12 +1126,12 @@ class ReactionDecomposition(ReactionElementary):
 
         if self.product_1 == self.product_2:
             eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
-                                                                        a=1, c=2, d=2,
-                                                                        A0=A0, C0=C0, D0=D0)
+                                                                            a=1, p=2, q=2,
+                                                                            A0=A0, P0=C0, Q0=D0)
         else:
             eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
-                                                                        a=1, c=1, d=1,
-                                                                        A0=A0, C0=C0, D0=D0)
+                                                                            a=1, p=1, q=1,
+                                                                            A0=A0, P0=C0, Q0=D0)
 
         # eq_dict contains the keys "A", "B", "C", "D";
         # translate the standard names A, B, C, D into the actual names, and also drop any missing term
@@ -1475,13 +1475,13 @@ class ReactionEnzyme(ReactionCommon):
         using the "Forward Euler" method
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
-                                concentration won't vary significantly during this span
+                                concentrations won't vary significantly during this span
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
-                                for all the chemicals involved in the given reaction
+                                for all the chemicals involved in this reaction
                                 EXAMPLE:  {"E": 1.5, "S": 31.6, "ES": 0.4, "P": 19.9}
 
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
-                                - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
+                                - increment_dict_single_rxn is the mapping of chemical labels to their concentration changes
                                                             during this step
                                 - rxn_rate pair             one value for each elementary reaction
                                 EXAMPLE of increment_dict_single_rxn: {"E": 0, "S": -2.9, "ES": 0.1, "P": 2.8}
@@ -2052,7 +2052,7 @@ class ReactionGeneric(ReactionCommon):
         at the start of the time step.
 
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
-                                for all the chemicals involved in the given reaction
+                                for all the chemicals involved in this reaction
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
         :return:            The differences between the reaction's forward and reverse rates
         """
@@ -2104,16 +2104,17 @@ class ReactionGeneric(ReactionCommon):
 
     def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> (dict, float):
         """
-        Simulate the generic reaction, over the specified time interval
+        Simulate the generic reaction, over the specified time interval.
+        The forward Euler method is used
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
-                                concentration won't vary significantly during this span
+                                concentrations won't vary significantly during this span
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
-                                for all the chemicals involved in the given reaction
+                                for all the chemicals involved in this reaction
                                 EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
-
+        :param exact:       UNUSED - this option is unavailable
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
-                                - increment_dict_single_rxn is the mapping of chemical label to their concentration changes
+                                - increment_dict_single_rxn is the mapping of chemical labels to their concentration changes
                                                             during this step
                                 - rxn_rate                  is the reaction rate ("velocity") for this reaction
                                 EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
@@ -2234,8 +2235,8 @@ class ReactionGeneric(ReactionCommon):
 
         eq_dict = ReactionKinetics.compute_equilibrium_conc_first_order(kF=self.kF, kR=self.kR,
                                                                         a=self.extract_stoichiometry(r1), b=self.extract_stoichiometry(r2),
-                                                                        c=self.extract_stoichiometry(p1), d=self.extract_stoichiometry(p1),
-                                                                        A0=A0, B0=B0, C0=C0, D0=D0)
+                                                                        p=self.extract_stoichiometry(p1), q=self.extract_stoichiometry(p1),
+                                                                        A0=A0, B0=B0, P0=C0, Q0=D0)
 
         # eq_dict contains the keys "A", "B", "C", "D";
         # translate the standard names A, B, C, D into the actual names, and also drop any missing term
