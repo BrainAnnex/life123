@@ -284,11 +284,13 @@ def test_step_simulation_ReactionUnimolecular():
 
     # Exact solution
     result = rxn.step_simulation(delta_time=0.1, conc_dict={"A": 10, "B": 50}, exact=True)
-    assert result[0] == {'A': 5.508570764023132, 'B': -5.508570764023133}
+    assert np.allclose(result[0]['A'],  5.508570764023133)
+    assert np.allclose(result[0]['B'], -5.508570764023133)
     assert result[1] == -70
 
     result = rxn.step_simulation(delta_time=0.8, conc_dict={"A": 10, "B": 50}, exact=True)
-    assert result[0] == {'A': 13.743581055557723, 'B': -13.743581055557726} # Note: far more sensible than Euler method!
+    assert np.allclose(result[0]['A'],  13.74358105555772)  # Note: far more sensible than Euler method!
+    assert np.allclose(result[0]['B'], -13.74358105555772)
     assert result[1] == -70
 
 

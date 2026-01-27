@@ -333,47 +333,72 @@ def test_exact_advance_synthesis_reversible():
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0, incremental=False)
     assert np.allclose(P_t, 20.)    # No change
 
-    Dp = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0001, incremental=True)
-    assert np.allclose(Dp, 0.24233229989)
-
+    # The comparison values below are from Octave, v. 10.3.0  ;  for example:
+    '''
+    lsode_options("absolute tolerance", 1e-12);
+    lsode_options("relative tolerance", 1e-10);
+    
+    kf = 5.0;
+    kr = 2.0;
+    a0 = 10.0;
+    b0 = 50.0;
+    p0 = 20.0;
+    
+    p_init = p0;
+    
+    t = [0, 0.0001, 0.0003, 0.0004, 0.0005, 0.0007, 0.001, 0.0015, 0.002, 0.003, 0.005, 0.008, 0.01, 1.];
+    
+    function dpdt = bimol_ode(p, t, kf, kr, a0, b0, p0)
+      dpdt = kf * (a0 - p + p0) .* (b0 - p + p0) - kr * p;
+    end
+    
+    p = lsode(@(p,t) bimol_ode(p,t,kf,kr,a0,b0,p0), p_init, t);
+    
+    format long
+    p
+    '''
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0001, incremental=False)
-    assert np.allclose(P_t, 20.24233229989)
+    assert np.allclose(P_t, 20.24233230049967)
+
+    Dp = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0001, incremental=True)
+    assert np.allclose(Dp, 0.24233230049967)    # This is a DELTA value
 
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0003, incremental=False)
-    assert np.allclose(P_t, 20.70580471094)
+    assert np.allclose(P_t, 20.70580470925962)
 
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0004, incremental=False)
-    assert np.allclose(P_t, 20.927461929486)
+    assert np.allclose(P_t, 20.92746192779109)
 
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0005, incremental=False)
-    assert np.allclose(P_t, 21.14272449633)
+    assert np.allclose(P_t, 21.14272449451510)
 
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0007, incremental=False)
-    assert np.allclose(P_t, 21.554973213)
+    assert np.allclose(P_t, 21.55497320836003)
 
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.001, incremental=False)
-    assert np.allclose(P_t, 22.130796453845)
+    assert np.allclose(P_t, 22.13079644707523)
 
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.0015, incremental=False)
-    assert np.allclose(P_t, 22.989395248289)
+    assert np.allclose(P_t, 22.98939523899655)
 
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.002, incremental=False)
-    assert np.allclose(P_t, 23.73870897904)
+    assert np.allclose(P_t, 23.73870896747882)
 
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.003, incremental=False)
-    assert np.allclose(P_t, 24.9720196494)
+    assert np.allclose(P_t, 24.97201963453988)
 
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.005, incremental=False)
-    assert np.allclose(P_t, 26.681100361833)
+    assert np.allclose(P_t, 26.68110034281166)
 
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.008, incremental=False)
-    assert np.allclose(P_t, 28.12354985934)
+    assert np.allclose(P_t, 28.12354983857080)
 
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=0.01, incremental=False)
-    assert np.allclose(P_t, 28.6688498538)
+    assert np.allclose(P_t, 28.66884983321557)
 
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=1., incremental=False)
-    assert np.allclose(P_t, 29.705122591242)
+    assert np.allclose(P_t, 29.70512259124693)
+
 
     # Verify reaching equilibrium at a large t
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=10., B0=50., P0=20., t=10., incremental=False)
@@ -383,12 +408,12 @@ def test_exact_advance_synthesis_reversible():
 
     # Case A0 = B0
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=2., A0=35, B0=35, P0=20., t=0.002, incremental=False)
-    assert np.allclose(P_t, 28.99659132780272)
+    assert np.allclose(P_t, 28.99659131142920)
 
 
     # No reverse reaction
     P_t = ReactionKinetics.exact_advance_synthesis_reversible(kF=5., kR=0, A0=30, B0=30, P0=20, t=0.0003, incremental=False)
-    assert np.allclose(P_t, 21.291866028708135)
+    assert np.allclose(P_t, 21.29186602834257)
 
 
 def test_exact_advance_synthesis_reversible_2():

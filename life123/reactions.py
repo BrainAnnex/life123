@@ -514,13 +514,13 @@ class ReactionUnimolecular(ReactionElementary):
             P0 = conc_dict[p]
             # Compute the respective increments of R0 and P0
             if self.reversible:
-                increment_pair = ReactionKinetics.exact_advance_unimolecular_reversible(kF=self.kF, kR=self.kR,
-                                                                                        A0=R0, P0=P0, t=delta_time, incremental=True)
+                delta_p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=self.kF, kR=self.kR,
+                                                                                 A0=R0, P0=P0, t=delta_time, incremental=True)
             else:
-                increment_pair = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=self.kF,
-                                                                                          A0=R0, P0=P0, t=delta_time, incremental=True)
+                delta_p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=self.kF,
+                                                                                   A0=R0, P0=P0, t=delta_time, incremental=True)
 
-            increment_dict_single_rxn = {r: increment_pair[0], p: increment_pair[1]}
+            increment_dict_single_rxn = {r: -delta_p, p: delta_p}
             return (increment_dict_single_rxn, rxn_rate)
 
 
@@ -571,9 +571,9 @@ class ReactionUnimolecular(ReactionElementary):
                                                                         a=1, p=1,
                                                                         A0=A0, P0=C0)
 
-        # eq_dict contains the keys "A", "B", "C", "D";
-        # translate the standard names A, B, C, D into the actual names, and also drop any missing term
-        return  {self.reactant: eq_dict["A"], self.product: eq_dict["C"]}
+        # eq_dict contains the keys "A", "B", "P", "Q";
+        # translate the standard names A, B, P, Q into the actual names, and also drop any missing term
+        return  {self.reactant: eq_dict["A"], self.product: eq_dict["P"]}
 
 
 
@@ -857,9 +857,9 @@ class ReactionSynthesis(ReactionElementary):
                                                                             a=1, b=1, p=1,
                                                                             A0=A0, B0=B0, P0=C0)
 
-        # eq_dict contains the keys "A", "B", "C", "D";
-        # translate the standard names A, B, C, D into the actual names, and also drop any missing term
-        return  {self.reactant_1: eq_dict["A"], self.reactant_2: eq_dict["B"], self.product: eq_dict["C"]}
+        # eq_dict contains the keys "A", "B", "P", "Q";
+        # translate the standard names A, B, P, Q into the actual names, and also drop any missing term
+        return  {self.reactant_1: eq_dict["A"], self.reactant_2: eq_dict["B"], self.product: eq_dict["P"]}
 
 
 
@@ -1133,9 +1133,9 @@ class ReactionDecomposition(ReactionElementary):
                                                                             a=1, p=1, q=1,
                                                                             A0=A0, P0=C0, Q0=D0)
 
-        # eq_dict contains the keys "A", "B", "C", "D";
-        # translate the standard names A, B, C, D into the actual names, and also drop any missing term
-        return  {self.reactant: eq_dict["A"], self.product_1: eq_dict["C"], self.product_2: eq_dict["D"]}
+        # eq_dict contains the keys "A", "B", "P", "Q";
+        # translate the standard names A, B, P, Q into the actual names, and also drop any missing term
+        return  {self.reactant: eq_dict["A"], self.product_1: eq_dict["P"], self.product_2: eq_dict["Q"]}
 
 
 
@@ -2239,10 +2239,10 @@ class ReactionGeneric(ReactionCommon):
                                                                         p=self.extract_stoichiometry(p1), q=self.extract_stoichiometry(p1),
                                                                         A0=A0, B0=B0, P0=C0, Q0=D0)
 
-        # eq_dict contains the keys "A", "B", "C", "D";
-        # translate the standard names A, B, C, D into the actual names, and also drop any missing term
+        # eq_dict contains the keys "A", "B", "P", "Q";
+        # translate the standard names A, B, P, Q into the actual names, and also drop any missing term
         return  {self.extract_chem_label(r1): eq_dict["A"], self.extract_chem_label(r2): eq_dict["B"],
-                 self.extract_chem_label(p1): eq_dict["C"], self.extract_chem_label(p2): eq_dict["D"]}
+                 self.extract_chem_label(p1): eq_dict["P"], self.extract_chem_label(p2): eq_dict["Q"]}
 
 
 

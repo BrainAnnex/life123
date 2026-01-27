@@ -172,7 +172,7 @@ class ReactionKinetics:
         :param kR:  Reverse reaction rate constant
         :param A0:  Initial concentration of the 1st reactant A
         :param B0:  Initial concentration of the 2nd reactant B
-        :param P0:  Initial concentration of the product C
+        :param P0:  Initial concentration of the product P
         :param t:   The end time of the reaction that started at time zero
                         OR a Numpy array with the desired times at which the solutions are desired
 
@@ -296,7 +296,7 @@ class ReactionKinetics:
         :param kR:  Reverse reaction rate constant
         :param A0:  Initial concentration of the 1st reactant A
         :param B0:  Initial concentration of the 2nd reactant B
-        :param P0:  Initial concentration of the product C
+        :param P0:  Initial concentration of the product P
         :param t:   The end time of the reaction that started at time zero
         :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
                                 rather than the final ones.  Default: False
