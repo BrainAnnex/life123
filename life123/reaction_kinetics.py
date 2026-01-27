@@ -209,6 +209,70 @@ class ReactionKinetics:
 
 
     @staticmethod
+    def approx_solution_synthesis_rxn_ALT(kF, kR, A0, B0, P0, t, incremental) -> float:
+        """
+        Provided by ChatGPT.  Not fully tested.
+
+        Closed-form solution for:
+        dp/dt = kf (a0 - p + p0)(b0 - p + p0) - kr p
+        with p(0) = p0
+
+        Parameters
+        ----------
+        t : float or array_like
+            Time(s) at which to evaluate p(t)
+        P0, kF, kR, A0, B0 : float
+            Reaction parameters
+
+        Returns
+        -------
+        p : float or ndarray
+            Value(s) of p(t)
+        """
+
+        # Coefficients of Riccati equation
+        alpha = kF
+        beta  = kF * (A0 + B0 + 2 * P0) + kR
+        gamma = kF * (A0 + P0) * (B0 + P0)
+
+        # Discriminant
+        discr = beta**2 - 4*alpha*gamma
+        if np.any(discr < 0):
+            raise ValueError("Negative discriminant: parameters give complex roots.")
+
+        sqrt_disc = np.sqrt(discr)
+
+        # Equilibria
+        p_plus  = (beta + sqrt_disc) / (2*alpha)
+        p_minus = (beta - sqrt_disc) / (2*alpha)
+
+        # Relaxation rate
+        lam = alpha * (p_plus - p_minus)
+
+        #t = np.asarray(t, dtype=float)
+
+        exp_term = np.exp(-lam * t)
+
+        numerator = (
+                p_plus * (P0 - p_minus)
+                - p_minus * (P0 - p_plus) * exp_term
+        )
+
+        denominator = (
+                (P0 - p_minus)
+                - (P0 - p_plus) * exp_term
+        )
+
+        P_t = numerator / denominator
+
+        if incremental:
+            return P_t - P0
+
+        return P_t
+
+
+
+    @staticmethod
     def exact_advance_synthesis_irreversible(kF, A0, B0, P0, t, incremental=False) -> float:
         """
         Exactly advance the concentrations
