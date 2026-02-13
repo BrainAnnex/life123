@@ -537,9 +537,9 @@ def test_missing_diffusion_rate():
 
 
 
-#############  ChemData  #############
+#################   ChemData (MAIN class)  #################
 
-def test_constructor():
+def test_constructor_ChemData():
     chem_data = ChemData()
     assert chem_data.chemical_data == []
     assert chem_data.label_dict == {}
@@ -550,10 +550,8 @@ def test_constructor():
     with pytest.raises(Exception):
         ChemData(names=123)         # Not a list/tuple/str
 
-
     with pytest.raises(Exception):
         ChemData(names=["A", 2])    # Some of the names aren't strings
-
 
     chem_data = ChemData(names='A')
     assert chem_data.chemical_data == [{"label": "A", "name": "A"}]
@@ -569,7 +567,7 @@ def test_constructor():
 
 
     with pytest.raises(Exception):
-        ChemData(labels=True)     # Not a list/tuple/str
+        ChemData(labels=True)       # Not a list/tuple/str
 
     with pytest.raises(Exception):
         ChemData(labels=["L1", 2])    # Some of the labels aren't strings
@@ -666,15 +664,19 @@ def test_constructor():
     assert chem_data.color_dict == {"A": "red", "B": "blue"}
     assert chem_data.diffusion_rates == {"A": 10, "B": 20}
 
-    chem_data = ChemData(names=["Name1", "Name2"], diffusion_rates=[10, 20], plot_colors=["red", "blue"])
+    chem_data = ChemData(names=["Name1", "Name2"],
+                         diffusion_rates=[10, 20],
+                         plot_colors=["red", "blue"])
     assert chem_data.chemical_data == [{"label": "Name1", "name": "Name1"},
                                        {"label": "Name2", "name": "Name2"}]
     assert chem_data.label_dict == {"Name1": 0, "Name2": 1}
     assert chem_data.color_dict == {"Name1": "red", "Name2": "blue"}
     assert chem_data.diffusion_rates == {"Name1": 10, "Name2": 20}
 
-    chem_data = ChemData(names=["Name1", "Name2"], labels=["L1", "L2"],
-                         diffusion_rates=[10, 20], plot_colors=["red", "blue"])
+    chem_data = ChemData(names=["Name1", "Name2"],
+                         labels=["L1", "L2"],
+                         diffusion_rates=[10, 20],
+                         plot_colors=["red", "blue"])
     assert chem_data.chemical_data == [{"label": "L1", "name": "Name1"},
                                        {"label": "L2", "name": "Name2"}]
     assert chem_data.label_dict == {"L1": 0, "L2": 1}
@@ -682,11 +684,18 @@ def test_constructor():
     assert chem_data.diffusion_rates == {"L1": 10, "L2": 20}
 
 
-    chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=np.array([0.15, 2, 3.14]))
+    chem_data = ChemData(names=['A', 'B', 'C'],
+                         diffusion_rates=np.array([0.15, 2, 3.14]))
     assert len(chem_data.chemical_data) == 3
     assert chem_data.get_all_labels() == ['A', 'B', 'C']
     assert chem_data.label_dict == {'A': 0, 'B': 1, 'C': 2}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 2, 3.14])
+
+
+    chem_data = ChemData(n_chems=3)
+    assert len(chem_data.chemical_data) == 3
+    assert chem_data.get_all_labels() == ['A', 'B', 'C']
+    assert chem_data.label_dict == {'A': 0, 'B': 1, 'C': 2}
 
 
 

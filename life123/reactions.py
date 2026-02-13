@@ -327,7 +327,7 @@ class ReactionElementary(ReactionCommon):
 
 class ReactionUnimolecular(ReactionElementary):
     """
-    Reactions of type A <-> P, of first order in A and P
+    Elementary reaction of type A <-> P, of first order in `A` and `P`
     """
 
     def __init__(self, reactant :str, product :str, **kwargs):
@@ -1341,7 +1341,9 @@ class ReactionEnzyme(ReactionCommon):
         :return:        The maximal reaction rate
                             (the asymptote of the rate, as the Substrate concentration grows large relative to Enzyme concentration)
         """
-        assert self.kcat is not None, "compute_vmax(): missing value for kcat"
+        assert self.kcat is not None, \
+            "compute_vmax(): missing value for kcat"
+
         self.vmax = self.kcat * E_tot
         return self.vmax
 
@@ -1364,6 +1366,7 @@ class ReactionEnzyme(ReactionCommon):
     def compute_rate_morrison(self, S_tot :float, E_tot :float) -> float:
         """
         Based on the Morrison model.
+        Especially useful in scenarios with high concentrations of enzyme.
         The arguments may also be Numpy arrays.
 
         Reference: eqn 7.32 on page 124 of "Analysis of Enzyme Reaction Kinetics, Vol. 1",

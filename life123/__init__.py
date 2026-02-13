@@ -29,6 +29,7 @@ from life123.history import (
     HistoryReactionRate
 )
 from life123.numerical import Numerical
+from life123.random_reactions import RandomReactionNetwork
 from life123.reactions import (
     ReactionDecomposition,
     ReactionGeneric,
@@ -70,6 +71,7 @@ __all__ = [
     'Membranes1D',
     'Membranes2D',
     'Numerical',
+    'RandomReactionNetwork',
     'ReactionDecomposition',
     'ReactionEnzyme',
     'ReactionGeneric',

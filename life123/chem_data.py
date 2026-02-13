@@ -811,14 +811,18 @@ class ChemData(Macromolecules):
               and ending in this user-facing class:
                     ChemCore <- Diffusion <- Macromolecules <- ChemData
     """
-    def __init__(self, names=None, labels=None, diffusion_rates=None, plot_colors=None):
+    def __init__(self, names=None, labels=None, n_chems=None, diffusion_rates=None, plot_colors=None):
         """
-        Any non-None arguments MUST all have the same length (and appear in the same order), or all be scalars.
         It's ok to skip passing any data at instantiation, and later add it, with calls to add_chemical().
-        Reactions, if applicable, need to be added later by means of calls to add_reaction()
+
         Macro-molecules, if applicable, need to be added later.
 
-        If no names nor labels are provided, but diffusion rates or plot colors are given,
+        Any provided values for `names`, `labels`, `diffusion_rates`, `plot_colors`
+        MUST all have the same length (and appear in the same order), or all be scalars;
+        also, they must be consistent with `n_chem`, if provided.
+
+        If no names nor labels are provided,
+        but the number of chemicals or the diffusion rates or then plot colors are given,
         the strings "A", "B", ..., "Z", "Z2", "Z3", .... are automatically assigned as both labels and names.
 
         :param names:           [OPTIONAL] A single name, or list or tuple of names, of the chemicals.
@@ -834,6 +838,8 @@ class ChemData(Macromolecules):
                                     "A", "B", ..., "Z", "Z2", "Z3", .... are used
                                     (as many as the diffusion rates or plot colors)
 
+        :param n_chems:          [OPTIONAL] The number of chemicals
+
         :param diffusion_rates: [OPTIONAL] A non-negative number, or a list/tuple/Numpy array with the diffusion rates of the chemicals,
                                     in the same order as the names/labels (if provided).
                                     None values (meaning "to be set later") are allowed for individual entries.
@@ -842,72 +848,85 @@ class ChemData(Macromolecules):
                                     in the same order as the names/labels (if provided).
         """
         # TODO: allow a way to optionally pass macromolecules as well
-        # TODO: allow to provide the number of chemicals, in lieu of the names
 
         super().__init__()       # Invoke the constructor of its parent class
 
 
-        non_none_args = [arg for arg in (names, labels, diffusion_rates, plot_colors) if arg is not None]
+        # Determine which arguments, if any, aren't None
+        list_args = [arg for arg in (names, labels, n_chems, diffusion_rates, plot_colors) if arg is not None]
 
-        if len(non_none_args) == 0:
+        if len(list_args) == 0:
             return      # All args are None; nothing else to do
 
 
         if names is not None:
+            # Validate the data type for `names`, and turn into a list if a scalar
             if (dt := type(names)) == str:
                 names = [names]
             else:
                 assert dt == list or dt == tuple, \
-                    f"ChemData instantiation: the `names` argument must be a list or tuple, or a string for a single chemical.  " \
+                    f"ChemData instantiation: the `names` argument, if provided, must be a list or tuple, or a string in case of a single chemical.  " \
                     f"What was passed ({names}) was of type {dt}"
 
         if labels is not None:
+            # Validate the data type for `labels`, and turn into a list if a scalar
             if (dt := type(labels)) == str:
                 labels = [labels]
             else:
                 assert dt == list or dt == tuple, \
-                    f"ChemData instantiation: the `labels` argument must be a list or tuple, or a string for a single chemical.  " \
+                    f"ChemData instantiation: the `labels` argument, if provided, must be a list or tuple, or a string for a single chemical.  " \
                     f"What was passed ({labels}) was of type {dt}"
 
         if plot_colors is not None:
+            # Validate the data type for `plot_colors`, and turn into a list if a scalar
             if (dt := type(plot_colors)) == str:
                 plot_colors = [plot_colors]
             else:
                 assert dt == list or dt == tuple, \
-                    f"ChemData instantiation: the `plot_colors` argument must be a list or tuple, or a string for a single chemical.  " \
+                    f"ChemData instantiation: the `plot_colors` argument, if provided, must be a list or tuple, or a string for a single chemical.  " \
                     f"What was passed ({plot_colors}) was of type {dt}"
 
         if diffusion_rates is not None:
+            # Validate the data type for `diffusion_rates`, and turn into a list if a scalar
             if (dt := type(diffusion_rates)) == int or dt == float:
                 diffusion_rates = [diffusion_rates]
             else:
                 assert dt == list or dt == tuple  or dt == np.ndarray, \
-                    f"ChemData instantiation(): the `diffusion_rates` argument must be a list or tuple or Numpy array, or a number for a single chemical.  " \
+                    f"ChemData instantiation(): the `diffusion_rates` argument, if provided, must be a list or tuple or Numpy array, or a number for a single chemical.  " \
                     f"What was passed ({diffusion_rates}) was of type {dt}"
 
+        if n_chems is not None:
+            assert (type(n_chems) == int) and (n_chems >= 0), \
+                f"ChemData instantiation(): the `n_chem` argument, if provided, must be a non-negative integer"
 
-        # We need to re-compute non_none_args because some of the original arguments may have been modified by now
-        non_none_args = [arg for arg in (names, labels, diffusion_rates, plot_colors) if arg is not None]
 
-        # Assert that all lengths are the same
-        if len(non_none_args) > 1:  # No need to check if only one or no argument is present
-            lengths = []
-            for arg in non_none_args:
-                    lengths.append(len(arg))
+        # Let's now consider all the lists that we have
+        list_args = [arg for arg in (names, labels, diffusion_rates, plot_colors) if arg is not None]
 
-            assert all(l == lengths[0] for l in lengths), \
-                "ChemData instantiation: all the non-None arguments must have the same length"
+        # Assert that all lengths are consistent with each other
+        if len(list_args) > 1:      # No need to check consistency if only one argument is present
+            first_len = len(list_args[0])
+
+            for arg in list_args[1:]:   # Skip the zero-th element
+                assert len(arg) == first_len, \
+                    "ChemData instantiation: inconsistency in the size of the passed arguments"
+
+        if n_chems and list_args:      # If `n_chem` was passed and non-zero, and if other arguments were passed
+             assert n_chems == len(list_args[0]), \
+                f"ChemData instantiation: inconsistency between the value of `n_chem` ({n_chems}) " \
+                f"and the size of some of the other passed arguments "
 
 
         # Populate the data structure
         if names is None and labels is None:
-            if diffusion_rates is not None:
+            if n_chems is not None:
+                n_species = n_chems
+            elif diffusion_rates is not None:
                 n_species = len(diffusion_rates)
             else:
-                n_species = len(plot_colors)        # plot_colors cannot be None, otherwise all args would be (already excluded)
+                n_species = len(plot_colors)        # plot_colors cannot be None, otherwise all args would be None (already excluded)
 
-            #names = [f"Chemical {i+1}" for i in range(n_species)]   # The strings "Chemical 1", "Chemical 2", ..., will be used
-            names = self._generate_generic_names(n_species)
+            names = self._generate_generic_names(n_species)     # Generates the strings "A", "B", ..., "Z", "Z2", "Z3", ....
 
 
         if labels is None:

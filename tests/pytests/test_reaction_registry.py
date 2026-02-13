@@ -6,14 +6,13 @@ from tests.utilities.comparisons import *
 
 
 
-def test_constructor():
+def test_constructor_ReactionRegistry():
     chem_data = ChemData()
     rxns = ReactionRegistry(chem_data=chem_data)
 
     assert rxns.reaction_list == []
 
     assert rxns.active_chemicals == set()       # Empty set
-    #assert rxns.active_enzymes == set()        # Empty set
 
 
 
@@ -299,6 +298,27 @@ def test_add_reaction():
 
 
 
+def test_add_elementary_reaction():
+    chem_data = ChemData(names=["A", "B", "C"])
+    rxns = ReactionRegistry(chem_data)
+
+    i = rxns.add_elementary_reaction(reactants="A", products="B")
+    assert type(rxns.get_reaction(i)) == ReactionUnimolecular
+
+    i = rxns.add_elementary_reaction(reactants=["A", "B"], products="C")
+    assert type(rxns.get_reaction(i)) == ReactionSynthesis
+
+    i = rxns.add_elementary_reaction(reactants=["A", "A"], products=["B"])
+    assert type(rxns.get_reaction(i)) == ReactionSynthesis
+
+    i = rxns.add_elementary_reaction(reactants="A", products=["B", "C"])
+    assert type(rxns.get_reaction(i)) == ReactionDecomposition
+
+    with pytest.raises(Exception):
+        rxns.add_elementary_reaction(reactants=["A", "A"], products=["B", "C"])
+
+
+
 def test_register_reaction():
     chem_data = ChemData()
     rxns = ReactionRegistry(chem_data)
@@ -538,7 +558,3 @@ def test_prepare_graph_network():
     assert compare_recordsets(graph_data["structure"], expected_structure)
     assert graph_data["color_mapping"] == {'Chemical': '#8DCC92', 'Reaction': '#D9C8AD'}
     assert graph_data["caption_mapping"] == {'Chemical': 'name', 'Reaction': 'name'}
-
-
-
-

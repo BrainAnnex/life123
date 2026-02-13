@@ -8,12 +8,12 @@ from life123.chem_data import ChemData
 
 class ReactionRegistry:
     """
-    Manage a list of reactions, and reaction-specific classes (in reactions.py file),
+    Manage a list of reactions, and the reaction-specific objects (defined in reactions.py file),
     such as ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionGeneric, ReactionEnzyme, etc.
 
     Instances of this class are typically used by UniformCompartment objects.
-    A ReactionRegistry object may be shared by multiple UniformCompartment objects
-    IF the latter all make use of ALL the registered reactions  (i.e. no "pick and choose" some of the reactions.)
+    A ReactionRegistry object may be shared by multiple UniformCompartment objects IF the latter
+    all make use of ALL the registered reactions  (i.e. no "pick and choose" some of the reactions.)
     """
 
     def __init__(self, chem_data=None):
@@ -240,15 +240,29 @@ class ReactionRegistry:
 
 
 
-    def get_reactions_participating_in_TODO(self, species_index :int) -> [ReactionGeneric]:
+    def get_reactions_participating_in(self, chem_label :str, side :str) -> list:
         """
         Return a list of all the reactions that the given chemical species
         is involved in
 
-        :param species_index:
-        :return:                List of "Reaction" objects
+        :param chem_label:
+        :param side:        Either "left" or "right"
+        :return:            List of varius types of "Reaction" objects
         """
-        pass        # TODO: write; also, accept a name
+        # TODO: test
+        assert side == "left" or side == "right"
+        rxns_found_in = []
+        for rxn in self.reaction_list:
+            if side == "left":
+                if chem_label in rxn.extract_reactant_labels():
+                    rxns_found_in.append(rxn)
+            else:
+                 if chem_label in rxn.extract_product_labels():
+                    rxns_found_in.append(rxn)
+
+
+        return rxns_found_in
+
 
 
 
@@ -325,6 +339,72 @@ class ReactionRegistry:
 
 
 
+    def add_elementary_reaction(self, reactants :str|list, products :str|list,
+                                reaction_type=None, temp=None,
+                                **kwargs) -> int:
+        """
+        Create and register a new SINGLE elementary chemical reaction,
+        optionally including its kinetic and/or thermodynamic data.
+        All the involved chemicals can be either previously registered, or not.
+
+        :param reactants:       A string or pair of strings; for reactions such as 2 A -> P, pass ["A", "A"]
+        :param products:        A string or pair of strings; for reactions such as A -> 2 P, pass ["P", "P"]
+        :param reaction_type:   A string with one of the following values:
+                                    "ReactionUnimolecular", "ReactionSynthesis", "ReactionDecomposition"
+
+        :param temp:            [OPTIONAL] Temperature in Kelvins
+        :param kwargs:          [OPTIONAL] Other named arguments to pass to instantiate the various reaction
+                                objects, such as `ReactionSynthesis`.
+                                For list, see documentation of the classes in reactions.py
+
+        :return:                Integer index of the newly-added reaction
+                                    (in the list self.reaction_list, stored as object variable)
+        """
+        # Turn `reactants` and `products` into lists, if not already lists
+        if type(reactants) == str:
+            reactants = [reactants]
+            n_reactants = 1
+        else:
+            n_reactants = len(reactants)
+            assert n_reactants <= 2
+
+        if type(products) == str:
+            products = [products]
+            n_products = 1
+        else:
+            n_products = len(products)
+            assert n_products <= 2
+
+
+        if reaction_type is None:
+            # Determine the reaction type from the number of reactants and products
+            if n_reactants == 1 and n_products == 1:
+                reaction_type = "ReactionUnimolecular"
+            elif n_reactants == 2 and n_products == 1:
+                reaction_type = "ReactionSynthesis"
+            elif n_reactants == 1 and n_products == 2:
+                reaction_type = "ReactionDecomposition"
+            else:
+                raise Exception(f"add_elementary_reaction(): {n_reactants} reactants and {n_products} products cannot correspond to any elementary reaction")
+
+
+        match reaction_type:
+            case "ReactionUnimolecular":
+                rxn = ReactionUnimolecular(reactant=reactants[0], product=products[0], temp=temp, **kwargs)
+            case "ReactionSynthesis":
+                rxn = ReactionSynthesis(reactants=reactants, product=products[0], temp=temp, **kwargs)
+            case "ReactionDecomposition":
+                rxn = ReactionDecomposition(reactant=reactants[0], products=products, temp=temp, **kwargs)
+            case _:
+                raise Exception(f"add_elementary_reaction(): unknown reaction type ({reaction_type})")
+
+
+        #print(f"add_elementary_reaction(): adding reaction of type `{reaction_type}`")
+
+        return self.register_reaction(rxn=rxn, temp=temp)
+
+
+
     def add_reaction(self, reactants :str|list, products :str|list,
                      kF=None, kR=None,
                      enzyme=None, k1_F=None, k1_R=None, k2_F=None,
@@ -341,11 +421,11 @@ class ReactionRegistry:
               stoichiometry coefficients.
 
               The full structure of each term in the list of reactants and of products
-              is the triplet:  (stoichiometry coefficient, chemical label)
+              is the pair:  (stoichiometry coefficient, chemical label)
 
               EXAMPLES of formats to use for each term in the lists of the reactants and of the products:
-                "F"         is taken to mean (1, "F") - default stoichiometry and reaction order
-                (2, "F")    is taken to mean (2, "F") - stoichiometry coefficient used as default for reaction order
+                "F"         is taken to mean (1, "F") - default stoichiometry
+                (2, "F")    is taken to mean (2, "F") - stoichiometry coefficient specified
 
               It's equally acceptable to use LISTS in lieu of tuples for the pairs
 
@@ -354,23 +434,24 @@ class ReactionRegistry:
         :param products:        A string or list of pairs (stoichiometry, species name),
                                     or simplified terms in various formats; for details, see above
 
-        :param kF:              [OPTIONAL] Forward reaction rate constant
-        :param kR:              [OPTIONAL] Reverse reaction rate constant
-
-        :param delta_H:         [OPTIONAL] Change in Enthalpy (from reactants to products)
-        :param delta_S:         [OPTIONAL] Change in Entropy (from reactants to products)
-        :param delta_G:         [OPTIONAL] Change in Free Energy (from reactants to products)
+        :param temp:            [OPTIONAL] Temperature in Kelvins
+        :param kwargs:          [OPTIONAL] Other named arguments to pass to instantiate the various reaction
+                                objects, such as `ReactionSynthesis`.
+                                For list, see documentation of the classes in reactions.py
 
         :return:                Integer index of the newly-added reaction
                                     (in the list self.reaction_list, stored as object variable)
         """
+        #TODO: add an optional `reaction_type` argument;
+        #      the dispatching might best be done elsewhere
+
         # Determine and assign the specific type of reaction, and instantiate an object of that class
         if enzyme is not None:
             reaction_type = "ReactionEnzyme"
             assert type(reactants) == str
             assert type(products) == str
             rxn = ReactionEnzyme(enzyme=enzyme, substrate=reactants, product=products,
-                                     k1_F=k1_F, k1_R=k1_R, k2_F=k2_F, temp=temp, **kwargs)
+                                 k1_F=k1_F, k1_R=k1_R, k2_F=k2_F, temp=temp, **kwargs)
         else:
             reactant_list = self._standardize_reaction_side(reactants, arg_name="reactants")
             product_list = self._standardize_reaction_side(products, arg_name="products")
