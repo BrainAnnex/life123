@@ -43,6 +43,7 @@ def test_constructor():
     assert net.already_used(reactants="B", products="C")
 
 
+
 def test__assign_chems_to_rxn():
     net = RandomReactionNetwork(n_chems=3, n_rxns=1, seed=1)
     all_chem_labels = net.chem_data.get_all_labels()

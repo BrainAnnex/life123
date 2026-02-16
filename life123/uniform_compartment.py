@@ -76,6 +76,7 @@ class UniformCompartment:
         self.chem_data = None       # Object of type "ChemData" (with data about the chemicals and their reactions,
                                     #                            incl. macromolecules)
         self.reactions = None       # Object ot type "ReactionRegistry" (with data about all the reactions)
+                                    #       TODO: rename to "reaction_data" (to avoid confusion with reactions.py)
 
         self.temp = temp            # Temperature in Kelvins.  (By default, 298.15 K, the equivalent of 25 C)
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
@@ -534,22 +535,30 @@ class UniformCompartment:
 
 
 
-    def plot_reaction_network(self, graphic_component :str, unpack=False) -> None:
+    def plot_reaction_network(self, log_file :str, graphic_component="vue_cytoscape_5") -> None:
         """
         Send a plot of the network of reactions to the HTML log file,
         also including a brief summary of all the reactions
 
-        EXAMPLE of usage:  plot_reaction_network("vue_cytoscape_2")
+        ~~~ EXAMPLE of usage ~~~
+            plot_reaction_network(log_file="my_file.htm", graphic_component="vue_cytoscape_5")
 
+        :param log_file:            The name of the file into which to place the HTML code
+                                        to create the interactive network plot.
+                                        The suffix ".htm" will be added if it doesn't end with ".htm" or ".html"
+                                        If the file already exists, it will get overwritten.
+                                        (Note: this file will automatically include an internal reference to the JavaScript
+                                        file specified in `graphic_component`)
         :param graphic_component:   The name of a Vue component that accepts a "graph_data" argument,
                                         an object with the following keys
-                                        'structure', 'color_mapping' and 'caption_mapping'
-                                        For more details, see ChemData.prepare_graph_network()
-        :param unpack:              Use True for Vue components that require their data unpacked into individual arguments;
-                                        False for that accept a single data argument, named "graph_data"
+                                        'nodes', 'edges', 'color_mapping' and 'caption_mapping'
+                                        For more details, see ReactionRegistry.prepare_graph_network()
         :return:                    None
         """
-        self.reactions.plot_reaction_network(graphic_component=graphic_component, unpack=unpack)
+        assert graphic_component == "vue_cytoscape_5", \
+            "plot_reaction_network(): the only value supported for argument `graphic_component` is 'vue_cytoscape_5'"
+
+        self.reactions.plot_reaction_network(log_file=log_file, graphic_component=graphic_component)
 
 
 

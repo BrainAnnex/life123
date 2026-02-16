@@ -1287,7 +1287,7 @@ class System1D:
         IMPORTANT: must first call GraphicLog.config(), or an Exception will be raised
 
         :param plot_pars:           A dictionary of parameters (such as "outer_width") for the plot
-        :param graphic_component:   A string with the name of the graphic module to use.  EXAMPLE: "vue_curves_4"
+        :param graphic_component:   A string with the name of the graphic module to use.  EXAMPLE: "vue_cytoscape_5"
         :param header:              [OPTIONAL] String to display just above the plot
         :param color_mapping:       [OPTIONAL] Dict mapping index numbers to color names or RBG hex values.
                                         If not provided, the colors associated to the chemicals are used, if any

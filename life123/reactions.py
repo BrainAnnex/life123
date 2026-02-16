@@ -893,11 +893,6 @@ class ReactionDecomposition(ReactionElementary):
         assert (p1 != reactant) and (p2 != reactant), \
             "ReactionDecomposition instantiation: the `reactant` cannot be identical to any of the reaction products"
 
-        '''
-        assert (p1 != p2), \
-            "ReactionDecomposition instantiation: the 2 reaction products cannot be the same. Use ReactionGeneric instead"
-            #TODO: maybe overcome this restriction
-        '''
 
         self.reactant = reactant
         self.product_1 = p1

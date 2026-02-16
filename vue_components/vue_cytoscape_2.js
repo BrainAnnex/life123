@@ -1,3 +1,7 @@
+/* DEPRECATED!
+ */
+
+
 Vue.component('vue_cytoscape_2',
     {
         props: {

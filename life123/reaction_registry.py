@@ -1,5 +1,5 @@
-from life123.visualization.py_graph_visual import PyGraphVisual
-from life123.visualization.graphic_log import GraphicLog
+from life123.visualization.py_graph_visual import PyGraphVisual, PyGraphVisual_OLD
+from life123.visualization.graphic_log import GraphicLog, DisplayNetwork
 from life123.html_log import HtmlLog as log
 from life123.reactions import ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionEnzyme, ReactionGeneric
 from life123.chem_data import ChemData
@@ -787,8 +787,10 @@ class ReactionRegistry:
     #####################################################################################################
 
 
-    def prepare_graph_network(self) -> dict:
+    def prepare_graph_network_OLD(self) -> dict:
         """
+        DEPRECATED, and to be OBSOLETED.  For use with the old Vue component "vue_cytoscape_3"
+
         Prepare and return a data structure with chemical-reaction data in a network format,
         ready to be passed to the front end, for network-diagram visualization with the Cytoscape.js library
         (in the graph module "vue_cytoscape")
@@ -810,7 +812,7 @@ class ReactionRegistry:
 
         :return:    A dictionary with 3 keys: 'structure', 'color_mapping', 'caption_mapping'
         """
-        graph = PyGraphVisual()
+        graph = PyGraphVisual_OLD()
 
         # Note: the graph nodes representing Chemicals will be given an id such as "C-123" and a label "Chemical";
         #       the graph nodes representing Reactions will be given an id such as "R-456" and a label "Reaction"
@@ -871,17 +873,108 @@ class ReactionRegistry:
 
 
 
-    def plot_reaction_network(self, graphic_component :str, unpack=False) -> None:
+    def prepare_graph_network(self) -> dict:
         """
+        Prepare and return a data structure with chemical-reaction data in a network format,
+        ready to be passed to the front end, for network-diagram visualization with the Cytoscape.js library
+        (in the graph module "vue_cytoscape")
+
+        4 parts are generated, and assembled together as a dictionary with 4 keys: 'nodes', 'edges', 'color_mapping', 'caption_mapping'
+
+        EXAMPLE of the 'nodes' structure part of the returned object for an  A <-> B reaction:
+           [{'id': 'C-0', 'labels': ['Chemical'], 'name': 'A', 'diff_rate': None},
+            {'id': 'C-1', 'labels': ['Chemical'], 'name': 'B', 'diff_rate': None},
+
+            {'id': 'R-0', 'labels': ['Reaction'], 'name': 'RXN', 'kF': 3.0, 'kR': 2.0, 'K': 1.5, 'Delta_G': -1005.13}
+           ]
+
+        EXAMPLE of the 'edges' structure part of the returned object for that same  A <-> B reaction:
+           [
+            {'id': 'edge-1', 'name': 'produces', 'source': 'R-0', 'target': 'C-1', 'stoich': 1, 'rxn_order': 1},
+            {'id': 'edge-2', 'name': 'reacts',   'source': 'C-0', 'target': 'R-0', 'stoich': 1, 'rxn_order': 1}
+           ]
+
+        EXAMPLE of `color_mapping`:     {'Chemical': '#8DCC92', 'Reaction': '#D9C8AD'},
+        EXAMPLE of `caption_mapping`:   {'Chemical': 'name', 'Reaction': 'name'}}
+
+        :return:    A dictionary with 4 keys: 'nodes', 'edges', 'color_mapping', 'caption_mapping'
+        """
+        graph = PyGraphVisual()
+
+        # Note: the graph nodes representing Chemicals will be given an id such as "C-123" and a label "Chemical";
+        #       the graph nodes representing Reactions will be given an id such as "R-456" and a label "Reaction"
+
+        for i, rxn in enumerate(self.reaction_list):    # Consider each REACTION in turn
+            # Add a node representing the reaction
+            rxn_id = f"R-{i}"               # Example: "R-456"
+            node_data = {'name': 'RXN'}
+
+            rxn_properties = rxn.extract_rxn_properties()
+            for k,v in rxn_properties.items():
+                node_data[k] = f"{v:,.6g}"
+
+            graph.add_node(node_id=rxn_id, labels='Reaction', properties=node_data)
+
+
+            # Process all the PRODUCTS of this reaction
+            products = rxn.extract_products()
+            for term in products:
+                species_name = rxn.extract_chem_label(term)
+                chemical_id = f"C-{self.chem_data.get_index(species_name)}"      # Example: "C-12"
+                # Add each product to the graph as a node (if not already present)
+                graph.add_node( node_id=chemical_id, labels="Chemical",
+                                properties={'name': species_name,
+                                      'diff_rate': self.chem_data.get_diffusion_rate(chem_label=species_name)
+                                      })
+
+                # Append edge from "reaction node" to "product node"
+                graph.add_edge(from_node=rxn_id, to_node=chemical_id, name="produces",
+                               properties={'stoich': rxn.extract_stoichiometry(term)})
+
+
+            # Process all the REACTANTS of this reaction
+            reactants = rxn.extract_reactants()
+            for term in reactants:
+                species_name = rxn.extract_chem_label(term)
+                chemical_id = f"C-{self.chem_data.get_index(species_name)}"      # Example: "C-34"
+                # Add each reactant to the graph as a node (if not already present)
+                graph.add_node(node_id=chemical_id, labels="Chemical",
+                               properties={'name': species_name,
+                                     'diff_rate': self.chem_data.get_diffusion_rate(chem_label=species_name)
+                                     })
+
+                # Append edge from "reactant node" to "reaction node"
+                graph.add_edge(from_node=chemical_id, to_node=rxn_id, name="reacts",
+                               properties={'stoich': rxn.extract_stoichiometry(term)})
+
+
+        graph.assign_color_mapping(label='Chemical', color='graph_green')
+        graph.assign_color_mapping(label='Reaction', color='graph_lightbrown')
+
+        graph.assign_caption(label='Chemical', caption='name')
+        graph.assign_caption(label='Reaction', caption='name')
+
+        #print(graph)
+
+        return graph.get_graph_data()
+
+
+
+    def plot_reaction_network_OLD(self, graphic_component :str, unpack=False) -> None:
+        """
+        OBSOLETE: don't use
+
         Send a plot of the network of reactions to the HTML log file,
         also including a brief summary of all the reactions
 
-        EXAMPLE of usage:  plot_reaction_network("vue_cytoscape_2")
+        ~~~ EXAMPLE of usage ~~~
+            plot_reaction_network("vue-cytoscape-5")
+            plot_reaction_network("vue_cytoscape_3")
 
         :param graphic_component:   The name of a Vue component that accepts a "graph_data" argument,
                                         an object with the following keys
-                                        'structure', 'color_mapping' and 'caption_mapping'
-                                        For more details, see ChemData.prepare_graph_network()
+                                        'nodes', 'edges', 'color_mapping' and 'caption_mapping
+                                        For more details, see prepare_graph_network()
         :param unpack:              Use True for Vue components that require their data unpacked into individual arguments;
                                         False for that accept a single data argument, named "graph_data"
         :return:                    None
@@ -895,8 +988,52 @@ class ReactionRegistry:
 
         #log.blank_line()
 
-        graph_data = self.prepare_graph_network()
-        # A dictionary with 3 keys: 'structure', 'color_mapping' and 'caption_mapping'
+        if graphic_component != "vue_cytoscape_5":      # If an old version
+            graph_data = self.prepare_graph_network_OLD()
+        else:
+            graph_data = self.prepare_graph_network()
+            # A dictionary with 4 keys: ''nodes', 'edges', 'color_mapping' and 'caption_mapping'
 
         # Send a plot of the network of reactions to the HTML log file
         GraphicLog.export_plot(graph_data, graphic_component, unpack=unpack)
+
+
+
+    def plot_reaction_network(self, log_file :str, graphic_component :str) -> None:
+        """
+        Send a plot of the network of reactions to the HTML log file,
+        also including a brief summary of all the reactions
+
+        :param log_file:            The name of the file into which to place the HTML code
+                                        to create the interactive network plot.
+                                        The suffix ".htm" will be added if it doesn't end with ".htm" or ".html"
+                                        If the file already exists, it will get overwritten.
+                                        (Note: this file will automatically include an internal reference to the JavaScript
+                                        file specified in `graphic_component`)
+        :param graphic_component:   The name of a Vue component that accepts a "graph_data" argument,
+                                        an object with the following keys
+                                        'nodes', 'edges', 'color_mapping' and 'caption_mapping
+                                        For more details, see prepare_graph_network()
+
+        :return:                    None
+        """
+        assert graphic_component == "vue_cytoscape_5", \
+            "plot_reaction_network(): the only value supported for argument `graphic_component` is 'vue_cytoscape_5'"
+
+        # Send a brief summary of all the reactions to the HTML log file
+        header = "<h3>List of reactions:</h3>"
+
+        header += "<p style='font-family: monospace; padding-left:20px'>"
+        rxn_descriptions = self.multiple_reactions_describe(concise=True)
+        for desc in rxn_descriptions:
+            header += f"    {desc}<br>"
+        header += "</p>"
+
+        graph_data = self.prepare_graph_network()
+        # A dictionary with 4 keys: ''nodes', 'edges', 'color_mapping' and 'caption_mapping'
+
+        # Send a plot of the network of reactions to the HTML log file
+        #GraphicLog.export_plot(graph_data, graphic_component, unpack=unpack)
+        DisplayNetwork.export_plot(graph_data = graph_data,
+                                   graphic_component = graphic_component,
+                                   filename = log_file, caption=header)
