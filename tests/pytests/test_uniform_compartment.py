@@ -23,21 +23,21 @@ def test_constructor():
 
 
     uc = UniformCompartment(reactions=rxns)
-    assert uc.reactions == rxns
+    assert uc.reaction_data == rxns
     assert uc.chem_data == chem_data
     assert uc.chem_data.get_all_labels() == names
 
     uc = UniformCompartment(chem_data=chem_data)
     assert uc.chem_data == chem_data
     assert uc.chem_data.get_all_labels() == names
-    assert uc.reactions.number_of_reactions() == 0
+    assert uc.reaction_data.number_of_reactions() == 0
 
     uc = UniformCompartment(names=names)
     assert uc.chem_data.get_all_labels() == names
-    assert uc.reactions.number_of_reactions() == 0
+    assert uc.reaction_data.number_of_reactions() == 0
 
     uc = UniformCompartment(reactions=rxns, chem_data=chem_data)
-    assert uc.reactions == rxns
+    assert uc.reaction_data == rxns
     assert uc.chem_data == chem_data
     assert uc.chem_data.get_all_labels() == names
 
@@ -340,7 +340,7 @@ def test__reaction_elemental_step_2():
     assert result[0] == - result[1]         # From the stoichiometry
 
 
-    uc.reactions.clear_reactions_data()   # Re-start with a blank slate of reactions
+    uc.reaction_data.clear_reactions_data()   # Re-start with a blank slate of reactions
     # Synthesis reaction A + B <-> C , with 1st-order kinetics for each species.
     # Based on experiment "1D/reactions/reaction4"
     uc.add_reaction(reactants=["A" , "B"], products="C",

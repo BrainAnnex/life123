@@ -75,8 +75,8 @@ class UniformCompartment:
 
         self.chem_data = None       # Object of type "ChemData" (with data about the chemicals and their reactions,
                                     #                            incl. macromolecules)
-        self.reactions = None       # Object ot type "ReactionRegistry" (with data about all the reactions)
-                                    #       TODO: rename to "reaction_data" (to avoid confusion with reactions.py)
+
+        self.reaction_data = None   # Object ot type "ReactionRegistry" (with data about all the reactions)
 
         self.temp = temp            # Temperature in Kelvins.  (By default, 298.15 K, the equivalent of 25 C)
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
@@ -96,7 +96,7 @@ class UniformCompartment:
             assert names is None, \
                 "UniformCompartment instantiation: Cannot pass both `names` and `reactions` as arguments (the `reactions` object already contains the `names`)"
             self.chem_data = reactions.chem_data
-            self.reactions = reactions
+            self.reaction_data = reactions
         else:           # reactions is None
             if chem_data is None:
                 self.chem_data = ChemData(names=names)      # It's ok if names is None
@@ -105,7 +105,7 @@ class UniformCompartment:
                     "UniformCompartment instantiation: Cannot pass both `chem_data` and `names` as arguments (the `chem_data` object contains the `names`)"
                 self.chem_data = chem_data
 
-            self.reactions = ReactionRegistry(chem_data=self.chem_data)
+            self.reaction_data = ReactionRegistry(chem_data=self.chem_data)
 
 
         self.system_time = 0.       # Global time of the system, from initialization on
@@ -397,59 +397,6 @@ class UniformCompartment:
 
 
 
-
-    #####################################################################################################
-
-    '''                                 ~  TO VISUALIZE SYSTEM  ~                                     '''
-
-    def ________TO_VISUALIZE_SYSTEM________(DIVIDER):
-        pass         # Used to get a better structure view in IDEs such asPycharm
-    #####################################################################################################
-
-
-    def describe_state(self) -> None:
-        """
-        Print out various data on the current state of the system, incl. system time
-
-        :return:        None
-        """
-        print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
-
-        n_species = self.chem_data.number_of_chemicals()
-        print(f"{n_species} species:")
-
-        # Show a line of line of data for each chemical species in turn
-        for species_index, name in enumerate(self.chem_data.get_all_labels()):
-            if name:    # If a name was provided, show it
-                name = f" ({name})"
-            else:
-                name = ""
-
-            if self.system is None:
-                print(f"  Species {species_index}{name}. No concentrations set yet")
-            else:
-                print(f"  Species {species_index}{name}. Conc: {self.system[species_index]}")
-
-        if self.macro_system != {}:
-            print("Macro-molecules, with their counts: ", self.macro_system)
-
-        if self.macro_system_state != {}:
-            print("Fractional Occupancy at the various binding sites for each macro-molecule:")
-            for mm, state_dict in self.macro_system_state.items():
-                state_list = [f"{a}: {b[1]} ({b[0]})" for a, b in state_dict.items()]   # EXAMPLE: ["3: 0.1 (A)", "8: 0.6 (B)"]
-                state_str = " | ".join(state_list)                                      # EXAMPLE: "3: 0.1 (A) | "8: 0.6 (B)"
-                print(f"     {mm} || {state_str}")
-
-        #if self.reactions.active_enzymes == set():    # If no enzymes were involved in any reaction
-        print(f"Chemicals involved in reactions: {self.reactions.labels_of_active_chemicals()}")
-        #else:
-            #print(f"Chemicals involved in reactions (not counting enzymes): {self.reactions.labels_of_active_chemicals()}")
-            #print(f"Enzymes involved in reactions: {self.reactions.names_of_enzymes()}")
-
-
-
-
-
     #####################################################################################################
 
     '''                             ~  MANAGEMENT OF REACTIONS  ~                                     '''
@@ -465,7 +412,7 @@ class UniformCompartment:
 
         :return:    Object ot type "ReactionRegistry" (with data about all the reactions)
         """
-        return self.reactions
+        return self.reaction_data
 
 
 
@@ -476,7 +423,7 @@ class UniformCompartment:
         :param i:   Integer index of the desired reaction
         :return:    Object of type "ReactionGeneric"
         """
-        return self.reactions.get_reaction(i)
+        return self.reaction_data.get_reaction(i)
 
 
 
@@ -490,7 +437,7 @@ class UniformCompartment:
 
         :return:    None
         """
-        self.reactions.clear_reactions_data()
+        self.reaction_data.clear_reactions_data()
 
 
 
@@ -506,9 +453,9 @@ class UniformCompartment:
         """
         if self.temp:
             # If a temperature is set for the uniform compartment, pass it to the reaction
-            return self.reactions.add_reaction(temp=self.temp, **kwargs)
+            return self.reaction_data.add_reaction(temp=self.temp, **kwargs)
         else:
-            return self.reactions.add_reaction(**kwargs)
+            return self.reaction_data.add_reaction(**kwargs)
 
 
 
@@ -521,7 +468,7 @@ class UniformCompartment:
         :param kwargs:  Any arbitrary named arguments
         :return:        None
         """
-        self.reactions.describe_reactions(**kwargs)
+        self.reaction_data.describe_reactions(**kwargs)
 
 
 
@@ -531,34 +478,7 @@ class UniformCompartment:
 
         :return:    The number of registered chemical reactions
         """
-        return self.reactions.number_of_reactions()
-
-
-
-    def plot_reaction_network(self, log_file :str, graphic_component="vue_cytoscape_5") -> None:
-        """
-        Send a plot of the network of reactions to the HTML log file,
-        also including a brief summary of all the reactions
-
-        ~~~ EXAMPLE of usage ~~~
-            plot_reaction_network(log_file="my_file.htm", graphic_component="vue_cytoscape_5")
-
-        :param log_file:            The name of the file into which to place the HTML code
-                                        to create the interactive network plot.
-                                        The suffix ".htm" will be added if it doesn't end with ".htm" or ".html"
-                                        If the file already exists, it will get overwritten.
-                                        (Note: this file will automatically include an internal reference to the JavaScript
-                                        file specified in `graphic_component`)
-        :param graphic_component:   The name of a Vue component that accepts a "graph_data" argument,
-                                        an object with the following keys
-                                        'nodes', 'edges', 'color_mapping' and 'caption_mapping'
-                                        For more details, see ReactionRegistry.prepare_graph_network()
-        :return:                    None
-        """
-        assert graphic_component == "vue_cytoscape_5", \
-            "plot_reaction_network(): the only value supported for argument `graphic_component` is 'vue_cytoscape_5'"
-
-        self.reactions.plot_reaction_network(log_file=log_file, graphic_component=graphic_component)
+        return self.reaction_data.number_of_reactions()
 
 
 
@@ -662,7 +582,7 @@ class UniformCompartment:
             assert type(stop) == tuple and len(stop) == 2, \
                 f"UniformCompartment.single_compartment_react(): the argument `stop`, if passed, must be a pair of values"
 
-        assert self.reactions.number_of_reactions() > 0, \
+        assert self.reaction_data.number_of_reactions() > 0, \
             f"UniformCompartment.single_compartment_react(): no reactions are present.  Make sure to first add them with add_reaction()"
 
 
@@ -1112,7 +1032,7 @@ class UniformCompartment:
 
         if variable_steps:
             decision_data = self.adaptive_steps.adjust_timestep(n_chems=self.chem_data.number_of_chemicals(),
-                                                                indexes_of_active_chemicals= self.reactions.indexes_of_active_chemicals(),
+                                                                indexes_of_active_chemicals= self.reaction_data.indexes_of_active_chemicals(),
                                                                 delta_conc=delta_concentrations, baseline_conc=self.system, prev_conc=self.previous_system)
             step_factor = decision_data['step_factor']
             action = decision_data['action']
@@ -1131,9 +1051,9 @@ class UniformCompartment:
                 print("    Baseline: ", self.system)
                 print("    Deltas:   ", delta_concentrations)
 
-                if len(self.reactions.active_chemicals) < self.chem_data.number_of_chemicals():
-                    print(f"    Restricting adaptive time step analysis to {len(self.reactions.active_chemicals)} "
-                    f"chemicals only: {self.reactions.labels_of_active_chemicals()} , with indexes: {self.reactions.indexes_of_active_chemicals()}")
+                if len(self.reaction_data.active_chemicals) < self.chem_data.number_of_chemicals():
+                    print(f"    Restricting adaptive time step analysis to {len(self.reaction_data.active_chemicals)} "
+                    f"chemicals only: {self.reaction_data.labels_of_active_chemicals()} , with indexes: {self.reaction_data.indexes_of_active_chemicals()}")
 
                 print("    Norms:    ", all_norms)
                 print("    Thresholds:    ")
@@ -1286,14 +1206,14 @@ class UniformCompartment:
 
         if rxn_list is None:    # Meaning ALL (active) reactions
             # A list of the reaction indices of all the active reactions
-            rxn_list = self.reactions.active_reaction_indices()
+            rxn_list = self.reaction_data.active_reaction_indices()
 
 
         # For each applicable reaction, find the needed adjustments ("deltas")
         #   to the concentrations of the reactants and products,
         #   based on the forward and reverse rates of the reaction
         for rxn_index in rxn_list:      # Consider each reaction in turn
-            rxn = self.reactions.get_reaction(rxn_index)
+            rxn = self.reaction_data.get_reaction(rxn_index)
 
             conc_dict = self._fetch_concs_for_rnx(rxn=rxn, conc_array=self.system)
             # For the chemicals in this rxn only.  EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
@@ -1487,7 +1407,7 @@ class UniformCompartment:
             chem_name = self.chem_data.get_label(species_index)
             raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
                                     f"would lead to a NEGATIVE concentration of the chemical `{chem_name}` "
-                                    f"from the reaction `{self.reactions.single_reaction_describe(rxn_index=rxn_index, concise=True)}` (rxn # {rxn_index}): "
+                                    f"from the reaction `{self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)}` (rxn # {rxn_index}): "
                                     f"\n      Baseline concentration value of `{chem_name}` : {baseline_conc:.6g} at system time {self.system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}"
                                     )
 
@@ -1676,7 +1596,7 @@ class UniformCompartment:
         #TODO: maybe automatically capture a snapshot of the current data
         self.diagnostics_enabled = True
         if not self.diagnostics:
-            self.diagnostics = Diagnostics(reactions=self.reactions)
+            self.diagnostics = Diagnostics(reactions=self.reaction_data)
 
 
     def pause_diagnostics(self):
@@ -1710,6 +1630,48 @@ class UniformCompartment:
     def ________VISUALIZATION________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
+
+
+    def describe_state(self) -> None:
+        """
+        Print out various data on the current state of the system, incl. system time
+
+        :return:        None
+        """
+        print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
+
+        n_species = self.chem_data.number_of_chemicals()
+        print(f"{n_species} species:")
+
+        # Show a line of line of data for each chemical species in turn
+        for species_index, name in enumerate(self.chem_data.get_all_labels()):
+            if name:    # If a name was provided, show it
+                name = f" ({name})"
+            else:
+                name = ""
+
+            if self.system is None:
+                print(f"  Species {species_index}{name}. No concentrations set yet")
+            else:
+                print(f"  Species {species_index}{name}. Conc: {self.system[species_index]}")
+
+        if self.macro_system != {}:
+            print("Macro-molecules, with their counts: ", self.macro_system)
+
+        if self.macro_system_state != {}:
+            print("Fractional Occupancy at the various binding sites for each macro-molecule:")
+            for mm, state_dict in self.macro_system_state.items():
+                state_list = [f"{a}: {b[1]} ({b[0]})" for a, b in state_dict.items()]   # EXAMPLE: ["3: 0.1 (A)", "8: 0.6 (B)"]
+                state_str = " | ".join(state_list)                                      # EXAMPLE: "3: 0.1 (A) | "8: 0.6 (B)"
+                print(f"     {mm} || {state_str}")
+
+        #if self.reactions.active_enzymes == set():    # If no enzymes were involved in any reaction
+        print(f"Chemicals involved in reactions: {self.reaction_data.labels_of_active_chemicals()}")
+        #else:
+            #print(f"Chemicals involved in reactions (not counting enzymes): {self.reactions.labels_of_active_chemicals()}")
+            #print(f"Enzymes involved in reactions: {self.reactions.names_of_enzymes()}")
+
+
 
     def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None,
                      range_x=None, range_y=None,
@@ -1767,15 +1729,15 @@ class UniformCompartment:
             chemicals = self.chem_data.get_all_labels()      # List of the chemical labels.  EXAMPLE: ["A", "B", "H"]
 
         if title is None:   # If no title was specified, create a default one based on how many reactions are present
-            number_of_rxns = self.reactions.number_of_reactions()
+            number_of_rxns = self.reaction_data.number_of_reactions()
             if number_of_rxns > 2:
                 title = f"Changes in concentrations for {number_of_rxns} reactions"
             elif number_of_rxns == 1:
-                rxn_text = self.reactions.single_reaction_describe(rxn_index=0, concise=True)   # The only reaction
+                rxn_text = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)   # The only reaction
                 title = f"Reaction `{rxn_text}` .  Changes in concentrations with time"
             else:   # Exactly 2 reactions
-                rxn_text_0 = self.reactions.single_reaction_describe(rxn_index=0, concise=True)
-                rxn_text_1 = self.reactions.single_reaction_describe(rxn_index=1, concise=True)
+                rxn_text_0 = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)
+                rxn_text_1 = self.reaction_data.single_reaction_describe(rxn_index=1, concise=True)
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
         if y_label is None:
@@ -1851,6 +1813,33 @@ class UniformCompartment:
                           yaxis_title='Step size')
 
         fig.show()
+
+
+
+    def plot_reaction_network(self, log_file :str, graphic_component="vue_cytoscape_5") -> None:
+        """
+        Send a plot of the network of reactions to the HTML log file,
+        also including a brief summary of all the reactions
+
+        ~~~ EXAMPLE of usage ~~~
+            plot_reaction_network(log_file="my_file.htm", graphic_component="vue_cytoscape_5")
+
+        :param log_file:            The name of the file into which to place the HTML code
+                                        to create the interactive network plot.
+                                        The suffix ".htm" will be added if it doesn't end with ".htm" or ".html"
+                                        If the file already exists, it will get overwritten.
+                                        (Note: this file will automatically include an internal reference to the JavaScript
+                                        file specified in `graphic_component`)
+        :param graphic_component:   The name of a Vue component that accepts a "graph_data" argument,
+                                        an object with the following keys
+                                        'nodes', 'edges', 'color_mapping' and 'caption_mapping'
+                                        For more details, see ReactionRegistry.prepare_graph_network()
+        :return:                    None
+        """
+        assert graphic_component == "vue_cytoscape_5", \
+            "plot_reaction_network(): the only value supported for argument `graphic_component` is 'vue_cytoscape_5'"
+
+        self.reaction_data.plot_reaction_network(log_file=log_file, graphic_component=graphic_component)
 
 
 
@@ -2184,7 +2173,7 @@ class UniformCompartment:
         if rxn_index is not None:
             # Check the 1 reaction that was requested
             if explain:
-                description = self.reactions.single_reaction_describe(rxn_index=rxn_index, concise=True)
+                description = self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)
                 print(description)
 
             status = self.reaction_in_equilibrium(rxn_index=rxn_index, conc=conc, tolerance=tolerance, explain=explain)
@@ -2194,8 +2183,8 @@ class UniformCompartment:
         else:
             # Check ALL the reactions
             status = True       # Overall status
-            description_list = self.reactions.multiple_reactions_describe(concise=True)
-            for rxn_index in range(self.reactions.number_of_reactions()):
+            description_list = self.reaction_data.multiple_reactions_describe(concise=True)
+            for rxn_index in range(self.reaction_data.number_of_reactions()):
                 # For each reaction
                 if explain:
                     print(description_list[rxn_index])
@@ -2234,7 +2223,7 @@ class UniformCompartment:
         :return:            True if the given reaction is close enough to an equilibrium,
                                 as allowed by the requested tolerance
         """
-        rxn = self.reactions.get_reaction(rxn_index)    # Look up the object of the requested reaction
+        rxn = self.reaction_data.get_reaction(rxn_index)    # Look up the object of the requested reaction
 
         if np.allclose(rxn.extract_reverse_rate(), 0):
             print("reaction_in_equilibrium() currently does NOT handle irreversible reactions (with a zero reverse rate)")
@@ -2314,7 +2303,7 @@ class UniformCompartment:
                                 chemicals involved in the specified reaction
                                 EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8}
         """
-        rxn = self.reactions.get_reaction(rxn_index)            # Look up the requested reaction
+        rxn = self.reaction_data.get_reaction(rxn_index)            # Look up the requested reaction
         chem_labels = list(rxn.extract_chemicals_in_reaction()) # List of the chemicals in the requested reaction
         return rxn.find_equilibrium_conc(conc_dict=self.get_conc_dict(chem_labels=chem_labels))
 

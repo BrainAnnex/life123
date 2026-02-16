@@ -21,7 +21,7 @@
 # ### TAGS :   "uniform compartment"
 
 # %%
-LAST_REVISED = "Feb. 14, 2026"
+LAST_REVISED = "Feb. 15, 2026"
 LIFE123_VERSION = "1.0.0rc7"         # Library version this experiment is based on
 
 # %%
@@ -43,7 +43,7 @@ check_version(LIFE123_VERSION)    # To check compatibility
 
 # %%
 # Initialize the HTML logging (for the graphics)
-log_file = ipynbname.name() + ".NEW.log.htm"    # Use the notebook base filename for the log file
+log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
                                             # IN CASE OF PROBLEMS, set manually to any desired name
 
 # %%

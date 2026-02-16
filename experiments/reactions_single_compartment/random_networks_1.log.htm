@@ -3,23 +3,28 @@
 <html lang="en">
 <head>  
     <meta charset="UTF-8">
-    <title>Log</title>
+    <title>Cytoscape graphics</title>
 
     <link type="text/css" rel="stylesheet" href="https://life123.science/libraries/vue_components/vue_cytoscape_5.css">
 
     <script src="https://life123.science/libraries/vue_2.6.12.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://life123.science/libraries/svg_helper_1.2.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js"></script>
 </head>
 
+
 <body>
-<h3>List of reactions:</h3><span style='padding-left:4ch'>&nbsp;</span>0: A <-> D + B<br>
-<span style='padding-left:4ch'>&nbsp;</span>1: D + C  <-> B<br>
-<span style='padding-left:4ch'>&nbsp;</span>2: C + A  <-> D<br>
-<span style='padding-left:4ch'>&nbsp;</span>3: B <-> D + D<br>
-<span style='padding-left:4ch'>&nbsp;</span>4: D <-> C + B<br>
-<span style='padding-left:4ch'>&nbsp;</span>5: 2 B  <-> C<br>
+
+<h3>List of reactions:</h3>
+<pre>    0: C <-> D + A
+    1: D <-> A + C
+    2: C + B  <-> D
+    3: C + D  <-> A
+    4: A <-> C + C
+    5: A <-> B + D
+</pre>
+
+        
 
 
 <div id="vue-root-1">   <!-- DIV container for the VUE COMPONENTS below : Vue ROOT element -->
@@ -27,24 +32,234 @@
     <vue-cytoscape-5 v-bind:graph_data="graph_data_json"
                      v-bind:component_id="1">        
     </vue-cytoscape-5>
-    
-</div>	<!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
+</div>    <!--  ~~~~~~~~~~~~~~~~~~~~~  END of Vue root element  ~~~~~~~~~~~~~~~~~  -->
+
 
 
 <!--
-    Vue components (and other JS).  This must appear AFTER the Vue-containing elements
+    Vue components (and other JS).  These must appear AFTER the Vue-containing elements
   -->
 <script src="https://life123.science/libraries/vue_components/vue_cytoscape_5.js"></script>
 
+
+
 <script>
-// Instantiation of the Vue ROOT component
-new Vue({
-    el: '#vue-root-1',
+    // Instantiation of the Vue ROOT element
+    new Vue({
+        el: '#vue-root-1',
 
-    data: {
-        graph_data_json: {"nodes": [{"name": "RXN", "id": "R-0", "_node_labels": ["Reaction"]}, {"name": "D", "diff_rate": null, "id": "C-3", "_node_labels": ["Chemical"]}, {"name": "B", "diff_rate": null, "id": "C-1", "_node_labels": ["Chemical"]}, {"name": "A", "diff_rate": null, "id": "C-0", "_node_labels": ["Chemical"]}, {"name": "RXN", "id": "R-1", "_node_labels": ["Reaction"]}, {"name": "C", "diff_rate": null, "id": "C-2", "_node_labels": ["Chemical"]}, {"name": "RXN", "id": "R-2", "_node_labels": ["Reaction"]}, {"name": "RXN", "id": "R-3", "_node_labels": ["Reaction"]}, {"name": "RXN", "id": "R-4", "_node_labels": ["Reaction"]}, {"name": "RXN", "id": "R-5", "_node_labels": ["Reaction"]}], "edges": [{"name": "produces", "source": "R-0", "target": "C-3", "id": "edge-1", "stoich": 1}, {"name": "produces", "source": "R-0", "target": "C-1", "id": "edge-2", "stoich": 1}, {"name": "reacts", "source": "C-0", "target": "R-0", "id": "edge-3", "stoich": 1}, {"name": "produces", "source": "R-1", "target": "C-1", "id": "edge-4", "stoich": 1}, {"name": "reacts", "source": "C-3", "target": "R-1", "id": "edge-5", "stoich": 1}, {"name": "reacts", "source": "C-2", "target": "R-1", "id": "edge-6", "stoich": 1}, {"name": "produces", "source": "R-2", "target": "C-3", "id": "edge-7", "stoich": 1}, {"name": "reacts", "source": "C-2", "target": "R-2", "id": "edge-8", "stoich": 1}, {"name": "reacts", "source": "C-0", "target": "R-2", "id": "edge-9", "stoich": 1}, {"name": "produces", "source": "R-3", "target": "C-3", "id": "edge-10", "stoich": 2}, {"name": "reacts", "source": "C-1", "target": "R-3", "id": "edge-11", "stoich": 1}, {"name": "produces", "source": "R-4", "target": "C-2", "id": "edge-12", "stoich": 1}, {"name": "produces", "source": "R-4", "target": "C-1", "id": "edge-13", "stoich": 1}, {"name": "reacts", "source": "C-3", "target": "R-4", "id": "edge-14", "stoich": 1}, {"name": "produces", "source": "R-5", "target": "C-2", "id": "edge-15", "stoich": 1}, {"name": "reacts", "source": "C-1", "target": "R-5", "id": "edge-16", "stoich": 2}], "color_mapping": {"Chemical": "#8DCC92", "Reaction": "#D9C8AD"}, "caption_mapping": {"Chemical": "name", "Reaction": "name"}}
+        data: {
+            graph_data_json: 
+{
+    "nodes": [
+        {
+            "name": "RXN",
+            "id": "R-0",
+            "_node_labels": [
+                "Reaction"
+            ]
+        },
+        {
+            "name": "D",
+            "diff_rate": null,
+            "id": "C-3",
+            "_node_labels": [
+                "Chemical"
+            ]
+        },
+        {
+            "name": "A",
+            "diff_rate": null,
+            "id": "C-0",
+            "_node_labels": [
+                "Chemical"
+            ]
+        },
+        {
+            "name": "C",
+            "diff_rate": null,
+            "id": "C-2",
+            "_node_labels": [
+                "Chemical"
+            ]
+        },
+        {
+            "name": "RXN",
+            "id": "R-1",
+            "_node_labels": [
+                "Reaction"
+            ]
+        },
+        {
+            "name": "RXN",
+            "id": "R-2",
+            "_node_labels": [
+                "Reaction"
+            ]
+        },
+        {
+            "name": "B",
+            "diff_rate": null,
+            "id": "C-1",
+            "_node_labels": [
+                "Chemical"
+            ]
+        },
+        {
+            "name": "RXN",
+            "id": "R-3",
+            "_node_labels": [
+                "Reaction"
+            ]
+        },
+        {
+            "name": "RXN",
+            "id": "R-4",
+            "_node_labels": [
+                "Reaction"
+            ]
+        },
+        {
+            "name": "RXN",
+            "id": "R-5",
+            "_node_labels": [
+                "Reaction"
+            ]
+        }
+    ],
+    "edges": [
+        {
+            "name": "produces",
+            "source": "R-0",
+            "target": "C-3",
+            "id": "edge-1",
+            "stoich": 1
+        },
+        {
+            "name": "produces",
+            "source": "R-0",
+            "target": "C-0",
+            "id": "edge-2",
+            "stoich": 1
+        },
+        {
+            "name": "reacts",
+            "source": "C-2",
+            "target": "R-0",
+            "id": "edge-3",
+            "stoich": 1
+        },
+        {
+            "name": "produces",
+            "source": "R-1",
+            "target": "C-0",
+            "id": "edge-4",
+            "stoich": 1
+        },
+        {
+            "name": "produces",
+            "source": "R-1",
+            "target": "C-2",
+            "id": "edge-5",
+            "stoich": 1
+        },
+        {
+            "name": "reacts",
+            "source": "C-3",
+            "target": "R-1",
+            "id": "edge-6",
+            "stoich": 1
+        },
+        {
+            "name": "produces",
+            "source": "R-2",
+            "target": "C-3",
+            "id": "edge-7",
+            "stoich": 1
+        },
+        {
+            "name": "reacts",
+            "source": "C-2",
+            "target": "R-2",
+            "id": "edge-8",
+            "stoich": 1
+        },
+        {
+            "name": "reacts",
+            "source": "C-1",
+            "target": "R-2",
+            "id": "edge-9",
+            "stoich": 1
+        },
+        {
+            "name": "produces",
+            "source": "R-3",
+            "target": "C-0",
+            "id": "edge-10",
+            "stoich": 1
+        },
+        {
+            "name": "reacts",
+            "source": "C-2",
+            "target": "R-3",
+            "id": "edge-11",
+            "stoich": 1
+        },
+        {
+            "name": "reacts",
+            "source": "C-3",
+            "target": "R-3",
+            "id": "edge-12",
+            "stoich": 1
+        },
+        {
+            "name": "produces",
+            "source": "R-4",
+            "target": "C-2",
+            "id": "edge-13",
+            "stoich": 2
+        },
+        {
+            "name": "reacts",
+            "source": "C-0",
+            "target": "R-4",
+            "id": "edge-14",
+            "stoich": 1
+        },
+        {
+            "name": "produces",
+            "source": "R-5",
+            "target": "C-1",
+            "id": "edge-15",
+            "stoich": 1
+        },
+        {
+            "name": "produces",
+            "source": "R-5",
+            "target": "C-3",
+            "id": "edge-16",
+            "stoich": 1
+        },
+        {
+            "name": "reacts",
+            "source": "C-0",
+            "target": "R-5",
+            "id": "edge-17",
+            "stoich": 1
+        }
+    ],
+    "color_mapping": {
+        "Chemical": "#8DCC92",
+        "Reaction": "#D9C8AD"
+    },
+    "caption_mapping": {
+        "Chemical": "name",
+        "Reaction": "name"
     }
+}
+        }  // END of data
 
-});
+    });
 </script>
-
+        

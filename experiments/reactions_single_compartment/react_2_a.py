@@ -28,7 +28,7 @@
 # ### TAGS :  "basic", "uniform compartment"
 
 # %%
-LAST_REVISED = "Jan. 2, 2026"
+LAST_REVISED = "Feb. 15, 2026"
 LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
 
 # %%
@@ -42,7 +42,7 @@ LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based o
 import numpy as np
 import ipynbname
 
-from life123 import check_version, UniformCompartment, ThermoDynamics, PlotlyHelper, GraphicLog
+from life123 import check_version, UniformCompartment, ThermoDynamics, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
@@ -51,11 +51,6 @@ check_version(LIFE123_VERSION)
 # Initialize the HTML logging (for the graphics)
 log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
                                             # IN CASE OF PROBLEMS, set manually to any desired name
-
-# Set up the use of some specified graphic (Vue) components
-GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_3"],
-                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
 
@@ -78,7 +73,7 @@ uc.describe_reactions()
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
-uc.plot_reaction_network("vue_cytoscape_3")
+uc.plot_reaction_network(log_file=log_file)
 
 
 # %%
@@ -108,7 +103,7 @@ uc.find_equilibrium_conc(rxn_index=0)    # This is an EXACT equilibrium solution
 
 # %% [markdown]
 # #### Considering that our initial state is {"A": 10., "B": 50.}, the reaction will actually proceed IN REVERSE (decreasing product), because of the large initial concentration of `B`, relative to the small initial concentration of `A`
-# More precisely, it's because the reaction quotient Q, at the current initial concentrations, is larger than our equilibrium constant K, which is 1.5 :
+# More precisely, it's because the **reaction quotient Q**, at the current initial concentrations, is larger than our **equilibrium constant K**, which is 1.5 :
 
 # %%
 ThermoDynamics.compute_reaction_quotient(reactant_data=["A"], product_data=["B"],

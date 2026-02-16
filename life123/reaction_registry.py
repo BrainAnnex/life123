@@ -1021,13 +1021,13 @@ class ReactionRegistry:
             "plot_reaction_network(): the only value supported for argument `graphic_component` is 'vue_cytoscape_5'"
 
         # Send a brief summary of all the reactions to the HTML log file
-        header = "<h3>List of reactions:</h3>"
+        header = "<h3>List of reactions:</h3>\n"
 
-        header += "<p style='font-family: monospace; padding-left:20px'>"
+        header += "<pre>"    #"<p style='font-family: monospace; padding-left:20px'>"
         rxn_descriptions = self.multiple_reactions_describe(concise=True)
         for desc in rxn_descriptions:
-            header += f"    {desc}<br>"
-        header += "</p>"
+            header += f"    {desc}\n"
+        header += "</pre>\n"
 
         graph_data = self.prepare_graph_network()
         # A dictionary with 4 keys: ''nodes', 'edges', 'color_mapping' and 'caption_mapping'
