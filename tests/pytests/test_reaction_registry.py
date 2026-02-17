@@ -538,28 +538,6 @@ def test__parse_reaction_term():
 
 #############  FOR CREATION OF NETWORK DIAGRAMS  #############
 
-def test_prepare_graph_network_OLD():
-    # Set up an A <-> B reaction
-    chem_data = ChemData(names=["A", "B"])
-    rxns = ReactionRegistry(chem_data)
-
-    rxns.add_reaction(reactants="A", products="B", kF=3., kR=2., temp=298.15)
-
-    graph_data = rxns.prepare_graph_network_OLD()
-
-    expected_structure = [{'name': 'A', 'diff_rate': None, 'id': 'C-0', 'labels': ['Chemical']},
-                          {'name': 'B', 'diff_rate': None, 'id': 'C-1', 'labels': ['Chemical']},
-                          {'name': 'RXN', 'kF': '3', 'kR': '2', 'delta_G': '-1,005.13', 'K': '1.5', 'id': 'R-0', 'labels': ['Reaction']},
-
-                          {'name': 'produces', 'source': 'R-0', 'target': 'C-1', 'id': 'edge-1', 'stoich': 1},
-                          {'name': 'reacts', 'source': 'C-0', 'target': 'R-0', 'id': 'edge-2', 'stoich': 1}
-                          ]
-
-    assert compare_recordsets(graph_data["structure"], expected_structure)
-    assert graph_data["color_mapping"] == {'Chemical': '#8DCC92', 'Reaction': '#D9C8AD'}
-    assert graph_data["caption_mapping"] == {'Chemical': 'name', 'Reaction': 'name'}
-
-
 
 def test_prepare_graph_network():
     # Set up an A <-> B reaction
@@ -570,10 +548,11 @@ def test_prepare_graph_network():
 
     graph_data = rxns.prepare_graph_network()
 
-    expected_nodes = [{'name': 'A', 'diff_rate': None, 'id': 'C-0', '_node_labels': ['Chemical']},
-                      {'name': 'B', 'diff_rate': None, 'id': 'C-1', '_node_labels': ['Chemical']},
-                      {'name': 'RXN', 'kF': '3', 'kR': '2', 'delta_G': '-1,005.13', 'K': '1.5', 'id': 'R-0', '_node_labels': ['Reaction']}
-                      ]
+    expected_nodes = [{'name': 'A', 'id': 'C-0', '_node_labels': ['Chemical']},
+                      {'name': 'B', 'id': 'C-1', '_node_labels': ['Chemical']},
+                      {'name': 'RXN', 'kF': '3', 'kR': '2', 'delta_G': '-1,005.13', 'K': '1.5', 'id': 'R-0',
+                       '_node_labels': ['Reaction'], 'formula': 'A <-> B'}
+                      ]     # Note: 'diff_rate': None   is NOT included
 
     expected_edges = [
                         {'name': 'produces', 'source': 'R-0', 'target': 'C-1', 'id': 'edge-1', 'stoich': 1},

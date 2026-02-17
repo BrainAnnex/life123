@@ -1819,7 +1819,7 @@ class UniformCompartment:
     def plot_reaction_network(self, log_file :str, graphic_component="vue_cytoscape_5") -> None:
         """
         Send a plot of the network of reactions to the HTML log file,
-        also including a brief summary of all the reactions
+        also including a brief summary of all the reactions.
 
         ~~~ EXAMPLE of usage ~~~
             plot_reaction_network(log_file="my_file.htm", graphic_component="vue_cytoscape_5")

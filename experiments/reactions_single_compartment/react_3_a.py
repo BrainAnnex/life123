@@ -21,7 +21,7 @@
 # ### TAGS :  "uniform compartment", "under-the-hood"
 
 # %%
-LAST_REVISED = "Jan. 4, 2026"
+LAST_REVISED = "Feb. 16, 2026"
 LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on 
 
 # %%
@@ -44,11 +44,6 @@ check_version(LIFE123_VERSION)
 log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
                                             # IN CASE OF PROBLEMS, set manually to any desired name
 
-# Set up the use of some specified graphic (Vue) components
-GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_3"],
-                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
-
 # %%
 
 # %% [markdown]
@@ -67,7 +62,7 @@ uc.describe_reactions()
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
-uc.plot_reaction_network("vue_cytoscape_3")
+uc.plot_reaction_network(log_file=log_file)
 
 # %%
 uc.enable_diagnostics()       # To save diagnostic information

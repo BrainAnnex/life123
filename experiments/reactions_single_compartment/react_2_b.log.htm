@@ -50,18 +50,18 @@
     "nodes": [
         {
             "name": "RXN",
+            "formula": "A <-> B",
             "kF": "3",
             "kR": "2",
             "delta_G": "-1,005.13",
             "K": "1.5",
-            "id": "R-0",
+            "id": "RXN-0",
             "_node_labels": [
                 "Reaction"
             ]
         },
         {
             "name": "B",
-            "diff_rate": null,
             "id": "C-1",
             "_node_labels": [
                 "Chemical"
@@ -69,7 +69,6 @@
         },
         {
             "name": "A",
-            "diff_rate": null,
             "id": "C-0",
             "_node_labels": [
                 "Chemical"
@@ -79,7 +78,7 @@
     "edges": [
         {
             "name": "produces",
-            "source": "R-0",
+            "source": "RXN-0",
             "target": "C-1",
             "id": "edge-1",
             "stoich": 1
@@ -87,7 +86,7 @@
         {
             "name": "reacts",
             "source": "C-0",
-            "target": "R-0",
+            "target": "RXN-0",
             "id": "edge-2",
             "stoich": 1
         }
@@ -98,7 +97,7 @@
     },
     "caption_mapping": {
         "Chemical": "name",
-        "Reaction": "name"
+        "Reaction": "id"
     }
 }
         }  // END of data

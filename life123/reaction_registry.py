@@ -787,92 +787,6 @@ class ReactionRegistry:
     #####################################################################################################
 
 
-    def prepare_graph_network_OLD(self) -> dict:
-        """
-        DEPRECATED, and to be OBSOLETED.  For use with the old Vue component "vue_cytoscape_3"
-
-        Prepare and return a data structure with chemical-reaction data in a network format,
-        ready to be passed to the front end, for network-diagram visualization with the Cytoscape.js library
-        (in the graph module "vue_cytoscape")
-
-        3 parts are generated, and assembled together as a dictionary with 3 keys: 'structure', 'color_mapping', 'caption_mapping'
-
-        EXAMPLE of the graph structure part of the returned object for an  A <-> B reaction:
-           [{'id': 'C-0', 'labels': ['Chemical'], 'name': 'A', 'diff_rate': None},
-            {'id': 'C-1', 'labels': ['Chemical'], 'name': 'B', 'diff_rate': None},
-
-            {'id': 'R-0', 'labels': ['Reaction'], 'name': 'RXN', 'kF': 3.0, 'kR': 2.0, 'K': 1.5, 'Delta_G': -1005.13},
-
-            {'id': 'edge-1', 'name': 'produces', 'source': 'R-0', 'target': 'C-1', 'stoich': 1, 'rxn_order': 1},
-            {'id': 'edge-2', 'name': 'reacts',   'source': 'C-0', 'target': 'R-0', 'stoich': 1, 'rxn_order': 1}
-           ]
-
-        EXAMPLE of `color_mapping`:     {'Chemical': '#8DCC92', 'Reaction': '#D9C8AD'},
-        EXAMPLE of `caption_mapping`:   {'Chemical': 'name', 'Reaction': 'name'}}
-
-        :return:    A dictionary with 3 keys: 'structure', 'color_mapping', 'caption_mapping'
-        """
-        graph = PyGraphVisual_OLD()
-
-        # Note: the graph nodes representing Chemicals will be given an id such as "C-123" and a label "Chemical";
-        #       the graph nodes representing Reactions will be given an id such as "R-456" and a label "Reaction"
-
-        for i, rxn in enumerate(self.reaction_list):    # Consider each REACTION in turn
-            # Add a node representing the reaction
-            rxn_id = f"R-{i}"               # Example: "R-456"
-            node_data = {'name': 'RXN'}
-
-            rxn_properties = rxn.extract_rxn_properties()
-            for k,v in rxn_properties.items():
-                node_data[k] = f"{v:,.6g}"
-
-            graph.add_node(node_id=rxn_id, labels='Reaction', data=node_data)
-
-
-            # Process all the PRODUCTS of this reaction
-            products = rxn.extract_products()
-            for term in products:
-                species_name = rxn.extract_chem_label(term)
-                chemical_id = f"C-{self.chem_data.get_index(species_name)}"      # Example: "C-12"
-                # Add each product to the graph as a node (if not already present)
-                graph.add_node( node_id=chemical_id, labels="Chemical",
-                                data={'name': species_name,
-                                      'diff_rate': self.chem_data.get_diffusion_rate(chem_label=species_name)
-                                      })
-
-                # Append edge from "reaction node" to "product node"
-                graph.add_edge(from_node=rxn_id, to_node=chemical_id, name="produces",
-                               data={'stoich': rxn.extract_stoichiometry(term)})
-
-
-            # Process all the REACTANTS of this reaction
-            reactants = rxn.extract_reactants()
-            for term in reactants:
-                species_name = rxn.extract_chem_label(term)
-                chemical_id = f"C-{self.chem_data.get_index(species_name)}"      # Example: "C-34"
-                # Add each reactant to the graph as a node (if not already present)
-                graph.add_node(node_id=chemical_id, labels="Chemical",
-                               data={'name': species_name,
-                                     'diff_rate': self.chem_data.get_diffusion_rate(chem_label=species_name)
-                                     })
-
-                # Append edge from "reactant node" to "reaction node"
-                graph.add_edge(from_node=chemical_id, to_node=rxn_id, name="reacts",
-                               data={'stoich': rxn.extract_stoichiometry(term)})
-
-
-        graph.assign_color_mapping(label='Chemical', color='graph_green')
-        graph.assign_color_mapping(label='Reaction', color='graph_lightbrown')
-
-        graph.assign_caption(label='Chemical', caption='name')
-        graph.assign_caption(label='Reaction', caption='name')
-
-        #print(graph)
-
-        return graph.serialize()
-
-
-
     def prepare_graph_network(self) -> dict:
         """
         Prepare and return a data structure with chemical-reaction data in a network format,
@@ -899,16 +813,17 @@ class ReactionRegistry:
 
         :return:    A dictionary with 4 keys: 'nodes', 'edges', 'color_mapping', 'caption_mapping'
         """
-        graph = PyGraphVisual()
+        graph = PyGraphVisual()     # Object to facilitate data preparation for graph visualization
 
         # Note: the graph nodes representing Chemicals will be given an id such as "C-123" and a label "Chemical";
         #       the graph nodes representing Reactions will be given an id such as "R-456" and a label "Reaction"
 
         for i, rxn in enumerate(self.reaction_list):    # Consider each REACTION in turn
             # Add a node representing the reaction
-            rxn_id = f"R-{i}"               # Example: "R-456"
-            node_data = {'name': 'RXN'}
+            rxn_id = f"RXN-{i}"               # Example: "RXN-456"
+            node_data = {'name': 'RXN', 'formula': rxn.describe(concise=True)}
 
+            # Show the parameter of the reaction
             rxn_properties = rxn.extract_rxn_properties()
             for k,v in rxn_properties.items():
                 node_data[k] = f"{v:,.6g}"
@@ -921,11 +836,13 @@ class ReactionRegistry:
             for term in products:
                 species_name = rxn.extract_chem_label(term)
                 chemical_id = f"C-{self.chem_data.get_index(species_name)}"      # Example: "C-12"
+
                 # Add each product to the graph as a node (if not already present)
+                properties={'name': species_name}
+                if diff := self.chem_data.get_diffusion_rate(chem_label=species_name):
+                    properties['diff_rate'] = diff
                 graph.add_node( node_id=chemical_id, labels="Chemical",
-                                properties={'name': species_name,
-                                      'diff_rate': self.chem_data.get_diffusion_rate(chem_label=species_name)
-                                      })
+                                properties=properties)
 
                 # Append edge from "reaction node" to "product node"
                 graph.add_edge(from_node=rxn_id, to_node=chemical_id, name="produces",
@@ -937,11 +854,13 @@ class ReactionRegistry:
             for term in reactants:
                 species_name = rxn.extract_chem_label(term)
                 chemical_id = f"C-{self.chem_data.get_index(species_name)}"      # Example: "C-34"
+
                 # Add each reactant to the graph as a node (if not already present)
+                properties={'name': species_name}
+                if diff := self.chem_data.get_diffusion_rate(chem_label=species_name):
+                    properties['diff_rate'] = diff
                 graph.add_node(node_id=chemical_id, labels="Chemical",
-                               properties={'name': species_name,
-                                     'diff_rate': self.chem_data.get_diffusion_rate(chem_label=species_name)
-                                     })
+                               properties=properties)
 
                 # Append edge from "reactant node" to "reaction node"
                 graph.add_edge(from_node=chemical_id, to_node=rxn_id, name="reacts",
@@ -952,7 +871,7 @@ class ReactionRegistry:
         graph.assign_color_mapping(label='Reaction', color='graph_lightbrown')
 
         graph.assign_caption(label='Chemical', caption='name')
-        graph.assign_caption(label='Reaction', caption='name')
+        graph.assign_caption(label='Reaction', caption='id')
 
         #print(graph)
 
@@ -979,6 +898,7 @@ class ReactionRegistry:
                                         False for that accept a single data argument, named "graph_data"
         :return:                    None
         """
+        raise Exception("No longer supported; use plot_reaction_network() instead")
         # Send a brief summary of all the reactions to the HTML log file
         log.write("List of reactions:", style=log.h3, newline=False, also_print=False)
 
@@ -988,11 +908,7 @@ class ReactionRegistry:
 
         #log.blank_line()
 
-        if graphic_component != "vue_cytoscape_5":      # If an old version
-            graph_data = self.prepare_graph_network_OLD()
-        else:
-            graph_data = self.prepare_graph_network()
-            # A dictionary with 4 keys: ''nodes', 'edges', 'color_mapping' and 'caption_mapping'
+        graph_data = self.prepare_graph_network()
 
         # Send a plot of the network of reactions to the HTML log file
         GraphicLog.export_plot(graph_data, graphic_component, unpack=unpack)
@@ -1002,7 +918,7 @@ class ReactionRegistry:
     def plot_reaction_network(self, log_file :str, graphic_component :str) -> None:
         """
         Send a plot of the network of reactions to the HTML log file,
-        also including a brief summary of all the reactions
+        also including a brief summary of all the reactions.
 
         :param log_file:            The name of the file into which to place the HTML code
                                         to create the interactive network plot.

@@ -354,7 +354,7 @@ class ReactionUnimolecular(ReactionElementary):
         Return as a string, a user-friendly plain-text form of the reaction
 
         :param concise:     If True, less detail is shown
-        :return:            A string with a description of the specified reaction
+        :return:            A string with a description of this reaction
         """
         description = f"{self.reactant} <-> {self.product}"
 
@@ -618,7 +618,10 @@ class ReactionSynthesis(ReactionElementary):
         Return as a string, a user-friendly plain-text form of the reaction
 
         :param concise:     If True, less detail is shown
-        :return:            A string with a description of the specified reaction
+        :return:            A string with a description of this reaction
+                            EXAMPLES of concise version:
+                                A + B <-> P
+                                2 C <-> P
         """
         description = f"{self.extract_reactants_formula()}  <-> {self.product}"
 
@@ -638,7 +641,7 @@ class ReactionSynthesis(ReactionElementary):
         """
         Return the list of ALL the reactant labels in this reaction
 
-        :return:
+        :return:    The list of ALL the reactant labels in this reaction
         """
         return [self.reactant_1, self.reactant_2]
 
@@ -906,9 +909,12 @@ class ReactionDecomposition(ReactionElementary):
         Return as a string, a user-friendly plain-text form of the reaction
 
         :param concise:     If True, less detail is shown
-        :return:            A string with a description of the specified reaction
+        :return:            A string with a description of this reaction
+                            EXAMPLES of concise version:
+                                A <-> P + Q
+                                D <-> 2 P
         """
-        description = f"{self.reactant} <-> {self.product_1} + {self.product_2}"
+        description = f"{self.reactant} <-> {self.extract_products_formula()}"
 
         if not concise:
             if self.reversible:
@@ -1221,7 +1227,7 @@ class ReactionEnzyme(ReactionCommon):
         Return as a string, a user-friendly plain-text form of the reaction
 
         :param concise:     If True, less detail is shown
-        :return:            A string with a description of the specified reaction
+        :return:            A string with a description of this reaction
         """
         description = f"{self.enzyme} + {self.substrate} <-> {self.intermediate} -> {self.enzyme} + {self.product}"
 
@@ -1915,7 +1921,7 @@ class ReactionGeneric(ReactionCommon):
         EXAMPLE (not concise):  "CH4 + 2 O2 <-> CO2 + 2 H2O  (kF = 3.0 / kR = 2.0 / Delta_G = -1,005.13 / K = 1.5) | 1st order in all reactants & products"
 
         :param concise:     If True, less detail is shown
-        :return:            A string with a description of the specified reaction
+        :return:            A string with a description of this reaction
         """
         reactants = self.extract_reactants()
         products = self.extract_products()
