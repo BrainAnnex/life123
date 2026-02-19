@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 from life123 import RandomReactionNetwork
 
 
@@ -130,3 +131,62 @@ def test_already_used():
     net.registry.add_elementary_reaction(reactants="D", products=["B", "B"])  # Reaction 3 : D <-> 2 B
     assert net.already_used(reactants="D", products=["B"])
     assert net.already_used(reactants="D", products=["B", "B"])
+
+
+
+def test_random_species_enthalpy():
+    net = RandomReactionNetwork(n_chems=3, n_rxns=0, seed=1492042)
+    H = net.random_species_enthalpy(sigma=40.4145, n=3)
+    np.allclose(H, [-12.67475766, 6.06243963, -6.70292682])
+
+    # Produce a linear combination of the form X1 + X2 - X3 from 3 of our normal distributions
+    linear_combo = [np.sum(net.random_species_enthalpy(sigma=40.4145, n=2)) -
+                           net.random_species_enthalpy(sigma=40.4145, n=1)
+                        for _ in range(100)]
+    np.allclose(np.mean(linear_combo), 0.8995432)   # This will approach 0
+    np.allclose(np.std(linear_combo), 69.654486)    # This will approach 70
+
+
+
+def test_random_reaction_enthalpy():
+    net = RandomReactionNetwork(n_chems=3, n_rxns=0, seed=1492042)
+
+    result_1 = net.random_reaction_enthalpy(reactants=["A", "B"], products="C")
+    print(net.standard_species_enthalpy)
+
+    assert np.allclose(net.standard_species_enthalpy["A"], -12.674757661590291)
+    assert np.allclose(net.standard_species_enthalpy["B"], 6.06243962532564)
+    assert np.allclose(net.standard_species_enthalpy["C"], -6.702926824946904)
+
+    assert np.allclose(result_1, -0.09060878868225242)
+    assert np.allclose(result_1,
+                       net.get_species_enthalpy("C")
+                       - net.get_species_enthalpy("A") - net.get_species_enthalpy("B"))
+    # ΔH = HC − HA − HB
+
+    result_2 = net.random_reaction_enthalpy(reactants="C", products=["A", "B"])
+    assert np.allclose(result_2, -result_1)     # The reverse reaction has opposite delta_H
+
+
+    result_1 = net.random_reaction_enthalpy(reactants=["A", "A"], products="C")
+    assert np.allclose(result_1, 18.64658849823368)
+    assert np.allclose(result_1,
+                       net.get_species_enthalpy("C")
+                       - 2 * net.get_species_enthalpy("A"))
+    # ΔH = HC - 2 HA
+
+    result_2 = net.random_reaction_enthalpy(reactants="C", products=["A", "A"])
+    assert np.allclose(result_2, -result_1)     # The reverse reaction has opposite delta_H
+
+
+
+def test_random_reaction_enthalpy_2():
+    net = RandomReactionNetwork(n_chems=35, n_rxns=65, seed=1492042)
+
+    H_list = [rxn.delta_H
+                for rxn in net.registry.get_all_reactions()]
+
+    #print(np.mean(H_list))
+    #print(np.std(H_list))
+    np.allclose(np.mean(H_list), 3.6438823)   # This will approach 0
+    np.allclose(np.std(H_list), 72.886196)    # Roughly around 70

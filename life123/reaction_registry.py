@@ -79,6 +79,16 @@ class ReactionRegistry:
 
 
 
+    def get_all_reactions(self):
+        """
+
+        :return:    A list of various types of reaction objects,
+                        such as ReactionUnimolecular, ReactionSynthesis, etc.
+        """
+        return self.reaction_list
+
+
+
     def active_reaction_indices(self) -> [int]:
         """
         Return a list of the reaction index numbers of all the active reactions
