@@ -5,7 +5,6 @@ import plotly.express as px
 import plotly.graph_objects as pgo
 import plotly.subplots as sp
 from life123.visualization.colors import Colors
-from typing import Union
 
 
 
@@ -120,6 +119,7 @@ class PlotlyHelper:
                     range_x=None, range_y=None,
                     x_label=None, y_label=None, legend_header="Plot",
                     vertical_lines_to_add=None, show_intervals=False,
+                    annotation_field=None, show_points=False, annotate=None,
                     smoothed=False, show=False) -> pgo.Figure:
         """
         Using plotly, draw line plots from the values in the given dataframe.
@@ -139,7 +139,7 @@ class PlotlyHelper:
                                     or list of names to use, in order; some of the entries may be None.
                                     If None, then the hardwired default colors are used
         :param title:           [OPTIONAL] Title for the plot
-        :param title_prefix:    [OPTIONAL] String to prefix (automatically followed by " <br>") to the title
+        :param title_prefix:    [OPTIONAL] String to prefix (automatically followed by the newline " <br>") to the title
         :param range_x:         [OPTIONAL] list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
         :param range_y:         [OPTIONAL] list of the form [y_min, y_max], to initially show only a part of the y values.
@@ -160,6 +160,20 @@ class PlotlyHelper:
                                     and draws thin vertical dotted gray lines at all the x-coords
                                     of the data points in the saved history data;
                                     also, it adds a comment to the title.
+
+        :param annotation_field:[OPTIONAL] The name of one of the dataframe fields,
+                                    for the use of the arguments `show_points` and `annotate`
+        :param show_points:     [OPTIONAL] If True, the individual data points are marked with large dots;
+                                    currently, only allowed for single-line plots (i.e. argument `fields` must be a single column).
+                                    If the argument `annotation_field` was specified, that field gets shown in the hover box
+        :param annotate:        [OPTIONAL] If a (possibly empty) dictionary is passed,
+                                    introduce callout boxes that make use of the `annotation_field` column as source of values.
+                                    Typically used in conjunction with show_points=True
+                                    Optional keys:
+                                        'frequency' (EXAMPLE: 2 , to annotate each other data point)
+                                        'dx', 'dy', 'x_offset', 'y_offset' (to affect the relative and absolute positions of the callouts;
+                                                                            note that higher y means further DOWN)
+
         :param smoothed:        [OPTIONAL] If True, a spline is used to smooth the lines;
                                     otherwise (default), line segments are used
         :param show:            If True, the plot will be shown
@@ -278,6 +292,87 @@ class PlotlyHelper:
 
             fig['layout']['shapes'] = vline_list    # The vertical lines are regarded by Plotly Express as "shapes"
                                                     # that are stored in the figure's "layout"
+
+
+        if show_points:
+            POINT_COLOR = "#3FBC84"     # A shade of green
+            assert type(fields) == str, \
+                "plot_pandas(): the `show_points` option can only be used when `fields` is a single column"
+
+            if annotation_field is not None:
+                assert type(annotation_field) == str, \
+                    "plot_pandas(): the `annotation_field` argument , if provided, must be a string, " \
+                    "with the name of one of the Pandas fields"
+
+                fig.add_scatter(
+                    x=df[x_var],
+                    y=df[fields],
+                    mode="markers",
+                    marker={"size": 6, "color": POINT_COLOR},
+                    name="data point",
+                    customdata=df[[annotation_field]],
+                    hovertemplate=
+                        fields + "=%{y}<br>" +
+                        x_var  + "=%{x}<br>" +
+                        annotation_field + "=%{customdata[0]:.2g}" +
+                        "<extra></extra>",
+                    showlegend=False
+                )
+            # The `<extra></extra>` suppresses the trace name (such as the provided "data point",
+            # or the default "trace 1") from showing next to the hover boxes
+            else:
+                # A simplified version of the previous add_scatter() call
+                fig.add_scatter(
+                    x=df[x_var],
+                    y=df[fields],
+                    mode="markers",
+                    name="data point",
+                    marker={"size": 6, "color": POINT_COLOR},
+                    hovertemplate=
+                        fields + "=%{y}<br>" +
+                        x_var  + "=%{x}<br>" +
+                        "<extra></extra>",
+                    showlegend=False
+                )
+
+
+        if annotate is not None:
+            assert type(annotate) == dict, \
+                    "plot_pandas(): the `annotate` argument , if provided, must be a dict, " \
+                    "with following optional keys: 'dx', 'dy', 'x_offset', 'y_offset', 'frequency'"
+
+            assert type(fields) == str, \
+                "plot_pandas(): `annotate` can only be used when `fields` is a single value"
+
+            assert type(annotation_field) == str, \
+                    "plot_pandas(): to use the argument `annotate`, you must also pass an `annotation_field` argument"
+
+
+            # Unpack the argument, and use defaults for any missing value
+            dx = annotate.get("dx", 2)
+            dy = annotate.get("dy", 4)
+            x_offset = annotate.get("x_offset", 0)
+            y_offset = annotate.get("y_offset", 20)
+            frequency = annotate.get("frequency", 2)    # To avoid clutter
+
+            for ind in df.index:     # for each row in the Pandas dataframe
+                label = f"{df[annotation_field][ind]:.2g}"
+                if ind == 0:
+                    label = f"{annotation_field}={label}"    # Also prefix "t=" to the 1st (zero-th) label
+
+                label_x = x_offset + ind * dx      # A greater x value here means further to the right
+                label_y = y_offset + ind * dy      # A greater y value here means further DOWN!!
+
+                if (ind % frequency) == 0:
+                    fig.add_annotation(x=df[x_var][ind], y=df[fields][ind],
+                                        text=label,
+                                        font=dict(
+                                            size=10,
+                                            color="grey"
+                                        ),
+                                        showarrow=True, arrowhead=0, ax=label_x, ay=label_y, arrowcolor="#b0b0b0",
+                                        bordercolor="#c7c7c7")
+
         if show:
             fig.show()  # Display the plot
 
