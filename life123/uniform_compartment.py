@@ -45,11 +45,11 @@ class UniformCompartment:
         """
         Note: AT MOST 1 of the following 3 arguments can be passed
 
-        :param reactions:   [OPTIONAL 1] Object of type "ReactionRegistry", with data about the reactions and the chemicals.
+        :param reactions:   [OPTIONAL 1] Object of type "ReactionRegistry", with data about the reactions and the chemical species.
                                 If passed, cannot pass either of the args `chem_data` nor `names` (those are both part of the "Reactions" object);
                                 if not passed, the reactions can be added later, with calls to add_reaction()
 
-        :param chem_data:   [OPTIONAL 2] Object of type "ChemData" (with data about the chemicals and their reactions).
+        :param chem_data:   [OPTIONAL 2] Object of type "ChemData" (with data about the chemical species).
                                 If passed, cannot pass either of the args  `reactions` (an object that contains `chem_data`) nor `names`
                                 (names are contained in the `chem_data` object)
 
@@ -532,14 +532,14 @@ class UniformCompartment:
         Update the system state and the system time accordingly
         (object attributes self.system and self.system_time)
 
-        :param duration:        The overall time advance for the reactions (it may be exceeded in case of variable steps)
-        :param target_end_time: The final time at which to stop the reaction; it may be exceeded in case of variable steps
+        :param duration:        [OPTIONAL] The overall time advance for the reactions (it may be exceeded in case of variable steps)
+        :param target_end_time: [OPTIONAL] The final time at which to stop the reaction; it may be exceeded in case of variable steps
                                     If both `target_end_time` and `duration` are specified, an error will result
 
-        :param initial_step:    The suggested size of the first step (it might be reduced automatically,
+        :param initial_step:    [OPTIONAL] The suggested size of the first step (it might be reduced automatically,
                                     in case of "hard" errors resulting from overly-large steps)
 
-        :param stop:            Pair of the form (termination_keyword, termination_parameter), to indicate
+        :param stop:            [OPTIONAL] Pair of the form (termination_keyword, termination_parameter), to indicate
                                     the criterion to use to stop the reaction
                                     EXAMPLES:
                                         ("conc_below", (chem_name, conc))  Stop when conc first dips below
@@ -550,7 +550,7 @@ class UniformCompartment:
                                         ("after_time", t)                   Stop just after the given target time
                                         ("equilibrium", tolerance)          Stop when equilibrium reached
 
-        :param n_steps:         The desired number of steps
+        :param n_steps:         [OPTIONAL] The desired number of steps
 
         :param max_steps:       [OPTIONAL] Max numbers of steps; if reached, it'll terminate regardless of any other criteria
 
@@ -611,6 +611,8 @@ class UniformCompartment:
 
             # Determine the time step,
             # as well as the required number of such steps
+            # TODO: if the following call results in an Exception, the reported arguments are confusing because
+            #       the names don't match
             time_step, n_steps = self.specify_steps(total_duration=duration,
                                                     time_step=initial_step,
                                                     n_steps=n_steps)
@@ -1589,11 +1591,16 @@ class UniformCompartment:
         """
         Turn on the diagnostics mode.
 
-        CAUTION: if not done early enough in the simulation, some desired diagnostic data may be missing
+        CAUTION: if not done early enough in the simulation, some desired diagnostic data may be missing.
+                 You might consider using the argument  enable_diagnostics=True
+                 when first instantiating UniformCompartment(
 
         :return: None
         """
         #TODO: maybe automatically capture a snapshot of the current data
+        if self.diagnostics_enabled:
+            print("*** INFO: enable_diagnostics() - diagnostics were ALREADY enabled")
+
         self.diagnostics_enabled = True
         if not self.diagnostics:
             self.diagnostics = Diagnostics(reactions=self.reaction_data)
@@ -1605,6 +1612,9 @@ class UniformCompartment:
 
         :return:    None
         """
+        if not self.diagnostics_enabled:
+            print("*** INFO: pause_diagnostics() - diagnostics were ALREADY off")
+
         self.diagnostics_enabled = False
 
 

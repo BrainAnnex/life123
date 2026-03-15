@@ -1613,6 +1613,8 @@ class ReactionGeneric(ReactionCommon):
         :param delta_S:     [OPTIONAL] Change in Entropy (from reactants to products)
         :param delta_G:     [OPTIONAL] Change in Free Energy (from reactants to products), in Joules
         :param kinetic_rate_function:  [OPTIONAL] Note - the current default will be removed in later versions
+                                        EXAMPLES:  ReactionKinetics.compute_rate_mass_action_kinetics  (the generalized "standard rate law")
+                                                   ReactionKinetics.compute_rate_first_order (reaction is first order in all reactants and products)
         """
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 

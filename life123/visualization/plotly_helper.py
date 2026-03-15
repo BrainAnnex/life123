@@ -118,7 +118,7 @@ class PlotlyHelper:
                     log_y=False,
                     colors=None, title=None, title_prefix=None,
                     range_x=None, range_y=None,
-                    x_label=None, y_label="Y", legend_header="Plot",
+                    x_label=None, y_label=None, legend_header="Plot",
                     vertical_lines_to_add=None, show_intervals=False,
                     smoothed=False, show=False) -> pgo.Figure:
         """
@@ -130,7 +130,7 @@ class PlotlyHelper:
 
         :param df:              Pandas dataframe with the data for the plot
         :param x_var:           Name of column with the independent variable for the x-axis
-        :param fields:          Name, or list of names, of the dataframe columns whose values are to be plotted;
+        :param fields:          [OPTIONAL] Name, or list of names, of the dataframe columns whose values are to be plotted;
                                     if a list is passed, also display a figure legend;
                                     if None, then display all columns EXCEPT the one that
                                     was declared as the independent variable thru argument `x_var`
@@ -145,7 +145,8 @@ class PlotlyHelper:
         :param range_y:         [OPTIONAL] list of the form [y_min, y_max], to initially show only a part of the y values.
                                     Note: it's still possible to zoom out, and see the excluded portion
         :param x_label:         [OPTIONAL] Caption to use for the x-axis
-        :param y_label:         [OPTIONAL] Caption to use for the y-axis.  Default: "Y"
+        :param y_label:         [OPTIONAL] Caption to use for the y-axis.
+                                    Default: the value of the argument `fields` if a string; otherwise, "Y"
         :param legend_header:   [OPTIONAL] Caption to use at the top of the legend box.
                                             Only applicable if more than 1 curve is being shown.
         :param vertical_lines_to_add:  [OPTIONAL] Ignored if the argument `show_intervals` is specified.
@@ -176,11 +177,6 @@ class PlotlyHelper:
         assert x_var in col_list, \
             f"plot_pandas(): the value of the argument `x_var` ({x_var}) must be the name of one of the columns in the dataframe"
 
-        # Prevent obscure error messages that arise when y_label is not a valid string (due to the fact that this string is used
-        # to shows values in the hover boxes when more than 1 curve is being shown)
-        assert type(y_label) == str, \
-            f"plot_pandas(): the value of the argument `y_label` must be a string; the passed values is of type {type(y_label)}"
-
 
         if fields is None:
             number_of_curves = len(col_list) - 1  # All the field but one (since one is the independent variable)
@@ -189,7 +185,27 @@ class PlotlyHelper:
             if len(fields) == 1:
                 fields = fields[0]      # Take the only element, if there's only one (this has the effect of hiding the legend)
         else:
-            number_of_curves = len(fields)
+            # If arg `fields` was passed
+            if type(fields) == str:
+                number_of_curves = 1
+            else:
+                assert type(fields) == list, \
+                    f"plot_pandas(): the value of the argument `fields`, if passed, must be a string or list; the passed values is of type {type(fields)}"
+
+                number_of_curves = len(fields)
+
+
+        if y_label is None:
+            if len(fields) == 1:
+                y_label = fields
+            else:
+                y_label = "Y"
+        else:
+            # Prevent obscure error messages that arise when y_label is not a valid string (due to the fact that this string is used
+            # to shows values in the hover boxes when more than 1 curve is being shown)
+            assert type(y_label) == str, \
+                f"plot_pandas(): the value of the argument `y_label` must be a string; the passed values is of type {type(y_label)}"
+
 
         if colors is None:
             # Entirely use default colors
@@ -270,7 +286,7 @@ class PlotlyHelper:
 
 
     @classmethod
-    def combine_plots(cls, fig_list :Union[list, tuple], title=None, modify=None,
+    def combine_plots(cls, fig_list :list|tuple, title=None, modify=None,
                       layout_index=None,
                       x_label=None, y_label=None,
                       xrange=None, legend_title=None, curve_labels=None, show=False) -> pgo.Figure:
