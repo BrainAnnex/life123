@@ -21,7 +21,7 @@
 # ### TAGS :  "uniform compartment", "under-the-hood"
 
 # %%
-LAST_REVISED = "Feb. 16, 2026"
+LAST_REVISED = "Mar. 18, 2026"
 LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on 
 
 # %%

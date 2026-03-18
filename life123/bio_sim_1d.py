@@ -1784,6 +1784,8 @@ class BioSim1D(System1D):
             diff = self.chem_data.get_diffusion_rate(chem_index=chem_index)     # The diffusion rate of this chemical
             chem_label = self.chem_data.get_label(chem_index)
             permeability = self.membranes_obj.permeability.get(chem_label)
+            # TODO: maybe skip any species that have exactly zero as diffusion/permeability (species that
+            #       in a simplified model we don't want to bother with)
 
             # Compute the "increment vector", a 1-D Numpy array with the CHANGE in concentrations for the given chemical species across all bins
             if algorithm is None:
@@ -2377,6 +2379,9 @@ class Diffusion1D:
         :return:            A relatively safe max length for a single time step of the simulation,
                                 to try to steer clear of instabilities
         """
+        if np.allclose(diff_rate, 0):
+            return 1000000000       # A very large value representing no maximum
+
         return delta_x**2 * self.time_step_threshold/diff_rate
 
 

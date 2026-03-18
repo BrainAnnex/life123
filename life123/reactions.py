@@ -313,7 +313,8 @@ class ReactionElementary(ReactionCommon):
 
     def extract_intermediate(self) -> str | None:
         """
-
+        Return the name of the reaction intermediate species,
+        or None if there's no intermediate
         :return:
         """
         return None   # There are no intermediates
@@ -1275,9 +1276,10 @@ class ReactionEnzyme(ReactionCommon):
 
 
 
-    def extract_intermediates(self) -> str:
+    def extract_intermediate(self) -> str | None:
         """
-
+        Return the name of the reaction intermediate species,
+        or None if there's no intermediate
         :return:
         """
         return self.intermediate
@@ -1769,7 +1771,8 @@ class ReactionGeneric(ReactionCommon):
 
     def extract_intermediate(self) -> str | None:
         """
-
+        Return the name of the reaction intermediate species,
+        or None if there's no intermediate
         :return:
         """
         return None   # There are no intermediates

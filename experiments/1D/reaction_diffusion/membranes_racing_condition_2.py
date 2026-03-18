@@ -17,7 +17,7 @@
 #
 # As in experiment `membranes_racing_condition_1`, **a racing condition between diffusion and reaction.**   
 # Like before, the "window of opportunity to escape" closes fast!  
-# This time, however, the initial concentration of `A` is outside the compartment, and the reaction is an enzyme-catalyed unimolecular `A + E -> B + E` .  The enzyme `E` cannot cross membranes.   
+# This time, however, the initial concentration of `A` is outside the compartment, and the reaction is an enzyme-catalyed `A + E -> B + E` .  The enzyme `E` cannot cross membranes.   
 #
 # If, metaphorically speaking, we think of `A` as a "traveler", then:
 #
@@ -33,7 +33,7 @@
 # ### TAGS : "reactions 1D", "diffusion 1D", "membranes 1D"
 
 # %%
-LAST_REVISED = "Sep. 29, 2025"
+LAST_REVISED = "Mar. 18, 2026"
 LIFE123_VERSION = "1.0.0rc7"       # Library version this experiment is based on
 
 # %%
@@ -60,7 +60,7 @@ check_version(LIFE123_VERSION)
 # because of our initial condition later, of `E` already uniformly diffused)
 # We'll let the simulator estimate a diffusion rate constant for `EU` (so, passing None for now)
 chem_data = ChemData(          names=["U", "L",  "E", "EU", "P",  "UP"], 
-                     diffusion_rates=[200., 250., 80., None, 120., 90.],        # The diffusion rate of `U` will later be increased in scenario 2
+                     diffusion_rates=[200., 250., 80.,  0, 120.,   90.],        # The diffusion rate of `U` will later be increased in scenario 2
                      plot_colors=["red", "green", "violet", "darkturquoise", "pink", "black"]) 
 
 rxns = ReactionRegistry(chem_data=chem_data)
@@ -202,7 +202,7 @@ bio.visualize_system()
 
 # %%
 bio.react_diffuse(total_duration=0.1, fraction_max_step=0.5, show_status=True)
-bio.visualize_system(title_prefix="Here we turned off the curve smoothing in the plot!",smoothed=False)
+bio.visualize_system(title_prefix="Here we turned off the curve smoothing in the plot!", smoothed=False)
 
 # %%
 bio.react_diffuse(total_duration=0.2, fraction_max_step=0.5, show_status=True)

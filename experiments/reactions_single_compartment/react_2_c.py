@@ -28,7 +28,7 @@
 # ### TAGS : "numerical", "uniform compartment"
 
 # %%
-LAST_REVISED = "Jan. 3, 2026"
+LAST_REVISED = "Mar. 18, 2026"
 LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
 
 # %%
@@ -42,7 +42,6 @@ LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based o
 from life123 import check_version, ChemData, UniformCompartment
 
 import numpy as np
-import plotly.graph_objects as go
 from life123 import ReactionKinetics, ReactionRegistry, PlotlyHelper
 
 # %%

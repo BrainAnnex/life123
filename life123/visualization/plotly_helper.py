@@ -394,7 +394,8 @@ class PlotlyHelper:
                         x_label=None, y_label=None,
                         xrange=None,
                         modify=None, layout_index=None, line_labels=None,
-                        legend_trace_selector=None, show=False) -> pgo.Figure:
+                        legend_show_all_traces=False, legend_trace_selector=None,
+                        show=False) -> pgo.Figure:
         """
         Combine together several existing Plotly plots into a single one,
         with COMBINED axes.
@@ -414,20 +415,31 @@ class PlotlyHelper:
         :param xrange:      [OPTIONAL] list of the form [x_start, x_end], to initially only show a part of the timeline.
                                 Note: it's still possible to zoom out, and see the excluded portion
 
-        :param modify:      [OPTIONAL] Dictionary of plot-style changes to permanently apply to some individual plots
+        :param modify:      [OPTIONAL] Dictionary of plot-style changes to permanently apply to some individual figures
                                 (indexed by their position in the `fig_list` argument) before they get combined.
                                 Allowed values: "dash", "dot", "solid", "dashdot", "longdash", "longdashdot"
                                 EXAMPLE:  {0 : "dash", 4: "dot"}
-                                Note: the modification will alter the original plot
+                                Warning: the modification will alter the original figures
 
         :param layout_index:[OPTIONAL] If given, the layout of the "Figure" object with the given index
                                 (from `fig_list`) is used as is - and all the layout parameters below are ignored
 
-        :param line_labels:[OPTIONAL] List of labels to use for the various curves in the legend
-                                and in the hover boxes; if not specified, use the titles of the individual plots
+        :param line_labels:[OPTIONAL] List of labels to use in the legend for each of the various original "figures";
+                                their number must match the length of `fig_list`
 
-        :param legend_trace_selector:  function(fig) -> index of trace to use for legend
-                                       default: first trace (index 0)
+        :param legend_show_all_traces: [OPTIONAL] Default, False.  If True, the legend will include all the "traces" (sub-parts)
+                                            of each figure.
+                                            - Use True when the figures consist of meaningful separate parts (such as multiple curves),
+                                              all of which ought to appear in the legend;
+                                            - use False when each figures consists of one actual data curve
+                                              and various modifications to it
+        :param legend_trace_selector:  [OPTIONAL] Only applicable if `legend_show_all_traces` is False.
+                                            Meant for scenarios where each of the Plotly figures only contains one meaningful trace (sub-part)
+                                            that should be used for the legend.
+                                            It accepts a python function that takes a Plotly figure as argument, and returns
+                                            the index of the trace to use for the legend
+                                                function(fig) -> index of trace to use for legend
+                                            If not passed, the first trace (index 0) of each Plotly figure will be used
 
         :param show:        [OPTIONAL] If True, the plot will be shown
                                 Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
@@ -490,15 +502,20 @@ class PlotlyHelper:
 
 
                 # Legend logic
-                if j == chosen_idx:
-                    # This trace is the "chosen" one to contribute to the overall legend
+                if legend_show_all_traces:
                     t.showlegend = True
-                    if line_labels:
-                        t.name = line_labels[fig_index]
-                    else:
-                        t.name = fig.layout.title.text
+                    t.name = fig_list[fig_index].data[j].name
                 else:
-                    t.showlegend = False
+                    if j == chosen_idx:
+                        # This trace is the "chosen" one to contribute to the overall legend
+                        t.showlegend = True
+                        if line_labels:
+                            t.name = line_labels[fig_index]
+                        else:
+                            t.name = fig.layout.title.text
+                    else:
+                        t.showlegend = False
+
 
                 all_fig.add_trace(t)   # Build up the combined "Figure" object;
                                         # note that it's done trace-by-trace rather than by the passed individual plots ("figures")

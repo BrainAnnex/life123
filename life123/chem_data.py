@@ -383,13 +383,13 @@ class Diffusion(ChemCore):
 
         self.diffusion_rates = {}   # Values for the diffusion rates, indexed by chemical "label".
                                     # All values must be non-negative numbers.
-                                    # Only chemicals with an assigned diffusion rate will be present here;
+                                    # Only chemical species with an assigned diffusion rate will be present here;
                                     #   some registered chemicals may be missing.
                                     # EXAMPLE: {"A": 6.4, "D": 12.0}
 
 
 
-    def add_chemical_with_diffusion(self, name :str, diff_rate :Union[float, int], label=None, note=None, **kwargs) -> int:
+    def add_chemical_with_diffusion(self, name :str, diff_rate :float|int, label=None, note=None, **kwargs) -> int:
         """
         Register a new chemical species, with a name, a diffusion rate (in water),
         and (optionally) :
@@ -453,7 +453,7 @@ class Diffusion(ChemCore):
 
 
 
-    def get_diffusion_rate(self, chem_index=None, chem_label=None) -> Union[float, int, None]:
+    def get_diffusion_rate(self, chem_index=None, chem_label=None) -> float|int|None:
         """
         Return the diffusion rate of the specified chemical species.
         If no value was assigned (but the chemical exists), return None.
