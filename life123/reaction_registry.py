@@ -889,43 +889,7 @@ class ReactionRegistry:
 
 
 
-    def plot_reaction_network_OLD(self, graphic_component :str, unpack=False) -> None:
-        """
-        OBSOLETE: don't use
-
-        Send a plot of the network of reactions to the HTML log file,
-        also including a brief summary of all the reactions
-
-        ~~~ EXAMPLE of usage ~~~
-            plot_reaction_network("vue-cytoscape-5")
-            plot_reaction_network("vue_cytoscape_3")
-
-        :param graphic_component:   The name of a Vue component that accepts a "graph_data" argument,
-                                        an object with the following keys
-                                        'nodes', 'edges', 'color_mapping' and 'caption_mapping
-                                        For more details, see prepare_graph_network()
-        :param unpack:              Use True for Vue components that require their data unpacked into individual arguments;
-                                        False for that accept a single data argument, named "graph_data"
-        :return:                    None
-        """
-        raise Exception("No longer supported; use plot_reaction_network() instead")
-        # Send a brief summary of all the reactions to the HTML log file
-        log.write("List of reactions:", style=log.h3, newline=False, also_print=False)
-
-        rxn_descriptions = self.multiple_reactions_describe(concise=True)
-        for desc in rxn_descriptions:
-            log.write(desc, indent=4, also_print=False)
-
-        #log.blank_line()
-
-        graph_data = self.prepare_graph_network()
-
-        # Send a plot of the network of reactions to the HTML log file
-        GraphicLog.export_plot(graph_data, graphic_component, unpack=unpack)
-
-
-
-    def plot_reaction_network(self, log_file :str, graphic_component :str) -> None:
+    def plot_reaction_network(self, log_file :str, graphic_component="vue_cytoscape_5") -> None:
         """
         Send a plot of the network of reactions to the HTML log file,
         also including a brief summary of all the reactions.

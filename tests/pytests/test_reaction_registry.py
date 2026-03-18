@@ -550,16 +550,16 @@ def test_prepare_graph_network():
 
     expected_nodes = [{'name': 'A', 'id': 'C-0', '_node_labels': ['Chemical']},
                       {'name': 'B', 'id': 'C-1', '_node_labels': ['Chemical']},
-                      {'name': 'RXN', 'kF': '3', 'kR': '2', 'delta_G': '-1,005.13', 'K': '1.5', 'id': 'R-0',
+                      {'name': 'RXN', 'kF': '3', 'kR': '2', 'delta_G': '-1,005.13', 'K': '1.5', 'id': 'RXN-0',
                        '_node_labels': ['Reaction'], 'formula': 'A <-> B'}
                       ]     # Note: 'diff_rate': None   is NOT included
 
     expected_edges = [
-                        {'name': 'produces', 'source': 'R-0', 'target': 'C-1', 'id': 'edge-1', 'stoich': 1},
-                        {'name': 'reacts', 'source': 'C-0', 'target': 'R-0', 'id': 'edge-2', 'stoich': 1}
+                        {'name': 'produces', 'source': 'RXN-0', 'target': 'C-1', 'id': 'edge-1', 'stoich': 1},
+                        {'name': 'reacts', 'source': 'C-0', 'target': 'RXN-0', 'id': 'edge-2', 'stoich': 1}
                       ]
 
     assert compare_recordsets(graph_data["nodes"], expected_nodes)
     assert compare_recordsets(graph_data["edges"], expected_edges)
     assert graph_data["color_mapping"] == {'Chemical': '#8DCC92', 'Reaction': '#D9C8AD'}
-    assert graph_data["caption_mapping"] == {'Chemical': 'name', 'Reaction': 'name'}
+    assert graph_data["caption_mapping"] == {'Chemical': 'name', 'Reaction': 'id'}

@@ -652,9 +652,9 @@ class BioSim2D:
         :return:                A dictionary with data about the status of the operation
                                     (for now, just the number of steps run; key: "steps")
         """
-        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
-                                                              time_step=time_step,
-                                                              n_steps=n_steps)
+        time_step, n_steps = self.reaction_dynamics.specify_steps(duration=total_duration,
+                                                                  initial_step=time_step,
+                                                                  n_steps=n_steps)
         for i in range(n_steps):
             if self.debug:
                 if (i < 2) or (i >= n_steps-2):
@@ -828,9 +828,9 @@ class BioSim2D:
         """
         # TODO: in case of any Exception, the state of the system is still valid, as of the time before this call
 
-        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
-                                                             time_step=time_step,
-                                                             n_steps=n_steps)
+        time_step, n_steps = self.reaction_dynamics.specify_steps(duration=total_duration,
+                                                                  initial_step=time_step,
+                                                                  n_steps=n_steps)
 
         for i in range(n_steps):
             self.reaction_step(time_step)         # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
@@ -903,9 +903,9 @@ class BioSim2D:
                                     (for now, they must be equal)
         :return:                None
         """
-        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
-                                                             time_step=time_step,
-                                                             n_steps=n_steps)
+        time_step, n_steps = self.reaction_dynamics.specify_steps(duration=total_duration,
+                                                                  initial_step=time_step,
+                                                                  n_steps=n_steps)
 
         for i in range(n_steps):
             # TODO: split off the diffusion step and the reaction steps to different computing cores

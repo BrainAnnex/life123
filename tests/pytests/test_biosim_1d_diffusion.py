@@ -263,12 +263,6 @@ def test_diffuse_4():
     """
 
     with pytest.raises(Exception):
-        bio.diffuse()               # Is not passing any arguments
-
-    #with pytest.raises(Exception):
-        #bio.diffuse(total_duration= 5)      # Is not passing enough arguments
-
-    with pytest.raises(Exception):
         bio.diffuse(time_step = 0.2)        # Is not passing enough arguments
 
     with pytest.raises(Exception):

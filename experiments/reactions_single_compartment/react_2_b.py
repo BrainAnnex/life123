@@ -25,7 +25,7 @@
 # ### TAGS :  "basic", "under-the-hood", "uniform compartment"
 
 # %%
-LAST_REVISED = "Mar. 12, 2026"
+LAST_REVISED = "Mar. 17, 2026"
 LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
 
 # %%
@@ -327,7 +327,7 @@ PlotlyHelper.combine_plots([p1, p2],
                            title="Concentration of A with time, and its rate of change (A_dot)",
                            y_label="[A] (turquoise) /<br> A_dot (brown)",
                            legend_title="Plot",
-                           curve_labels=["A", "A_dot"]
+                           line_labels=["A", "A_dot"]
                            )
 
 # %% [markdown]

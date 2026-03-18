@@ -22,7 +22,7 @@
 # ### TAGS :   "quick-start", "uniform compartment"
 
 # %%
-LAST_REVISED = "Feb. 15, 2026"
+LAST_REVISED = "Mar. 17, 2026"
 LIFE123_VERSION = "1.0.0rc7"         # Library version this experiment is based on
 
 # %%
@@ -64,7 +64,7 @@ uc.set_conc({"A": 80., "B": 10.})
 # ## Run the reaction
 
 # %%
-uc.single_compartment_react(initial_step=0.1, target_end_time=1.)   # Using defaults for all other parameters
+uc.single_compartment_react(target_end_time=1.)   # Using defaults for all other parameters
 
 # %%
 uc.get_history()   # The system's history, saved during the run of single_compartment_react()

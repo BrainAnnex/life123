@@ -358,14 +358,14 @@ class UniformCompartment:
         Specify the temperature of the environment
 
         :param temp:    Temperature value (or use None to unset)
-        :param units:   Either "K" for Kelvins (default) or "C" for Celsius
+        :param units:   Either "K" for Kelvins (default) or "C" for Celsius;
+                            case-insensitive
         :return:        None
         """
-        # TODO: also allow lowercase units
-        if units == "C":
+        if units == "C" or units == "c":
             temp += 273.15
         else:
-            assert units == "K", \
+            assert units == "K" or units == "k", \
                 "set_temp(): allowable values for `units` are 'K' and 'C'"
 
         self.temp = temp
@@ -432,11 +432,11 @@ class UniformCompartment:
         Get rid of all reactions; start again with "an empty slate" (but still with reference
         to the same data object about the chemicals)
 
+        :return:    None
+        """
         # TODO: maybe offer an option to clear just one reaction, or a list of them
         # TODO: provide support for "inactivating" reactions
 
-        :return:    None
-        """
         self.reaction_data.clear_reactions_data()
 
 
@@ -493,40 +493,88 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def specify_steps(self, total_duration=None, time_step=None, n_steps=None) -> (float, int):
+    def specify_steps(self, duration=None, initial_step=None, n_steps=None) -> (float, int):
         """
-        If either the time_step or n_steps is not provided (but at least 1 of them must be present),
-        determine the other one from total_duration
+        If either the `initial_step` or `n_steps` is not provided (but at least 1 of them must be present),
+        determine the other one from `duration`
 
         Their desired relationship is: total_duration = time_step * n_steps
 
-        :param total_duration:  Float with the overall time advance (i.e. time_step * n_steps)
-        :param time_step:       Float with the size of each time step
-        :param n_steps:         Integer with the desired number of steps
-        :return:                The pair (time_step, n_steps)
+        :param duration:    Float with the overall time advance (i.e. time_step * n_steps)
+        :param initial_step:Float with the size of each time step
+        :param n_steps:     Integer with the desired number of steps
+        :return:            The pair (time_step, n_steps)
         """
-        assert (not total_duration or not time_step or not n_steps), \
-            "UniformCompartment.specify_steps(): cannot specify all 3 arguments: `total_duration`, `time_step`, `n_steps` (specify only any 2 of them)"
+        DEFAULT_N_STEPS = 10
 
-        assert (total_duration and time_step) or (total_duration and n_steps) or (time_step and n_steps), \
-            "UniformCompartment.specify_steps(): must provide exactly 2 arguments from:  `total_duration`, `time_step`, `n_steps`"
+        assert (not duration or not initial_step or not n_steps), \
+            "UniformCompartment.specify_steps(): cannot specify all 3 arguments: " \
+            "`duration`, `initial_step`, `n_steps` (specify at most 2 of them)"
 
-        if not time_step:
-            time_step = total_duration / n_steps
+        assert (duration or initial_step), \
+            "UniformCompartment.specify_steps(): at least 1 of the arguments `duration` and `initial_step` must be provided"
+
+        if (not initial_step) and (not n_steps):    # If only `duration` is provided
+            n_steps = DEFAULT_N_STEPS
+            initial_step = duration
+            return (initial_step, n_steps)
+
+        if (not duration) and (not n_steps):        # If only `initial_step` is provided
+            n_steps = DEFAULT_N_STEPS
+            return (initial_step, n_steps)
+
+        # If we get this far, both `duration` and `initial_step` must be present
+
+        if not initial_step:
+            initial_step = duration / n_steps
 
         if not n_steps:
-            n_steps = math.ceil(total_duration / time_step)
+            n_steps = math.ceil(duration / initial_step)
 
-        return (time_step, n_steps)     # Note: could opt to also return total_duration if there's a need for it
+        return (initial_step, n_steps)     # Note: could opt to also return total_duration if there's a need for it
+
+
+
+    def react_to_equilibrium(self, initial_step, silent=True, max_cycles=1000) -> None:
+        """
+        Simulate ALL the (previously-registered) reactions in the single uniform ("well-stirred") compartment -
+        based on the INITIAL concentrations stored in self.system , until equilibrium is reached,
+        or the specified max number of rounds of simulations is reached (in the latter case, an Exception is raised).
+
+        Adaptive variable time steps are automatically picked.
+
+        Update the system state and the system time accordingly
+        (object attributes self.system and self.system_time)
+
+        :param initial_step:The suggested size of the first step (it might be reduced automatically,
+                                in case of "hard" errors resulting from overly-large steps)
+        :param silent:      [OPTIONAL] If True, less output is generated
+        :param max_cycles:  [OPTIONAL] Note that simulation cycles aren't the same as the computation time steps
+        :return:            None
+        """
+        result = self.single_compartment_react(duration=initial_step, silent=silent)    # Variable steps is the default
+        rec_step = result.get("recommended_next_step")
+
+        count = 1
+        while (self.is_in_equilibrium(explain=False) != True):
+            #print(f"react_to_equilibrium(): cycle # {count}")
+            result = self.single_compartment_react(duration=rec_step, silent=silent)    # Take the variable step recommended by the previous run
+            rec_step = result.get("recommended_next_step")
+            if count > max_cycles:
+                raise Exception(f"react_to_equilibrium(): Unable to reach equilibrium within the requested {max_cycles} simulation cycles")
+            count += 1
+
+        if silent:
+            print(f"System Time is now: {self.system_time:,.5g}")       # For silent mode, just give a one-liner final summary
 
 
 
     def single_compartment_react(self, duration=None, target_end_time=None, stop=None,
                                  initial_step=None, n_steps=None, max_steps=None,
                                  variable_steps=True, explain_variable_steps=None,
-                                 silent=False, report_interval=0.5) -> None:
+                                 silent=False, report_interval=0.5) -> dict:
         """
-        Perform ALL the (previously-registered) reactions in the single compartment -
+        Simulate ALL the (previously-registered) reactions in the single uniform ("well-stirred") compartment -
         based on the INITIAL concentrations stored in self.system
 
         Update the system state and the system time accordingly
@@ -563,7 +611,8 @@ class UniformCompartment:
         :param report_interval:         [OPTIONAL] How frequently, in terms of elapsed running time, in minutes,
                                             to inform the user of the current status
 
-        :return:                        None.   The object attributes self.system and self.system_time get updated
+        :return:                        A dictionary containing the key "recommended_next_step"
+                                        Note: the object attributes self.system and self.system_time get updated
         """
 
         # Default values
@@ -580,7 +629,8 @@ class UniformCompartment:
 
         if stop is not None:
             assert type(stop) == tuple and len(stop) == 2, \
-                f"UniformCompartment.single_compartment_react(): the argument `stop`, if passed, must be a pair of values"
+                f"UniformCompartment.single_compartment_react(): the argument `stop`, if passed, " \
+                f"must be a pair of values, of the form (termination_keyword, termination_parameter)"
 
         assert self.reaction_data.number_of_reactions() > 0, \
             f"UniformCompartment.single_compartment_react(): no reactions are present.  Make sure to first add them with add_reaction()"
@@ -613,10 +663,11 @@ class UniformCompartment:
             # as well as the required number of such steps
             # TODO: if the following call results in an Exception, the reported arguments are confusing because
             #       the names don't match
-            time_step, n_steps = self.specify_steps(total_duration=duration,
-                                                    time_step=initial_step,
+            time_step, n_steps = self.specify_steps(duration=duration,
+                                                    initial_step=initial_step,
                                                     n_steps=n_steps)
-            # Note: if variable steps are requested then n_steps stops being particularly meaningful; it becomes a
+            #print(f"time_step: {time_step} , n_steps: {n_steps}")
+            # Note: if variable steps are requested then `n_steps` stops being particularly meaningful; it becomes a
             #       hypothetical value, in the (unlikely) event that the step sizes were never changed - and is only
             #       used to detect a very excessive number of actual attempted steps
 
@@ -736,6 +787,8 @@ class UniformCompartment:
 
         # Add a caption to the very last entry in the system history
         self.conc_history.set_caption_last_snapshot(final_step_caption)
+
+        return {"recommended_next_step": recommended_next_step}
 
 
 
@@ -2147,7 +2200,7 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True) -> Union[bool, dict]:
+    def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True) -> bool|dict:
         """
         Ascertain whether the given concentrations (by default the current System concentrations)
         are in equilibrium for the specified reactions (by default, check all reactions)

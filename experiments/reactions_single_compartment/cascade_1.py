@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -40,58 +40,54 @@
 # ![2 Coupled Reactions](../../docs/2_coupled_reactions.png)
 
 # %%
-LAST_REVISED = "Oct. 11, 2024"
-LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based on
+LAST_REVISED = "Mar. 17, 2026"
+LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
-# %% tags=[]
+# %%
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
-# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
 import ipynbname
 
-from life123 import check_version, ChemData, UniformCompartment, PlotlyHelper, GraphicLog
+from life123 import check_version, ReactionRegistry, UniformCompartment, PlotlyHelper, GraphicLog
 
 # %%
 check_version(LIFE123_VERSION)
 
-# %% tags=[]
+# %%
 # Initialize the HTML logging (for the graphics)
 log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
+                                            # IN CASE OF PROBLEMS, set manually to any desired name
 
-# Set up the use of some specified graphic (Vue) components
-GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_2"],
-                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
+# %%
+
+# %%
 
 # %% [markdown]
 # # Initialize the System
 # Specify the chemicals and the reactions
 
-# %% tags=[]
-# Specify the chemicals and the reactions; this data structure will get re-used in 
-# the various simulations below
-chem = ChemData()
-
-# Reaction A <-> B (fast)
-chem.add_reaction(reactants="A", products="B",
-                       forward_rate=64., reverse_rate=8.) 
-
-# Reaction B <-> C (slow)
-chem.add_reaction(reactants="B", products="C",
-                       forward_rate=12., reverse_rate=2.) 
-
-print("Number of reactions: ", chem.number_of_reactions())
-
 # %%
-chem.describe_reactions()
+# Set up the reactions and their chemicals (common for all the simulations below)
+rxns = ReactionRegistry()
+
+# Elementary reaction A <-> B (fast)
+rxns.add_reaction(reactants="A", products="B", kF=64., kR=8.) 
+
+# Elementary reaction B <-> C (slow)
+rxns.add_reaction(reactants="B", products="C", kF=12., kR=2.) 
+
+rxns.describe_reactions()
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
-chem.plot_reaction_network("vue_cytoscape_2")
+rxns.plot_reaction_network(log_file=log_file)
+
+# %%
 
 # %%
 
@@ -99,7 +95,7 @@ chem.plot_reaction_network("vue_cytoscape_2")
 # ## Run the simulation
 
 # %%
-dynamics = UniformCompartment(chem_data=chem, preset="fast")
+dynamics = UniformCompartment(reactions=rxns, preset="fast", enable_diagnostics=True)   # To save diagnostic information 
 
 dynamics.set_conc({"A": 50.}, snapshot=True) # Set the initial concentrations of all the chemicals, in their index order
 dynamics.describe_state()
@@ -107,16 +103,13 @@ dynamics.describe_state()
 # %%
 dynamics.get_history()
 
-# %% [markdown] tags=[]
+# %%
+
+# %% [markdown]
 # ## Run the reaction
 
 # %%
-dynamics.enable_diagnostics()    # To save diagnostic information about the call to single_compartment_react()
-
-dynamics.single_compartment_react(initial_step=0.02, duration=0.4,
-                                  snapshots={"initial_caption": "1st reaction step",
-                                             "final_caption": "last reaction step"},
-                                  variable_steps=True)
+dynamics.single_compartment_react(initial_step=0.02, duration=0.4)
 
 # %% [markdown]
 # ### <a name="cascade_1_plot"> Plots of changes of concentration with time</a>
@@ -195,24 +188,22 @@ dynamics.diagnostics.get_rxn_data(rxn_index=1)
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # # PART 3 : Re-run with very small constant steps, and compare with original run
 
 # %% [markdown]
 # We'll use **constant steps of size 0.0005** , which is 1/4 of the smallest steps (the "substep" size) previously used in the variable-step run
 
 # %%
-dynamics2 = UniformCompartment(chem_data=chem)  # Re-use the same chemicals and reactions of the previous simulation
+dynamics2 = UniformCompartment(reactions=rxns)  # Re-use the same chemicals and reactions of the previous simulation
 
-# %% tags=[]
-dynamics2.set_conc({"A": 50.}, snapshot=True)
+# %%
+dynamics2.set_conc({"A": 50.})
 
 # %%
 # Notice that we're using FIXED steps this time
 dynamics2.single_compartment_react(initial_step=0.0005, duration=0.4,
-                                   variable_steps=False,
-                                   snapshots={"initial_caption": "1st reaction step",
-                                              "final_caption": "last reaction step"},
+                                   variable_steps=False
                                    )
 
 # %%
@@ -255,8 +246,8 @@ fig2 = dynamics2.plot_history(chemicals='B', colors=['violet'], title="Fine fixe
                               show=True)
 
 # %%
-PlotlyHelper.combine_plots(fig_list=[fig1, fig2], title="The 2 runs, contrasted together", 
-                           curve_labels=["B (adaptive variable steps)", "B (fixed small steps)"])
+PlotlyHelper.combine_plots(fig_list=[fig1, fig2], title="The 2 runs, contrasted together",
+                           line_labels=["B (adaptive variable steps)", "B (fixed small steps)"])
 
 # %% [markdown]
 # #### They overlap fairly well!  The 800 fixed-timestep points vs. the 48 adaptable variable-timestep ones.

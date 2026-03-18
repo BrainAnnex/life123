@@ -137,15 +137,15 @@ def test_specify_steps():
     with pytest.raises(Exception):
         # Too few arguments
         uc.specify_steps()
-        uc.specify_steps(total_duration=15.1)
-        uc.specify_steps(time_step=0.2)
+        uc.specify_steps(duration=15.1)
+        uc.specify_steps(initial_step=0.2)
         uc.specify_steps(n_steps=30)
         # Too many arguments
-        uc.specify_steps(total_duration=15.1, time_step=0.2, n_steps=30)
+        uc.specify_steps(duration=15.1, initial_step=0.2, n_steps=30)
 
-    assert uc.specify_steps(time_step=0.5, n_steps=24) == (0.5, 24)
-    assert uc.specify_steps(total_duration=12.0, time_step=0.5) == (0.5, 24)
-    assert uc.specify_steps(total_duration=12.0, n_steps=24) == (0.5, 24)
+    assert uc.specify_steps(initial_step=0.5, n_steps=24) == (0.5, 24)
+    assert uc.specify_steps(duration=12.0, initial_step=0.5) == (0.5, 24)
+    assert uc.specify_steps(duration=12.0, n_steps=24) == (0.5, 24)
 
 
 

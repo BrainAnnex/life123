@@ -28,7 +28,7 @@
 # ### TAGS :  "basic", "uniform compartment"
 
 # %%
-LAST_REVISED = "Feb. 16, 2026"
+LAST_REVISED = "Mar. 17, 2026"
 LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
 
 # %%
@@ -202,11 +202,13 @@ p1 = uc.plot_history(chemicals="A", colors="darkturquoise")   # The plot of [A] 
 p2 = PlotlyHelper.plot_pandas(df=rates_df, x_var="SYSTEM TIME", fields="A_dot", colors="brown")   # The plot of A_dot, from rates_df
 
 # %%
-PlotlyHelper.combine_plots([p1, p2], 
+PlotlyHelper.combine_plots([p1, p2],
                            title="Concentration of A with time, and its rate of change (A_dot)",
                            y_label="[A] (turquoise) /<br> A_dot (brown)",
                            legend_title="Plot",
-                           curve_labels=["A", "A_dot"])
+                           line_labels=["A", "A_dot"])
+
+# %%
 
 # %% [markdown]
 # ### At t=0 :  

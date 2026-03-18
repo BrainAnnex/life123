@@ -1669,13 +1669,13 @@ class BioSim1D(System1D):
 
         If only the `total_duration` is specified, then a default is used for the step sizes
 
-        :param total_duration:  The overall time advance (i.e. time_step * n_steps)
-        :param time_step:       The size of each constant time step
-        :param fraction_max_step: The fraction (> 0 and <= 1) of what is regarded as the max allowed step,
+        :param total_duration:  [OPTIONAL] The overall time advance (i.e. time_step * n_steps)
+        :param time_step:       [OPTIONAL] The size of each constant time step
+        :param fraction_max_step: [OPTIONAL] The fraction (> 0 and <= 1) of what is regarded as the max allowed step,
                                     based on stability considerations for the diffusion of the chemical with the
                                     largest diffusion rate
-        :param n_steps:         The desired number of constant steps
-        :param delta_x:         Distance between consecutive bins (the spatial dimension of each bin)
+        :param n_steps:         [OPTIONAL] The desired number of constant steps
+        :param delta_x:         [OPTIONAL] Distance between consecutive bins (the spatial dimension of each bin)
         :param algorithm:       [OPTIONAL] String indicating the desired method to use to solve the diffusion equation.
                                     Currently available options: "5_1_explicit";
                                     if not specified, the default method diffuse_step_single_species() is used
@@ -1708,8 +1708,8 @@ class BioSim1D(System1D):
             time_step = fraction_max_step * self.diff_obj.max_time_step(diff_rate=max_diff_rate, delta_x=delta_x)
 
 
-        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
-                                                                  time_step=time_step,
+        time_step, n_steps = self.reaction_dynamics.specify_steps(duration=total_duration,
+                                                                  initial_step=time_step,
                                                                   n_steps=n_steps)
         for i in range(n_steps):
             if self.debug:
@@ -1830,9 +1830,9 @@ class BioSim1D(System1D):
         """
         #TODO: TODO: in case of any Exception, the state of the system is still valid, as of the time before this call
 
-        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
-                                                             time_step=time_step,
-                                                             n_steps=n_steps)
+        time_step, n_steps = self.reaction_dynamics.specify_steps(duration=total_duration,
+                                                                  initial_step=time_step,
+                                                                  n_steps=n_steps)
 
 
         for i in range(n_steps):
@@ -1938,8 +1938,8 @@ class BioSim1D(System1D):
             time_step = fraction_max_step * self.diff_obj.max_time_step(diff_rate=max_diff_rate, delta_x=delta_x)
 
 
-        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
-                                                                  time_step=time_step,
+        time_step, n_steps = self.reaction_dynamics.specify_steps(duration=total_duration,
+                                                                  initial_step=time_step,
                                                                   n_steps=n_steps)
 
         for i in range(n_steps):

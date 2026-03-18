@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import math
+import copy
 import plotly.express as px
 import plotly.graph_objects as pgo
 import plotly.subplots as sp
@@ -170,7 +171,7 @@ class PlotlyHelper:
                                     introduce callout boxes that make use of the `annotation_field` column as source of values.
                                     Typically used in conjunction with show_points=True
                                     Optional keys:
-                                        'frequency' (EXAMPLE: 2 , to annotate each other data point)
+                                        'frequency' (EXAMPLE: 2 , to annotate each other data point.  The last point is ALWAYS shown)
                                         'dx', 'dy', 'x_offset', 'y_offset' (to affect the relative and absolute positions of the callouts;
                                                                             note that higher y means further DOWN)
 
@@ -247,6 +248,10 @@ class PlotlyHelper:
                       labels={"value": y_label, "variable": legend_header},
                       line_shape=line_shape)
 
+        fig.update_traces(
+            legendgroup=title
+        )
+
         if type(fields) == str:     # Somehow, the `labels` argument in px.line, above, is ignored when `fields` is just a string
             fig.update_layout(yaxis_title=y_label)   # This line will remedy the above issue
 
@@ -294,7 +299,7 @@ class PlotlyHelper:
                                                     # that are stored in the figure's "layout"
 
 
-        if show_points:
+        if show_points:     # If the user wants to also see all the individual data points, overlayed on the main (line) plot
             POINT_COLOR = "#3FBC84"     # A shade of green
             assert type(fields) == str, \
                 "plot_pandas(): the `show_points` option can only be used when `fields` is a single column"
@@ -308,7 +313,7 @@ class PlotlyHelper:
                     x=df[x_var],
                     y=df[fields],
                     mode="markers",
-                    marker={"size": 6, "color": POINT_COLOR},
+                    marker={"size": 6, "color": POINT_COLOR},   # A solid little circle
                     name="data point",
                     customdata=df[[annotation_field]],
                     hovertemplate=
@@ -316,6 +321,7 @@ class PlotlyHelper:
                         x_var  + "=%{x}<br>" +
                         annotation_field + "=%{customdata[0]:.2g}" +
                         "<extra></extra>",
+                    legendgroup=title,
                     showlegend=False
                 )
             # The `<extra></extra>` suppresses the trace name (such as the provided "data point",
@@ -345,7 +351,10 @@ class PlotlyHelper:
                 "plot_pandas(): `annotate` can only be used when `fields` is a single value"
 
             assert type(annotation_field) == str, \
-                    "plot_pandas(): to use the argument `annotate`, you must also pass an `annotation_field` argument"
+                "plot_pandas(): to use the argument `annotate`, you must also pass an `annotation_field` argument"
+
+            assert annotation_field in col_list, \
+                "plot_pandas(): the argument `annotation_field` must be one of the column names of the Panda's dataframe"
 
 
             # Unpack the argument, and use defaults for any missing value
@@ -363,7 +372,7 @@ class PlotlyHelper:
                 label_x = x_offset + ind * dx      # A greater x value here means further to the right
                 label_y = y_offset + ind * dy      # A greater y value here means further DOWN!!
 
-                if (ind % frequency) == 0:
+                if (ind % frequency == 0) or (ind == len(df.index) -1):
                     fig.add_annotation(x=df[x_var][ind], y=df[fields][ind],
                                         text=label,
                                         font=dict(
@@ -381,44 +390,71 @@ class PlotlyHelper:
 
 
     @classmethod
-    def combine_plots(cls, fig_list :list|tuple, title=None, modify=None,
-                      layout_index=None,
-                      x_label=None, y_label=None,
-                      xrange=None, legend_title=None, curve_labels=None, show=False) -> pgo.Figure:
+    def combine_plots(cls, fig_list :list|tuple, title=None, legend_title=None,
+                        x_label=None, y_label=None,
+                        xrange=None,
+                        modify=None, layout_index=None, line_labels=None,
+                        legend_trace_selector=None, show=False) -> pgo.Figure:
         """
-        Combine together several existing Plotly plots into a single one (with COMBINED axes)
+        Combine together several existing Plotly plots into a single one,
+        with COMBINED axes.
+        Note: the individual plots (aka Plotly "Figures") may contain one or more "traces"
 
         EXAMPLE:
                     from life123 import PlotlyHelper
-                    plot_1 = PlotlyHelper.plot_pandas(various args, show=False)
-                    plot_2 = PlotlyHelper.plot_pandas(various args, show=False)
-                    PlotlyHelper.combine_plots( [plot_1, plot_2] , other optional args)
+                    plot_1 = PlotlyHelper.plot_pandas(various args)
+                    plot_2 = PlotlyHelper.plot_pandas(various args)
+                    PlotlyHelper.combine_plots( fig_list=[plot_1, plot_2] , other optional args)
 
-        :param fig_list:    List or tuple of plotly "Figure" objects (as returned by graphic functions)
+        :param fig_list:    List or tuple of Plotly "Figure" objects (as returned by graphic functions)
         :param title:       [OPTIONAL] The title to use for the overall plot
+        :param legend_title:[OPTIONAL] String to show at the top of the legend box
+        :param x_label:     [OPTIONAL] Caption to use for the x-axis; if not specified, use that of the 1st plot
+        :param y_label:     [OPTIONAL] Caption to use for the y-axis; if not specified, use that of the 1st plot
+        :param xrange:      [OPTIONAL] list of the form [x_start, x_end], to initially only show a part of the timeline.
+                                Note: it's still possible to zoom out, and see the excluded portion
+
         :param modify:      [OPTIONAL] Dictionary of plot-style changes to permanently apply to some individual plots
-                                (indexed by their position in `fig_list`) before they get combined.
+                                (indexed by their position in the `fig_list` argument) before they get combined.
                                 Allowed values: "dash", "dot", "solid", "dashdot", "longdash", "longdashdot"
                                 EXAMPLE:  {0 : "dash", 4: "dot"}
                                 Note: the modification will alter the original plot
 
         :param layout_index:[OPTIONAL] If given, the layout of the "Figure" object with the given index
-                                (in `fig_list`) is used as is - and all the layout parameters below are ignored
+                                (from `fig_list`) is used as is - and all the layout parameters below are ignored
 
-        :param x_label:     [OPTIONAL] Caption to use for the x-axis; if not specified, use that of the 1st plot
-        :param y_label:     [OPTIONAL] Caption to use for the y-axis; if not specified, use that of the 1st plot
-        :param xrange:      [OPTIONAL] list of the form [t_start, t_end], to initially only show a part of the timeline.
-                                Note: it's still possible to zoom out, and see the excluded portion
-        :param legend_title:[OPTIONAL] String to show at the top of the legend box
-        :param curve_labels:[OPTIONAL] List of labels to use for the various curves in the legend
+        :param line_labels:[OPTIONAL] List of labels to use for the various curves in the legend
                                 and in the hover boxes; if not specified, use the titles of the individual plots
+
+        :param legend_trace_selector:  function(fig) -> index of trace to use for legend
+                                       default: first trace (index 0)
+
         :param show:        [OPTIONAL] If True, the plot will be shown
                                 Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
                                       leads to it being automatically shown
+
         :return:            A plotly "Figure" object for the combined plot
         """
         assert (type(fig_list) == list) or (type(fig_list) == tuple), \
-            "combine_plots(): the argument fig_list must be a list or tuple"
+            "combine_plots(): the argument `fig_list` must be a list or tuple"
+
+        if line_labels is not None:
+            assert len(line_labels) == len(fig_list), \
+                "combine_plots(): the argument `line_labels`, if provided, must be a list with as many entries as `fig_list`"
+
+
+        if layout_index is not None:
+            # The layout of the "Figure" object with the given index (in `fig_list`) is used as is
+            assert 0 <= layout_index < len(fig_list), \
+                f"combine_plots(): argument {layout_index} must be an integer between 0 and {len(fig_list)-1}, inclusive"
+
+            figure_providing_layout = fig_list[layout_index]
+            all_fig = pgo.Figure(layout = figure_providing_layout.layout)   # Start with a blank "Figure" object with the designated layout
+        else:
+            all_fig = pgo.Figure()   # Start with a blank "Figure" object that will absorb all our individual plots
+
+
+        #trace_offset = 0        # Not in current use; perhaps to ditch
 
 
         representative_fig = fig_list[0]    # The axes titles of the first plot are used as default values
@@ -428,45 +464,64 @@ class PlotlyHelper:
             y_label = representative_fig.layout.yaxis.title.text
 
 
-        # Put together the data from all the various individual plots
-        combined_data = []
-        for i, fig in enumerate(fig_list):
-            combined_data += fig.data      # concatenating lists
-            if modify and i in modify:
-                dash_type = modify[i]    # EXAMPLE: "dash"
-                fig.update_traces(line=dict(dash=dash_type))
+        if legend_trace_selector is None:
+            # If no function was provided by the user, utilize a lambda function that always returns 0
+            legend_trace_selector = lambda fig: 0
+
+        for fig_index, fig in enumerate(fig_list):   # For each "figure" (plot) to combine together
+            #n = len(fig.data)     # The number of traces in that figure.  Not in current use; perhaps to ditch
+            chosen_idx = legend_trace_selector(fig)     # The index of the trace to be used for the combined legend
+
+            if modify and (fig_index in modify):
+                mod_type = modify[fig_index]    # EXAMPLE: "dash"
+                fig.update_traces(line=dict(dash=mod_type))
+
+            for j, trace in enumerate(fig.data):
+                # Process in turn each of the traces in the "figure" (plot) under consideration
+                t = copy.deepcopy(trace)    # Copy trace (important to avoid mutating originals)
+
+                if t.hovertemplate:
+                    if line_labels:
+                        prefix = line_labels[fig_index]
+                    else:
+                        prefix = fig.layout.title.text
+
+                    t.update(hovertemplate = f"<span style='font-size:16px'><b>{prefix}</b></span><br>------<br>" + t.hovertemplate)
 
 
-        if layout_index is not None:
-            # The layout of the "Figure" object with the given index (in `fig_list`) is used as is
-            assert 0 <= layout_index < len(fig_list), \
-                f"combine_plots(): argument {layout_index} must be an integer between 0 and {len(fig_list)-1}, inclusive"
+                # Legend logic
+                if j == chosen_idx:
+                    # This trace is the "chosen" one to contribute to the overall legend
+                    t.showlegend = True
+                    if line_labels:
+                        t.name = line_labels[fig_index]
+                    else:
+                        t.name = fig.layout.title.text
+                else:
+                    t.showlegend = False
 
-            figure_providing_layout = fig_list[layout_index]
-            all_fig = pgo.Figure(data=combined_data, layout = figure_providing_layout.layout)
+                all_fig.add_trace(t)   # Build up the combined "Figure" object;
+                                        # note that it's done trace-by-trace rather than by the passed individual plots ("figures")
 
-        else:
-            # Create an all-new layout for the combined "Figure" object
-            all_fig = pgo.Figure(data=combined_data)
+            #trace_offset += n
 
+
+        # END "for fig in fig_list"
+
+
+        if layout_index is None:
+            # Introduce the "titles" (labels) for the two axes
             all_fig.update_layout(xaxis_title=x_label,
                                   yaxis_title=y_label)
+
 
             if legend_title:
                 all_fig.update_layout(legend={"title": legend_title})
 
             if xrange:
+                assert type(xrange) == list, \
+                    "combine_plots(): the argument `xrange`, if provided, must be a list of the form [x_start, x_end]"
                 all_fig.update_layout(xaxis={"range": xrange})
-
-
-            for i, fig in enumerate(fig_list):
-                all_fig['data'][i]['showlegend'] = True
-                if curve_labels:
-                    all_fig['data'][i]['name'] = curve_labels[i]
-                    all_fig.data[i]['hovertemplate'] = f"{curve_labels[i]}<br>" + all_fig.data[i]['hovertemplate']
-                else:
-                    all_fig['data'][i]['name'] = fig.layout.title.text
-                    all_fig.data[i]['hovertemplate'] = f"{fig.layout.title.text}<br>" + all_fig.data[i]['hovertemplate']
 
 
         if title is not None:
