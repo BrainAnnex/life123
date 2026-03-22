@@ -650,7 +650,7 @@ class ReactionRegistry:
 
     '''                             ~   TO DESCRIBE THE REACTIONS  ~                                  '''
 
-    def ________DESCRIBE_RXNS________(DIVIDER):
+    def ________DESCRIBE_REACTIONS________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
@@ -799,16 +799,6 @@ class ReactionRegistry:
         return sorted(index_list)
 
 
-
-    '''
-    def names_of_enzymes(self) -> Set[str]:
-        """
-        Return the set of the names of the enzymes (catalysts) involved
-        in any of the registered reactions
-        (regardless of whether they might participate in a non-enzymatic role in OTHER reactions)
-        """
-        return self.active_enzymes
-    '''
 
 
 

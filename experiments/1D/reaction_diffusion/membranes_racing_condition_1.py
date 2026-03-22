@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## A transient concentration inside an organelle can "escape" from it by passive transport across the membranes, only it if diffuses quicky - before a reaction transforms it into a chemical unable to cross membranes.
+# ## A transient concentration inside an organelle can "escape" from it by passive transport across the membranes, only it if diffuses quickly - before a reaction transforms it into a chemical unable to cross membranes.
 # ### The "window of opportunity to escape" closes fast!
 #
 # #### SCENARIO 1 : `A`, the chemical injected into the organelle, diffuses **slowly** - and gets converted into `C` (which cannot cross the membranes) by the reaction `A + B <-> C` , before it has a chance to leave the organelle.  Trapped!  
