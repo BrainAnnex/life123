@@ -16,12 +16,12 @@
 <body>
 
 <h3>List of reactions:</h3>
-<pre>    0: D + B  <-> A
-    1: A + D  <-> B
-    2: C + A  <-> B
-    3: 2 A  <-> B
-    4: A + B  <-> C
-    5: C <-> A + D
+<pre>    0: C <-> 2 D
+    1: D <-> C + B
+    2: C <-> 2 A
+    3: D + B  <-> A
+    4: D <-> C + A
+    5: B <-> 2 D
 </pre>
 
         
@@ -55,8 +55,57 @@
     "nodes": [
         {
             "name": "RXN",
-            "formula": "D + B  <-> A",
+            "formula": "C <-> 2 D",
+            "delta_H": "-47.0831",
+            "delta_S": "61.2615",
+            "delta_G": "-18,312.2",
+            "K": "1,614.95",
             "id": "RXN-0",
+            "_node_labels": [
+                "Reaction"
+            ]
+        },
+        {
+            "name": "D",
+            "id": "C-3",
+            "_node_labels": [
+                "Chemical"
+            ]
+        },
+        {
+            "name": "C",
+            "id": "C-2",
+            "_node_labels": [
+                "Chemical"
+            ]
+        },
+        {
+            "name": "RXN",
+            "formula": "D <-> C + B",
+            "delta_H": "-53.1106",
+            "delta_S": "64.9501",
+            "delta_G": "-19,418",
+            "K": "2,522.79",
+            "id": "RXN-1",
+            "_node_labels": [
+                "Reaction"
+            ]
+        },
+        {
+            "name": "B",
+            "id": "C-1",
+            "_node_labels": [
+                "Chemical"
+            ]
+        },
+        {
+            "name": "RXN",
+            "formula": "C <-> 2 A",
+            "delta_H": "-32.6786",
+            "delta_S": "10.2063",
+            "delta_G": "-3,075.68",
+            "K": "3.45809",
+            "id": "RXN-2",
             "_node_labels": [
                 "Reaction"
             ]
@@ -69,45 +118,12 @@
             ]
         },
         {
-            "name": "D",
-            "id": "C-3",
-            "_node_labels": [
-                "Chemical"
-            ]
-        },
-        {
-            "name": "B",
-            "id": "C-1",
-            "_node_labels": [
-                "Chemical"
-            ]
-        },
-        {
             "name": "RXN",
-            "formula": "A + D  <-> B",
-            "id": "RXN-1",
-            "_node_labels": [
-                "Reaction"
-            ]
-        },
-        {
-            "name": "RXN",
-            "formula": "C + A  <-> B",
-            "id": "RXN-2",
-            "_node_labels": [
-                "Reaction"
-            ]
-        },
-        {
-            "name": "C",
-            "id": "C-2",
-            "_node_labels": [
-                "Chemical"
-            ]
-        },
-        {
-            "name": "RXN",
-            "formula": "2 A  <-> B",
+            "formula": "D + B  <-> A",
+            "delta_H": "93.3755",
+            "delta_S": "-20.2492",
+            "delta_G": "6,130.69",
+            "K": "0.0843238",
             "id": "RXN-3",
             "_node_labels": [
                 "Reaction"
@@ -115,7 +131,11 @@
         },
         {
             "name": "RXN",
-            "formula": "A + B  <-> C",
+            "formula": "D <-> C + A",
+            "delta_H": "26.2444",
+            "delta_S": "43.133",
+            "delta_G": "-12,833.9",
+            "K": "177.173",
             "id": "RXN-4",
             "_node_labels": [
                 "Reaction"
@@ -123,7 +143,11 @@
         },
         {
             "name": "RXN",
-            "formula": "C <-> A + D",
+            "formula": "B <-> 2 D",
+            "delta_H": "58.1322",
+            "delta_S": "55.6932",
+            "delta_G": "-16,546.8",
+            "K": "792.273",
             "id": "RXN-5",
             "_node_labels": [
                 "Reaction"
@@ -134,21 +158,21 @@
         {
             "name": "produces",
             "source": "RXN-0",
-            "target": "C-0",
+            "target": "C-3",
             "id": "edge-1",
-            "stoich": 1
+            "stoich": 2
         },
         {
             "name": "reacts",
-            "source": "C-3",
+            "source": "C-2",
             "target": "RXN-0",
             "id": "edge-2",
             "stoich": 1
         },
         {
-            "name": "reacts",
-            "source": "C-1",
-            "target": "RXN-0",
+            "name": "produces",
+            "source": "RXN-1",
+            "target": "C-2",
             "id": "edge-3",
             "stoich": 1
         },
@@ -161,93 +185,79 @@
         },
         {
             "name": "reacts",
-            "source": "C-0",
+            "source": "C-3",
             "target": "RXN-1",
             "id": "edge-5",
             "stoich": 1
         },
         {
-            "name": "reacts",
-            "source": "C-3",
-            "target": "RXN-1",
-            "id": "edge-6",
-            "stoich": 1
-        },
-        {
             "name": "produces",
             "source": "RXN-2",
-            "target": "C-1",
-            "id": "edge-7",
-            "stoich": 1
+            "target": "C-0",
+            "id": "edge-6",
+            "stoich": 2
         },
         {
             "name": "reacts",
             "source": "C-2",
             "target": "RXN-2",
-            "id": "edge-8",
-            "stoich": 1
-        },
-        {
-            "name": "reacts",
-            "source": "C-0",
-            "target": "RXN-2",
-            "id": "edge-9",
+            "id": "edge-7",
             "stoich": 1
         },
         {
             "name": "produces",
             "source": "RXN-3",
-            "target": "C-1",
-            "id": "edge-10",
+            "target": "C-0",
+            "id": "edge-8",
             "stoich": 1
         },
         {
             "name": "reacts",
-            "source": "C-0",
+            "source": "C-3",
             "target": "RXN-3",
-            "id": "edge-11",
-            "stoich": 2
-        },
-        {
-            "name": "produces",
-            "source": "RXN-4",
-            "target": "C-2",
-            "id": "edge-12",
-            "stoich": 1
-        },
-        {
-            "name": "reacts",
-            "source": "C-0",
-            "target": "RXN-4",
-            "id": "edge-13",
+            "id": "edge-9",
             "stoich": 1
         },
         {
             "name": "reacts",
             "source": "C-1",
-            "target": "RXN-4",
-            "id": "edge-14",
+            "target": "RXN-3",
+            "id": "edge-10",
             "stoich": 1
         },
         {
             "name": "produces",
-            "source": "RXN-5",
+            "source": "RXN-4",
+            "target": "C-2",
+            "id": "edge-11",
+            "stoich": 1
+        },
+        {
+            "name": "produces",
+            "source": "RXN-4",
             "target": "C-0",
-            "id": "edge-15",
+            "id": "edge-12",
+            "stoich": 1
+        },
+        {
+            "name": "reacts",
+            "source": "C-3",
+            "target": "RXN-4",
+            "id": "edge-13",
             "stoich": 1
         },
         {
             "name": "produces",
             "source": "RXN-5",
             "target": "C-3",
-            "id": "edge-16",
-            "stoich": 1
+            "id": "edge-14",
+            "stoich": 2
         },
         {
             "name": "reacts",
-            "source": "C-2",
+            "source": "C-1",
             "target": "RXN-5",
-            "id": "edge-17",
+            "id": "edge-15",
             "stoich": 1
         }
     ],

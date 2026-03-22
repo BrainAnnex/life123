@@ -53,11 +53,49 @@ def test_get_reaction():
 def test_get_reactants():
     pass   # TODO
 
+
+
+def test_get_reactant_species():
+    rxns = ReactionRegistry()
+
+    rxns.add_reaction(reactants="A", products="B")
+    assert rxns.get_reactant_species(0) == ["A"]
+
+    rxns.add_reaction(reactants=[(2, "F")], products="X")
+    assert rxns.get_reactant_species(0) == ["A"]
+    assert rxns.get_reactant_species(1) == ["F"]
+
+    rxns.add_reaction(reactants=["B", (2, "H")], products=[(2, "C"), "L"])
+    assert rxns.get_reactant_species(0) == ["A"]
+    assert rxns.get_reactant_species(1) == ["F"]
+    assert rxns.get_reactant_species(2) == ["B", "H"]
+
+
 def test_get_reactants_formula():
     pass   # TODO
 
+
 def test_get_products():
     pass   # TODO
+
+
+
+def test_get_product_species():
+    rxns = ReactionRegistry()
+
+    rxns.add_reaction(reactants="A", products="B")
+    assert rxns.get_product_species(0) == ["B"]
+
+    rxns.add_reaction(reactants=[(2, "F")], products="X")
+    assert rxns.get_product_species(0) == ["B"]
+    assert rxns.get_product_species(1) == ["X"]
+
+    rxns.add_reaction(reactants=["B", (2, "H")], products=[(2, "C"), "L"])
+    assert rxns.get_product_species(0) == ["B"]
+    assert rxns.get_product_species(1) == ["X"]
+    assert rxns.get_product_species(2) == ["C", "L"]
+
+
 
 def test_get_products_formula():
     pass   # TODO

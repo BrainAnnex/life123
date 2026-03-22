@@ -149,14 +149,26 @@ class ReactionRegistry:
 
     def get_reactants(self, i :int) -> [(int, str)]:
         """
-        Return a list of pairs with details of the reactants of the i-th reaction
+        Return a list of pairs with details of the reactants of the i-th reaction.
+        Each pair represents a "complex" of the reaction reactants
 
         :param i:   The index (0-based) to identify the reaction of interest
-        :return:    A list of triplets of the form (stoichiometry, chem labels)
+        :return:    A list of pairs of the form (stoichiometry, chem labels)
         """
         rxn = self.get_reaction(i)
         return rxn.extract_reactants()
 
+
+    def get_reactant_species(self, i :int) -> [(int, str)]:
+        """
+        Return a list of the reactant species of the i-th reaction.
+
+        :param i:   The index (0-based) to identify the reaction of interest
+        :return:    A list of chem labels
+        """
+        rxn = self.get_reaction(i)
+        reactant_complexes = rxn.extract_reactants()
+        return [c[1] for c in reactant_complexes]
 
 
     def get_reactants_formula(self, i :int) -> str:
@@ -171,15 +183,28 @@ class ReactionRegistry:
 
 
 
-    def get_products(self, i :int) -> [(int, int, int)]:
+    def get_products(self, i :int) -> [(int, str)]:
         """
-        Return a list of triplets with details of the products of the i-th reaction
+        Return a list of pairs with details of the products of the i-th reaction.
+        Each pair represents a "complex" of the reaction products
 
         :param i:   The index (0-based) to identify the reaction of interest
-        :return:    A list of triplets of the form (stoichiometry, species index, reaction order)
+        :return:    A list of pairs of the form (stoichiometry, species label)
         """
         rxn = self.get_reaction(i)
         return rxn.extract_products()
+
+
+    def get_product_species(self, i :int) -> [(int, str)]:
+        """
+        Return a list of the product species of the i-th reaction.
+
+        :param i:   The index (0-based) to identify the reaction of interest
+        :return:    A list of chem labels
+        """
+        rxn = self.get_reaction(i)
+        product_complexes = rxn.extract_products()
+        return [c[1] for c in product_complexes]
 
 
     def get_products_formula(self, i :int) -> str:
@@ -427,8 +452,6 @@ class ReactionRegistry:
 
         NOTE: in the reactants and products, if the stoichiometry coefficients aren't specified,
               they're assumed to be 1.
-              The reaction orders, if not specified, are assumed to be equal to their corresponding
-              stoichiometry coefficients.
 
               The full structure of each term in the list of reactants and of products
               is the pair:  (stoichiometry coefficient, chemical label)
@@ -646,6 +669,7 @@ class ReactionRegistry:
         :param concise:     If True, less detail is shown
         :return:            None
         """
+        #TODO: implement a Pandas version
         print(f"Number of reactions: {self.number_of_reactions()}")
 
         # Print a concise description of EACH REACTION IN TURN

@@ -10,7 +10,7 @@
     :license:       MIT.  See LICENSE file for more details.
 """
 
-__version__ = "1.0.0rc7"        # IN_PROGRESS
+__version__ = "1.0.0rc7"
 
 
 from life123.bio_sim_1d import (System1D, Membranes1D, Diffusion1D, BioSim1D)

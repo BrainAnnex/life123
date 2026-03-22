@@ -6,37 +6,42 @@ import numpy as np
 
 class RandomReactionNetwork:
     """
-    Generate and manage random networks of reactions
+    EARLY PARTIAL IMPLEMENTATION!
+
+    Generate and manage random networks of reactions that are thermodynamically possible,
+    and biologically plausible.
+
+    Kinetic parameters NOT yet implemented.
     """
 
-    def __init__(self, n_chems :int, n_rxns :int, relative_rxn_prob=None, seed=None):
+    def __init__(self, n_species :int, n_rxns :int, relative_rxn_prob=None, seed=None, temp=298.15, verbose=False):
         """
-        :param n_chems:             Integer >=3, with the desired number of chemicals
-        :param n_rxns:              Number of desired reactions (1 or higher)
+        :param n_species:           Integer >=3, with the desired number of chemicals species
+        :param n_rxns:              Number of desired reactions (ok to use 0 for testing)
         :param relative_rxn_prob:   [OPTIONAL] A 3-element list with the relative probability
                                         of each of the 3 reaction choices that are currently available:
                                         [ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition]
                                         Probabilities must add up to 1;
                                         if not specified, a uniform distribution is used.
                                         EXAMPLE:  [0.2, 0.5, 0.3]
+        :param seed:                [OPTIONAL] A (large) integer, to guarantee consistent random runs
+        :param temp:                [OPTIONAL] Temperature in Kelvins
+        :param verbose:             [OPTIONAL] Some extra printout if True
         """
         RXN_CHOICES = ["ReactionSynthesis", "ReactionDecomposition"]  # Available reaction classes
         #RXN_CHOICES = ["ReactionUnimolecular", "ReactionSynthesis", "ReactionDecomposition"]
 
-        assert type(n_chems) == int, \
-            f"RandomReactionNetwork Instantiation: the argument `n_chem` must be an integer, not {type(n_chems)}"
+        assert type(n_species) == int, \
+            f"RandomReactionNetwork Instantiation: the argument `n_chem` must be an integer, not {type(n_species)}"
 
-        assert n_chems >= 3, \
-            f"RandomReactionNetwork Instantiation: the number of chemicals must be at least 3 (value passed was {n_chems})"
+        assert n_species >= 3, \
+            f"RandomReactionNetwork Instantiation: the number of chemicals must be at least 3 (value passed was {n_species})"
 
         assert type(n_rxns) == int, \
             f"RandomReactionNetwork Instantiation: the argument `n_rxns` must be an integer, not {type(n_rxns)}"
 
-        #assert n_rxns >= 1, \
-            #f"RandomReactionNetwork Instantiation: the value passed to argument `n_rxns` ({n_rxns}) must be at least 1"
 
-
-        self.chem_data = ChemData(n_chems=n_chems)        # Object of type "ChemData", with info on the individual chemicals
+        self.chem_data = ChemData(n_chems=n_species)        # Object of type "ChemData", with info on the individual chemicals
 
         all_chems = self.chem_data.get_all_labels()
         # Auto-generated strings "A", "B", ..., "Z", "Z2", "Z3"
@@ -49,9 +54,11 @@ class RandomReactionNetwork:
 
         # Select each of the reactions types (using the relative probabilities, if available)
         rxn_type = self.rng.choice(a=RXN_CHOICES, size=n_rxns, replace=True, p=relative_rxn_prob)  # List of class names
-        # EXAMPLE: [ReactionUnimolecular, ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition]
+        # EXAMPLE: [ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition]
 
         self.standard_species_enthalpy = {}
+
+        self.temp = temp
 
 
         MAX_ATTEMPTS = 6        # To avoid infinite loops
@@ -70,13 +77,28 @@ class RandomReactionNetwork:
                 n_attempts += 1
             assert n_attempts <= MAX_ATTEMPTS, \
                 f"Giving up after {n_attempts} attempts.  It seems that you are requesting such a large number of reactions ({n_rxns}), " \
-                f"relative to the {n_chems} available chemicals, that random reactions would be repeating"
+                f"relative to the {n_species} available chemicals, that random reactions would be repeating"
 
 
             delta_enthalpy = self.random_reaction_enthalpy(reactants, products)
-            i = self.registry.add_elementary_reaction(reactants=reactants, products=products, delta_H=delta_enthalpy)
-            print(f"-- Added reaction {i}, with reactants: {reactants} | products: {products} | delta_enthalpy: {delta_enthalpy}")
-            print(self.registry.get_reaction(i).describe(concise=False))
+            delta_entropy = self.random_reaction_entropy(reaction_type=r)
+            i = self.registry.add_elementary_reaction(reactants=reactants, products=products,
+                                                      delta_H=delta_enthalpy, delta_S=delta_entropy,
+                                                      temp=self.temp)
+
+            if verbose:
+                print(f"-- Added reaction {i}, with reactants: {reactants} | products: {products} | delta_enthalpy: {delta_enthalpy}")
+                print(self.registry.get_reaction(i).describe(concise=False))
+
+
+
+    def get_reactions(self):
+        """
+        Extract and return all the reactions
+
+        :return:    Object of type "ReactionRegistry"
+        """
+        return self.registry
 
 
 
@@ -87,8 +109,8 @@ class RandomReactionNetwork:
 
         Note: validation checks are assumed to be done in the calling function
 
-        :param reaction_type:    One of the following reaction types:
-                                    "ReactionUnimolecular", "ReactionSynthesis", "ReactionDecomposition"
+        :param reaction_type:   One of the following reaction types:
+                                    "ReactionSynthesis", "ReactionDecomposition"
         :param all_chem_labels: All the chemical labels for the random network we're building
         :return:                The pair (reactants, products),
                                     where each element is a list of chemical labels
@@ -101,15 +123,20 @@ class RandomReactionNetwork:
             n_products = 2      # The only scenario leading to 2 products
         elif reaction_type == "ReactionSynthesis":
             n_reactants = 2     # The only scenario leading to 2 reactants
+        else:
+            raise Exception(f"Only `ReactionDecomposition` and `ReactionSynthesis` are currently allowed; "
+                            f"you requested `{reaction_type}`")
 
-        # Random selection of reactants are with replacement, to allow reactions such as 2 A -> B
+
+        # Random selection of reactants are WITH replacement, to allow reactions such as 2 A -> B
         reactants = self.rng.choice(a=all_chem_labels, size=n_reactants, replace=True)
 
         # Likewise, random selection of products are with replacement, to allow reactions such as A -> 2 B
-        # However, do not pick the products from the pool of reactants that were used in this reaction!
-        available_pool = list(set(all_chem_labels) - set(reactants))    # EXAMPLE: ['X', 'Y']
-        #print(available_pool)          # Note: the order the elements in available_pool isn't guaranteed,
-                                        #       and might vary, even with runs with the same random seed
+        # However, do NOT pick the products from the pool of reactants that were used in this reaction!
+        available_pool = [c for c in all_chem_labels
+                             if c not in reactants]         # EXAMPLE: ['X', 'Y']
+        #print(available_pool)
+
         products = self.rng.choice(a=available_pool, size=n_products, replace=True)
 
         reactants = reactants.tolist()  # Converts both the container (numpy.ndarray) and the element types (numpy.str_),
@@ -190,16 +217,17 @@ class RandomReactionNetwork:
     def get_species_enthalpy(self, label :str):
         """
         Look up the standard enthalpy value to assign to the given chemical;
-        if not found, assign and store a new one
+        if not found, assign and store a new random one
 
-        :param label:
-        :return:
+        :param label:   To identify a chemical species
+        :return:        A standard enthalpy value already assigned, or just assigned,
+                            to the given chemical
         """
         if value := self.standard_species_enthalpy.get(label):
             return value
         value = self.random_species_enthalpy()   # Assign a new value
         self.standard_species_enthalpy[label] = value
-        print(f"Standard species enthalpy of {value} assigned to `{label}`")
+        #print(f"Standard species enthalpy of {value} assigned to `{label}`")
         return value
 
 
@@ -229,8 +257,8 @@ class RandomReactionNetwork:
         and v_i is the stoichiometric coefficient (negative for reactants,
         and positive for products)
 
-        :param reactants:
-        :param products:
+        :param reactants:   A list of the labels of the reactants
+        :param products:    A list of the labels of the reaction products
         :return:            A random value for the change in enthalpy of the given reaction,
                                 normally-distributed with mean 0 and σ ≈ 70 kJ/mol,
                                 thermodynamically consistent with all the previous random reactions added so far
@@ -262,3 +290,45 @@ class RandomReactionNetwork:
 
 
         return reaction_enthalpy
+
+
+
+    def random_reaction_entropy(self, reaction_type :str) -> float:
+        """
+        Attempt to provide plausible random entropy values for non-enzymatic small-molecule aqueous reactions.
+
+        Current starting point (to further verify):
+
+        For decomposition reactions:
+            ΔS ~ Normal with mean=40 and σ=20 ,  J/(mol·K)
+            Note that 95% of the values will fall between 0 and 80 (i.e within 2σ of the mean)
+            Further clipped to within the range [0, 100]
+
+        For synthesis reactions:
+            ΔS ~ Normal with mean=-40 and σ=20 ,  J/(mol·K)
+            Note that 95% of the values will fall between -80 and 0 (i.e within 2σ of the mean)
+            Further clipped to within the range [-100, 0]
+
+        At biological temperature T ≈ 300K, our distribution centers of 40 J/mol·K will correspond to entropy values of:
+            300 * 40 J/mol = 12 kJ/mol
+
+        :param reaction_type:One of the following reaction types:
+                                "ReactionSynthesis", "ReactionDecomposition"
+        :return:            A random value for the change in entropy of the given reaction
+        """
+        if reaction_type == "ReactionDecomposition":
+            entropy = self.rng.normal(loc=40, scale=20)    # Mean and SD
+            if entropy < 0:
+                return 0.
+            if entropy > 100:
+                return 100
+        elif reaction_type == "ReactionSynthesis":
+            entropy = self.rng.normal(loc=-40, scale=20)    # Mean and SD
+            if entropy < -100:
+                return -100.
+            if entropy > 0:
+                return 0
+        else:
+            raise Exception("random_reaction_entropy(): only `ReactionDecomposition` and `ReactionSynthesis` are currently allowed")
+
+        return entropy

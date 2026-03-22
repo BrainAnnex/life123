@@ -11,22 +11,20 @@ def test_constructor():
         RandomReactionNetwork()     # Missing arg
 
     with pytest.raises(Exception):
-        RandomReactionNetwork(n_chems="not_an_int!", n_rxns=3)  # Bad arg
+        RandomReactionNetwork(n_species="not_an_int!", n_rxns=3)  # Bad arg
 
     with pytest.raises(Exception):
-        RandomReactionNetwork(n_chems=2, n_rxns=3)  # Too few chems
+        RandomReactionNetwork(n_species=2, n_rxns=3)  # Too few species
 
     with pytest.raises(Exception):
-        RandomReactionNetwork(n_chems=3, n_rxns=[1,3])
+        RandomReactionNetwork(n_species=3, n_rxns=[1, 3])
 
-    with pytest.raises(Exception):
-        RandomReactionNetwork(n_chems=3, n_rxns=0)
 
     for _ in range(25):
         # In some cases, the instantiation of RandomReactionNetwork will give up, because of
         # the difficulty of creating so many unique reactions from so few chemicals
         try:
-            net = RandomReactionNetwork(n_chems=3, n_rxns=6, relative_rxn_prob=[0.3, 0.7])
+            net = RandomReactionNetwork(n_species=3, n_rxns=6, relative_rxn_prob=[0.3, 0.7])
             break
         except Exception:
             pass
@@ -44,13 +42,28 @@ def test_constructor():
     assert net.already_used(reactants="B", products="C")
 
 
+def test_constructor_2():
+    net = RandomReactionNetwork(n_species=5, n_rxns=25, seed=888)
+    for i in range(len(net.registry.get_all_reactions())):
+        reactants = net.get_reactions().get_reactant_species(i)
+        products = net.get_reactions().get_product_species(i)
+        '''
+        print()
+        print(reactants)
+        print(products)
+        '''
+        assert set(reactants) & set(products) == set()      # The intersection is an empty set
+
+
 
 def test__assign_chems_to_rxn():
-    net = RandomReactionNetwork(n_chems=3, n_rxns=1, seed=1)
+    net = RandomReactionNetwork(n_species=3, n_rxns=1, seed=1)
     all_chem_labels = net.chem_data.get_all_labels()
     assert all_chem_labels == ["A", "B", "C"]
 
     for _ in range(20):
+        '''
+        # "ReactionUnimolecular" is currently NOT supported
         result = net._assign_chems_to_rxn("ReactionUnimolecular", all_chem_labels=all_chem_labels)
         assert len(reactants := result[0]) == 1
         r1 = reactants[0]
@@ -61,7 +74,7 @@ def test__assign_chems_to_rxn():
         assert p1 in all_chem_labels
 
         assert r1 != p1
-
+        '''
 
         result = net._assign_chems_to_rxn("ReactionSynthesis", all_chem_labels=all_chem_labels)
         assert len(reactants := result[0]) == 2
@@ -93,7 +106,7 @@ def test__assign_chems_to_rxn():
 
 
 def test_already_used():
-    net = RandomReactionNetwork(n_chems=3, n_rxns=1, seed=1)
+    net = RandomReactionNetwork(n_species=3, n_rxns=1, seed=1)
     all_chem_labels = net.chem_data.get_all_labels()
     assert all_chem_labels == ["A", "B", "C"]
 
@@ -135,7 +148,7 @@ def test_already_used():
 
 
 def test_random_species_enthalpy():
-    net = RandomReactionNetwork(n_chems=3, n_rxns=0, seed=1492042)
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
     H = net.random_species_enthalpy(sigma=40.4145, n=3)
     np.allclose(H, [-12.67475766, 6.06243963, -6.70292682])
 
@@ -149,10 +162,10 @@ def test_random_species_enthalpy():
 
 
 def test_random_reaction_enthalpy():
-    net = RandomReactionNetwork(n_chems=3, n_rxns=0, seed=1492042)
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
 
     result_1 = net.random_reaction_enthalpy(reactants=["A", "B"], products="C")
-    print(net.standard_species_enthalpy)
+    #print(net.standard_species_enthalpy)
 
     assert np.allclose(net.standard_species_enthalpy["A"], -12.674757661590291)
     assert np.allclose(net.standard_species_enthalpy["B"], 6.06243962532564)
@@ -181,12 +194,36 @@ def test_random_reaction_enthalpy():
 
 
 def test_random_reaction_enthalpy_2():
-    net = RandomReactionNetwork(n_chems=35, n_rxns=65, seed=1492042)
+    net = RandomReactionNetwork(n_species=15, n_rxns=25, seed=1492042, verbose=False)
 
     H_list = [rxn.delta_H
                 for rxn in net.registry.get_all_reactions()]
 
     #print(np.mean(H_list))
     #print(np.std(H_list))
-    np.allclose(np.mean(H_list), 3.6438823)   # This will approach 0
-    np.allclose(np.std(H_list), 72.886196)    # Roughly around 70
+
+    assert np.allclose(np.mean(H_list), 7.511580706834767)   # This will approach 0
+    assert np.allclose(np.std(H_list), 76.07987788990208)    # Roughly around 70
+
+
+
+def test_random_entropy():
+    net = RandomReactionNetwork(n_species=3, n_rxns=0, seed=1492042)
+
+    with pytest.raises(Exception):
+        net.random_reaction_entropy("Unknown_rxn_type")
+
+    assert np.allclose(net.random_reaction_entropy("ReactionDecomposition"), 33.72761872021661)
+    assert np.allclose(net.random_reaction_entropy("ReactionSynthesis"), -36.99986904436495)
+
+    entropy_list = [net.random_reaction_entropy("ReactionDecomposition") for i in range(100)]
+    assert np.allclose(np.mean(entropy_list), 38.876713159925636)       # This will approach 40
+    assert np.allclose(np.std(entropy_list), 19.606579641379344)        # This will approach 20
+    assert min(entropy_list) >= 0
+    assert max(entropy_list) <= 100
+
+    entropy_list = [net.random_reaction_entropy("ReactionSynthesis") for i in range(100)]
+    assert np.allclose(np.mean(entropy_list), -39.72751726151384)       # This will approach -40
+    assert np.allclose(np.std(entropy_list), 18.754802472647917)        # This will approach 20
+    assert min(entropy_list) >= -100
+    assert max(entropy_list) <= 0

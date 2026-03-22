@@ -13,15 +13,18 @@
 # ---
 
 # %% [markdown]
-# ### Random Networks
+# ## Random Reaction Networks
 #
-# Early implementation
+# #### Early implementation of random networks of reactions that are **thermodynamically possible**,
+# #### and **biologically plausible**.
+#     
+# Kinetic parameters NOT yet implemented.
 
 # %% [markdown]
 # ### TAGS :   "uniform compartment"
 
 # %%
-LAST_REVISED = "Feb. 16, 2026"
+LAST_REVISED = "Mar. 21, 2026"
 LIFE123_VERSION = "1.0.0rc7"         # Library version this experiment is based on
 
 # %%
@@ -35,6 +38,7 @@ LIFE123_VERSION = "1.0.0rc7"         # Library version this experiment is based 
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
 import ipynbname
+from IPython.display import IFrame
 
 from life123 import check_version, RandomReactionNetwork, UniformCompartment
 
@@ -54,30 +58,41 @@ log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for
 # ## Set up Random Network (no thermodynamic nor kinetic data)
 
 # %%
-net = RandomReactionNetwork(n_chems=4, n_rxns=6)
+net = RandomReactionNetwork(n_species=4, n_rxns=6, seed=59238125)
 
 # %%
 net.chem_data.get_all_labels()
 
 # %% [markdown]
-# ### The above chemical labels were auto-generated
+# #### The above chemical labels were auto-generated
 
 # %%
-net.registry.number_of_reactions()
 
 # %%
-for i in range(net.registry.number_of_reactions()):
-    rxn = net.registry.get_reaction(i)
-    print(f"({i}) {rxn.describe(concise=False)}")
+rxns = net.get_reactions()          # Object of type "ReactionRegistry"
+
+# %%
+rxns.number_of_reactions()
+
+# %%
+rxns.describe_reactions()
 
 # %%
 
 # %%
 # Instantiate the simulator with our chemicals and reactions
-uc = UniformCompartment(reactions=net.registry)
+uc = UniformCompartment(reactions=rxns)
 
 # %%
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
 uc.plot_reaction_network(log_file=log_file)
+
+# %%
+IFrame(log_file, width=1200, height=600)         # You may also open the log file in a browser
+
+# %% [markdown]
+# ### Note: this is an early implementation.  Kinetic parameters aren't yet implemented
+
+# %%
