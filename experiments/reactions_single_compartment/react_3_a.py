@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -13,44 +13,36 @@
 # ---
 
 # %% [markdown]
-# ## The reversible Synthesis/Decomposition reaction `A + B <-> C`
-# #### with 1st-order kinetics for each species, taken to equilibrium.
+# ## Reversible Synthesis elementary reaction `A + B <-> C`
+# #### taken to equilibrium.
 # #### Exploration of debugging and diagnostics options
-# (Adaptive variable time steps are used)
-#
-# _See also the experiment "1D/reactions/reaction_4"_  
 
 # %% [markdown]
 # ### TAGS :  "uniform compartment", "under-the-hood"
 
 # %%
-LAST_REVISED = "Sep. 8, 2024"
-LIFE123_VERSION = "1.0.0.beta.38"      # Version this experiment is based on
+LAST_REVISED = "Mar. 18, 2026"
+LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on 
 
 # %%
-#import set_path            # Using MyBinder?  Uncomment this before running the next cell!
-                            # Importing this local file will add the project's home directory to sys.path
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
-# %% tags=[]
+# %%
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
-# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from experiments.get_notebook_info import get_notebook_basename
+import ipynbname
 
 from life123 import check_version, UniformCompartment, GraphicLog
 
 # %%
 check_version(LIFE123_VERSION)
 
-# %% tags=[]
+# %%
 # Initialize the HTML logging (for the graphics)
-log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
-
-# Set up the use of some specified graphic (Vue) components
-GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_2"],
-                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
+log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
+                                            # IN CASE OF PROBLEMS, set manually to any desired name
 
 # %%
 
@@ -63,15 +55,17 @@ GraphicLog.config(filename=log_file,
 uc = UniformCompartment(preset="fast")
 
 # %%
-# Reaction A + B <-> C , with 1st-order kinetics for each species
-uc.add_reaction(reactants=["A" , "B"], products="C",
-                forward_rate=5., reverse_rate=2.)
+# Elementary reaction A + B <-> C
+uc.add_reaction(reactants=["A" , "B"], products="C", kF=5., kR=2.)
 
 uc.describe_reactions()
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
-uc.plot_reaction_network("vue_cytoscape_2")
+uc.plot_reaction_network(log_file=log_file)
+
+# %%
+uc.enable_diagnostics()       # To save diagnostic information
 
 # %%
 # Set the initial concentrations of all the chemicals
@@ -97,38 +91,36 @@ uc.find_equilibrium_conc(rxn_index=0)    # This is an EXACT solution
 
 # %%
 
-# %% [markdown] tags=[]
+# %%
+
+# %% [markdown]
 # # Run the reaction
 
 # %%
-uc.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-
 uc.single_compartment_react(initial_step=0.004, duration=0.06,
-                                  variable_steps=True,
-                                  snapshots={"initial_caption": "1st reaction step",
-                                             "final_caption": "last reaction step"})
+                            variable_steps=True)
 
 # %%
 uc.get_history()
 
 # %% [markdown]
-# ## Note: "A" (now largely depleted) is the limiting reagent
+# ## Note: `A` (now largely depleted) is the limiting reagent
 
-# %% tags=[]
+# %%
 uc.diagnostics.explain_time_advance()
 
 # %% [markdown]
 # ### Notice how the reaction proceeds in smaller steps in the early times, when the concentrations are changing much more rapidly.
-# #### The argument argument _variable_steps=True_ dynamically adjusts the initial_step (which is initially found to be too large, leading to some backtracking)
+# #### The argument argument _variable_steps=True_ (which is the default) dynamically adjusts the initial_step (which is initially found to be too large, leading to some backtracking)
 
 # %%
 uc.plot_step_sizes(show_intervals=True)
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ## Plots changes of concentration with time
 
 # %%
-uc.plot_history(colors=['red', 'darkorange', 'green'], show_intervals=True)
+uc.plot_history(show_intervals=True)
 
 # %% [markdown]
 # ### Check the final equilibrium
@@ -162,12 +154,13 @@ uc.get_history(tail=3)
 # This information is available because we made a call to `dynamics.set_diagnostics()` prior to running the simulation
 
 # %%
-uc.diagnostics.get_decisions_data()   # diagnostic data about concentration changes at every step - EVEN aborted ones
+uc.get_diagnostics().get_decisions_data()   # diagnostic data about concentration changes at every step - EVEN aborted ones
 
 # %%
-uc.diagnostics.get_rxn_data(rxn_index=0)   # diagnostic run data of the requested SINGLE reaction
+uc.get_diagnostics().get_rxn_data(rxn_index=0)   # diagnostic run data of the requested SINGLE reaction
 
 # %%
-uc.diagnostics.get_diagnostic_conc_data()   # diagnostic concentration data saved during the run, regardless of how much history we requested to save
+uc.get_diagnostics().get_diagnostic_conc_data()   
+# Diagnostic concentration data saved during the run, regardless of how much history we requested to save
 
 # %%

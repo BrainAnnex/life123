@@ -9,13 +9,11 @@ import math
 class Numerical:
     """
     Assorted, general numerical methods
-
-    TODO: change @classmethod to @staticmethod , and ditch the cls's
     """
 
 
-    @classmethod
-    def simple_least_square(cls, X :np.ndarray, Y: np.ndarray) -> (float, float):
+    @staticmethod
+    def simple_least_square(X :np.ndarray, Y: np.ndarray) -> (float, float):
         """
         Give two numeric 1-D arrays X and Y, of the same size,
         do a least-square fit: Y = a + b * X , for some numbers a and b
@@ -43,8 +41,8 @@ class Numerical:
         return a, b
 
 
-    @classmethod
-    def two_vector_least_square(cls, V :np.ndarray, W :np.ndarray, Y :np.ndarray) -> (float, float):
+    @staticmethod
+    def two_vector_least_square(V :np.ndarray, W :np.ndarray, Y :np.ndarray) -> (float, float):
         """
         Give three numeric 1-D arrays V, W and Y, of the same size,
         do a least-square fit: Y = a * V + b * W, for some numbers a and b
@@ -60,8 +58,8 @@ class Numerical:
 
 
 
-    @classmethod
-    def reach_threshold(cls, df, x :str, y :str, y_threshold) -> Union[float, None]:
+    @staticmethod
+    def reach_threshold(df, x :str, y :str, y_threshold) -> Union[float, None]:
         """
         Given a set of 2-D points, whose x- and y- coordinates are stored, respectively, in the
         columns whose names are given by the arguments x and y, locate the x-coordinate at which
@@ -108,8 +106,8 @@ class Numerical:
 
 
 
-    @classmethod
-    def curve_intersect(cls, df: pd.DataFrame,
+    @staticmethod
+    def curve_intersect(df: pd.DataFrame,
                         x :str, var1 :str, var2 :str, explain=False) -> (float, float):
         """
         Determine the intersection point between 2 Pandas dataframe columns,
@@ -229,15 +227,15 @@ class Numerical:
             return None
 
 
-        return cls.segment_intersect(  t=(prev_t, next_t),
-                                       y1=(prev_val1, next_val1),
-                                       y2=(prev_val2, next_val2)
-                                    )
+        return Numerical.segment_intersect( t=(prev_t, next_t),
+                                           y1=(prev_val1, next_val1),
+                                           y2=(prev_val2, next_val2)
+                                          )
 
 
 
-    @classmethod
-    def segment_intersect(cls, t, y1, y2) -> (float, float):
+    @staticmethod
+    def segment_intersect(t, y1, y2) -> (float, float):
         """
         Find the intersection of two segments in 2D.
         Their respective endpoints share the same x-coordinates: (t_start, t_end)
@@ -284,8 +282,8 @@ class Numerical:
 
 
 
-    @classmethod
-    def line_intersect(cls, p1, p2, q1, q2) -> Union[tuple, None]:
+    @staticmethod
+    def line_intersect(p1, p2, q1, q2) -> Union[tuple, None]:
         """
         Returns the coordinates of the intersection
         between the line passing thru the points p1 and p2,
@@ -323,8 +321,8 @@ class Numerical:
 
 
 
-    @classmethod
-    def deep_flatten(cls, items) -> list:
+    @staticmethod
+    def deep_flatten(items) -> list:
         """
         Completely flatten any lists/tuples of lists or tuples
         into a single list
@@ -343,12 +341,12 @@ class Numerical:
         elif (type(items) is not list) and (type(items) is not tuple):
             return [items]
         else:
-            return cls.deep_flatten(items[0]) + cls.deep_flatten(items[1:])
+            return Numerical.deep_flatten(items[0]) + Numerical.deep_flatten(items[1:])
 
 
 
-    @classmethod
-    def compare_results(cls, res1, res2) -> float:
+    @staticmethod
+    def compare_results(res1, res2) -> float:
         """
         Use a Euclidean distance metric to compare 2 sets of results - typically from 2 runs
         of different accuracy.
@@ -361,17 +359,17 @@ class Numerical:
         :param res2:
         :return:    The distance between the two sets of value, based on an L2 (Euclidean) metric
         """
-        flat1 =  cls.deep_flatten(res1)
-        flat2 =  cls.deep_flatten(res2)
+        flat1 =  Numerical.deep_flatten(res1)
+        flat2 =  Numerical.deep_flatten(res2)
         assert len(flat1) == len(flat2), \
             "compare_results(): the 2 sets of data (after flattening) must have the same length"
 
-        return cls.compare_vectors(v1=np.array(flat1), v2=np.array(flat2))
+        return Numerical.compare_vectors(v1=np.array(flat1), v2=np.array(flat2))
 
 
 
-    @classmethod
-    def compare_vectors(cls, v1: np.array, v2: np.array, metric=None, trim_edges=0) -> float:
+    @staticmethod
+    def compare_vectors(v1: np.array, v2: np.array, metric=None, trim_edges=0) -> float:
         """
         Return the Euclidean distance between the two given same-sized Numpy arrays
         (TODO: offer option to use alternate metrics)
@@ -394,8 +392,8 @@ class Numerical:
 
 
 
-    @classmethod
-    def compare_states(cls, state1: np.array, state2: np.array, verbose=False) -> None:
+    @staticmethod
+    def compare_states(state1: np.array, state2: np.array, verbose=False) -> None:
         """
         Print out various assessments of how similar two same-sized Numpy arrays are.
         Typically, those arrays will be system state snapshots - but could be anything.
@@ -432,10 +430,11 @@ class Numerical:
 
 
 
-    @classmethod
-    def gradient_order4_1d(cls, arr :Union[np.array, List, Tuple], dx=1.0, dtype='float') -> np.array:
+    @staticmethod
+    def gradient_order4_1d(arr :np.array|List|Tuple, dx=1.0, dtype='float') -> np.array:
         """
-        Compute the gradient, from UNIT-SPACED x-values and y-values in the given 1-dimensional array,
+        Compute the gradient, from the y-values in the given 1-dimensional array,
+        along EQUALLY-SPACED x-values,
         using the 5-point Central Difference, which produces an accuracy of order 4.
 
         At the boundary, or close to it, different 5-point stencils are used,
@@ -501,8 +500,8 @@ class Numerical:
 
 
 
-    @classmethod
-    def gradient_order4(cls, f :np.array, *varargs) -> Union[np.array, list]:
+    @staticmethod
+    def gradient_order4(f :np.array, *varargs) -> Union[np.array, list]:
         """
         Compute the gradient, from the values in the given (possibly multidimensional) array,
         using the 5-point Central Difference, which produces an accuracy of order 4.
@@ -528,6 +527,7 @@ class Numerical:
         :return:        A list of N numpy arrays,
                         each of the same shape as f, and giving the derivative of f with respect to each dimension
         """
+        # TODO: enforce min number of values (5?)
 
         N = len(f.shape)            # Number of dimensions
         n_args = len(varargs)       # Number of arguments passed after the first one (f)
@@ -624,8 +624,8 @@ class Numerical:
 
 
 
-    @classmethod
-    def gradient_uneven_grid(cls, x_values :np.array, f :np.array, stencil :int) -> np.ndarray:
+    @staticmethod
+    def gradient_uneven_grid(x_values :np.array, f :np.array, stencil :int) -> np.ndarray:
         """
         Compute and return the gradient of a 1-D function f(x) at the given grid points,
         which may be uneven.  An arbitrary stencil ("sliding window") size may be used.
@@ -636,8 +636,8 @@ class Numerical:
         Based on B. Fornberg, "Calculation of Weights in Finite Difference Formulas", 1998
         (https://epubs.siam.org/doi/abs/10.1137/S0036144596322507)
 
-        :param x_values:    A Numpy array of x values (independent variable) that
-                                may be unevenly-spaced
+        :param x_values:    A Numpy array of x values (independent variable),
+                                which may be unevenly-spaced
         :param f:           A Numpy array of the values of the function at the above grid point
         :param stencil:     An integer between 2 and the number of grid points.
         :return:            A Numpy array
@@ -680,7 +680,7 @@ class Numerical:
         for grid_index in range(math.ceil(stencil / 2)):    # Ceiling of division)
             z = x_values[grid_index]
             #print(f"i : {grid_index} | z : {z}")
-            numeric_1st_deriv = cls._compute_derivative(z, window_x_arr, window_f_arr)
+            numeric_1st_deriv = Numerical._compute_derivative(z, window_x_arr, window_f_arr)
             gradient_values[grid_index] = numeric_1st_deriv
 
 
@@ -694,7 +694,7 @@ class Numerical:
             grid_index += 1
             z = x_values[grid_index]
             #print(f"i : {grid_index} | z : {z}")
-            numeric_1st_deriv = cls._compute_derivative(z, window_x_arr, window_f_arr)
+            numeric_1st_deriv = Numerical._compute_derivative(z, window_x_arr, window_f_arr)
             gradient_values[grid_index] = numeric_1st_deriv
 
 
@@ -704,7 +704,7 @@ class Numerical:
         while grid_index < size:    # This loop stops at index size-1
             z = x_values[grid_index]
             #print(f"i : {grid_index} | z : {z}")
-            numeric_1st_deriv = cls._compute_derivative(z, window_x_arr, window_f_arr)
+            numeric_1st_deriv = Numerical._compute_derivative(z, window_x_arr, window_f_arr)
             gradient_values[grid_index] = numeric_1st_deriv
             grid_index += 1
 
@@ -712,8 +712,8 @@ class Numerical:
 
 
 
-    @classmethod
-    def _compute_derivative(cls, z, window_x_arr, window_f_arr, order=1) -> np.float64:
+    @staticmethod
+    def _compute_derivative(z, window_x_arr, window_f_arr, order=1) -> np.float64:
         """
         Compute and return the specified derivative order (by default the gradient)
         of a 1-D function f(x) at the  point x=z.
@@ -725,7 +725,7 @@ class Numerical:
         :param order:           Order of the derivative (by default 1st derivative, i.e. gradient)
         :return:                A floating-point value
         """
-        c = cls._finite_diff_weights(z=z, x=window_x_arr, m=order)
+        c = Numerical._finite_diff_weights(z=z, x=window_x_arr, m=order)
         col = c[:, 1]       # Extract 2nd column (k = 1, to be used for 1st derivatives)
         #print("col: ", col)
         #print("window_f_arr: ", window_f_arr)
@@ -734,8 +734,8 @@ class Numerical:
 
 
 
-    @classmethod
-    def _finite_diff_weights(cls, z, x, m) -> np.ndarray:
+    @staticmethod
+    def _finite_diff_weights(z, x, m) -> np.ndarray:
         """
         Based on B. Fornberg, "Calculation of Weights in Finite Difference Formulas", 1998
         (https://epubs.siam.org/doi/abs/10.1137/S0036144596322507)
@@ -786,8 +786,8 @@ class Numerical:
 
 
 
-    @classmethod
-    def expand_matrix_boundary(cls, m) -> np.ndarray:
+    @staticmethod
+    def expand_matrix_boundary(m) -> np.ndarray:
         """
         Add a row at the top and at the bottom, and also add a column to the left and to the right,
         repeating the edge values of the matrix

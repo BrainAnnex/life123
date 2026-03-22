@@ -22,8 +22,8 @@
 # ### TAGS :   "basic", "uniform compartment"
 
 # %%
-LAST_REVISED = "Aug. 29, 2025"
-LIFE123_VERSION = "1.0.0rc6"         # Library version this experiment is based on
+LAST_REVISED = "Jan. 2, 2026"
+LIFE123_VERSION = "1.0.0rc7"         # Library version this experiment is based on
 
 # %%
 #import set_path            # Using MyBinder?  Uncomment this before running the next cell!

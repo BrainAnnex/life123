@@ -1,14 +1,16 @@
 """
-5 classes:
+5 classes about the chemicals and their properties - EXCEPT reactions:
+
     * ChemCore
     * Diffusion (which extends ChemCore)
-    * Macromolecutes (which extends Diffusion)
-    * ChemDate (which extends Macromolecutes) : THIS IS THE CLASS TYPICALLY INSTANTIATED BY THE USER
+    * Macromolecules (which extends Diffusion)
+    * ChemData (which extends Macromolecules) : THIS IS THE CLASS TYPICALLY INSTANTIATED BY THE USER
 
     * ChemicalAffinity (derived from NamedTuple)
 """
 
 from typing import Union, List, NamedTuple
+from life123.visualization.colors import Colors
 import numpy as np
 import pandas as pd
 import string
@@ -18,7 +20,7 @@ import string
 class ChemCore:
     """
     Core data about the chemical species, such as their names, labels
-    and indexes (position in their listing)
+    indexes (position in their registration listing), and plotting color
 
     Note: End users will typically utilize the class ChemData, which extends this one
     """
@@ -28,7 +30,7 @@ class ChemCore:
         self.chemical_data = [] # Basic data for all chemicals, *except* water and macro-molecules.
                                 # Each list entry represents 1 chemical,
                                 # and is a dict required to contain the keys "label" and "name";
-                                # it may also contain other arbitrary other keys ("notes" is a commonly-used one)
+                                # it may also contain arbitrary other keys ("notes" is a commonly-used one)
                                 # EXAMPLE: [{"label": "A",   "name": "A"},
                                 #           {"label": "NAD", "name": "Nicotinamide adenine dinucleotide", "note": "some note"},
                                 #           {"label": "B",   "name": "B"]
@@ -36,7 +38,7 @@ class ChemCore:
                                 #          in out example above, "A" has index 0, while "NAD" has index 1
                                 # Labels must be unique; likewise, names must be unique.
                                 # The name of any chemical cannot be the same as the label of a different one.
-                                # TODO: maybe use a Pandas dataframe
+                                # TODO: maybe use a Pandas dataframe?
 
 
         self.label_dict = {}    # To map assigned chemical labels to their positional index
@@ -63,10 +65,10 @@ class ChemCore:
 
     def assert_valid_chem_index(self, chem_index: int) -> None:
         """
-        Raise an Exception if the specified species_index (meant to identify a chemical) isn't valid
+        Raise an Exception if the specified chem_index (meant to identify a chemical) isn't valid
 
-        :param chem_index:   An integer that indexes the chemical of interest (numbering starts at 0)
-        :return:                None
+        :param chem_index:  An integer that indexes the chemical of interest (numbering starts at 0)
+        :return:            None
         """
         n_species = self.number_of_chemicals()
         assert type(chem_index) == int, f"The specified chemical index ({chem_index}) must be an integer: " \
@@ -80,7 +82,8 @@ class ChemCore:
 
     def get_label_mapping(self) -> dict:
         """
-        Return a dict with all the mappings of the chemical names to the registered index
+        Return a dict with all the mappings of the chemical names
+        to their (zero-based) registered index position
 
         :return:
         """
@@ -108,13 +111,28 @@ class ChemCore:
 
     def label_exists(self, label :str) -> bool:
         """
-        Return True if the chemical with the given name exists (i.e. was registered),
+        Return True if the chemical with the given label exists (i.e. was registered),
         or False otherwise
 
         :param label:   The label of a chemical
-        :return:        True if it exists, or False otherwise
+        :return:        True if it was already registered, or False otherwise
         """
         return label in self.label_dict.keys()
+
+
+    def name_exists(self, name :str) -> bool:
+        """
+        Return True if the chemical with the given name exists (i.e. was registered),
+        or False otherwise
+
+        :param name:    The name (full name) of a chemical
+        :return:        True if it was already registered, or False otherwise
+        """
+        for chem in self.chemical_data:
+            if name == chem["name"]:
+                return True     # Located in existing data
+
+        return False    # Not found
 
 
 
@@ -159,27 +177,8 @@ class ChemCore:
 
 
 
-    def all_chemicals(self) -> pd.DataFrame:
-        """
-        Returns a Pandas dataframe with all the known information
-        about all the registered chemicals (not counting macro-molecules),
-        in their registration index order
-
-        :return:    A Pandas dataframe
-        """
-        df = pd.DataFrame(self.chemical_data)
-
-        # Add a column for plot colors, if any were registered
-        if self.color_dict != {}:
-            color_df = pd.DataFrame(list(self.color_dict.items()), columns=["label", "plot_color"])
-            df = pd.merge(df, color_df, on="label", how="left") # All rows from df and matching rows from color_df
-            df["plot_color"] = df["plot_color"].fillna("")      # Turn any NaN in the 'plot_color' column into a blank
-
-        return df
-
-
-
-    def add_chemical(self, name :str, label=None, note=None, plot_color=None, **kwargs) -> int:
+    def add_chemical(self, name :str, label=None, note=None, skip_duplicates=False,
+                    plot_color=None, **kwargs) -> Union[int, None]:
         """
         Register a new chemical species, with a name
         and (optionally) :
@@ -194,15 +193,19 @@ class ChemCore:
         Note: if also wanting to set the diffusion rate in a single function call,
               use ChemData.add_chemical_with_diffusion() instead
 
-        :param name:        Name of the new chemical species to register; names must be unique -
+        :param name:        (Long) name of the new chemical species to register; names must be unique -
                                an Exception will be raised if the name was already registered as a name or as a label
         :param label:       [OPTIONAL] Typically, a short version of the name, or a stand-in for it.
                                 If provided, it must be unique, and cannot be identical to the name of another chemical;
                                 if not provided, the name will be used as a label
         :param note:        [OPTIONAL] String with note to attach to the chemical
+        :param skip_duplicates: [OPTIONAL] Normally, duplicate labels or duplicate names raise Exception;
+                                                however, if True, any such duplicate is silently skipped
         :param plot_color:  [OPTIONAL] String with color value to attach to the chemical for visualizations
         :param kwargs:      [OPTIONAL] Dictionary of named arguments (with any desired names)
+
         :return:            The integer index assigned to the newly-added chemical
+                                (or None in case of a duplicate that was skipped)
         """
         # Validate
         assert type(name) == str, \
@@ -210,27 +213,38 @@ class ChemCore:
             f"What was passed ({name}) was of type {type(name)}"
 
         assert name != "", \
-            "add_chemical(): the chemical's name cannot be a blank string"
+            "add_chemical(): the chemical's name cannot be a blank string"  # TODO: strip blanks first
 
-        assert name not in self.label_dict.keys(), \
-            f"add_chemical(): the requested name (`{name}`) is ALREADY registered"
+        if self.name_exists(name):
+            if skip_duplicates:
+                return
+            raise Exception(f"add_chemical(): the requested name (`{name}`) is ALREADY registered")
 
-        for chem in self.chemical_data:
-            assert name != chem["name"], \
-                f"add_chemical(): the requested name (`{name}`) is ALREADY registered"
+        for l in self.label_dict.keys():
+            assert name != l, \
+                f"add_chemical(): the requested name (`{name}`) is ALREADY registered as the label of another chemical"
 
 
         if not label:
-            label = name    # Use the (full) name as a label, if no full label is provided
+            label = name    # Use the (full) name as a label, if no label was provided
         else:
+            # If a label was passed
             assert type(label) == str, \
                 f"add_chemical(): a chemical's label, if provided, must be a string value.  " \
                 f"What was passed ({label}) was of type {type(label)}"
-            assert label not in self.label_dict.keys(), \
-                f"add_chemical(): the requested name (`{label}`) is ALREADY registered"
+
+            assert label != "", \
+                "add_chemical(): the chemical's label cannot be a blank string"  # TODO: strip blanks first
+
+            if self.label_exists(label):
+                if skip_duplicates:
+                    return
+                raise Exception(f"add_chemical(): the requested label (`{label}`) is ALREADY registered")
+
             for chem in self.chemical_data:
                 assert label != chem["name"], \
                     f"add_chemical(): the requested label (`{label}`) is ALREADY registered as the name of another chemical"
+
 
         index = len(self.chemical_data)     # The next available index number (list position)
         self.label_dict[label] = index
@@ -252,41 +266,30 @@ class ChemCore:
 
 
 
+    def set_color(self, chem_label :str, color :str) -> None:
+        """
+        Associate the given chemical with a color for plots.
+
+        :param chem_label:  The label of a previously-registered chemical
+        :param color:
+        :return:            None
+        """
+        assert self.label_exists(chem_label), \
+            f"set_color(): no chemical with the label `{chem_label}` is currently registered"
+
+        self.color_dict[chem_label] = color
+
+
+
     def get_plot_color(self, label :str) -> Union[str, None]:
         """
-        Return the name of the plot color previously associated to the given chemical
+        Return the name of the plot color previously associated to the given chemical,
+        or None if no color association was registered
 
         :param label:   A string to identify a particular chemical
         :return:        The name of the associated plot color, or None if not found
         """
         return self.color_dict.get(label, None)
-
-
-
-    def get_registered_colors(self, chem_labels :Union[None, list[str]]) -> Union[None, list[str]]:
-        """
-        Return a list of the colors registered for the specified chemicals or, if not specified, for all chemicals.
-        If not a single color is registered, return None
-
-        :param chem_labels: List of chemical labels; use None to mean ALL chemicals
-        :return:            List of color names, with as many entries as the chemicals of interest;
-                                any of the entries might be None.
-                                However, if zero colors are found, return None
-        """
-        if chem_labels is None:
-            chem_labels = self.get_all_labels()
-
-        # Attempt to use the colors registered for individual chemicals, if present
-        registered_colors = []
-        for label in chem_labels:
-            stored_color = self.get_plot_color(label)     # Will be None if no color was registered for this chemical
-            registered_colors.append(stored_color)
-
-        if set(registered_colors) == {None}:    #  If all elements of the list registered_colors are None
-            return None
-
-        return registered_colors        # List of color names, with as many entries as the chemicals of interest;
-                                        # any of the entries might be None
 
 
 
@@ -308,12 +311,55 @@ class ChemCore:
         return   {self.label_dict[k]: v for k, v in self.color_dict.items()}
 
 
-    def get_all_colors(self) -> list:
+    def get_all_colors(self) -> list[str]:
         """
 
-        :return:    A list of all colors, in the index position of their respective chemicals
+        :return:    A list of all color names, in the index position of their respective chemicals
         """
         return list(self.color_dict.values())
+
+
+
+    def assign_colors(self, chem_labels=None) -> list[str]:
+        """
+        Return a list of the colors registered for the requested chemicals or, if not specified, for all chemicals.
+        If any chemicals lack registered colors, assign new ones from a palette of default colors,
+        and register the new assignments for future use.
+
+        :param chem_labels: List of chemical labels; use None to mean ALL chemicals
+        :return:            List of color names, with as many entries as the chemicals of interest,
+                                and in their same order
+                                EXAMPLE:   ["blue", "yellow", "cyan"]
+        """
+        if chem_labels is None:
+            chem_labels = self.get_all_labels()
+        elif type(chem_labels) == str:
+            chem_labels = [chem_labels]
+        else:
+            assert type(chem_labels) == list, \
+                f"assign_colors(): argument `chem_labels` must be a string or a list of strings; instead, it was {type(chem_labels)}"
+
+
+        # Attempt to use the colors registered for the individual chemicals;
+        # if not already present, assign new ones
+        registered_colors = []
+        fallback_colors = None      # A list that will be created if needed
+        new_color_index = 0
+        for label in chem_labels:
+            stored_color = self.get_plot_color(label)     # Will be None if no color was registered for this chemical
+            if stored_color is not None:
+                registered_colors.append(stored_color)
+            else:   # In case no previously-registered color for this chemical
+                if fallback_colors is None:
+                    fallback_colors = Colors.assign_default_colors(len(chem_labels))
+
+                new_color = fallback_colors[new_color_index]
+                new_color_index += 1
+                registered_colors.append(new_color)
+                self.set_color(chem_label=label, color=new_color)
+
+
+        return registered_colors        # List of color names, with as many entries as the chemicals of interest;
 
 
 
@@ -337,13 +383,13 @@ class Diffusion(ChemCore):
 
         self.diffusion_rates = {}   # Values for the diffusion rates, indexed by chemical "label".
                                     # All values must be non-negative numbers.
-                                    # Only chemicals with an assigned diffusion rate will be present here;
+                                    # Only chemical species with an assigned diffusion rate will be present here;
                                     #   some registered chemicals may be missing.
                                     # EXAMPLE: {"A": 6.4, "D": 12.0}
 
 
 
-    def add_chemical_with_diffusion(self, name :str, diff_rate :Union[float, int], label=None, note=None, **kwargs) -> int:
+    def add_chemical_with_diffusion(self, name :str, diff_rate :float|int, label=None, note=None, **kwargs) -> int:
         """
         Register a new chemical species, with a name, a diffusion rate (in water),
         and (optionally) :
@@ -407,28 +453,28 @@ class Diffusion(ChemCore):
 
 
 
-    def get_diffusion_rate(self, chem_index=None, name=None) -> Union[float, int, None]:
+    def get_diffusion_rate(self, chem_index=None, chem_label=None) -> float|int|None:
         """
         Return the diffusion rate of the specified chemical species.
         If no value was assigned (but the chemical exists), return None.
 
-        :param name:            Name of the chemical of interest
-        :param chem_index:   Alternate way to specify the chemical, using its zero-based index (order
-                                    in which it was registered);
-                                    `name` and `species_index` cannot be both specified, or an Exception will be raised
-        :return:                The value of the diffusion rate for the species with the given index if present,
-                                    or None if not
+        :param chem_label:  Label of the chemical of interest
+        :param chem_index:  Alternate way to specify the chemical, using its zero-based index (order
+                                in which it was registered);
+                                `name` and `species_index` cannot be both specified, or an Exception will be raised
+        :return:            The value of the diffusion rate for the species with the given index if present,
+                                or None if not
         """
-        assert (name is None) or (chem_index is None), \
+        assert (chem_label is None) or (chem_index is None), \
             "get_diffusion_rate(): cannot specify BOTH `name` and `species_index`"
 
-        if name is None:
-            name = self.get_label(chem_index)
+        if chem_label is None:
+            chem_label = self.get_label(chem_index)
         else:
-            assert self.label_exists(name), \
-                f"get_diffusion_rate(): No chemical named `{name}` exists"
+            assert self.label_exists(chem_label), \
+                f"get_diffusion_rate(): No chemical named `{chem_label}` exists"
 
-        return self.diffusion_rates.get(name)      # If not present, None is returned
+        return self.diffusion_rates.get(chem_label)      # If not present, None is returned
 
 
 
@@ -765,15 +811,19 @@ class ChemData(Macromolecules):
               and ending in this user-facing class:
                     ChemCore <- Diffusion <- Macromolecules <- ChemData
     """
-    def __init__(self, names=None, labels=None, diffusion_rates=None, plot_colors=None):
+    def __init__(self, names=None, labels=None, n_chems=None, diffusion_rates=None, plot_colors=None):
         """
-        Any non-None arguments MUST all have the same length (and appear in the same order), or all be scalars.
         It's ok to skip passing any data at instantiation, and later add it, with calls to add_chemical().
-        Reactions, if applicable, need to be added later by means of calls to add_reaction()
+
         Macro-molecules, if applicable, need to be added later.
 
-        If no names nor labels are provided, but diffusion rates or plot colors are given,
-        the strings "A", "B", ..., "Z", "Z2", "Z3", .... are used
+        Any provided values for `names`, `labels`, `diffusion_rates`, `plot_colors`
+        MUST all have the same length (and appear in the same order), or all be scalars;
+        also, they must be consistent with `n_chem`, if provided.
+
+        If no names nor labels are provided,
+        but the number of chemicals or the diffusion rates or then plot colors are given,
+        the strings "A", "B", ..., "Z", "Z2", "Z3", .... are automatically assigned as both labels and names.
 
         :param names:           [OPTIONAL] A single name, or list or tuple of names, of the chemicals.
                                     If not provided, the names are made equal to the labels.
@@ -788,79 +838,95 @@ class ChemData(Macromolecules):
                                     "A", "B", ..., "Z", "Z2", "Z3", .... are used
                                     (as many as the diffusion rates or plot colors)
 
+        :param n_chems:          [OPTIONAL] The number of chemicals
+
         :param diffusion_rates: [OPTIONAL] A non-negative number, or a list/tuple/Numpy array with the diffusion rates of the chemicals,
                                     in the same order as the names/labels (if provided).
+                                    None values (meaning "to be set later") are allowed for individual entries.
 
         :param plot_colors:     [OPTIONAL] A single name, or list or tuple of names, of the plotting colors for the chemicals,
                                     in the same order as the names/labels (if provided).
         """
         # TODO: allow a way to optionally pass macromolecules as well
-        # TODO: allow to provide the number of chemicals, in lieu of the names
 
         super().__init__()       # Invoke the constructor of its parent class
 
 
-        non_none_args = [arg for arg in (names, labels, diffusion_rates, plot_colors) if arg is not None]
+        # Determine which arguments, if any, aren't None
+        list_args = [arg for arg in (names, labels, n_chems, diffusion_rates, plot_colors) if arg is not None]
 
-        if len(non_none_args) == 0:
+        if len(list_args) == 0:
             return      # All args are None; nothing else to do
 
 
         if names is not None:
+            # Validate the data type for `names`, and turn into a list if a scalar
             if (dt := type(names)) == str:
                 names = [names]
             else:
                 assert dt == list or dt == tuple, \
-                    f"ChemData instantiation: the `names` argument must be a list or tuple, or a string for a single chemical.  " \
+                    f"ChemData instantiation: the `names` argument, if provided, must be a list or tuple, or a string in case of a single chemical.  " \
                     f"What was passed ({names}) was of type {dt}"
 
         if labels is not None:
+            # Validate the data type for `labels`, and turn into a list if a scalar
             if (dt := type(labels)) == str:
                 labels = [labels]
             else:
                 assert dt == list or dt == tuple, \
-                    f"ChemData instantiation: the `labels` argument must be a list or tuple, or a string for a single chemical.  " \
+                    f"ChemData instantiation: the `labels` argument, if provided, must be a list or tuple, or a string for a single chemical.  " \
                     f"What was passed ({labels}) was of type {dt}"
 
         if plot_colors is not None:
+            # Validate the data type for `plot_colors`, and turn into a list if a scalar
             if (dt := type(plot_colors)) == str:
                 plot_colors = [plot_colors]
             else:
                 assert dt == list or dt == tuple, \
-                    f"ChemData instantiation: the `plot_colors` argument must be a list or tuple, or a string for a single chemical.  " \
+                    f"ChemData instantiation: the `plot_colors` argument, if provided, must be a list or tuple, or a string for a single chemical.  " \
                     f"What was passed ({plot_colors}) was of type {dt}"
 
         if diffusion_rates is not None:
+            # Validate the data type for `diffusion_rates`, and turn into a list if a scalar
             if (dt := type(diffusion_rates)) == int or dt == float:
                 diffusion_rates = [diffusion_rates]
             else:
                 assert dt == list or dt == tuple  or dt == np.ndarray, \
-                    f"ChemData instantiation(): the `diffusion_rates` argument must be a list or tuple or Numpy array, or a number for a single chemical.  " \
+                    f"ChemData instantiation(): the `diffusion_rates` argument, if provided, must be a list or tuple or Numpy array, or a number for a single chemical.  " \
                     f"What was passed ({diffusion_rates}) was of type {dt}"
 
+        if n_chems is not None:
+            assert (type(n_chems) == int) and (n_chems >= 0), \
+                f"ChemData instantiation(): the `n_chem` argument, if provided, must be a non-negative integer"
 
-        # We need to re-compute non_none_args because some of the original arguments may have been modified by now
-        non_none_args = [arg for arg in (names, labels, diffusion_rates, plot_colors) if arg is not None]
 
-        # Assert that all lengths are the same
-        if len(non_none_args) > 1:  # No need to check if only one or no argument is present
-            lengths = []
-            for arg in non_none_args:
-                    lengths.append(len(arg))
+        # Let's now consider all the lists that we have
+        list_args = [arg for arg in (names, labels, diffusion_rates, plot_colors) if arg is not None]
 
-            assert all(l == lengths[0] for l in lengths), \
-                "ChemData instantiation: all the non-None arguments must have the same length"
+        # Assert that all lengths are consistent with each other
+        if len(list_args) > 1:      # No need to check consistency if only one argument is present
+            first_len = len(list_args[0])
+
+            for arg in list_args[1:]:   # Skip the zero-th element
+                assert len(arg) == first_len, \
+                    "ChemData instantiation: inconsistency in the size of the passed arguments"
+
+        if n_chems and list_args:      # If `n_chem` was passed and non-zero, and if other arguments were passed
+             assert n_chems == len(list_args[0]), \
+                f"ChemData instantiation: inconsistency between the value of `n_chem` ({n_chems}) " \
+                f"and the size of some of the other passed arguments "
 
 
         # Populate the data structure
         if names is None and labels is None:
-            if diffusion_rates is not None:
+            if n_chems is not None:
+                n_species = n_chems
+            elif diffusion_rates is not None:
                 n_species = len(diffusion_rates)
             else:
-                n_species = len(plot_colors)        # plot_colors cannot be None, otherwise all args would be (already excluded)
+                n_species = len(plot_colors)        # plot_colors cannot be None, otherwise all args would be None (already excluded)
 
-            #names = [f"Chemical {i+1}" for i in range(n_species)]   # The strings "Chemical 1", "Chemical 2", ..., will be used
-            names = self._generate_generic_names(n_species)
+            names = self._generate_generic_names(n_species)     # Generates the strings "A", "B", ..., "Z", "Z2", "Z3", ....
 
 
         if labels is None:
@@ -881,15 +947,43 @@ class ChemData(Macromolecules):
                 self.add_chemical(name=chem_name, label=l)
             else:
                 diff = diffusion_rates[i]
-                self.assert_valid_diffusion(diff)
                 self.add_chemical(name=chem_name, label=l)
-                self.set_diffusion_rate(chem_label=l, diff_rate=diff)
+                if diff is not None:
+                    self.assert_valid_diffusion(diff)
+                    self.set_diffusion_rate(chem_label=l, diff_rate=diff)
 
             if plot_colors is not None:
                 color = plot_colors[i]
                 assert type(color) == str, \
                     f"ChemData instantiation: all the colors must be strings.  The passed value ({color}) is of type {type(color)}"
-                self.color_dict[l] = color
+                self.color_dict[l] = color      # TODO: use set_color()
+
+
+
+
+    def all_chemicals(self) -> pd.DataFrame:
+        """
+        Returns a Pandas dataframe with all the known information
+        about all the registered chemicals (not counting macro-molecules),
+        including labels, names, diffusion rates, plot colors, and optional extra fields,
+        in their registration-index order
+
+        :return:    A Pandas dataframe
+        """
+        df = pd.DataFrame(self.chemical_data)   # Get labels, names and optional extra fields
+
+        # Add a column for plot colors, if any were registered
+        if self.color_dict != {}:
+            color_df = pd.DataFrame(list(self.color_dict.items()), columns=["label", "plot_color"])
+            df = pd.merge(df, color_df, on="label", how="left") # All rows from df and matching rows from color_df
+            df["plot_color"] = df["plot_color"].fillna("")      # Turn any NaN in the 'plot_color' column into a blank
+
+
+        # Insert a column with the diffusion rates, after the first 2 columns (with labels and names)
+        df.insert(2, "diff rate", self.get_all_diffusion_rates())
+        # Note: missing diffusion values are returned as None, and will be turned into NaN in the dataframe
+
+        return df
 
 
 

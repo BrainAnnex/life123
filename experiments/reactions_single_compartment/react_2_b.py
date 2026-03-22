@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -21,34 +21,32 @@
 #
 # **Background**: please see experiment `react_2_a` 
 
-# %%
-LAST_REVISED = "Nov. 10, 2024"
-LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based on
+# %% [markdown]
+# ### TAGS :  "basic", "under-the-hood", "uniform compartment"
 
 # %%
-#import set_path              # Using MyBinder?  Uncomment this before running the next cell!
+LAST_REVISED = "Mar. 17, 2026"
+LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
 
-# %% tags=[]
+# %%
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
+
+# %%
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
 import ipynbname
 
-from life123 import check_version, UniformCompartment, GraphicLog, PlotlyHelper
+from life123 import check_version, UniformCompartment, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
 
-# %% tags=[]
+# %%
 # Initialize the HTML logging (for the graphics)
 log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
                                             # IN CASE OF PROBLEMS, set manually to any desired name
-
-# Set up the use of some specified graphic (Vue) components
-GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_2"],
-                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
 
@@ -60,20 +58,21 @@ GraphicLog.config(filename=log_file,
 # %% [markdown]
 # ### Initialize the System
 
-# %% tags=[]
+# %%
 # Instantiate the simulator and specify the chemicals
 # The diagnostics will be give insight into the inner workings of the simulation
 uc = UniformCompartment(names=["A", "B"], preset="mid", enable_diagnostics=True)
 
 # Reaction A <-> B , with 1st-order kinetics in both directions
-uc.add_reaction(reactants="A", products="B", 
-                forward_rate=3., reverse_rate=2.)
+uc.add_reaction(reactants="A", products="B", kF=3., kR=2.)
 
 uc.describe_reactions()
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
-uc.plot_reaction_network("vue_cytoscape_2")
+uc.plot_reaction_network(log_file=log_file)
+
+# %%
 
 # %%
 # Set the initial concentrations of all the chemicals
@@ -89,7 +88,9 @@ uc.get_history()
 # let's take a look at the value assigned by that preset
 uc.adaptive_steps.show_adaptive_parameters() 
 
-# %% [markdown] tags=[]
+# %%
+
+# %% [markdown]
 # ## Run the reaction   
 # #### Passing True to _variable_steps_ automatically adjusts up or down the time steps
 
@@ -101,7 +102,7 @@ uc.single_compartment_react(initial_step=0.1, target_end_time=1.2,
 history = uc.get_history()   # The system's history, saved during the run of single_compartment_react()
 history
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ## Notice how the reaction proceeds in smaller steps in the early times, when [A] and [B] are changing much more rapidly
 # #### That resulted from passing the flag _variable_steps=True_ to single_compartment_react()
 
@@ -116,7 +117,7 @@ uc.is_in_equilibrium()
 # %% [markdown]
 # # PART 2 - Visualize the Results
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ### Plots of changes of concentration with time
 
 # %%
@@ -136,7 +137,7 @@ uc.plot_step_sizes(show_intervals=True)
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # # PART 2 - Scrutinizing the inner workings of the step-size changes
 
 # %% [markdown]
@@ -188,7 +189,7 @@ uc.get_history(t=0.016)
 # %% [markdown]
 # #### In the examples below, we'll re-compute Delta values for individual steps, directly from the system history.
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ### Example 1: **very early in the run**    
 
 # %%
@@ -210,7 +211,7 @@ baseline_conc
 # %%
 # Computes some measures of how large delta_concentrations is, and propose a course of action
 uc.adaptive_steps.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=baseline_conc,
-                                  n_chems=2, indexes_of_active_chemicals=uc.chem_data.indexes_of_active_chemicals())  
+                                  n_chems=2, indexes_of_active_chemicals=uc.get_reactions().indexes_of_active_chemicals())  
 
 # %% [markdown]
 # #### The above analysis indicates that the time step is just about right, and the simulations should STAY on that course : that's based on the shown computed norms (indicating the extent of the change taking place.)  
@@ -229,7 +230,7 @@ next_step / original_step
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ### Example 2: **very late in the run**    
 
 # %%
@@ -251,7 +252,7 @@ baseline_conc
 # %%
 # Computes a measure of how large delta_concentrations is, and propose a course of action
 uc.adaptive_steps.adjust_timestep(delta_conc=delta_concentrations, baseline_conc=baseline_conc,
-                                  n_chems=2, indexes_of_active_chemicals=uc.chem_data.indexes_of_active_chemicals())  
+                                  n_chems=2, indexes_of_active_chemicals=uc.get_reactions().indexes_of_active_chemicals())  
 
 # %% [markdown]
 # #### The above analysis indicates that the time step is on the "LOW" side, and the simulations should increase it by a factor 1.2 : again, that's based on the shown computed norms (indicating the extent of the change taking place.)  
@@ -326,7 +327,7 @@ PlotlyHelper.combine_plots([p1, p2],
                            title="Concentration of A with time, and its rate of change (A_dot)",
                            y_label="[A] (turquoise) /<br> A_dot (brown)",
                            legend_title="Plot",
-                           curve_labels=["A", "A_dot"]
+                           line_labels=["A", "A_dot"]
                            )
 
 # %% [markdown]

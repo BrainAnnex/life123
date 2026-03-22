@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
 import math
+import copy
 import plotly.express as px
 import plotly.graph_objects as pgo
 import plotly.subplots as sp
 from life123.visualization.colors import Colors
-from typing import Union
 
 
 
@@ -118,8 +118,9 @@ class PlotlyHelper:
                     log_y=False,
                     colors=None, title=None, title_prefix=None,
                     range_x=None, range_y=None,
-                    x_label=None, y_label="Y", legend_header="Plot",
+                    x_label=None, y_label=None, legend_header="Plot",
                     vertical_lines_to_add=None, show_intervals=False,
+                    annotation_field=None, show_points=False, annotate=None,
                     smoothed=False, show=False) -> pgo.Figure:
         """
         Using plotly, draw line plots from the values in the given dataframe.
@@ -130,7 +131,7 @@ class PlotlyHelper:
 
         :param df:              Pandas dataframe with the data for the plot
         :param x_var:           Name of column with the independent variable for the x-axis
-        :param fields:          Name, or list of names, of the dataframe columns whose values are to be plotted;
+        :param fields:          [OPTIONAL] Name, or list of names, of the dataframe columns whose values are to be plotted;
                                     if a list is passed, also display a figure legend;
                                     if None, then display all columns EXCEPT the one that
                                     was declared as the independent variable thru argument `x_var`
@@ -139,13 +140,14 @@ class PlotlyHelper:
                                     or list of names to use, in order; some of the entries may be None.
                                     If None, then the hardwired default colors are used
         :param title:           [OPTIONAL] Title for the plot
-        :param title_prefix:    [OPTIONAL] String to prefix (automatically followed by " <br>") to the title
+        :param title_prefix:    [OPTIONAL] String to prefix (automatically followed by the newline " <br>") to the title
         :param range_x:         [OPTIONAL] list of the form [t_start, t_end], to initially show only a part of the timeline.
                                     Note: it's still possible to zoom out, and see the excluded portion
         :param range_y:         [OPTIONAL] list of the form [y_min, y_max], to initially show only a part of the y values.
                                     Note: it's still possible to zoom out, and see the excluded portion
         :param x_label:         [OPTIONAL] Caption to use for the x-axis
-        :param y_label:         [OPTIONAL] Caption to use for the y-axis.  Default: "Y"
+        :param y_label:         [OPTIONAL] Caption to use for the y-axis.
+                                    Default: the value of the argument `fields` if a string; otherwise, "Y"
         :param legend_header:   [OPTIONAL] Caption to use at the top of the legend box.
                                             Only applicable if more than 1 curve is being shown.
         :param vertical_lines_to_add:  [OPTIONAL] Ignored if the argument `show_intervals` is specified.
@@ -159,6 +161,20 @@ class PlotlyHelper:
                                     and draws thin vertical dotted gray lines at all the x-coords
                                     of the data points in the saved history data;
                                     also, it adds a comment to the title.
+
+        :param annotation_field:[OPTIONAL] The name of one of the dataframe fields,
+                                    for the use of the arguments `show_points` and `annotate`
+        :param show_points:     [OPTIONAL] If True, the individual data points are marked with large dots;
+                                    currently, only allowed for single-line plots (i.e. argument `fields` must be a single column).
+                                    If the argument `annotation_field` was specified, that field gets shown in the hover box
+        :param annotate:        [OPTIONAL] If a (possibly empty) dictionary is passed,
+                                    introduce callout boxes that make use of the `annotation_field` column as source of values.
+                                    Typically used in conjunction with show_points=True
+                                    Optional keys:
+                                        'frequency' (EXAMPLE: 2 , to annotate each other data point.  The last point is ALWAYS shown)
+                                        'dx', 'dy', 'x_offset', 'y_offset' (to affect the relative and absolute positions of the callouts;
+                                                                            note that higher y means further DOWN)
+
         :param smoothed:        [OPTIONAL] If True, a spline is used to smooth the lines;
                                     otherwise (default), line segments are used
         :param show:            If True, the plot will be shown
@@ -176,11 +192,6 @@ class PlotlyHelper:
         assert x_var in col_list, \
             f"plot_pandas(): the value of the argument `x_var` ({x_var}) must be the name of one of the columns in the dataframe"
 
-        # Prevent obscure error messages that arise when y_label is not a valid string (due to the fact that this string is used
-        # to shows values in the hover boxes when more than 1 curve is being shown)
-        assert type(y_label) == str, \
-            f"plot_pandas(): the value of the argument `y_label` must be a string; the passed values is of type {type(y_label)}"
-
 
         if fields is None:
             number_of_curves = len(col_list) - 1  # All the field but one (since one is the independent variable)
@@ -189,7 +200,27 @@ class PlotlyHelper:
             if len(fields) == 1:
                 fields = fields[0]      # Take the only element, if there's only one (this has the effect of hiding the legend)
         else:
-            number_of_curves = len(fields)
+            # If arg `fields` was passed
+            if type(fields) == str:
+                number_of_curves = 1
+            else:
+                assert type(fields) == list, \
+                    f"plot_pandas(): the value of the argument `fields`, if passed, must be a string or list; the passed values is of type {type(fields)}"
+
+                number_of_curves = len(fields)
+
+
+        if y_label is None:
+            if len(fields) == 1:
+                y_label = fields
+            else:
+                y_label = "Y"
+        else:
+            # Prevent obscure error messages that arise when y_label is not a valid string (due to the fact that this string is used
+            # to shows values in the hover boxes when more than 1 curve is being shown)
+            assert type(y_label) == str, \
+                f"plot_pandas(): the value of the argument `y_label` must be a string; the passed values is of type {type(y_label)}"
+
 
         if colors is None:
             # Entirely use default colors
@@ -197,21 +228,6 @@ class PlotlyHelper:
         elif type(colors) == str:
             # Turn colors into a list, if it was a single entry
             colors = [colors]
-        else:
-            # If we get here, we were given a list; replace any missing (None) entry with a default color
-            number_none = colors.count(None)    # Number of None entries
-            if number_none > 0:
-                replacement_colors = Colors.assign_default_colors(number_none)   # Get all the replacements in bulk
-                colors_adjusted = []
-                i = 0
-                for c in colors:
-                    if c is None:
-                        colors_adjusted.append(replacement_colors[i])
-                        i += 1
-                    else:
-                        colors_adjusted.append(c)
-
-                colors = colors_adjusted
 
 
         if title_prefix is not None:
@@ -231,6 +247,10 @@ class PlotlyHelper:
                       color_discrete_sequence = colors,
                       labels={"value": y_label, "variable": legend_header},
                       line_shape=line_shape)
+
+        fig.update_traces(
+            legendgroup=title
+        )
 
         if type(fields) == str:     # Somehow, the `labels` argument in px.line, above, is ignored when `fields` is just a string
             fig.update_layout(yaxis_title=y_label)   # This line will remedy the above issue
@@ -277,6 +297,91 @@ class PlotlyHelper:
 
             fig['layout']['shapes'] = vline_list    # The vertical lines are regarded by Plotly Express as "shapes"
                                                     # that are stored in the figure's "layout"
+
+
+        if show_points:     # If the user wants to also see all the individual data points, overlayed on the main (line) plot
+            POINT_COLOR = "#3FBC84"     # A shade of green
+            assert type(fields) == str, \
+                "plot_pandas(): the `show_points` option can only be used when `fields` is a single column"
+
+            if annotation_field is not None:
+                assert type(annotation_field) == str, \
+                    "plot_pandas(): the `annotation_field` argument , if provided, must be a string, " \
+                    "with the name of one of the Pandas fields"
+
+                fig.add_scatter(
+                    x=df[x_var],
+                    y=df[fields],
+                    mode="markers",
+                    marker={"size": 6, "color": POINT_COLOR},   # A solid little circle
+                    name="data point",
+                    customdata=df[[annotation_field]],
+                    hovertemplate=
+                        fields + "=%{y}<br>" +
+                        x_var  + "=%{x}<br>" +
+                        annotation_field + "=%{customdata[0]:.2g}" +
+                        "<extra></extra>",
+                    legendgroup=title,
+                    showlegend=False
+                )
+            # The `<extra></extra>` suppresses the trace name (such as the provided "data point",
+            # or the default "trace 1") from showing next to the hover boxes
+            else:
+                # A simplified version of the previous add_scatter() call
+                fig.add_scatter(
+                    x=df[x_var],
+                    y=df[fields],
+                    mode="markers",
+                    name="data point",
+                    marker={"size": 6, "color": POINT_COLOR},
+                    hovertemplate=
+                        fields + "=%{y}<br>" +
+                        x_var  + "=%{x}<br>" +
+                        "<extra></extra>",
+                    showlegend=False
+                )
+
+
+        if annotate is not None:
+            assert type(annotate) == dict, \
+                    "plot_pandas(): the `annotate` argument , if provided, must be a dict, " \
+                    "with following optional keys: 'dx', 'dy', 'x_offset', 'y_offset', 'frequency'"
+
+            assert type(fields) == str, \
+                "plot_pandas(): `annotate` can only be used when `fields` is a single value"
+
+            assert type(annotation_field) == str, \
+                "plot_pandas(): to use the argument `annotate`, you must also pass an `annotation_field` argument"
+
+            assert annotation_field in col_list, \
+                "plot_pandas(): the argument `annotation_field` must be one of the column names of the Panda's dataframe"
+
+
+            # Unpack the argument, and use defaults for any missing value
+            dx = annotate.get("dx", 2)
+            dy = annotate.get("dy", 4)
+            x_offset = annotate.get("x_offset", 0)
+            y_offset = annotate.get("y_offset", 20)
+            frequency = annotate.get("frequency", 2)    # To avoid clutter
+
+            for ind in df.index:     # for each row in the Pandas dataframe
+                label = f"{df[annotation_field][ind]:.2g}"
+                if ind == 0:
+                    label = f"{annotation_field}={label}"    # Also prefix "t=" to the 1st (zero-th) label
+
+                label_x = x_offset + ind * dx      # A greater x value here means further to the right
+                label_y = y_offset + ind * dy      # A greater y value here means further DOWN!!
+
+                if (ind % frequency == 0) or (ind == len(df.index) -1):
+                    fig.add_annotation(x=df[x_var][ind], y=df[fields][ind],
+                                        text=label,
+                                        font=dict(
+                                            size=10,
+                                            color="grey"
+                                        ),
+                                        showarrow=True, arrowhead=0, ax=label_x, ay=label_y, arrowcolor="#b0b0b0",
+                                        bordercolor="#c7c7c7")
+
         if show:
             fig.show()  # Display the plot
 
@@ -285,44 +390,83 @@ class PlotlyHelper:
 
 
     @classmethod
-    def combine_plots(cls, fig_list :Union[list, tuple], title=None, modify=None,
-                      layout_index=None,
-                      x_label=None, y_label=None,
-                      xrange=None, legend_title=None, curve_labels=None, show=False) -> pgo.Figure:
+    def combine_plots(cls, fig_list :list|tuple, title=None, legend_title=None,
+                        x_label=None, y_label=None,
+                        xrange=None,
+                        modify=None, layout_index=None, line_labels=None,
+                        legend_show_all_traces=False, legend_trace_selector=None,
+                        show=False) -> pgo.Figure:
         """
-        Combine together several existing Plotly plots into a single one (with COMBINED axes)
+        Combine together several existing Plotly plots into a single one,
+        with COMBINED axes.
+        Note: the individual plots (aka Plotly "Figures") may contain one or more "traces"
 
         EXAMPLE:
                     from life123 import PlotlyHelper
-                    plot_1 = PlotlyHelper.plot_pandas(various args, show=False)
-                    plot_2 = PlotlyHelper.plot_pandas(various args, show=False)
-                    PlotlyHelper.combine_plots( [plot_1, plot_2] , other optional args)
+                    plot_1 = PlotlyHelper.plot_pandas(various args)
+                    plot_2 = PlotlyHelper.plot_pandas(various args)
+                    PlotlyHelper.combine_plots( fig_list=[plot_1, plot_2] , other optional args)
 
-        :param fig_list:    List or tuple of plotly "Figure" objects (as returned by graphic functions)
+        :param fig_list:    List or tuple of Plotly "Figure" objects (as returned by graphic functions)
         :param title:       [OPTIONAL] The title to use for the overall plot
-        :param modify:      [OPTIONAL] Dictionary of plot-style changes to permanently apply to some individual plots
-                                (indexed by their position in `fig_list`) before they get combined.
-                                Allowed values: "dash", "dot", "solid", "dashdot", "longdash", "longdashdot"
-                                EXAMPLE:  {0 : "dash", 4: "dot"}
-                                Note: the modification will alter the original plot
-
-        :param layout_index:[OPTIONAL] If given, the layout of the "Figure" object with the given index
-                                (in `fig_list`) is used as is - and all the layout parameters below are ignored
-
+        :param legend_title:[OPTIONAL] String to show at the top of the legend box
         :param x_label:     [OPTIONAL] Caption to use for the x-axis; if not specified, use that of the 1st plot
         :param y_label:     [OPTIONAL] Caption to use for the y-axis; if not specified, use that of the 1st plot
-        :param xrange:      [OPTIONAL] list of the form [t_start, t_end], to initially only show a part of the timeline.
+        :param xrange:      [OPTIONAL] list of the form [x_start, x_end], to initially only show a part of the timeline.
                                 Note: it's still possible to zoom out, and see the excluded portion
-        :param legend_title:[OPTIONAL] String to show at the top of the legend box
-        :param curve_labels:[OPTIONAL] List of labels to use for the various curves in the legend
-                                and in the hover boxes; if not specified, use the titles of the individual plots
+
+        :param modify:      [OPTIONAL] Dictionary of plot-style changes to permanently apply to some individual figures
+                                (indexed by their position in the `fig_list` argument) before they get combined.
+                                Allowed values: "dash", "dot", "solid", "dashdot", "longdash", "longdashdot"
+                                EXAMPLE:  {0 : "dash", 4: "dot"}
+                                Warning: the modification will alter the original figures
+
+        :param layout_index:[OPTIONAL] If given, the layout of the "Figure" object with the given index
+                                (from `fig_list`) is used as is - and all the layout parameters below are ignored
+
+        :param line_labels:[OPTIONAL] List of labels to use in the legend for each of the various original "figures";
+                                their number must match the length of `fig_list`
+
+        :param legend_show_all_traces: [OPTIONAL] Default, False.  If True, the legend will include all the "traces" (sub-parts)
+                                            of each figure.
+                                            - Use True when the figures consist of meaningful separate parts (such as multiple curves),
+                                              all of which ought to appear in the legend;
+                                            - use False when each figures consists of one actual data curve
+                                              and various modifications to it
+        :param legend_trace_selector:  [OPTIONAL] Only applicable if `legend_show_all_traces` is False.
+                                            Meant for scenarios where each of the Plotly figures only contains one meaningful trace (sub-part)
+                                            that should be used for the legend.
+                                            It accepts a python function that takes a Plotly figure as argument, and returns
+                                            the index of the trace to use for the legend
+                                                function(fig) -> index of trace to use for legend
+                                            If not passed, the first trace (index 0) of each Plotly figure will be used
+
         :param show:        [OPTIONAL] If True, the plot will be shown
                                 Note: on JupyterLab, simply returning a plot object (without assigning it to a variable)
                                       leads to it being automatically shown
+
         :return:            A plotly "Figure" object for the combined plot
         """
         assert (type(fig_list) == list) or (type(fig_list) == tuple), \
-            "combine_plots(): the argument fig_list must be a list or tuple"
+            "combine_plots(): the argument `fig_list` must be a list or tuple"
+
+        if line_labels is not None:
+            assert len(line_labels) == len(fig_list), \
+                "combine_plots(): the argument `line_labels`, if provided, must be a list with as many entries as `fig_list`"
+
+
+        if layout_index is not None:
+            # The layout of the "Figure" object with the given index (in `fig_list`) is used as is
+            assert 0 <= layout_index < len(fig_list), \
+                f"combine_plots(): argument {layout_index} must be an integer between 0 and {len(fig_list)-1}, inclusive"
+
+            figure_providing_layout = fig_list[layout_index]
+            all_fig = pgo.Figure(layout = figure_providing_layout.layout)   # Start with a blank "Figure" object with the designated layout
+        else:
+            all_fig = pgo.Figure()   # Start with a blank "Figure" object that will absorb all our individual plots
+
+
+        #trace_offset = 0        # Not in current use; perhaps to ditch
 
 
         representative_fig = fig_list[0]    # The axes titles of the first plot are used as default values
@@ -332,45 +476,69 @@ class PlotlyHelper:
             y_label = representative_fig.layout.yaxis.title.text
 
 
-        # Put together the data from all the various individual plots
-        combined_data = []
-        for i, fig in enumerate(fig_list):
-            combined_data += fig.data      # concatenating lists
-            if modify and i in modify:
-                dash_type = modify[i]    # EXAMPLE: "dash"
-                fig.update_traces(line=dict(dash=dash_type))
+        if legend_trace_selector is None:
+            # If no function was provided by the user, utilize a lambda function that always returns 0
+            legend_trace_selector = lambda fig: 0
+
+        for fig_index, fig in enumerate(fig_list):   # For each "figure" (plot) to combine together
+            #n = len(fig.data)     # The number of traces in that figure.  Not in current use; perhaps to ditch
+            chosen_idx = legend_trace_selector(fig)     # The index of the trace to be used for the combined legend
+
+            if modify and (fig_index in modify):
+                mod_type = modify[fig_index]    # EXAMPLE: "dash"
+                fig.update_traces(line=dict(dash=mod_type))
+
+            for j, trace in enumerate(fig.data):
+                # Process in turn each of the traces in the "figure" (plot) under consideration
+                t = copy.deepcopy(trace)    # Copy trace (important to avoid mutating originals)
+
+                if t.hovertemplate:
+                    if line_labels:
+                        prefix = line_labels[fig_index]
+                    else:
+                        prefix = fig.layout.title.text
+
+                    t.update(hovertemplate = f"<span style='font-size:16px'><b>{prefix}</b></span><br>------<br>" + t.hovertemplate)
 
 
-        if layout_index is not None:
-            # The layout of the "Figure" object with the given index (in `fig_list`) is used as is
-            assert 0 <= layout_index < len(fig_list), \
-                f"combine_plots(): argument {layout_index} must be an integer between 0 and {len(fig_list)-1}, inclusive"
+                # Legend logic
+                if legend_show_all_traces:
+                    t.showlegend = True
+                    t.name = fig_list[fig_index].data[j].name
+                else:
+                    if j == chosen_idx:
+                        # This trace is the "chosen" one to contribute to the overall legend
+                        t.showlegend = True
+                        if line_labels:
+                            t.name = line_labels[fig_index]
+                        else:
+                            t.name = fig.layout.title.text
+                    else:
+                        t.showlegend = False
 
-            figure_providing_layout = fig_list[layout_index]
-            all_fig = pgo.Figure(data=combined_data, layout = figure_providing_layout.layout)
 
-        else:
-            # Create an all-new layout for the combined "Figure" object
-            all_fig = pgo.Figure(data=combined_data)
+                all_fig.add_trace(t)   # Build up the combined "Figure" object;
+                                        # note that it's done trace-by-trace rather than by the passed individual plots ("figures")
 
+            #trace_offset += n
+
+
+        # END "for fig in fig_list"
+
+
+        if layout_index is None:
+            # Introduce the "titles" (labels) for the two axes
             all_fig.update_layout(xaxis_title=x_label,
                                   yaxis_title=y_label)
+
 
             if legend_title:
                 all_fig.update_layout(legend={"title": legend_title})
 
             if xrange:
+                assert type(xrange) == list, \
+                    "combine_plots(): the argument `xrange`, if provided, must be a list of the form [x_start, x_end]"
                 all_fig.update_layout(xaxis={"range": xrange})
-
-
-            for i, fig in enumerate(fig_list):
-                all_fig['data'][i]['showlegend'] = True
-                if curve_labels:
-                    all_fig['data'][i]['name'] = curve_labels[i]
-                    all_fig.data[i]['hovertemplate'] = f"{curve_labels[i]}<br>" + all_fig.data[i]['hovertemplate']
-                else:
-                    all_fig['data'][i]['name'] = fig.layout.title.text
-                    all_fig.data[i]['hovertemplate'] = f"{fig.layout.title.text}<br>" + all_fig.data[i]['hovertemplate']
 
 
         if title is not None:

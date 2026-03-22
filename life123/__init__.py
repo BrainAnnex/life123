@@ -10,7 +10,7 @@
     :license:       MIT.  See LICENSE file for more details.
 """
 
-__version__ = "1.0.0rc6"
+__version__ = "1.0.0rc7"
 
 
 from life123.bio_sim_1d import (System1D, Membranes1D, Diffusion1D, BioSim1D)
@@ -29,25 +29,32 @@ from life123.history import (
     HistoryReactionRate
 )
 from life123.numerical import Numerical
+from life123.random_reactions import RandomReactionNetwork
 from life123.reactions import (
+    ReactionDecomposition,
     ReactionGeneric,
     ReactionEnzyme,
     ReactionUnimolecular,
-    ReactionSynthesis,
-    ReactionDecomposition,
-    ReactionRegistry
+    ReactionSynthesis
 )
+from life123.reaction_registry import ReactionRegistry
 from life123.thermodynamics import ThermoDynamics
 from life123.uniform_compartment import UniformCompartment
 from life123.reaction_kinetics import (ReactionKinetics, VariableTimeSteps)
 
-from life123.visualization.graphic_log import GraphicLog
+from life123.visualization.graphic_log import GraphicLog, DisplayNetwork
 from life123.visualization.plotly_helper import PlotlyHelper
 from life123.visualization.py_graph_visual import PyGraphVisual
 from life123.visualization.colors import Colors
 
 
 __all__ = [
+    'GraphicLog',
+    'DisplayNetwork',
+    'PlotlyHelper',
+    'PyGraphVisual',
+
+
     'BioSim1D',
     'BioSim2D',
     'BioSim3D',
@@ -64,20 +71,18 @@ __all__ = [
     'Membranes1D',
     'Membranes2D',
     'Numerical',
+    'RandomReactionNetwork',
+    'ReactionDecomposition',
+    'ReactionEnzyme',
     'ReactionGeneric',
     'ReactionUnimolecular',
     'ReactionSynthesis',
-    'ReactionDecomposition',
     'ReactionRegistry',
-    'ReactionEnzyme',
     'ReactionKinetics',
     'System1D',
     'ThermoDynamics',
     'VariableTimeSteps',
-    'UniformCompartment',
-    'GraphicLog',
-    'PlotlyHelper',
-    'PyGraphVisual'
+    'UniformCompartment'
 ]
 
 

@@ -107,3 +107,96 @@ def test_delta_S_from_gibbs():
     assert np.allclose(delta_S, 20.)
     # Get back the original delta_G
     assert np.allclose(3000. , ThermoDynamics.delta_G_from_enthalpy(delta_H=5000, delta_S=delta_S, temp=100))
+
+
+
+def test_compute_reaction_quotient():
+    # Reaction : A <-> B
+    q = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"B")],
+                                                 conc={'A': 24., 'B': 36.}, explain=False)
+    assert np.allclose(q, 1.5)
+    q, formula = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"B")],
+                                                          conc={'A': 24., 'B': 36.}, explain=True)
+    assert np.allclose(q, 1.5)
+    assert formula == '[B] / [A]'
+
+    # Reaction: R + S <-> P + Q
+    q, formula = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"R"), (1,"S")],
+                                                          product_data=[(1,"P"), (1,"Q")],
+                                                          conc={'R': 10., 'S': 4., 'P': 5., 'Q': 20.}, explain=True)
+    assert np.allclose(q, 2.5)    #  (5 * 20) / (10 * 4)
+    assert formula == '([P][Q]) / ([R][S])'
+
+    # Reaction: R + 3 S <-> 2 P + Q
+    q, formula = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"R"), (3,"S")],
+                                                          product_data=[(2,"P"), (1,"Q")],
+                                                          conc={'R': 10., 'S': 4., 'P': 5., 'Q': 20.}, explain=True)
+    assert np.allclose(q, 0.78125)    #  (5**2 * 20) / (10 * 4**3)
+    assert formula == '( [P]^2 [Q]) / ([R] [S]^3 )'
+
+
+
+def test_extract_thermodynamic_data():
+    with pytest.raises(Exception):
+        ThermoDynamics.extract_thermodynamic_data(delta_H=1, delta_S=2, temp=None)  # Missing temp
+
+
+    result = ThermoDynamics.extract_thermodynamic_data(temp=100)
+    assert result == {"K": None, "delta_H": None, "delta_S": None, "delta_G": None}
+
+
+    result = ThermoDynamics.extract_thermodynamic_data(temp=100, K=3)
+    assert result["K"] == 3
+    assert result["delta_H"] is None
+    assert result["delta_S"] is None
+    assert np.allclose(result["delta_G"], -913.437080597)
+
+
+    result = ThermoDynamics.extract_thermodynamic_data(temp=100, delta_G=800)
+    assert np.allclose(result["K"], 0.38205953171)
+    assert result["delta_H"] is None
+    assert result["delta_S"] is None
+    assert result["delta_G"] == 800
+
+
+    with pytest.raises(Exception):
+        # Inconsistent thermodynamic data
+        ThermoDynamics.extract_thermodynamic_data(temp=100, K=3, delta_G=666.)
+
+
+    result = ThermoDynamics.extract_thermodynamic_data(temp=100, delta_H=500, delta_S=-3)
+    assert np.allclose(result["K"], 0.38205953171)
+    assert result["delta_H"] == 500
+    assert result["delta_S"] == -3
+    assert result["delta_G"] == 800
+
+
+    with pytest.raises(Exception):
+        # Inconsistent thermodynamic data
+        ThermoDynamics.extract_thermodynamic_data(temp=100, delta_H=500, delta_S=-3, delta_G=999)
+
+
+    result = ThermoDynamics.extract_thermodynamic_data(temp=100, delta_H=500, K=0.38205953171)
+    assert np.allclose(result["K"], 0.38205953171)
+    assert result["delta_H"] == 500
+    assert np.allclose(result["delta_S"], -3)
+    assert np.allclose(result["delta_G"], 800)
+
+
+    with pytest.raises(Exception):
+        # Inconsistent thermodynamic data
+        ThermoDynamics.extract_thermodynamic_data(temp=100, K=2, delta_H=500, delta_S=-3)
+
+
+    result = ThermoDynamics.extract_thermodynamic_data(temp=100, delta_H=700, delta_G=800)
+    assert np.allclose(result["K"], 0.38205953171)
+    assert result["delta_H"] == 700
+    assert np.allclose(result["delta_S"], -1)
+    assert result["delta_G"] == 800
+
+
+    result = ThermoDynamics.extract_thermodynamic_data(temp=100, delta_S=-1, delta_G=800)
+    assert np.allclose(result["K"], 0.38205953171)
+    assert np.allclose(result["delta_H"], 700)
+    assert result["delta_S"] == -1
+    assert result["delta_G"] == 800

@@ -1,3 +1,5 @@
+# See also "test_system_1d.py" and "test_membranes_1d.py"
+
 import pytest
 import numpy as np
 from life123 import BioSim1D, ReactionRegistry, UniformCompartment, ChemData

@@ -267,6 +267,9 @@ class Diagnostics:
         Note: if the run of an interval step is aborted,
               by convention NO entry is created here
 
+        CAUTION: if diagnostics weren't enabled done early enough in the simulation,
+                 some desired concentration data history may be missing
+
         :return: A Pandas dataframe, with the columns:
                     'TIME' 	'A' 'B' ... 'caption'
                     where 'A', 'B', ... are the labels of all the chemicals
@@ -429,19 +432,23 @@ class Diagnostics:
 
 
 
-    def explain_time_advance(self, return_times=False, silent=False, sys_history=None) -> Union[None, tuple]:
+    def explain_time_advance(self, return_times=False, silent=False, sys_history=None) -> None|tuple:
         """
-        Use the saved-up diagnostic data, to print out details of the timescales of the reaction run
+        Use the saved-up diagnostic data, to print out details of the varying steps of the reaction run.
 
-        If diagnostics weren't enabled ahead of calling this function, an Exception is raised
+        If diagnostics weren't enabled prior to calling this function, an Exception is raised.
 
-        EXAMPLE of output:
-            From time 0 to 0.0304, in 17 FULL steps of 0.0008
-            (for a grand total of 38 FULL steps)
+        EXAMPLE of printed output:
+            From time 0 to 0.03, in 3 steps of 0.01
+            From time 0.03 to 0.23, in 2 steps of 0.1
+            (5 steps total)
 
-        :param return_times:    If True, all the critical times (times where the interval steps change)
+        CAUTION: if diagnostics weren't enabled done early enough in the simulation,
+                 some desired diagnostic data may be missing
+
+        :param return_times:    [OPTIONAL] If True, all the critical times (times where the interval steps change)
                                     are saved and returned as a list
-        :param silent:          If True, nothing gets printed out
+        :param silent:          [OPTIONAL] If True, nothing gets printed out
         :param sys_history:     [OPTIONAL] The system history.
                                     If passed, use it in lieu of the diagnostic data;
                                     a consideration is the fact that the user might only have asked
@@ -456,6 +463,7 @@ class Diagnostics:
                 "Diagnostics.explain_time_advance(): no history data found.  " \
                 "Did you run the reaction simulation prior to calling this function?"
         else:
+            # Make use of historical diagnostic concentration data
             df = self.get_diagnostic_conc_data()
             assert not df.empty , \
                 "Diagnostics.explain_time_advance(): no diagnostic data found.  " \
@@ -615,7 +623,7 @@ class Diagnostics:
         # Pick (arbitrarily) the first reactant,
         # to establish a baseline change in concentration relative to its stoichiometric coefficient
         baseline_term = reactants[0]
-        baseline_species_name = rxn.extract_species_name(baseline_term)
+        baseline_species_name = rxn.extract_chem_label(baseline_term)
         baseline_species_index = self.chem_data.get_index(baseline_species_name)
         baseline_stoichiometry = rxn.extract_stoichiometry(baseline_term)
         baseline_ratio =  (delta_arr[baseline_species_index]) / baseline_stoichiometry
@@ -623,7 +631,7 @@ class Diagnostics:
 
         for i, term in enumerate(reactants):
             if i != 0:
-                species_name = rxn.extract_species_name(term)
+                species_name = rxn.extract_chem_label(term)
                 species_index = self.chem_data.get_index(species_name)
                 stoichiometry = rxn.extract_stoichiometry(term)
                 ratio =  (delta_arr[species_index]) / stoichiometry
@@ -632,7 +640,7 @@ class Diagnostics:
                     return False
 
         for term in products:
-            species_name = rxn.extract_species_name(term)
+            species_name = rxn.extract_chem_label(term)
             species_index = self.chem_data.get_index(species_name)
             stoichiometry = rxn.extract_stoichiometry(term)
             ratio =  - (delta_arr[species_index]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn

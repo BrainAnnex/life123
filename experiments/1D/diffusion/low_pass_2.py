@@ -22,8 +22,8 @@
 # ### TAGS :  "diffusion 1D"
 
 # %%
-LAST_REVISED = "June 4, 2025"
-LIFE123_VERSION = "1.0.0rc6"        # Library version this experiment is based on
+LAST_REVISED = "Mar. 17, 2026"
+LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -332,9 +332,9 @@ fig_freq_2
 
 # %%
 # Combine the last 2 plots
-PlotlyHelper.combine_plots(fig_list=[fig_freq_2, fig_freq_10],  
+PlotlyHelper.combine_plots(fig_list=[fig_freq_2, fig_freq_10],
                            title="Superposed plots for frequency 2 and 10",
-                           curve_labels=["Component of frequency=2", "Component of frequency=10"])
+                           line_labels=["Component of frequency=2", "Component of frequency=10"])
 
 # %% [markdown]
 # ## Note how more more substantial the attenuation of the higher frequency (red) is!

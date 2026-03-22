@@ -22,8 +22,8 @@
 # ### TAGS :   "quick-start", "uniform compartment"
 
 # %%
-LAST_REVISED = "Aug. 29, 2025"
-LIFE123_VERSION = "1.0.0rc6"         # Library version this experiment is based on
+LAST_REVISED = "Mar. 17, 2026"
+LIFE123_VERSION = "1.0.0rc7"         # Library version this experiment is based on
 
 # %%
 #import set_path            # Using MyBinder?  Uncomment this before running the next cell!
@@ -46,12 +46,11 @@ life123.check_version(LIFE123_VERSION)    # To check compatibility
 # ## Initialize the System
 
 # %%
-# Instantiate the simulator and specify the chemicals
+# Instantiate the simulator and specify the reaction and the chemicals
 uc = life123.UniformCompartment()  
 
 # Elementary Reaction A <-> B
-uc.add_reaction(reactants="A", products="B", 
-                kF=3., kR=2.)
+uc.add_reaction(reactants="A", products="B", kF=3., kR=2.)
 
 uc.describe_reactions()
 
@@ -59,11 +58,13 @@ uc.describe_reactions()
 # Set the initial concentrations of all the chemicals
 uc.set_conc({"A": 80., "B": 10.})
 
+# %%
+
 # %% [markdown]
 # ## Run the reaction
 
 # %%
-uc.single_compartment_react(initial_step=0.1, target_end_time=1.)   # Using defaults for all other parameters
+uc.single_compartment_react(target_end_time=1.)   # Using defaults for all other parameters
 
 # %%
 uc.get_history()   # The system's history, saved during the run of single_compartment_react()
@@ -72,7 +73,7 @@ uc.get_history()   # The system's history, saved during the run of single_compar
 
 # %% [markdown]
 # ## Plots changes of concentration with time  
-# Notice that adaptive variable time steps were automatically taken
+# Notice that **adaptive variable time steps** were automatically taken
 
 # %%
 uc.plot_history(show_intervals=True)

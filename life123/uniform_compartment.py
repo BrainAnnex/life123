@@ -8,7 +8,7 @@ from typing import Union
 from life123.chem_data import ChemData
 from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
-from life123.reactions import ReactionRegistry, ReactionGeneric, ReactionUnimolecular
+from life123.reaction_registry import ReactionRegistry
 from life123.reaction_kinetics import VariableTimeSteps
 from life123.history import HistoryUniformConcentration, HistoryReactionRate
 from life123.visualization.plotly_helper import PlotlyHelper
@@ -40,15 +40,16 @@ class UniformCompartment:
     This might be thought of as a "zero-dimensional system"
     """
 
-    def __init__(self, reactions=None, chem_data=None, names=None, preset="mid", enable_diagnostics=False, temp = 298.15):
+    def __init__(self, reactions=None, chem_data=None, names=None,
+                       preset="mid", exact=False, enable_diagnostics=False, temp=298.15):
         """
         Note: AT MOST 1 of the following 3 arguments can be passed
 
-        :param reactions:   [OPTIONAL 1] Object of type "Reactions", with data about the reactions and the chemicals.
+        :param reactions:   [OPTIONAL 1] Object of type "ReactionRegistry", with data about the reactions and the chemical species.
                                 If passed, cannot pass either of the args `chem_data` nor `names` (those are both part of the "Reactions" object);
                                 if not passed, the reactions can be added later, with calls to add_reaction()
 
-        :param chem_data:   [OPTIONAL 2] Object of type "ChemData" (with data about the chemicals and their reactions).
+        :param chem_data:   [OPTIONAL 2] Object of type "ChemData" (with data about the chemical species).
                                 If passed, cannot pass either of the args  `reactions` (an object that contains `chem_data`) nor `names`
                                 (names are contained in the `chem_data` object)
 
@@ -57,24 +58,36 @@ class UniformCompartment:
                                 If passed, cannot pass either of the args `reactions` nor `chem_data` (both those object contain the chemical names)
 
 
-        :param preset:      [OPTIONAL] String with code that can be adjusted make the time resolution finer or coarser;
-                                it will stay in effect from now on, unless explicitly changed later
+        :param preset:      [OPTIONAL] String with name of a standard preset
+                                that can be specified to make the time resolution finer or coarser;
+                                it will stay in effect from now on, unless explicitly changed later.
+                                Available values (in generally-increasing speed):
+                                    'heavy_brakes', 'slower', 'slow', 'mid' (default), 'fast'
+
+        :param exact:       [OPTIONAL] If True, use exact analytical solutions whenever possible;
+                                if False (default), always use the "Forward Euler" approximation method
 
         :param enable_diagnostics:  [OPTIONAL] If True, the diagnostics mode is turned on - and will remain on unless explicitly
                                         disabled by a call to pause_diagnostics();
                                         if False (default), no action taken
+        :param temp:        [OPTIONAL] Temperature in Kelvins.  Default is 298.15 K (25 C)
         """
 
         self.chem_data = None       # Object of type "ChemData" (with data about the chemicals and their reactions,
                                     #                            incl. macromolecules)
-        self.reactions = None       # Object ot type "ReactionRegistry" (with data about all the reactions)
+
+        self.reaction_data = None   # Object ot type "ReactionRegistry" (with data about all the reactions)
 
         self.temp = temp            # Temperature in Kelvins.  (By default, 298.15 K, the equivalent of 25 C)
                                     # For now, assumed constant everywhere, and unvarying (or very slowly varying)
 
+        self.exact = exact          # If True, use exact analytical solutions whenever possible;
+                                    # if False, always use the "Forward Euler" approximation method
+
+
         if chem_data and reactions:
             assert reactions.get_chem_data() == chem_data, \
-                "BioSim1D() instantiation: the argument `reactions` is based " \
+                "UniformCompartment() instantiation: the argument `reactions` is based " \
                 "on a 'ChemData' object that doesn't match the one passed by the argument `chem_data`"
 
         if reactions is not None:
@@ -83,7 +96,7 @@ class UniformCompartment:
             assert names is None, \
                 "UniformCompartment instantiation: Cannot pass both `names` and `reactions` as arguments (the `reactions` object already contains the `names`)"
             self.chem_data = reactions.chem_data
-            self.reactions = reactions
+            self.reaction_data = reactions
         else:           # reactions is None
             if chem_data is None:
                 self.chem_data = ChemData(names=names)      # It's ok if names is None
@@ -92,7 +105,7 @@ class UniformCompartment:
                     "UniformCompartment instantiation: Cannot pass both `chem_data` and `names` as arguments (the `chem_data` object contains the `names`)"
                 self.chem_data = chem_data
 
-            self.reactions = ReactionRegistry(chem_data=self.chem_data)
+            self.reaction_data = ReactionRegistry(chem_data=self.chem_data)
 
 
         self.system_time = 0.       # Global time of the system, from initialization on
@@ -286,25 +299,26 @@ class UniformCompartment:
 
 
 
-    def get_chem_conc(self, name: str) -> float:
+    def get_chem_conc(self, label :str) -> float:
         """
-        Return the current system concentration of the given chemical, specified by its name.
+        Return the current system concentration of the given chemical, specified by its label.
         If no chemical by that name exists, an Exception is raised
 
-        :param name:    The name of a chemical species
+        :param label:   The label of a chemical species
         :return:        The current system concentration of the above chemical
         """
-        species_index = self.chem_data.get_index(name)
+        species_index = self.chem_data.get_index(label)
         return self.system[species_index]
 
 
 
-    def get_conc_dict(self, species=None, system_data=None) -> dict:
+    def get_conc_dict(self, chem_labels=None, system_data=None) -> dict:
         """
         Retrieve the concentrations of the requested chemicals (by default all),
         as a dictionary indexed by the chemicals' labels
 
-        :param species:     [OPTIONAL] List or tuple of labels of the chemical species; by default, return all
+        :param chem_labels: [OPTIONAL] List or tuple of the labels of the chemical species;
+                                by default, return all
         :param system_data: [OPTIONAL] A Numpy array of concentration values, in the same order as the
                                 index of the chemical species; by default, use the SYSTEM DATA
 
@@ -319,19 +333,19 @@ class UniformCompartment:
                 f"as the declared number of chemicals ({self.chem_data.number_of_chemicals()})"
 
 
-        if species is None:
+        if chem_labels is None:
             if system_data is None:
                 return {}
             else:
                 return {self.chem_data.get_label(index): system_data[index]
                         for index, conc in enumerate(system_data)}
         else:
-            assert type(species) == list or  type(species) == tuple, \
+            assert type(chem_labels) == list or type(chem_labels) == tuple, \
                 f"UniformCompartment.get_conc_dict(): the argument `species` must be a list or tuple" \
-                f" (it was of type {type(species)})"
+                f" (it was of type {type(chem_labels)})"
 
             conc_dict = {}
-            for name in species:
+            for name in chem_labels:
                 species_index = self.chem_data.get_index(name)
                 conc_dict[name] = system_data[species_index]
 
@@ -344,69 +358,40 @@ class UniformCompartment:
         Specify the temperature of the environment
 
         :param temp:    Temperature value (or use None to unset)
-        :param units:   Either "K" for Kelvins (default) or "C" for Celsius
+        :param units:   Either "K" for Kelvins (default) or "C" for Celsius;
+                            case-insensitive
         :return:        None
         """
-        # TODO: also allow lowercase units
-        if units == "C":
+        if units == "C" or units == "c":
             temp += 273.15
         else:
-            assert units == "K", \
+            assert units == "K" or units == "k", \
                 "set_temp(): allowable values for `units` are 'K' and 'C'"
 
         self.temp = temp
 
 
-
-
-
-    #####################################################################################################
-
-    '''                                 ~  TO VISUALIZE SYSTEM  ~                                     '''
-
-    def ________TO_VISUALIZE_SYSTEM________(DIVIDER):
-        pass         # Used to get a better structure view in IDEs such asPycharm
-    #####################################################################################################
-
-
-    def describe_state(self) -> None:
+    def set_preset(self, preset :str) -> None:
         """
-        Print out various data on the current state of the system, incl. system time
 
+        :param preset:  String with name of a standard preset
+                            that can be specified to make the time resolution finer or coarser;
+                            it will stay in effect unless explicitly changed later.
+                            Available values (in generally-increasing speed):
+                                'heavy_brakes', 'slower', 'slow', 'mid' (default), 'fast'
         :return:        None
         """
-        print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
+        self.adaptive_steps.use_adaptive_preset(preset)
 
-        n_species = self.chem_data.number_of_chemicals()
-        print(f"{n_species} species:")
 
-        # Show a line of line of data for each chemical species in turn
-        for species_index, name in enumerate(self.chem_data.get_all_labels()):
-            if name:    # If a name was provided, show it
-                name = f" ({name})"
-            else:
-                name = ""
+    def set_exact_mode(self, exact :bool) -> None:
+        """
 
-            if self.system is None:
-                print(f"  Species {species_index}{name}. No concentrations set yet")
-            else:
-                print(f"  Species {species_index}{name}. Conc: {self.system[species_index]}")
-
-        if self.macro_system != {}:
-            print("Macro-molecules, with their counts: ", self.macro_system)
-
-        if self.macro_system_state != {}:
-            print("Fractional Occupancy at the various binding sites for each macro-molecule:")
-            for mm, state_dict in self.macro_system_state.items():
-                state_list = [f"{a}: {b[1]} ({b[0]})" for a, b in state_dict.items()]   # EXAMPLE: ["3: 0.1 (A)", "8: 0.6 (B)"]
-                state_str = " | ".join(state_list)                                      # EXAMPLE: "3: 0.1 (A) | "8: 0.6 (B)"
-                print(f"     {mm} || {state_str}")
-
-        if self.reactions.active_enzymes == set():    # If no enzymes were involved in any reaction
-            print(f"Chemicals involved in reactions: {self.reactions.labels_of_active_chemicals()}")
-        else:
-            print(f"Chemicals involved in reactions (not counting enzymes): {self.reactions.labels_of_active_chemicals()}")
-            print(f"Enzymes involved in reactions: {self.reactions.names_of_enzymes()}")
+        :param exact:   If True, use exact analytical solutions whenever possible;
+                                if False (default), always use the "Forward Euler" approximation method
+        :return:        None
+        """
+        self.exact = exact
 
 
 
@@ -421,13 +406,13 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def get_reactions(self):
+    def get_reactions(self) -> ReactionRegistry:
         """
         Return all the reactions associated to this Uniform Compartment
 
-        :return:    Object ot type "Reactions" (with data about all the reactions)
+        :return:    Object ot type "ReactionRegistry" (with data about all the reactions)
         """
-        return self.reactions
+        return self.reaction_data
 
 
 
@@ -438,7 +423,7 @@ class UniformCompartment:
         :param i:   Integer index of the desired reaction
         :return:    Object of type "ReactionGeneric"
         """
-        return self.reactions.get_reaction(i)
+        return self.reaction_data.get_reaction(i)
 
 
 
@@ -447,12 +432,12 @@ class UniformCompartment:
         Get rid of all reactions; start again with "an empty slate" (but still with reference
         to the same data object about the chemicals)
 
+        :return:    None
+        """
         # TODO: maybe offer an option to clear just one reaction, or a list of them
         # TODO: provide support for "inactivating" reactions
 
-        :return:    None
-        """
-        self.reactions.clear_reactions_data()
+        self.reaction_data.clear_reactions_data()
 
 
 
@@ -468,9 +453,9 @@ class UniformCompartment:
         """
         if self.temp:
             # If a temperature is set for the uniform compartment, pass it to the reaction
-            return self.reactions.add_reaction(temp=self.temp, **kwargs)
+            return self.reaction_data.add_reaction(temp=self.temp, **kwargs)
         else:
-            return self.reactions.add_reaction(**kwargs)
+            return self.reaction_data.add_reaction(**kwargs)
 
 
 
@@ -483,7 +468,7 @@ class UniformCompartment:
         :param kwargs:  Any arbitrary named arguments
         :return:        None
         """
-        self.reactions.describe_reactions(**kwargs)
+        self.reaction_data.describe_reactions(**kwargs)
 
 
 
@@ -493,26 +478,7 @@ class UniformCompartment:
 
         :return:    The number of registered chemical reactions
         """
-        return self.reactions.number_of_reactions()
-
-
-
-    def plot_reaction_network(self, graphic_component :str, unpack=False) -> None:
-        """
-        Send a plot of the network of reactions to the HTML log file,
-        also including a brief summary of all the reactions
-
-        EXAMPLE of usage:  plot_reaction_network("vue_cytoscape_2")
-
-        :param graphic_component:   The name of a Vue component that accepts a "graph_data" argument,
-                                        an object with the following keys
-                                        'structure', 'color_mapping' and 'caption_mapping'
-                                        For more details, see ChemData.prepare_graph_network()
-        :param unpack:              Use True for Vue components that require their data unpacked into individual arguments;
-                                        False for that accept a single data argument, named "graph_data"
-        :return:                    None
-        """
-        self.reactions.plot_reaction_network(graphic_component=graphic_component, unpack=unpack)
+        return self.reaction_data.number_of_reactions()
 
 
 
@@ -527,53 +493,101 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def specify_steps(self, total_duration=None, time_step=None, n_steps=None) -> (float, int):
+    def specify_steps(self, duration=None, initial_step=None, n_steps=None) -> (float, int):
         """
-        If either the time_step or n_steps is not provided (but at least 1 of them must be present),
-        determine the other one from total_duration
+        If either the `initial_step` or `n_steps` is not provided (but at least 1 of them must be present),
+        determine the other one from `duration`
 
         Their desired relationship is: total_duration = time_step * n_steps
 
-        :param total_duration:  Float with the overall time advance (i.e. time_step * n_steps)
-        :param time_step:       Float with the size of each time step
-        :param n_steps:         Integer with the desired number of steps
-        :return:                The pair (time_step, n_steps)
+        :param duration:    Float with the overall time advance (i.e. time_step * n_steps)
+        :param initial_step:Float with the size of each time step
+        :param n_steps:     Integer with the desired number of steps
+        :return:            The pair (time_step, n_steps)
         """
-        assert (not total_duration or not time_step or not n_steps), \
-            "UniformCompartment.specify_steps(): cannot specify all 3 arguments: `total_duration`, `time_step`, `n_steps` (specify only any 2 of them)"
+        DEFAULT_N_STEPS = 10
 
-        assert (total_duration and time_step) or (total_duration and n_steps) or (time_step and n_steps), \
-            "UniformCompartment.specify_steps(): must provide exactly 2 arguments from:  `total_duration`, `time_step`, `n_steps`"
+        assert (not duration or not initial_step or not n_steps), \
+            "UniformCompartment.specify_steps(): cannot specify all 3 arguments: " \
+            "`duration`, `initial_step`, `n_steps` (specify at most 2 of them)"
 
-        if not time_step:
-            time_step = total_duration / n_steps
+        assert (duration or initial_step), \
+            "UniformCompartment.specify_steps(): at least 1 of the arguments `duration` and `initial_step` must be provided"
+
+        if (not initial_step) and (not n_steps):    # If only `duration` is provided
+            n_steps = DEFAULT_N_STEPS
+            initial_step = duration
+            return (initial_step, n_steps)
+
+        if (not duration) and (not n_steps):        # If only `initial_step` is provided
+            n_steps = DEFAULT_N_STEPS
+            return (initial_step, n_steps)
+
+        # If we get this far, both `duration` and `initial_step` must be present
+
+        if not initial_step:
+            initial_step = duration / n_steps
 
         if not n_steps:
-            n_steps = math.ceil(total_duration / time_step)
+            n_steps = math.ceil(duration / initial_step)
 
-        return (time_step, n_steps)     # Note: could opt to also return total_duration if there's a need for it
+        return (initial_step, n_steps)     # Note: could opt to also return total_duration if there's a need for it
+
+
+
+    def react_to_equilibrium(self, initial_step, silent=True, max_cycles=1000) -> None:
+        """
+        Simulate ALL the (previously-registered) reactions in the single uniform ("well-stirred") compartment -
+        based on the INITIAL concentrations stored in self.system , until equilibrium is reached,
+        or the specified max number of rounds of simulations is reached (in the latter case, an Exception is raised).
+
+        Adaptive variable time steps are automatically picked.
+
+        Update the system state and the system time accordingly
+        (object attributes self.system and self.system_time)
+
+        :param initial_step:The suggested size of the first step (it might be reduced automatically,
+                                in case of "hard" errors resulting from overly-large steps)
+        :param silent:      [OPTIONAL] If True, less output is generated
+        :param max_cycles:  [OPTIONAL] Note that simulation cycles aren't the same as the computation time steps
+        :return:            None
+        """
+        result = self.single_compartment_react(duration=initial_step, silent=silent)    # Variable steps is the default
+        rec_step = result.get("recommended_next_step")
+
+        count = 1
+        while (self.is_in_equilibrium(explain=False) != True):
+            #print(f"react_to_equilibrium(): cycle # {count}")
+            result = self.single_compartment_react(duration=rec_step, silent=silent)    # Take the variable step recommended by the previous run
+            rec_step = result.get("recommended_next_step")
+            if count > max_cycles:
+                raise Exception(f"react_to_equilibrium(): Unable to reach equilibrium within the requested {max_cycles} simulation cycles")
+            count += 1
+
+        if silent:
+            print(f"System Time is now: {self.system_time:,.5g}")       # For silent mode, just give a one-liner final summary
 
 
 
     def single_compartment_react(self, duration=None, target_end_time=None, stop=None,
                                  initial_step=None, n_steps=None, max_steps=None,
                                  variable_steps=True, explain_variable_steps=None,
-                                 silent=False, report_interval=0.5) -> None:
+                                 silent=False, report_interval=0.5) -> dict:
         """
-        Perform ALL the (previously-registered) reactions in the single compartment -
+        Simulate ALL the (previously-registered) reactions in the single uniform ("well-stirred") compartment -
         based on the INITIAL concentrations stored in self.system
 
         Update the system state and the system time accordingly
         (object attributes self.system and self.system_time)
 
-        :param duration:        The overall time advance for the reactions (it may be exceeded in case of variable steps)
-        :param target_end_time: The final time at which to stop the reaction; it may be exceeded in case of variable steps
+        :param duration:        [OPTIONAL] The overall time advance for the reactions (it may be exceeded in case of variable steps)
+        :param target_end_time: [OPTIONAL] The final time at which to stop the reaction; it may be exceeded in case of variable steps
                                     If both `target_end_time` and `duration` are specified, an error will result
 
-        :param initial_step:    The suggested size of the first step (it might be reduced automatically,
+        :param initial_step:    [OPTIONAL] The suggested size of the first step (it might be reduced automatically,
                                     in case of "hard" errors resulting from overly-large steps)
 
-        :param stop:            Pair of the form (termination_keyword, termination_parameter), to indicate
+        :param stop:            [OPTIONAL] Pair of the form (termination_keyword, termination_parameter), to indicate
                                     the criterion to use to stop the reaction
                                     EXAMPLES:
                                         ("conc_below", (chem_name, conc))  Stop when conc first dips below
@@ -584,7 +598,7 @@ class UniformCompartment:
                                         ("after_time", t)                   Stop just after the given target time
                                         ("equilibrium", tolerance)          Stop when equilibrium reached
 
-        :param n_steps:         The desired number of steps
+        :param n_steps:         [OPTIONAL] The desired number of steps
 
         :param max_steps:       [OPTIONAL] Max numbers of steps; if reached, it'll terminate regardless of any other criteria
 
@@ -597,7 +611,8 @@ class UniformCompartment:
         :param report_interval:         [OPTIONAL] How frequently, in terms of elapsed running time, in minutes,
                                             to inform the user of the current status
 
-        :return:                        None.   The object attributes self.system and self.system_time get updated
+        :return:                        A dictionary containing the key "recommended_next_step"
+                                        Note: the object attributes self.system and self.system_time get updated
         """
 
         # Default values
@@ -614,9 +629,10 @@ class UniformCompartment:
 
         if stop is not None:
             assert type(stop) == tuple and len(stop) == 2, \
-                f"UniformCompartment.single_compartment_react(): the argument `stop`, if passed, must be a pair of values"
+                f"UniformCompartment.single_compartment_react(): the argument `stop`, if passed, " \
+                f"must be a pair of values, of the form (termination_keyword, termination_parameter)"
 
-        assert self.reactions.number_of_reactions() > 0, \
+        assert self.reaction_data.number_of_reactions() > 0, \
             f"UniformCompartment.single_compartment_react(): no reactions are present.  Make sure to first add them with add_reaction()"
 
 
@@ -645,10 +661,13 @@ class UniformCompartment:
 
             # Determine the time step,
             # as well as the required number of such steps
-            time_step, n_steps = self.specify_steps(total_duration=duration,
-                                                    time_step=initial_step,
+            # TODO: if the following call results in an Exception, the reported arguments are confusing because
+            #       the names don't match
+            time_step, n_steps = self.specify_steps(duration=duration,
+                                                    initial_step=initial_step,
                                                     n_steps=n_steps)
-            # Note: if variable steps are requested then n_steps stops being particularly meaningful; it becomes a
+            #print(f"time_step: {time_step} , n_steps: {n_steps}")
+            # Note: if variable steps are requested then `n_steps` stops being particularly meaningful; it becomes a
             #       hypothetical value, in the (unlikely) event that the step sizes were never changed - and is only
             #       used to detect a very excessive number of actual attempted steps
 
@@ -672,109 +691,63 @@ class UniformCompartment:
         report_interval *= 60.      # Convert to seconds
 
 
-        '''
-        TODO: explore a main loop of the form:
-        
         try:
-            [MAIN LOOP BODY]
-        
-        except KeyboardInterrupt:
-            print("\n*** KeyboardInterrupt exception caught")
-        '''
+            while True:     # Loop until one of various criteria becomes applicable
+
+                # Check various criteria for termination
+                if (max_steps is not None) and (step_count >= max_steps):
+                    print(f"single_compartment_react(): computation stopped because max # of steps ({max_steps}) reached")
+                    break       # We have reached the max allowable number of steps
+
+                if (target_end_time is not None) and (self.system_time >= target_end_time):
+                    break       # The system time has reached the target endtime
+
+                if (stop is not None):
+                    (termination_keyword, termination_parameter) = stop
+                    if termination_keyword == "conc_below":
+                        chem_name, conc_threshold = termination_parameter
+                        if self.get_chem_conc(chem_name) < conc_threshold:
+                            break   # The concentration of the specified chemical has dropped the requested threshold
+                    elif termination_keyword == "conc_above":
+                        chem_name, conc_threshold = termination_parameter
+                        if self.get_chem_conc(chem_name) > conc_threshold:
+                            break   # The concentration of the specified chemical has risen above the requested threshold
+
+                if (not variable_steps) and (step_count == n_steps)\
+                        and (target_end_time is not None) and np.allclose(self.system_time, target_end_time):
+                    break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
+                                #   the System Time is below the target_end_time because of roundoff error
 
 
-        # MAIN LOOP
-        while True:
-            # Check various criteria for termination
-            if (max_steps is not None) and (step_count >= max_steps):
-                print(f"single_compartment_react(): computation stopped because max # of steps ({max_steps}) reached")
-                break       # We have reached the max allowable number of steps
-
-            if (target_end_time is not None) and (self.system_time >= target_end_time):
-                break       # The system time has reached the target endtime
-
-            if (stop is not None):
-                (termination_keyword, termination_parameter) = stop
-                if termination_keyword == "conc_below":
-                    chem_name, conc_threshold = termination_parameter
-                    if self.get_chem_conc(chem_name) < conc_threshold:
-                        break   # The concentration of the specified chemical has dropped the requested threshold
-                elif termination_keyword == "conc_above":
-                    chem_name, conc_threshold = termination_parameter
-                    if self.get_chem_conc(chem_name) > conc_threshold:
-                        break   # The concentration of the specified chemical has risen above the requested threshold
-
-            if (not variable_steps) and (step_count == n_steps)\
-                    and (target_end_time is not None) and np.allclose(self.system_time, target_end_time):
-                break       # When dealing with fixed steps, catch scenarios where after performing n_steps,
-                            #   the System Time is below the target_end_time because of roundoff error
+                # ---  CORE OPERATION OF MAIN LOOP  ---
+                step_count, recommended_next_step = self._single_compartment_react_main_loop(step_count=step_count, n_steps=n_steps,
+                                                                    variable_steps=variable_steps, time_step=time_step,
+                                                                    explain_variable_steps=explain_variable_steps)
 
 
-            # ----------  CORE OPERATION OF MAIN LOOP  ----------
-            if variable_steps:
-                delta_concentrations, step_actually_taken, recommended_next_step = \
-                    self.reaction_step_common(delta_time=time_step,
-                                              variable_steps=variable_steps, explain_variable_steps=explain_variable_steps,
-                                              step_counter=step_count)
-            else:
-                # Fixed steps
-                delta_concentrations = \
-                    self.reaction_step_common_fixed_step(delta_time=time_step, step_counter=step_count)
-                step_actually_taken = time_step
-                recommended_next_step = time_step
+                if self.diagnostics_enabled:
+                    # Save up the current time and System State as "diagnostic 'concentration' data"
+                    system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
+                    self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
 
+                t_now = time.perf_counter()
+                t_elapsed = t_now - t_report    # Time elapsed since the last report
+                if (not silent) and (t_elapsed > report_interval):
+                    if variable_steps:
+                        info_on_step = f"(doing step size {time_step:,.2g})"
+                    else:
+                        info_on_step = ""
+                    print(f"... running : currently at System Time {self.system_time:,.4g} {info_on_step} after running for {(t_now - t_start)/60:.1f} min")
+                    t_report = t_now            # Reset
 
-            # Update the System State
-            self.previous_system = self.system.copy()
-            self.system += delta_concentrations
-            if min(self.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
-                print(f"***********  SYSTEM STATE ERROR: FAILED TO CATCH negative concentration "
-                      f"upon advancing reactions from system time t={self.system_time:,.5g}")
-
-
-            # Preserve the RATES data, as requested (part1, BEFORE updating the System Time, because reaction rates are
-            # based on the *start* time of the simulation step)
-            if step_count == 0:
-                self.capture_rate_snapshot(force=True, step_count=0)    # Always save the initial rate
-            else:
-                self.capture_rate_snapshot(step_count=step_count)       # Save historical rate values (if enabled)
-
-            # UPDATE THE SYSTEM TIME (now we're at the END of the current time step)
-            self.system_time += step_actually_taken
-
-
-            # Preserve the CONCENTRATION data, as requested (part2, AFTER updating the System Time, because current concentrations
-            # refer to the System Time, just updated at the end of the simulation step)
-            self.capture_conc_snapshot(step_count=step_count+1) # Save historical concentration values (if enabled)
-                                                                # It's +1 because we save the conc. values at the END of the step
-
-
-            step_count += 1
-
-            if (n_steps is not None) and (step_count > 1000 * n_steps):  # Another approach to catch infinite loops
-                raise Exception("single_compartment_react(): "
-                                "the computation is taking a very large number of steps, probably from automatically trying to correct instability;"
-                                " trying reducing the time_step")   # TODO: is the explanation correctly phrased?
-
-            if self.diagnostics_enabled:
-                # Save up the current time and System State as "diagnostic 'concentration' data"
-                system_data = self.get_conc_dict(system_data=self.system)   # The current System State, as a dict
-                self.diagnostics.save_diagnostic_conc_data(system_data=system_data, system_time=self.system_time)
-
-            t_now = time.perf_counter()
-            t_elapsed = t_now - t_report    # Time elapsed since the last report
-            if (not silent) and (t_elapsed > report_interval):
                 if variable_steps:
-                    info_on_step = f"(doing step size {time_step:,.2g})"
-                else:
-                    info_on_step = ""
-                print(f"... running : currently at System Time {self.system_time:,.4g} {info_on_step} after running for {(t_now - t_start)/60:.1f} min")
-                t_report = t_now            # Reset
-
-            if variable_steps:
-                time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
+                    time_step = recommended_next_step   # Follow the recommendation of the ODE solver for the next time step to take
 
         # --- END while ---
+
+        except KeyboardInterrupt:
+            print("\n*** KeyboardInterrupt exception caught")
+
 
 
         # We're now at the end of the computation
@@ -814,6 +787,72 @@ class UniformCompartment:
 
         # Add a caption to the very last entry in the system history
         self.conc_history.set_caption_last_snapshot(final_step_caption)
+
+        return {"recommended_next_step": recommended_next_step}
+
+
+
+    def _single_compartment_react_main_loop(self, step_count, n_steps, variable_steps,
+                                            time_step, explain_variable_steps) -> (int, float):
+        """
+        Helper function to single_compartment_react(), for its main loop.
+        Perform the reaction step (either fixed or variable step, as appropriate),
+        then update the System State, and preserve the RATES data.
+        If the number of steps taken so far is getting excessive, raise an Exception
+
+        :param step_count:
+        :param n_steps:
+        :param variable_steps:
+        :param time_step:
+        :param explain_variable_steps:
+        :return:                        The pair (step_count, recommended_next_step)
+        """
+        # ----------  CORE OPERATION OF MAIN LOOP  ----------
+        if variable_steps:
+            delta_concentrations, step_actually_taken, recommended_next_step = \
+                self.reaction_step_common(delta_time=time_step,
+                                          variable_steps=variable_steps, explain_variable_steps=explain_variable_steps,
+                                          step_counter=step_count)
+        else:
+            # Fixed steps
+            delta_concentrations = \
+                self.reaction_step_common_fixed_step(delta_time=time_step, step_counter=step_count)
+            step_actually_taken = time_step
+            recommended_next_step = time_step
+
+
+        # Update the System State
+        self.previous_system = self.system.copy()
+        self.system += delta_concentrations
+        if min(self.system) < 0:    # Check for negative concentrations. TODO: redundant, since reaction_step_common() now does that
+            print(f"***********  SYSTEM STATE ERROR: FAILED TO CATCH negative concentration "
+                  f"upon advancing reactions from system time t={self.system_time:,.5g}")
+
+
+        # Preserve the RATES data, as requested (part1, BEFORE updating the System Time, because reaction rates are
+        # based on the *start* time of the simulation step)
+        if step_count == 0:
+            self.capture_rate_snapshot(force=True, step_count=0)    # Always save the initial rate
+        else:
+            self.capture_rate_snapshot(step_count=step_count)       # Save historical rate values (if enabled)
+
+        # UPDATE THE SYSTEM TIME (now we're at the END of the current time step)
+        self.system_time += step_actually_taken
+
+
+        # Preserve the CONCENTRATION data, as requested (part2, AFTER updating the System Time, because current concentrations
+        # refer to the System Time, just updated at the end of the simulation step)
+        self.capture_conc_snapshot(step_count=step_count+1) # Save historical concentration values (if enabled)
+                                                            # It's +1 because we save the conc. values at the END of the step
+
+        step_count += 1
+
+        if (n_steps is not None) and (step_count > 1000 * n_steps):  # Another approach to catch infinite loops
+            raise Exception("single_compartment_react(): "
+                            "the computation is taking a very large number of steps, probably from automatically trying to correct instability;"
+                            " trying reducing the time_step")   # TODO: is the explanation correctly phrased?
+
+        return step_count, recommended_next_step
 
 
 
@@ -1048,7 +1087,7 @@ class UniformCompartment:
 
         if variable_steps:
             decision_data = self.adaptive_steps.adjust_timestep(n_chems=self.chem_data.number_of_chemicals(),
-                                                                indexes_of_active_chemicals= self.reactions.indexes_of_active_chemicals(),
+                                                                indexes_of_active_chemicals= self.reaction_data.indexes_of_active_chemicals(),
                                                                 delta_conc=delta_concentrations, baseline_conc=self.system, prev_conc=self.previous_system)
             step_factor = decision_data['step_factor']
             action = decision_data['action']
@@ -1067,9 +1106,9 @@ class UniformCompartment:
                 print("    Baseline: ", self.system)
                 print("    Deltas:   ", delta_concentrations)
 
-                if len(self.reactions.active_chemicals) < self.chem_data.number_of_chemicals():
-                    print(f"    Restricting adaptive time step analysis to {len(self.reactions.active_chemicals)} "
-                    f"chemicals only: {self.reactions.labels_of_active_chemicals()} , with indexes: {self.reactions.indexes_of_active_chemicals()}")
+                if len(self.reaction_data.active_chemicals) < self.chem_data.number_of_chemicals():
+                    print(f"    Restricting adaptive time step analysis to {len(self.reaction_data.active_chemicals)} "
+                    f"chemicals only: {self.reaction_data.labels_of_active_chemicals()} , with indexes: {self.reaction_data.indexes_of_active_chemicals()}")
 
                 print("    Norms:    ", all_norms)
                 print("    Thresholds:    ")
@@ -1182,16 +1221,20 @@ class UniformCompartment:
 
     def _reaction_elemental_step(self, delta_time: float, rxn_list=None) -> np.array:
         """
-        Using the system concentration data of ALL the chemical species,
-        do the specified SINGLE TIME STEP for ONLY the requested reactions (by default all).
+        Using the system concentration data,
+        do the specified SINGLE TIME STEP
+        for ONLY the requested reactions (by default all).
 
         All computations are based on the INITIAL concentrations (prior to this reaction step),
         which are used as the basis for all the reactions (in "forward Euler" approach.)
 
+        If any concentration goes negative, an Exception is raised.
+
         Return the Numpy increment vector for ALL the chemical species concentrations, in their index order
         (whether involved in these reactions or not)
 
-        NOTES:  - the actual System Concentrations and the System Time (stored in object variables) are NOT changed
+        NOTES:  - the actual System Concentrations
+                    and the System Time (stored in object variables) are NOT changed
                 - if any of the concentrations go negative, an Exception is raised
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
@@ -1218,21 +1261,21 @@ class UniformCompartment:
 
         if rxn_list is None:    # Meaning ALL (active) reactions
             # A list of the reaction indices of all the active reactions
-            rxn_list = self.reactions.active_reaction_indices()
+            rxn_list = self.reaction_data.active_reaction_indices()
 
 
         # For each applicable reaction, find the needed adjustments ("deltas")
         #   to the concentrations of the reactants and products,
         #   based on the forward and reverse rates of the reaction
         for rxn_index in rxn_list:      # Consider each reaction in turn
-            rxn = self.reactions.get_reaction(rxn_index)
+            rxn = self.reaction_data.get_reaction(rxn_index)
 
             conc_dict = self._fetch_concs_for_rnx(rxn=rxn, conc_array=self.system)
-            # For the chems in this rxn only.  EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
+            # For the chemicals in this rxn only.  EXAMPLE:  {"B": 1.5, "F": 31.6, "D": 19.9}
 
             # ********** START OF NEW APPROACH
             increment_dict_single_rxn, rxn_rate = rxn.step_simulation(delta_time=delta_time,
-                                                                      conc_dict=conc_dict)
+                                                                      conc_dict=conc_dict, exact=self.exact)
             # EXAMPLE of increment_dict_single_rxn: {"B": -1.3, "F": 2.9, "D": -1.6}
 
             rates_dict[rxn_index] = rxn_rate       # Save the value (may be single float, or a pair of them)
@@ -1329,7 +1372,7 @@ class UniformCompartment:
         # The reactants DECREASE based on the quantity (forward reaction - reverse reaction)
         for r in reactants:
             # Unpack data from the reactant r
-            species_name = rxn.extract_species_name(r)
+            species_name = rxn.extract_chem_label(r)
             species_index = self.chem_data.get_index(species_name)
             if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING reactant ENZYME {species_index} in reaction {rxn_index}")
@@ -1345,7 +1388,7 @@ class UniformCompartment:
         # The reaction products INCREASE based on the quantity (forward reaction - reverse reaction)
         for p in products:
             # Unpack data from the reactant r
-            species_name = rxn.extract_species_name(p)
+            species_name = rxn.extract_chem_label(p)
             species_index = self.chem_data.get_index(species_name)
             if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING product ENZYME {species_index} in reaction {rxn_index}")
@@ -1419,7 +1462,7 @@ class UniformCompartment:
             chem_name = self.chem_data.get_label(species_index)
             raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
                                     f"would lead to a NEGATIVE concentration of the chemical `{chem_name}` "
-                                    f"from the reaction `{self.reactions.single_reaction_describe(rxn_index=rxn_index, concise=True)}` (rxn # {rxn_index}): "
+                                    f"from the reaction `{self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)}` (rxn # {rxn_index}): "
                                     f"\n      Baseline concentration value of `{chem_name}` : {baseline_conc:.6g} at system time {self.system_time:.5g}; requested change (NOT carried out): {delta_conc:.6g}"
                                     )
 
@@ -1573,7 +1616,7 @@ class UniformCompartment:
 
 
 
-    def logistic(self, x: float, x0 = 0., k = 1.) -> float:
+    def logistic(self, x :float, x0 = 0., k = 1.) -> float:
         """
         Compute the value of the Logistic function, in the range (0, 1), at the given point
         See: https://en.wikipedia.org/wiki/Logistic_function
@@ -1599,13 +1642,21 @@ class UniformCompartment:
 
     def enable_diagnostics(self):
         """
-        Turn on the diagnostics mode
+        Turn on the diagnostics mode.
+
+        CAUTION: if not done early enough in the simulation, some desired diagnostic data may be missing.
+                 You might consider using the argument  enable_diagnostics=True
+                 when first instantiating UniformCompartment(
 
         :return: None
         """
+        #TODO: maybe automatically capture a snapshot of the current data
+        if self.diagnostics_enabled:
+            print("*** INFO: enable_diagnostics() - diagnostics were ALREADY enabled")
+
         self.diagnostics_enabled = True
         if not self.diagnostics:
-            self.diagnostics = Diagnostics(reactions=self.reactions)
+            self.diagnostics = Diagnostics(reactions=self.reaction_data)
 
 
     def pause_diagnostics(self):
@@ -1614,11 +1665,14 @@ class UniformCompartment:
 
         :return:    None
         """
+        if not self.diagnostics_enabled:
+            print("*** INFO: pause_diagnostics() - diagnostics were ALREADY off")
+
         self.diagnostics_enabled = False
 
 
 
-    def get_diagnostics(self):
+    def get_diagnostics(self) -> Diagnostics:
         """
 
         :return:    Object of type life123.diagnostics.Diagnostics
@@ -1639,6 +1693,48 @@ class UniformCompartment:
     def ________VISUALIZATION________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
+
+
+    def describe_state(self) -> None:
+        """
+        Print out various data on the current state of the system, incl. system time
+
+        :return:        None
+        """
+        print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
+
+        n_species = self.chem_data.number_of_chemicals()
+        print(f"{n_species} species:")
+
+        # Show a line of line of data for each chemical species in turn
+        for species_index, name in enumerate(self.chem_data.get_all_labels()):
+            if name:    # If a name was provided, show it
+                name = f" ({name})"
+            else:
+                name = ""
+
+            if self.system is None:
+                print(f"  Species {species_index}{name}. No concentrations set yet")
+            else:
+                print(f"  Species {species_index}{name}. Conc: {self.system[species_index]}")
+
+        if self.macro_system != {}:
+            print("Macro-molecules, with their counts: ", self.macro_system)
+
+        if self.macro_system_state != {}:
+            print("Fractional Occupancy at the various binding sites for each macro-molecule:")
+            for mm, state_dict in self.macro_system_state.items():
+                state_list = [f"{a}: {b[1]} ({b[0]})" for a, b in state_dict.items()]   # EXAMPLE: ["3: 0.1 (A)", "8: 0.6 (B)"]
+                state_str = " | ".join(state_list)                                      # EXAMPLE: "3: 0.1 (A) | "8: 0.6 (B)"
+                print(f"     {mm} || {state_str}")
+
+        #if self.reactions.active_enzymes == set():    # If no enzymes were involved in any reaction
+        print(f"Chemicals involved in reactions: {self.reaction_data.labels_of_active_chemicals()}")
+        #else:
+            #print(f"Chemicals involved in reactions (not counting enzymes): {self.reactions.labels_of_active_chemicals()}")
+            #print(f"Enzymes involved in reactions: {self.reactions.names_of_enzymes()}")
+
+
 
     def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None,
                      range_x=None, range_y=None,
@@ -1696,15 +1792,15 @@ class UniformCompartment:
             chemicals = self.chem_data.get_all_labels()      # List of the chemical labels.  EXAMPLE: ["A", "B", "H"]
 
         if title is None:   # If no title was specified, create a default one based on how many reactions are present
-            number_of_rxns = self.reactions.number_of_reactions()
+            number_of_rxns = self.reaction_data.number_of_reactions()
             if number_of_rxns > 2:
                 title = f"Changes in concentrations for {number_of_rxns} reactions"
             elif number_of_rxns == 1:
-                rxn_text = self.reactions.single_reaction_describe(rxn_index=0, concise=True)   # The only reaction
+                rxn_text = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)   # The only reaction
                 title = f"Reaction `{rxn_text}` .  Changes in concentrations with time"
             else:   # Exactly 2 reactions
-                rxn_text_0 = self.reactions.single_reaction_describe(rxn_index=0, concise=True)
-                rxn_text_1 = self.reactions.single_reaction_describe(rxn_index=1, concise=True)
+                rxn_text_0 = self.reaction_data.single_reaction_describe(rxn_index=0, concise=True)
+                rxn_text_1 = self.reaction_data.single_reaction_describe(rxn_index=1, concise=True)
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
         if y_label is None:
@@ -1716,14 +1812,9 @@ class UniformCompartment:
         df = self.get_history()         # A Pandas dataframe that contains a column named "SYSTEM TIME"
 
         if colors is None:
-            # TODO: switch to  colors = self.chem_data.get_registered_colors(chemicals)
-            # Attempt to use the colors registered for individual chemicals, if present
-            registered_colors = []
-            for label in chemicals:
-                stored_color = self.chem_data.get_plot_color(label)     # Will be None if no color was registered for this chemical
-                registered_colors.append(stored_color)
-            colors = registered_colors      # List of colors, with as many entries as the chemicals of interest;
-                                            # any of the entries might be None
+            # Attempt to make use of the previously-registered colors, if available
+            colors = self.chem_data.assign_colors(chemicals)
+
 
         return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=chemicals,
                                         colors=colors, title=title, title_prefix=title_prefix,
@@ -1735,15 +1826,21 @@ class UniformCompartment:
 
     def plot_step_sizes(self, show_intervals=False) -> None:
         """
-        Using plotly, draw the plot of the step sizes vs. time
+        Using Plotly, draw the plot of the step sizes vs. time
         (only meaningful when the variable-step option was used).
         The same scale as plot_history() will be used.
-        This function requires the diagnostics option to be turned on, prior to running the simulation
+
+        IMPORTANT: This function requires the diagnostics option to be turned on,
+                   prior to running the simulation, with a call to enable_diagnostics()
 
         :param show_intervals:  If True, will add to the plot thin vertical dotted gray lines
                                     at the time steps
         :return:                None
         """
+        assert self.diagnostics is not None, \
+                "plot_step_sizes(): no diagnostic data is available. " \
+                "Did you invoke enable_diagnostics() prior to running the simulation?"
+
         (transition_times, step_sizes) = self.diagnostics.explain_time_advance(return_times=True, silent=True)
 
         x=transition_times
@@ -1779,6 +1876,33 @@ class UniformCompartment:
                           yaxis_title='Step size')
 
         fig.show()
+
+
+
+    def plot_reaction_network(self, log_file :str, graphic_component="vue_cytoscape_5") -> None:
+        """
+        Send a plot of the network of reactions to the HTML log file,
+        also including a brief summary of all the reactions.
+
+        ~~~ EXAMPLE of usage ~~~
+            plot_reaction_network(log_file="my_file.htm", graphic_component="vue_cytoscape_5")
+
+        :param log_file:            The name of the file into which to place the HTML code
+                                        to create the interactive network plot.
+                                        The suffix ".htm" will be added if it doesn't end with ".htm" or ".html"
+                                        If the file already exists, it will get overwritten.
+                                        (Note: this file will automatically include an internal reference to the JavaScript
+                                        file specified in `graphic_component`)
+        :param graphic_component:   The name of a Vue component that accepts a "graph_data" argument,
+                                        an object with the following keys
+                                        'nodes', 'edges', 'color_mapping' and 'caption_mapping'
+                                        For more details, see ReactionRegistry.prepare_graph_network()
+        :return:                    None
+        """
+        assert graphic_component == "vue_cytoscape_5", \
+            "plot_reaction_network(): the only value supported for argument `graphic_component` is 'vue_cytoscape_5'"
+
+        self.reaction_data.plot_reaction_network(log_file=log_file, graphic_component=graphic_component)
 
 
 
@@ -1875,7 +1999,7 @@ class UniformCompartment:
         if not self.conc_history.to_capture(step_count, extra=extra):
             return
 
-        data_snapshot = self.get_conc_dict(species=self.conc_history.restrict_chemicals)
+        data_snapshot = self.get_conc_dict(chem_labels=self.conc_history.restrict_chemicals)
         '''
            EXAMPLE of data_snapshot:
                 {"A": 1.3, "B": 4.9}        
@@ -2076,7 +2200,7 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True) -> Union[bool, dict]:
+    def is_in_equilibrium(self, rxn_index=None, conc=None, tolerance=1, explain=True) -> bool|dict:
         """
         Ascertain whether the given concentrations (by default the current System concentrations)
         are in equilibrium for the specified reactions (by default, check all reactions)
@@ -2112,7 +2236,7 @@ class UniformCompartment:
         if rxn_index is not None:
             # Check the 1 reaction that was requested
             if explain:
-                description = self.reactions.single_reaction_describe(rxn_index=rxn_index, concise=True)
+                description = self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)
                 print(description)
 
             status = self.reaction_in_equilibrium(rxn_index=rxn_index, conc=conc, tolerance=tolerance, explain=explain)
@@ -2122,8 +2246,8 @@ class UniformCompartment:
         else:
             # Check ALL the reactions
             status = True       # Overall status
-            description_list = self.reactions.multiple_reactions_describe(concise=True)
-            for rxn_index in range(self.reactions.number_of_reactions()):
+            description_list = self.reaction_data.multiple_reactions_describe(concise=True)
+            for rxn_index in range(self.reaction_data.number_of_reactions()):
                 # For each reaction
                 if explain:
                     print(description_list[rxn_index])
@@ -2162,7 +2286,7 @@ class UniformCompartment:
         :return:            True if the given reaction is close enough to an equilibrium,
                                 as allowed by the requested tolerance
         """
-        rxn = self.reactions.get_reaction(rxn_index)    # Look up the object of the requested reaction
+        rxn = self.reaction_data.get_reaction(rxn_index)    # Look up the object of the requested reaction
 
         if np.allclose(rxn.extract_reverse_rate(), 0):
             print("reaction_in_equilibrium() currently does NOT handle irreversible reactions (with a zero reverse rate)")
@@ -2182,11 +2306,7 @@ class UniformCompartment:
             # Prepare a concise listing from the given concentrations,
             # only including the concentrations that are applicable to this reaction
             all_applicable_concs = []
-            '''
-            for species_name in rxn.extract_chemicals_in_reaction():
-                s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
-                all_applicable_concs.append(s)
-            '''
+
             reactants = rxn.extract_reactant_labels()
             for species_name in reactants:
                 s = f"[{species_name}] = {conc[species_name]:,.4g}"         # EXAMPLE: "[A] = 20.3"
@@ -2236,160 +2356,19 @@ class UniformCompartment:
 
     def find_equilibrium_conc(self, rxn_index :int) -> dict:
         """
-        Determine the equilibrium concentrations that would be reached by the chemicals
-        participating in the specified reversible reaction, given their current concentrations,
+        Determine the equilibrium concentrations that would be eventually reached
+        by the chemicals of this reaction,
+        given the specified concentrations,
         IN THE ABSENCE of any other reaction.
-
-        RESTRICTIONS:  currently limited to just aA + bB <-> cC + dD reversible reactions,
-                       first-order in all chemicals (some of the terms may be missing.)
-                       An Exception will be raised in all other cases!
 
         :param rxn_index:   The integer index (0-based) to identify the reaction of interest
         :return:            A dictionary of the equilibrium concentrations of the
                                 chemicals involved in the specified reaction
-                            EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8}
+                                EXAMPLE:  {'A': 24.0, 'B': 36.0, 'C': 1.8}
         """
-        #TODO: handle scenarios where kF or kR is zero
-
-        rxn = self.reactions.get_reaction(rxn_index)    # Look up the requested reaction
-
-        reactants = rxn.extract_reactants()
-        products = rxn.extract_products()
-        K = rxn.extract_equilibrium_constant()
-
-
-        assert len(reactants) <= 2, \
-                "find_equilibrium_conc(): Currently only implemented " \
-                "for reactions with at most 2 reactants and 2 products"
-        assert len(products) <= 2, \
-                "find_equilibrium_conc(): Currently only implemented " \
-                "for reactions with at most 2 reactants and 2 products"
-
-        '''
-        For reactions of the form aA + bB <-> cC + dD  that are first-order in all chemicals,
-        the equilibrium equation is:  
-                [(C0 + c*m) (D0 + d*m)] / [(A0 - a*m) (B0 - b*m)]  =  K
-            
-        where K is the Equilibrium constant (kF/kR),
-        and the unknown m (to be solved for) is the number of "moles/liter of forward reaction"
-        (i.e. the the Product concentration change)
-        from the starting point to the equilibrium point
-        
-        For reaction terms that aren't present (for example the "D" part in the reaction A + B <-> C),
-        we'll use 0 for the "stoichiometry coefficient" and 1 for the "initial concentration";
-        that's a hack to make the multiplicative terms of the form X0 + x*m  (where the X's are the A,B,C,D and the x's are the a,b,c,d)
-        to be identical equal to 1, and thus have no effect on the solution of the above equation
-        '''
-        a = 0
-        b = 0
-        c = 0
-        d = 0
-        A0 = 1
-        B0 = 1
-        C0 = 1
-        D0 = 1
-
-
-        name_map = {}   # To transform the A, B, C, D into the actual names
-
-        # Look at the denominator of the "Reaction Quotient"
-        for i, r in enumerate(reactants):
-            # Loop over the reactants
-            species_name =  rxn.extract_species_name(r)
-            rxn_order =  rxn.extract_rxn_order(r)
-            coefficient = rxn.extract_stoichiometry(r)
-
-            assert rxn_order == 1, \
-                "find_equilibrium_conc(): Currently only implemented for 1st order reactions"
-
-            if i == 0:
-                name_map["A"] = species_name
-                a = coefficient
-                A0 = self.get_chem_conc(species_name)
-                assert A0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
-                                       f"concentration of `{species_name}` was not provided"
-            else:
-                name_map["B"] = species_name
-                b = coefficient
-                B0 = self.get_chem_conc(species_name)
-                assert B0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
-                                       f"concentration of `{species_name}` was not provided"
-
-
-        # Look at the numerator of the "Reaction Quotient"
-        for i, p in enumerate(products):
-            # Loop over the reaction products
-            species_name =  rxn.extract_species_name(p)
-            rxn_order =  rxn.extract_rxn_order(p)
-            coefficient = rxn.extract_stoichiometry(p)
-
-            assert rxn_order == 1, "find_equilibrium_conc(): Currently only implemented for 1st order reactions"
-
-            if i == 0:
-                name_map["C"] = species_name
-                c = coefficient
-                C0 = self.get_chem_conc(species_name)
-                assert C0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
-                                       f"concentration of `{species_name}` was not provided"
-            else:
-                name_map["D"] = species_name
-                d = coefficient
-                D0 = self.get_chem_conc(species_name)
-                assert D0 is not None, f"equilibrium_concentration(): unable to proceed because the " \
-                                       f"concentration of `{species_name}` was not provided"
-
-
-        #print("Initial values: ", A0, B0, C0, D0)
-        #print("Stoichiometry coefficients: ", a, b, c, d)
-
-        '''
-        The equation we saw earlier,
-                [(C0 + c*m) (D0 + d*m)] / [(A0 - a*m) (B0 - b*m)]  =  K
-                
-        can be expanded into a standard quadratic form for the unknown m :
-        
-                alpha * m**2 + beta * m + gamma = 0
-                
-        and then solved for m    
-        '''
-        alpha = (c * d - K * a * b)
-        beta = d * C0 + c * D0 + K * (A0 * b + B0 * a)
-        gamma = C0 * D0 - K * A0 * B0
-
-        #print(name_map)
-        #print("alpha, beta, gamma : ", alpha, beta, gamma)
-
-        if alpha == 0:
-            # The quadratic reduces to the linear equation:  beta * m + gamma = 0
-            m = -gamma / beta
-        else:
-            sqrt_discriminant = math.sqrt(beta**2 - 4 * alpha * gamma)
-            m1 = (-beta + sqrt_discriminant) / (2 * alpha)
-            m2 = (-beta - sqrt_discriminant) / (2 * alpha)
-            #print("m1, m2 : ", m1, m2)
-            m = m1  # Let's start with one of the 2 possible solutions of the quadratic equation
-
-
-        # After m "moles of forward reaction", the concentration of the reactant "A"
-        # in aA + bB <-> cC + dD gets reduced by a*m . Likewise for the other terms.
-        # Reaction products get increased.  Values for missing terms will be meaningless
-        std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "C" : C0 + c*m, "D" : D0 + d*m}
-
-        if min(std_result.values()) < 0:    # If there's any negative value in the concentrations...
-            # ...then repeat the computation using the other solution to the quadratic
-            m = m2
-            std_result = {"A" : A0 - a*m, "B" : B0 - b*m, "C" : C0 + c*m, "D" : D0 + d*m}
-
-
-        # Let's translate our standard names A, B, C, D into the actual names,
-        # and also drop any missing term
-        result = {}
-        for k, v in std_result.items():
-            actual_name = name_map.get(k)
-            if actual_name:     # Missing terms will get dropped out
-                result[actual_name] = v
-
-        return result
+        rxn = self.reaction_data.get_reaction(rxn_index)            # Look up the requested reaction
+        chem_labels = list(rxn.extract_chemicals_in_reaction()) # List of the chemicals in the requested reaction
+        return rxn.find_equilibrium_conc(conc_dict=self.get_conc_dict(chem_labels=chem_labels))
 
 
 

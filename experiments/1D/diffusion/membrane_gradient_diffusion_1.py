@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## Diffusion of the initial concentration gradient of a single chemical, in the presence of membranes in its path (passive transport)   
+# ## Diffusion of a single chemical gradient, in the presence of membranes in its path (passive transport)   
 # Three scenarios:  
 # 1) no membranes  
 # 2) membranes with permeability to that chemical equal its diffusion rate

@@ -384,7 +384,7 @@ class HtmlLog:
                 1) graph_data
                 2) component_id
 
-        :param graph_data:      Data to pass to the Vue component
+        :param graph_data:      Data dictionary to pass to the Vue component
         :param component_name:  A string with the name of the existing Vue.js component to use.
                                     EXAMPLE: "vue_curves_4" (assuming that a js file with such a component exists)
         :param component_file:  A string with the name of the .js file containing the needed Vue component above

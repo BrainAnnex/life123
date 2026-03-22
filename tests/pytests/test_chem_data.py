@@ -2,11 +2,20 @@ import pytest
 import numpy as np
 import pandas as pd
 from life123 import ChemData
-from life123.chem_data import Diffusion
+from life123.chem_data import ChemCore, Diffusion
+from life123.visualization.colors import Colors
 from tests.utilities.comparisons import *
 
 
 #############  ChemCore  #############
+
+def test_constructor_ChemCore():
+    chem_core = ChemCore()
+    assert chem_core.chemical_data == []
+    assert chem_core.label_dict == {}
+    assert chem_core.color_dict == {}
+
+
 
 def test_number_of_chemicals():
     chem_data = ChemData(names=['A', 'B', 'C'])
@@ -17,7 +26,16 @@ def test_number_of_chemicals():
 
 
 
-def test_assert_valid_species_index():
+def test_get_label_mapping():
+    chem_data = ChemData(names=['A', 'B', 'C'])
+    assert chem_data.get_label_mapping() == {'A': 0, 'B': 1, 'C': 2}
+
+    chem_data = ChemData(names=[])
+    assert chem_data.get_label_mapping() == {}
+
+
+
+def test_assert_valid_chem_index():
     chem_data = ChemData(names=['A', 'B', 'C'])
     chem_data.assert_valid_chem_index(0)
     chem_data.assert_valid_chem_index(1)
@@ -44,8 +62,8 @@ def test_get_index():
 
 
 
-def test_name_exists():
-    chem_data = ChemData(names=['A', 'B', 'C'])
+def test_label_exists():
+    chem_data = ChemData(labels=['A', 'B', 'C']) # Names and labels are by default identical
     assert chem_data.label_exists("A")
     assert chem_data.label_exists("C")
     assert not chem_data.label_exists("X")
@@ -56,8 +74,55 @@ def test_name_exists():
     assert not chem_data.label_exists("Z")
 
 
+    chem_data = ChemData(labels=['A', 'B', 'C'],
+                         names=['A dioxide', 'B chloride', 'C amino'])
 
-def test_get_name():
+    assert chem_data.label_exists("A")
+    assert chem_data.label_exists("C")
+    assert not chem_data.label_exists("X")
+
+    chem_data.add_chemical(name="X")
+    assert chem_data.label_exists("X")
+
+    assert not chem_data.label_exists("Z")
+
+    assert not chem_data.label_exists("A dioxide")  # This is a name, not a label
+    assert not chem_data.label_exists("B chloride")
+    assert not chem_data.label_exists("C amino")
+
+
+
+def test_name_exists():
+    chem_data = ChemData(names=['A', 'B', 'C'])  # Names and labels are by default identical
+    assert chem_data.name_exists("A")
+    assert chem_data.name_exists("C")
+    assert not chem_data.name_exists("X")
+
+    chem_data.add_chemical(name="X")
+    assert chem_data.name_exists("X")
+
+    assert not chem_data.name_exists("Z")
+
+
+    chem_data = ChemData(labels=['A', 'B', 'C'],
+                         names=['A dioxide', 'B chloride', 'C amino'])
+
+    assert chem_data.name_exists("A dioxide")
+    assert chem_data.name_exists("C amino")
+    assert not chem_data.name_exists("X")
+
+    chem_data.add_chemical(name="X")
+    assert chem_data.name_exists("X")
+
+    assert not chem_data.name_exists("Z")
+
+    assert not chem_data.name_exists("A")   # This is a label, not a name
+    assert not chem_data.name_exists("B")
+    assert not chem_data.name_exists("C")
+
+
+
+def test_get_label():
     chem_data = ChemData(names=['A', 'B', 'C'])
     assert chem_data.get_label(0) == 'A'
     assert chem_data.get_label(1) == 'B'
@@ -74,7 +139,7 @@ def test_get_name():
 
 
 
-def test_get_all_names():
+def test_get_all_labels():
     chem_data = ChemData(names=['A', 'B', 'C'])
     assert chem_data.get_all_labels() == ['A', 'B', 'C']
 
@@ -91,34 +156,25 @@ def test_get_all_names():
 
 
 
-def test_all_chemicals():
-    chem_data = ChemData(names=['A', 'B'])
-    chem_data.add_chemical(label="C", note="this is C", name="CH4", cost="200")
-    chem_data.add_chemical_with_diffusion("D", diff_rate=10, note="this is D")
-
-    result = chem_data.all_chemicals()
-    expected_recordset = [{'name': 'A', 'label': 'A'}, {'name': 'B', 'label': 'B'},
-                          {'name': 'CH4', 'label': 'C', 'note': 'this is C', 'cost': '200'},
-                          {'name': 'D', 'label': 'D', 'note': 'this is D'}]
-    expected_df = pd.DataFrame(expected_recordset)
-
-    assert expected_df.equals(result)
-
-
-
 def test_add_chemical():
     chem_data = ChemData()
     assert chem_data.number_of_chemicals() == 0
     assert chem_data.chemical_data == []
 
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name=123)    # Name is not a string
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name="")     # Missing name
+
     result = chem_data.add_chemical(name="A")
     assert result == 0
     assert chem_data.number_of_chemicals() == 1
-    assert chem_data.chemical_data == [{"name": "A", "label": "A"}]
+    assert chem_data.chemical_data == [{"name": "A", "label": "A"}]     # The label was by default same as name
     assert chem_data.label_dict == {"A": 0}
 
     with pytest.raises(Exception):
-        chem_data.add_chemical(name="A")     # Duplicate!
+        chem_data.add_chemical(name="A")     # Duplicate name
 
     result = chem_data.add_chemical(name="B", note="some note")
     assert result == 1
@@ -138,29 +194,30 @@ def test_add_chemical():
     result = chem_data.add_chemical(name="Some long name", label="D")
     assert result == 3
     assert chem_data.number_of_chemicals() == 4
-    assert chem_data.chemical_data == [{"name": "A", "label": "A"},
-                                       {"name": "B", "label": "B", "note": "some note"},
-                                       {"name": "C", "label": "C"},
-                                       {"name": "Some long name", "label": "D"}]
+    expected_chem_data = [{"name": "A", "label": "A"},
+                          {"name": "B", "label": "B", "note": "some note"},
+                          {"name": "C", "label": "C"},
+                          {"name": "Some long name", "label": "D"}]
+    assert chem_data.chemical_data == expected_chem_data
     assert chem_data.label_dict == {"A": 0, "B": 1, "C": 2, "D": 3}
 
     with pytest.raises(Exception):
         chem_data.add_chemical(name="Some long name")   # Duplicate name!
 
-    with pytest.raises(Exception):
-        chem_data.add_chemical(name="D")                # Name cannot be same as an existing label!
+    chem_data.add_chemical(name="Some long name", skip_duplicates=True) # No action taken (duplicate name)
+    assert chem_data.chemical_data == expected_chem_data                # Nothing has changed
 
     with pytest.raises(Exception):
         chem_data.add_chemical(name="Z", label="A")     # Duplicate label!
 
+    chem_data.add_chemical(name="Z", label="A", skip_duplicates=True)   # No action taken (duplicate label)
+    assert chem_data.chemical_data == expected_chem_data                # Nothing has changed
+
+    with pytest.raises(Exception):
+        chem_data.add_chemical(name="D")                            # Name cannot be same as an existing label!
+
     with pytest.raises(Exception):
         chem_data.add_chemical(name="Z", label="Some long name")    # Label cannot be same as an existing name!
-
-    with pytest.raises(Exception):
-        chem_data.add_chemical(name=123)    # Name is not a string
-
-    with pytest.raises(Exception):
-        chem_data.add_chemical(name="")     # Missing name
 
 
     # Re-start
@@ -169,7 +226,8 @@ def test_add_chemical():
     result = chem_data.add_chemical("Y", note="test")
     assert result == 1
     assert chem_data.number_of_chemicals() == 2
-    assert chem_data.chemical_data == [{"name": "X", "label": "X"}, {"name": "Y", "label": "Y", "note": "test"}]
+    assert chem_data.chemical_data == [{"name": "X", "label": "X"},
+                                       {"name": "Y", "label": "Y", "note": "test"}]
     assert chem_data.label_dict == {"X": 0, "Y": 1}
 
     result = chem_data.add_chemical(label="Z", name="CH3OH")
@@ -179,6 +237,136 @@ def test_add_chemical():
                                        {"name": "Y", "label": "Y", "note": "test"},
                                        {"name": "CH3OH", "label": "Z"}]
     assert chem_data.label_dict == {"X": 0, "Y": 1, "Z": 2}
+
+
+
+def test_set_color():
+    chem_core = ChemCore()
+
+    with pytest.raises(Exception):
+        chem_core.set_color(chem_label="A", color="yellow")  # `A` isn't registered
+
+    chem_core.add_chemical("A")
+    chem_core.set_color(chem_label="A", color="yellow")
+    assert chem_core.get_plot_color("A") == "yellow"
+
+    chem_core.add_chemical("B")
+    assert chem_core.get_plot_color("B") is None
+    chem_core.set_color(chem_label="B", color="cyan")
+    assert chem_core.get_plot_color("B") == "cyan"
+
+    assert chem_core.color_dict == {"A": "yellow", "B": "cyan"}
+
+
+
+def test_get_plot_color():
+    chem_core = ChemCore()
+
+    assert chem_core.get_plot_color("A") is None
+
+    chem_data = ChemData(names=['A', 'B', 'C'], plot_colors = ['red', 'green', 'blue'])
+    assert chem_data.get_plot_color("A") == "red"
+    assert chem_data.get_plot_color("B") == "green"
+    assert chem_data.get_plot_color("C") == "blue"
+
+
+
+def test_get_color_mapping_by_label():
+    chem_core = ChemCore()
+    assert chem_core.get_color_mapping_by_label() == {}
+
+    chem_data = ChemData(names=['A', 'B', 'C'], plot_colors = ['red', 'green', 'blue'])
+    assert chem_data.get_color_mapping_by_label() == {"A": "red", "B": "green", "C": "blue"}
+
+
+
+def test_get_color_mapping_by_index():
+    chem_core = ChemCore()
+    assert chem_core.get_color_mapping_by_index() == {}
+
+    chem_data = ChemData(names=['A', 'B', 'C'], plot_colors = ['red', 'green', 'blue'])
+    assert chem_data.get_color_mapping_by_index() == {0: "red", 1: "green", 2: "blue"}
+
+
+
+def test_get_all_colors():
+    chem_core = ChemCore()
+    assert chem_core.get_all_colors() == []
+
+    chem_data = ChemData(names=['A', 'B', 'C'], plot_colors = ['red', 'green', 'blue'])
+    assert chem_data.get_all_colors() == ["red", "green", "blue"]
+
+
+
+def test_assign_colors():
+    chem_core = ChemCore()
+
+    with pytest.raises(Exception):
+        chem_core.assign_colors(123)
+
+    with pytest.raises(Exception):
+        chem_core.assign_colors("Unknown")
+
+
+    # Make a note of the first 3 default colors
+    default_col_1, default_col_2, default_col_3 = Colors.assign_default_colors(3)
+
+    chem_data = ChemData(names="A", plot_colors="red")
+    result = chem_data.assign_colors("A")
+    assert result == ["red"]
+    assert chem_data.color_dict == {"A": "red"}
+
+    chem_data = ChemData(names="A")
+    result = chem_data.assign_colors(["A"])
+    assert result == [default_col_1]
+    assert chem_data.color_dict == {"A": default_col_1}   # Was made into a permanent assignment
+
+
+    chem_data = ChemData(names=["A", "B"], plot_colors=["red", "blue"])
+    result = chem_data.assign_colors(["A", "B"])
+    assert result == ["red", "blue"]
+    assert chem_data.color_dict == {"A": "red", "B": "blue"}
+
+    chem_data = ChemData(names="A", plot_colors="red")
+    chem_data.add_chemical(name="B")
+    result = chem_data.assign_colors(["A", "B"])
+    assert result == ["red", default_col_1]
+    assert chem_data.color_dict == {"A": "red", "B": default_col_1}
+
+    chem_data = ChemData(names=["A", "B"])
+    chem_data.set_color(chem_label="B", color="yellow")
+    result = chem_data.assign_colors(["A", "B"])
+    assert result == [default_col_1, "yellow"]
+    assert chem_data.color_dict == {"A": default_col_1, "B": "yellow"}
+
+    chem_data = ChemData(names=["A", "B"])
+    result = chem_data.assign_colors(["A", "B"])
+    assert result == [default_col_1, default_col_2]
+    assert chem_data.color_dict == {"A": default_col_1, "B": default_col_2}
+
+    chem_data = ChemData(names=["A", "B"])
+    result = chem_data.assign_colors()
+    assert result == [default_col_1, default_col_2]
+    assert chem_data.color_dict == {"A": default_col_1, "B": default_col_2}
+
+    chem_data = ChemData(names=["A", "B", "C"])
+    chem_data.set_color(chem_label="A", color="red")
+    chem_data.set_color(chem_label="C", color="yellow")
+    result = chem_data.assign_colors(["A", "B", "C"])
+    assert result == ["red", default_col_1, "yellow"]
+    assert chem_data.color_dict == {"A": "red", "B": default_col_1, "C": "yellow"}
+
+    chem_data = ChemData(names=["A", "B", "C", "D", "E"])
+    result = chem_data.assign_colors(["B", "C", "D"])
+    assert result == [default_col_1, default_col_2, default_col_3]
+    assert chem_data.color_dict == {"B": default_col_1, "C": default_col_2, "D": default_col_3}
+
+    chem_data = ChemData(names=["A", "B", "C", "D", "E"])
+    chem_data.set_color(chem_label="B", color="red")
+    chem_data.set_color(chem_label="D", color="yellow")
+    result = chem_data.assign_colors(["B", "C", "D"])
+    assert result == ["red", default_col_1, "yellow"]
+    assert chem_data.color_dict == { "B": "red", "C": default_col_1, "D": "yellow"}
 
 
 
@@ -246,26 +434,26 @@ def test_assert_valid_diffusion():
 def test_get_diffusion_rate():
     chem_data = ChemData(names=["A", "B", "C"], diffusion_rates=[10, 11, 12])
 
-    assert chem_data.get_diffusion_rate(name="A") == 10
+    assert chem_data.get_diffusion_rate(chem_label="A") == 10
     assert chem_data.get_diffusion_rate(chem_index=0) == 10
     with pytest.raises(Exception):
-        assert chem_data.get_diffusion_rate(name="A", chem_index=0)
+        assert chem_data.get_diffusion_rate(chem_label="A", chem_index=0)
 
-    assert chem_data.get_diffusion_rate(name="C") == 12
+    assert chem_data.get_diffusion_rate(chem_label="C") == 12
     assert chem_data.get_diffusion_rate(chem_index=2) == 12
 
     with pytest.raises(Exception):
-        chem_data.get_diffusion_rate(name="X")          # X doesn't exist
+        chem_data.get_diffusion_rate(chem_label="X")          # X doesn't exist
 
     with pytest.raises(Exception):
         chem_data.get_diffusion_rate(chem_index=3)   # Index 3 doesn't exist
 
     chem_data.add_chemical(name="Z")                    # This will be given index 3
-    assert chem_data.get_diffusion_rate(name="Z") is None       # No diffusion value assigned
+    assert chem_data.get_diffusion_rate(chem_label="Z") is None       # No diffusion value assigned
     assert chem_data.get_diffusion_rate(chem_index=3) is None
 
     chem_data.set_diffusion_rate(chem_label="Z", diff_rate=8)
-    assert chem_data.get_diffusion_rate(name="Z") == 8
+    assert chem_data.get_diffusion_rate(chem_label="Z") == 8
     assert chem_data.get_diffusion_rate(chem_index=3) == 8
 
 
@@ -349,9 +537,9 @@ def test_missing_diffusion_rate():
 
 
 
-#############  ChemData  #############
+#################   ChemData (MAIN class)  #################
 
-def test_constructor():
+def test_constructor_ChemData():
     chem_data = ChemData()
     assert chem_data.chemical_data == []
     assert chem_data.label_dict == {}
@@ -362,10 +550,8 @@ def test_constructor():
     with pytest.raises(Exception):
         ChemData(names=123)         # Not a list/tuple/str
 
-
     with pytest.raises(Exception):
         ChemData(names=["A", 2])    # Some of the names aren't strings
-
 
     chem_data = ChemData(names='A')
     assert chem_data.chemical_data == [{"label": "A", "name": "A"}]
@@ -381,7 +567,7 @@ def test_constructor():
 
 
     with pytest.raises(Exception):
-        ChemData(labels=True)     # Not a list/tuple/str
+        ChemData(labels=True)       # Not a list/tuple/str
 
     with pytest.raises(Exception):
         ChemData(labels=["L1", 2])    # Some of the labels aren't strings
@@ -478,15 +664,19 @@ def test_constructor():
     assert chem_data.color_dict == {"A": "red", "B": "blue"}
     assert chem_data.diffusion_rates == {"A": 10, "B": 20}
 
-    chem_data = ChemData(names=["Name1", "Name2"], diffusion_rates=[10, 20], plot_colors=["red", "blue"])
+    chem_data = ChemData(names=["Name1", "Name2"],
+                         diffusion_rates=[10, 20],
+                         plot_colors=["red", "blue"])
     assert chem_data.chemical_data == [{"label": "Name1", "name": "Name1"},
                                        {"label": "Name2", "name": "Name2"}]
     assert chem_data.label_dict == {"Name1": 0, "Name2": 1}
     assert chem_data.color_dict == {"Name1": "red", "Name2": "blue"}
     assert chem_data.diffusion_rates == {"Name1": 10, "Name2": 20}
 
-    chem_data = ChemData(names=["Name1", "Name2"], labels=["L1", "L2"],
-                         diffusion_rates=[10, 20], plot_colors=["red", "blue"])
+    chem_data = ChemData(names=["Name1", "Name2"],
+                         labels=["L1", "L2"],
+                         diffusion_rates=[10, 20],
+                         plot_colors=["red", "blue"])
     assert chem_data.chemical_data == [{"label": "L1", "name": "Name1"},
                                        {"label": "L2", "name": "Name2"}]
     assert chem_data.label_dict == {"L1": 0, "L2": 1}
@@ -494,17 +684,39 @@ def test_constructor():
     assert chem_data.diffusion_rates == {"L1": 10, "L2": 20}
 
 
-    chem_data = ChemData(names=['A', 'B', 'C'], diffusion_rates=np.array([0.15, 2, 3.14]))
+    chem_data = ChemData(names=['A', 'B', 'C'],
+                         diffusion_rates=np.array([0.15, 2, 3.14]))
     assert len(chem_data.chemical_data) == 3
     assert chem_data.get_all_labels() == ['A', 'B', 'C']
     assert chem_data.label_dict == {'A': 0, 'B': 1, 'C': 2}
     assert np.allclose(chem_data.get_all_diffusion_rates(), [0.15, 2, 3.14])
 
 
+    chem_data = ChemData(n_chems=3)
+    assert len(chem_data.chemical_data) == 3
+    assert chem_data.get_all_labels() == ['A', 'B', 'C']
+    assert chem_data.label_dict == {'A': 0, 'B': 1, 'C': 2}
 
 
 
-##########  MACRO-MOLECULES  ##########
+def test_all_chemicals():
+    chem_data = ChemData(names=['A', 'B'])
+    chem_data.add_chemical(label="C", note="this is C", name="CH4", cost="200")
+    chem_data.add_chemical_with_diffusion("D", diff_rate=10, note="this is D")
+
+    result = chem_data.all_chemicals()  # A Pandas dataframe
+    expected_recordset = [{'name': 'A', 'label': 'A'},
+                          {'name': 'B', 'label': 'B'},
+                          {'name': 'CH4', 'label': 'C', 'diff rate': None, 'note': 'this is C', 'cost': '200'},
+                          {'name': 'D', 'label': 'D', 'diff rate': 10, 'note': 'this is D'}]
+    expected_df = pd.DataFrame(expected_recordset)
+
+    assert expected_df.equals(result)
+
+
+
+
+###################  MACRO-MOLECULES  ###################
 
 def test_add_macromolecules():
     chem_data = ChemData()

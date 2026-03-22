@@ -4,7 +4,7 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 from life123 import ChemData, CollectionTabular
 from life123.diagnostics import Diagnostics
-from life123.reactions import ReactionRegistry
+from life123.reaction_registry import ReactionRegistry
 
 
 
@@ -97,9 +97,9 @@ def test_save_diagnostic_rxn_data():
     rxns = ReactionRegistry(chem_data=chem_data)
 
     # Add 3 reactions
-    rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)        # Rxn 0
-    rxns.add_reaction(reactants="A", products="X", forward_rate=5., reverse_rate=2.)        # Rxn 1
-    rxns.add_reaction(reactants=["A", "B"], products="X", forward_rate=5., reverse_rate=2.) # Rxn 2
+    rxns.add_reaction(reactants="A", products="B", kF=5., kR=2.)        # Rxn 0
+    rxns.add_reaction(reactants="A", products="X", kF=5., kR=2.)        # Rxn 1
+    rxns.add_reaction(reactants=["A", "B"], products="X", kF=5., kR=2.) # Rxn 2
 
     diag = Diagnostics(reactions=rxns)
     assert len(diag.diagnostic_rxn_data) == 0
@@ -198,9 +198,9 @@ def test_save_diagnostic_aborted_rxns():
     rxns = ReactionRegistry(chem_data=chem_data)
 
     # Add 3 reactions
-    rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)
-    rxns.add_reaction(reactants="A", products="X", forward_rate=5., reverse_rate=2.)
-    rxns.add_reaction(reactants=["A", "B"], products="X", forward_rate=5., reverse_rate=2.)
+    rxns.add_reaction(reactants="A", products="B", kF=5., kR=2.)
+    rxns.add_reaction(reactants="A", products="X", kF=5., kR=2.)
+    rxns.add_reaction(reactants=["A", "B"], products="X", kF=5., kR=2.)
 
     diag = Diagnostics(reactions=rxns)
 
@@ -230,9 +230,9 @@ def test_get_diagnostic_rxn_data():
     rxns = ReactionRegistry(chem_data=chem_data)
 
     # Add 3 reactions
-    rxns.add_reaction(reactants="A", products="B", forward_rate=5., reverse_rate=2.)        # Rxn 0
-    rxns.add_reaction(reactants=["A"], products="X", forward_rate=5., reverse_rate=2.)      # Rxn 1
-    rxns.add_reaction(reactants=["A", "B"], products="X", forward_rate=5., reverse_rate=2.) # Rxn 2
+    rxns.add_reaction(reactants="A", products="B", kF=5., kR=2.)        # Rxn 0
+    rxns.add_reaction(reactants=["A"], products="X", kF=5., kR=2.)      # Rxn 1
+    rxns.add_reaction(reactants=["A", "B"], products="X", kF=5., kR=2.) # Rxn 2
 
     diag = Diagnostics(reactions=rxns)
 
@@ -343,7 +343,7 @@ def test_stoichiometry_checker():
 
 
     rxns.clear_reactions_data()
-    rxns.add_reaction(reactants=[(2, "A")], products=["B"])         # Reaction 0:   2A <--> B
+    rxns.add_reaction(reactants=[(2, "A")], products=["B"])         # Reaction 0:   2A <--> B  (Synthesis)
 
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([0, 0, 0, 0]), conc_arr_after=np.array([0, 0, 0, 0]))
     assert diag.stoichiometry_checker(rxn_index=0, conc_arr_before=np.array([100, 0, 0, 0]), conc_arr_after=np.array([80, 10, 0, 0]))

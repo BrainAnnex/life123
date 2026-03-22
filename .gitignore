@@ -128,7 +128,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# PyCharm files
 /.idea
 
-# Project-specific
+# Life123-specific
 /experiments/PRIVATE/
+quick2.bat

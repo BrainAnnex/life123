@@ -12,7 +12,8 @@ from life123.visualization.colors import Colors
 
 class BioSim2D:
     """
-    2D simulations of diffusion and reactions
+    2D simulations of diffusion and reactions.
+    Early implementation of membranes.
 
     TODO: reorganize by splitting, as done for BioSim1D
     """
@@ -232,7 +233,7 @@ class BioSim2D:
         """
         Return the concentration at the requested bin of the specified chemical species
 
-        :param bin_address:     A pair of integers identifying the bin of interest
+        :param bin_address:     A pair of (zero-based) integers identifying the bin of interest in the 2D system
         :param species_index:   The index order of the chemical species of interest
         :param species_label:   [OPTIONAL] If provided, it over-rides the value for species_index
         :return:                A concentration value at the indicated bin, for the requested species
@@ -306,8 +307,8 @@ class BioSim2D:
         as a Numpy array in the index order of the species
         EXAMPLE: np.array([10., 50.)]
 
-        :param bin_address:     A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
-        :return:                A Numpy array  of concentration values, in the index order of the species
+        :param bin_address:     A pair of (zero-based) integers identifying the bin of interest in the 2D system
+        :return:                A Numpy array  of concentration values, in the index order of the chemical species
         """
         bin_x, bin_y = bin_address      # Unpack the bin address
 
@@ -374,7 +375,7 @@ class BioSim2D:
         """
         Raise an Exception if the given bin address isn't valid
 
-        :param bin_address: A pair of integers identifying a bin in the 2D system
+        :param bin_address: A pair of (zero-based) integers identifying the bin of interest in the 2D system
         :return:            None
         """
         assert type(bin_address) == tuple, \
@@ -408,7 +409,7 @@ class BioSim2D:
         Assign the requested concentration value to the bin with the given address,
         for the specified chemical species
 
-        :param bin_address: A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
+        :param bin_address: A pair of (zero-based) integers identifying the bin of interest in the 2D system
         :param chem_label:  String with the label to identify the chemical of interest
         :param conc:        The desired concentration value to assign to the specified location
         :return:            None
@@ -429,7 +430,7 @@ class BioSim2D:
         """
         Add the requested concentration to the cell with the given address, for the specified chemical species
 
-        :param bin_address: A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
+        :param bin_address: A pair of (zero-based) integers identifying the bin of interest in the 2D system
         :param chem_index:  Zero-based index to identify a specific chemical species
         :param delta_conc:  The concentration to add to the specified location
         :param zero_clip:   If True, any requested increment causing a concentration dip below zero, will make the concentration zero;
@@ -459,7 +460,7 @@ class BioSim2D:
         Assign the requested concentration values to the cell with the given index,
         for all the chemical species in their index order
 
-        :param bin_address: A pair with the zero-based bin numbers of the desired cell, in the x- and y-coordinates
+        :param bin_address: A pair of (zero-based) integers identifying the bin of interest in the 2D system
         :param conc_list:   A list with the desired concentration values to assign to the specified location
         :return:            None
         """
@@ -651,9 +652,9 @@ class BioSim2D:
         :return:                A dictionary with data about the status of the operation
                                     (for now, just the number of steps run; key: "steps")
         """
-        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
-                                                              time_step=time_step,
-                                                              n_steps=n_steps)
+        time_step, n_steps = self.reaction_dynamics.specify_steps(duration=total_duration,
+                                                                  initial_step=time_step,
+                                                                  n_steps=n_steps)
         for i in range(n_steps):
             if self.debug:
                 if (i < 2) or (i >= n_steps-2):
@@ -827,9 +828,9 @@ class BioSim2D:
         """
         # TODO: in case of any Exception, the state of the system is still valid, as of the time before this call
 
-        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
-                                                             time_step=time_step,
-                                                             n_steps=n_steps)
+        time_step, n_steps = self.reaction_dynamics.specify_steps(duration=total_duration,
+                                                                  initial_step=time_step,
+                                                                  n_steps=n_steps)
 
         for i in range(n_steps):
             self.reaction_step(time_step)         # TODO: catch Exceptions in this step; in case of failure, repeat with a smaller time_step
@@ -902,9 +903,9 @@ class BioSim2D:
                                     (for now, they must be equal)
         :return:                None
         """
-        time_step, n_steps = self.reaction_dynamics.specify_steps(total_duration=total_duration,
-                                                             time_step=time_step,
-                                                             n_steps=n_steps)
+        time_step, n_steps = self.reaction_dynamics.specify_steps(duration=total_duration,
+                                                                  initial_step=time_step,
+                                                                  n_steps=n_steps)
 
         for i in range(n_steps):
             # TODO: split off the diffusion step and the reaction steps to different computing cores
@@ -1070,7 +1071,7 @@ class BioSim2D:
             title = f"{title_prefix}.  {title}"
 
         if colors is None:  # Attempt to make use of the previously-registered colors, if available
-            colors = self.chem_data.get_registered_colors(chem_labels)
+            colors = self.chem_data.assign_colors(chem_labels)
 
         return PlotlyHelper.heatmap_grid(array_list=data, labels=chem_labels, title=title,
                                          height=height, colors=colors, z_name="Conc.", max_n_cols=4,
@@ -1118,7 +1119,7 @@ class BioSim2D:
             raise Exception(df)
 
         if colors is None:  # Attempt to make sure of the previously-registered colors, if available
-            colors = self.chem_data.get_registered_colors(self.conc_history.restrict_chemicals)
+            colors = self.chem_data.assign_colors(self.conc_history.restrict_chemicals)
 
         return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
                                         colors=colors, legend_header="Chemical", title=title,

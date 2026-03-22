@@ -16,9 +16,9 @@
 # ## A transient concentration inside an organelle can "escape" from it by passive transport across the membranes, only it if diffuses quicky - before a reaction transforms it into a chemical unable to cross membranes.
 # ### The "window of opportunity to escape" closes fast!
 #
-# #### SCENARIO 1 : `A`, the chemical injected into the organelle, diffuses slowly - and gets converted into `C` (which cannot cross the membranes) by the reaction `A + B <-> C` , before it has a chance to leave the organelle.  Trapped!  
+# #### SCENARIO 1 : `A`, the chemical injected into the organelle, diffuses **slowly** - and gets converted into `C` (which cannot cross the membranes) by the reaction `A + B <-> C` , before it has a chance to leave the organelle.  Trapped!  
 #
-# #### SCENARIO 2 : `A` diffuses fast enough to "escape" out of the organelle before getting completely trapped there
+# #### SCENARIO 2 : `A` diffuses **fast** enough to "escape" out of the organelle before getting completely trapped there
 #
 # Note: `B` is plentiful everywhere
 #
@@ -31,8 +31,8 @@
 # ### TAGS : "reactions 1D", "diffusion 1D", "membranes 1D"
 
 # %%
-LAST_REVISED = "Aug. 28, 2025"
-LIFE123_VERSION = "1.0.0rc6"       # Library version this experiment is based on
+LAST_REVISED = "Mar. 17, 2026"
+LIFE123_VERSION = "1.0.0rc7"       # Library version this experiment is based on
 
 # %%
 #import set_path              # Using MyBinder?  Uncomment this before running the next cell!
@@ -60,8 +60,8 @@ chem_data = ChemData(names=["A", "B", "C"],
 
 rxns = ReactionRegistry(chem_data=chem_data)
 
-# Reaction A + B <-> C , with 1st-order kinetics for each species; note that it's mostly in the forward direction
-# The reaction is mostly in the forward direction
+# Reaction A + B <-> C , with 1st-order kinetics for each species
+# Note that the reaction is mostly in the forward direction
 rxns.add_reaction(reactants=["A", "B"], products="C", kF=0.1, kR=0.02)
 rxns.describe_reactions()
 
@@ -161,30 +161,30 @@ bio.system_heatmaps(title_prefix=["The localized transient `A` starts turning in
 
 # %%
 bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)  # Here, and for most of the later plots, we stop smoothing
 
 # %% [markdown]
 # ### `A` is crossing to some extent the nearby left membrane, but not making it in time to reach the right membrane, before getting consumed   
 
 # %%
 bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)
 
 # %%
 bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)
 
 # %%
 bio.react_diffuse(total_duration=0.05, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)
 
 # %%
 bio.react_diffuse(total_duration=0.15, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)
 
 # %%
 bio.react_diffuse(total_duration=1.2, fraction_max_step=0.9, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)
 
 # %%
 bio.system_heatmaps()
@@ -209,8 +209,9 @@ bio.plot_history_single_bin(title_prefix=["Diffusion, membrane passive transport
 
 # %%
 # Save this plot, for later comparison with the counterpart from scenario 2
-scenario_1 = bio.plot_history_single_bin(title_prefix=["Diffusion, membrane passive transport, and reaction `A + B <-> C`",
-                                                       "Faraway bin."], 
+scenario_1 = bio.plot_history_single_bin(title_prefix=["Scenario 1: `A` diffuses slowly.",
+                                                       "Diffusion, membrane passive transport, and reaction."
+                                                       ], 
                                          bin_address=29)
 scenario_1 
 
@@ -264,37 +265,37 @@ bio.visualize_system(title_prefix=["Initial strong, localized transient of chemi
 # The first round of reaction-diffusion, over a small time duration
 bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
 bio.visualize_system(title_prefix=["This time, the localized transient `A` diffuses more substantially across the membrane,",
-                                   "before being converted into `C`, which can't cross the membrane"])
+                                   "before being converted into `C`, which can't cross the membrane"], smoothed=False)
 
 # %%
 bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)
 
 # %% [markdown]
 # ### In this scenario, `A` is managing to cross both membranes, to some extent, before getting consumed   
 
 # %%
 bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)
 
 # %%
 bio.react_diffuse(total_duration=0.025, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)
 
 # %%
 bio.react_diffuse(total_duration=0.05, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)
 
 # %%
 bio.react_diffuse(total_duration=0.15, fraction_max_step=0.5, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)
 
 # %% [markdown]
 # #### The increasingly prominent `C` (green) on the right is from `A` that managed to cross the membrane, and then converted to `C`
 
 # %%
 bio.react_diffuse(total_duration=1.2, fraction_max_step=0.9, show_status=True)
-bio.visualize_system()
+bio.visualize_system(smoothed=False)
 
 # %%
 
@@ -304,8 +305,9 @@ bio.visualize_system()
 # ### Now, let's look at the faraway bin 29, and it concentration change with time
 
 # %%
-scenario_2 = bio.plot_history_single_bin(title_prefix=["Diffusion, membrane passive transport, and reaction `A + B <-> C`",
-                                                       "Faraway bin."], 
+scenario_2 = bio.plot_history_single_bin(title_prefix=["Scenario 2: `A` diffuses quickly.",
+                                                       "Diffusion, membrane passive transport, and reaction."
+                                                       ], 
                                          bin_address=29)
 scenario_2
 
@@ -315,7 +317,7 @@ scenario_2
 # %%
 PlotlyHelper.combine_plots(fig_list = [scenario_1, scenario_2], 
                            title="Diffusion, membrane passive transport, and reaction `A + B <-> C`<br>Concentrations in faraway bin 29<br>Comparison of scenario 1 (dotted) and 2 (solid)", 
-                           layout_index=0, modify = {0: "dot"})
+                           modify = {0: "dot"}, legend_title="Species", legend_show_all_traces=True)
 
 # %% [markdown]
 # Magnify plot to separate the red and green dots (very close to each other)!  

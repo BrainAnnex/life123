@@ -13,20 +13,23 @@
 # ---
 
 # %% [markdown]
-# ## An `A <-> B` reaction  
+# ## `A <-> B` elementary unimolecular reaction  
 # with 1st-order kinetics in both directions, taken to equilibrium,
 # using a simple, **coarse fixed-timestep simulation.**  
 #
-# In Part 2, below, perform some analysis of the results: in particular, examine the **reaction rates**. 
+# In Part 2, below, we perform some analysis of the results: in particular, we examine the **reaction rates**. 
 #
 # (See also the experiment _"1D/reactions/reaction_1"_ for a multi-compartment version)  
 #
 # #### This experiment gets repeated in _"react_2_b"_ , with a more sophisticated approach, 
 # #### involving adaptive variable time steps
 
+# %% [markdown]
+# ### TAGS :  "basic", "uniform compartment"
+
 # %%
-LAST_REVISED = "Aug. 29, 2024"
-LIFE123_VERSION = "1.0.0rc6"        # Library version this experiment is based on
+LAST_REVISED = "Mar. 17, 2026"
+LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -39,7 +42,7 @@ LIFE123_VERSION = "1.0.0rc6"        # Library version this experiment is based o
 import numpy as np
 import ipynbname
 
-from life123 import check_version, UniformCompartment, PlotlyHelper, GraphicLog
+from life123 import check_version, UniformCompartment, ThermoDynamics, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
@@ -48,11 +51,6 @@ check_version(LIFE123_VERSION)
 # Initialize the HTML logging (for the graphics)
 log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
                                             # IN CASE OF PROBLEMS, set manually to any desired name
-
-# Set up the use of some specified graphic (Vue) components
-GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_2"],
-                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
 
 # %%
 
@@ -75,7 +73,7 @@ uc.describe_reactions()
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
-uc.plot_reaction_network("vue_cytoscape_2")
+uc.plot_reaction_network(log_file=log_file)
 
 
 # %%
@@ -101,8 +99,20 @@ uc.find_equilibrium_conc(rxn_index=0)    # This is an EXACT equilibrium solution
                                          # for 1 reaction (the only reaction)
 
 # %% [markdown]
-# #### The reaction will actually proceed IN REVERSE, because of the large initial concentration of B (which we had set to 50), relative to the small initial concentration of A (10)
+# That's consistent with the 3/2 ratio of forward/reverse rate constants (and the 1st order of the reaction)
+
+# %% [markdown]
+# #### Considering that our initial state is {"A": 10., "B": 50.}, the reaction will actually proceed IN REVERSE (decreasing product), because of the large initial concentration of `B`, relative to the small initial concentration of `A`
+# More precisely, it's because the **reaction quotient Q**, at the current initial concentrations, is larger than our **equilibrium constant K**, which is 1.5 :
+
+# %%
+ThermoDynamics.compute_reaction_quotient(reactant_data=["A"], product_data=["B"],
+                                         conc={"A": 10., "B": 50.})
+
+# %% [markdown]
 # Now, let's see the reaction in action!
+
+# %%
 
 # %%
 
@@ -137,11 +147,7 @@ uc.get_history()
 uc.get_system_conc()   # The current concentrations, in the order the chemicals were added 
 
 # %% [markdown]
-# NOTE: Consistent with the 3/2 ratio of forward/reverse rates (and the 1st order of the reactions), the systems settles in the following equilibrium:
-#
-# [A] = 23.99316406
-#  
-# [B] = 36.00683594
+# That's very close to the values we previewed earlier:  {'A': 24.0, 'B': 36.0}
 #
 
 # %%
@@ -196,11 +202,13 @@ p1 = uc.plot_history(chemicals="A", colors="darkturquoise")   # The plot of [A] 
 p2 = PlotlyHelper.plot_pandas(df=rates_df, x_var="SYSTEM TIME", fields="A_dot", colors="brown")   # The plot of A_dot, from rates_df
 
 # %%
-PlotlyHelper.combine_plots([p1, p2], 
+PlotlyHelper.combine_plots([p1, p2],
                            title="Concentration of A with time, and its rate of change (A_dot)",
                            y_label="[A] (turquoise) /<br> A_dot (brown)",
                            legend_title="Plot",
-                           curve_labels=["A", "A_dot"])
+                           line_labels=["A", "A_dot"])
+
+# %%
 
 # %% [markdown]
 # ### At t=0 :  

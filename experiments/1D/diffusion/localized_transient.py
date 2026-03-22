@@ -22,8 +22,8 @@
 # ### TAGS :  "diffusion 1D"
 
 # %%
-LAST_REVISED = "Aug. 10, 2025"
-LIFE123_VERSION = "1.0.0rc6"       # Library version this experiment is based on
+LAST_REVISED = "Mar. 17, 2026"
+LIFE123_VERSION = "1.0.0rc7"       # Library version this experiment is based on
 
 # %%
 #import set_path              # Using MyBinder?  Uncomment this before running the next cell!
@@ -42,14 +42,16 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Initialize the system
-chem_data = ChemData(diffusion_rates=10.)    # Name "A" automatically assigned to only chemical
+chem_data = ChemData(diffusion_rates=10.)    # Name and label "A" automatically assigned to the only chemical
+chem_data.all_chemicals()
 
+# %%
 bio = BioSim1D(n_bins=500, chem_data=chem_data)
 
 # %%
-# Set up the initial bell-shape concentration, with the very narrow peak close to one end of the system,
-# centered at 1/10 of the width of the system, i.e. at bin 50
-bio.inject_bell_curve(chem_label="A", center=0.1, sd=0.005, amplitude=0.1, bias=10.)
+# Set up the initial bell-shape concentration, with the very narrow peak close to the left end of the system,
+# at bin 50
+bio.inject_bell_curve(chem_label="A", center_bin=50, sd=0.005, amplitude=0.1, bias=10.)
 
 # %%
 
@@ -69,6 +71,10 @@ bio.visualize_system(title_prefix="Initial strong, localized transient")
 # %%
 # Show as heatmap
 bio.system_heatmaps(title_prefix="Initial strong, localized transient")
+
+# %%
+# Note: since we didn't specify any color preference, a color got automatically assigned to `A`
+chem_data.all_chemicals()
 
 # %%
 

@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -13,74 +13,61 @@
 # ---
 
 # %% [markdown]
-# ### `A <-> 3B` reaction, taken to equilibrium.  
-# #### A hypothetical scenario with 1st-order kinetics in both directions. 
+# ### `A <-> 2B` elementary reversible decomposition reaction, taken to equilibrium.  
 # ### Examine State Space trajectory, using [A] and [B] as state variables
-#
-# 1st-order kinetics in both directions
-#
-# See also the experiment `1D/reaction/reaction_2`
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
+
+# %% [markdown]
+# ### TAGS :  "uniform compartment"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "Mar. 17, 2026"
+LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
 
 # %%
-from experiments.get_notebook_info import get_notebook_basename
-
-from life123 import ChemData
-from life123 import UniformCompartment
-
-import plotly.express as px
-import plotly.graph_objects as go
-from life123 import GraphicLog
+#import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
 
 # %%
-# Initialize the HTML logging
-log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-# Set up the use of some specified graphic (Vue) components
-GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_2"],
-                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
+from life123 import check_version, UniformCompartment, ReactionKinetics, PlotlyHelper
 
 # %%
-# Initialize the system
-chem_data = ChemData(names=["A", "B"])
 
-
-# Reaction A <-> 3B , with 1st-order kinetics in both directions
-chem_data.add_reaction(reactants="A", products=[(3,"B",1)], forward_rate=5., reverse_rate=2.)
-
-chem_data.describe_reactions()
+# %% [markdown]
+# ### Initialize the system
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)
-dynamics.set_conc(conc={"A": 10., "B": 50.},
-                  snapshot=True)
-dynamics.describe_state()
+uc = UniformCompartment(names=["A", "B"])
+uc.set_conc(conc={"A": 40., "B": 0.})
 
 # %%
-# Send the plot to the HTML log file
-chem_data.plot_reaction_network("vue_cytoscape_2")
+# Elementary reaction A <-> 2B
+uc.add_reaction(reactants="A", products=[(2,"B")], kF=3., kR=2.)
 
-# %% [markdown] tags=[]
-# ### To equilibrium
-
-# %%
-dynamics.single_compartment_react(initial_step=0.05, n_steps=10, variable_steps=False)
+uc.describe_reactions()
 
 # %%
-df = dynamics.get_history()
+
+# %%
+
+# %% [markdown]
+# ### Simulate the reaction to equilibrium
+
+# %%
+uc.single_compartment_react(initial_step=0.005, duration=0.08, variable_steps=False)
+
+# %%
+df = uc.get_history()
 df
 
 # %%
 # Verify that the reaction has reached equilibrium
-dynamics.is_in_equilibrium()
+uc.is_in_equilibrium(tolerance=2)
 
 # %%
-dynamics.plot_history(colors=['navy', 'orange'])
+uc.plot_history(colors=['navy', 'orange'])
 
 # %%
 
@@ -88,48 +75,11 @@ dynamics.plot_history(colors=['navy', 'orange'])
 # ## Same data, but shown differently
 
 # %%
-fig0 = px.line(data_frame=dynamics.get_history(), x="A", y="B", 
-              title="State space of reaction A <-> 3B : [A] vs. [B]",
-              color_discrete_sequence = ['#C83778'],
-              labels={"value":"concentration", "variable":"Chemical"})
-fig0.show()
-
-# %%
-# Now show the individual data points
-
-df['SYSTEM TIME'] = round(df['SYSTEM TIME'], 2)    # To avoid clutter from too many digits, in the column
-
-fig1 = px.scatter(data_frame=df, x="A", y="B",
-                  title="Trajectory in State space: [A] vs. [B]",
-                  hover_data=['SYSTEM TIME'])
-
-fig1.update_traces(marker={"size": 6, "color": "#2FAC74"})    # Modify the style of the dots
-
-# Add annotations (showing the System Time value) to SOME of the points, to avoid clutter
-for ind in df.index:     # for each row in the Pandas dataframe
-    label = df["SYSTEM TIME"][ind]
-    if ind == 0:
-        label = f"t={label}"
-        
-    label_x = ind*16
-    label_y = 20 + ind*8    # A greater y value here means further DOWN!!
-        
-    if (ind <= 3) or (ind%2 == 0):
-        fig1.add_annotation(x=df["A"][ind], y=df["B"][ind],
-                            text=label,
-                            font=dict(
-                                size=10,
-                                color="grey"
-                            ),
-                            showarrow=True, arrowhead=0, ax=label_x, ay=label_y, arrowcolor="#b0b0b0",
-                            bordercolor="#c7c7c7")
-
-fig1.show()
-
-# %%
-# Combine the two above plots, while using the layout of fig1 (which includes the title and annotations)
-all_fig = go.Figure(data=fig0.data + fig1.data, layout = fig1.layout)
-all_fig.show()
+PlotlyHelper.plot_pandas(df=uc.get_history(), x_var="B", fields="A", 
+                         title="State space of reaction A <-> 2B : [A] vs. [B]", 
+                         colors="#C83778", 
+                         annotation_field="SYSTEM TIME", show_points=True, 
+                         annotate={"dx": 5, "dy": -13, "x_offset": -50, "y_offset": -8, "frequency": 2})
 
 # %% [markdown]
 # ### **Note how the trajectory is progressively slowing down towards the dynamical system's "attractor" (equilibrium state of the reaction)**
