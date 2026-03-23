@@ -6,11 +6,11 @@
 
 	https://Life123.science
 
-    :copyright:     (c) 2022-2025 by Julian West and the Life123 project.
+    :copyright:     (c) 2022-2026 by Julian West and the Life123 project.
     :license:       MIT.  See LICENSE file for more details.
 """
 
-__version__ = "1.0.0rc7"
+__version__ = "1.0.0rc8"
 
 
 from life123.bio_sim_1d import (System1D, Membranes1D, Diffusion1D, BioSim1D)
