@@ -159,18 +159,6 @@ class ReactionRegistry:
         return rxn.extract_reactants()
 
 
-    def get_reactant_species(self, i :int) -> [(int, str)]:
-        """
-        Return a list of the reactant species of the i-th reaction.
-
-        :param i:   The index (0-based) to identify the reaction of interest
-        :return:    A list of chem labels
-        """
-        rxn = self.get_reaction(i)
-        reactant_complexes = rxn.extract_reactants()
-        return [c[1] for c in reactant_complexes]
-
-
     def get_reactants_formula(self, i :int) -> str:
         """
         Return a string with a user-friendly form of the left (reactants) side of the reaction formula
@@ -193,18 +181,6 @@ class ReactionRegistry:
         """
         rxn = self.get_reaction(i)
         return rxn.extract_products()
-
-
-    def get_product_species(self, i :int) -> [(int, str)]:
-        """
-        Return a list of the product species of the i-th reaction.
-
-        :param i:   The index (0-based) to identify the reaction of interest
-        :return:    A list of chem labels
-        """
-        rxn = self.get_reaction(i)
-        product_complexes = rxn.extract_products()
-        return [c[1] for c in product_complexes]
 
 
     def get_products_formula(self, i :int) -> str:

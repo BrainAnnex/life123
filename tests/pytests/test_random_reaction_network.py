@@ -44,9 +44,9 @@ def test_constructor():
 
 def test_constructor_2():
     net = RandomReactionNetwork(n_species=5, n_rxns=25, seed=888)
-    for i in range(len(net.registry.get_all_reactions())):
-        reactants = net.get_reactions().get_reactant_species(i)
-        products = net.get_reactions().get_product_species(i)
+    for rxn in net.registry.get_all_reactions():
+        reactants = rxn.get_reactant_species()
+        products = rxn.get_product_species()
         '''
         print()
         print(reactants)

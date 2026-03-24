@@ -55,10 +55,39 @@ class ReactionCommon:
 
 
 
+    def extract_reactants(self, *args, **kwargs):
+        raise NotImplementedError("Subclasses must implement this")
+
+    def extract_products(self, *args, **kwargs):
+        raise NotImplementedError("Subclasses must implement this")
+
+
+
+    def get_reactant_species(self) -> [(int, str)]:
+        """
+        Return a list of the reactant species of this reaction
+
+        :return:    A list of chem labels
+        """
+        reactant_complexes = self.extract_reactants()
+        return [c[1] for c in reactant_complexes]
+
+
+    def get_product_species(self) -> [(int, str)]:
+        """
+        Return a list of the product species of this reaction
+
+        :return:    A list of chem labels
+        """
+        product_complexes = self.extract_products()
+        return [c[1] for c in product_complexes]
+
+
 
     def reaction_details(self, rxn_properties :dict) -> str:
         """
-        Return a string with some details about the parameters of this reaction
+        Return a string with some details about the parameters of this reaction,
+        extracted from the passed dictionary
 
         :param rxn_properties:  A dictionary with numerical properties of interest for the reaction
                                     EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': -1005.13, 'K': 1.5}

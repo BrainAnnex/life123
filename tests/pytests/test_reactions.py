@@ -21,6 +21,29 @@ def test_constructor_ReactionCommon():
 
 
 
+def test_get_reactant_species():
+    rxn = ReactionUnimolecular(reactant="A", product="B")
+    assert rxn.get_reactant_species() == ["A"]
+
+    rxn = ReactionSynthesis(reactants=("F", "F"), product="X")
+    assert rxn.get_reactant_species() == ["F"]
+
+    rxn = ReactionGeneric(reactants=["B", (2, "H")], products=[(2, "C"), "L"])
+    assert rxn.get_reactant_species() == ["B", "H"]
+
+
+def test_get_product_species():
+    rxn = ReactionUnimolecular(reactant="A", product="B")
+    assert rxn.get_product_species() == ["B"]
+
+    rxn = ReactionSynthesis(reactants=("F", "F"), product="X")
+    assert rxn.get_product_species() == ["X"]
+
+    rxn = ReactionGeneric(reactants=["B", (2, "H")], products=[(2, "C"), "L"])
+    assert rxn.get_product_species() == ["C", "L"]
+
+
+
 def test_extract_stoichiometry():
     rxn = ReactionCommon()
     term = (2, "A")
