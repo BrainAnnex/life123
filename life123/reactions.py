@@ -61,26 +61,13 @@ class ReactionCommon:
     def extract_products(self, *args, **kwargs):
         raise NotImplementedError("Subclasses must implement this")
 
+    def extract_reactant_labels(self, *args, **kwargs):
+        # Return the list of the labels of ALL the reactants of this reaction
+        raise NotImplementedError("Subclasses must implement this")
 
-
-    def get_reactant_species(self) -> [(int, str)]:
-        """
-        Return a list of the reactant species of this reaction
-
-        :return:    A list of chem labels
-        """
-        reactant_complexes = self.extract_reactants()
-        return [c[1] for c in reactant_complexes]
-
-
-    def get_product_species(self) -> [(int, str)]:
-        """
-        Return a list of the product species of this reaction
-
-        :return:    A list of chem labels
-        """
-        product_complexes = self.extract_products()
-        return [c[1] for c in product_complexes]
+    def extract_product_labels(self, *args, **kwargs):
+        # Return the list of the labels of ALL the products of this reaction
+        raise NotImplementedError("Subclasses must implement this")
 
 
 
@@ -404,7 +391,8 @@ class ReactionUnimolecular(ReactionElementary):
         """
         Return the list of ALL the reactant labels in this reaction
 
-        :return:    A list of ALL the reactant labels in this reaction
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
         return [self.reactant]
 
@@ -431,9 +419,10 @@ class ReactionUnimolecular(ReactionElementary):
 
     def extract_product_labels(self) -> [str]:
         """
-        Return the list of the labels ALL the products of this reaction
+        Return the list of the labels of ALL the products of this reaction
 
-        :return:
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
         return [self.product]
 
@@ -671,8 +660,12 @@ class ReactionSynthesis(ReactionElementary):
         """
         Return the list of ALL the reactant labels in this reaction
 
-        :return:    The list of ALL the reactant labels in this reaction
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
+        if self.reactant_1 == self.reactant_2:
+            return [self.reactant_1]
+
         return [self.reactant_1, self.reactant_2]
 
 
@@ -704,9 +697,10 @@ class ReactionSynthesis(ReactionElementary):
 
     def extract_product_labels(self) -> [str]:
         """
-        Return the list of the labels ALL the products of this reaction
+        Return the list of the labels of ALL the products of this reaction
 
-        :return:
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
         return [self.product]
 
@@ -962,7 +956,8 @@ class ReactionDecomposition(ReactionElementary):
         """
         Return the list of ALL the reactant labels in this reaction
 
-        :return:
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
         return [self.reactant]
 
@@ -989,10 +984,14 @@ class ReactionDecomposition(ReactionElementary):
 
     def extract_product_labels(self) -> [str]:
         """
-        Return the list of the labels ALL the products of this reaction
+        Return the list of the labels of ALL the products of this reaction
 
-        :return:
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
+        if self.product_1 == self.product_2:
+            return [self.product_1]
+
         return [self.product_1, self.product_2]
 
 
@@ -1279,7 +1278,8 @@ class ReactionEnzyme(ReactionCommon):
         Return the list of ALL the reactant labels in this reaction,
         (including the enzyme)
 
-        :return:
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
         return [self.substrate, self.enzyme]
 
@@ -1320,7 +1320,8 @@ class ReactionEnzyme(ReactionCommon):
         Return the list of the labels of ALL the products of this reaction,
         (including the enzyme)
 
-        :return:
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
         return [self.product, self.enzyme]
 
@@ -1820,16 +1821,6 @@ class ReactionGeneric(ReactionCommon):
         self.macro_enzyme = (macromolecule, site_number)
 
 
-    '''
-    def extract_catalyst(self) -> Union[str, None]:
-        """
-
-        :return:
-        """
-        #TODO: deprecate?
-        return self.catalyst
-    '''
-
 
 
 
@@ -1912,11 +1903,12 @@ class ReactionGeneric(ReactionCommon):
     def extract_reactant_labels(self) -> [str]:
         """
         Return the list of the labels of ALL the reactant in this reaction,
-        (including any catalysts, if applicable),
-        in the order in which they appear when the reaction was first defined
+        (including any catalysts, if applicable).
 
-        :return:    List of chemical labels
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
+        # TODO: investigate if there's a chance of repeat
         reactants = self.extract_reactants()
         reactant_names = [self.extract_chem_label(r) for r in reactants]
 
@@ -1926,11 +1918,12 @@ class ReactionGeneric(ReactionCommon):
     def extract_product_labels(self) -> [str]:
         """
         Return the list of the labels of ALL the reaction products,
-        (including any catalysts, if applicable),
-        in the order in which they appear when the reaction was first defined
+        (including any catalysts, if applicable)
 
-        :return:    List of chemical labels
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
+        # TODO: investigate if there's a chance of repeat
         products = self.extract_products()
         product_names = [self.extract_chem_label(r) for r in products]
 

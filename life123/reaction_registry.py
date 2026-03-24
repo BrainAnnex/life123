@@ -81,6 +81,7 @@ class ReactionRegistry:
 
     def get_all_reactions(self):
         """
+        Return the list of all the reactions that have been registered
 
         :return:    A list of various types of reaction objects,
                         such as ReactionUnimolecular, ReactionSynthesis, etc.
@@ -256,7 +257,7 @@ class ReactionRegistry:
         Return a list of all the reactions that the given chemical species
         is involved in
 
-        :param chem_label:
+        :param chem_label:  To identify a particular chemical
         :param side:        Either "left" or "right"
         :return:            List of varius types of "Reaction" objects
         """
