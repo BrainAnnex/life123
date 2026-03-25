@@ -258,14 +258,13 @@ class ReactionRegistry:
         is involved in
 
         :param chem_label:  To identify a particular chemical
-        :param side:        Either "left" or "right"
-        :return:            List of varius types of "Reaction" objects
+        :param side:        Either "reagent" or "product"
+        :return:            List of various types of "Reaction" objects
         """
-        # TODO: test
-        assert side == "left" or side == "right"
+        assert side == "reagent" or side == "product"
         rxns_found_in = []
         for rxn in self.reaction_list:
-            if side == "left":
+            if side == "reagent":
                 if chem_label in rxn.extract_reactant_labels():
                     rxns_found_in.append(rxn)
             else:
@@ -274,7 +273,6 @@ class ReactionRegistry:
 
 
         return rxns_found_in
-
 
 
 

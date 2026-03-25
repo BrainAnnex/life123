@@ -137,7 +137,42 @@ def test_get_chemicals_indexes_in_reaction():
 
 
 def test_get_reactions_participating_in():
-    pass   # TODO
+    rxns = ReactionRegistry()
+
+    result = rxns.get_reactions_participating_in(chem_label="A", side="reagent")
+    assert result == []
+
+    rxns.add_reaction(reactants="A", products="B")
+
+    result = rxns.get_reactions_participating_in(chem_label="A", side="reagent")
+    assert len(result) == 1
+    assert type(result[0]).__name__ == "ReactionUnimolecular"
+
+    result = rxns.get_reactions_participating_in(chem_label="A", side="product")
+    assert result == []
+
+    result = rxns.get_reactions_participating_in(chem_label="B", side="product")
+    assert len(result) == 1
+    assert type(result[0]).__name__ == "ReactionUnimolecular"
+
+
+    rxns.add_reaction(reactants=["A", "C"], products="P")
+
+    result = rxns.get_reactions_participating_in(chem_label="A", side="reagent")
+    assert len(result) == 2
+    assert type(result[0]).__name__ == "ReactionUnimolecular"
+    assert type(result[1]).__name__ == "ReactionSynthesis"
+
+    result = rxns.get_reactions_participating_in(chem_label="C", side="reagent")
+    assert len(result) == 1
+    assert type(result[0]).__name__ == "ReactionSynthesis"
+
+    result = rxns.get_reactions_participating_in(chem_label="C", side="product")
+    assert result == []
+
+    result = rxns.get_reactions_participating_in(chem_label="P", side="product")
+    assert len(result) == 1
+    assert type(result[0]).__name__ == "ReactionSynthesis"
 
 
 
