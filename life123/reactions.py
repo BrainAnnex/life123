@@ -526,8 +526,8 @@ class ReactionUnimolecular(ReactionElementary):
 
     def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> (dict, float):
         """
-        Simulate the unimolecular reaction R <-> P, over the specified time interval,
-        using either the exact analytical solution, or the "Forward Euler" approximation method
+        Simulate the unimolecular reaction of the type R <-> P, over the specified time interval,
+        using either the exact analytical solution, or the "Forward Euler" approximation method.
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
                                 concentrations won't vary significantly during this span
@@ -567,6 +567,7 @@ class ReactionUnimolecular(ReactionElementary):
                 delta_p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=self.kF,
                                                                                    A0=R0, P0=P0, t=delta_time, incremental=True)
 
+            # Work out the stoichiometry for all the species
             increment_dict_single_rxn = {r: -delta_p, p: delta_p}
             return (increment_dict_single_rxn, rxn_rate)
 
@@ -807,23 +808,26 @@ class ReactionSynthesis(ReactionElementary):
 
     def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> (dict, float):
         """
-        Simulate the synthesis reaction A + B <-> C, over the specified time interval,
-        using the "Forward Euler" method
+        Simulate the synthesis reaction of the type A + B <-> P, over the specified time interval,
+        using either the exact analytical solution, or the "Forward Euler" approximation method.
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
                                 concentrations won't vary significantly during this span
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
                                 for all the chemicals involved in this reaction
-                                EXAMPLE:  {"A": 1.5, "B": 31.6, "C": 19.9}
+                                EXAMPLE:  {"A": 1.5, "B": 31.6, "P": 19.9}
         :param exact:       [OPTIONAL] If True, use the exact analytical solution;
                                 if False (default), use the "Forward Euler" approximation method
 
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
                                 - increment_dict_single_rxn is the mapping of chemical labels to their concentration CHANGES
                                                             during this step
+                                                            EXAMPLE:  {"A": -1.3, "B": -1.3, "P": 1.3}
+                                                                      (meaning the reactants [A] and [B] decrease by 1.3,
+                                                                       while the product [P] increases by the same amount)
                                 - rxn_rate                  is the reaction rate ("velocity") for this reaction
-                                                            (rate of change of the product)
-                                EXAMPLE of increment_dict_single_rxn: "A": -1.3, "B": 2.9, "C": -1.6
+                                                            (rate of change of the product), at the START of the simulation step
+                                                            EXAMPLE: 3.5
         """
         increment_dict_single_rxn = {}      # The keys are the chemical labels,
                                             # and the values are their respective concentration changes as a result of this reaction
@@ -831,17 +835,25 @@ class ReactionSynthesis(ReactionElementary):
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
         rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
 
-        if exact and self.reversible:   # TODO: take care of the ir-reversible case
-            A0 = conc_dict[self.reactant_1]    # TODO: Look into whether this approach will work for 2A -> C
+        if exact:
+            A0 = conc_dict[self.reactant_1]    # TODO: Look into whether this approach will work for 2A -> P
             B0 = conc_dict[self.reactant_2]
-            C0 = conc_dict[self.product]
+            P0 = conc_dict[self.product]
 
-            increment_triplet = ReactionKinetics.exact_advance_synthesis_reversible(kF=self.kF, kR=self.kR,
-                                                                                    A0=A0, B0=B0, P0=C0, t=delta_time, incremental=True)
+            if self.reversible:
+                delta_p = ReactionKinetics.exact_advance_synthesis_reversible(kF=self.kF, kR=self.kR,
+                                                                              A0=A0, B0=B0, P0=P0, t=delta_time,
+                                                                              incremental=True)
+            else:
+                delta_p = ReactionKinetics.exact_advance_synthesis_irreversible(kF=self.kF,
+                                                                                A0=A0, B0=B0, P0=P0, t=delta_time,
+                                                                                incremental=True)
 
-            increment_dict_single_rxn = {self.reactant_1: increment_triplet[0], self.reactant_2: increment_triplet[1],
-                                         self.product: increment_triplet[2]}
+            # Work out the stoichiometry for all the species
+            increment_dict_single_rxn = {self.reactant_1: -delta_p, self.reactant_2: -delta_p,
+                                         self.product: delta_p}
             return (increment_dict_single_rxn, rxn_rate)
+
 
 
         # If we get thus far, exact=False
@@ -1103,21 +1115,26 @@ class ReactionDecomposition(ReactionElementary):
 
     def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> (dict, float):
         """
-        Simulate the decomposition reaction A <-> B + C, over the specified time interval,
-        using the "Forward Euler" method
+        Simulate the decomposition reaction of the type R <-> P + Q, over the specified time interval,
+        using either the exact analytical solution, or the "Forward Euler" approximation method.
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
                                 concentrations won't vary significantly during this span
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
                                 for all the chemicals involved in this reaction
-                                EXAMPLE:  {"A": 1.5, "B": 31.6, "C": 19.9}
+                                EXAMPLE:  {"R": 1.5, "P": 31.6, "Q": 19.9}
+        :param exact:       [OPTIONAL] If True, use the exact analytical solution;
+                                if False (default), use the "Forward Euler" approximation method
 
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
                                 - increment_dict_single_rxn is the mapping of chemical labels to their concentration CHANGES
                                                             during this step
+                                                            EXAMPLE:  {"R": -1.3, "P": 1.3, "Q": 1.3}
+                                                                      (meaning the reactant [R] decreases by 1.3,
+                                                                       while the products [P] and [Q] increase by the same amount)
                                 - rxn_rate                  is the reaction rate ("velocity") for this reaction
-                                                            (rate of change of either of the products)
-                                EXAMPLE of increment_dict_single_rxn: "A": -1.3, "B": 2.9, "C": -1.6
+                                                            (rate of change of the product), at the START of the simulation step
+                                                            EXAMPLE: 3.5
         """
         increment_dict_single_rxn = {}      # The keys are the chemical labels,
                                             # and the values are their respective concentration changes as a result of this reaction
@@ -1125,6 +1142,33 @@ class ReactionDecomposition(ReactionElementary):
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
         rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
 
+        if exact:
+            # We'll model the decomposition reaction R <-> P + Q
+            # as a synthesis reaction P + Q <-> R (written as A + B <-> C)  with kF and kR switched around
+
+            A0 = conc_dict[self.product_1]  # TODO: Look into whether this approach will work for 2R -> P
+            B0 = conc_dict[self.product_2]
+            C0 = conc_dict[self.reactant]
+
+            if self.reversible:
+                delta_c = ReactionKinetics.exact_advance_synthesis_reversible(kF=self.kR, kR=self.kF,
+                                                                              A0=A0, B0=B0, P0=C0, t=delta_time,
+                                                                              incremental=True)
+            else:
+                delta_c = ReactionKinetics.exact_advance_synthesis_irreversible(kF=self.kR,
+                                                                                A0=A0, B0=B0, P0=C0, t=delta_time,
+                                                                                incremental=True)
+
+            # Work out the stoichiometry for all the species
+            increment_dict_single_rxn = {self.reactant: delta_c,
+                                         self.product_1: -delta_c, self.product_2: -delta_c}
+            return (increment_dict_single_rxn, rxn_rate)
+
+
+
+        # If we get thus far, exact=False
+
+        # In the "forward Euler" approximation, the following rate is taken to remain unvaried during the entire (small) time step
         delta_rxn = rxn_rate * delta_time      # forward reaction - reverse reaction
 
 

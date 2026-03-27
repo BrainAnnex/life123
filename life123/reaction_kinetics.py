@@ -19,74 +19,6 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def half_time_unimolecular_irreversible(kF) -> float:
-        """
-        Return the time taken for the reactant concentration in an irreversible unimolecular reaction
-        to decrease by half (halfway to the asymptotic state, which happens to be zero)
-
-        :param kF:  Forward reaction rate constant
-        :return:    Reaction time taken for reactant concentration to decrease by half
-        """
-        return 0.6931471805599 / kF     # ln 2 / kF
-
-
-
-    @staticmethod
-    def half_time_relaxation_unimolecular_reversible(kF, kR) -> float:
-        """
-        Return the time taken for the reactant concentration in a reversible unimolecular reaction
-        to decrease halfway to its asymptotic equilibrium state
-
-        :param kF:  Forward reaction rate constant
-        :param kR:  Reverse reaction rate constant
-        :return:    Reaction time taken for reactant concentration
-                        to decrease halfway to its asymptotic equilibrium state
-        """
-        # TODO: maybe simply combine with half_time_unimolecular_irreversible, with kR=0
-        return 0.6931471805599 / (kF + kR)      # ln 2 / (kF + kR)
-
-
-    @staticmethod
-    def relaxation_time_unimolecular_reversible(kF, kR) -> float:
-        """
-        This is the same as the half-time of relaxation, within a factor of ln 2
-
-        :param kF:  Forward reaction rate constant
-        :param kR:  Reverse reaction rate constant
-        :return:    A quantity named "relaxation time"
-        """
-        # TODO: is this method needed?
-        return 1. / (kF + kR)
-
-
-
-    @staticmethod
-    def half_time_to_equilibrium_irreversible_synthesis(kF, A0, B0) -> float:
-        """
-        Return the time taken for the reactant concentration
-        in a synthesis reaction A + B -> P
-        to decrease halfway to their asymptotic equilibrium state.
-        The time taken for 50% of the limiting reactant to be consumed
-
-        :param kF:  Forward reaction rate constant
-        :return:    Reaction time taken for reactant concentration
-                        to decrease halfway to its asymptotic equilibrium state
-        """
-        #TODO: test
-        #equil_concs = ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=A0, b=1, B0=B0, p=1, P0=P0)
-
-        delta_conc = A0 - B0
-        if np.allclose(delta_conc, 0):
-            return 1 / (kF * A0)
-
-        if delta_conc > 0:      # When A0 > B0
-            return math.log((2 * A0 - B0) / A0) / (kF * delta_conc)
-        else:
-            return - math.log((2 * B0 - A0) / B0) / (kF * delta_conc)   #TODO: test
-
-
-
-    @staticmethod
     def exact_advance_unimolecular_reversible(kF, kR, A0, P0, t, incremental=False) -> float:
         """
         Exactly advance the concentrations
@@ -158,120 +90,6 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def approx_solution_synthesis_rxn(kF, kR, A0, B0, P0, t :float|np.ndarray) -> float|np.ndarray:
-        """
-        Return the APPROXIMATE analytical solution, by way of exponentials,
-        of the reversible 2nd Order Reaction A + B <-> P,
-        with the specified parameters, sampled at the given time(s).
-
-        This approximation is relatively coarse; in the pytests, errors of up to about 2% were seen,
-        with the worst errors in the mid-portion between the starting state and the final equilibrium
-
-        :param kF:  Forward reaction rate constant (cannot be zero)
-        :param kR:  Reverse reaction rate constant
-        :param A0:  Initial concentration of the 1st reactant A
-        :param B0:  Initial concentration of the 2nd reactant B
-        :param P0:  Initial concentration of the product P
-        :param t:   The end time of the reaction that started at time zero
-                        OR a Numpy array with the desired times at which the solutions are desired
-
-        :return:    A concentration value, or Numpy arrays with the concentrations,
-                        of P at the time - or times - given by the argument `t`
-        """
-        assert not np.allclose(kF, 0), \
-            "approx_solution_synthesis_rxn(): this approximation cannot be used when kF is zero"
-
-        # Calculate the equilibrium concentrations
-        K_inv = kR / kF     # Inverse of the equilibrium constant.  Note that we're assuming kF isn't zero
-
-        # The following derive from solving the quadratic equation  (A0 - m) * (B0 - m) / (C0 + m) == K_inv , for m
-        # where m is the Product concentration change ("moles/liter of forward reaction")
-        TOT_reactants = A0+B0
-        r = (K_inv**2 + TOT_reactants**2) / 4 + (K_inv * TOT_reactants / 2) + P0 * K_inv - A0 * B0
-        m = (K_inv + TOT_reactants)/2  - math.sqrt(r)         # Product concentration change
-
-        # The reactants get consumed by m, while the product increases by m
-        A_eq = A0 - m
-        B_eq = B0 - m
-
-        #print(f"\nProduct concentration change: {m} | A_eq: {A_eq}  |  B_eq: {B_eq}")
-
-        l = (kF + kR) * (A_eq + B_eq)  # Relaxation rate constant λ
-
-        AC_tot = A0 + P0        # Quantity conserved thru the rxn, from the stoichiometry
-
-        A_arr = A_eq + (A0 - A_eq) * np.exp(-l * t)     # Approximate analytical solution
-        P_arr = AC_tot - A_arr
-
-        return P_arr
-
-
-
-    @staticmethod
-    def approx_solution_synthesis_rxn_ALT(kF, kR, A0, B0, P0, t, incremental) -> float:
-        """
-        Provided by ChatGPT.  Not fully tested.
-
-        Closed-form solution for:
-        dp/dt = kf (a0 - p + p0)(b0 - p + p0) - kr p
-        with p(0) = p0
-
-        Parameters
-        ----------
-        t : float or array_like
-            Time(s) at which to evaluate p(t)
-        P0, kF, kR, A0, B0 : float
-            Reaction parameters
-
-        Returns
-        -------
-        p : float or ndarray
-            Value(s) of p(t)
-        """
-
-        # Coefficients of Riccati equation
-        alpha = kF
-        beta  = kF * (A0 + B0 + 2 * P0) + kR
-        gamma = kF * (A0 + P0) * (B0 + P0)
-
-        # Discriminant
-        discr = beta**2 - 4*alpha*gamma
-        if np.any(discr < 0):
-            raise ValueError("Negative discriminant: parameters give complex roots.")
-
-        sqrt_disc = np.sqrt(discr)
-
-        # Equilibria
-        p_plus  = (beta + sqrt_disc) / (2*alpha)
-        p_minus = (beta - sqrt_disc) / (2*alpha)
-
-        # Relaxation rate
-        lam = alpha * (p_plus - p_minus)
-
-        #t = np.asarray(t, dtype=float)
-
-        exp_term = np.exp(-lam * t)
-
-        numerator = (
-                p_plus * (P0 - p_minus)
-                - p_minus * (P0 - p_plus) * exp_term
-        )
-
-        denominator = (
-                (P0 - p_minus)
-                - (P0 - p_plus) * exp_term
-        )
-
-        P_t = numerator / denominator
-
-        if incremental:
-            return P_t - P0
-
-        return P_t
-
-
-
-    @staticmethod
     def exact_advance_synthesis_reversible(kF, kR, A0, B0, P0, t, incremental=False) -> float:
         """
         Exactly advance the concentrations
@@ -285,7 +103,7 @@ class ReactionKinetics:
         :param B0:  Initial concentration of the 2nd reactant B
         :param P0:  Initial concentration of the product P
         :param t:   The end time of the reaction that started at time zero
-        :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
+        :param incremental: [OPTIONAL] If True, the changes in concentration of P is returned,
                                 rather than the final ones.  Default: False
 
         :return:   The concentration of P at time t (if `incremental` is False)
@@ -444,6 +262,206 @@ class ReactionKinetics:
         return P_t
 
 
+
+    @staticmethod
+    def approx_solution_synthesis_rxn(kF, kR, A0, B0, P0, t :float|np.ndarray) -> float|np.ndarray:
+        """
+        Return the APPROXIMATE analytical solution, by way of exponentials,
+        of the reversible 2nd Order Reaction A + B <-> P,
+        with the specified parameters, sampled at the given time(s).
+
+        This approximation is relatively coarse; in the pytests, errors of up to about 2% were seen,
+        with the worst errors in the mid-portion between the starting state and the final equilibrium
+
+        :param kF:  Forward reaction rate constant (cannot be zero)
+        :param kR:  Reverse reaction rate constant
+        :param A0:  Initial concentration of the 1st reactant A
+        :param B0:  Initial concentration of the 2nd reactant B
+        :param P0:  Initial concentration of the product P
+        :param t:   The end time of the reaction that started at time zero
+                        OR a Numpy array with the desired times at which the solutions are desired
+
+        :return:    A concentration value, or Numpy arrays with the concentrations,
+                        of P at the time - or times - given by the argument `t`
+        """
+        assert not np.allclose(kF, 0), \
+            "approx_solution_synthesis_rxn(): this approximation cannot be used when kF is zero"
+
+        # Calculate the equilibrium concentrations
+        K_inv = kR / kF     # Inverse of the equilibrium constant.  Note that we're assuming kF isn't zero
+
+        # The following derive from solving the quadratic equation  (A0 - m) * (B0 - m) / (C0 + m) == K_inv , for m
+        # where m is the Product concentration change ("moles/liter of forward reaction")
+        TOT_reactants = A0+B0
+        r = (K_inv**2 + TOT_reactants**2) / 4 + (K_inv * TOT_reactants / 2) + P0 * K_inv - A0 * B0
+        m = (K_inv + TOT_reactants)/2  - math.sqrt(r)         # Product concentration change
+
+        # The reactants get consumed by m, while the product increases by m
+        A_eq = A0 - m
+        B_eq = B0 - m
+
+        #print(f"\nProduct concentration change: {m} | A_eq: {A_eq}  |  B_eq: {B_eq}")
+
+        l = (kF + kR) * (A_eq + B_eq)  # Relaxation rate constant λ
+
+        AC_tot = A0 + P0        # Quantity conserved thru the rxn, from the stoichiometry
+
+        A_arr = A_eq + (A0 - A_eq) * np.exp(-l * t)     # Approximate analytical solution
+        P_arr = AC_tot - A_arr
+
+        return P_arr
+
+
+
+    @staticmethod
+    def approx_solution_synthesis_rxn_ALT(kF, kR, A0, B0, P0, t, incremental) -> float:
+        """
+        Provided by ChatGPT.  Not fully tested.
+
+        Closed-form solution for:
+        dp/dt = kf (a0 - p + p0)(b0 - p + p0) - kr p
+        with p(0) = p0
+
+        Parameters
+        ----------
+        t : float or array_like
+            Time(s) at which to evaluate p(t)
+        P0, kF, kR, A0, B0 : float
+            Reaction parameters
+
+        Returns
+        -------
+        p : float or ndarray
+            Value(s) of p(t)
+        """
+
+        # Coefficients of Riccati equation
+        alpha = kF
+        beta  = kF * (A0 + B0 + 2 * P0) + kR
+        gamma = kF * (A0 + P0) * (B0 + P0)
+
+        # Discriminant
+        discr = beta**2 - 4*alpha*gamma
+        if np.any(discr < 0):
+            raise ValueError("Negative discriminant: parameters give complex roots.")
+
+        sqrt_disc = np.sqrt(discr)
+
+        # Equilibria
+        p_plus  = (beta + sqrt_disc) / (2*alpha)
+        p_minus = (beta - sqrt_disc) / (2*alpha)
+
+        # Relaxation rate
+        lam = alpha * (p_plus - p_minus)
+
+        #t = np.asarray(t, dtype=float)
+
+        exp_term = np.exp(-lam * t)
+
+        numerator = (
+                p_plus * (P0 - p_minus)
+                - p_minus * (P0 - p_plus) * exp_term
+        )
+
+        denominator = (
+                (P0 - p_minus)
+                - (P0 - p_plus) * exp_term
+        )
+
+        P_t = numerator / denominator
+
+        if incremental:
+            return P_t - P0
+
+        return P_t
+
+
+
+    #####################################################################################################
+
+    '''                                 ~   HALF-TIME RELAXATION   ~                                  '''
+
+    def ________HALF_TIME_RELAXATION________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
+    @staticmethod
+    def half_time_unimolecular_irreversible(kF) -> float:
+        """
+        Return the time taken for the reactant concentration in an irreversible unimolecular reaction
+        to decrease by half (halfway to the asymptotic state, which happens to be zero)
+
+        :param kF:  Forward reaction rate constant
+        :return:    Reaction time taken for reactant concentration to decrease by half
+        """
+        return 0.6931471805599 / kF     # ln 2 / kF
+
+
+
+    @staticmethod
+    def half_time_relaxation_unimolecular_reversible(kF, kR) -> float:
+        """
+        Return the time taken for the reactant concentration in a reversible unimolecular reaction
+        to decrease halfway to its asymptotic equilibrium state
+
+        :param kF:  Forward reaction rate constant
+        :param kR:  Reverse reaction rate constant
+        :return:    Reaction time taken for reactant concentration
+                        to decrease halfway to its asymptotic equilibrium state
+        """
+        # TODO: maybe simply combine with half_time_unimolecular_irreversible, with kR=0
+        return 0.6931471805599 / (kF + kR)      # ln 2 / (kF + kR)
+
+
+    @staticmethod
+    def relaxation_time_unimolecular_reversible(kF, kR) -> float:
+        """
+        This is the same as the half-time of relaxation, within a factor of ln 2
+
+        :param kF:  Forward reaction rate constant
+        :param kR:  Reverse reaction rate constant
+        :return:    A quantity named "relaxation time"
+        """
+        # TODO: is this method needed?
+        return 1. / (kF + kR)
+
+
+
+    @staticmethod
+    def half_time_to_equilibrium_irreversible_synthesis(kF, A0, B0) -> float:
+        """
+        Return the time taken for the reactant concentration
+        in a synthesis reaction A + B -> P
+        to decrease halfway to their asymptotic equilibrium state.
+        The time taken for 50% of the limiting reactant to be consumed
+
+        :param kF:  Forward reaction rate constant
+        :return:    Reaction time taken for reactant concentration
+                        to decrease halfway to its asymptotic equilibrium state
+        """
+        #TODO: test
+        #equil_concs = ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=A0, b=1, B0=B0, p=1, P0=P0)
+
+        delta_conc = A0 - B0
+        if np.allclose(delta_conc, 0):
+            return 1 / (kF * A0)
+
+        if delta_conc > 0:      # When A0 > B0
+            return math.log((2 * A0 - B0) / A0) / (kF * delta_conc)
+        else:
+            return - math.log((2 * B0 - A0) / B0) / (kF * delta_conc)   #TODO: test
+
+
+
+
+    #####################################################################################################
+
+    '''                                       ~   OTHER   ~                                           '''
+
+    def ________OTHER________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
     @staticmethod
     def estimate_rate_constants_simple(t :np.ndarray,

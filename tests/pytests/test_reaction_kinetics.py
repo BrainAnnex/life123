@@ -6,111 +6,6 @@ from life123 import ThermoDynamics, ReactionGeneric
 
 
 
-def test_half_time_unimolecular_irreversible():
-    # Reaction A -> P , with kF=5
-    kF=5.
-    half_time = ReactionKinetics.half_time_unimolecular_irreversible(kF=kF)
-    assert np.allclose(half_time, math.log(2) / kF)
-
-    p_halftime = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=kF, A0=80., P0=10., t=half_time)
-    a_halftime = 80 - (p_halftime - 10)     # From the stoichiometry
-    assert np.allclose(a_halftime, 80./2)   # [A] has indeed dropped in half after half_time has elapsed
-
-
-
-def test_half_time_relaxation_unimolecular_reversible():
-    # Reaction A <-> P , with kF=8 and kR=2
-    kF=8.
-    kR=2.
-    half_time_relaxation = ReactionKinetics.half_time_relaxation_unimolecular_reversible(kF=kF, kR=kR)
-    assert np.allclose(half_time_relaxation, math.log(2) / (kF + kR))
-
-    # Simulate the reaction to t = half_time_relaxation
-    p_halftime = ReactionKinetics.exact_advance_unimolecular_reversible(kF=kF, kR=kR, A0=80., P0=10., t=half_time_relaxation)
-    a_halftime = 80 - (p_halftime - 10)      # From the stoichiometry
-
-    # Determine the equilibrium concentrations (the other reference point for the halfway drop)
-    equil_concs = ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=80., p=1, P0=10.)
-
-    delta_a = 80. - equil_concs["A"]    # Change in [A] from initial state to equilibrium
-    assert np.allclose(a_halftime, 80. - delta_a/2)    # [A] has indeed dropped by half of the overall delta_a after half_time has elapsed
-
-
-
-def test_relaxation_time_unimolecular_reversible():
-    relaxation_time = ReactionKinetics.relaxation_time_unimolecular_reversible(kF=8., kR=2.)
-    assert np.allclose(relaxation_time, 0.1)    # 1 / (8.+2.)
-
-
-
-def test_half_time_to_equilibrium_synthesis():
-    # Reaction A + B -> P
-    kF=8.
-
-    half_time_relaxation = ReactionKinetics.half_time_to_equilibrium_irreversible_synthesis(kF=kF, A0=15, B0=5)
-    assert np.allclose(half_time_relaxation, 0.006385320297074884)
-
-    #equil_concs = ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=0, a=1, A0=15., b=1, B0=5, p=1, P0=0)
-    #print(equil_concs)
-
-    P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=kF, A0=15., B0=5., P0=0, t=half_time_relaxation)
-    assert np.allclose(P_t, 2.5)    # 2.5 is halfway between P0=0 and the final value of 5,
-                                    # when all the limiting reagent (B) has been consumed
-
-
-    half_time_relaxation = ReactionKinetics.half_time_to_equilibrium_irreversible_synthesis(kF=kF, A0=20, B0=20)
-    print(half_time_relaxation)
-    assert np.allclose(half_time_relaxation, 0.00625)
-    P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=kF, A0=20, B0=20, P0=0, t=half_time_relaxation)
-    print(P_t)
-    assert np.allclose(P_t, 10)     # 10 is halfway between P0=0 and the final value of 20,
-                                    # when the reagents have been consumed
-
-
-
-def test_exact_advance_unimolecular_irreversible():
-    # Reaction A -> P
-    # Compare against the REVERSIBLE reaction solver with zero reverse rate constant
-    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0)
-    assert np.allclose(p, 10.)      # No change
-
-    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0, incremental=True)
-    assert np.allclose(incr, 0)     # No change
-
-    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.005)
-    assert np.allclose(p, 11.191044831754994)
-
-    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.31739)
-    assert np.allclose(p, 59.127783572982025)
-
-    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.31739, incremental=True)
-    assert np.allclose(incr, p-10)      # P(t) - P0
-
-    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=1.12)
-    assert np.allclose(p, 87.22117928442091)
-
-    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=100.)
-    assert np.allclose(p, 90)
-
-    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=100., incremental=True)
-    assert np.allclose(incr, 80)
-
-
-def test_exact_advance_unimolecular_irreversible_2():
-    # Verify that the actual (numerically computed) reaction rate matches what's expected from the rate law, at the middle point
-    h = 0.0005
-    t_start = 0.3
-    p1 = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=t_start)
-    p2 = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=t_start + h)
-    a2 = 90 - p2    # From mass conservation
-    p3 = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=t_start + 2 * h)
-
-    gradient = np.gradient([p1, p2, p3], h)
-    derivative_p2 = gradient[1]
-    rate_at_mid_point = 3 * a2   # kF * a2
-    assert np.allclose(derivative_p2, rate_at_mid_point)
-
-
 
 def test_exact_advance_unimolecular_reversible():
     # Reaction A <-> P
@@ -175,6 +70,52 @@ def test_exact_advance_unimolecular_reversible_3():
 
     exact_p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0.2)   # 37.81330458845654
     assert np.allclose(p, exact_p)
+
+
+
+
+def test_exact_advance_unimolecular_irreversible():
+    # Reaction A -> P
+    # Compare against the REVERSIBLE reaction solver with zero reverse rate constant
+    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0)
+    assert np.allclose(p, 10.)      # No change
+
+    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0, incremental=True)
+    assert np.allclose(incr, 0)     # No change
+
+    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.005)
+    assert np.allclose(p, 11.191044831754994)
+
+    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.31739)
+    assert np.allclose(p, 59.127783572982025)
+
+    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=0.31739, incremental=True)
+    assert np.allclose(incr, p-10)      # P(t) - P0
+
+    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=1.12)
+    assert np.allclose(p, 87.22117928442091)
+
+    p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=100.)
+    assert np.allclose(p, 90)
+
+    incr = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=100., incremental=True)
+    assert np.allclose(incr, 80)
+
+
+def test_exact_advance_unimolecular_irreversible_2():
+    # Verify that the actual (numerically computed) reaction rate matches what's expected from the rate law, at the middle point
+    h = 0.0005
+    t_start = 0.3
+    p1 = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=t_start)
+    p2 = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=t_start + h)
+    a2 = 90 - p2    # From mass conservation
+    p3 = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=3., A0=80., P0=10., t=t_start + 2 * h)
+
+    gradient = np.gradient([p1, p2, p3], h)
+    derivative_p2 = gradient[1]
+    rate_at_mid_point = 3 * a2   # kF * a2
+    assert np.allclose(derivative_p2, rate_at_mid_point)
+
 
 
 
@@ -526,6 +467,68 @@ def test_exact_advance_synthesis_reversible_3():
 
 
 
+def test_half_time_unimolecular_irreversible():
+    # Reaction A -> P , with kF=5
+    kF=5.
+    half_time = ReactionKinetics.half_time_unimolecular_irreversible(kF=kF)
+    assert np.allclose(half_time, math.log(2) / kF)
+
+    p_halftime = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=kF, A0=80., P0=10., t=half_time)
+    a_halftime = 80 - (p_halftime - 10)     # From the stoichiometry
+    assert np.allclose(a_halftime, 80./2)   # [A] has indeed dropped in half after half_time has elapsed
+
+
+
+def test_half_time_relaxation_unimolecular_reversible():
+    # Reaction A <-> P , with kF=8 and kR=2
+    kF=8.
+    kR=2.
+    half_time_relaxation = ReactionKinetics.half_time_relaxation_unimolecular_reversible(kF=kF, kR=kR)
+    assert np.allclose(half_time_relaxation, math.log(2) / (kF + kR))
+
+    # Simulate the reaction to t = half_time_relaxation
+    p_halftime = ReactionKinetics.exact_advance_unimolecular_reversible(kF=kF, kR=kR, A0=80., P0=10., t=half_time_relaxation)
+    a_halftime = 80 - (p_halftime - 10)      # From the stoichiometry
+
+    # Determine the equilibrium concentrations (the other reference point for the halfway drop)
+    equil_concs = ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=80., p=1, P0=10.)
+
+    delta_a = 80. - equil_concs["A"]    # Change in [A] from initial state to equilibrium
+    assert np.allclose(a_halftime, 80. - delta_a/2)    # [A] has indeed dropped by half of the overall delta_a after half_time has elapsed
+
+
+
+def test_relaxation_time_unimolecular_reversible():
+    relaxation_time = ReactionKinetics.relaxation_time_unimolecular_reversible(kF=8., kR=2.)
+    assert np.allclose(relaxation_time, 0.1)    # 1 / (8.+2.)
+
+
+
+def test_half_time_to_equilibrium_synthesis():
+    # Reaction A + B -> P
+    kF=8.
+
+    half_time_relaxation = ReactionKinetics.half_time_to_equilibrium_irreversible_synthesis(kF=kF, A0=15, B0=5)
+    assert np.allclose(half_time_relaxation, 0.006385320297074884)
+
+    #equil_concs = ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=0, a=1, A0=15., b=1, B0=5, p=1, P0=0)
+    #print(equil_concs)
+
+    P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=kF, A0=15., B0=5., P0=0, t=half_time_relaxation)
+    assert np.allclose(P_t, 2.5)    # 2.5 is halfway between P0=0 and the final value of 5,
+                                    # when all the limiting reagent (B) has been consumed
+
+
+    half_time_relaxation = ReactionKinetics.half_time_to_equilibrium_irreversible_synthesis(kF=kF, A0=20, B0=20)
+    print(half_time_relaxation)
+    assert np.allclose(half_time_relaxation, 0.00625)
+    P_t = ReactionKinetics.exact_advance_synthesis_irreversible(kF=kF, A0=20, B0=20, P0=0, t=half_time_relaxation)
+    print(P_t)
+    assert np.allclose(P_t, 10)     # 10 is halfway between P0=0 and the final value of 20,
+                                    # when the reagents have been consumed
+
+
+
 def test_estimate_rate_constants_simple():
     pass    # TODO
 
@@ -597,6 +600,7 @@ def test_compute_rate_mass_action_kinetics():
                                             kF=5., kR=2.,
                                             conc_dict={"A": 5., "B": 8., "C": 15., "D": 7.})
     assert np.allclose(result,  -10.)
+
 
 
 def test_compute_rate_first_order():
