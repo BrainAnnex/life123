@@ -55,11 +55,17 @@ class ReactionCommon:
 
 
 
+    def describe(self, *args, **kwargs):
+        # Return as a string, a user-friendly plain-text form of the reaction
+        raise NotImplementedError("Subclasses must implement this")
+
+
     def extract_reactants(self, *args, **kwargs):
         raise NotImplementedError("Subclasses must implement this")
 
     def extract_products(self, *args, **kwargs):
         raise NotImplementedError("Subclasses must implement this")
+
 
     def extract_reactant_labels(self, *args, **kwargs):
         # Return the list of the labels of ALL the reactants of this reaction
@@ -68,6 +74,28 @@ class ReactionCommon:
     def extract_product_labels(self, *args, **kwargs):
         # Return the list of the labels of ALL the products of this reaction
         raise NotImplementedError("Subclasses must implement this")
+
+
+    def extract_reactants_formula(self, *args, **kwargs):
+        #         Return a string with a user-friendly form of the left (reactants) side of the reaction formula
+        raise NotImplementedError("Subclasses must implement this")
+
+    def extract_products_formula(self, *args, **kwargs):
+        #         Return a string with a user-friendly form of the left (reactants) side of the reaction formula
+        raise NotImplementedError("Subclasses must implement this")
+
+
+    def extract_chemicals_in_reaction(self, *args, **kwargs):
+        # Return a SET of the labels of ALL the chemicals appearing in this reaction
+        raise NotImplementedError("Subclasses must implement this")
+
+
+    def step_simulation(self, *args, **kwargs):
+        # Simulate the reaction over a specified time interval,
+        # using either the exact analytical solution, if available,
+        # or the "Forward Euler" approximation method
+        raise NotImplementedError("Subclasses must implement this")
+
 
 
 

@@ -87,41 +87,6 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def exact_advance_unimolecular_irreversible(kF, A0, P0, t, incremental=False) -> float:
-        """
-        Exactly advance the concentrations
-        in the ir-reversible 1st Order Reaction A -> P,
-        from time 0 to time t,
-        with the specified parameters.
-
-        :param kF:  Forward reaction rate constant (the reverse one is taken to be zero)
-        :param A0:  Initial concentration of the reactant A
-        :param P0:  Initial concentration of the product P
-        :param t:   The end time of the reaction that started at time zero
-        :param incremental: [OPTIONAL] If True, the change in concentration is returned,
-                                rather than the final ones.  Default: False
-
-        :return:    The concentrations of P at time t (if `incremental` is False)
-                        or its concentration change during the time interval (if `incremental` is True)
-        """
-
-        # Formula is:  A(t) = A0 Exp(-kF t)
-
-        if incremental:
-            A_incr = A0 * (np.exp(-kF * t) - 1)
-            P_incr = - A_incr   # From mass conservation
-            return P_incr
-
-
-        TOT = A0 + P0
-        A_t = A0 * np.exp(-kF * t)
-        P_t = TOT - A_t     # From mass conservation
-
-        return P_t
-
-
-
-    @staticmethod
     def exact_advance_unimolecular_reversible(kF, kR, A0, P0, t, incremental=False) -> float:
         """
         Exactly advance the concentrations
@@ -153,6 +118,40 @@ class ReactionKinetics:
 
         if incremental:
             return P_t - P0
+
+        return P_t
+
+
+    @staticmethod
+    def exact_advance_unimolecular_irreversible(kF, A0, P0, t, incremental=False) -> float:
+        """
+        Exactly advance the concentrations
+        in the ir-reversible 1st Order Reaction A -> P,
+        from time 0 to time t,
+        with the specified parameters.
+
+        :param kF:  Forward reaction rate constant (the reverse one is taken to be zero)
+        :param A0:  Initial concentration of the reactant A
+        :param P0:  Initial concentration of the product P
+        :param t:   The end time of the reaction that started at time zero
+        :param incremental: [OPTIONAL] If True, the change in concentration is returned,
+                                rather than the final ones.  Default: False
+
+        :return:    The concentrations of P at time t (if `incremental` is False)
+                        or its concentration change during the time interval (if `incremental` is True)
+        """
+
+        # Formula is:  A(t) = A0 Exp(-kF t)
+
+        if incremental:
+            A_incr = A0 * (np.exp(-kF * t) - 1)
+            P_incr = - A_incr   # From mass conservation
+            return P_incr
+
+
+        TOT = A0 + P0
+        A_t = A0 * np.exp(-kF * t)
+        P_t = TOT - A_t     # From mass conservation
 
         return P_t
 
@@ -273,82 +272,6 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def exact_advance_synthesis_irreversible(kF, A0, B0, P0, t, incremental=False) -> float:
-        """
-        Exactly advance the concentrations
-        in the irreversible elementary Reaction A + B -> P,
-        from time 0 to time t,
-        with the specified parameters.
-
-        :param kF:  Forward reaction rate constant
-        :param A0:  Initial concentration of the 1st reactant A
-        :param B0:  Initial concentration of the 2nd reactant B
-        :param P0:  Initial concentration of the product P
-        :param t:   The end time of the reaction that started at time zero
-        :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
-                                rather than the final ones.  Default: False
-        :return:    The concentration of P at time t (if `incremental` is False)
-                        or its concentration change during the time interval (if `incremental` is True)
-        """
-        # Adapted from "Athel Cornish-Bowden, Fundamentals of Enzyme Kinetics, 4th edn", section 1.2.3
-        # Note: the above author assumes P0 = 0, and overlooks the case A0 = B0 (which requires special treatment)
-        '''
-        Start with the ODE:
-            d P(t) / dt = kF * A(t) * B(t) = kF * (A0 - (P(t)-P0)) * (B0 - (P(t)-P0))
-                     
-        Special case - when A0 = B0, the ODE becomes:
-            d P(t) / dt = kF * A(t) * A(t) = kF * ( A0 - (P(t)-P0) )**2
-            which can, for example, be plugged into Mathematica as:
-            DSolve[{ p'[t] == kF (A0 + P0 - p[t])^2 , p[0] == P0 }, p[t], t]
-        '''
-        alpha =  P0 + A0
-
-        if np.allclose(A0, B0):
-            # When A0 = B0, the ODE has a special solution:
-            #   P(t) = (P0 + alpha A0 kF t) / (1 + A0 kF t)
-            prod = A0 * kF * t
-            P_t = (P0 + alpha * prod) / (1 + prod)  # Concentration of `P` at time t
-
-        else:
-            # When A0 != B0, the solution P(t) of the ODE must satisfy:
-            #   (A0 * (P0+B0 - P(t))) / (B0 * (P0+A0 - P(t))) = e ^ (B0-A0)*kF*t
-            #   [see "Athel Cornish-Bowden, Fundamentals of Enzyme Kinetics, 4th edn", section 1.2.3]
-            #   which gets solved for P(t) below
-            #   Note: when A0 = B0, the above equation doesn't hold (at, at any rate, turns into a trivial 1 = 1)
-            beta =   P0 + B0
-            try:
-                # Evaluate the exponential on the right-hand size
-                eps = math.exp((B0-A0)* kF * t)
-            except OverflowError:
-                # Overflow occurs if B0 > A0 and t is very large;
-                # in such a case, `A` is the limiting reagent, and fully converts to `P`
-                if incremental:
-                    return A0
-                return alpha    # P0 + A0
-
-            ''' 
-            With the above variable assignments, and writing P for P(t), the earlier equation can be re-stated as:
-                (A0 * (beta - P)) / (B0 * (alpha - P)) = eps 
-                           
-            i.e.:
-                (A0 * (beta - P)) = eps * (B0 * (alpha - P))
-                A0 * beta - A0 * P = eps * (B0 * alpha - B0 * P)
-                A0 * beta - A0 * P = B0 * alpha * eps - B0 * P * eps
-                B0 * P * eps - A0 * P = B0 * alpha * eps - A0 * beta
-                (B0 * eps - A0) * P   = B0 * alpha * eps - A0 * beta
-            '''
-            #print(f"alpha: {alpha} , beta: {beta} , eps: {eps}")
-            P_t = (B0 * alpha * eps - A0 * beta) / (B0 * eps - A0)    # Concentration of `P` at time t
-
-
-        if incremental:
-            return P_t-P0
-
-        return P_t
-
-
-
-    @staticmethod
     def exact_advance_synthesis_reversible(kF, kR, A0, B0, P0, t, incremental=False) -> float:
         """
         Exactly advance the concentrations
@@ -441,6 +364,82 @@ class ReactionKinetics:
 
         if incremental:
             return P_t - P0
+
+        return P_t
+
+
+
+    @staticmethod
+    def exact_advance_synthesis_irreversible(kF, A0, B0, P0, t, incremental=False) -> float:
+        """
+        Exactly advance the concentrations
+        in the irreversible elementary Reaction A + B -> P,
+        from time 0 to time t,
+        with the specified parameters.
+
+        :param kF:  Forward reaction rate constant
+        :param A0:  Initial concentration of the 1st reactant A
+        :param B0:  Initial concentration of the 2nd reactant B
+        :param P0:  Initial concentration of the product P
+        :param t:   The end time of the reaction that started at time zero
+        :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
+                                rather than the final ones.  Default: False
+        :return:    The concentration of P at time t (if `incremental` is False)
+                        or its concentration change during the time interval (if `incremental` is True)
+        """
+        # Adapted from "Athel Cornish-Bowden, Fundamentals of Enzyme Kinetics, 4th edn", section 1.2.3
+        # Note: the above author assumes P0 = 0, and overlooks the case A0 = B0 (which requires special treatment)
+        '''
+        Start with the ODE:
+            d P(t) / dt = kF * A(t) * B(t) = kF * (A0 - (P(t)-P0)) * (B0 - (P(t)-P0))
+                     
+        Special case - when A0 = B0, the ODE becomes:
+            d P(t) / dt = kF * A(t) * A(t) = kF * ( A0 - (P(t)-P0) )**2
+            which can, for example, be plugged into Mathematica as:
+            DSolve[{ p'[t] == kF (A0 + P0 - p[t])^2 , p[0] == P0 }, p[t], t]
+        '''
+        alpha =  P0 + A0
+
+        if np.allclose(A0, B0):
+            # When A0 = B0, the ODE has a special solution:
+            #   P(t) = (P0 + alpha A0 kF t) / (1 + A0 kF t)
+            prod = A0 * kF * t
+            P_t = (P0 + alpha * prod) / (1 + prod)  # Concentration of `P` at time t
+
+        else:
+            # When A0 != B0, the solution P(t) of the ODE must satisfy:
+            #   (A0 * (P0+B0 - P(t))) / (B0 * (P0+A0 - P(t))) = e ^ (B0-A0)*kF*t
+            #   [see "Athel Cornish-Bowden, Fundamentals of Enzyme Kinetics, 4th edn", section 1.2.3]
+            #   which gets solved for P(t) below
+            #   Note: when A0 = B0, the above equation doesn't hold (at, at any rate, turns into a trivial 1 = 1)
+            beta =   P0 + B0
+            try:
+                # Evaluate the exponential on the right-hand size
+                eps = math.exp((B0-A0)* kF * t)
+            except OverflowError:
+                # Overflow occurs if B0 > A0 and t is very large;
+                # in such a case, `A` is the limiting reagent, and fully converts to `P`
+                if incremental:
+                    return A0
+                return alpha    # P0 + A0
+
+            ''' 
+            With the above variable assignments, and writing P for P(t), the earlier equation can be re-stated as:
+                (A0 * (beta - P)) / (B0 * (alpha - P)) = eps 
+                           
+            i.e.:
+                (A0 * (beta - P)) = eps * (B0 * (alpha - P))
+                A0 * beta - A0 * P = eps * (B0 * alpha - B0 * P)
+                A0 * beta - A0 * P = B0 * alpha * eps - B0 * P * eps
+                B0 * P * eps - A0 * P = B0 * alpha * eps - A0 * beta
+                (B0 * eps - A0) * P   = B0 * alpha * eps - A0 * beta
+            '''
+            #print(f"alpha: {alpha} , beta: {beta} , eps: {eps}")
+            P_t = (B0 * alpha * eps - A0 * beta) / (B0 * eps - A0)    # Concentration of `P` at time t
+
+
+        if incremental:
+            return P_t-P0
 
         return P_t
 
