@@ -7,6 +7,7 @@ from life123 import ThermoDynamics, ReactionGeneric
 
 
 
+
 def test_exact_advance_unimolecular_reversible():
     # Reaction A <-> P
     p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0)
@@ -35,10 +36,13 @@ def test_exact_advance_unimolecular_reversible():
     p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=100.)
     assert np.allclose(p, 54.)
 
+    equil = ReactionKinetics.compute_equilibrium_conc_first_order(kF=3., kR=2., a=1, A0=80., p=1, P0=10.)
+    assert np.allclose(p, equil["P"])
+
 
 def test_exact_advance_unimolecular_reversible_2():
     # Verify that the actual (numerically computed) reaction rate matches what's expected from the rate law,
-    # at the middle point of 3
+    # at the middle point of 3 sampled points
     h = 0.0005
     t_start = 0.2
     p1 = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=t_start)
@@ -53,7 +57,7 @@ def test_exact_advance_unimolecular_reversible_2():
 
 
 def test_exact_advance_unimolecular_reversible_3():
-    # Compare the exact solution against a fine-grained forward Euler approximation
+    # Compare the exact solution against a fine-grained forward-Euler approximation
     rxn = ReactionGeneric(reactants="A", products="P", kF=3., kR=2.)
 
     t_final = 0.2
@@ -70,7 +74,6 @@ def test_exact_advance_unimolecular_reversible_3():
 
     exact_p = ReactionKinetics.exact_advance_unimolecular_reversible(kF=3., kR=2., A0=80., P0=10., t=0.2)   # 37.81330458845654
     assert np.allclose(p, exact_p)
-
 
 
 
