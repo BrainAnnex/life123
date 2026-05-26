@@ -1,5 +1,6 @@
-# classes: "ReactionCommon", "ReactionOneStep", "ReactionUnimolecular",
-#          "ReactionSynthesis", "ReactionDecomposition", "ReactionEnzyme",
+# classes: "ReactionCommon", "ReactionElementary", "ReactionUnimolecular",
+#          "ReactionSynthesis", "ReactionDecomposition",
+#          "ReactionEnzyme",
 #          and "ReactionGeneric"
 
 from typing import Union, Set, Tuple
