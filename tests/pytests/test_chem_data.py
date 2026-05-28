@@ -7,7 +7,7 @@ from life123.visualization.colors import Colors
 from tests.utilities.comparisons import *
 
 
-#############  ChemCore  #############
+##################  ChemCore  ##################
 
 def test_constructor_ChemCore():
     chem_core = ChemCore()
@@ -23,15 +23,6 @@ def test_number_of_chemicals():
 
     chem_data = ChemData(names=[])
     assert chem_data.number_of_chemicals() == 0
-
-
-
-def test_get_label_mapping():
-    chem_data = ChemData(names=['A', 'B', 'C'])
-    assert chem_data.get_label_mapping() == {'A': 0, 'B': 1, 'C': 2}
-
-    chem_data = ChemData(names=[])
-    assert chem_data.get_label_mapping() == {}
 
 
 
@@ -52,6 +43,15 @@ def test_assert_valid_chem_index():
 
 
 
+def test_get_label_mapping():
+    chem_data = ChemData(names=['A', 'B', 'C'])
+    assert chem_data.get_label_mapping() == {'A': 0, 'B': 1, 'C': 2}
+
+    chem_data = ChemData(names=[])
+    assert chem_data.get_label_mapping() == {}
+
+
+
 def test_get_index():
     chem_data = ChemData(names=['A', 'B', 'C'])
     assert chem_data.get_index('A') == 0
@@ -59,6 +59,40 @@ def test_get_index():
     assert chem_data.get_index('C') == 2
     with pytest.raises(Exception):
         assert chem_data.get_index('X')     # Not found
+
+
+
+def test_get_label():
+    chem_data = ChemData(names=['A', 'B', 'C'])
+    assert chem_data.get_label(0) == 'A'
+    assert chem_data.get_label(1) == 'B'
+    assert chem_data.get_label(2) == 'C'
+
+    with pytest.raises(Exception):
+        chem_data.get_label(3)               # Out of bounds
+    with pytest.raises(Exception):
+        chem_data.get_label(-1)              # Invalid argument value
+    with pytest.raises(Exception):
+        chem_data.get_label("some string")   # Invalid argument type
+    with pytest.raises(Exception):
+        chem_data.get_label(3.14)            # Invalid argument type
+
+
+
+def test_get_all_labels():
+    chem_data = ChemData(names=['A', 'B', 'C'])
+    assert chem_data.get_all_labels() == ['A', 'B', 'C']
+
+    # Reach into the internal data structure, to mess up some names
+    chem_data.chemical_data = [{'name': 'A'}, {'name': ''}, {'name': 'C'}]
+
+    with pytest.raises(Exception):
+        chem_data.get_all_labels()   # The former name 'B' is now a blank
+
+    chem_data.chemical_data = [{'name': 'A'}, {'name': 'B'}, {}]
+
+    with pytest.raises(Exception):
+        chem_data.get_all_labels()   # The former name 'B' is now missing
 
 
 
@@ -119,40 +153,6 @@ def test_name_exists():
     assert not chem_data.name_exists("A")   # This is a label, not a name
     assert not chem_data.name_exists("B")
     assert not chem_data.name_exists("C")
-
-
-
-def test_get_label():
-    chem_data = ChemData(names=['A', 'B', 'C'])
-    assert chem_data.get_label(0) == 'A'
-    assert chem_data.get_label(1) == 'B'
-    assert chem_data.get_label(2) == 'C'
-
-    with pytest.raises(Exception):
-        chem_data.get_label(3)               # Out of bounds
-    with pytest.raises(Exception):
-        chem_data.get_label(-1)              # Invalid argument value
-    with pytest.raises(Exception):
-        chem_data.get_label("some string")   # Invalid argument type
-    with pytest.raises(Exception):
-        chem_data.get_label(3.14)            # Invalid argument type
-
-
-
-def test_get_all_labels():
-    chem_data = ChemData(names=['A', 'B', 'C'])
-    assert chem_data.get_all_labels() == ['A', 'B', 'C']
-
-    # Reach into the internal data structure, to mess up some names
-    chem_data.chemical_data = [{'name': 'A'}, {'name': ''}, {'name': 'C'}]
-
-    with pytest.raises(Exception):
-        chem_data.get_all_labels()   # The former name 'B' is now a blank
-
-    chem_data.chemical_data = [{'name': 'A'}, {'name': 'B'}, {}]
-
-    with pytest.raises(Exception):
-        chem_data.get_all_labels()   # The former name 'B' is now missing
 
 
 
@@ -372,7 +372,16 @@ def test_assign_colors():
 
 
 
-#############  Diffusion  #############
+########################   Diffusion   ########################
+
+
+def test_constructor_Diffusion():
+    diff = Diffusion()
+    assert diff.chemical_data == []
+    assert diff.label_dict == {}
+    assert diff.color_dict == {}
+    assert diff.diffusion_rates == {}
+
 
 
 def test_add_chemical_with_diffusion():
@@ -415,7 +424,22 @@ def test_add_chemical_with_diffusion():
 
 
 def test_set_diffusion_rate():
-    pass
+    chem_data = ChemData(names=['A', 'B', 'C'])
+
+    with pytest.raises(Exception):
+        chem_data.set_diffusion_rate(chem_label='B', diff_rate="junk")  # Bad value
+
+    with pytest.raises(Exception):
+        chem_data.set_diffusion_rate(chem_label='B', diff_rate=-1)      # Bad value
+
+    chem_data.set_diffusion_rate(chem_label='B', diff_rate=2)
+    assert chem_data.diffusion_rates == {'B': 2}
+
+    chem_data.set_diffusion_rate(chem_label='C', diff_rate=3)
+    assert chem_data.diffusion_rates == {'B': 2, 'C': 3}
+
+    chem_data.set_diffusion_rate(chem_label='C', diff_rate=1)
+    assert chem_data.diffusion_rates == {'B': 2, 'C': 1}    # Over-written
 
 
 
@@ -535,9 +559,191 @@ def test_missing_diffusion_rate():
 
 
 
+########################  MACRO-MOLECULES  ########################
 
 
-#################   ChemData (MAIN class)  #################
+def test_add_macromolecules():
+    chem_data = ChemData()
+
+    chem_data.add_macromolecules(["M1", "M2"])
+    assert chem_data.get_macromolecules() == ["M1", "M2"]
+
+    chem_data.add_macromolecules("M3")
+    assert chem_data.get_macromolecules() == ["M1", "M2", "M3"]
+
+    chem_data.add_macromolecules(["M4", "M5"])
+    assert chem_data.get_macromolecules() == ["M1", "M2", "M3", "M4", "M5"]
+
+    chem_data.add_macromolecules("M2")          # Redundant
+    assert chem_data.get_macromolecules() == ["M1", "M2", "M3", "M4", "M5"]
+
+    chem_data.add_macromolecules(["M1", "M6"])  # Partially redundant
+    assert chem_data.get_macromolecules() == ["M1", "M2", "M3", "M4", "M5", "M6"]
+
+
+
+def test_get_macromolecules():
+    chem_data = ChemData()
+
+    assert chem_data.get_macromolecules() == []
+    chem_data.add_macromolecules(["M1", "M2"])
+    assert chem_data.get_macromolecules() == ["M1", "M2"]
+    chem_data.add_macromolecules(["M3", "M1"])
+    assert chem_data.get_macromolecules() == ["M1", "M2", "M3"]
+
+
+
+def test_set_binding_site_affinity():
+    chem_data = ChemData(["A", "B", "ZZZ"])
+    chem_data.add_macromolecules(["M1", "M2"])
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
+    result = chem_data.get_binding_site_affinity(macromolecule="M1", site_number=1)
+    assert result == ("A", 3)
+    assert result.chemical == "A"
+    assert result.Kd == 3
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
+    assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 3)
+    assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
+
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
+    assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 3)
+    assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
+    assert chem_data.get_binding_site_affinity("M2", site_number=1) == ("B",11)
+
+    # Over-write previous value of affinity of "A" to site 1 of macromolecule "M1"
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=999)
+    assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 999)
+    assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
+    assert chem_data.get_binding_site_affinity("M2", site_number=1) == ("B",11)
+
+    # Attempting to associate another chemical to site 1 of macromolecule "M1", will result in error
+    with pytest.raises(Exception):
+        chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="ZZZ", Kd=999)
+
+    chem_data.set_binding_site_affinity(macromolecule="M3", site_number=10, ligand="A", Kd= 4)
+    assert chem_data.get_binding_site_affinity("M3", site_number=10) == ("A", 4)
+    assert chem_data.get_macromolecules() == ["M1", "M2", "M3"]     # "M3" got automatically added
+    assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 999)
+    assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
+    assert chem_data.get_binding_site_affinity("M2", site_number=1) == ("B",11)
+
+    # Unknown chemical "X"
+    with pytest.raises(Exception):
+        chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="X", Kd=100)
+
+
+
+def test_get_binding_site_affinity():
+    pass  # TODO
+
+
+
+def test_get_binding_sites():
+    chem_data = ChemData(["A", "B"])
+    chem_data.add_macromolecules(["M1", "M2"])
+
+    with pytest.raises(Exception):
+        chem_data.get_binding_sites("M9999")    # Unknown macromolecule
+
+    assert chem_data.get_binding_sites("M1") == []
+    assert chem_data.get_binding_sites("M2") == []
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
+    assert chem_data.get_binding_sites("M1") == [1]
+    assert chem_data.get_binding_sites("M2") == []
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
+    assert chem_data.get_binding_sites("M1") == [1, 2]
+    assert chem_data.get_binding_sites("M2") == []
+
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
+    assert chem_data.get_binding_sites("M1") == [1, 2]
+    assert chem_data.get_binding_sites("M2") == [1]
+
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
+    assert chem_data.get_binding_sites("M1") == [1, 2]
+    assert chem_data.get_binding_sites("M2") == [1, 3]
+
+
+
+def test_get_binding_sites_and_ligands():
+    chem_data = ChemData(["A", "B"])
+    chem_data.add_macromolecules(["M1", "M2"])
+
+    with pytest.raises(Exception):
+        chem_data.get_binding_sites_and_ligands("M9999")    # Unknown macromolecule
+
+    assert chem_data.get_binding_sites_and_ligands("M1") == {}
+    assert chem_data.get_binding_sites_and_ligands("M2") == {}
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
+    assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A"}
+    assert chem_data.get_binding_sites_and_ligands("M2") == {}
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
+    assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A", 2: "B"}
+    assert chem_data.get_binding_sites_and_ligands("M2") == {}
+
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
+    assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A", 2: "B"}
+    assert chem_data.get_binding_sites_and_ligands("M2") == {1: "B"}
+
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
+    assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A", 2: "B"}
+    assert chem_data.get_binding_sites_and_ligands("M2") == {1: "B", 3: "B"}
+
+
+
+def test_get_ligand_name():
+    chem_data = ChemData(["A", "B"])
+    chem_data.add_macromolecules(["M1", "M2"])
+
+    with pytest.raises(Exception):
+        chem_data.get_ligand_name(macromolecule="M9999", site_number=123)    # Unknown macromolecule
+
+    with pytest.raises(Exception):
+        chem_data.get_ligand_name(macromolecule="M1", site_number=1)    # M1 has no sites associated to it
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="A", Kd=3.1)
+
+    with pytest.raises(Exception):
+        chem_data.get_ligand_name(macromolecule="M1", site_number=1)    # No site number 1 on M1
+
+    assert chem_data.get_ligand_name(macromolecule="M1", site_number=2) == "A"
+
+    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="B", Kd=6.)
+    assert chem_data.get_ligand_name(macromolecule="M1", site_number=1) == "B"
+
+    chem_data.add_chemical("C")
+    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=5, ligand="C", Kd=11.4)
+    assert chem_data.get_ligand_name(macromolecule="M2", site_number=5) == "C"
+
+
+
+def test_show_binding_affinities():
+    pass
+
+
+
+def test_reset_macromolecule():
+    pass   # TODO
+
+
+def test_clear_macromolecules():
+    chem_data = ChemData()
+    chem_data.add_macromolecules(["M1", "M2"])
+    chem_data.clear_macromolecules()
+    assert chem_data.macromolecules == []
+    assert chem_data.binding_sites == {}
+
+
+
+
+
+######################   ChemData (MAIN class)  ######################
+
 
 def test_constructor_ChemData():
     chem_data = ChemData()
@@ -716,188 +922,8 @@ def test_all_chemicals():
 
 
 
-###################  MACRO-MOLECULES  ###################
 
-def test_add_macromolecules():
-    chem_data = ChemData()
-
-    chem_data.add_macromolecules(["M1", "M2"])
-    assert chem_data.get_macromolecules() == ["M1", "M2"]
-
-    chem_data.add_macromolecules("M3")
-    assert chem_data.get_macromolecules() == ["M1", "M2", "M3"]
-
-    chem_data.add_macromolecules(["M4", "M5"])
-    assert chem_data.get_macromolecules() == ["M1", "M2", "M3", "M4", "M5"]
-
-    chem_data.add_macromolecules("M2")          # Redundant
-    assert chem_data.get_macromolecules() == ["M1", "M2", "M3", "M4", "M5"]
-
-    chem_data.add_macromolecules(["M1", "M6"])  # Partially redundant
-    assert chem_data.get_macromolecules() == ["M1", "M2", "M3", "M4", "M5", "M6"]
-
-
-
-def test_get_macromolecules():
-    chem_data = ChemData()
-
-    assert chem_data.get_macromolecules() == []
-    chem_data.add_macromolecules(["M1", "M2"])
-    assert chem_data.get_macromolecules() == ["M1", "M2"]
-    chem_data.add_macromolecules(["M3", "M1"])
-    assert chem_data.get_macromolecules() == ["M1", "M2", "M3"]
-
-
-
-def test_set_binding_site_affinity():
-    chem_data = ChemData(["A", "B", "ZZZ"])
-    chem_data.add_macromolecules(["M1", "M2"])
-
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
-    result = chem_data.get_binding_site_affinity(macromolecule="M1", site_number=1)
-    assert result == ("A", 3)
-    assert result.chemical == "A"
-    assert result.Kd == 3
-
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
-    assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 3)
-    assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
-
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
-    assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 3)
-    assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
-    assert chem_data.get_binding_site_affinity("M2", site_number=1) == ("B",11)
-
-    # Over-write previous value of affinity of "A" to site 1 of macromolecule "M1"
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=999)
-    assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 999)
-    assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
-    assert chem_data.get_binding_site_affinity("M2", site_number=1) == ("B",11)
-
-    # Attempting to associate another chemical to site 1 of macromolecule "M1", will result in error
-    with pytest.raises(Exception):
-        chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="ZZZ", Kd=999)
-
-    chem_data.set_binding_site_affinity(macromolecule="M3", site_number=10, ligand="A", Kd= 4)
-    assert chem_data.get_binding_site_affinity("M3", site_number=10) == ("A", 4)
-    assert chem_data.get_macromolecules() == ["M1", "M2", "M3"]     # "M3" got automatically added
-    assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 999)
-    assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
-    assert chem_data.get_binding_site_affinity("M2", site_number=1) == ("B",11)
-
-    # Unknown chemical "X"
-    with pytest.raises(Exception):
-        chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="X", Kd=100)
-
-
-
-def test_get_binding_site_affinity():
-    pass  # TODO
-
-
-
-def test_get_binding_sites():
-    chem_data = ChemData(["A", "B"])
-    chem_data.add_macromolecules(["M1", "M2"])
-
-    with pytest.raises(Exception):
-        chem_data.get_binding_sites("M9999")    # Unknown macromolecule
-
-    assert chem_data.get_binding_sites("M1") == []
-    assert chem_data.get_binding_sites("M2") == []
-
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
-    assert chem_data.get_binding_sites("M1") == [1]
-    assert chem_data.get_binding_sites("M2") == []
-
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
-    assert chem_data.get_binding_sites("M1") == [1, 2]
-    assert chem_data.get_binding_sites("M2") == []
-
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
-    assert chem_data.get_binding_sites("M1") == [1, 2]
-    assert chem_data.get_binding_sites("M2") == [1]
-
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
-    assert chem_data.get_binding_sites("M1") == [1, 2]
-    assert chem_data.get_binding_sites("M2") == [1, 3]
-
-
-
-def test_get_binding_sites_and_ligands():
-    chem_data = ChemData(["A", "B"])
-    chem_data.add_macromolecules(["M1", "M2"])
-
-    with pytest.raises(Exception):
-        chem_data.get_binding_sites_and_ligands("M9999")    # Unknown macromolecule
-
-    assert chem_data.get_binding_sites_and_ligands("M1") == {}
-    assert chem_data.get_binding_sites_and_ligands("M2") == {}
-
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
-    assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A"}
-    assert chem_data.get_binding_sites_and_ligands("M2") == {}
-
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
-    assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A", 2: "B"}
-    assert chem_data.get_binding_sites_and_ligands("M2") == {}
-
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
-    assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A", 2: "B"}
-    assert chem_data.get_binding_sites_and_ligands("M2") == {1: "B"}
-
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
-    assert chem_data.get_binding_sites_and_ligands("M1") == {1: "A", 2: "B"}
-    assert chem_data.get_binding_sites_and_ligands("M2") == {1: "B", 3: "B"}
-
-
-
-def test_get_ligand_name():
-    chem_data = ChemData(["A", "B"])
-    chem_data.add_macromolecules(["M1", "M2"])
-
-    with pytest.raises(Exception):
-        chem_data.get_ligand_name(macromolecule="M9999", site_number=123)    # Unknown macromolecule
-
-    with pytest.raises(Exception):
-        chem_data.get_ligand_name(macromolecule="M1", site_number=1)    # M1 has no sites associated to it
-
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="A", Kd=3.1)
-
-    with pytest.raises(Exception):
-        chem_data.get_ligand_name(macromolecule="M1", site_number=1)    # No site number 1 on M1
-
-    assert chem_data.get_ligand_name(macromolecule="M1", site_number=2) == "A"
-
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="B", Kd=6.)
-    assert chem_data.get_ligand_name(macromolecule="M1", site_number=1) == "B"
-
-    chem_data.add_chemical("C")
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=5, ligand="C", Kd=11.4)
-    assert chem_data.get_ligand_name(macromolecule="M2", site_number=5) == "C"
-
-
-
-def test_reset_macromolecule():
-    pass   # TODO
-
-
-def test_clear_macromolecules():
-    chem_data = ChemData()
-    chem_data.add_macromolecules(["M1", "M2"])
-    chem_data.clear_macromolecules()
-    assert chem_data.macromolecules == []
-    assert chem_data.binding_sites == {}
-
-
-
-
-
-#############  PRIVATE METHODS  #############
-
-def test__internal_reactions_data():
-    pass   # TODO
-
+##################  PRIVATE METHODS  ##################
 
 
 def test__generate_generic_names():

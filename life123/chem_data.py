@@ -1,5 +1,5 @@
 """
-5 classes about the chemicals and their properties - EXCEPT reactions:
+5 classes about the chemicals species and their properties:
 
     * ChemCore
     * Diffusion (which extends ChemCore)
@@ -19,8 +19,8 @@ import string
 
 class ChemCore:
     """
-    Core data about the chemical species, such as their names, labels
-    indexes (position in their registration listing), and plotting color
+    Core data about all the chemical species, such as their names, labels,
+    indexes (position in their registration listing), and assigned colors to use on plots
 
     Note: End users will typically utilize the class ChemData, which extends this one
     """
@@ -28,9 +28,10 @@ class ChemCore:
     def __init__(self):
 
         self.chemical_data = [] # Basic data for all chemicals, *except* water and macro-molecules.
-                                # Each list entry represents 1 chemical,
+                                # Each list entry represents 1 chemical species,
                                 # and is a dict required to contain the keys "label" and "name";
                                 # it may also contain arbitrary other keys ("notes" is a commonly-used one)
+                                # Labels are meant to be short strings suitable for inclusion in plots, etc
                                 # EXAMPLE: [{"label": "A",   "name": "A"},
                                 #           {"label": "NAD", "name": "Nicotinamide adenine dinucleotide", "note": "some note"},
                                 #           {"label": "B",   "name": "B"]
@@ -55,7 +56,7 @@ class ChemCore:
 
     def number_of_chemicals(self) -> int:
         """
-        Return the number of registered chemicals - exclusive of water and of macro-molecules
+        Return the number of registered chemical species - exclusive of water and of macro-molecules
 
         :return:    The number of registered chemicals - exclusive of water and of macro-molecules
         """
@@ -65,9 +66,9 @@ class ChemCore:
 
     def assert_valid_chem_index(self, chem_index: int) -> None:
         """
-        Raise an Exception if the specified chem_index (meant to identify a chemical) isn't valid
+        Raise an Exception if the specified chem_index (meant to identify a chemical species) isn't valid
 
-        :param chem_index:  An integer that indexes the chemical of interest (numbering starts at 0)
+        :param chem_index:  An integer that indexes the chemical species of interest (numbering starts at 0)
         :return:            None
         """
         n_species = self.number_of_chemicals()
@@ -85,7 +86,7 @@ class ChemCore:
         Return a dict with all the mappings of the chemical names
         to their (zero-based) registered index position
 
-        :return:
+        :return:    A dict with all the mappings chem name -> index position
         """
         return self.label_dict
 
@@ -106,33 +107,6 @@ class ChemCore:
             f"ChemData.get_index(): No chemical species named `{label}` was found"
 
         return index
-
-
-
-    def label_exists(self, label :str) -> bool:
-        """
-        Return True if the chemical with the given label exists (i.e. was registered),
-        or False otherwise
-
-        :param label:   The label of a chemical
-        :return:        True if it was already registered, or False otherwise
-        """
-        return label in self.label_dict.keys()
-
-
-    def name_exists(self, name :str) -> bool:
-        """
-        Return True if the chemical with the given name exists (i.e. was registered),
-        or False otherwise
-
-        :param name:    The name (full name) of a chemical
-        :return:        True if it was already registered, or False otherwise
-        """
-        for chem in self.chemical_data:
-            if name == chem["name"]:
-                return True     # Located in existing data
-
-        return False    # Not found
 
 
 
@@ -177,6 +151,34 @@ class ChemCore:
 
 
 
+    def label_exists(self, label :str) -> bool:
+        """
+        Return True if the chemical with the given label exists (i.e. was registered),
+        or False otherwise
+
+        :param label:   The label of a chemical
+        :return:        True if it was already registered, or False otherwise
+        """
+        return label in self.label_dict.keys()
+
+
+
+    def name_exists(self, name :str) -> bool:
+        """
+        Return True if the chemical with the given name exists (i.e. was registered),
+        or False otherwise
+
+        :param name:    The name (full name) of a chemical
+        :return:        True if it was already registered, or False otherwise
+        """
+        for chem in self.chemical_data:
+            if name == chem["name"]:
+                return True     # Located in existing data
+
+        return False    # Not found
+
+
+
     def add_chemical(self, name :str, label=None, note=None, skip_duplicates=False,
                     plot_color=None, **kwargs) -> Union[int, None]:
         """
@@ -184,13 +186,16 @@ class ChemCore:
         and (optionally) :
             - a label (typically, a short version of the name, or a stand-in for it)
             - a note (will be stored in a "note" column)
-            - a color value used in visualizations
+            - a color value used for this chemical species in visualizations
             - any other named argument(s) that the user wishes to store (i.e. arbitrary-named arguments)
 
         EXAMPLE:  add_chemical("Nicotinamide adenine dinucleotide",
-                               label = "NAD", note = "my note about this substrate", CAS_number = "CAS 53-84-9")
+                               label = "NAD",
+                               note = "my note about this substrate",
+                               CAS_number = "CAS 53-84-9")
 
-        Note: if also wanting to set the diffusion rate in a single function call,
+        Note: do NOT use for diffusion rates.
+              If also wanting to set the diffusion rate in a single function call,
               use ChemData.add_chemical_with_diffusion() instead
 
         :param name:        (Long) name of the new chemical species to register; names must be unique -
@@ -268,10 +273,10 @@ class ChemCore:
 
     def set_color(self, chem_label :str, color :str) -> None:
         """
-        Associate the given chemical with a color for plots.
+        Associate the given chemical with a color for use in plots
 
         :param chem_label:  The label of a previously-registered chemical
-        :param color:
+        :param color:       A string with a standard color name (see colors.py)
         :return:            None
         """
         assert self.label_exists(chem_label), \
@@ -322,7 +327,8 @@ class ChemCore:
 
     def assign_colors(self, chem_labels=None) -> list[str]:
         """
-        Return a list of the colors registered for the requested chemicals or, if not specified, for all chemicals.
+        Return a list of the colors registered for the requested chemical species
+        or, if not specified, for all chemicals.
         If any chemicals lack registered colors, assign new ones from a palette of default colors,
         and register the new assignments for future use.
 
@@ -372,9 +378,9 @@ class ChemCore:
 
 class Diffusion(ChemCore):
     """
-    Extends its parent class, to manage diffusion-related data
+    Extends its parent class, to manage diffusion-related data.
 
-    End users will typically utilize the class ChemData, which extends this one
+    End users will typically utilize the class ChemData, which extends this one.
     """
 
     def __init__(self):
@@ -389,17 +395,19 @@ class Diffusion(ChemCore):
 
 
 
-    def add_chemical_with_diffusion(self, name :str, diff_rate :float|int, label=None, note=None, **kwargs) -> int:
+    def add_chemical_with_diffusion(self, name :str, diff_rate :float|int,
+                                          label=None, note=None, **kwargs) -> int:
         """
         Register a new chemical species, with a name, a diffusion rate (in water),
         and (optionally) :
+            - a label (short version of name)
             - a note
             - any other named argument(s) that the user wishes to store (i.e. arbitrary named arguments)
 
         EXAMPLE:  add_chemical(label = "P1", diff_rate = 0.1,
                                note = "my note about P1", name = "protein P1")
 
-        Note: if no diffusion is to be set, can also simply use ChemData.add_chemical()
+        Note: if no diffusion is to be set, one can also simply use ChemData.add_chemical()
 
         :param name:       Label of the new chemical species to register;
                                 an Exception will be raised if the name was already registered
@@ -426,9 +434,10 @@ class Diffusion(ChemCore):
 
     def set_diffusion_rate(self, chem_label :str, diff_rate :float) -> None:
         """
-        Set the diffusion rate of the given chemical species (identified by its name)
+        Set the diffusion rate of the given chemical species (identified by its label).
+        Any previousy-set value will get over-written.
 
-        :param chem_label:  Label of a chemical
+        :param chem_label:  Label of the chemical species of interest
         :param diff_rate:   Diffusion rate (in water) for the above chemical
         :return:            None
         """
@@ -449,13 +458,13 @@ class Diffusion(ChemCore):
             f"assert_valid_diffusion(): The value for the diffusion rate ({diff}) is not a valid number; it is of type {type(diff)}"
 
         assert diff >= 0., \
-            f"assert_valid_diffusion(): the diffusion rate ({diff}) cannot be negative"
+            f"assert_valid_diffusion(): the diffusion rate cannot be negative (value given: {diff})"
 
 
 
     def get_diffusion_rate(self, chem_index=None, chem_label=None) -> float|int|None:
         """
-        Return the diffusion rate of the specified chemical species.
+        Return the diffusion rate of the specified chemical.
         If no value was assigned (but the chemical exists), return None.
 
         :param chem_label:  Label of the chemical of interest
@@ -524,6 +533,8 @@ class Diffusion(ChemCore):
 
 
 
+
+
 ###############################################################################################################
 ###############################################################################################################
 
@@ -542,9 +553,11 @@ class ChemicalAffinity(NamedTuple):
 class Macromolecules(Diffusion):
     """
     Extends its parent class to manage modeling of large molecules (such as DNA)
-    with multiple binding sites (for example, for Transcription Factors)
+    with multiple binding sites (for example, for Transcription Factors).
 
-    End users will typically utilize the class ChemData, which extends this one
+    CAUTION: this class is currently in flux, and likely to change.
+
+    End users will typically utilize the class ChemData, which extends this one.
     """
 
     def __init__(self):
@@ -792,6 +805,8 @@ class Macromolecules(Diffusion):
 
 
 
+
+
 ###############################################################################################################
 ###############################################################################################################
 
@@ -956,7 +971,7 @@ class ChemData(Macromolecules):
                 color = plot_colors[i]
                 assert type(color) == str, \
                     f"ChemData instantiation: all the colors must be strings.  The passed value ({color}) is of type {type(color)}"
-                self.color_dict[l] = color      # TODO: use set_color()
+                self.set_color(chem_label=l, color=color)
 
 
 
@@ -968,7 +983,7 @@ class ChemData(Macromolecules):
         including labels, names, diffusion rates, plot colors, and optional extra fields,
         in their registration-index order
 
-        :return:    A Pandas dataframe
+        :return:    A Pandas dataframe with info about all the registered chemicals
         """
         df = pd.DataFrame(self.chemical_data)   # Get labels, names and optional extra fields
 
