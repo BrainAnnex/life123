@@ -503,7 +503,7 @@ class ReactionUnimolecular(ReactionElementary):
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        return ThermoDynamics.compute_reaction_quotient(reactant_data=[(1, self.reactant)], product_data=[(1, self.product)],
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=[(1, self.reactant)], product_data=[(1, self.product)],
                                                         conc=conc, explain=explain)
 
 
@@ -782,7 +782,7 @@ class ReactionSynthesis(ReactionElementary):
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        return ThermoDynamics.compute_reaction_quotient(reactant_data=[(1, self.reactant_1) , (1, self.reactant_2)],
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=[(1, self.reactant_1) , (1, self.reactant_2)],
                                                         product_data= [(1, self.product)],
                                                         conc=conc, explain=explain)
 
@@ -1089,7 +1089,7 @@ class ReactionDecomposition(ReactionElementary):
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        return ThermoDynamics.compute_reaction_quotient(reactant_data=[(1, self.reactant)],
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=[(1, self.reactant)],
                                                         product_data=[(1, self.product_1) , (1, self.product_2)],
                                                         conc=conc, explain=explain)
 
@@ -2095,7 +2095,7 @@ class ReactionGeneric(ReactionCommon):
         product_data = [(self.extract_stoichiometry(p), self.extract_chem_label(p) )
                                for p in self.products]
 
-        return ThermoDynamics.compute_reaction_quotient(reactant_data=reactant_data,
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=reactant_data,
                                                         product_data=product_data,
                                                         conc=conc, explain=explain)
 

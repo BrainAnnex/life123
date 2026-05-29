@@ -813,17 +813,15 @@ class Macromolecules(Diffusion):
 
 class ChemData(Macromolecules):
     """
-    Data about all the chemicals and (if applicable) reactions,
-    including:
+    Data about all the chemicals, including:
         - names
         - diffusion rates
         - macro-molecules Binding Site Affinities (for Transcription Factors)
 
 
-    Notes:  - for now, the temperature is assumed constant everywhere, and unvarying (or very slowly varying)
-
-            - we're using a "daisy chain" of classes extending the previous one, starting from ChemCore
-              and ending in this user-facing class:
+    Note:   This class contains (extends) the following other classes: ChemCore, Diffusion, Macromolecules.
+            We're using a "daisy chain" of classes extending the previous one, starting from ChemCore
+            and ending in this user-facing class:
                     ChemCore <- Diffusion <- Macromolecules <- ChemData
     """
     def __init__(self, names=None, labels=None, n_chems=None, diffusion_rates=None, plot_colors=None):

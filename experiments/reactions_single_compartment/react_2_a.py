@@ -106,7 +106,7 @@ uc.find_equilibrium_conc(rxn_index=0)    # This is an EXACT equilibrium solution
 # More precisely, it's because the **reaction quotient Q**, at the current initial concentrations, is larger than our **equilibrium constant K**, which is 1.5 :
 
 # %%
-ThermoDynamics.compute_reaction_quotient(reactant_data=["A"], product_data=["B"],
+ReactionKinetics.compute_reaction_quotient(reactant_data=["A"], product_data=["B"],
                                          conc={"A": 10., "B": 50.})
 
 # %% [markdown]

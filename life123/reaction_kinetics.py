@@ -6,6 +6,7 @@ import numpy as np
 import plotly.graph_objects as pgo
 from life123.numerical import Numerical
 from life123.visualization.plotly_helper import PlotlyHelper
+from typing import Tuple
 
 
 
@@ -857,6 +858,119 @@ class ReactionKinetics:
         return std_result
 
 
+
+    @classmethod
+    def compute_reaction_quotient(cls, reactant_data :[str|Tuple[int, str]], product_data :[str|Tuple[int, str]],
+                                  conc :dict, explain=False) -> np.double | Tuple[np.double, str]:
+        """
+        Compute the "Reaction Quotient" Q (aka "Mass–action Ratio"),
+        for the reaction with the specified parameters,
+        given the concentrations of chemicals involved in the reaction.
+
+        EXAMPLE: use reactant_data=[(2, "A"), (1, "B")] and product_data=["C"] ,
+                 for a reaction of the form 2 A + B <-> C ,
+                 alongside a dictionary with the concentrations (activities) of A, B and C;
+                 the result will be given by the formula:  [C] / ( [A]^2 [B])    , where ^2 represents squaring
+
+        Note: in a heterogeneous mixture, solids, pure liquids and solvents have an activity that has a fixed value of 1,
+              and should be omitted from the parameters passed to this function.
+              We're using the term "concentrations" instead of "chemical activities";
+              concentrations approximate the activities of ideal dilute solutions
+
+        :param reactant_data:   List whose elements can be either STRINGS with the labels of the reactants,
+                                    or PAIRS of the form (stoichiometry coefficient, label) of the reactants.
+
+        :param product_data:    List whose elements can be either STRINGS with the labels of the products of the reactions,
+                                    or PAIRS of the form (stoichiometry coefficient, label) of the products.
+
+        :param conc:            Dictionary with the concentrations (activities) of the species involved in the reaction.
+                                The keys are the chemical labels
+                                    EXAMPLE: {'A': 23.9, 'B': 36.1}
+        :param explain:         If True, it also returns the math formula being used for the computation
+                                    EXAMPLES:   "([C][D]) / ([A][B])"
+                                                "[B] /  [A]^2 "
+
+        :return:                If explain is False, return a value for the "Reaction Quotient" (aka "Mass–action Ratio");
+                                    if True, return a pair with that quotient and a string with the math formula that was used.
+                                    Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
+        """
+        # TODO: could be tidier in avoiding unnecessary blanks in the explanations
+        numerator = np.double(1)    # The product of all the concentrations of the reaction products (adjusted for reaction order)
+        denominator = np.double(1)  # The product of all the concentrations of the reactants (also adjusted for reaction order)
+
+        numerator_text = ""      # First part of the textual explanation
+        denominator_text = ""    # Second part of the textual explanation
+
+
+        # Compute the numerator of the "Reaction Quotient"
+        for term in product_data:
+            # Loop over the reaction products
+            if type(term) == str:
+                stoich_coeff = 1
+                p = term
+            else:
+                (stoich_coeff, p) = term
+                assert type(stoich_coeff) == int, f"compute_reaction_quotient(): the argument `product_data` " \
+                                                  f"must be a list of pairs (integer and string).  `{stoich_coeff}` is not an integer"
+                assert type(p) == str, f"compute_reaction_quotient(): the argument `product_data` " \
+                                       f"must be a list of pairs (integer and string).  {p} is not a string"
+
+            species_name = p
+            # TODO: Maybe turn the several next lines into a helper function
+            species_conc = conc.get(species_name)
+            assert species_conc is not None, f"compute_reaction_quotient(): unable to proceed because the " \
+                                             f"concentration of product `{species_name}` was not provided"
+
+            numerator *= (species_conc ** stoich_coeff)
+            if explain:
+                if stoich_coeff > 1:
+                    numerator_text += f" [{species_name}]^{stoich_coeff} "
+                else:
+                    numerator_text += f"[{species_name}]"
+
+        if explain and len(product_data) > 1:
+            numerator_text = f"({numerator_text})"  # In case of multiple terms, enclose them in parenthesis
+
+
+        # Compute the denominator of the "Reaction Quotient"
+        for term in reactant_data:
+            # Loop over the reactants
+            if type(term) == str:
+                stoich_coeff = 1
+                r = term
+            else:
+                (stoich_coeff, r) = term
+                assert type(stoich_coeff) == int, f"compute_reaction_quotient(): the argument `reactant_data` " \
+                                                  f"must be a list of pairs (integer and string).  `{stoich_coeff}` is not an integer"
+                assert type(r) == str, f"compute_reaction_quotient(): the argument `reactant_data` " \
+                                       f"must be a list of pairs (integer and string).  {r} is not a string"
+
+            species_name =  r
+            # TODO: Maybe turn the several next lines into a helper function
+            species_conc = conc.get(species_name)
+            assert species_conc is not None, f"compute_reaction_quotient(): unable to proceed because the " \
+                                             f"concentration of reactant `{species_name}` was not provided"
+
+            denominator *= (species_conc ** stoich_coeff)
+            if explain:
+                if stoich_coeff > 1:
+                    denominator_text += f" [{species_name}]^{stoich_coeff} "
+                else:
+                    denominator_text += f"[{species_name}]"
+
+        if explain and len(reactant_data) > 1:
+            denominator_text = f"({denominator_text})"  # In case of multiple terms, enclose them in parenthesis
+
+
+        with np.errstate(divide='ignore', invalid='ignore'):
+            # It might be np.inf (if just the denominator is zero) or np.nan (if both are zero)
+            quotient = numerator / denominator
+
+        if explain:
+            formula = f"{numerator_text} / {denominator_text}"
+            return (quotient, formula)
+
+        return quotient
 
 
 

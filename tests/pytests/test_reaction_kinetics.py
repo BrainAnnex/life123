@@ -650,7 +650,7 @@ def test_compute_equilibrium_conc_first_order():
     assert "Q" not in result
 
     # Further verify
-    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"P")],
+    K = ReactionKinetics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"P")],
                                                  conc={"A": 36, "P": 54})
     assert np.allclose(K, 3./2.)    # At the equilibrium concentrations, the reaction quotient of elementary equations equals kF/kR
 
@@ -675,7 +675,7 @@ def test_compute_equilibrium_conc_first_order():
     assert np.allclose(result["P"], 29.705122591242464)
     assert "Q" not in result
     # Further verify
-    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A"), (1,"B")], product_data=[(1,"P")],
+    K = ReactionKinetics.compute_reaction_quotient(reactant_data=[(1,"A"), (1,"B")], product_data=[(1,"P")],
                                                    conc={"A": 0.2948774087575341, "B": 40.294877408757536, "P": 29.705122591242464})
     assert np.allclose(K, 5./2.)    # At the equilibrium concentrations, the reaction quotient of elementary equations equals kF/kR
 
@@ -686,7 +686,7 @@ def test_compute_equilibrium_conc_first_order():
     assert "Q" not in result
 
     # Further verify.  Compute the reaction quotient with the equilibrium concentrations, i.e. the thermodynamic equilibrium constant
-    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(2,"A")], product_data=[(1,"P")],
+    K = ReactionKinetics.compute_reaction_quotient(reactant_data=[(2,"A")], product_data=[(1,"P")],
                                                  conc={"A": 9.49568869375716, "P": 135.2521556531214})
     assert np.allclose(K, 3./2.)    # At the equilibrium concentrations, the reaction quotient of elementary equations equals kF/kR
 
@@ -697,7 +697,7 @@ def test_compute_equilibrium_conc_first_order():
         assert np.allclose(result[key], expected[key])
 
     # Further verify.  Compute the reaction quotient with the equilibrium concentrations, i.e. the thermodynamic equilibrium constant
-    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A"), (1,"B")], product_data=[(1,"P"), (1,"Q")],
+    K = ReactionKinetics.compute_reaction_quotient(reactant_data=[(1,"A"), (1,"B")], product_data=[(1,"P"), (1,"Q")],
                                                    conc=expected)
     assert np.allclose(K, 10./2.)    # Non-elementary reaction, but still with kinetics following mass-action: the equilibrium constant equals to kF/kR
 
@@ -710,7 +710,7 @@ def test_compute_equilibrium_conc_first_order():
         assert np.allclose(result[key], expected[key])
 
     # Further verify.  Compute the reaction quotient with the equilibrium concentrations, i.e. the thermodynamic equilibrium constant
-    K = ThermoDynamics.compute_reaction_quotient(reactant_data=[(1,"A"), (2,"B")], product_data=[(1,"P"), (3,"Q")],
+    K = ReactionKinetics.compute_reaction_quotient(reactant_data=[(1,"A"), (2,"B")], product_data=[(1,"P"), (3,"Q")],
                                                  conc=expected)
     corrective_factor = (result["B"] / result["Q"]**2)      # Needed because we're dealing with generalized kinetics
                                                             # (non-mass-action with respect to the stoichiometry)
@@ -915,6 +915,40 @@ def test_relative_significance():
     assert rd.relative_significance(20.1, 10) == "L"
     assert rd.relative_significance(137423, 10) == "L"
 
+
+
+def test_compute_reaction_quotient():
+    # Reaction : A <-> B
+    q = ReactionKinetics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"B")],
+                                                 conc={'A': 24., 'B': 36.}, explain=False)
+    assert np.allclose(q, 1.5)
+    q, formula = ReactionKinetics.compute_reaction_quotient(reactant_data=[(1,"A")], product_data=[(1,"B")],
+                                                          conc={'A': 24., 'B': 36.}, explain=True)
+    assert np.allclose(q, 1.5)
+    assert formula == '[B] / [A]'
+
+
+    # Reaction : 2 A + B <-> C
+    q, formula = ReactionKinetics.compute_reaction_quotient(reactant_data=[(2, "A"), (1, "B")], product_data=["C"],
+                                                          conc={'A': 24., 'B': 36., 'C': 10}, explain=True)
+
+    assert np.allclose(q, 10 / (24.**2 * 36))
+    assert formula == '[C] / ( [A]^2 [B])'
+
+
+    # Reaction: R + S <-> P + Q
+    q, formula = ReactionKinetics.compute_reaction_quotient(reactant_data=[(1,"R"), "S"],
+                                                          product_data=["P", (1,"Q")],
+                                                          conc={'R': 10., 'S': 4., 'P': 5., 'Q': 20.}, explain=True)
+    assert np.allclose(q, 2.5)    #  (5 * 20) / (10 * 4)
+    assert formula == '([P][Q]) / ([R][S])'
+
+    # Reaction: R + 3 S <-> 2 P + Q
+    q, formula = ReactionKinetics.compute_reaction_quotient(reactant_data=[(1,"R"), (3,"S")],
+                                                          product_data=[(2,"P"), (1,"Q")],
+                                                          conc={'R': 10., 'S': 4., 'P': 5., 'Q': 20.}, explain=True)
+    assert np.allclose(q, 0.78125)    #  (5**2 * 20) / (10 * 4**3)
+    assert formula == '( [P]^2 [Q]) / ([R] [S]^3 )'
 
 
 
