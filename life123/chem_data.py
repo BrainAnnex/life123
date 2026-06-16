@@ -46,6 +46,7 @@ class ChemCore:
                                 # (in the ordered list of chemicals, self.chemical_data);
                                 # this is automatically set and maintained
                                 # EXAMPLE: {"A": 0, "B": 1, "C": 2}
+                                # TODO: maybe rename to something like species_by_id 
 
         self.color_dict = {}    # To map assigned chemical labels
                                 # to optionally specified color values to use in visualizations
@@ -180,7 +181,7 @@ class ChemCore:
 
 
     def add_chemical(self, name :str, label=None, note=None, skip_duplicates=False,
-                    plot_color=None, **kwargs) -> Union[int, None]:
+                    plot_color=None, **kwargs) -> int|None:
         """
         Register a new chemical species, with a name
         and (optionally) :

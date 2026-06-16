@@ -463,7 +463,7 @@ class UniformCompartment:
         """
         Print out a user-friendly plain-text form of ALL the reactions.
 
-        For details, see ChemData.describe_reactions()
+        For details, see ReactionRegistry.describe_reactions()
 
         :param kwargs:  Any arbitrary named arguments
         :return:        None

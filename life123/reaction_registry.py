@@ -1,6 +1,5 @@
-from life123.visualization.py_graph_visual import PyGraphVisual, PyGraphVisual_OLD
-from life123.visualization.graphic_log import GraphicLog, DisplayNetwork
-from life123.html_log import HtmlLog as log
+from life123.visualization.py_graph_visual import PyGraphVisual
+from life123.visualization.graphic_log import DisplayNetwork
 from life123.reactions import ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionEnzyme, ReactionGeneric
 from life123.chem_data import ChemData
 
@@ -792,6 +791,9 @@ class ReactionRegistry:
         ready to be passed to the front end, for network-diagram visualization with the Cytoscape.js library
         (in the graph module "vue_cytoscape")
 
+        A "bipartite" graph ("Petri net") representation is used for reaction, where the reaction itself - as well as the reactants
+        and products - are all turned into graph vertices.
+
         4 parts are generated, and assembled together as a dictionary with 4 keys: 'nodes', 'edges', 'color_mapping', 'caption_mapping'
 
         EXAMPLE of the 'nodes' structure part of the returned object for an  A <-> B reaction:
@@ -812,6 +814,8 @@ class ReactionRegistry:
 
         :return:    A dictionary with 4 keys: 'nodes', 'edges', 'color_mapping', 'caption_mapping'
         """
+        # TODO: manage shapes; e.g., use rectangles for reactions
+
         graph = PyGraphVisual()     # Object to facilitate data preparation for graph visualization
 
         # Note: the graph nodes representing Chemicals will be given an id such as "C-123" and a label "Chemical";
