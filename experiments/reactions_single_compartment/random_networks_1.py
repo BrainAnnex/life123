@@ -61,7 +61,7 @@ log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for
 net = RandomReactionNetwork(n_species=4, n_rxns=6, seed=59238125)
 
 # %%
-net.chem_data.get_all_labels()
+net.species_data.get_all_species_ids()
 
 # %% [markdown]
 # #### The above chemical labels were auto-generated

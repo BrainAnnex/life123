@@ -17,6 +17,7 @@ from life123.bio_sim_1d import (System1D, Membranes1D, Diffusion1D, BioSim1D)
 from life123.bio_sim_2d import (BioSim2D, Membranes2D)
 from life123.bio_sim_3d import BioSim3D
 from life123.chem_data import ChemData
+from life123.species_registry import (Species, SpeciesRegistry)
 from life123.html_log import HtmlLog
 from life123.collections import (
     CollectionTabular,
@@ -79,6 +80,8 @@ __all__ = [
     'ReactionSynthesis',
     'ReactionRegistry',
     'ReactionKinetics',
+    'Species',
+    'SpeciesRegistry',
     'System1D',
     'ThermoDynamics',
     'VariableTimeSteps',
@@ -109,5 +112,3 @@ def check_version(expected :str, enforce=False) -> None:
 
         if enforce:
             raise Exception(f"Using version '{__version__}' instead of the expected version '{expected}'")
-
-

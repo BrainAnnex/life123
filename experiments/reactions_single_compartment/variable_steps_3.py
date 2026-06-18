@@ -42,7 +42,7 @@ LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData as chem
+from life123 import SpeciesRegistry
 from life123 import UniformCompartment
 
 import numpy as np
@@ -57,7 +57,7 @@ import numpy as np
 
 # %%
 # Initialize the system.  
-chem_data = chem(names=["EXTRA 1", "U", "EXTRA 2", "X", "S", "EXTRA 3"])
+chem_data = SpeciesRegistry(id=["EXTRA 1", "U", "EXTRA 2", "X", "S", "EXTRA 3"])
 
 # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
 chem_data.add_reaction(reactants=[(2, "S", 1)], products="U",
@@ -73,7 +73,7 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset=None)
+dynamics = UniformCompartment(species_data=chem_data, preset=None)
 dynamics.set_conc(conc={"U": 50., "X": 100., "EXTRA 2": 55.,  "EXTRA 3": 100. })  # The EXTRA's are junk for testing
 dynamics.describe_state()
 
@@ -126,7 +126,7 @@ dynamics.curve_intersect("U", "X", t_start=0.3, t_end=0.35)
 
 # %%
 # Initialize the system
-chem_data = chem(names=["U", "X", "S", "E"])
+chem_data = SpeciesRegistry(id=["U", "X", "S", "E"])
 
 # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
 chem_data.add_reaction(reactants=[(2, "S", 1), "E"], products=["U", "E"],
@@ -142,7 +142,7 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset=None)
+dynamics = UniformCompartment(species_data=chem_data, preset=None)
 dynamics.set_conc(conc={"U": 50., "X": 100., "E": 1. })
 dynamics.describe_state()
 

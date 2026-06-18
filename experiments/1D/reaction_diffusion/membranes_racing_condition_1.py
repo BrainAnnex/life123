@@ -42,7 +42,7 @@ LIFE123_VERSION = "1.0.0rc7"       # Library version this experiment is based on
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import BioSim1D, ChemData, ReactionRegistry, PlotlyHelper, check_version
+from life123 import BioSim1D, SpeciesRegistry, ReactionRegistry, PlotlyHelper, check_version
 
 # %%
 check_version(LIFE123_VERSION)
@@ -54,11 +54,11 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Initialize the chemical data
-chem_data = ChemData(names=["A", "B", "C"], 
-                     diffusion_rates=[100., 800., 500.],        # The diffusion rate of `A` will later be increased in scenario 2
-                     plot_colors=["red", "turquoise", "green"]) 
+chem_data = SpeciesRegistry(id=["A", "B", "C"],
+                     diffusion_rate=[100., 800., 500.],        # The diffusion rate of `A` will later be increased in scenario 2
+                     plot_color=["red", "turquoise", "green"])
 
-rxns = ReactionRegistry(chem_data=chem_data)
+rxns = ReactionRegistry(species_data=chem_data)
 
 # Reaction A + B <-> C , with 1st-order kinetics for each species
 # Note that the reaction is mostly in the forward direction
@@ -78,7 +78,7 @@ rxns.describe_reactions()
 # ### Initialize the 1D System, including Membranes
 
 # %%
-bio = BioSim1D(n_bins=30, chem_data=chem_data, reactions=rxns)
+bio = BioSim1D(n_bins=30, species_data=chem_data, reactions=rxns)
 
 # %%
 bio.membranes().set_membranes(membranes=[ (2, 18) ])
@@ -231,7 +231,7 @@ scenario_1
 # %%
 # Initial conditioned just like before
 
-bio = BioSim1D(n_bins=30, chem_data=chem_data, reactions=rxns)
+bio = BioSim1D(n_bins=30, species_data=chem_data, reactions=rxns)
 
 bio.membranes().set_membranes(membranes=[ (2, 18) ])
 

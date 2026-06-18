@@ -46,7 +46,7 @@ LIFE123_VERSION = "1.0.0rc6"         # Library version this experiment is based 
 
 import pandas as pd
 
-from life123 import check_version, ChemData, UniformCompartment, ReactionEnzyme, PlotlyHelper
+from life123 import check_version, SpeciesRegistry, UniformCompartment, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)    # To check compatibility
@@ -59,7 +59,7 @@ check_version(LIFE123_VERSION)    # To check compatibility
 # # PART 1. Accurate numerical solution
 
 # %%
-chem_data = ChemData(names=["P", "ES"], plot_colors=["green", "red"])
+chem_data = SpeciesRegistry(id=["P", "ES"], plot_color=["green", "red"])
 
 # %%
 # Our Enzyme
@@ -83,7 +83,7 @@ chem_data.all_chemicals()
 
 # %%
 # Here we use the "slow" preset for the variable steps, a conservative option prioritizing accuracy over speed
-uc = UniformCompartment(chem_data=chem_data, preset="slow")
+uc = UniformCompartment(species_data=chem_data, preset="slow")
 
 # %%
 # Enzymatic reaction `E + S <-> ES -> E + P` 

@@ -29,8 +29,8 @@ def test_constructor():
         except Exception:
             pass
 
-    assert net.chem_data.number_of_chemicals() == 3
-    assert net.chem_data.get_all_labels() == ['A', 'B', 'C']
+    assert net.species_data.number_of_species() == 3
+    assert net.species_data.get_all_species_ids() == ['A', 'B', 'C']
 
     # Verify that all possible reactions (or their reverse ones) were indeed generated,
     # with no consideration for stoichiometry
@@ -58,7 +58,7 @@ def test_constructor_2():
 
 def test__assign_chems_to_rxn():
     net = RandomReactionNetwork(n_species=3, n_rxns=1, seed=1)
-    all_chem_labels = net.chem_data.get_all_labels()
+    all_chem_labels = net.species_data.get_all_species_ids()
     assert all_chem_labels == ["A", "B", "C"]
 
     for _ in range(20):
@@ -107,7 +107,7 @@ def test__assign_chems_to_rxn():
 
 def test_already_used():
     net = RandomReactionNetwork(n_species=3, n_rxns=1, seed=1)
-    all_chem_labels = net.chem_data.get_all_labels()
+    all_chem_labels = net.species_data.get_all_species_ids()
     assert all_chem_labels == ["A", "B", "C"]
 
     assert not net.already_used(reactants="A", products="B")
@@ -128,7 +128,7 @@ def test_already_used():
 
     assert not net.already_used(reactants=["A", "C"], products="B")
 
-    net.registry.chem_data.add_chemical(name="D")
+    net.registry.species_data.add_species(id="D")
     assert not net.already_used(reactants=["C", "D"], products="B")
 
     net.registry.add_elementary_reaction(reactants=["D", "C"], products="B")  # Reaction 2 : D + C <-> B

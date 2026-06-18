@@ -2,7 +2,7 @@
 
 import pytest
 import numpy as np
-from life123 import BioSim1D, ReactionRegistry, UniformCompartment, ChemData
+from life123 import BioSim1D, ReactionRegistry, UniformCompartment, SpeciesRegistry
 
 
 
@@ -22,25 +22,25 @@ def test_constructor():
         BioSim1D(n_bins=3)      # At least one more arg is needed
 
 
-    chem_data = ChemData(names="A")
+    chem_data = SpeciesRegistry(id="A")
 
-    bio = BioSim1D(n_bins=5, chem_data=chem_data)
+    bio = BioSim1D(n_bins=5, species_data=chem_data)
     #bio.describe_state()
 
     assert bio.n_bins == 5
     assert bio.n_species == 1
-    assert bio.chem_data == chem_data
+    assert bio.species_data == chem_data
     expected = np.zeros((1, 5), dtype=float)
     assert np.allclose(bio.system, expected)
 
 
     # New test
-    chem_data = ChemData(names=["A", "B", "C"])
-    bio = BioSim1D(n_bins=15, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B", "C"])
+    bio = BioSim1D(n_bins=15, species_data=chem_data)
     #bio.describe_state()
     assert bio.n_bins == 15
     assert bio.n_species == 3
-    assert bio.chem_data == chem_data
+    assert bio.species_data == chem_data
     expected = np.zeros((3,15), dtype=float)
     assert np.allclose(bio.system, expected)
     assert type(bio.reactions) == ReactionRegistry
@@ -63,7 +63,7 @@ def test_constructor():
     assert np.allclose(bio.system, expected)
     assert type(bio.reactions) == ReactionRegistry
     assert type(bio.reaction_dynamics) == UniformCompartment
-    assert type(bio.chem_data) == ChemData
+    assert type(bio.species_data) == SpeciesRegistry
 
 
 

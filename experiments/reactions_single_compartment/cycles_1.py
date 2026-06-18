@@ -30,7 +30,7 @@ import set_path      # Importing this module will add the project's home directo
 # %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData
+from life123 import SpeciesRegistry
 from life123 import UniformCompartment
 from life123 import Numerical as num
 
@@ -50,7 +50,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = ChemData(names=["A", "B", "C", "E_high", "E_low"])
+chem_data = SpeciesRegistry(id=["A", "B", "C", "E_high", "E_low"])
 
 # Reaction A <-> B, mostly in forward direction (favored energetically)
 # Note: all reactions in this experiment have 1st-order kinetics for all species
@@ -88,7 +88,7 @@ initial_conc
 # note: fixed time resolution is generelly NOT recommended, except for double-checks and error analysis)
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)
+dynamics = UniformCompartment(species_data=chem_data)
 dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 
@@ -172,7 +172,7 @@ dynamics.is_in_equilibrium()
 # # Run # 2. VARIABLE time resolution
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="mid_inclusive")   # Note: OVER-WRITING the "dynamics" object  # heavy_brakes
+dynamics = UniformCompartment(species_data=chem_data, preset="mid_inclusive")   # Note: OVER-WRITING the "dynamics" object  # heavy_brakes
 dynamics.set_conc(conc=initial_conc, snapshot=True) 
 dynamics.describe_state()
 
@@ -236,7 +236,7 @@ run2
 # # Run # 3. FIXED time resolution, using FINER fixed resolution than in run #1 
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
+dynamics = UniformCompartment(species_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
 dynamics.set_conc(conc=initial_conc, snapshot=True) 
 dynamics.describe_state()
 

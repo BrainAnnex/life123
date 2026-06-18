@@ -5,7 +5,7 @@ import time
 import plotly.express as px
 import plotly.graph_objects as pgo
 from typing import Union
-from life123.chem_data import ChemData
+from life123.species_registry import SpeciesRegistry, Macromol
 from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
 from life123.reaction_registry import ReactionRegistry
@@ -40,22 +40,22 @@ class UniformCompartment:
     This might be thought of as a "zero-dimensional system"
     """
 
-    def __init__(self, reactions=None, chem_data=None, names=None,
-                       preset="mid", exact=False, enable_diagnostics=False, temp=298.15):
+    def __init__(self, reactions=None, species_data=None, names=None,
+                 preset="mid", exact=False, enable_diagnostics=False, temp=298.15, macromolecules=None):
         """
         Note: AT MOST 1 of the following 3 arguments can be passed
 
         :param reactions:   [OPTIONAL 1] Object of type "ReactionRegistry", with data about the reactions and the chemical species.
-                                If passed, cannot pass either of the args `chem_data` nor `names` (those are both part of the "Reactions" object);
+                                If passed, cannot pass either of the args `species_data` nor `names` (those are both part of the "ReactionRegistry" object);
                                 if not passed, the reactions can be added later, with calls to add_reaction()
 
-        :param chem_data:   [OPTIONAL 2] Object of type "ChemData" (with data about the chemical species).
-                                If passed, cannot pass either of the args  `reactions` (an object that contains `chem_data`) nor `names`
+        :param species_data:[OPTIONAL 2] Object of type "SpeciesRegistry" (with data about the species).
+                                If passed, cannot pass either of the args `reactions` (an object that contains `chem_data`) nor `names`
                                 (names are contained in the `chem_data` object)
 
         :param names:       [OPTIONAL 3] A single name, or list or tuple of names, of the chemicals;
                                 providing a list can be used to make the chemicals appear in a particular desired order.
-                                If passed, cannot pass either of the args `reactions` nor `chem_data` (both those object contain the chemical names)
+                                If passed, cannot pass either of the args `reactions` nor `species_data` (both those object contain the chemical names)
 
 
         :param preset:      [OPTIONAL] String with name of a standard preset
@@ -70,11 +70,11 @@ class UniformCompartment:
         :param enable_diagnostics:  [OPTIONAL] If True, the diagnostics mode is turned on - and will remain on unless explicitly
                                         disabled by a call to pause_diagnostics();
                                         if False (default), no action taken
-        :param temp:        [OPTIONAL] Temperature in Kelvins.  Default is 298.15 K (25 C)
+        :param temp:            [OPTIONAL] Temperature in Kelvins.  Default is 298.15 K (25 C)
+        :param macromolecules:  [OPTIONAL] Object of class Macromol
         """
 
-        self.chem_data = None       # Object of type "ChemData" (with data about the chemicals and their reactions,
-                                    #                            incl. macromolecules)
+        self.species_data = None       # Object of type "SpeciesRegistry" (with data about all the species)
 
         self.reaction_data = None   # Object ot type "ReactionRegistry" (with data about all the reactions)
 
@@ -85,27 +85,27 @@ class UniformCompartment:
                                     # if False, always use the "Forward Euler" approximation method
 
 
-        if chem_data and reactions:
-            assert reactions.get_chem_data() == chem_data, \
+        if species_data and reactions:
+            assert reactions.get_chem_data() == species_data, \
                 "UniformCompartment() instantiation: the argument `reactions` is based " \
-                "on a 'ChemData' object that doesn't match the one passed by the argument `chem_data`"
+                "on a 'SpeciesRegistry' object that doesn't match the one passed by the argument `chem_data`"
 
         if reactions is not None:
             #assert chem_data is None, \
                 #"UniformCompartment instantiation: Cannot pass both `chem_data` and `reactions` as arguments (the `reactions` object already contains the `chem_data`)"
             assert names is None, \
                 "UniformCompartment instantiation: Cannot pass both `names` and `reactions` as arguments (the `reactions` object already contains the `names`)"
-            self.chem_data = reactions.chem_data
+            self.species_data = reactions.get_chem_data()
             self.reaction_data = reactions
         else:           # reactions is None
-            if chem_data is None:
-                self.chem_data = ChemData(names=names)      # It's ok if names is None
+            if species_data is None:
+                self.species_data = SpeciesRegistry(id=names)      # It's ok if names is None
             else:
                 assert names is None,\
                     "UniformCompartment instantiation: Cannot pass both `chem_data` and `names` as arguments (the `chem_data` object contains the `names`)"
-                self.chem_data = chem_data
+                self.species_data = species_data
 
-            self.reaction_data = ReactionRegistry(chem_data=self.chem_data)
+            self.reaction_data = ReactionRegistry(species_data=self.species_data)
 
 
         self.system_time = 0.       # Global time of the system, from initialization on
@@ -115,12 +115,14 @@ class UniformCompartment:
         self.system = None  # Concentration data in the single compartment we're simulating, for all the chemicals
                             # A 1-d Numpy array of the concentrations (floats), in their index order;
                             # the array size is the total number of chemical species.
-                            # Each entry is the concentration of the species with that index (in the "ChemData" object)
+                            # Each entry is the concentration of the species with that index (in the "SpeciesRegistry" object)
                             # Note that this is the counterpart - with 1 less dimension - of the array by the same name
                             #       in the class BioSim1D
 
         self.previous_system = None # Concentration data of all the chemicals at the previous simulation step
 
+
+        self.macromolecules = macromolecules
 
         self.macro_system = {}      # A dict mapping macromolecule names to their counts
                                     # EXAMPLE:  {"M1": 1, "M2": 3, "M3": 1}
@@ -174,7 +176,7 @@ class UniformCompartment:
         self.diagnostics = None         # Object of class Diagnostics
 
         if enable_diagnostics:
-            self.enable_diagnostics()       # Note: self.chem_data must be defined BEFORE this call
+            self.enable_diagnostics()       # Note: self.species_data must be defined BEFORE this call
 
 
 
@@ -190,16 +192,17 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def get_chem_data(self) -> ChemData:
+    def get_chem_data(self) -> SpeciesRegistry:
         """
-
-        :return:    Object of type "ChemData"
+        Return the "SpeciesRegistry" object being used
+        
+        :return:    Object of type "SpeciesRegistry"
         """
-        return self.chem_data
+        return self.species_data
 
 
 
-    def set_conc(self, conc: Union[list, tuple, dict], snapshot=True) -> None:
+    def set_conc(self, conc :list|tuple|dict, snapshot=True) -> None:
         """
         Set the concentrations of some or all the chemicals
 
@@ -221,9 +224,9 @@ class UniformCompartment:
         # TODO: also allow a Numpy array; make sure to do a copy() to it!
 
         if type(conc) == list or type(conc) == tuple:
-            assert len(conc) == self.chem_data.number_of_chemicals(), \
+            assert len(conc) == self.species_data.number_of_species(), \
                 f"UniformCompartment.set_conc(): when a list or tuple is passed as the argument 'conc', " \
-                f"its size must match the number of declared chemicals ({self.chem_data.number_of_chemicals()})"
+                f"its size must match the number of declared chemicals ({self.species_data.number_of_species()})"
 
             assert min(conc) >= 0, \
                 f"UniformCompartment.set_conc(): values meant to be chemical concentrations cannot be negative " \
@@ -266,23 +269,23 @@ class UniformCompartment:
             f"UniformCompartment.set_single_conc(): chemical concentrations cannot be negative (value passed: {conc})"
 
         if species_name is not None:
-            species_index = self.chem_data.get_index(species_name)
+            species_index = self.species_data.get_species_index(species_name)
         elif species_index is not None:
-            self.chem_data.assert_valid_chem_index(species_index)
+            self.species_data.assert_valid_species_index(species_index)
         else:
             raise Exception("UniformCompartment.set_single_conc(): at least one "
                             "of the arguments `species_index` or `species_name` must be provided")
 
 
         if self.system is None:
-            self.system = np.zeros(self.chem_data.number_of_chemicals(), dtype='d')      # float64      TODO: allow users to specify the type
+            self.system = np.zeros(self.species_data.number_of_species(), dtype='d')      # float64      TODO: allow users to specify the type
 
         # TODO: if setting concentrations of a newly-added chemical, needs to first expand self.system
         self.system[species_index] = conc
 
         if snapshot:
             # Save this operation in the history (if enabled)
-            self.capture_conc_snapshot(caption=f"Set concentration of `{self.chem_data.get_label(species_index)}`")
+            self.capture_conc_snapshot(caption=f"Set concentration of `{self.species_data.get_species_id(species_index)}`")
 
 
 
@@ -307,7 +310,7 @@ class UniformCompartment:
         :param label:   The label of a chemical species
         :return:        The current system concentration of the above chemical
         """
-        species_index = self.chem_data.get_index(label)
+        species_index = self.species_data.get_species_index(label)
         return self.system[species_index]
 
 
@@ -328,16 +331,16 @@ class UniformCompartment:
         if system_data is None:
             system_data = self.system
         else:
-            assert system_data.size == self.chem_data.number_of_chemicals(), \
+            assert system_data.size == self.species_data.number_of_species(), \
                 f"UniformCompartment.get_conc_dict(): the argument `system_data` must be a 1-D Numpy array with as many entries " \
-                f"as the declared number of chemicals ({self.chem_data.number_of_chemicals()})"
+                f"as the declared number of chemicals ({self.species_data.number_of_species()})"
 
 
         if chem_labels is None:
             if system_data is None:
                 return {}
             else:
-                return {self.chem_data.get_label(index): system_data[index]
+                return {self.species_data.get_species_id(index): system_data[index]
                         for index, conc in enumerate(system_data)}
         else:
             assert type(chem_labels) == list or type(chem_labels) == tuple, \
@@ -346,7 +349,7 @@ class UniformCompartment:
 
             conc_dict = {}
             for name in chem_labels:
-                species_index = self.chem_data.get_index(name)
+                species_index = self.species_data.get_species_index(name)
                 conc_dict[name] = system_data[species_index]
 
             return conc_dict
@@ -1086,7 +1089,7 @@ class UniformCompartment:
                                                 # Baseline value; no reason yet to suggest a change in step size
 
         if variable_steps:
-            decision_data = self.adaptive_steps.adjust_timestep(n_chems=self.chem_data.number_of_chemicals(),
+            decision_data = self.adaptive_steps.adjust_timestep(n_chems=self.species_data.number_of_species(),
                                                                 indexes_of_active_chemicals= self.reaction_data.indexes_of_active_chemicals(),
                                                                 delta_conc=delta_concentrations, baseline_conc=self.system, prev_conc=self.previous_system)
             step_factor = decision_data['step_factor']
@@ -1106,7 +1109,7 @@ class UniformCompartment:
                 print("    Baseline: ", self.system)
                 print("    Deltas:   ", delta_concentrations)
 
-                if len(self.reaction_data.active_chemicals) < self.chem_data.number_of_chemicals():
+                if len(self.reaction_data.active_chemicals) < self.species_data.number_of_species():
                     print(f"    Restricting adaptive time step analysis to {len(self.reaction_data.active_chemicals)} "
                     f"chemicals only: {self.reaction_data.labels_of_active_chemicals()} , with indexes: {self.reaction_data.indexes_of_active_chemicals()}")
 
@@ -1208,7 +1211,7 @@ class UniformCompartment:
 
             neg_indices = np.where(tentative_updated_system < 0)[0]
             first_neg_index = neg_indices[0]
-            chem_name = self.chem_data.get_label(int(first_neg_index))  # The int() is to convert the NumPy integer type
+            chem_name = self.species_data.get_species_id(int(first_neg_index))  # The int() is to convert the NumPy integer type
             raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
                                         f"would lead to a NEGATIVE concentration "
                                         f"\n      in one or more of the chemicals (for instance `{chem_name}`, of index {first_neg_index}), from the combined reactions."
@@ -1252,7 +1255,7 @@ class UniformCompartment:
         """
 
         # The increment vector is cumulative for ALL the requested reactions.  Initialize it to all zeros
-        increment_vector = np.zeros(self.chem_data.number_of_chemicals(), dtype=float)       # One element per chemical species
+        increment_vector = np.zeros(self.species_data.number_of_species(), dtype=float)       # One element per chemical species
 
         # Compute and save up the rates ("velocities") of all the reactions we're looking into, as a dict;
         # the keys are the reaction indexes
@@ -1281,7 +1284,7 @@ class UniformCompartment:
             rates_dict[rxn_index] = rxn_rate       # Save the value (may be single float, or a pair of them)
 
             for (chem_label, delta_conc) in increment_dict_single_rxn.items():
-                chem_index = self.chem_data.get_index(chem_label)
+                chem_index = self.species_data.get_species_index(chem_label)
                 # Do a validation check to avoid negative concentrations; an Exception will get raised if that's the case
                 # for any of the proposed concentration changes for this reaction.
                 # Note: it's not enough to detect conc going negative from combined changes from multiple reactions!
@@ -1324,7 +1327,7 @@ class UniformCompartment:
 
         conc_dict = {}
         for label in chem_labels:
-            chem_index = self.chem_data.get_index(label)    # The integer index this chemical
+            chem_index = self.species_data.get_species_index(label)    # The integer index this chemical
             conc_dict[label] = conc_array[chem_index]
 
         return conc_dict
@@ -1373,7 +1376,7 @@ class UniformCompartment:
         for r in reactants:
             # Unpack data from the reactant r
             species_name = rxn.extract_chem_label(r)
-            species_index = self.chem_data.get_index(species_name)
+            species_index = self.species_data.get_species_index(species_name)
             if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING reactant ENZYME {species_index} in reaction {rxn_index}")
                 continue    # Skip if r is an enzyme for this reaction
@@ -1389,7 +1392,7 @@ class UniformCompartment:
         for p in products:
             # Unpack data from the reactant r
             species_name = rxn.extract_chem_label(p)
-            species_index = self.chem_data.get_index(species_name)
+            species_index = self.species_data.get_species_index(species_name)
             if species_name == rxn.catalyst:
                 #print(f"*** SKIPPING product ENZYME {species_index} in reaction {rxn_index}")
                 continue    # Skip if p is an enzyme for this reaction
@@ -1441,7 +1444,7 @@ class UniformCompartment:
         """
         if (baseline_conc + delta_conc) < 0:
             # If the requested concentration change would lead to a negative concentration
-            #print(f"\n*** CAUTION: negative concentration in chemical `{self.chem_data.get_name(species_index)}` "
+            #print(f"\n*** CAUTION: negative concentration in chemical `{self.species_data.get_species_id(species_index)}` "
             #      f"in step starting at t={self.system_time:.5g})"
 
             # A type of HARD ABORT is detected (a single reaction that, by itself, would lead to a negative concentration;
@@ -1451,15 +1454,15 @@ class UniformCompartment:
                 self.diagnostics.save_diagnostic_decisions_data(system_time=self.system_time,
                                                                 data={"action": "ABORT",
                                                                       "step_factor": self.adaptive_steps.step_factors['error'],
-                                                                      "caption": f"neg. conc. in {self.chem_data.get_label(species_index)} from rxn # {rxn_index}",
+                                                                      "caption": f"neg. conc. in {self.species_data.get_species_id(species_index)} from rxn # {rxn_index}",
                                                                       "time_step": delta_time},
                                                                 delta_conc_arr=None)
                 self.diagnostics.save_rxn_data(rxn_index=rxn_index, system_time=self.system_time, time_step=delta_time,
                                                increment_dict_single_rxn=None,
                                                aborted=True,
-                                               caption=f"aborted: neg. conc. in `{self.chem_data.get_label(species_index)}`")
+                                               caption=f"aborted: neg. conc. in `{self.species_data.get_species_id(species_index)}`")
 
-            chem_name = self.chem_data.get_label(species_index)
+            chem_name = self.species_data.get_species_id(species_index)
             raise ExcessiveTimeStepHard(f"      The tentative time step ({delta_time:.6g}) "
                                     f"would lead to a NEGATIVE concentration of the chemical `{chem_name}` "
                                     f"from the reaction `{self.reaction_data.single_reaction_describe(rxn_index=rxn_index, concise=True)}` (rxn # {rxn_index}): "
@@ -1498,7 +1501,7 @@ class UniformCompartment:
         if data is None:
             # Use the registered macromolecules, and set all counts to 1
             data = {}
-            for mm in self.chem_data.get_macromolecules():
+            for mm in self.macromolecules.get_macromolecules():
                 data[mm] = 1        # EXAMPLE, after this operation: data = {"M1": 1}
 
         self.macro_system = data
@@ -1506,7 +1509,7 @@ class UniformCompartment:
 
         self.macro_system_state = {}    # Reset
         for mm in data.keys():          # For each macromolecule in our system
-            binding_sites_and_ligands = self.chem_data.get_binding_sites_and_ligands(mm)     # EXAMPLE: {1: "A", 2: "C"}
+            binding_sites_and_ligands = self.macromolecules.get_binding_sites_and_ligands(mm)     # EXAMPLE: {1: "A", 2: "C"}
             d = {}
             for (site_number, ligand) in binding_sites_and_ligands.items():
                 d[site_number] = (ligand, 0.)           # All "binding occupancy fractions" are set to 0.
@@ -1531,7 +1534,7 @@ class UniformCompartment:
             f"set_occupancy(): the value for the fractional occupancy must be a number between 0. and 1. " \
             f"Value given: {fractional_occupancy}"
 
-        ligand = self.chem_data.get_ligand_name(macromolecule=macromolecule, site_number=site_number)
+        ligand = self.macromolecules.get_ligand_name(macromolecule=macromolecule, site_number=site_number)
 
         # If the specified macromolecule hasn't yet been added to the dynamic system, automatically add it
         # with count 1
@@ -1573,11 +1576,11 @@ class UniformCompartment:
 
         :return:    None
         """
-        for mm in self.chem_data.get_macromolecules():
+        for mm in self.macromolecules.get_macromolecules():
             # For each macromolecule
-            d = self.chem_data.get_binding_sites_and_ligands(mm)    # EXAMPLE: {1: "A", 2: "C"}
+            d = self.macromolecules.get_binding_sites_and_ligands(mm)    # EXAMPLE: {1: "A", 2: "C"}
             for (site_number, ligand) in d.items():
-                aff_data = self.chem_data.get_binding_site_affinity(mm, site_number)
+                aff_data = self.macromolecules.get_binding_site_affinity(mm, site_number)
                 conc = self.get_chem_conc(ligand)
                 fractional_occupancy = self.sigmoid(conc=conc, Kd=aff_data.Kd)
 
@@ -1703,11 +1706,11 @@ class UniformCompartment:
         """
         print(f"SYSTEM STATE at Time t = {self.system_time:,.8g}:")
 
-        n_species = self.chem_data.number_of_chemicals()
+        n_species = self.species_data.number_of_species()
         print(f"{n_species} species:")
 
-        # Show a line of line of data for each chemical species in turn
-        for species_index, name in enumerate(self.chem_data.get_all_labels()):
+        # Show a line of line of data for each species in turn
+        for species_index, name in enumerate(self.species_data.get_all_species_ids()):
             if name:    # If a name was provided, show it
                 name = f" ({name})"
             else:
@@ -1789,7 +1792,7 @@ class UniformCompartment:
         :return:                A plotly "Figure" object
         """
         if chemicals is None:
-            chemicals = self.chem_data.get_all_labels()      # List of the chemical labels.  EXAMPLE: ["A", "B", "H"]
+            chemicals = self.species_data.get_all_species_ids()      # List of the chemical labels.  EXAMPLE: ["A", "B", "H"]
 
         if title is None:   # If no title was specified, create a default one based on how many reactions are present
             number_of_rxns = self.reaction_data.number_of_reactions()
@@ -1812,8 +1815,9 @@ class UniformCompartment:
         df = self.get_history()         # A Pandas dataframe that contains a column named "SYSTEM TIME"
 
         if colors is None:
-            # Attempt to make use of the previously-registered colors, if available
-            colors = self.chem_data.assign_colors(chemicals)
+            # Attempt to make use of the previously-registered colors, if available;
+            # otherwise, automatically assign them
+            colors = self.species_data.assign_colors(chemicals)
 
 
         return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=chemicals,
@@ -2087,7 +2091,7 @@ class UniformCompartment:
             else:
                 df = self.get_history()
 
-        chem_list = self.chem_data.get_all_labels()  # List of all the chemicals' names
+        chem_list = self.species_data.get_all_species_ids()  # List of all the chemicals' names
 
         if row:
             return df.loc[row][chem_list].to_numpy(dtype='float32')

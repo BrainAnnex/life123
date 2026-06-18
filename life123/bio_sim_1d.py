@@ -19,7 +19,7 @@ class System1D:
     """
     The foundational structure of 1D systems,
     including bins, system state (concentrations and system time),
-    and the underlying "ChemData" and "Membranes1D" objects.
+    and the underlying "SpeciesRegistry" and "Membranes1D" objects.
 
     This base class does NOT know about reactions;
     nor does it handle any simulation.
@@ -29,11 +29,11 @@ class System1D:
     "system coordinates": real numbers in the interval [0-1]
     """
 
-    def __init__(self, n_bins :int, chem_data):
+    def __init__(self, n_bins :int, species_data):
         """
 
-        :param n_bins:      The number of compartments (bins) to model our 1D system
-        :param chem_data:   Object of class "ChemData"
+        :param n_bins:          The number of compartments (bins) to model our 1D system
+        :param species_data:    Object of class "SpeciesRegistry"
         """
         self.n_bins = n_bins        # Number of spatial compartments (bins) used in the simulation
 
@@ -58,14 +58,14 @@ class System1D:
         assert type(n_bins) == int, "System1D() instantiation: the argument `n_bins` must be an integer"
         assert n_bins >= 1, "System1D() instantiation: the number of bins must be at least 1"
 
-        assert chem_data is not None, \
-            "System1D() instantiation: the argument `chem_data` (Object of class `ChemData`) must be set"
+        assert species_data is not None, \
+            "System1D() instantiation: the argument `chem_data` (Object of class `SpeciesRegistry`) must be set"
             # TODO: maybe drop this requirement?  And then set it later on?
 
 
-        self.chem_data = chem_data      # Object of type "ChemData", with info on the individual chemicals
+        self.species_data = species_data      # Object of type "SpeciesRegistry", with info on the individual chemicals
 
-        self.n_species = self.chem_data.number_of_chemicals()   # The number of (non-water) chemical species   TODO: phase out?
+        self.n_species = self.species_data.number_of_species()   # The number of (non-water) chemical species   TODO: phase out?
 
         assert self.n_species >= 1, \
             "System1D() instantiation: At least 1 chemical species must be declared prior to instantiating class"
@@ -159,8 +159,8 @@ class System1D:
 
         df = pd.DataFrame(self.system, columns=[f"Bin {i}" for i in range(self.n_bins)])
 
-        df.insert(0, "Species", self.chem_data.get_all_labels())
-        df.insert(1, "Diff rate", self.chem_data.get_all_diffusion_rates()) # Missing values will show up as None
+        df.insert(0, "Species", self.species_data.get_all_species_ids())
+        df.insert(1, "Diff rate", self.species_data.get_all_values(field_name="diffusion_rate")) # Missing values will show up as None
 
         return df
 
@@ -171,9 +171,9 @@ class System1D:
         Return all the associated chemical data,
         incl. diffusion rate constants (but EXCLUSIVE of reactions)
 
-        :return:    An Object of type "ChemData"
+        :return:    An Object of type "SpeciesRegistry"
         """
-        return self.chem_data
+        return self.species_data
 
 
 
@@ -271,9 +271,9 @@ class System1D:
 
         self.system = new_state["system"]
         self.n_species, self.n_bins = self.system.shape     # Extract from the new state
-        assert self.n_species == self.chem_data.number_of_chemicals(), \
+        assert self.n_species == self.species_data.number_of_species(), \
             f"restore_system(): inconsistency in the number of chemical species in the specified new state ({self.n_species}) " \
-            f"vs. what's stored in the `Chemicals` object ({self.chem_data.number_of_chemicals()})"
+            f"vs. what's stored in the `Chemicals` object ({self.species_data.number_of_species()})"
 
         self.system_time = new_state["system_time"]
 
@@ -290,7 +290,7 @@ class System1D:
         """
         self.system = new_state
         self.n_species, self.n_bins = new_state.shape     # Extract from the new state
-        assert self.n_species == self.chem_data.number_of_chemicals(), \
+        assert self.n_species == self.species_data.number_of_species(), \
             "replace_system(): inconsistency in the number of chemical species vs. what's stored in the `Chemicals` object"
 
 
@@ -513,9 +513,9 @@ class System1D:
         :return:            None
         """
         if chem_label is not None:
-            chem_index = self.chem_data.get_index(chem_label)
+            chem_index = self.species_data.get_species_index(chem_label)
         else:
-            self.chem_data.assert_valid_chem_index(chem_index)
+            self.species_data.assert_valid_species_index(chem_index)
 
         assert conc >= 0., \
             f"set_uniform_concentration(): the concentration must be a positive number or zero (the requested value was {conc})"
@@ -532,8 +532,8 @@ class System1D:
                                 in their index order
         :return:            None
         """
-        assert len(conc_list) == self.chem_data.number_of_chemicals(), \
-            f"set_all_uniform_concentrations(): the argument must be a list or tuple of size {self.chem_data.number_of_chemicals()}"
+        assert len(conc_list) == self.species_data.number_of_species(), \
+            f"set_all_uniform_concentrations(): the argument must be a list or tuple of size {self.species_data.number_of_species()}"
 
         for i, conc in enumerate(conc_list):
             self.set_uniform_concentration(chem_index=i, conc=conc)
@@ -574,9 +574,9 @@ class System1D:
             f"set_bin_conc(): the concentration must be a positive number or zero (the requested value was {conc})"
 
         if chem_label is not None:
-            chem_index = self.chem_data.get_index(chem_label)
+            chem_index = self.species_data.get_species_index(chem_label)
         else:
-            self.chem_data.assert_valid_chem_index(chem_index)
+            self.species_data.assert_valid_species_index(chem_index)
 
         self.system[chem_index, bin_address] = conc
 
@@ -596,11 +596,11 @@ class System1D:
         """
         if chem_label is not None:
             # If the chemical is being identified by name, look up its index
-            chem_index = self.chem_data.get_index(chem_label)
+            chem_index = self.species_data.get_species_index(chem_label)
         elif chem_index is None:
             raise Exception("System1D.set_species_conc(): must provide a `chem_label` or `chem_index`")
         else:
-            self.chem_data.assert_valid_chem_index(chem_index)
+            self.species_data.assert_valid_species_index(chem_index)
 
         assert (type(conc_list) == list) or (type(conc_list) == tuple) or (type(conc_list) == np.ndarray), \
             f"System1D.set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
@@ -638,10 +638,10 @@ class System1D:
             "inject_conc_to_bin(): at least one of the args `chem_label` or `chem_index` must be provided"
         if chem_label is not None:
             assert chem_index is None, "inject_conc_to_bin(): cannot pass both arguments `chem_label` and `chem_index`"
-            chem_index = self.chem_data.get_index(chem_label)
+            chem_index = self.species_data.get_species_index(chem_label)
         else:
             assert chem_index is not None, "inject_conc_to_bin(): must pass one of the arguments `chem_label` or `chem_index`"
-            self.chem_data.assert_valid_chem_index(chem_index)
+            self.species_data.assert_valid_species_index(chem_index)
 
 
         if (self.system[chem_index, bin_address] + delta_conc) < 0. :
@@ -673,7 +673,7 @@ class System1D:
         assert self.n_bins > 1, \
                     f"System1D.inject_gradient(): minimum system size must be 2 bins"
 
-        species_index = self.chem_data.get_index(chem_label)
+        species_index = self.species_data.get_species_index(chem_label)
 
         # Create an array of equally-spaced values from conc_left to conc_right
         # Size of array is same as the number of bins in the system
@@ -705,7 +705,7 @@ class System1D:
                                     otherwise, an Exception will be raised
         :return:                None
         """
-        species_index = self.chem_data.get_index(chem_label)
+        species_index = self.species_data.get_species_index(chem_label)
 
         period = self.n_bins / number_cycles
         #print("period: ", period)
@@ -778,7 +778,7 @@ class System1D:
             assert amplitude >= 0, \
                 f"System1D.inject_bell_curve(): the value for the `amplitude` ({amplitude}) cannot be negative"
 
-        species_index = self.chem_data.get_index(chem_label)
+        species_index = self.species_data.get_species_index(chem_label)
 
         # Create an array of equally-spaced values from 0. to 1.
         # Size of array is same as the number of bins in the system
@@ -845,9 +845,9 @@ class System1D:
         #TODO: merge this function and system_snapshot_arr(), maybe under the name chem_snapshot_arr()
 
         if chem_label is not None:
-            chem_index = self.chem_data.get_index(chem_label)
+            chem_index = self.species_data.get_species_index(chem_label)
         else:
-            self.chem_data.assert_valid_chem_index(chem_index)
+            self.species_data.assert_valid_species_index(chem_index)
 
         species_conc = self.system[chem_index]
 
@@ -876,10 +876,10 @@ class System1D:
 
         if chem_label is not None:
             assert chem_index is None, "system_snapshot_arr(): cannot pass both arguments `chem_label` and `chem_index`"
-            chem_index = self.chem_data.get_index(chem_label)
+            chem_index = self.species_data.get_species_index(chem_label)
         else:
             assert chem_index is not None, "system_snapshot_arr(): must pass one of the arguments `chem_label` or `chem_index`"
-            self.chem_data.assert_valid_chem_index(chem_index)
+            self.species_data.assert_valid_species_index(chem_index)
 
         arr = self.system[chem_index]    # A 1-D Numpy array with the chemical data along bin coordinates
 
@@ -897,7 +897,7 @@ class System1D:
                         and each column a chemical species
         """
         #TODO: rename snapshot_concentrations()
-        all_chem_names = self.chem_data.get_all_labels()
+        all_chem_names = self.species_data.get_all_species_ids()
         if self.system is None:
             return pd.DataFrame(columns = all_chem_names)   # Empty dataframe
 
@@ -919,9 +919,9 @@ class System1D:
         :return:            A concentration value at the indicated bin, for the requested species
         """
         if chem_label is not None:
-            chem_index = self.chem_data.get_index(chem_label)
+            chem_index = self.species_data.get_species_index(chem_label)
 
-        self.chem_data.assert_valid_chem_index(chem_index)
+        self.species_data.assert_valid_species_index(chem_index)
 
         return self.system[chem_index, bin_address]
 
@@ -940,7 +940,7 @@ class System1D:
 
         d = {}
         for species_index in range(self.n_species):
-            name = self.chem_data.get_label(species_index)
+            name = self.species_data.get_species_id(species_index)
             conc = self.bin_concentration(bin_address, species_index)
             d[name] = conc
 
@@ -1000,7 +1000,7 @@ class System1D:
             bins = [bins]
 
         if chem_labels is None:
-            chem_labels = self.chem_data.get_all_labels()
+            chem_labels = self.species_data.get_all_species_ids()
         elif type(chem_labels) != list:
             chem_labels = [chem_labels]
 
@@ -1183,14 +1183,14 @@ class System1D:
         title = PlotlyHelper.assemble_title(title, title_prefix)
 
 
-        chem_labels = self.chem_data.get_all_labels()
+        chem_labels = self.species_data.get_all_species_ids()
         n_chem = len(chem_labels)
 
 
         if colors is None:
             # Attempt to make use of previously-registered colors, if available;
             # or assign new default colors as needed
-            colors = self.chem_data.assign_colors(chem_labels)
+            colors = self.species_data.assign_colors(chem_labels)
 
 
         line_shape = "spline" if smoothed else "linear"
@@ -1255,13 +1255,13 @@ class System1D:
 
         #if chem_labels is None:
         # TODO: for now, it's always ALL chemicals that get shown
-        chem_labels = self.chem_data.get_all_labels()
+        chem_labels = self.species_data.get_all_species_ids()
 
 
         if colors is None:
             # Attempt to make use of previously-registered colors, if available;
             # or assign new default colors as needed
-            colors = self.chem_data.assign_colors(chem_labels)
+            colors = self.species_data.assign_colors(chem_labels)
 
 
         conc_matrix = self.system
@@ -1315,7 +1315,7 @@ class System1D:
         #print(species_concentrations)
 
         all_data = {
-            "curve_labels": self.chem_data.get_all_labels(),
+            "curve_labels": self.species_data.get_all_species_ids(),
 
             # Concentration data for the plots
             "plot_data": species_concentrations,
@@ -1333,7 +1333,7 @@ class System1D:
         # If a color mapping was provided, add it to the data
         if color_mapping:
             all_data["color_mapping"] = color_mapping
-        elif col_map := self.chem_data.get_color_mapping_by_index():
+        elif col_map := self.species_data.get_color_mapping_by_index():
             all_data["color_mapping"] = col_map
 
 
@@ -1390,8 +1390,8 @@ class System1D:
         self.assert_valid_bin(bin_address)
 
         if title is None:
-            if self.chem_data.number_of_chemicals() == 1:
-                chem_title = f"chemical `{self.chem_data.get_label(0)}`"    # The label of the only chemical in the system
+            if self.species_data.number_of_species() == 1:
+                chem_title = f"chemical `{self.species_data.get_species_id(0)}`"    # The label of the only chemical in the system
             else:
                 chem_title = "all chemicals"
 
@@ -1416,7 +1416,7 @@ class System1D:
         chem_labels = self.conc_history.restrict_chemicals  # The chemicals for which history was kept
 
         if colors is None:  # Attempt to make use of the previously-registered colors, if available
-            colors = self.chem_data.assign_colors(chem_labels)
+            colors = self.species_data.assign_colors(chem_labels)
 
         return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
                                         colors=colors, legend_header="Chemical", title=title,
@@ -1438,7 +1438,7 @@ class BioSim1D(System1D):
     with optional membranes
     """
 
-    def __init__(self, n_bins :int, chem_data=None, reaction_handler=None, reactions=None):
+    def __init__(self, n_bins :int, species_data=None, reaction_handler=None, reactions=None):
         """
         Initialize all concentrations to zero.
         Membranes, if present, need to be set later.
@@ -1446,7 +1446,7 @@ class BioSim1D(System1D):
         :param n_bins:          The number of compartments (bins) to use in the simulation
 
         [IMPORTANT: At least one of the 3 following arguments MUST be provided]
-        :param chem_data:       [OPTIONAL] Object of class "ChemData";
+        :param species_data:       [OPTIONAL] Object of class "SpeciesRegistry";
                                     if not specified, it will get extracted
                                     from the "UniformCompartment" class (if passed to the next argument)
         :param reaction_handler:[OPTIONAL] Object of class "UniformCompartment";
@@ -1456,15 +1456,15 @@ class BioSim1D(System1D):
         #TODO?: maybe allow optionally passing n_species in lieu of chem_data,
         #       (or passing the names, like with UniformCompartment?)
         #       and let it create and store the "Chemicals" object in that case
-        if reaction_handler and chem_data:
-            assert reaction_handler.get_chem_data() == chem_data, \
+        if reaction_handler and species_data:
+            assert reaction_handler.get_chem_data() == species_data, \
                 "BioSim1D() instantiation: the argument `reaction_handler` is based " \
-                "on a 'ChemData' object that doesn't match the one passed by the argument `chem_data`"
+                "on a 'SpeciesRegistry' object that doesn't match the one passed by the argument `chem_data`"
 
-        if chem_data and reactions:
-            assert reactions.get_chem_data() == chem_data, \
+        if species_data and reactions:
+            assert reactions.get_chem_data() == species_data, \
                 "BioSim1D() instantiation: the argument `reactions` is based " \
-                "on a 'ChemData' object that doesn't match the one passed by the argument `chem_data`"
+                "on a 'SpeciesRegistry' object that doesn't match the one passed by the argument `chem_data`"
 
         if reactions and reaction_handler:
             assert reaction_handler.get_reactions() == reactions, \
@@ -1495,22 +1495,22 @@ class BioSim1D(System1D):
                                             #   See explanation in file overly_large_single_timesteps.py
 
 
-        assert chem_data is not None or reaction_handler is not None, \
+        assert species_data is not None or reaction_handler is not None, \
             "BioSim1D() instantiation: at least one of the arguments `chem_data` or `reaction_handler` must be set"
             # TODO: maybe drop this requirement?  And then set it later on?
 
-        if not chem_data:
-            chem_data = reaction_handler.chem_data
+        if not species_data:
+            species_data = reaction_handler.species_data
 
         if reaction_handler:
             self.reaction_dynamics = reaction_handler
         else:
-            self.reaction_dynamics = UniformCompartment(chem_data=chem_data, reactions=reactions)
+            self.reaction_dynamics = UniformCompartment(species_data=species_data, reactions=reactions)
 
         self.reactions = self.reaction_dynamics.get_reactions()
 
 
-        super().__init__(n_bins, chem_data=chem_data)    # Invoke the constructor of its parent class
+        super().__init__(n_bins, species_data=species_data)    # Invoke the constructor of its parent class
 
 
         self.diff_obj = Diffusion1D(n_bins=self.n_bins, membranes=self.membranes_obj)
@@ -1597,7 +1597,7 @@ class BioSim1D(System1D):
         # TODO: expand, or drop (not sure if really needed anymore)
         self.system = None
         self.system_earlier = None
-        self.chem_data = None
+        self.species_data = None
         self.reaction_dynamics = None
         self.saved_values = None
         self.conc_history = None
@@ -1702,7 +1702,7 @@ class BioSim1D(System1D):
                 "diffuse(): cannot specify both arguments `time_step` and `fraction_max_step`"
             assert 0 < fraction_max_step <= 1, \
                  "diffuse(): arguments `fraction_max_step` must be > 0 and <= 1"
-            max_diff_rate = self.chem_data.get_max_diffusion_rate()     # The largest diffusion rate is the one
+            max_diff_rate = self.species_data.get_max_value(field_name="diffusion_rate")     # The largest diffusion rate is the one
                                                                         # setting the upper bound on max time steps
 
             time_step = fraction_max_step * self.diff_obj.max_time_step(diff_rate=max_diff_rate, delta_x=delta_x)
@@ -1757,7 +1757,7 @@ class BioSim1D(System1D):
         assert self.system is not None, \
             "diffuse_step(): Must first initialize the system"
 
-        assert not self.chem_data.missing_diffusion_rate(), \
+        assert not self.species_data.missing_values(field_name="diffusion_rate"), \
             "diffuse_step(): Must first set the diffusion rates"
 
         assert self.sealed == True, \
@@ -1780,9 +1780,9 @@ class BioSim1D(System1D):
 
         # Loop over all the chemical species in the system
         for chem_index in range(self.n_species):
-
-            diff = self.chem_data.get_diffusion_rate(chem_index=chem_index)     # The diffusion rate of this chemical
-            chem_label = self.chem_data.get_label(chem_index)
+            species_id = self.species_data.get_species_id(chem_index)
+            diff = self.species_data.get_value(species_id=species_id, field_name="diffusion_rate")     # The diffusion rate of this chemical
+            chem_label = self.species_data.get_species_id(chem_index)
             permeability = self.membranes_obj.permeability.get(chem_label)
             # TODO: maybe skip any species that have exactly zero as diffusion/permeability (species that
             #       in a simplified model we don't want to bother with)
@@ -1934,7 +1934,7 @@ class BioSim1D(System1D):
                 "react_diffuse(): cannot specify both arguments `time_step` and `fraction_max_step`"
             assert 0 < fraction_max_step <= 1, \
                  "react_diffuse(): arguments `fraction_max_step` must be > 0 and <= 1"
-            max_diff_rate = self.chem_data.get_max_diffusion_rate()     # The largest diffusion rate is the one
+            max_diff_rate = self.species_data.get_max_value(field_name="diffusion_rate")     # The largest diffusion rate is the one
                                                                         # setting the upper bound on max time steps
 
             time_step = fraction_max_step * self.diff_obj.max_time_step(diff_rate=max_diff_rate, delta_x=delta_x)

@@ -23,7 +23,7 @@
 import set_path      # Importing this module will add the project's home directory to sys.path
 
 # %% tags=[]
-from life123 import ChemData
+from life123 import SpeciesRegistry
 from life123 import UniformCompartment
 from life123 import CollectionTabular
 
@@ -33,7 +33,7 @@ import plotly.express as px
 
 # %%
 # Initialize the system
-chem = ChemData(names=["A", "B", "C"])
+chem = SpeciesRegistry(id=["A", "B", "C"])
 
 
 # %% [markdown]
@@ -82,7 +82,7 @@ aff.Kd
 # ## Start setting up the dynamical system
 
 # %%
-dynamics = UniformCompartment(chem_data=chem)
+dynamics = UniformCompartment(species_data=chem)
 
 # %%
 dynamics.set_macromolecules()      # By default, set counts to 1 for all the registered macromolecules
@@ -116,7 +116,7 @@ dynamics.update_occupancy()
 dynamics.describe_state()
 
 # %%
-dynamics.chem_data.show_binding_affinities()        # Review the values we had given for the dissociation constants
+dynamics.species_data.show_binding_affinities()        # Review the values we had given for the dissociation constants
 
 # %% [markdown]
 # #### Notes:

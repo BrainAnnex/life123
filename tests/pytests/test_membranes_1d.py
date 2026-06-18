@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from life123 import ChemData, Membranes1D
+from life123 import SpeciesRegistry, Membranes1D
 
 
 

@@ -11,13 +11,17 @@ class Diagnostics:
     """
 
     def __init__(self, reactions):
+        """
+        
+        :param reactions:   Object of type "ReactionRegistry"
+        """
 
         assert reactions is not None, \
             "Diagnostics class cannot be instantiated with a missing value for the argument `reactions`"
 
-        self.reactions = reactions                  # Object of type "Reactions"
+        self.reactions = reactions                  # Object of type "ReactionRegistry"
 
-        self.chem_data = reactions.get_chem_data()  # Object of type "ChemData"
+        self.species_data = reactions.get_chem_data()  # Object of type "SpeciesRegistry"
 
 
         # TODO: maybe drop the "diagnostic_" from the names, or rename it to "historic_"
@@ -102,10 +106,10 @@ class Diagnostics:
 
         if increment_dict_single_rxn is None:     # If the values aren't available (as is the case in aborts)
             for index in indexes:       # For all the chemicals participating in this reaction
-                data_snapshot["Delta " + self.chem_data.get_label(index)] = np.nan
+                data_snapshot["Delta " + self.species_data.get_species_id(index)] = np.nan
         else:
             for index in indexes:       # For all the chemicals participating in this reaction
-                chem_label = self.chem_data.get_label(index)
+                chem_label = self.species_data.get_species_id(index)
                 data_snapshot["Delta " + chem_label] = increment_dict_single_rxn[chem_label]
 
         if rate is not None:
@@ -386,13 +390,13 @@ class Diagnostics:
         print("row_list: ", row_list)
         print("active_list: ", active_list)
 
-        chemical_list = self.chem_data.get_all_labels()
+        chemical_list = self.species_data.get_all_species_ids()
         chemical_delta_list = self._delta_names()
 
         conc_arr_before = self.get_diagnostic_conc_data().loc[row_baseline][chemical_list].to_numpy(dtype='float16')
         print("baseline concentrations: ", conc_arr_before)
 
-        delta_cumulative = np.zeros(self.chem_data.number_of_chemicals(),
+        delta_cumulative = np.zeros(self.species_data.number_of_species(),
                                     dtype=float)  # One element per chemical species
 
         # For each reaction
@@ -572,14 +576,14 @@ class Diagnostics:
             f"stoichiometry_checker() currently only works for 1-reaction simulations, but " \
             f"{self.reactions.number_of_reactions()} reactions are present."
 
-        assert len(conc_arr_before) == self.chem_data.number_of_chemicals(), \
+        assert len(conc_arr_before) == self.species_data.number_of_species(), \
             f"stoichiometry_checker() : the argument `conc_arr_before` must be a Numpy array " \
-            f"with as many elements as the number of registered chemicals ({self.chem_data.number_of_chemicals()}); " \
+            f"with as many elements as the number of registered chemicals ({self.species_data.number_of_species()}); " \
             f"instead, it has {len(conc_arr_before)}"
 
-        assert len(conc_arr_after) == self.chem_data.number_of_chemicals(), \
+        assert len(conc_arr_after) == self.species_data.number_of_species(), \
             f"stoichiometry_checker() : the argument `conc_arr_after` must be a Numpy array " \
-            f"with as many elements as the number of registered chemicals ({self.chem_data.number_of_chemicals()}); " \
+            f"with as many elements as the number of registered chemicals ({self.species_data.number_of_species()}); " \
             f"instead, it has {len(conc_arr_after)}"
 
         self.reactions.assert_valid_rxn_index(rxn_index)
@@ -624,7 +628,7 @@ class Diagnostics:
         # to establish a baseline change in concentration relative to its stoichiometric coefficient
         baseline_term = reactants[0]
         baseline_species_name = rxn.extract_chem_label(baseline_term)
-        baseline_species_index = self.chem_data.get_index(baseline_species_name)
+        baseline_species_index = self.species_data.get_species_index(baseline_species_name)
         baseline_stoichiometry = rxn.extract_stoichiometry(baseline_term)
         baseline_ratio =  (delta_arr[baseline_species_index]) / baseline_stoichiometry
         #print("\nbaseline_ratio: ", baseline_ratio)
@@ -632,19 +636,19 @@ class Diagnostics:
         for i, term in enumerate(reactants):
             if i != 0:
                 species_name = rxn.extract_chem_label(term)
-                species_index = self.chem_data.get_index(species_name)
+                species_index = self.species_data.get_species_index(species_name)
                 stoichiometry = rxn.extract_stoichiometry(term)
                 ratio =  (delta_arr[species_index]) / stoichiometry
-                #print(f"ratio for `{self.chem_data.get_name(species)}`: {ratio}")
+                #print(f"ratio for `{species_name}`: {ratio}")
                 if not np.allclose(ratio, baseline_ratio):
                     return False
 
         for term in products:
             species_name = rxn.extract_chem_label(term)
-            species_index = self.chem_data.get_index(species_name)
+            species_index = self.species_data.get_species_index(species_name)
             stoichiometry = rxn.extract_stoichiometry(term)
             ratio =  - (delta_arr[species_index]) / stoichiometry     # The minus in front is b/c we're on the other side of the eqn
-            #print(f"ratio for `{self.chem_data.get_name(species)}`: {ratio}")
+            #print(f"ratio for `{species_name}`: {ratio}")
             if not np.allclose(ratio, baseline_ratio):
                 return False
 
@@ -697,7 +701,7 @@ class Diagnostics:
 
         :return:    A list of strings
         """
-        chemical_list = self.chem_data.get_all_labels()      # EXAMPLE: ["A", "B", "X"]
+        chemical_list = self.species_data.get_all_species_ids()      # EXAMPLE: ["A", "B", "X"]
         chemical_delta_list = ["Delta " + name
                                for name in chemical_list]
         return chemical_delta_list

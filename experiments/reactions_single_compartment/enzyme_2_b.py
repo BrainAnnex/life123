@@ -48,7 +48,7 @@ LIFE123_VERSION = "1.0.0rc6"         # Library version this experiment is based 
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import check_version, ChemData, ReactionRegistry, UniformCompartment, ReactionEnzyme, PlotlyHelper
+from life123 import check_version, SpeciesRegistry, ReactionRegistry, UniformCompartment, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)    # To check compatibility
@@ -90,7 +90,7 @@ k1_forward = 18.
 k1_reverse = 100.
 
 # %%
-chem_data = ChemData(names=["P", "ES"], plot_colors=["green", "red"])
+chem_data = SpeciesRegistry(id=["P", "ES"], plot_color=["green", "red"])
 
 # %%
 # Our Enzyme
@@ -105,7 +105,7 @@ chem_data.all_chemicals()
 # ### Specify the Kinetic Parameters
 
 # %%
-rxns = ReactionRegistry(chem_data=chem_data)
+rxns = ReactionRegistry(species_data=chem_data)
 
 # %%
 # Enzymatic reaction `E + S <-> ES -> E + P` 
@@ -177,7 +177,7 @@ chem_data.all_chemicals()   # Nothing changed here; same chemicals as before
 # %%
 
 # %%
-rxns_underest = ReactionRegistry(chem_data=chem_data)   # New set of reactions
+rxns_underest = ReactionRegistry(species_data=chem_data)   # New set of reactions
 
 # %%
 # Enzymatic reaction `E + S <-> ES -> E + P` 
@@ -241,7 +241,7 @@ chem_data.all_chemicals()   # Nothing changed here; same chemicals as before
 # %%
 
 # %%
-rxns_overest = ReactionRegistry(chem_data=chem_data)   # New set of reactions
+rxns_overest = ReactionRegistry(species_data=chem_data)   # New set of reactions
 
 # %%
 # Enzymatic reaction `E + S <-> ES -> E + P` 

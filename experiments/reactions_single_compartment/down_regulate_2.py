@@ -29,7 +29,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData as chem
+from life123 import SpeciesRegistry as chem
 from life123 import UniformCompartment
 
 from life123 import GraphicLog
@@ -63,7 +63,7 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="fast")
+dynamics = UniformCompartment(species_data=chem_data, preset="fast")
 dynamics.set_conc(conc={"A": 5., "B": 100.},
                   snapshot=True)      # A is scarce, B is plentiful, Y is absent
 dynamics.describe_state()

@@ -1,4 +1,4 @@
-from life123.chem_data import ChemData
+from life123.species_registry import SpeciesRegistry
 from life123.reaction_registry import ReactionRegistry
 import numpy as np
 
@@ -41,12 +41,12 @@ class RandomReactionNetwork:
             f"RandomReactionNetwork Instantiation: the argument `n_rxns` must be an integer, not {type(n_rxns)}"
 
 
-        self.chem_data = ChemData(n_chems=n_species)        # Object of type "ChemData", with info on the individual chemicals
+        self.species_data = SpeciesRegistry(n_species=n_species)        # Object of type "ChemData", with info on the individual chemicals
 
-        all_chems = self.chem_data.get_all_labels()
+        all_chems = self.species_data.get_all_species_ids()
         # Auto-generated strings "A", "B", ..., "Z", "Z2", "Z3"
 
-        self.registry = ReactionRegistry(chem_data=self.chem_data)      # Object of type ReactionRegistry,
+        self.registry = ReactionRegistry(species_data=self.species_data)      # Object of type ReactionRegistry,
                                                                         # to manage a list of reactions, and the reaction-specific objects
 
         # A Generator object with Numpy’s default BitGenerator

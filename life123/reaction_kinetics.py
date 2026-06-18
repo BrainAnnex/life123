@@ -1348,7 +1348,7 @@ class VariableTimeSteps:
         # restrict our consideration to only the dynamically involved ones
         # CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
         #          the reactions are simulated
-        #if self.chem_data.number_of_active_chemicals() < n_chems:
+        #if self.species_data.number_of_active_chemicals() < n_chems:
         if len(indexes_of_active_chemicals) < n_chems:
             delta_conc = delta_conc[indexes_of_active_chemicals]
             #print(f"\nadjust_timestep(): restricting adaptive time step analysis to {n_chems} chemicals only; their delta_conc is {delta_conc}")

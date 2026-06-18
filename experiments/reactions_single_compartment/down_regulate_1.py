@@ -43,7 +43,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData as chem
+from life123 import SpeciesRegistry as chem
 from life123 import UniformCompartment
 
 import plotly.express as px
@@ -81,7 +81,7 @@ chem_data.describe_reactions()
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="fast")
+dynamics = UniformCompartment(species_data=chem_data, preset="fast")
 dynamics.set_conc(conc={"A": 50.}, snapshot=True)
 dynamics.describe_state()
 
@@ -139,7 +139,7 @@ chem_data.describe_reactions()
 chem_data.plot_reaction_network("vue_cytoscape_2")
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="mid")   # Notice we're over-writing the earlier "dynamics" object
+dynamics = UniformCompartment(species_data=chem_data, preset="mid")   # Notice we're over-writing the earlier "dynamics" object
 dynamics.set_conc(conc={"A": 50.}, snapshot=True)
 dynamics.describe_state()
 
@@ -191,7 +191,7 @@ new_chem_data.add_reaction(reactants=["A"], products=["S"],
 new_chem_data.describe_reactions()
 
 # %%
-dynamics = UniformCompartment(chem_data=new_chem_data, preset="small_rel_change")
+dynamics = UniformCompartment(species_data=new_chem_data, preset="small_rel_change")
 dynamics.set_conc(conc={"A": 50.}, snapshot=True)
 dynamics.describe_state()
 

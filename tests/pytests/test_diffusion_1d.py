@@ -5,7 +5,7 @@
 import pytest
 import numpy as np
 from scipy.ndimage import shift
-from life123 import ChemData, Diffusion1D, Membranes1D, System1D
+from life123 import SpeciesRegistry, Diffusion1D, Membranes1D, System1D
 
 
 
@@ -450,7 +450,7 @@ def test_diffuse_step_3_1_stencil_F():
     # Initialize the system, with a complex pattern of initial concentrations
     membranes = Membranes1D(n_bins=n_bins)
     diff_obj = Diffusion1D(n_bins=n_bins, membranes=membranes)
-    bio = System1D(n_bins=n_bins, chem_data=ChemData("A"))
+    bio = System1D(n_bins=n_bins, species_data=SpeciesRegistry(id="A"))
     
     bio.inject_gradient(chem_label="A", conc_left = 10., conc_right = 1000.)
     bio.inject_sine_conc(chem_label="A", number_cycles=4, amplitude=350, bias=20, phase=60, zero_clip = True)
@@ -501,7 +501,7 @@ def test_diffuse_step_3_1_stencil_G():
     # Initialize the system, with a complex pattern of initial concentrations
     membranes = Membranes1D(n_bins=n_bins)
     diff_obj = Diffusion1D(n_bins=n_bins, membranes=membranes)
-    bio = System1D(n_bins=n_bins, chem_data=ChemData(["A", "B"]))
+    bio = System1D(n_bins=n_bins, species_data=SpeciesRegistry(id=["A", "B"]))
 
     bio.inject_gradient(chem_label="A", conc_left = 20., conc_right = 800.)
     bio.inject_sine_conc(chem_label="A", number_cycles=5, amplitude=450, bias=10, phase=90, zero_clip = True)
@@ -559,7 +559,7 @@ def test_diffuse_step_3_1_stencil_H():
     # Initialize the system, with a complex pattern of initial concentrations
     membranes = Membranes1D(n_bins=n_bins)
     diff_obj = Diffusion1D(n_bins=n_bins, membranes=membranes)
-    bio = System1D(n_bins=n_bins, chem_data=ChemData(["A", "B"]))
+    bio = System1D(n_bins=n_bins, species_data=SpeciesRegistry(id=["A", "B"]))
 
     bio.inject_gradient(chem_label="A", conc_left = 120., conc_right = 800.)
     bio.inject_sine_conc(chem_label="A", number_cycles=3, amplitude=450, bias=20, phase=210, zero_clip = True)

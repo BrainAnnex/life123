@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -13,8 +13,8 @@
 # ---
 
 # %% [markdown]
-# ## A complex (composite/multistep) reaction `A <-> C` derived from 2 coupled elementary reactions: 
-# ## `A <-> B` and `B <-> C`  
+# ## A complex (composite/multistep) reaction `A <-> C` ,  
+# ## derived from 2 coupled elementary reactions: `A <-> B` and `B <-> C`  
 # We are given the time evolution of the complex reaction,  
 # and want to determine whether it can be modeled as an elementary reaction.  
 #
@@ -24,18 +24,18 @@
 # **Background**: please see experiments `cascade_1` and `mystery_reaction_1`
 
 # %%
-LAST_REVISED = "Dec. 15, 2024"
-LIFE123_VERSION = "1.0-rc.1"     # Library version this experiment is based on
+LAST_REVISED = "June 16, 2026"
+LIFE123_VERSION = "1.0.0rc8"     # Library version this experiment is based on
 
 # %%
 #import set_path                 # Using MyBinder?  Uncomment this before running the next cell!
 
-# %% tags=[]
+# %%
 #import sys
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import check_version, ChemData, UniformCompartment, ReactionKinetics, PlotlyHelper
+from life123 import check_version, SpeciesRegistry, SpeciesRegistry, UniformCompartment, ReactionKinetics
 
 # %%
 check_version(LIFE123_VERSION)
@@ -48,23 +48,41 @@ check_version(LIFE123_VERSION)
 # # PART 1 - We'll generate the time evolution of [A] and [C] by simulating coupled elementary reactions of KNOWN rate constants...
 # ## but pretend you don't see this section! (because we later assume that those time evolutions are just GIVEN to us)
 
-# %% tags=[]
+# %%
 # Instantiate the simulator and specify the chemicals
-chem_data = ChemData(names=["A", "B", "C"], plot_colors=["darkturquoise", "orange", "green"])
+chem_data = SpeciesRegistry(n_species=3)     # Will generate the default "A", "B", "C"
 
-chem_data.all_chemicals()
+chem_data.set_all_values(field_name="plot_color", values=["darkturquoise", "orange", "green"])
 
-# %% tags=[]
+chem_data.as_dataframe()
+
+# %%
+
+# %%
 # Here we use the "mid" preset for the variable steps, a compromise between speed and accuracy
-uc = UniformCompartment(chem_data=chem_data, preset="mid")
+uc = UniformCompartment(species_data=chem_data, preset="mid")
 
 # Reaction A <-> B (slower, and with a smaller K)
 uc.add_reaction(reactants="A", products="B",
-                forward_rate=8., reverse_rate=2.) 
+                kF=8., kR=2.) 
 
 # Reaction B <-> C (faster, and with a larger K)
 uc.add_reaction(reactants="B", products="C",
-                forward_rate=12., reverse_rate=1.) 
+                kF=12., kR=1.) 
+                                   
+uc.describe_reactions()
+
+# %%
+# Here we use the "mid" preset for the variable steps, a compromise between speed and accuracy
+uc = UniformCompartment(species_data=chem_data, preset="mid")
+
+# Reaction A <-> B (slower, and with a smaller K)
+uc.add_reaction(reactants="A", products="B",
+                kF=8., kR=2.) 
+
+# Reaction B <-> C (faster, and with a larger K)
+uc.add_reaction(reactants="B", products="C",
+                kF=12., kR=1.) 
                                    
 uc.describe_reactions()
 
@@ -174,7 +192,7 @@ t_arr_late = t_arr[48:]
 
 # %%
 ReactionKinetics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_early, B_conc=C_conc_early,
-                                        reactant_name="A", product_name="C")
+                                                reactant_name="A", product_name="C")
 
 # %% [markdown]
 # While the linear fits is a lot better than before - nonetheless trying to fit an elementary reaction to that region leads to a **negative** reverse rate constant!  

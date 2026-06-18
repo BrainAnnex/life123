@@ -35,7 +35,7 @@ LIFE123_VERSION = "1.0.0rc6"        # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import check_version, BioSim1D, ChemData, UniformCompartment
+from life123 import check_version, BioSim1D, SpeciesRegistry
 
 # %%
 check_version(LIFE123_VERSION)
@@ -47,9 +47,9 @@ check_version(LIFE123_VERSION)
 # with two chemicals `A` and `B`
 
 # %%
-chem_data = ChemData(diffusion_rates=[2., 2.], plot_colors=["turquoise", "green"])   # Names "A", "B" automatically assigned
+chem_data = SpeciesRegistry(n_species=2, diffusion_rates=[2., 2.], plot_color=["turquoise", "green"])   # Names "A", "B" automatically assigned
 
-bio = BioSim1D(n_bins=9, chem_data=chem_data)
+bio = BioSim1D(n_bins=9, species_data=chem_data)
 
 # %%
 reactions = bio.get_reactions()

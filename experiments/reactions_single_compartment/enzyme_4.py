@@ -38,7 +38,7 @@ LIFE123_VERSION = "1.0.0rc6"        # Library version this experiment is based o
 
 import ipynbname
 
-from life123 import check_version, ChemData, ReactionRegistry, UniformCompartment, CollectionTabular, GraphicLog
+from life123 import check_version, SpeciesRegistry, ReactionRegistry, UniformCompartment, GraphicLog
 
 import pandas as pd
 
@@ -59,12 +59,12 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = ChemData(names=["S","E","ES","P"], plot_colors=["cyan","violet","red","green"])
+chem_data = SpeciesRegistry(id=["S","E","ES","P"], plot_color=["cyan","violet","red","green"])
 
 chem_data.all_chemicals()
 
 # %%
-rxns = ReactionRegistry(chem_data=chem_data)
+rxns = ReactionRegistry(species_data=chem_data)
 
 
 # Reaction S <-> P , with 1st-order kinetics, favorable thermodynamics in the forward direction, 

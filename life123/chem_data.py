@@ -137,7 +137,7 @@ class ChemCore:
         in their index order of registration.
         If any label is missing or blank, an Exception is raised
 
-        :return:    A list of strings with the chemical names,
+        :return:    A list of strings with the chemical labels,
                         in their registered index order
         """
         all_labels = []
@@ -366,7 +366,7 @@ class ChemCore:
                 self.set_color(chem_label=label, color=new_color)
 
 
-        return registered_colors        # List of color names, with as many entries as the chemicals of interest;
+        return registered_colors        # List of color names, with as many entries as the chemicals of interest
 
 
 

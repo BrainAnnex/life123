@@ -33,7 +33,7 @@ LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
-from life123 import BioSim1D, ChemData, check_version
+from life123 import BioSim1D, SpeciesRegistry, check_version
 
 # %%
 check_version(LIFE123_VERSION)
@@ -45,9 +45,9 @@ check_version(LIFE123_VERSION)
 # with a single chemical `A`
 
 # %%
-chem_data = ChemData(diffusion_rates=10.)   # Name "A" automatically assigned to single chemical
+chem_data = SpeciesRegistry(n_species=1, diffusion_rate=10.)   # Name "A" automatically assigned to single chemical
 
-bio = BioSim1D(n_bins=4, chem_data=chem_data)
+bio = BioSim1D(n_bins=4, species_data=chem_data)
 
 # %%
 initial_conc = [20, 50, 150, 250]
