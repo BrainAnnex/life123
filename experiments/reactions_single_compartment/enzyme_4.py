@@ -186,7 +186,7 @@ uc.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %%
 # The very early part of the reaction
-uc.plot_history(chemicals=['E', 'ES', 'P'],
+uc.plot_history(species=['E', 'ES', 'P'],
                 title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 0.2])
 
 # %% [markdown]
@@ -194,7 +194,7 @@ uc.plot_history(chemicals=['E', 'ES', 'P'],
 
 # %%
 # The full reaction of E and ES
-uc.plot_history(chemicals=['E', 'ES'], show_intervals=True, 
+uc.plot_history(species=['E', 'ES'], show_intervals=True,
                 title_prefix=f"E and ES when E0 = {E_init}")
 
 # %% [markdown]
@@ -255,12 +255,12 @@ uc.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %%
 # The very early part of the reactions
-uc.plot_history(chemicals=['E', 'ES', 'P'], 
+uc.plot_history(species=['E', 'ES', 'P'],
                 title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 1.])
 
 # %%
 # The full reaction of E and ES
-uc.plot_history(chemicals=['E', 'ES'], show_intervals=True, 
+uc.plot_history(species=['E', 'ES'], show_intervals=True,
                 title_prefix=f"E and ES when E0 = {E_init}")
 
 # %%
@@ -321,12 +321,12 @@ uc.curve_intersect("S", "P", t_start=0, t_end=0.4)
 
 # %%
 #The very early part of the reaction
-uc.plot_history(chemicals=['E', 'ES', 'P'],
+uc.plot_history(species=['E', 'ES', 'P'],
                 title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 2.])
 
 # %%
 # Show the full reaction of E and ES
-uc.plot_history(chemicals=['E', 'ES'], show_intervals=True, 
+uc.plot_history(species=['E', 'ES'], show_intervals=True,
                 title_prefix=f"E and ES when E0 = {E_init}")
 
 # %%
@@ -387,12 +387,12 @@ uc.curve_intersect("S", "P", t_start=0, t_end=0.05)
 
 # %%
 # The very early part of the reaction
-uc.plot_history(chemicals=['E', 'ES', 'P'], 
+uc.plot_history(species=['E', 'ES', 'P'],
                 title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], range_y=[0, 10.])
 
 # %%
 # The full reaction of E and ES
-uc.plot_history(chemicals=['E', 'ES'], show_intervals=True, 
+uc.plot_history(species=['E', 'ES'], show_intervals=True,
                 title_prefix=f"E and ES when E0 = {E_init}")
 
 # %% [markdown]
@@ -460,7 +460,7 @@ uc.plot_history(title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.002], r
 
 # %%
 # The full reaction of E and ES
-uc.plot_history(chemicals=['E', 'ES'], show_intervals=True, 
+uc.plot_history(species=['E', 'ES'], show_intervals=True,
                 title_prefix=f"E and ES when E0 = {E_init}")
 
 # %% [markdown]
@@ -528,7 +528,7 @@ uc.plot_history(title_prefix=f"Detail when E0 = {E_init}", range_x=[0, 0.005], r
 
 # %%
 # The full reaction of E and ES
-uc.plot_history(chemicals=['E', 'ES'], show_intervals=True, 
+uc.plot_history(species=['E', 'ES'], show_intervals=True,
                 title_prefix=f"E and ES when E0 = {E_init}")
 
 # %% [markdown]

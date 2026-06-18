@@ -320,7 +320,7 @@ p2
 # Let's create a combined plot like we had in experiment `react_2_a`:
 
 # %%
-p1 = uc.plot_history(chemicals="A", colors='darkturquoise')   # The plot of [A] vs. time that we saw earlier
+p1 = uc.plot_history(species="A", colors='darkturquoise')   # The plot of [A] vs. time that we saw earlier
 
 # %%
 PlotlyHelper.combine_plots([p1, p2],

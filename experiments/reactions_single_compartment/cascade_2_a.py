@@ -24,7 +24,7 @@
 # **Background**: please see experiments `cascade_1` and `mystery_reaction_1`
 
 # %%
-LAST_REVISED = "June 16, 2026"
+LAST_REVISED = "June 18, 2026"
 LIFE123_VERSION = "1.0.0rc8"     # Library version this experiment is based on
 
 # %%
@@ -35,7 +35,7 @@ LIFE123_VERSION = "1.0.0rc8"     # Library version this experiment is based on
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import check_version, SpeciesRegistry, SpeciesRegistry, UniformCompartment, ReactionKinetics
+from life123 import check_version, SpeciesRegistry, UniformCompartment, ReactionKinetics
 
 # %%
 check_version(LIFE123_VERSION)
@@ -50,9 +50,7 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Instantiate the simulator and specify the chemicals
-chem_data = SpeciesRegistry(n_species=3)     # Will generate the default "A", "B", "C"
-
-chem_data.set_all_values(field_name="plot_color", values=["darkturquoise", "orange", "green"])
+chem_data = SpeciesRegistry(n_species=3, plot_color=["darkturquoise", "orange", "green"])     # Will generate the default species "A", "B", "C"
 
 chem_data.as_dataframe()
 
@@ -73,18 +71,6 @@ uc.add_reaction(reactants="B", products="C",
 uc.describe_reactions()
 
 # %%
-# Here we use the "mid" preset for the variable steps, a compromise between speed and accuracy
-uc = UniformCompartment(species_data=chem_data, preset="mid")
-
-# Reaction A <-> B (slower, and with a smaller K)
-uc.add_reaction(reactants="A", products="B",
-                kF=8., kR=2.) 
-
-# Reaction B <-> C (faster, and with a larger K)
-uc.add_reaction(reactants="B", products="C",
-                kF=12., kR=1.) 
-                                   
-uc.describe_reactions()
 
 # %% [markdown]
 # ### Run the simulation
@@ -200,7 +186,7 @@ ReactionKinetics.estimate_rate_constants_simple(t=t_arr_early, A_conc=A_conc_ear
 
 # %%
 uc.plot_history(range_x=[0, 0.4], vertical_lines_to_add=[0.1],
-                chemicals=['A', 'C'], title="Changes in concentration for `A <-> C`")
+                species=['A', 'C'], title="Changes in concentration for `A <-> C`")
 
 # %% [markdown]
 # In the zone to the left of the vertical dashed line:  

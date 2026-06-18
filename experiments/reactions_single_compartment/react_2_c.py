@@ -177,15 +177,15 @@ dynamics_exact.plot_history(colors=['darkturquoise', 'green'], show_intervals=Tr
 
 # %%
 # A streamlined version of the diagram seen in Part 1
-fig_variable = dynamics_variable.plot_history(chemicals='A', colors='darkturquoise', title="VARIABLE time steps", show=True)     
+fig_variable = dynamics_variable.plot_history(species='A', colors='darkturquoise', title="VARIABLE time steps", show=True)
 
 # %%
 # A streamlined version of the diagram seen in Part 2
-fig_fixed = dynamics_fixed.plot_history(chemicals='A', colors='blue', title="FIXED time steps", show=True)
+fig_fixed = dynamics_fixed.plot_history(species='A', colors='blue', title="FIXED time steps", show=True)
 
 # %%
 # A streamlined version of the diagram seen in Part 3
-fig_exact = dynamics_exact.plot_history(chemicals='A', colors='red', title="EXACT solution (at fixed time steps)", show=True)
+fig_exact = dynamics_exact.plot_history(species='A', colors='red', title="EXACT solution (at fixed time steps)", show=True)
 
 # %%
 PlotlyHelper.combine_plots(fig_list=[fig_fixed, fig_variable, fig_exact],

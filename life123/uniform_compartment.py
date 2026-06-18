@@ -1739,7 +1739,7 @@ class UniformCompartment:
 
 
 
-    def plot_history(self, chemicals=None, colors=None, title=None, title_prefix=None,
+    def plot_history(self, species=None, colors=None, title=None, title_prefix=None,
                      range_x=None, range_y=None,
                      y_label=None,
                      vertical_lines_to_add=None, show_intervals=False, show=False) -> pgo.Figure:
@@ -1754,7 +1754,7 @@ class UniformCompartment:
                     p2 = plot_history(various args, show=False)
                     PlotlyHelper.combine_plots([p1, p2], other optional args)
 
-        :param chemicals:       [OPTIONAL] Label, or list of labels, of the chemicals whose concentration changes are to be plotted;
+        :param species:         [OPTIONAL] Id, or list of id's, of the species whose concentration changes are to be plotted;
                                     if None, then display all, in their index order
         :param colors:          [OPTIONAL] Either a single color (string with standard plotly name, such as "red"),
                                     or list of names to use, in the same order as the chemicals of the previous argument;
@@ -1791,8 +1791,8 @@ class UniformCompartment:
 
         :return:                A plotly "Figure" object
         """
-        if chemicals is None:
-            chemicals = self.species_data.get_all_species_ids()      # List of the chemical labels.  EXAMPLE: ["A", "B", "H"]
+        if species is None:
+            species = self.species_data.get_all_species_ids()      # List of the chemical labels.  EXAMPLE: ["A", "B", "H"]
 
         if title is None:   # If no title was specified, create a default one based on how many reactions are present
             number_of_rxns = self.reaction_data.number_of_reactions()
@@ -1807,8 +1807,8 @@ class UniformCompartment:
                 title = f"Changes in concentration for `{rxn_text_0}` and `{rxn_text_1}`"
 
         if y_label is None:
-            if type(chemicals) == str:
-                y_label = f"[{chemicals}]"          # EXAMPLE:  "[A]"
+            if type(species) == str:
+                y_label = f"[{species}]"          # EXAMPLE:  "[A]"
             else:
                 y_label = "Concentration"
 
@@ -1817,10 +1817,10 @@ class UniformCompartment:
         if colors is None:
             # Attempt to make use of the previously-registered colors, if available;
             # otherwise, automatically assign them
-            colors = self.species_data.assign_colors(chemicals)
+            colors = self.species_data.assign_colors(species)
 
 
-        return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=chemicals,
+        return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=species,
                                         colors=colors, title=title, title_prefix=title_prefix,
                                         range_x=range_x, range_y=range_y,
                                         y_label=y_label, legend_header="Chemical",

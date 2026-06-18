@@ -125,10 +125,10 @@ dynamics.explain_time_advance()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+dynamics.plot_history(species=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_history(chemicals=["A", "B", "C"])
+dynamics.plot_history(species=["A", "B", "C"])
 
 # %% [markdown]
 # ### The plots has 4 distinctive intersections; locate them and save them for later comparisons across repeated runs:
@@ -195,14 +195,14 @@ dynamics.single_compartment_react(initial_step=0.0001, target_end_time=8.0,
 dynamics.get_history()
 
 # %%
-dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+dynamics.plot_history(species=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_history(chemicals=["A", "B", "C"])
+dynamics.plot_history(species=["A", "B", "C"])
 
 # %%
 # Show the timestepe taken (vertical dashed lines) in a small section of the plot
-dynamics.plot_history(chemicals=["A", "B", "C"], show_intervals=True, range_x=[2.5, 3.5])
+dynamics.plot_history(species=["A", "B", "C"], show_intervals=True, range_x=[2.5, 3.5])
 
 # %%
 dynamics.explain_time_advance()  # Notice a lot of timestep adjustments, as needed
@@ -265,10 +265,10 @@ dynamics.explain_time_advance()
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+dynamics.plot_history(species=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_history(chemicals=["A", "B", "C"])
+dynamics.plot_history(species=["A", "B", "C"])
 
 # %% [markdown]
 # ### Yet again, the two plots have 4 distinctive intersections among them; locate and save them:

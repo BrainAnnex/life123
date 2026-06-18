@@ -60,16 +60,8 @@ class Species:
     def __post_init__(self):
         # Validate some arguments
 
-        if (self.diffusion_rate is not None):
-            assert isinstance(self.diffusion_rate, (float, int, np.integer, np.floating)), \
-                f"The value for the diffusion_rate ({self.diffusion_rate}) is not a valid number; it is of type {type(self.diffusion_rate)}"
-
-            assert self.diffusion_rate >= 0, "diffusion_rate, if provided, cannot be negative"
-
-        assert type(self.categories) == list, \
-            "The `categories` argument, if provided, must be a list"
-
-
+        SpeciesValidation.validate(field_name="diffusion_rate", value=self.diffusion_rate)
+        SpeciesValidation.validate(field_name="categories", value=self.categories)
         # TODO: add more validation
 
 
@@ -79,6 +71,51 @@ class Species:
 
         if self.label == "":
             self.label = self.id
+
+
+        SpeciesValidation.validate(field_name="name", value=self.name)
+        SpeciesValidation.validate(field_name="label", value=self.label)
+
+
+
+
+
+############################################################################################
+
+class SpeciesValidation:
+
+    @staticmethod
+    def validate(field_name, value) -> None:
+        """
+
+        :param field_name:
+        :param value:
+        :return:            None
+        """
+        match field_name:
+            case "diffusion_rate":
+                # Acceptable values: None, or a non-negative number (possibly Numpy)
+                if (value is not None):
+                    assert isinstance(value, (float, int, np.integer, np.floating)), \
+                        f"The value for `{field_name}` ({value}) is not a valid number; the value given is of type {type(value)}"
+
+                    assert value >= 0, \
+                        f"`{field_name}` cannot be negative; the value given: {value}"
+
+
+            case "categories":
+                # Acceptable values: lists
+                assert type(value) == list, \
+                    f"`{field_name}` must be a list; the value given ({value}) is of type {type(value)}"
+
+
+            case "name" | "label":
+                # Acceptable values: non-empty strings
+                assert type(value) == str, \
+                    f"`{field_name}` must be a string; the value given ({value}) is of type {type(value)}"
+
+                assert value.strip() != "", \
+                    f"`{field_name}` cannot be an empty string"
 
 
 
@@ -506,15 +543,16 @@ class SpeciesRegistry:
 
 
 
-    def set_value(self, species_id :str, field_name :str, value):
+    def set_value(self, species_id :str, field_name :str, value) -> None:
         """
 
         :param species_id:  String with a unique value to identify a species
         :param field_name:  The name of the property of interest.  EXAMPLE: "formula"
-        :param value:
-        :return:
+        :param value:       The value that we wish to set for the above property
+        :return:            None
         """
         s = self.get_species(species_id)
+        SpeciesValidation.validate(field_name=field_name, value=value)
         setattr(s, field_name, value)       # In-place modification
 
 

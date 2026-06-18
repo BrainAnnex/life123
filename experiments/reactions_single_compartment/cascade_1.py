@@ -240,12 +240,12 @@ df2
 
 # %%
 # Earlier run (using variable time steps)
-fig1 = dynamics.plot_history(chemicals='B', colors='orange', title="Adaptive variable-step run", 
+fig1 = dynamics.plot_history(species='B', colors='orange', title="Adaptive variable-step run",
                              show=True)
 
 # %%
 # Latest run (high-precision result from fine fixed-resolution run)
-fig2 = dynamics2.plot_history(chemicals='B', colors=['violet'], title="Fine fixed-step run", 
+fig2 = dynamics2.plot_history(species='B', colors=['violet'], title="Fine fixed-step run",
                               show=True)
 
 # %%

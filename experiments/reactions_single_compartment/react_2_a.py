@@ -196,7 +196,7 @@ uc.get_history()         # Revisited from earlier
 # Notice that we lack a rate for the last time value, in the above table, because no reaction simulation starting at that time has been performed
 
 # %%
-p1 = uc.plot_history(chemicals="A", colors="darkturquoise")   # The plot of [A] from the system history
+p1 = uc.plot_history(species="A", colors="darkturquoise")   # The plot of [A] from the system history
 
 # %%
 p2 = PlotlyHelper.plot_pandas(df=rates_df, x_var="SYSTEM TIME", fields="A_dot", colors="brown")   # The plot of A_dot, from rates_df

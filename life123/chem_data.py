@@ -27,6 +27,9 @@ class ChemCore:
 
     def __init__(self):
 
+        print("\n******  OBSOLETE  ************************* ChemData and related classes (ChemCore, Diffusion) are OBSOLETE.  Use SpeciesRegistry instead ****")
+        print("    Note: arguments such as plot_colors and diffusion_rates are now IN THE SINGULAR.  label is replaced by id\n\n\n")
+
         self.chemical_data = [] # Basic data for all chemicals, *except* water and macro-molecules.
                                 # Each list entry represents 1 chemical species,
                                 # and is a dict required to contain the keys "label" and "name";

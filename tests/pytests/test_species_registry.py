@@ -469,11 +469,42 @@ def test_add_species():
 def test_set_value():
     sr = SpeciesRegistry()
 
-    result = sr.add_species(id="A")
+    sr.add_species(id="A")
 
-    sr.set_value(species_id="A", field_name="diffusion_rate", value=5)
-    print(result)
-    # TODO: continue
+    sr.set_value(species_id="A", field_name="diffusion_rate", value=10)
+    result = sr.get_value(species_id="A", field_name="diffusion_rate")
+    assert result == 10
+
+    with pytest.raises(Exception):
+        sr.set_value(species_id="A", field_name="diffusion_rate", value=-4)     # Bad value
+
+    with pytest.raises(Exception):
+        sr.set_value(species_id="A", field_name="categories", value="I'm not a list")    # Bad value
+
+    sr.set_value(species_id="A", field_name="categories", value=["protein", "enzyme"])
+    result = sr.get_value(species_id="A", field_name="categories")
+    assert result == ["protein", "enzyme"]
+    result = sr.get_value(species_id="A", field_name="diffusion_rate")
+    assert result == 10
+
+    sr.add_species(id="B", plot_color="magenta")
+    sr.set_value(species_id="B", field_name="plot_color", value="plum")
+    result = sr.get_value(species_id="B", field_name="plot_color")
+    assert result == "plum"
+
+    assert sr.get_species("A") == Species(id='A', name='A', label='A', sort_order=0, diffusion_rate=10, charge=0, formula='',
+                                          ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None,
+                                          categories=["protein", "enzyme"], metadata={}, annotation='', plot_color='')
+
+    assert sr.get_species("B") == Species(id='B', name='B', label='B', sort_order=1, diffusion_rate=None, charge=0, formula='',
+                                          ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None,
+                                          categories=[], metadata={}, annotation='', plot_color='plum')
+
+    with pytest.raises(Exception):
+        sr.set_value(species_id="B", field_name="name", value={"a": 1})     # Bad value
+
+    with pytest.raises(Exception):
+        sr.set_value(species_id="B", field_name="label", value="      ")    # Bad value
 
 
 

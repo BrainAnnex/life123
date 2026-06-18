@@ -124,7 +124,7 @@ ReactionKinetics.estimate_rate_constants_simple(t=t_arr, A_conc=A_conc, B_conc=C
 # Let's visually locate at what times those [A] values occur:
 
 # %%
-dynamics.plot_history(chemicals='A', colors='darkturquoise', range_x=[0, 0.15],
+dynamics.plot_history(species='A', colors='darkturquoise', range_x=[0, 0.15],
                       vertical_lines_to_add=[0.028, 0.1], title="[A] as a function of time")
 
 # %%
@@ -199,7 +199,7 @@ ReactionKinetics.estimate_rate_constants_simple(t=t_arr_late, A_conc=A_conc_late
 # Let's see the time evolution again, but just for `A` and `C`:
 
 # %%
-dynamics.plot_history(chemicals=['A', 'C'], colors=['darkturquoise',  'green'], range_x=[0, 0.25],
+dynamics.plot_history(species=['A', 'C'], colors=['darkturquoise', 'green'], range_x=[0, 0.25],
                       vertical_lines_to_add=[0.028, 0.1], title='A <-> C compound reaction')
 
 # %% [markdown]

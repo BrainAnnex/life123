@@ -138,9 +138,9 @@ uc_exact.get_history()
 # # 4. Let's compare plots for the concentration of `C`, as a function of time, from the earlier 3 simulations
 
 # %%
-p1 = uc_fast.plot_history(chemicals="C", colors=['#F5B914'], title="fast (less precise)", show=False)
-p2 = uc_slow.plot_history(chemicals="C", colors=['#CBE504'], title="slow (more precise)", show=False)
-p3 = uc_exact.plot_history(chemicals="C", colors=['forestgreen'], title="exact",  show=False)
+p1 = uc_fast.plot_history(species="C", colors=['#F5B914'], title="fast (less precise)", show=False)
+p2 = uc_slow.plot_history(species="C", colors=['#CBE504'], title="slow (more precise)", show=False)
+p3 = uc_exact.plot_history(species="C", colors=['forestgreen'], title="exact", show=False)
 
 # %%
 PlotlyHelper.combine_plots([p1, p2, p3], title="Comparison of simulation accuracies", xrange=[0, 0.015])
