@@ -24,8 +24,8 @@
 # ### TAGS :  "diffusion 1D", "quick-start"
 
 # %%
-LAST_REVISED = "Aug. 15, 2025"
-LIFE123_VERSION = "1.0.0rc6"        # Library version this experiment is based on
+LAST_REVISED = "June 18, 2026"
+LIFE123_VERSION = "1.0.0rc8"      # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -61,7 +61,7 @@ bio.describe_state()
 bio.system_snapshot()
 
 # %%
-bio.visualize_system(title_prefix="Diffusion")   # Line curve view
+bio.visualize_system(title_prefix="Diffusion", smoothed=False)   # Line curve view
 
 # %%
 bio.system
@@ -100,7 +100,7 @@ print(status)
 bio.describe_state(concise=True)
 
 # %%
-bio.visualize_system(title_prefix="Diffusion")   # Line curve view
+bio.visualize_system(title_prefix="Diffusion")   # Line curve view; by default, smoothed
 
 # %%
 bio.system_heatmaps(title_prefix="Diffusion")

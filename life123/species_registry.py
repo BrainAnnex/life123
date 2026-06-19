@@ -584,10 +584,10 @@ class SpeciesRegistry:
         """
         Return a list of the colors registered for the requested chemical species
         or, if not specified, for all chemicals.
-        If any chemicals lack registered colors, assign new ones from a palette of default colors,
+        If any species lacks a registered color, assign new ones from a palette of default colors,
         and register the new assignments for future use.
 
-        :param species_ids: List of species id's; use None to mean ALL chemicals
+        :param species_ids: List of species id's; use None to mean ALL the species
         :return:            List of color names, with as many entries as the species of interest,
                                 and in their same order
                                 EXAMPLE:   ["blue", "yellow", "cyan"]
@@ -602,13 +602,13 @@ class SpeciesRegistry:
                 f"instead, it was {type(species_ids)}"
 
 
-        # Attempt to use the colors registered for the individual chemicals;
+        # Attempt to use the colors registered for the individual species;
         # if not already present, assign new ones
         registered_colors = []
         fallback_colors = None      # A list that will be created if needed
         new_color_index = 0
         for label in species_ids:
-            stored_color = self.get_value(species_id=label, field_name="plot_color")     # Will be an empty string if no color was registered for this chemical
+            stored_color = self.get_value(species_id=label, field_name="plot_color")     # Will be an empty string if no color was registered for this species
             if stored_color:
                 registered_colors.append(stored_color)
             else:   # In case no previously-registered color for this chemical

@@ -53,8 +53,8 @@ class UniformCompartment:
                                 If passed, cannot pass either of the args `reactions` (an object that contains `chem_data`) nor `names`
                                 (names are contained in the `chem_data` object)
 
-        :param names:       [OPTIONAL 3] A single name, or list or tuple of names, of the chemicals;
-                                providing a list can be used to make the chemicals appear in a particular desired order.
+        :param names:       [OPTIONAL 3] A single name, or list or tuple of names, of the species;
+                                providing a list can be used to make the species appear in a particular desired order.
                                 If passed, cannot pass either of the args `reactions` nor `species_data` (both those object contain the chemical names)
 
 
@@ -86,7 +86,7 @@ class UniformCompartment:
 
 
         if species_data and reactions:
-            assert reactions.get_chem_data() == species_data, \
+            assert reactions.get_species_data() == species_data, \
                 "UniformCompartment() instantiation: the argument `reactions` is based " \
                 "on a 'SpeciesRegistry' object that doesn't match the one passed by the argument `chem_data`"
 
@@ -95,7 +95,7 @@ class UniformCompartment:
                 #"UniformCompartment instantiation: Cannot pass both `chem_data` and `reactions` as arguments (the `reactions` object already contains the `chem_data`)"
             assert names is None, \
                 "UniformCompartment instantiation: Cannot pass both `names` and `reactions` as arguments (the `reactions` object already contains the `names`)"
-            self.species_data = reactions.get_chem_data()
+            self.species_data = reactions.get_species_data()
             self.reaction_data = reactions
         else:           # reactions is None
             if species_data is None:
@@ -192,7 +192,7 @@ class UniformCompartment:
     #####################################################################################################
 
 
-    def get_chem_data(self) -> SpeciesRegistry:
+    def get_species_data(self) -> SpeciesRegistry:
         """
         Return the "SpeciesRegistry" object being used
         
@@ -1732,14 +1732,15 @@ class UniformCompartment:
                 print(f"     {mm} || {state_str}")
 
         #if self.reactions.active_enzymes == set():    # If no enzymes were involved in any reaction
-        print(f"Chemicals involved in reactions: {self.reaction_data.labels_of_active_chemicals()}")
+        print(f"Species involved in reactions: {self.reaction_data.labels_of_active_chemicals()}")
         #else:
             #print(f"Chemicals involved in reactions (not counting enzymes): {self.reactions.labels_of_active_chemicals()}")
             #print(f"Enzymes involved in reactions: {self.reactions.names_of_enzymes()}")
 
 
 
-    def plot_history(self, species=None, colors=None, title=None, title_prefix=None,
+    def plot_history(self, species=None, colors=None, add_colors=None,
+                     title=None, title_prefix=None,
                      range_x=None, range_y=None,
                      y_label=None,
                      vertical_lines_to_add=None, show_intervals=False, show=False) -> pgo.Figure:
@@ -1756,10 +1757,20 @@ class UniformCompartment:
 
         :param species:         [OPTIONAL] Id, or list of id's, of the species whose concentration changes are to be plotted;
                                     if None, then display all, in their index order
-        :param colors:          [OPTIONAL] Either a single color (string with standard plotly name, such as "red"),
+
+        :param colors:          [OPTIONAL] Either a single color (a string with standard plotly name, such as "red"),
                                     or list of names to use, in the same order as the chemicals of the previous argument;
-                                    if None, then use the registered colors (if specified),
-                                    or the hardwired defaults as a last resort
+                                    if None, then use the colors registered with the species, if present,
+                                    or the hardwired defaults as a last resort.
+                                    If colors were provided or automatically generated, save them with the species data.
+                                    Cannot use if using the `add_colors` argument.
+        :param add_colors:      [OPTIONAL] Either a single color (a string with standard plotly name, such as "red"),
+                                    or list of names to use for species that lack a previously-assigned color.
+                                    If provide, `add_colors` must contain at least as many values as needed to cover all
+                                    the species that lack a registered color
+                                    Any color that gets used will be saved with the species data
+                                    Cannot use if using the `colors` argument.
+
         :param title:           [OPTIONAL] Title for the plot;
                                     if None, use default titles that will vary based on the # of reactions; EXAMPLES:
                                     "Changes in concentrations for 5 reactions"
@@ -1792,7 +1803,7 @@ class UniformCompartment:
         :return:                A plotly "Figure" object
         """
         if species is None:
-            species = self.species_data.get_all_species_ids()      # List of the chemical labels.  EXAMPLE: ["A", "B", "H"]
+            species = self.species_data.get_all_species_ids()      # List of the all the species id's.  EXAMPLE: ["A", "B", "H"]
 
         if title is None:   # If no title was specified, create a default one based on how many reactions are present
             number_of_rxns = self.reaction_data.number_of_reactions()
@@ -1812,12 +1823,49 @@ class UniformCompartment:
             else:
                 y_label = "Concentration"
 
+        if type(species) == str:
+            species = [species]          # Turn a single value into a string
+
+
         df = self.get_history()         # A Pandas dataframe that contains a column named "SYSTEM TIME"
 
-        if colors is None:
+        assert (colors is None) or (add_colors is None), \
+            "plot_history(): cannot use both arguments `colors` and `add_colors`"
+
+        if (colors is None) and (add_colors is None):      # If no colors were specified in this function call
             # Attempt to make use of the previously-registered colors, if available;
-            # otherwise, automatically assign them
-            colors = self.species_data.assign_colors(species)
+            # otherwise, automatically assign them, and save them with the species data
+            colors = self.species_data.assign_colors(species)   # TODO: ought to avoid existing colors (or at least color/style combos)
+        elif (add_colors is None):      # Using argument `colors`
+            if type(colors)==str:
+                colors = [colors]       # Turn a single value into a string
+            assert len(colors) == len(species), \
+                f"plot_history(): the number of provided colors ({len(colors)}) doesn't match the number of species ({len(species)})"
+            # Save the passed colors with the species data
+            for i, col in enumerate(colors):
+                self.get_species_data().set_value(species_id=species[i], field_name="plot_color", value=col)
+        else:                           # Using argument `add_colors`
+            if type(add_colors) == str:
+                add_colors = [add_colors]       # Turn a single value into a string
+            elif type(add_colors) == list:
+                add_colors = add_colors.copy()  # To avoid altering the list passed as argument
+            else:
+                raise Exception("plot_history(): the argument `add_colors` must be a string or a list")
+
+            colors = []     # The colors to be used for this plot, in the same order as the `species` list
+            for i, sp in enumerate(species):
+                registered_color = self.get_species_data().get_value(species_id=species[i], field_name="plot_color")    # Might be blank
+                if registered_color:    # A color was already assigned to this species
+                    colors.append(registered_color)     # Use the pre-assigned color for this species
+                else:
+                    assert len(add_colors) > 0, \
+                        "plot_history(): not enough values in `add_colors` to cover all the species that lack a registered color"
+
+                    new_color = add_colors[0]   # Get the next color, from the start of the list
+                    del add_colors[0]           # Drop that first element from the list
+                    # Use the passed color for this species (and also save it in its species data)
+                    self.get_species_data().set_value(species_id=species[i], field_name="plot_color", value=new_color)
+                    colors.append(new_color)
 
 
         return PlotlyHelper.plot_pandas(df=df, x_var="SYSTEM TIME", fields=species,

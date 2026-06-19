@@ -21,7 +21,7 @@ class Diagnostics:
 
         self.reactions = reactions                  # Object of type "ReactionRegistry"
 
-        self.species_data = reactions.get_chem_data()  # Object of type "SpeciesRegistry"
+        self.species_data = reactions.get_species_data()  # Object of type "SpeciesRegistry"
 
 
         # TODO: maybe drop the "diagnostic_" from the names, or rename it to "historic_"

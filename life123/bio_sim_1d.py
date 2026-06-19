@@ -1457,12 +1457,12 @@ class BioSim1D(System1D):
         #       (or passing the names, like with UniformCompartment?)
         #       and let it create and store the "Chemicals" object in that case
         if reaction_handler and species_data:
-            assert reaction_handler.get_chem_data() == species_data, \
+            assert reaction_handler.get_species_data() == species_data, \
                 "BioSim1D() instantiation: the argument `reaction_handler` is based " \
                 "on a 'SpeciesRegistry' object that doesn't match the one passed by the argument `chem_data`"
 
         if species_data and reactions:
-            assert reactions.get_chem_data() == species_data, \
+            assert reactions.get_species_data() == species_data, \
                 "BioSim1D() instantiation: the argument `reactions` is based " \
                 "on a 'SpeciesRegistry' object that doesn't match the one passed by the argument `chem_data`"
 

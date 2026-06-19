@@ -124,8 +124,10 @@ class ReactionRegistry:
 
 
 
-    def get_chem_data(self):
+    def get_species_data(self) -> SpeciesRegistry:
         """
+        Return the "SpeciesRegistry" object being used
+
         :return:    Object of type "SpeciesRegistry"
         """
         return self.species_data

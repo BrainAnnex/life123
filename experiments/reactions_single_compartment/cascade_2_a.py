@@ -50,15 +50,15 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Instantiate the simulator and specify the chemicals
-chem_data = SpeciesRegistry(n_species=3, plot_color=["darkturquoise", "orange", "green"])     # Will generate the default species "A", "B", "C"
+species_data = SpeciesRegistry(n_species=3, plot_color=["darkturquoise", "orange", "green"])     # Will generate the default species "A", "B", "C"
 
-chem_data.as_dataframe()
+species_data.as_dataframe()
 
 # %%
 
 # %%
 # Here we use the "mid" preset for the variable steps, a compromise between speed and accuracy
-uc = UniformCompartment(species_data=chem_data, preset="mid")
+uc = UniformCompartment(species_data=species_data, preset="mid")
 
 # Reaction A <-> B (slower, and with a smaller K)
 uc.add_reaction(reactants="A", products="B",

@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -25,8 +25,11 @@
 # (i.e. `A <-> S` is slow, but energetically favored)  
 #
 # All reactions are 1st order, mostly forward.  Taken to equilibrium.
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
+
+# %% [markdown]
+# ### TAGS :  "uniform compartment"
+
+# %%
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -38,25 +41,34 @@
 # ![Downregulated by shunt](../../docs/down_regulate_1.png)
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "June 18, 2026"
+LIFE123_VERSION = "1.0.0rc8"     # Library version this experiment is based on
 
-# %% tags=[]
-from experiments.get_notebook_info import get_notebook_basename
+# %%
+#import set_path                 # Using MyBinder?  Uncomment this before running the next cell!
 
-from life123 import SpeciesRegistry as chem
-from life123 import UniformCompartment
+# %%
+#import sys
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
+
+import ipynbname
+from IPython.display import IFrame
+
+from life123 import check_version, SpeciesRegistry, UniformCompartment
 
 import plotly.express as px
-from life123 import GraphicLog
 
-# %% tags=[]
+# %%
+check_version(LIFE123_VERSION)
+
+# %%
 # Initialize the HTML logging (for the graphics)
-log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
+log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
+                                            # IN CASE OF PROBLEMS, set manually to any desired name
+log_file
 
-# Set up the use of some specified graphic (Vue) components
-GraphicLog.config(filename=log_file,
-                  components=["vue_cytoscape_2"],
-                  extra_js="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.2/cytoscape.umd.js")
+# %%
 
 # %%
 
@@ -65,100 +77,108 @@ GraphicLog.config(filename=log_file,
 
 # %% [markdown]
 # ### Initialize the System
-# Specify the chemicals and the reaction
 
-# %% tags=[]
-# Specify the chemicals
-chem_data = chem(names=["A", "B"])
+# %%
+# Instantiate the simulator and specify the chemicals.
+# The diagnostics will be give insight into the inner workings of the simulation
+uc = UniformCompartment(names=["A", "B"], preset="fast", enable_diagnostics=True)
 
-# Reaction A <-> B
-chem_data.add_reaction(reactants=["A"], products=["B"],
-                       forward_rate=30., reverse_rate=5.)
+# Reaction A <-> B , with 1st-order kinetics in both directions
+uc.add_reaction(reactants="A", products="B", kF=30., kR=5.)
 
-chem_data.describe_reactions()
+uc.describe_reactions()
+
+# %%
 
 # %% [markdown]
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(species_data=chem_data, preset="fast")
-dynamics.set_conc(conc={"A": 50.}, snapshot=True)
-dynamics.describe_state()
+uc.set_conc(conc={"A": 50.})
+uc.describe_state()
+
+# %%
 
 # %% [markdown]
 # ### Run the reaction
 
 # %%
-dynamics.enable_diagnostics()          # To save diagnostic information about the call to single_compartment_react()
-
 # The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
-dynamics.single_compartment_react(initial_step=0.001, duration=0.3,
-                                  snapshots={"initial_caption": "1st reaction step",
-                                             "final_caption": "last reaction step"},
-                                  variable_steps=True)
+uc.single_compartment_react(initial_step=0.001, duration=0.3)
 
 # %%
-dynamics.get_history()
+uc.get_history()
 
 # %%
-dynamics.explain_time_advance()
+uc.get_diagnostics().explain_time_advance()
 
 # %%
-dynamics.plot_history(colors=["darkturquoise", "green"], title="Single reaction A <-> B (no downregulation)",
-                      show_intervals=True)
+uc.plot_history(colors=["darkturquoise", "green"],
+                title="Single reaction A <-> B (no downregulation)",
+                show_intervals=True)
 
 # %% [markdown]
 # #### Notice the intersection at the exact midpoint of the 2 initial concentrations (50 and 0):
 
 # %%
-dynamics.curve_intersect('A', 'B', t_start=0, t_end=0.1)
+uc.curve_intersect('A', 'B', t_start=0, t_end=0.1)
 
 # %%
 # Verify that all the reactions have reached equilibrium
-dynamics.is_in_equilibrium()
+uc.is_in_equilibrium()
+
+# %%
+# Notice that the plot colors that we assigned got saved with the species data
+uc.get_species_data().as_dataframe()
+
+# %%
 
 # %%
 
 # %% [markdown]
 # # <a name="down_regulate_1_scenario_2"></a>  Scenario 2 - downregulated by shunt: 
 # ### kinetically fast,   
-# ### but with thermodynamical dis-advantage (i.e. energetically un-favored)
+# ### but with pooor thermodynamical advantage (i.e. not very favored energetically)
 
-# %% tags=[]
-# Register the new chemical ("S")
-chem_data.add_chemical("S")
-
+# %%
 # Add the reaction A <-> S (fast shunt, poor thermodynical energetic advantage)
-chem_data.add_reaction(reactants=["A"], products=["S"],
-                       forward_rate=150., reverse_rate=100.) 
+uc.add_reaction(reactants="A", products="S",
+                kF=150., kR=100.) 
 
-chem_data.describe_reactions()
+uc.describe_reactions()
 
 # %%
 # Send a plot of the network of reactions to the HTML log file
-chem_data.plot_reaction_network("vue_cytoscape_2")
+uc.plot_reaction_network(log_file=log_file)
 
 # %%
-dynamics = UniformCompartment(species_data=chem_data, preset="mid")   # Notice we're over-writing the earlier "dynamics" object
-dynamics.set_conc(conc={"A": 50.}, snapshot=True)
-dynamics.describe_state()
+IFrame(log_file, width=1000, height=500)         # You may also open the log file in a browser
 
-# %% [markdown] tags=[]
+# %%
+
+# %%
+reaction_data = uc.get_reactions()
+
+# %%
+uc = UniformCompartment(reactions=reaction_data, preset="mid", enable_diagnostics=True)   
+# Notice we're over-writing the earlier "uc" object, and re-using the reaction data
+
+uc.set_conc(conc={"A": 50.})
+uc.describe_state()
+
+# %% [markdown]
 # ### Run the reaction
 
 # %%
-dynamics.enable_diagnostics()         # To save diagnostic information about the call to single_compartment_react()
-
 # The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
-dynamics.single_compartment_react(initial_step=0.001, duration=0.3,
-                                  snapshots={"initial_caption": "1st reaction step",
-                                             "final_caption": "last reaction step"},
-                                  variable_steps=True)
+uc.single_compartment_react(initial_step=0.001, duration=0.3)
 
 # %%
-dynamics.plot_history(colors=["darkturquoise", "green", "red"],
-                      title="Coupled reactions A <-> B and A <-> S (fast but disadvantaged energetically)",
-                      show_intervals=True)
+#species_data.set_value(species_id="S", field_name="plot_color", value="red")
+
+# %%
+uc.plot_history(add_colors="red", title="Coupled reactions A <-> B and A <-> S (fast but disadvantaged energetically)",
+                show_intervals=True)
 
 # %% [markdown]
 # ### Notice how the "alternate (shunt) path" of the reaction, i.e. S (red)   
@@ -167,7 +187,9 @@ dynamics.plot_history(colors=["darkturquoise", "green", "red"],
 
 # %%
 # Verify that all the reactions have reached equilibrium
-dynamics.is_in_equilibrium()
+uc.is_in_equilibrium()
+
+# %%
 
 # %%
 
@@ -177,39 +199,41 @@ dynamics.is_in_equilibrium()
 # ### but with thermodynamical advantage (i.e. energetically favored)
 
 # %%
-# Specify the chemicals  (notice that we're starting with new objects)
-new_chem_data = chem(names=["A", "B", "S"])
+# Start with new UniformCompartment object, but re-use the earlier species data
+species_data = uc.get_species_data()
 
-# Reaction A <-> B (as before)
-new_chem_data.add_reaction(reactants=["A"], products=["B"],
-                       forward_rate=30., reverse_rate=5.) 
-
-# Reaction A <-> S (slow shunt, excellent thermodynamical energetic advantage)
-new_chem_data.add_reaction(reactants=["A"], products=["S"],
-                       forward_rate=3., reverse_rate=0.1)
-
-new_chem_data.describe_reactions()
+species_data.as_dataframe()
+# Notice that the new color that we assigned for the species `S`, in the last plot, got saved with its species data
 
 # %%
-dynamics = UniformCompartment(species_data=new_chem_data, preset="small_rel_change")
-dynamics.set_conc(conc={"A": 50.}, snapshot=True)
-dynamics.describe_state()
+uc_new = UniformCompartment(species_data=species_data, preset="small_rel_change",
+                            enable_diagnostics=True)
 
-# %% [markdown] tags=[]
+# Reaction A <-> B (just as before)
+uc_new.add_reaction(reactants="A", products="B",
+                    kF=30., kR=5.) 
+
+# Reaction A <-> S (slow shunt, excellent thermodynamical energetic advantage)
+uc_new.add_reaction(reactants="A", products="S",
+                    kF=3., kR=0.1)
+
+uc_new.describe_reactions()
+
+
+# %%
+uc_new.set_conc(conc={"A": 50.})
+uc_new.describe_state()
+
+# %% [markdown]
 # ### Run the reaction
 
 # %%
-dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
-
 # The changes of concentrations vary very rapidly early on; automated variable timesteps will take care of that
-dynamics.single_compartment_react(initial_step=0.005, duration=7.0,
-                                  snapshots={"initial_caption": "1st reaction step",
-                                             "final_caption": "last reaction step"},
-                                  variable_steps=True)
+uc_new.single_compartment_react(initial_step=0.005, duration=7.0)
 
 # %%
-dynamics.plot_history(colors=["darkturquoise", "green", "red"],
-                      title="Coupled reactions A <-> B and A <-> S (slow but with energetic advantage)")
+# The plot now simply uses the previously-assigned colors
+uc_new.plot_history(title="Coupled reactions A <-> B and A <-> S (slow but with energetic advantage)")
 
 # %% [markdown]
 # ### Notice how the "alternate (shunt) path" of the reaction, i.e. S (red)   
@@ -217,28 +241,27 @@ dynamics.plot_history(colors=["darkturquoise", "green", "red"],
 # ### but EVENTUALLY DOMINATES (energy advantage)
 
 # %%
-dynamics.explain_time_advance()
+uc_new.get_diagnostics().explain_time_advance()
 
 # %% [markdown]
 # ### Check the final equilibrium
 
 # %%
 # Verify that all the reactions are close to equilibrium
-dynamics.is_in_equilibrium(tolerance=12)
+uc_new.is_in_equilibrium(tolerance=12)
 
 # %% [markdown]
 # ### Please note the **much-longer** timescale from the earlier plots
 # If we look at early time interval, this is what it looks like:
 
 # %%
-dynamics.plot_history(colors=["darkturquoise", "green", "red"],
-                      title="Same plot as above, both only showing initial detail", range_x=[0, 0.3])
+uc_new.plot_history(title="Same plot as above, both only showing initial detail", range_x=[0, 0.3])
 
 # %%
 # Look at where the curves intersect
-dynamics.curve_intersect("A", "B", t_start=0, t_end=0.1)
+uc_new.curve_intersect("A", "B", t_start=0, t_end=0.1)
 
 # %%
-dynamics.curve_intersect("A", "S", t_start=0.1, t_end=0.2)
+uc_new.curve_intersect("A", "S", t_start=0.1, t_end=0.2)
 
 # %%
