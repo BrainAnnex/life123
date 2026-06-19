@@ -58,13 +58,8 @@ class Species:
         purine
     """
     def __post_init__(self):
-        # Validate some arguments
 
-        SpeciesValidation.validate(field_name="diffusion_rate", value=self.diffusion_rate)
-        SpeciesValidation.validate(field_name="categories", value=self.categories)
-        # TODO: add more validation
-
-
+        """
         # Assign default values to some arguments, based on available arguments
         if self.name == "":
             self.name = self.id
@@ -72,9 +67,37 @@ class Species:
         if self.label == "":
             self.label = self.id
 
-
         SpeciesValidation.validate(field_name="name", value=self.name)
         SpeciesValidation.validate(field_name="label", value=self.label)
+
+        # Note: the other properties get validated as the pass thru __setattr__()
+        """
+
+
+    def __setattr__(self, name :str, value):
+        """
+
+        :param name:
+        :param value:
+        :return:
+        """
+        # Special treatment for the properties (fields) "label" and "name"
+        if name == "label" or name == "name":
+            if (value is None):     # or (value == ""):
+                value = self.id
+            else:
+                assert type(value)==str, \
+                    f"The field '{name}', if specified, must be a string; the value given ({value}) is of type {type(value)}"
+                if value.strip() == "":     # Detect if blank
+                    value = self.id
+
+        else:
+        #if name not in ["name", "label"]:   # Exclude properties that get validated later during instantiantion
+            SpeciesValidation.validate(field_name=name, value=value)
+
+
+        # Carry out the actual setting of the property
+        object.__setattr__(self, name, value)
 
 
 
@@ -92,6 +115,8 @@ class SpeciesValidation:
         :param value:
         :return:            None
         """
+        # TODO: add more validation
+
         match field_name:
             case "diffusion_rate":
                 # Acceptable values: None, or a non-negative number (possibly Numpy)
@@ -552,7 +577,10 @@ class SpeciesRegistry:
         :return:            None
         """
         s = self.get_species(species_id)
-        SpeciesValidation.validate(field_name=field_name, value=value)
+        #SpeciesValidation.validate(field_name=field_name, value=value)
+        # Except for "name" and "label", field are validated by setattr
+        # TODO: validate for unique name and label
+
         setattr(s, field_name, value)       # In-place modification
 
 

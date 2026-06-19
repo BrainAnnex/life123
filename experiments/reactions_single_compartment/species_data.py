@@ -1,0 +1,90 @@
+# ---
+# jupyter:
+#   jupytext:
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.15.2
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
+# %% [markdown]
+# ### A demo/tutorial on the data structure for Species and SpeciesRegistry
+#
+# **"Species"** is very broadly defined to be a molecule or larger entity that the simulator acts on.   
+# For now, small molecules, enzymes and macromolecules.   
+# NOT to be confused with ecological species (homo sapiens, etc)!
+
+# %% [markdown]
+# ### TAGS :   "quick-start", "basic"
+
+# %%
+LAST_REVISED = "June 19, 2026"
+LIFE123_VERSION = "1.0.0rc8"     # Library version this experiment is based on
+
+# %%
+#import set_path            # Using MyBinder?  Uncomment this before running the next cell!
+                            # Importing this module will add the project's home directory to sys.path
+
+# %%
+#import sys, os
+#os.getcwd()
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
+
+from life123 import check_version, Species, SpeciesRegistry
+
+# %%
+check_version(LIFE123_VERSION)    # To check compatibility
+
+# %%
+
+# %% [markdown]
+# ## Creation of individual species
+
+# %%
+# Minimal!
+s1 = Species("A")   # The first, and only required, argument is a unique "id"
+
+print(s1)   # Notice the various attributes (fields); by default, "name" and "label" are made equal to the passed "id"
+
+# %%
+
+# %%
+# Additional properties may be set at initialization...
+
+s2 = Species(
+            id="metK",
+            name="methionine adenosyltransferase",
+            categories=["protein", "enzyme"],
+            molecular_weight=43000,
+            ec_number="2.5.1.6",
+            metadata={"compartment": "cytosol"},
+            plot_color="darkturquoise"
+        )
+
+print(s2)
+
+# %%
+# ... or added later
+
+s1.diffusion_rate=123.   # s1 is a "Species" object (a python dataclass), and its attributes may be set the usual way
+
+print(s1)
+
+# %%
+# A number of validations are automatically performed
+
+try:
+    s1.diffusion_rate = -1    # Negative diffusion!
+except Exception as ex:
+    print("What were you thinking?!? ", ex)
+
+# %%
+print(s1)       # Unchanged
+
+# %%

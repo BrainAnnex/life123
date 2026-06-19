@@ -36,6 +36,32 @@ def test_constructor_Species():
         Species(id="test", categories=123)          # Bad value
 
 
+    s = Species(id="test")
+    s.diffusion_rate = 10
+    assert s == Species(id='test', name='test', label='test', sort_order=0, diffusion_rate=10, charge=0, formula='',
+                        ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None, categories=[], metadata={}, annotation='', plot_color='')
+
+    with pytest.raises(Exception):
+        s.diffusion_rate = -1           # Negative diffusion
+
+    with pytest.raises(Exception):
+        Species(id="test", name=123)    # Bad value
+
+    with pytest.raises(Exception):
+        Species(id="test", label=["confused"])      # Bad value
+
+
+    s = Species(id="test", name="       ")          # `id` is used for `name` when `name` is missing
+    assert s.name == "test"
+    s = Species(id="test", name=None)               # `id` is used for `name` when `name` is missing
+    assert s.name == "test"
+
+    s = Species(id="test", label="       ")         # `id` is used for `label` when `label` is missing
+    assert s.label == "test"
+    s = Species(id="test", label=None)              # `id` is used for `label` when `label` is missing
+    assert s.label == "test"
+
+
 
 
 
@@ -503,8 +529,18 @@ def test_set_value():
     with pytest.raises(Exception):
         sr.set_value(species_id="B", field_name="name", value={"a": 1})     # Bad value
 
+    sr.set_value(species_id="B", field_name="name", value="      ")    # Missing value; the `id` is used instead
+    assert sr.get_species("B") == Species(id='B', name='B', label='B', sort_order=1, diffusion_rate=None, charge=0, formula='',
+                                          ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None,
+                                          categories=[], metadata={}, annotation='', plot_color='plum')
+
     with pytest.raises(Exception):
-        sr.set_value(species_id="B", field_name="label", value="      ")    # Bad value
+        sr.set_value(species_id="B", field_name="label", value=1234)     # Bad value
+
+    sr.set_value(species_id="B", field_name="label", value="      ")    # Missing value; the `id` is used instead
+    assert sr.get_species("B") == Species(id='B', name='B', label='B', sort_order=1, diffusion_rate=None, charge=0, formula='',
+                                          ec_number='', cas_number='', chebi='', locus_tag='', molecular_weight=None,
+                                          categories=[], metadata={}, annotation='', plot_color='plum')
 
 
 
