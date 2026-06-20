@@ -1843,7 +1843,7 @@ class UniformCompartment:
                 f"plot_history(): the number of provided colors ({len(colors)}) doesn't match the number of species ({len(species)})"
             # Save the passed colors with the species data
             for i, col in enumerate(colors):
-                self.get_species_data().set_value(species_id=species[i], field_name="plot_color", value=col)
+                self.get_species_data().set_value(species_id=species[i], field="plot_color", value=col)
         else:                           # Using argument `add_colors`
             if type(add_colors) == str:
                 add_colors = [add_colors]       # Turn a single value into a string
@@ -1854,7 +1854,7 @@ class UniformCompartment:
 
             colors = []     # The colors to be used for this plot, in the same order as the `species` list
             for i, sp in enumerate(species):
-                registered_color = self.get_species_data().get_value(species_id=species[i], field_name="plot_color")    # Might be blank
+                registered_color = self.get_species_data().get_value(species_id=species[i], field="plot_color")    # Might be blank
                 if registered_color:    # A color was already assigned to this species
                     colors.append(registered_color)     # Use the pre-assigned color for this species
                 else:
@@ -1864,7 +1864,7 @@ class UniformCompartment:
                     new_color = add_colors[0]   # Get the next color, from the start of the list
                     del add_colors[0]           # Drop that first element from the list
                     # Use the passed color for this species (and also save it in its species data)
-                    self.get_species_data().set_value(species_id=species[i], field_name="plot_color", value=new_color)
+                    self.get_species_data().set_value(species_id=species[i], field="plot_color", value=new_color)
                     colors.append(new_color)
 
 

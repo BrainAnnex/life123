@@ -41,7 +41,7 @@
 # ![Downregulated by shunt](../../docs/down_regulate_1.png)
 
 # %%
-LAST_REVISED = "June 18, 2026"
+LAST_REVISED = "June 20, 2026"
 LIFE123_VERSION = "1.0.0rc8"     # Library version this experiment is based on
 
 # %%
@@ -152,7 +152,7 @@ uc.describe_reactions()
 uc.plot_reaction_network(log_file=log_file)
 
 # %%
-IFrame(log_file, width=1000, height=500)         # You may also open the log file in a browser
+IFrame(log_file, width=1000, height=600)         # You may also open the log file in a browser
 
 # %%
 

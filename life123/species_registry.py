@@ -78,7 +78,7 @@ class Species:
                     value = self.id         # Use the `id` value if missing
 
         else:
-            self._validate(field_name=name, value=value)
+            self._validate(field=name, value=value)
 
 
         # Carry out the actual setting of the property
@@ -86,32 +86,32 @@ class Species:
 
 
 
-    def _validate(self, field_name :str, value) -> None:
+    def _validate(self, field :str, value) -> None:
         """
         Note: "label" and "name" are handled separately; not here
 
-        :param field_name:
+        :param field:
         :param value:
         :return:            None
         """
         # TODO: no longer needed by SpeciesRegistry class; can now be moved into Species class
         # TODO: add more validation
 
-        match field_name:
+        match field:
             case "diffusion_rate":
                 # Acceptable values: None, or a non-negative number (possibly Numpy)
                 if (value is not None):
                     assert isinstance(value, (float, int, np.integer, np.floating)), \
-                        f"The value for `{field_name}` ({value}) is not a valid number; the value given is of type {type(value)}"
+                        f"The value for `{field}` ({value}) is not a valid number; the value given is of type {type(value)}"
 
                     assert value >= 0, \
-                        f"`{field_name}` cannot be negative; the value given: {value}"
+                        f"`{field}` cannot be negative; the value given: {value}"
 
 
             case "categories":
                 # Acceptable values: lists
                 assert type(value) == list, \
-                    f"`{field_name}` must be a list; the value given ({value}) is of type {type(value)}"
+                    f"`{field}` must be a list; the value given ({value}) is of type {type(value)}"
 
 
 
@@ -243,7 +243,7 @@ class SpeciesRegistry:
                 f"SpeciesRegistry() instantiation: the number of elements in the special argument `{k}` ({len(v)}) " \
                 f"doesn't match the requested number of species ({number_species})"
 
-            self.set_all_values(field_name=k, values=v)
+            self.set_all_values(field=k, values=v)
 
 
 
@@ -369,58 +369,58 @@ class SpeciesRegistry:
 
 
 
-    def get_value(self, species_id :str, field_name :str):
+    def get_value(self, species_id :str, field :str):
         """
         If the species isn't found, or if it lacks the requested field (property) name,
         an Exception is raised
 
         :param species_id:  String with a unique value to identify a species
-        :param field_name:  The name of the property of interest.  EXAMPLE: "formula"
+        :param field:  The name of the property of interest.  EXAMPLE: "formula"
         :return:            The value of the above property, for the specified species.
                                 (Note that None may be returned if that happens to be the property value)
         """
         s = self.get_species(species_id)
         try:
-            value = getattr(s, field_name)
+            value = getattr(s, field)
         except:
-            raise Exception(f"get_value(): species `{species_id}` has no attribute '{field_name}'")
+            raise Exception(f"get_value(): species `{species_id}` has no attribute '{field}'")
 
         return value
 
 
 
-    def get_all_values(self, field_name :str):
+    def get_all_values(self, field :str):
         """
         Retrieve all the values of the specified field (property),
         across all species in order of their registration index
 
-        :param field_name:  The name of the property of interest.  EXAMPLE: "formula"
-        :return:            A list of all values.  Some may be None
+        :param field:  The name of the property of interest.  EXAMPLE: "formula"
+        :return:       A list of all values.  Some may be None
         """
         all_values = []
         for key, val in self.by_id.items():
-            value = self.get_value(species_id=key, field_name=field_name)
+            value = self.get_value(species_id=key, field=field)
             all_values.append(value)
 
         return all_values
 
 
 
-    def max_value(self, field_name :str):
+    def max_value(self, field :str):
         """
 
-        :param field_name:  The name of the property of interest.  EXAMPLE: "diffusion_rate"
-        :return:            The max of all values.
-                                If the species registry is empty, or if any value is None,
-                                an Exception will be raised
+        :param field:  The name of the property of interest.  EXAMPLE: "diffusion_rate"
+        :return:       The max of all values.
+                        If the species registry is empty, or if any value is None,
+                        an Exception will be raised
         """
         assert self.number_of_species() > 0, \
             "get_max_value(): no values found, because no species are present"
 
         try:
-            max_value = max(self.get_all_values(field_name=field_name))
+            max_value = max(self.get_all_values(field=field))
         except Exception as ex:
-            if self.has_missing_values(field_name=field_name):      # For better error message
+            if self.has_missing_values(field=field):      # For better error message
                 raise Exception("get_max_value(): cannot determine a max, because some values are missing")
             else:
                 raise Exception(f"get_max_value(): {ex}")       # Just pass thru the Exception message
@@ -430,17 +430,17 @@ class SpeciesRegistry:
 
 
 
-    def has_missing_values(self, field_name :str) -> bool:
+    def has_missing_values(self, field :str) -> bool:
         """
         Determine whether any of the registered species has any missing value for the specified field (property)
 
         :return:            True if any of the value is missing;
                                 False otherwise
-        :param field_name:  The name of the property of interest.  EXAMPLE: "diffusion_rate"
+        :param field:  The name of the property of interest.  EXAMPLE: "diffusion_rate"
         :return:
         """
         for s in self.by_id.values():
-            value = getattr(s, field_name, None)
+            value = getattr(s, field, None)
             if value is None:
                 return True
 
@@ -553,35 +553,24 @@ class SpeciesRegistry:
 
 
 
-    def set_value(self, species_id :str, field_name=None, value=None, **kwargs) -> None:
+    def update(self, species_id :str, **kwargs) -> None:
         """
+        Set the values of any number of fields (properties) for the given species.
+        See also set_value()
+
+        EXAMPLE:    update(species_id="X", diffusion_rate=123, plot_color="red")
 
         :param species_id:  String with a unique value to identify a species
-        :param field_name:  The name of the property of interest.  EXAMPLE: "formula"
-        :param value:       The value that we wish to set for the above property;
-                                None is an acceptable value
-        :param kwargs:      [OPTIONAL] Other named arguments.
-                                Their names must match the property names of the class "Species".
-                                If present, cannot have arguments `field_name` nor `value`
-                                EXAMPLE: diffusion_rate=123.
+        :param kwargs:      Other named arguments.
+                                Their names must match against the property names of the class "Species".
         :return:            None
         """
         s = self.get_species(species_id)
         # TODO: validate for unique name and label, if applicable
 
-        if field_name is not None:      # Setting by `field_name` and `value`
-            # Note: value could be None
-            assert kwargs == {}, \
-                f"set_value(): Cannot specify both `field_name` and `{list(kwargs)[0]}`"
-            setattr(s, field_name, value)       # In-place modification
-            return
-
-        # If we get here, `field_name` is None
-        assert len(kwargs) > 0, "set_value(): Must also pass the argument `value`"
-
-        # We're setting by special named arguments
-        assert value is None, \
-            f"set_value(): Cannot specify both `value` and `{list(kwargs)[0]}`"
+        assert len(kwargs) > 0, \
+            f"update(): Missing arguments with fields and values to update for species `{species_id}`.  " \
+            f"USAGE EXAMPLE: update(species_id='{species_id}', diffusion_rate=123, plot_color='red')"
 
         for k, v in kwargs.items():
             #print(f"key: {k} -> value: {v}")    # EXAMPLE: key: plot_color -> value: ('blue', 'turquoise')
@@ -589,14 +578,35 @@ class SpeciesRegistry:
 
 
 
-    def set_all_values(self, field_name :str, values :list) -> None:
+    def set_value(self, species_id :str, field=None, value=None) -> None:
+        """
+        Set the value of one specific field (property) for the given species.
+        For setting multiple values at once, you may use update()
+
+        EXAMPLE:    set_value(species_id="X", field="diffusion_rate", value=123)
+
+        :param species_id:  String with a unique value to identify a species
+        :param field:       The name of the property of interest;
+                                it must match against one of the property names of the class "Species"
+        :param value:       The value that we wish to set for the above property;
+                                note that None is an acceptable value
+        :return:            None
+        """
+        s = self.get_species(species_id)
+        # TODO: validate for unique name and label, if applicable
+
+        setattr(s, field, value)       # In-place modification.  Note: value could be None
+
+
+
+    def set_all_values(self, field :str, values :list) -> None:
         """
         Set values across ALL species, in order of their registration index,
         for the specified field (property)
 
-        :param field_name:  The name of the property of interest.  EXAMPLE: "formula"
-        :param values:      A list of values compatible with the above field
-        :return:            None
+        :param field:   The name of the property of interest.  EXAMPLE: "formula"
+        :param values:  A list of values compatible with the above field
+        :return:        None
         """
         assert type(values) == list or type(values) == tuple, \
             "set_values(): the argument `values` must be a list or tuple"
@@ -607,7 +617,7 @@ class SpeciesRegistry:
 
         index = 0
         for key, val in self.by_id.items():
-            self.set_value(species_id=key, field_name=field_name, value=values[index])
+            self.set_value(species_id=key, field=field, value=values[index])
             index += 1
 
 
@@ -640,7 +650,7 @@ class SpeciesRegistry:
         fallback_colors = None      # A list that will be created if needed
         new_color_index = 0
         for label in species_ids:
-            stored_color = self.get_value(species_id=label, field_name="plot_color")     # Will be an empty string if no color was registered for this species
+            stored_color = self.get_value(species_id=label, field="plot_color")     # Will be an empty string if no color was registered for this species
             if stored_color:
                 registered_colors.append(stored_color)
             else:   # In case no previously-registered color for this chemical
@@ -650,7 +660,7 @@ class SpeciesRegistry:
                 new_color = fallback_colors[new_color_index]
                 new_color_index += 1
                 registered_colors.append(new_color)
-                self.set_value(species_id=label, field_name="plot_color", value=new_color)
+                self.set_value(species_id=label, field="plot_color", value=new_color)
 
 
         return registered_colors        # List of color names, with as many entries as the species of interest

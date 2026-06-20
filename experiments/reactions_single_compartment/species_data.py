@@ -133,13 +133,13 @@ sr_2 = SpeciesRegistry()
 sr_2.as_recordset()
 
 # %%
-sr_2.add_species(id="X")       # Minimal!
+sr_2.add_species("X")       # Minimal!
 
 # %%
 sr_2.as_recordset()     # `name` and `label`, not directly supplied, were by default made equal to `id`
 
 # %%
-sr_2.add_species(id="Y", annotation="need to re-test")
+sr_2.add_species("Y", annotation="need to re-test")
 
 # %%
 
@@ -152,17 +152,25 @@ rome_cocktail.as_dataframe()
 
 # %%
 # Several functions help deal with setting and reading values
-rome_cocktail.set_value(species_id="Q", diffusion_rate=5, plot_color="red")
+rome_cocktail.update(species_id="Q", diffusion_rate=5, plot_color="red")
 
-rome_cocktail.set_value(species_id="R", field_name="diffusion_rate", value=8)   # Alternate way to set a single value
+rome_cocktail.set_value(species_id="R", field="diffusion_rate", value=8)   # Alternate way to set a single value
 
 rome_cocktail.as_dataframe()
 
 # %%
-# Some search/aggregation functions
-rome_cocktail.max_value(field_name="molecular_weight")
+rome_cocktail.get_value(species_id="Q", field="molecular_weight")
 
 # %%
-rome_cocktail.has_missing_values(field_name="diffusion_rate")
+rome_cocktail.get_all_values(field="molecular_weight")
+
+# %%
+
+# %%
+# Some search/aggregation functions
+rome_cocktail.max_value(field="molecular_weight")
+
+# %%
+rome_cocktail.has_missing_values(field="diffusion_rate")   # Some of the diffusion rates are indeed missing
 
 # %%

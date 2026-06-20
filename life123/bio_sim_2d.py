@@ -732,7 +732,7 @@ class BioSim2D:
         """
         assert self.system is not None, \
                 "BioSim2D.diffuse_step_single_species(): Must first initialize the system"
-        assert not self.species_data.has_missing_values(field_name="diffusion_rate"), \
+        assert not self.species_data.has_missing_values(field="diffusion_rate"), \
                 "BioSim2D.diffuse_step_single_species(): Must first set the diffusion rates"
         assert self.sealed == True, \
                 "BioSim2D.diffuse_step_single_species(): For now, there's no provision for exchange with the outside"
@@ -743,7 +743,7 @@ class BioSim2D:
             return increment_matrix                                 # There's nothing to do in the case of just 1 bin!
 
         species_id = self.species_data.get_species_id(species_index)
-        diff = self.species_data.get_value(species_id=species_id, field_name="diffusion_rate")     # The diffusion rate of the specified single species
+        diff = self.species_data.get_value(species_id=species_id, field="diffusion_rate")     # The diffusion rate of the specified single species
 
         #assert not self.is_excessive(time_step, diff, delta_x), \  # TODO: implement
             #f"Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"

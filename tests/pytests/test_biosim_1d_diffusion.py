@@ -210,7 +210,7 @@ def test_diffuse_2():
     bio = BioSim1D(n_bins=1, species_data=chem_data)
     bio.set_uniform_concentration(chem_index=0, conc=8.0)
 
-    chem_data.set_value(species_id="A", field_name="diffusion_rate", value=20.)
+    chem_data.set_value(species_id="A", field="diffusion_rate", value=20.)
     #bio.describe_state()    # 1 bins and 1 species:  [[8.]]
 
     bio.diffuse(time_step=3, n_steps=1)    # With just 1 bin, nothing happens

@@ -160,7 +160,7 @@ class System1D:
         df = pd.DataFrame(self.system, columns=[f"Bin {i}" for i in range(self.n_bins)])
 
         df.insert(0, "Species", self.species_data.get_all_species_ids())
-        df.insert(1, "Diff rate", self.species_data.get_all_values(field_name="diffusion_rate")) # Missing values will show up as None
+        df.insert(1, "Diff rate", self.species_data.get_all_values(field="diffusion_rate")) # Missing values will show up as None
 
         return df
 
@@ -1702,7 +1702,7 @@ class BioSim1D(System1D):
                 "diffuse(): cannot specify both arguments `time_step` and `fraction_max_step`"
             assert 0 < fraction_max_step <= 1, \
                  "diffuse(): arguments `fraction_max_step` must be > 0 and <= 1"
-            max_diff_rate = self.species_data.max_value(field_name="diffusion_rate")     # The largest diffusion rate is the one
+            max_diff_rate = self.species_data.max_value(field="diffusion_rate")     # The largest diffusion rate is the one
                                                                         # setting the upper bound on max time steps
 
             time_step = fraction_max_step * self.diff_obj.max_time_step(diff_rate=max_diff_rate, delta_x=delta_x)
@@ -1757,7 +1757,7 @@ class BioSim1D(System1D):
         assert self.system is not None, \
             "diffuse_step(): Must first initialize the system"
 
-        assert not self.species_data.has_missing_values(field_name="diffusion_rate"), \
+        assert not self.species_data.has_missing_values(field="diffusion_rate"), \
             "diffuse_step(): Must first set the diffusion rates"
 
         assert self.sealed == True, \
@@ -1781,7 +1781,7 @@ class BioSim1D(System1D):
         # Loop over all the chemical species in the system
         for chem_index in range(self.n_species):
             species_id = self.species_data.get_species_id(chem_index)
-            diff = self.species_data.get_value(species_id=species_id, field_name="diffusion_rate")     # The diffusion rate of this chemical
+            diff = self.species_data.get_value(species_id=species_id, field="diffusion_rate")     # The diffusion rate of this chemical
             chem_label = self.species_data.get_species_id(chem_index)
             permeability = self.membranes_obj.permeability.get(chem_label)
             # TODO: maybe skip any species that have exactly zero as diffusion/permeability (species that
@@ -1934,7 +1934,7 @@ class BioSim1D(System1D):
                 "react_diffuse(): cannot specify both arguments `time_step` and `fraction_max_step`"
             assert 0 < fraction_max_step <= 1, \
                  "react_diffuse(): arguments `fraction_max_step` must be > 0 and <= 1"
-            max_diff_rate = self.species_data.max_value(field_name="diffusion_rate")     # The largest diffusion rate is the one
+            max_diff_rate = self.species_data.max_value(field="diffusion_rate")     # The largest diffusion rate is the one
                                                                         # setting the upper bound on max time steps
 
             time_step = fraction_max_step * self.diff_obj.max_time_step(diff_rate=max_diff_rate, delta_x=delta_x)

@@ -552,15 +552,15 @@ class ReactionRegistry:
             if new_index is not None:
                 print(f"register_reaction() INFO: a reaction intermediates (`{rxn_intermediate}`), not explicitly registered, was automatically added to the chemical registry")
 
-            if self.species_data.get_value(species_id=rxn_intermediate, field_name="diffusion_rate") is None:
+            if self.species_data.get_value(species_id=rxn_intermediate, field="diffusion_rate") is None:
                 # Attempt to estimate the diffusion rate constant of the reaction intermediate
-                D_enzyme = self.species_data.get_value(species_id=rxn_intermediate, field_name="diffusion_rate")
-                D_substrate = self.species_data.get_value(species_id=rxn.substrate, field_name="diffusion_rate")
+                D_enzyme = self.species_data.get_value(species_id=rxn_intermediate, field="diffusion_rate")
+                D_substrate = self.species_data.get_value(species_id=rxn.substrate, field="diffusion_rate")
                 # TODO: this might best belong elsewhere; also, review its validity
                 if (D_enzyme is not None) and (D_substrate is not None):
                     D_ES_rough_estimate = min(D_enzyme, D_substrate) * 0.9
                     print(f"register_reaction() INFO: diffusion rate for the reaction intermediates (`{rxn_intermediate}`), not yet specified, roughly estimated as {D_ES_rough_estimate}")
-                    self.species_data.set_value(species_id=rxn_intermediate, field_name="diffusion_rate", value=D_ES_rough_estimate)
+                    self.species_data.set_value(species_id=rxn_intermediate, field="diffusion_rate", value=D_ES_rough_estimate)
 
 
         involved_chemicals = set(rxn_reactants) | set(rxn_products)  # Union of sets
@@ -657,7 +657,7 @@ class ReactionRegistry:
         # If plot colors were registered, show them alongside the chem labels
         chem_labels_with_colors = []
         for label in chem_labels:
-            color = self.species_data.get_value(species_id=label, field_name="plot_color")
+            color = self.species_data.get_value(species_id=label, field="plot_color")
             if color:
                 chem_labels_with_colors.append(f'"{label}" ({color})')
             else:
@@ -840,7 +840,7 @@ class ReactionRegistry:
 
                 # Add each product to the graph as a node (if not already present)
                 properties={'name': species_name}
-                if diff := self.species_data.get_value(species_id=species_name, field_name="diffusion_rate"):
+                if diff := self.species_data.get_value(species_id=species_name, field="diffusion_rate"):
                     properties['diff_rate'] = diff
                 graph.add_node( node_id=chemical_id, labels="Chemical",
                                 properties=properties)
@@ -858,7 +858,7 @@ class ReactionRegistry:
 
                 # Add each reactant to the graph as a node (if not already present)
                 properties={'name': species_name}
-                if diff := self.species_data.get_value(species_id=species_name, field_name="diffusion_rate"):
+                if diff := self.species_data.get_value(species_id=species_name, field="diffusion_rate"):
                     properties['diff_rate'] = diff
                 graph.add_node(node_id=chemical_id, labels="Chemical",
                                properties=properties)
