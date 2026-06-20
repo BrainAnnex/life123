@@ -57,43 +57,28 @@ class Species:
         nucleotide
         purine
     """
-    def __post_init__(self):
-
-        """
-        # Assign default values to some arguments, based on available arguments
-        if self.name == "":
-            self.name = self.id
-
-        if self.label == "":
-            self.label = self.id
-
-        SpeciesValidation.validate(field_name="name", value=self.name)
-        SpeciesValidation.validate(field_name="label", value=self.label)
-
-        # Note: the other properties get validated as the pass thru __setattr__()
-        """
-
 
     def __setattr__(self, name :str, value):
         """
+        Note: here we do validation, and set a few defaults,
+              both during instantiation as well as when modifying an existing Species
 
         :param name:
         :param value:
         :return:
         """
-        # Special treatment for the properties (fields) "label" and "name"
-        if name == "label" or name == "name":
-            if (value is None):     # or (value == ""):
-                value = self.id
+        if (name == "label") or (name == "name"):
+            # Special treatment for the properties (fields) "label" and "name"
+            if (value is None):
+                value = self.id             # Use the `id` value if missing
             else:
                 assert type(value)==str, \
                     f"The field '{name}', if specified, must be a string; the value given ({value}) is of type {type(value)}"
                 if value.strip() == "":     # Detect if blank
-                    value = self.id
+                    value = self.id         # Use the `id` value if missing
 
         else:
-        #if name not in ["name", "label"]:   # Exclude properties that get validated later during instantiantion
-            SpeciesValidation.validate(field_name=name, value=value)
+            self._validate(field_name=name, value=value)
 
 
         # Carry out the actual setting of the property
@@ -101,20 +86,15 @@ class Species:
 
 
 
-
-
-############################################################################################
-
-class SpeciesValidation:
-
-    @staticmethod
-    def validate(field_name, value) -> None:
+    def _validate(self, field_name :str, value) -> None:
         """
+        Note: "label" and "name" are handled separately; not here
 
         :param field_name:
         :param value:
         :return:            None
         """
+        # TODO: no longer needed by SpeciesRegistry class; can now be moved into Species class
         # TODO: add more validation
 
         match field_name:
@@ -133,14 +113,6 @@ class SpeciesValidation:
                 assert type(value) == list, \
                     f"`{field_name}` must be a list; the value given ({value}) is of type {type(value)}"
 
-
-            case "name" | "label":
-                # Acceptable values: non-empty strings
-                assert type(value) == str, \
-                    f"`{field_name}` must be a string; the value given ({value}) is of type {type(value)}"
-
-                assert value.strip() != "", \
-                    f"`{field_name}` cannot be an empty string"
 
 
 
@@ -577,8 +549,6 @@ class SpeciesRegistry:
         :return:            None
         """
         s = self.get_species(species_id)
-        #SpeciesValidation.validate(field_name=field_name, value=value)
-        # Except for "name" and "label", field are validated by setattr
         # TODO: validate for unique name and label
 
         setattr(s, field_name, value)       # In-place modification
