@@ -313,47 +313,47 @@ def test_get_max_value():
     sr = SpeciesRegistry()
     
     with pytest.raises(Exception):
-        sr.get_max_value(field_name="diffusion_rate")       # Empty registry
+        sr.max_value(field_name="diffusion_rate")       # Empty registry
 
 
     sr.add_species(id="A")
     sr.set_value(species_id="A", field_name="diffusion_rate", value=10)
-    result = sr.get_max_value(field_name="diffusion_rate")
+    result = sr.max_value(field_name="diffusion_rate")
     assert result == 10
 
     sr.add_species(id="B")
     sr.set_value(species_id="B", field_name="diffusion_rate", value=3)
-    result = sr.get_max_value(field_name="diffusion_rate")
+    result = sr.max_value(field_name="diffusion_rate")
     assert result == 10
 
     sr.set_value(species_id="B", field_name="diffusion_rate", value=11)
-    result = sr.get_max_value(field_name="diffusion_rate")
+    result = sr.max_value(field_name="diffusion_rate")
     assert result == 11
 
     sr.add_species(id="X")      # This won't get the `diffusion_rate` set; its value will be None
     with pytest.raises(Exception):
-        sr.get_max_value(field_name="diffusion_rate")
+        sr.max_value(field_name="diffusion_rate")
 
     
 
 def test_missing_values_present():
     sr = SpeciesRegistry()
 
-    assert not sr.missing_values(field_name="diffusion_rate")
+    assert not sr.has_missing_values(field_name="diffusion_rate")
 
     sr.add_species(id="A")
     sr.set_value(species_id="A", field_name="diffusion_rate", value=10)
-    assert not sr.missing_values(field_name="diffusion_rate")
+    assert not sr.has_missing_values(field_name="diffusion_rate")
 
     sr.add_species(id="B")
     sr.set_value(species_id="B", field_name="diffusion_rate", value=3)
-    assert not sr.missing_values(field_name="diffusion_rate")
+    assert not sr.has_missing_values(field_name="diffusion_rate")
 
     sr.set_value(species_id="B", field_name="diffusion_rate", value=11)
-    assert not sr.missing_values(field_name="diffusion_rate")
+    assert not sr.has_missing_values(field_name="diffusion_rate")
 
     sr.add_species(id="X")      # This won't get the `diffusion_rate` set; its value will be None
-    assert sr.missing_values(field_name="diffusion_rate")
+    assert sr.has_missing_values(field_name="diffusion_rate")
 
 
 

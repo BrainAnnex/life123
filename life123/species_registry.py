@@ -141,7 +141,8 @@ class SpeciesRegistry:
         :param plot_colors:     [OPTIONAL] OBSOLETE
 
         :param **kwargs:        [OPTIONAL] Other named arguments.
-                                    Their names must match the property names of the class "Species"
+                                    Their names must match the property names of the class "Species".
+                                    If present, one of the 3 core arguments (`id` or `species` or `n_species`) must also be present
                                     EXAMPLE: diffusion_rate=[5, 2], plot_color=["blue", "red"]
         """
         # Raise Exception if any of the obsolete arguments are being used
@@ -243,6 +244,18 @@ class SpeciesRegistry:
                 f"doesn't match the requested number of species ({number_species})"
 
             self.set_all_values(field_name=k, values=v)
+
+
+
+    def __repr__(self):
+        msg = """This is on object of type life123.species_registry.SpeciesRegistry
+                 To display is, use the function as_recordset() or as_dataframe()
+                 EXAMPLE:   my_species_registry.as_dataframe()
+              """
+        return  msg
+
+
+
 
 
 
@@ -393,7 +406,7 @@ class SpeciesRegistry:
 
 
 
-    def get_max_value(self, field_name :str):
+    def max_value(self, field_name :str):
         """
 
         :param field_name:  The name of the property of interest.  EXAMPLE: "diffusion_rate"
@@ -407,7 +420,7 @@ class SpeciesRegistry:
         try:
             max_value = max(self.get_all_values(field_name=field_name))
         except Exception as ex:
-            if self.missing_values(field_name=field_name):      # For better error message
+            if self.has_missing_values(field_name=field_name):      # For better error message
                 raise Exception("get_max_value(): cannot determine a max, because some values are missing")
             else:
                 raise Exception(f"get_max_value(): {ex}")       # Just pass thru the Exception message
@@ -417,9 +430,9 @@ class SpeciesRegistry:
 
 
 
-    def missing_values(self, field_name :str) -> bool:
+    def has_missing_values(self, field_name :str) -> bool:
         """
-        Determine whether any of the registered species has any missing value for the specified field (property(
+        Determine whether any of the registered species has any missing value for the specified field (property)
 
         :return:            True if any of the value is missing;
                                 False otherwise
@@ -540,18 +553,39 @@ class SpeciesRegistry:
 
 
 
-    def set_value(self, species_id :str, field_name :str, value) -> None:
+    def set_value(self, species_id :str, field_name=None, value=None, **kwargs) -> None:
         """
 
         :param species_id:  String with a unique value to identify a species
         :param field_name:  The name of the property of interest.  EXAMPLE: "formula"
-        :param value:       The value that we wish to set for the above property
+        :param value:       The value that we wish to set for the above property;
+                                None is an acceptable value
+        :param kwargs:      [OPTIONAL] Other named arguments.
+                                Their names must match the property names of the class "Species".
+                                If present, cannot have arguments `field_name` nor `value`
+                                EXAMPLE: diffusion_rate=123.
         :return:            None
         """
         s = self.get_species(species_id)
-        # TODO: validate for unique name and label
+        # TODO: validate for unique name and label, if applicable
 
-        setattr(s, field_name, value)       # In-place modification
+        if field_name is not None:      # Setting by `field_name` and `value`
+            # Note: value could be None
+            assert kwargs == {}, \
+                f"set_value(): Cannot specify both `field_name` and `{list(kwargs)[0]}`"
+            setattr(s, field_name, value)       # In-place modification
+            return
+
+        # If we get here, `field_name` is None
+        assert len(kwargs) > 0, "set_value(): Must also pass the argument `value`"
+
+        # We're setting by special named arguments
+        assert value is None, \
+            f"set_value(): Cannot specify both `value` and `{list(kwargs)[0]}`"
+
+        for k, v in kwargs.items():
+            #print(f"key: {k} -> value: {v}")    # EXAMPLE: key: plot_color -> value: ('blue', 'turquoise')
+            setattr(s, k, v)       # In-place modification
 
 
 

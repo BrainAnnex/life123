@@ -732,7 +732,7 @@ class BioSim2D:
         """
         assert self.system is not None, \
                 "BioSim2D.diffuse_step_single_species(): Must first initialize the system"
-        assert not self.species_data.missing_values(field_name="diffusion_rate"), \
+        assert not self.species_data.has_missing_values(field_name="diffusion_rate"), \
                 "BioSim2D.diffuse_step_single_species(): Must first set the diffusion rates"
         assert self.sealed == True, \
                 "BioSim2D.diffuse_step_single_species(): For now, there's no provision for exchange with the outside"
