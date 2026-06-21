@@ -24,8 +24,8 @@
 # ### TAGS :   "uniform compartment"
 
 # %%
-LAST_REVISED = "Mar. 21, 2026"
-LIFE123_VERSION = "1.0.0rc7"         # Library version this experiment is based on
+LAST_REVISED = "June 20, 2026"
+LIFE123_VERSION = "1.0.0rc8"         # Library version this experiment is based on
 
 # %%
 #import set_path            # Using MyBinder?  Uncomment this before running the next cell!
@@ -49,6 +49,7 @@ check_version(LIFE123_VERSION)    # To check compatibility
 # Initialize the HTML logging (for the graphics)
 log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
                                             # IN CASE OF PROBLEMS, set manually to any desired name
+log_file
 
 # %%
 
@@ -90,7 +91,7 @@ uc = UniformCompartment(reactions=rxns)
 uc.plot_reaction_network(log_file=log_file)
 
 # %%
-IFrame(log_file, width=1200, height=600)         # You may also open the log file in a browser
+IFrame(log_file, width=1200, height=700)         # You may also open the log file in a browser
 
 # %% [markdown]
 # ### Note: this is an early implementation.  Kinetic parameters aren't yet implemented

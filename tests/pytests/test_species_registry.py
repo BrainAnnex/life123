@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from life123.species_registry import Species, SpeciesRegistry, Macromol
+from life123.species_registry import Species, SpeciesRegistry, MacroMolecules
 from life123.visualization.colors import Colors
 from tests.utilities.comparisons import *
 
@@ -745,124 +745,70 @@ def test__generate_generic_names():
 
 
 
-########################  MACRO-MOLECULES  ########################
+########################  MACRO MOLECULES  ########################
 
 
-def test_add_macromolecules():
-    chem_data = Macromol()
+def test_instantiate_macromolecules():
+    sr = SpeciesRegistry()
 
-    chem_data.add_macromolecules(["M1", "M2"])
-    assert chem_data.get_macromolecules() == ["M1", "M2"]
+    mm = MacroMolecules(sr)
 
-    chem_data.add_macromolecules("M3")
-    assert chem_data.get_macromolecules() == ["M1", "M2", "M3"]
-
-    chem_data.add_macromolecules(["M4", "M5"])
-    assert chem_data.get_macromolecules() == ["M1", "M2", "M3", "M4", "M5"]
-
-    chem_data.add_macromolecules("M2")          # Redundant
-    assert chem_data.get_macromolecules() == ["M1", "M2", "M3", "M4", "M5"]
-
-    chem_data.add_macromolecules(["M1", "M6"])  # Partially redundant
-    assert chem_data.get_macromolecules() == ["M1", "M2", "M3", "M4", "M5", "M6"]
+    assert mm.species_registry == sr
+    assert mm.binding_sites == {}
 
 
 
 def test_get_macromolecules():
-    chem_data = Macromol()
+    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
 
-    assert chem_data.get_macromolecules() == []
-    chem_data.add_macromolecules(["M1", "M2"])
-    assert chem_data.get_macromolecules() == ["M1", "M2"]
-    chem_data.add_macromolecules(["M3", "M1"])
-    assert chem_data.get_macromolecules() == ["M1", "M2", "M3"]
+    mm = MacroMolecules(sr)
 
+    assert mm.get_macromolecules() == []
 
+    mm.set_binding_site_affinity("M1", site_number=1, ligand="A", Kd=2.3)
+    assert mm.get_macromolecules() == ["M1"]
 
-def test_set_binding_site_affinity():
-    sr = SpeciesRegistry(id=["A", "B", "ZZZ"])
+    mm.set_binding_site_affinity("M2", site_number=1, ligand="A", Kd=12.6)
+    assert mm.get_macromolecules() == ["M1", "M2"]
 
-    chem_data = Macromol()          # TODO: probably pass the SpeciesRegistry as argument
-    chem_data.add_macromolecules(["M1", "M2"])
-
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
-    result = chem_data.get_binding_site_affinity(macromolecule="M1", site_number=1)
-    assert result == ("A", 3)
-    assert result.chemical == "A"
-    assert result.Kd == 3
-
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
-    assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 3)
-    assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
-
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
-    assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 3)
-    assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
-    assert chem_data.get_binding_site_affinity("M2", site_number=1) == ("B",11)
-
-    # Over-write previous value of affinity of "A" to site 1 of macromolecule "M1"
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=999)
-    assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 999)
-    assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
-    assert chem_data.get_binding_site_affinity("M2", site_number=1) == ("B",11)
-
-    # Attempting to associate another chemical to site 1 of macromolecule "M1", will result in error
-    with pytest.raises(Exception):
-        chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="ZZZ", Kd=999)
-
-    chem_data.set_binding_site_affinity(macromolecule="M3", site_number=10, ligand="A", Kd= 4)
-    assert chem_data.get_binding_site_affinity("M3", site_number=10) == ("A", 4)
-    assert chem_data.get_macromolecules() == ["M1", "M2", "M3"]     # "M3" got automatically added
-    assert chem_data.get_binding_site_affinity("M1", site_number=1) == ("A", 999)
-    assert chem_data.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
-    assert chem_data.get_binding_site_affinity("M2", site_number=1) == ("B",11)
-
-    # Unknown chemical "X"
-    with pytest.raises(Exception):
-        chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="X", Kd=100)
-
-
-
-def test_get_binding_site_affinity():
-    pass  # TODO
+    mm.set_binding_site_affinity("M1", site_number=2, ligand="B", Kd=6.7)
+    assert mm.get_macromolecules() == ["M1", "M2"]
 
 
 
 def test_get_binding_sites():
-    sr = SpeciesRegistry(id=["A", "B"])
+    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
 
-    chem_data = Macromol()
-    chem_data.add_macromolecules(["M1", "M2"])
+    mm = MacroMolecules(sr)
 
     with pytest.raises(Exception):
-        chem_data.get_binding_sites("M9999")    # Unknown macromolecule
+        mm.get_binding_sites("M9999")    # Unknown species
 
-    assert chem_data.get_binding_sites("M1") == []
-    assert chem_data.get_binding_sites("M2") == []
+    assert mm.get_binding_sites("M1") == []
+    assert mm.get_binding_sites("M2") == []
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
-    assert chem_data.get_binding_sites("M1") == [1]
-    assert chem_data.get_binding_sites("M2") == []
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
+    assert mm.get_binding_sites("M1") == [1]
+    assert mm.get_binding_sites("M2") == []
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
-    assert chem_data.get_binding_sites("M1") == [1, 2]
-    assert chem_data.get_binding_sites("M2") == []
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
+    assert mm.get_binding_sites("M1") == [1, 2]
+    assert mm.get_binding_sites("M2") == []
 
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
-    assert chem_data.get_binding_sites("M1") == [1, 2]
-    assert chem_data.get_binding_sites("M2") == [1]
+    mm.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
+    assert mm.get_binding_sites("M1") == [1, 2]
+    assert mm.get_binding_sites("M2") == [1]
 
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
-    assert chem_data.get_binding_sites("M1") == [1, 2]
-    assert chem_data.get_binding_sites("M2") == [1, 3]
+    mm.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
+    assert mm.get_binding_sites("M1") == [1, 2]
+    assert mm.get_binding_sites("M2") == [1, 3]
 
 
 
 def test_get_binding_sites_and_ligands():
-    sr = SpeciesRegistry(id=["A", "B"])
+    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
 
-    chem_data = Macromol()
-    chem_data.add_macromolecules(["M1", "M2"])
+    chem_data = MacroMolecules(sr)
 
     with pytest.raises(Exception):
         chem_data.get_binding_sites_and_ligands("M9999")    # Unknown macromolecule
@@ -889,45 +835,116 @@ def test_get_binding_sites_and_ligands():
 
 
 def test_get_ligand_name():
-    sr = SpeciesRegistry(id=["A", "B"])
+    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
 
-    chem_data = Macromol()
-    chem_data.add_macromolecules(["M1", "M2"])
-
-    with pytest.raises(Exception):
-        chem_data.get_ligand_name(macromolecule="M9999", site_number=123)    # Unknown macromolecule
+    mm = MacroMolecules(sr)
 
     with pytest.raises(Exception):
-        chem_data.get_ligand_name(macromolecule="M1", site_number=1)    # M1 has no sites associated to it
-
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="A", Kd=3.1)
+        mm.get_ligand_name(macromolecule="M9999", site_number=123)    # Unknown macromolecule
 
     with pytest.raises(Exception):
-        chem_data.get_ligand_name(macromolecule="M1", site_number=1)    # No site number 1 on M1
+        mm.get_ligand_name(macromolecule="M1", site_number=1)    # M1 has no sites associated to it
 
-    assert chem_data.get_ligand_name(macromolecule="M1", site_number=2) == "A"
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="A", Kd=3.1)
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="B", Kd=6.)
-    assert chem_data.get_ligand_name(macromolecule="M1", site_number=1) == "B"
+    with pytest.raises(Exception):
+        mm.get_ligand_name(macromolecule="M1", site_number=1)    # No site number 1 on M1
+
+    assert mm.get_ligand_name(macromolecule="M1", site_number=2) == "A"
+
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="B", Kd=6.)
+    assert mm.get_ligand_name(macromolecule="M1", site_number=1) == "B"
 
     sr.add_species("C")
-    chem_data.set_binding_site_affinity(macromolecule="M2", site_number=5, ligand="C", Kd=11.4)
-    assert chem_data.get_ligand_name(macromolecule="M2", site_number=5) == "C"
+    mm.set_binding_site_affinity(macromolecule="M2", site_number=5, ligand="C", Kd=11.4)
+    assert mm.get_ligand_name(macromolecule="M2", site_number=5) == "C"
+
+
+
+def test_get_binding_site_affinity():
+    pass  # TODO  - see test_set_binding_site_affinity()
 
 
 
 def test_show_binding_affinities():
-    pass
+    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+
+    mm = MacroMolecules(sr)
+
+    mm.set_binding_site_affinity("M1", site_number=1, ligand="A", Kd=2.3)
+    mm.set_binding_site_affinity("M1", site_number=2, ligand="B", Kd=6.7)
+    mm.set_binding_site_affinity("M2", site_number=1, ligand="A", Kd=12.6)
+
+    #mm.show_binding_affinities()       # TODO: turn into an automated test (it only prints out)
+
+
+
+def test_set_binding_site_affinity():
+    sr = SpeciesRegistry(id=["A", "B", "ZZZ", "M1", "M2", "M3"])
+
+    mm = MacroMolecules(species_registry=sr)
+
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
+    result = mm.get_binding_site_affinity(macromolecule="M1", site_number=1)
+    assert result == ("A", 3)
+    assert result.chemical == "A"
+    assert result.Kd == 3
+
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
+    assert mm.get_binding_site_affinity("M1", site_number=1) == ("A", 3)
+    assert mm.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
+
+    mm.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
+    assert mm.get_binding_site_affinity("M1", site_number=1) == ("A", 3)
+    assert mm.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
+    assert mm.get_binding_site_affinity("M2", site_number=1) == ("B",11)
+
+    # Over-write previous value of affinity of "A" to site 1 of macromolecule "M1"
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=999)
+    assert mm.get_binding_site_affinity("M1", site_number=1) == ("A", 999)
+    assert mm.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
+    assert mm.get_binding_site_affinity("M2", site_number=1) == ("B",11)
+
+    # Attempting to associate another chemical to site 1 of macromolecule "M1", will result in error
+    with pytest.raises(Exception):
+        mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="ZZZ", Kd=999)
+
+    mm.set_binding_site_affinity(macromolecule="M3", site_number=10, ligand="A", Kd= 4)
+    assert mm.get_binding_site_affinity("M3", site_number=10) == ("A", 4)
+    assert mm.get_binding_site_affinity("M1", site_number=1) == ("A", 999)
+    assert mm.get_binding_site_affinity("M1", site_number=2) == ("B", 5)
+    assert mm.get_binding_site_affinity("M2", site_number=1) == ("B",11)
+
+    # Unknown chemical "X"
+    with pytest.raises(Exception):
+        mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="X", Kd=100)
 
 
 
 def test_reset_macromolecule():
-    pass   # TODO
+    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+
+    mm = MacroMolecules(sr)
+
+    mm.set_binding_site_affinity("M1", site_number=1, ligand="A", Kd=2.3)
+    mm.set_binding_site_affinity("M1", site_number=2, ligand="B", Kd=6.7)
+    mm.set_binding_site_affinity("M2", site_number=1, ligand="A", Kd=12.6)
+    assert mm.get_macromolecules() == ["M1", "M2"]
+
+    mm.reset_macromolecule("M1")
+    assert mm.get_macromolecules() == ["M2"]
+
+    mm.reset_macromolecule("M2")
+    assert mm.get_macromolecules() == []
+
 
 
 def test_clear_macromolecules():
-    chem_data = Macromol()
-    chem_data.add_macromolecules(["M1", "M2"])
-    chem_data.clear_macromolecules()
-    assert chem_data.macromolecules == []
-    assert chem_data.binding_sites == {}
+    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+
+    mm = MacroMolecules(sr)
+    mm.set_binding_site_affinity("M1", site_number=1, ligand="A", Kd=2.3)
+
+    mm.clear_macromolecules()
+    assert mm.get_macromolecules() == []
+    assert mm.binding_sites == {}

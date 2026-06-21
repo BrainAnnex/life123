@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from life123 import SpeciesRegistry, UniformCompartment, ReactionRegistry, \
                     ReactionUnimolecular, ReactionSynthesis, ReactionGeneric, ReactionKinetics
-from life123.species_registry import Macromol
+from life123.species_registry import MacroMolecules
 
 
 
@@ -682,56 +682,83 @@ def test_set_temp():
 
 
 def test_set_macromolecules():
-    sr = SpeciesRegistry(id=["A", "B"])
-    chem = Macromol()
-    chem.add_macromolecules(["M1", "M2"])
-    chem.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
-    chem.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
-    chem.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
-    chem.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
+    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+    mm = MacroMolecules(sr)
 
-    rxn = UniformCompartment(species_data=sr, macromolecules=chem)
-    rxn.set_macromolecules()    # By default, set counts to 1 for all the registered macromolecules
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
+    mm.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
+    mm.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
 
-    assert rxn.macro_system == {"M1": 1, "M2": 1}
-    assert len(rxn.macro_system_state) == 2
-    assert rxn.macro_system_state["M1"] == {1: ("A", 0.), 2: ("B", 0.)}
-    assert rxn.macro_system_state["M2"] == {1: ("B", 0.), 3: ("B", 0.)}
+    uc = UniformCompartment(species_data=sr, macromolecules=mm)
+    uc.set_macromolecules()    # By default, set counts to 1 for all the registered macromolecules
+
+    assert uc.macro_system == {"M1": 1, "M2": 1}
+    assert len(uc.macro_system_state) == 2
+    assert uc.macro_system_state["M1"] == {1: ("A", 0.), 2: ("B", 0.)}
+    assert uc.macro_system_state["M2"] == {1: ("B", 0.), 3: ("B", 0.)}
 
 
     # Over-write the previous settings
-    rxn.set_macromolecules({"M2": 4})
+    uc.set_macromolecules({"M2": 4})
 
-    assert rxn.macro_system == {"M2": 4}
-    assert len(rxn.macro_system_state) == 1
-    assert rxn.macro_system_state["M2"] == {1: ("B", 0.), 3: ("B", 0.)}
+    assert uc.macro_system == {"M2": 4}
+    assert len(uc.macro_system_state) == 1
+    assert uc.macro_system_state["M2"] == {1: ("B", 0.), 3: ("B", 0.)}
 
 
     with pytest.raises(Exception):
-        rxn.set_macromolecules({"M999": 2})        # Unknown macromolecule
+        uc.set_macromolecules({"M999": 2})        # Unknown macromolecule
 
-    chem.add_macromolecules("M999")
+    sr.add_species("M999")
 
     # Over-write the previous settings
-    rxn.set_macromolecules({"M999": 2})
-    assert rxn.macro_system == {"M999": 2}
-    assert len(rxn.macro_system_state) == 1
-    assert rxn.macro_system_state["M999"] == {}     # No binding sites were registered
+    uc.set_macromolecules({"M999": 2})
+    assert uc.macro_system == {"M999": 2}
+    assert len(uc.macro_system_state) == 1
+    assert uc.macro_system_state["M999"] == {}     # No binding sites were registered
 
-    chem.set_binding_site_affinity(macromolecule="M999", site_number=12, ligand="A", Kd=4.5)
-    assert rxn.macro_system_state["M999"] == {}     # The system state has not been updated yet
+    mm.set_binding_site_affinity(macromolecule="M999", site_number=12, ligand="A", Kd=4.5)
+    assert uc.macro_system_state["M999"] == {}     # The system state has not been updated yet
     # Over-write the previous settings
-    rxn.set_macromolecules({"M999": 2})
-    assert rxn.macro_system_state["M999"] == {12: ("A", 0.)}
+    uc.set_macromolecules({"M999": 2})
+    assert uc.macro_system_state["M999"] == {12: ("A", 0.)}
+
+
+
+def test_get_occupancy():
+    sr = SpeciesRegistry(id=["A", "B", "C", "M1", "M2"])
+    mm = MacroMolecules(sr)
+
+    uc = UniformCompartment(species_data=sr, macromolecules=mm)
+
+    with pytest.raises(Exception):
+        # The system state for macromolecules has not been set yet
+        uc.get_occupancy(macromolecule="M1", site_number=1)
+
+    with pytest.raises(Exception):
+        # No occupancy data yet set for macromolecule `Unknown`
+        uc.get_occupancy(macromolecule="Unknown", site_number=1)
+
+    with pytest.raises(Exception):
+        # No occupancy data yet set for site number 1 of macromolecule `M1`
+        uc.get_occupancy(macromolecule="M1", site_number=1)
+
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="C", Kd=23.5)
+    uc.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
+
+    assert uc.macro_system == {"M1": 1}
+    assert uc.macro_system_state == {"M1": {1: ("C", 0.5)} }
+
+    assert uc.get_occupancy(macromolecule="M1", site_number=1) == 0.5
 
 
 
 def test_set_occupancy():
-    sr = SpeciesRegistry(id=["A", "B"])
-    chem_data = Macromol()
-    chem_data.add_macromolecules(["M1", "M2"])
+    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+    mm = MacroMolecules(sr)
 
-    rxn = UniformCompartment(species_data=sr, macromolecules=chem_data)
+    rxn = UniformCompartment(species_data=sr, macromolecules=mm)
 
     with pytest.raises(Exception):
         # Occupancy out of range
@@ -749,7 +776,7 @@ def test_set_occupancy():
         # No binding sites are defined on macromolecule M1
         rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="B", Kd=6.)
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="B", Kd=6.)
     rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
 
     assert rxn.macro_system == {"M1": 1}
@@ -759,41 +786,9 @@ def test_set_occupancy():
 
 
 
-def test_get_occupancy():
-    sr = SpeciesRegistry(id=["A", "B", "C"])
-    chem_data = Macromol()
-    chem_data.add_macromolecules(["M1", "M2"])
-
-    rxn = UniformCompartment(species_data=sr, macromolecules=chem_data)
-
-    with pytest.raises(Exception):
-        # The system state for macromolecules has not been set yet
-        rxn.get_occupancy(macromolecule="M1", site_number=1)
-
-    rxn.set_macromolecules()
-
-    with pytest.raises(Exception):
-        # No occupancy data yet set for macromolecule `Unknown`
-        rxn.get_occupancy(macromolecule="Unknown", site_number=1)
-
-    with pytest.raises(Exception):
-        # No occupancy data yet set for site number 1 of macromolecule `M1`
-        rxn.get_occupancy(macromolecule="M1", site_number=1)
-
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="C", Kd=23.5)
-    rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
-
-    assert rxn.macro_system == {"M1": 1, "M2": 1}
-    assert rxn.macro_system_state == {"M1": {1: ("C", 0.5)}, "M2": {} }
-
-    assert rxn.get_occupancy(macromolecule="M1", site_number=1) == 0.5
-
-
-
 def test_update_occupancy():
-    sr = SpeciesRegistry(id=["A", "B", "C"])
-    chem_data = Macromol()
-    chem_data.add_macromolecules(["M1", "M2"])
+    sr = SpeciesRegistry(id=["A", "B", "C", "M1", "M2"])
+    chem_data = MacroMolecules(sr)
 
     chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=10)
     chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=20)
@@ -809,7 +804,7 @@ def test_update_occupancy():
     rxn.set_macromolecules()
     assert rxn.macro_system == {"M1": 1, "M2": 1}
 
-    rxn.set_conc([10, 20, 30])      # Set the concentrations, respectively, of A, B and C
+    rxn.set_conc({"A": 10, "B": 20, "C": 30})
 
     assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=1) , 0.)
     assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=2) , 0.)

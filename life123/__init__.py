@@ -16,8 +16,7 @@ __version__ = "1.0.0rc8"    # IN-PROGRESS
 from life123.bio_sim_1d import (System1D, Membranes1D, Diffusion1D, BioSim1D)
 from life123.bio_sim_2d import (BioSim2D, Membranes2D)
 from life123.bio_sim_3d import BioSim3D
-from life123.chem_data import ChemData
-from life123.species_registry import (Species, SpeciesRegistry)
+from life123.species_registry import (Species, SpeciesRegistry, MacroMolecules)
 from life123.html_log import HtmlLog
 from life123.collections import (
     CollectionTabular,
@@ -42,7 +41,6 @@ from life123.reaction_registry import ReactionRegistry
 from life123.thermodynamics import ThermoDynamics
 from life123.uniform_compartment import UniformCompartment
 from life123.reaction_kinetics import (ReactionKinetics, VariableTimeSteps)
-
 from life123.visualization.graphic_log import GraphicLog, DisplayNetwork
 from life123.visualization.plotly_helper import PlotlyHelper
 from life123.visualization.py_graph_visual import PyGraphVisual
@@ -59,7 +57,6 @@ __all__ = [
     'BioSim1D',
     'BioSim2D',
     'BioSim3D',
-    'ChemData',
     'HtmlLog',
     'CollectionTabular',
     'CollectionArray',
@@ -69,6 +66,7 @@ __all__ = [
     'HistoryBinConcentration',
     'HistoryUniformConcentration',
     'HistoryReactionRate',
+    'MacroMolecules',
     'Membranes1D',
     'Membranes2D',
     'Numerical',

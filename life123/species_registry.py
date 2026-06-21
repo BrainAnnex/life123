@@ -720,23 +720,23 @@ class ChemicalAffinity(NamedTuple):
 
 
 
-class Macromol():
+class MacroMolecules():
     """
     Manage the modeling of large molecules (such as DNA)
-    with multiple binding sites (for example, for Transcription Factors).
+    that have multiple binding sites (for example, for Transcription Factors).
 
     CAUTION: this class is currently in flux, and likely to change.
     """
 
-    def __init__(self):
-        # TODO: probably pass the SpeciesRegistry as (optional?) argument
+    def __init__(self, species_registry):
+        """
 
-        self.macromolecules = []    # List of names.  EXAMPLE: ["M1", "M2"]
-                                    # The position in the list is referred to as the
-                                    #   "index" of that macro-molecule
-                                    # Names are enforced to be unique
+        :param species_registry:    Object of type "SpeciesRegistry"
+        """
 
-        self.binding_sites = {}     # A dict whose keys are macromolecule names.
+        self.species_registry = species_registry    # Object of type "SpeciesRegistry"
+
+        self.binding_sites = {}     # A dict whose keys are macromolecule id's.
                                     # The values are in turn dicts, indexed by binding-site number.
         # EXAMPLE:
         #       {"M1": {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)},
@@ -744,156 +744,57 @@ class Macromol():
         #               3: ChemicalAffinity("A", 1.8), 4: ChemicalAffinity("C", 2.3)}
         #        }
         #       where "M1", "M2" are macro-molecules,
-        #           and "A", "B", "C" are bulk chemicals (such as transcription factors),
+        #           and "A", "B", "C" are species (such as transcription factors),
         #           all previously-declared;
         #           the various ChemicalAffinity's are NamedTuples (objects)
         #           storing a ligand name and its dissociation constant at that site.
-
-        # TODO: maybe make a new class for a SINGLE macromolecule (akin to what done for reactions)
 
         # Info on Binding Site Affinities : https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6787930/
 
 
 
-
-    def add_macromolecules(self, names: str|list[str]) -> None:
+    def get_macromolecules(self) -> list[str]:
         """
-        Register one or more macromolecule species, specified by their name(s)
-        Note: this is a register of names, NOT of dynamical information
-              about counts of macromolecules in the system (which is the domain of the class UniformCompartment)
-
-        :param names:   A string, or list of strings, with the name(s) of the macromolecule(s)
-        :return:        None.  The object attribute self.macro_molecules will get modified
+        Return the list of id's of the species that have
+        data about binding-site affinity
+        :return:
         """
-        if type(names) == str:  # If a single name was given, turn it into a list
-            names = [names]
-
-        for m in names:
-            if m in self.macromolecules:
-                # Warn of redundant attempt to re-register an existing macromolecule name
-                print(f"WARNING: Macromolecule `{m}` was already registered.  Skipped...")
-            else:
-                self.macromolecules.append(m)  # Grow the list of registered macromolecules
+        return list(self.binding_sites)
 
 
 
-    def get_macromolecules(self) -> [str]:
-        """
-        Return a list of the names of all the registered macromolecules
-
-        :return:    A (possibly empty) list of the names of all the registered macromolecules
-        """
-        return self.macromolecules
-
-
-
-    def set_binding_site_affinity(self, macromolecule: str, site_number: int, ligand: str, Kd) -> None:
-        """
-        Set the values of the binding affinity of the given macromolecule, at the indicated site on it,
-        for the specified chemical species.
-
-        Any previously-set value (for that macromolecule/site_number/chemical) will get over-written.
-
-        IMPORTANT: Only 1 chemical (ligand type) can be associated to a particular site of a given macromolecule; attempting
-        to associate another one will result in error.  In case multiple ligands can bind to the same physical site on
-        the macromolecule, simply assign multiple site numbers for each of them
-
-        NOTE: at present, no allowance is made for the fact that if the macromolecule is already bound
-              to chemical "X" then its affinity of "Y" might be different than in the absence of "X"
-
-        :param macromolecule:   Name of a macromolecule; if not previously-declared,
-                                    it will get added to the list of registered macromolecules
-        :param site_number:     Unique integer to identify a binding site on the macromolecule
-        :param ligand:          Id of a previously-declared (bulk) chemical;
-                                    if not found, an Exception will be raised       TODO: inconsistent with "macromolecule" arg
-        :param Kd:              Dissociation constant, in units of concentration (typically microMolar).
-                                    Note that the dissociation constant is inversely proportional to the binding affinity
-        :return:                None
-        """
-        # TODO: restore the validation below
-        #assert ligand in self.get_all_labels(), \
-        #    f"set_binding_site_affinity(): no chemical named `{ligand}` found; use add_species() first"
-
-        assert type(site_number) == int, \
-            f"set_binding_site_affinity(): the argument `site_number` must be an integer"
-
-        if macromolecule not in self.macromolecules:
-            self.add_macromolecules([macromolecule])
-
-        if self.binding_sites.get(macromolecule) is None:
-            self.binding_sites[macromolecule] = {}          # Initialize the dict of binding sites for this macromolecule
-
-        binding_data = self.binding_sites[macromolecule]    # This will be a dict whose key is the site_number
-
-        if site_number in binding_data:
-            existing_affinity_data = binding_data[site_number]
-            if existing_affinity_data.chemical != ligand:
-                raise Exception(f"set_binding_site_affinity(): "
-                                f"site number {site_number} of macromolecule `{macromolecule}` was previously associated to chemical `{existing_affinity_data.chemical}` "
-                                f"(attempting to set an affinity value for chemical `{ligand}`)")
-
-        binding_data[site_number] = ChemicalAffinity(chemical=ligand, Kd=Kd)
-
-
-
-    def get_binding_site_affinity(self, macromolecule: str, site_number: int) -> ChemicalAffinity:
-        """
-        Return the value of the binding affinity of the given macromolecule.
-        If no value was previously set, an Exception is raised
-
-        :param macromolecule:   Name of a macromolecule; if not found, an Exception will get raised
-        :param site_number:     Integer to identify a binding site on the macromolecule
-        :return:                The NamedTuple (ligand name, dissociation constant)
-                                    if no value was previously set, an Exception is raised
-        """
-        assert macromolecule in self.macromolecules, \
-            f"get_binding_site_affinity(): no macromolecule named `{macromolecule}` found"
-
-        assert type(site_number) == int, \
-            f"get_binding_site_affinity(): the argument `site_number` must be an integer"
-
-        binding_data = self.binding_sites.get(macromolecule)    # This will be a dict whose key is the site_number.  (None if not found)
-        assert binding_data is not None, "not found"
-
-        chem_affinity = binding_data.get(site_number)           # Will be None if not found
-        assert chem_affinity is not None, "not found"
-
-        return chem_affinity
-
-
-
-    def get_binding_sites(self, macromolecule) -> [int]:
+    def get_binding_sites(self, macromolecule :str) -> list[int]:
         """
         Get a list of all the binding-site numbers of the given macromolecule.
         If the requested macromolecule isn't registered, an Exception will be raised
 
-        :param macromolecule:   The name of a macromolecule
+        :param macromolecule:   Id of a species that represents a large molecule
         :return:                A (possibly empty) list of integers, representing the binding-site numbers.
                                     EXAMPLE: [1, 2]
         """
         binding_site_info = self.binding_sites.get(macromolecule)   # EXAMPLE: {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)}
-        #   will be None if no binding sites are found
+                                                                    #   will be None if no binding sites are found
         if binding_site_info is None:
-            assert macromolecule in self.get_macromolecules(), \
-                f"get_binding_sites(): the requested macromolecule ({macromolecule}) isn't registered; use add_macromolecules()"
+            assert macromolecule in self.species_registry.get_all_species_ids(), \
+                f"get_binding_sites(): the requested macromolecule ({macromolecule}) isn't registered; use add_species()"
             return []
         return list(binding_site_info)                              # EXAMPLE: [1, 2]
 
 
 
-    def get_binding_sites_and_ligands(self, macromolecule) -> dict:
+    def get_binding_sites_and_ligands(self, macromolecule :str) -> dict:
         """
         Return a mapping (python dict) from binding-site number to ligand species, for the given macromolecule
         If the requested macromolecule isn't registered, an Exception will be raised
 
-        :param macromolecule:   The name of a macromolecule
+        :param macromolecule:   Id of a species that represents a large molecule
         :return:                A dict whose keys are binding-site numbers and values are their respective ligands
                                     EXAMPLE: {1: "A", 2: "C"}
         """
         binding_site_info = self.binding_sites.get(macromolecule)   # EXAMPLE: {1: ChemicalAffinity("A", 2.4), 2: ChemicalAffinity("C", 5.1)}
                                                                     #   It will be None if no binding sites are found
         if binding_site_info is None:
-            assert macromolecule in self.get_macromolecules(), \
+            assert macromolecule in self.species_registry.get_all_species_ids(), \
                 f"get_binding_sites(): the requested macromolecule ({macromolecule}) isn't registered; use add_macromolecules()"
             return {}
 
@@ -906,13 +807,13 @@ class Macromol():
 
 
 
-    def get_ligand_name(self, macromolecule: str, site_number: int) -> str:
+    def get_ligand_name(self, macromolecule :str, site_number :int) -> str:
         """
         Return the name of the ligand associated to the specified site
         on the given macromolecule.
         If not found, an Exception is raised
 
-        :param macromolecule:   The name of a macromolecule
+        :param macromolecule:   Id of a species that represents a large molecule
         :param site_number:     Integer to identify a binding site on the macromolecule
         :return:                The name of the ligand (chemical species)
         """
@@ -933,6 +834,34 @@ class Macromol():
 
 
 
+    def get_binding_site_affinity(self, macromolecule :str, site_number :int) -> ChemicalAffinity:
+        """
+        Return the value of the binding affinity of the given macromolecule.
+        If no value was previously set, an Exception is raised
+
+        :param macromolecule:   Id of a species that represents a large molecule
+        :param site_number:     Integer to identify a binding site on the macromolecule
+        :return:                The NamedTuple (ligand name, dissociation constant)
+                                    if no value was previously set, an Exception is raised
+        """
+        assert macromolecule in self.species_registry.get_all_species_ids(), \
+            f"get_binding_site_affinity(): no species (large molecule) with an ID of `{macromolecule}` found; use add_species() first"
+
+        assert type(site_number) == int, \
+            f"get_binding_site_affinity(): the argument `site_number` must be an integer"
+
+        binding_data = self.binding_sites.get(macromolecule)    # This will be a dict whose key is the site_number  (None if not found)
+        assert binding_data is not None, \
+            f"get_binding_site_affinity(): no binding-site information found for macromolecule `{macromolecule}`"
+
+        chem_affinity = binding_data.get(site_number)           # Will be None if not found
+        assert chem_affinity is not None, \
+            f"get_binding_site_affinity(): no chemical-affinity information found for macromolecule `{macromolecule}`"
+
+        return chem_affinity
+
+
+
     def show_binding_affinities(self) -> None:
         """
         Print out the Dissociation Constant for each Binding Site in each Macromolecule
@@ -948,11 +877,57 @@ class Macromol():
 
 
 
-    def reset_macromolecule(self, macromolecule) -> None:
+    def set_binding_site_affinity(self, macromolecule :str, site_number :int, ligand :str, Kd :float) -> None:
+        """
+        Set the values of the binding affinity of the given macromolecule, at the indicated site on it,
+        for the specified chemical species.
+
+        Any previously-set value (for that macromolecule/site_number/chemical) will get over-written.
+
+        IMPORTANT: Only 1 chemical (ligand type) can be associated to a particular site of a given macromolecule; attempting
+        to associate another one will result in error.  In case multiple ligands can bind to the same physical site on
+        the macromolecule, simply assign multiple site numbers for each of them
+
+        NOTE: at present, no allowance is made for the fact that if the macromolecule is already bound
+              to chemical "X" then its affinity of "Y" might be different than in the absence of "X"
+
+        :param macromolecule:   Id of a species that represents a large molecule
+        :param site_number:     Unique integer to identify a binding site on the macromolecule
+        :param ligand:          Id of a previously-declared species (small molecule)
+        :param Kd:              Dissociation constant, in units of concentration (typically microMolar).
+                                    Note that the dissociation constant is inversely proportional to the binding affinity
+        :return:                None
+        """
+        assert macromolecule in self.species_registry.get_all_species_ids(), \
+            f"set_binding_site_affinity(): no species (large molecule) with an ID of `{macromolecule}` found; use add_species() first"
+
+        assert ligand in self.species_registry.get_all_species_ids(), \
+            f"set_binding_site_affinity(): no species (small molecule) with an ID of `{ligand}` found; use add_species() first"
+
+        assert type(site_number) == int, \
+            f"set_binding_site_affinity(): the argument `site_number` must be an integer"
+
+        if self.binding_sites.get(macromolecule) is None:
+            self.binding_sites[macromolecule] = {}          # Initialize the dict of binding sites for this macromolecule
+
+        binding_data = self.binding_sites[macromolecule]    # This will be a dict whose key is the site_number
+
+        if site_number in binding_data:
+            existing_affinity_data = binding_data[site_number]
+            if existing_affinity_data.chemical != ligand:
+                raise Exception(f"set_binding_site_affinity(): "
+                                f"site number {site_number} of macromolecule  id `{macromolecule}` "
+                                f"was previously associated to small molecule id `{existing_affinity_data.chemical}` "
+                                f"(attempting to set an affinity value for chemical `{ligand}`)")
+
+        binding_data[site_number] = ChemicalAffinity(chemical=ligand, Kd=Kd)
+
+
+    def reset_macromolecule(self, macromolecule :str) -> None:
         """
         Erase all data for the specified macromolecule
 
-        :param macromolecule:   The name of a macromolecule
+        :param macromolecule:   Id of a species that represents a large molecule
         :return:                None
         """
         if self.binding_sites.get(macromolecule) is not None:
@@ -966,5 +941,4 @@ class Macromol():
 
         :return:    None
         """
-        self.macromolecules = []
         self.binding_sites = {}

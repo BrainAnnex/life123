@@ -5,7 +5,7 @@ import time
 import plotly.express as px
 import plotly.graph_objects as pgo
 from typing import Union
-from life123.species_registry import SpeciesRegistry, Macromol
+from life123.species_registry import SpeciesRegistry, MacroMolecules
 from life123.diagnostics import Diagnostics
 from life123.numerical import Numerical
 from life123.reaction_registry import ReactionRegistry
@@ -122,7 +122,7 @@ class UniformCompartment:
         self.previous_system = None # Concentration data of all the chemicals at the previous simulation step
 
 
-        self.macromolecules = macromolecules
+        self.macromolecules = macromolecules    # Object of type "MacroMolecules"
 
         self.macro_system = {}      # A dict mapping macromolecule names to their counts
                                     # EXAMPLE:  {"M1": 1, "M2": 3, "M3": 1}
@@ -1485,7 +1485,7 @@ class UniformCompartment:
     def set_macromolecules(self, data=None) -> None:
         """
         Specify the macromolecules, and their counts, to be included in the system.
-        The fractional occupancy is set to 0 at all binding sites of all the specified macromolecules.
+        The fractional occupancy is set to 0, for all binding sites of all the specified macromolecules.
         Any previous data gets over-written.
 
         Note: to set a single fractional occupancy value, use set_occupancy()
@@ -1518,38 +1518,11 @@ class UniformCompartment:
 
 
 
-    def set_occupancy(self, macromolecule, site_number: int, fractional_occupancy: float) -> None:
-        """
-        Set the fractional occupancy at the given binding site of the specified macromolecule,
-        using the requested value.
-        If the specified macromolecule hasn't yet been added to the dynamical system state,
-        automatically add it with count 1
-
-        :param macromolecule:           Name of a previously-registered macromolecule
-        :param site_number:             Integer to identify a binding site on the macromolecule
-        :param fractional_occupancy:    A number between 0. and 1., inclusive
-        :return:                        None
-        """
-        assert 0. <= fractional_occupancy <= 1., \
-            f"set_occupancy(): the value for the fractional occupancy must be a number between 0. and 1. " \
-            f"Value given: {fractional_occupancy}"
-
-        ligand = self.macromolecules.get_ligand_name(macromolecule=macromolecule, site_number=site_number)
-
-        # If the specified macromolecule hasn't yet been added to the dynamic system, automatically add it
-        # with count 1
-        if self.macro_system_state == {}:
-            self.set_macromolecules({macromolecule: 1})
-
-        self.macro_system_state[macromolecule][site_number] = (ligand, fractional_occupancy)
-
-
-
-    def get_occupancy(self, macromolecule, site_number) -> float:
+    def get_occupancy(self, macromolecule :str, site_number :int) -> float:
         """
         Get the fractional occupancy at the given binding site of the specified macromolecule.
 
-        :param macromolecule:           Name of a previously-registered macromolecule
+        :param macromolecule:           Id of a species that represents a large molecule
         :param site_number:             Integer to identify a binding site on the macromolecule
         :return:                        A number between 0. and 1., representing the fractional occupancy
         """
@@ -1566,6 +1539,33 @@ class UniformCompartment:
 
         (ligand, fractional_occupancy) = self.macro_system_state[macromolecule][site_number]
         return fractional_occupancy
+
+
+
+    def set_occupancy(self, macromolecule :str, site_number :int, fractional_occupancy :float) -> None:
+        """
+        Set the fractional occupancy at the given binding site of the specified macromolecule,
+        using the requested value.
+        If the specified macromolecule hasn't yet been added to the dynamical system state,
+        automatically add it with count 1
+
+        :param macromolecule:           Id of a species that represents a large molecule
+        :param site_number:             Integer to identify a binding site on the macromolecule
+        :param fractional_occupancy:    A number between 0. and 1., inclusive
+        :return:                        None
+        """
+        assert 0. <= fractional_occupancy <= 1., \
+            f"set_occupancy(): the value for the fractional occupancy must be a number between 0. and 1. " \
+            f"Value given: {fractional_occupancy}"
+
+        ligand = self.macromolecules.get_ligand_name(macromolecule=macromolecule, site_number=site_number)
+
+        # If the specified macromolecule hasn't yet been added to the dynamic system, automatically add it
+        # with count 1
+        if self.macro_system_state == {}:
+            self.set_macromolecules({macromolecule: 1})
+
+        self.macro_system_state[macromolecule][site_number] = (ligand, fractional_occupancy)
 
 
 
