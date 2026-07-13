@@ -7,6 +7,7 @@ from typing import Union, Set, Tuple
 import numpy as np
 from life123.thermodynamics import ThermoDynamics
 from life123.reaction_kinetics import ReactionKinetics
+from life123.units import show_standard_units, convert, K, C
 
 
 
@@ -103,26 +104,33 @@ class ReactionCommon:
     def reaction_details(self, rxn_properties :dict) -> str:
         """
         Return a string with some details about the parameters of this reaction,
-        extracted from the passed dictionary
+        contained in the passed dictionary
 
         :param rxn_properties:  A dictionary with numerical properties of interest for the reaction
-                                    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': -1005.13, 'K': 1.5}
+                                    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': 1.2345, 'K': 1.5}
 
         :return:                A string with some details about the parameters of this reaction
-                                    EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13 / Temp = 25 C)"
+                                    EXAMPLE: "  (kF = 3 | kR = 2 | delta_G = 1.2345 kJ/mol | Temp = 25 C)"
         """
-        details = []
-        #rxn_properties = self.extract_rxn_properties()
+        details = []    # Running list of strings with each of the individual details
+
         for k,v in rxn_properties.items():
-            details.append(f"{k} = {v:,.5g}")          # EXAMPLE: "kF = 3"
+            single_detail = f"{k} = {v:,.5g}"       # EXAMPLES: "kF = 3"
+                                                    #           "delta_G = 1.2345"
+            units = show_standard_units(k)
+            if units is not None:
+                single_detail += " " + units        # EXAMPLE: "delta_G = 1.2345 kJ/mol"
+
+            details.append(single_detail)
+
 
         description = ""
 
         if self.temp:
-            details.append(f"Temp = {self.temp - 273.15:,.4g} C")          # EXAMPLE: "Temp = 25 C"
+            details.append(f"Temp = {convert(self.temp, from_unit=K, to_unit=C):,.4g} C")          # EXAMPLE: "Temp = 25 C"
 
         if details:
-            description = "  (" + ' / '.join(details) + ")"   # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
+            description = "  (" + ' | '.join(details) + ")"   # EXAMPLE: "  (kF = 3 | kR = 2 | delta_G = 1.2345 kJ/mol)"
 
         return description
 

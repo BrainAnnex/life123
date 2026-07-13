@@ -8,15 +8,12 @@ import numpy as np
 
 class RandomReactionNetwork:
     """
-    EARLY PARTIAL IMPLEMENTATION!
-
     Generate and manage random networks of reactions that are thermodynamically possible,
-    and biologically plausible.
-
-    Kinetic parameters NOT yet implemented.
+    and biologically plausible
     """
 
-    def __init__(self, n_species :int, n_rxns :int, relative_rxn_prob=None, seed=None, temp=298.15, verbose=False):
+    def __init__(self, n_species :int, n_rxns :int, relative_rxn_prob=None, seed=None,
+                temp=298.15, thermodynamic_ruggedness = 2.0, verbose=False):
         """
         :param n_species:           Integer >=3, with the desired number of chemicals species
         :param n_rxns:              Number of desired reactions (ok to use 0 for testing)
@@ -28,8 +25,23 @@ class RandomReactionNetwork:
                                         EXAMPLE:  [0.2, 0.5, 0.3]
         :param seed:                [OPTIONAL] A (large) integer, to guarantee consistent random runs
         :param temp:                [OPTIONAL] Temperature in Kelvins.  By default, 298.15 K
+        :param thermodynamic_ruggedness: [OPTIONAL] It affects the magnitudes of the random reactions delta Gibbs energy values,
+                                            by means of picking the standard deviation of the normal distribution
+                                            used to generate the random values for the SPECIES enthalpy.
+                                            Very rough guidelines:
+                                                ruggedness	σ(H)	    behavior
+                                                    0.5	    10	    metabolism-like
+                                                    1	    20	    moderate
+                                                    1.5	    30	    broad chemistry
+                                                    2	    40	    rugged chemistry
+                                            A value of 40.4145 for sigma has the effect of
+                                            making the derived SD for the REACTION delta_H value to be sqrt(3) * sigma = 70 kJ/mol
+                                            For more details, see random_species_enthalpy()
+
         :param verbose:             [OPTIONAL] Some extra printout if True
         """
+        self.species_sigma_entropy = thermodynamic_ruggedness * 40.4145 / 2
+
         self.kB_over_h = 2.08366191233e10 # K-1 s-1
                                 # Boltzmann constant / Plank constant
                                 # Boltzmann constant = 1.380649 × 10-23 J K-1
@@ -71,14 +83,24 @@ class RandomReactionNetwork:
 
 
 
-    def setup_random_reactions(self, rxn_types :list[str], verbose=False):
+    def setup_random_reactions(self, rxn_types :list[str], verbose=False) -> None:
+        """
+        Create a network of randon reactions
+
+        :param rxn_types:   List of names of reaction classes.
+                                EXAMPLE: ["ReactionSynthesis", "ReactionDecomposition", "ReactionDecomposition"]
+        :param verbose:
+        :return:            None
+        """
         MAX_ATTEMPTS = 6        # To avoid infinite loops
 
         all_chems = self.species_data.get_all_species_ids()             # Get all the id's of the species we're using
         # Auto-generated strings "A", "B", ..., "Z", "Z2", "Z3", ...
 
+        k_diffusion_limit = 1e9  # Smoluchowski diffusion limit for bimolecular reactions
+
         for r in rxn_types:
-            # For each reaction to create
+            # For each reaction to create.  EXAMPLE: "ReactionSynthesis"
             #print(f"Attempting to add reaction of type: {r}")
             reactants, products = self._assign_chems_to_rxn(r, all_chems)
             #print(f"    Tentatively considering reactants: {reactants} | products: {products}")
@@ -97,8 +119,22 @@ class RandomReactionNetwork:
 
             delta_enthalpy = self.random_reaction_enthalpy(reactants, products)
             delta_entropy = self.random_reaction_entropy(reaction_type=r)
+
+            delta_gibbs_energy = ThermoDynamics.gibbs_energy_from_enthalpy_entropy(delta_H=delta_enthalpy,
+                                                                                   delta_S=delta_entropy,
+                                                                                   temp=self.temp)
+
+            forward_activation_gibbs_energy = self.forward_activation_gibbs_energy_BEP(delta_G=delta_gibbs_energy)
+            kF = self.rate_constant_from_activation_gibbs_energy(activation_delta_G=forward_activation_gibbs_energy,
+                                                                temp=self.temp)
+            if r == "ReactionSynthesis":
+                kF = min(kF, k_diffusion_limit)     # Apply an upper bound to reactions of the type A+B -> C
+            elif r == "ReactionDecomposition":
+                pass        # TODO: apply a diffusion limit to kR
+
             i = self.reaction_data.add_elementary_reaction(reactants=reactants, products=products,
                                                            delta_H=delta_enthalpy, delta_S=delta_entropy,
+                                                           kF=kF,
                                                            temp=self.temp)
 
             if verbose:
@@ -107,7 +143,7 @@ class RandomReactionNetwork:
 
 
 
-    def get_reactions(self):
+    def get_reaction_data(self):
         """
         Extract and return all the reactions
 
@@ -199,7 +235,7 @@ class RandomReactionNetwork:
 
 
 
-    def random_species_enthalpy(self, sigma = 40.4145, n=None) -> np.ndarray | float:
+    def random_species_enthalpy(self, sigma=None, n=None) -> np.ndarray | float:
         """
         Generate a random "standard enthalpy" value to assign to each of our chemical species.
         Essentially, a species standard enthalpy is a generalized, randomized version
@@ -208,7 +244,7 @@ class RandomReactionNetwork:
         The values are generated from a normal distribution all centered at zero,
         and with the given value for the standard deviation sigma.
 
-        The default value for sigma has the effect of making the derived SD
+        EXAMPLE: a value of 40.4145 for sigma has the effect of making the derived SD
         of the sum of 3 random values to be about
         sqrt(3) * sigma = 70 kJ/mol
         For example, the sum of 3 random values comes up in determining
@@ -226,6 +262,9 @@ class RandomReactionNetwork:
                             otherwise, return a single float.
                             All values are kJ/mol
         """
+        if sigma is None:
+            sigma = self.species_sigma_entropy
+
         return self.rng.normal(loc=0, scale=sigma, size=n)
 
 
@@ -275,7 +314,7 @@ class RandomReactionNetwork:
 
         :param reactants:   A list of the labels of the reactants
         :param products:    A list of the labels of the reaction products
-        :return:            A random value for the change in enthalpy of the given reaction,
+        :return:            A random value for the change in enthalpy of the given reaction, in kJ/mol,
                                 normally-distributed with mean 0 and σ ≈ 70 kJ/mol,
                                 thermodynamically consistent with all the previous random reactions added so far
         """
@@ -303,7 +342,6 @@ class RandomReactionNetwork:
             h_1 = self.get_species_enthalpy(products[0])
             h_2 = self.get_species_enthalpy(products[1])
             reaction_enthalpy = reaction_enthalpy + h_1 + h_2
-
 
         return reaction_enthalpy
 

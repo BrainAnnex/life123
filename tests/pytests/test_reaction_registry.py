@@ -296,10 +296,10 @@ def test_add_reaction():
 
     # Check the descriptions we has so far
     rxn_info = rxns.multiple_reactions_describe()
-    assert rxn_info[0] == '0: A <-> B  Elementary Unimolecular reaction  (kF = 3 / kR = 2 / K = 1.5)'
-    assert rxn_info[1] == '1: 2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.2857) | Kinetic rate function : `compute_rate_mass_action_kinetics()`'
-    assert rxn_info[2] == '2: 2 D  <-> C  Elementary Synthesis reaction  (kF = 11 / kR = 13 / delta_G = 0.27779 / K = 0.84615 / Temp = -73.15 C)'
-    assert rxn_info[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2.6763 / K = 5 / Temp = -73.15 C) | Kinetic rate function : `compute_rate_mass_action_kinetics()`'
+    assert rxn_info[0] == '0: A <-> B  Elementary Unimolecular reaction  (kF = 3 | kR = 2 | K = 1.5)'
+    assert rxn_info[1] == '1: 2 B <-> 5 C  (kF = 9 | kR = 7 | K = 1.2857) | Kinetic rate function : `compute_rate_mass_action_kinetics()`'
+    assert rxn_info[2] == '2: 2 D  <-> C  Elementary Synthesis reaction  (kF = 11 | kR = 13 | delta_G = 0.27779 kJ/mol | K = 0.84615 | Temp = -73.15 C)'
+    assert rxn_info[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 | kR = 1 | delta_G = -2.6763 kJ/mol | K = 5 | Temp = -73.15 C) | Kinetic rate function : `compute_rate_mass_action_kinetics()`'
 
 
     # Add another reaction (reaction index 4), this time with thermodynamic data;

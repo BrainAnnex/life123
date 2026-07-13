@@ -202,16 +202,18 @@ def test_random_reaction_enthalpy():
 
 
 def test_random_reaction_enthalpy_2():
-    net = RandomReactionNetwork(n_species=15, n_rxns=25, seed=1492042, verbose=False)
+    net = RandomReactionNetwork(n_species=20, n_rxns=30, seed=8492342, verbose=False)
 
+    # Extract the delta_H values for all the reactions
     H_list = [rxn.delta_H
-              for rxn in net.reaction_data.get_all_reactions()]
+              for rxn in net.get_reaction_data().get_all_reactions()]
 
+    assert len(H_list) == net.n_rxns
     #print(np.mean(H_list))
     #print(np.std(H_list))
-
-    assert np.allclose(np.mean(H_list), 7.511580706834767)   # This will approach 0
-    assert np.allclose(np.std(H_list), 76.07987788990208)    # Roughly around 70
+    # Note: the values are subject to change, if changes are made in RandomReactionNetwork's usage of random calls
+    assert np.allclose(np.mean(H_list), 1.134796074882131)  # This will approach 0
+    assert np.allclose(np.std(H_list), 75.23219472302631)   # Roughly around 70
 
 
 

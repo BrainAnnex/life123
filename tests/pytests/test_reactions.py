@@ -174,30 +174,11 @@ def test_constructor_ReactionUnimolecular():
 
 
 def test_describe_ReactionUnimolecular():
-    '''
-    rxn = ReactionUnimolecular(reactant="A", product="B")
-    assert rxn.describe(concise=True) == "A <-> B"
-    assert rxn.describe(concise=False) == "A <-> B  Elementary Unimolecular reaction"
-
-    rxn = ReactionUnimolecular(reactant="A", product="B", kF=20, kR=4)
-    assert rxn.describe(concise=True) == "A <-> B"
-    assert rxn.describe(concise=False) == "A <-> B  Elementary Unimolecular reaction  (kF = 20 / kR = 4 / K = 5)"
-
-    rxn = ReactionUnimolecular(reactant="A", product="B",
-                               kF=20, reversible=False)
-    assert rxn.describe(concise=True) == "A <-> B"
-    assert rxn.describe(concise=False) == "A <-> B  Elementary Unimolecular Irreversible reaction  (kF = 20 / kR = 0)"
-
-    rxn = ReactionUnimolecular(reactant="R", product="P",
-                               kF=10, kR=2, delta_H=-3000)
-    assert rxn.describe(concise=True) == "R <-> P"
-    assert rxn.describe(concise=False) == "R <-> P  Elementary Unimolecular reaction  (kF = 10 / kR = 2 / delta_H = -3,000 / K = 5)"
-    '''
     rxn = ReactionUnimolecular(reactant="R", product="P",
                                kF=10, delta_H=0.5, delta_S=-3, delta_G=None, temp=100)
     assert rxn.describe(concise=True) == "R <-> P"
     assert rxn.describe(concise=False) == \
-        "R <-> P  Elementary Unimolecular reaction  (kF = 10 / kR = 26.174 / delta_H = 0.5 / delta_S = -3 / delta_G = 0.8 / K = 0.38206 / Temp = -173.1 C)"
+        "R <-> P  Elementary Unimolecular reaction  (kF = 10 | kR = 26.174 | delta_H = 0.5 kJ/mol | delta_S = -3 J/(mol·K) | delta_G = 0.8 kJ/mol | K = 0.38206 | Temp = -173.1 C)"
 
 
 
@@ -798,23 +779,23 @@ def test_describe():
     rxn = ReactionGeneric(reactants=["A"], products=["B"], kF=3., kR=2.)
     rxn.kinetic_rate_function = None    # TODO: this will become the default
     assert rxn.describe(concise=True) == "A <-> B"
-    assert rxn.describe(concise=False) == "A <-> B  (kF = 3 / kR = 2 / K = 1.5) | No kinetic rate function provided"
+    assert rxn.describe(concise=False) == "A <-> B  (kF = 3 | kR = 2 | K = 1.5) | No kinetic rate function provided"
 
     rxn = ReactionGeneric(reactants=[(2, "B")], products=[(5, "C")], kF=9., kR=7.)
     rxn.kinetic_rate_function = None    # TODO: this will become the default
     assert rxn.describe(concise=True) == "2 B <-> 5 C"
-    assert rxn.describe(concise=False) == "2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.2857) | No kinetic rate function provided"
+    assert rxn.describe(concise=False) == "2 B <-> 5 C  (kF = 9 | kR = 7 | K = 1.2857) | No kinetic rate function provided"
 
 
     rxn = ReactionGeneric(reactants=[(2, "D")], products=[(1, "C")], kF=11., kR=13., temp=200)
     rxn.kinetic_rate_function = None    # TODO: this will become the default
     assert rxn.describe(concise=True) == "2 D <-> C"
-    assert rxn.describe(concise=False) == "2 D <-> C  (kF = 11 / kR = 13 / delta_G = 0.27779 / K = 0.84615 / Temp = -73.15 C) | No kinetic rate function provided"
+    assert rxn.describe(concise=False) == "2 D <-> C  (kF = 11 | kR = 13 | delta_G = 0.27779 kJ/mol | K = 0.84615 | Temp = -73.15 C) | No kinetic rate function provided"
 
     rxn = ReactionGeneric(reactants=["A", (2, "B")], products=[(3, "C"), "D"], kF=5., kR=1., temp=200)
     rxn.kinetic_rate_function = None    # TODO: this will become the default
     assert rxn.describe(concise=True) == "A + 2 B <-> 3 C + D"
-    assert rxn.describe(concise=False) == "A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2.6763 / K = 5 / Temp = -73.15 C) | No kinetic rate function provided"
+    assert rxn.describe(concise=False) == "A + 2 B <-> 3 C + D  (kF = 5 | kR = 1 | delta_G = -2.6763 kJ/mol | K = 5 | Temp = -73.15 C) | No kinetic rate function provided"
 
 
 

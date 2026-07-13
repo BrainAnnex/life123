@@ -41,30 +41,32 @@ class ThermoDynamics:
 
 
     @classmethod
-    def equilibrium_constant_from_gibbs_energy(cls, delta_G, temp :float) -> float:
+    def equilibrium_constant_from_gibbs_energy(cls, delta_G :float, temp :float|tuple) -> float:
         """
         Compute a reaction's equilibrium constant from its change in Gibbs Free Energy,
         at the specified temperature
 
         :param delta_G: Change in Gibbs Free Energy (from reactants to products), in kJ/mol
-        :param temp:    System's temperature, in degree Kelvins
+        :param temp:    In degrees Kelvin, or in pair format such as (25, C)
         :return:        The reaction's equilibrium constant
         """
+        temp = standardize_units(temp, dimension="temperature")
         return math.exp(- delta_G / (cls.R * temp))
 
 
 
     @classmethod
-    def gibbs_energy_from_equilibrium_constant(cls, K, temp) -> float:
+    def gibbs_energy_from_equilibrium_constant(cls, K :float, temp :float|tuple) -> float:
         """
         Compute a reaction's change in its Gibbs Free Energy from its equilibrium constant,
         at the specified temperature
 
         :param K:       The reaction's equilibrium constant
-        :param temp:    System's temperature, in degree Kelvins
+        :param temp:    In degrees Kelvin, or in pair format such as (25, C)
         :return:        The reaction's change in Gibbs Free Energy (from reactants to products),
                             in kJ/mol
         """
+        temp = standardize_units(temp, dimension="temperature")
         return -cls.R * temp * math.log(K)      # Natural log
 
 

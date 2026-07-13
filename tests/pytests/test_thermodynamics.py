@@ -21,6 +21,8 @@ def test_equilibrium_constant_from_gibbs_energy():
     assert np.allclose(1.27194180118, ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G = -1, temp = 500))
     assert np.allclose(0.78619949361, ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G =  1, temp = 500))
 
+    assert np.allclose(0.78619949361, ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G =  1, temp = (226.85, C)))
+
     delta_G = 8.
     K = ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G = delta_G, temp = 300)
     assert np.allclose(delta_G, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = K, temp = 300))   # Reverse ops
@@ -33,13 +35,15 @@ def test_gibbs_energy_from_equilibrium_constant():
     assert np.allclose(0, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 1, temp = 1000))
 
     assert np.allclose(-0.831446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 2.71828182846, temp = 100))
-    assert np.allclose(0.831446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K =1 / 2.71828182846, temp = 100))
+    assert np.allclose(0.831446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 1 / 2.71828182846, temp = 100))
 
     assert np.allclose(-8.31446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 2.71828182846, temp = 1000))
-    assert np.allclose(8.31446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K =1 / 2.71828182846, temp = 1000))
+    assert np.allclose(8.31446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 1 / 2.71828182846, temp = 1000))
 
     assert np.allclose(-0.0831446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 2.71828182846, temp = 10))
-    assert np.allclose(0.0831446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K =1 / 2.71828182846, temp = 10))
+    assert np.allclose(0.0831446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 1 / 2.71828182846, temp = 10))
+
+    assert np.allclose(-0.0831446261815324, ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = 2.71828182846, temp = (-263.15, C)))
 
     K = 4.2
     delta_G = ThermoDynamics.gibbs_energy_from_equilibrium_constant(K = K, temp = 273.)

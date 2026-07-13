@@ -11,9 +11,26 @@ class Unit:
     symbol: str     # EXAMPLE: "°C"
 
     dimension: str  # The type of quantity.  EXAMPLES: "temperature", "molar energy"
+    standard: bool  # True if this unit is a standard one for Life123 internal use
 
     factor: float   # The 1st (multiplicative) step in converting to the Life123 standard internal units
     offset: float   # The 2nd (additive) step in converting to the Life123 standard internal units
+
+
+
+def show_standard_units(quantity_name :str) -> str:
+    """
+    Return the name of Life123's internal standard units for the quantity of interest,
+    or None if no units name found
+
+    :param quantity_name:   Standard Life123 name of a quantity of interest;
+                                EXAMPLE: "delta_G"
+    :return:                The name of Life123's internal standard units for the above quantity;
+                                or None if not present
+    """
+    # TODO: synchronize to the rest of the module
+    MAPPING = {"delta_G": "kJ/mol", "delta_H": "kJ/mol", "delta_S": "J/(mol·K)"}
+    return MAPPING.get(quantity_name)
 
 
 
@@ -71,6 +88,7 @@ K = Unit(
     symbol="K",
 
     dimension="temperature",
+    standard=True,
 
     # To standardize to degree Kelvin
     factor=1,
@@ -82,6 +100,7 @@ C = Unit(
     symbol="°C",
 
     dimension="temperature",
+    standard=False,
 
     # To standardize to degree Kelvin
     factor=1,
@@ -93,6 +112,7 @@ F = Unit(
     symbol="°F",
 
     dimension="temperature",
+    standard=False,
 
     # To standardize to degree Kelvin
     factor=5/9,
@@ -106,6 +126,7 @@ KJ_PER_MOL = Unit(
     symbol="kJ/mol",
 
     dimension="molar energy",
+    standard=True,
 
     # To standardize to kJ/mol
     factor=1,
@@ -117,6 +138,7 @@ J_PER_MOL = Unit(
     symbol="kJ/mol",
 
     dimension="molar energy",
+    standard=False,
 
     # To standardize to kJ/mol
     factor=1/1000,
