@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from life123 import ChemData, System1D
+from life123 import SpeciesRegistry, System1D
 
 
 
@@ -14,21 +14,21 @@ def test_constructor():
         System1D(n_bins=3)          # Missing required arguments
 
 
-    chem_data = ChemData(names="A")
+    chem_data = SpeciesRegistry(id="A")
 
     with pytest.raises(Exception):
-        System1D(n_bins="I'm not an integer", chem_data=chem_data)
+        System1D(n_bins="I'm not an integer", species_data=chem_data)
 
     with pytest.raises(Exception):
-        System1D(n_bins=0, chem_data=chem_data)      # Must be at least 1
+        System1D(n_bins=0, species_data=chem_data)      # Must be at least 1
 
 
 
-    bio = System1D(n_bins=5, chem_data=chem_data)
+    bio = System1D(n_bins=5, species_data=chem_data)
 
     assert bio.n_bins == 5
     assert bio.n_species == 1
-    assert bio.chem_data == chem_data
+    assert bio.species_data == chem_data
     assert bio.global_Dx == 1
     assert np.allclose(bio.system_time, 0)
     expected = np.zeros((1, 5), dtype=float)
@@ -36,27 +36,27 @@ def test_constructor():
 
 
     # New test
-    chem_data = ChemData(names=["A", "B", "C"])
-    bio = System1D(n_bins=15, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B", "C"])
+    bio = System1D(n_bins=15, species_data=chem_data)
     assert bio.n_bins == 15
     assert bio.n_species == 3
-    assert bio.chem_data == chem_data
+    assert bio.species_data == chem_data
     expected = np.zeros((3,15), dtype=float)
     assert np.allclose(bio.system, expected)
 
 
 
 def test_system_size():
-    bio = System1D(n_bins=8 , chem_data=ChemData(names="A"))
+    bio = System1D(n_bins=8, species_data=SpeciesRegistry(id="A"))
     assert bio.system_size() == 8
 
-    bio = System1D(n_bins=1 , chem_data=ChemData(names=["A", "B"]))
+    bio = System1D(n_bins=1, species_data=SpeciesRegistry(id=["A", "B"]))
     assert bio.system_size() == 1
 
 
 
 def test_get_system_time():
-    bio = System1D(n_bins=8 , chem_data=ChemData(names="A"))
+    bio = System1D(n_bins=8, species_data=SpeciesRegistry(id="A"))
 
     result = bio.get_system_time()
     assert np.allclose(result, 0)
@@ -76,15 +76,15 @@ def test_describe_state():
 
 
 def test_get_chem_data():
-    chem_data=ChemData(names="A")
-    bio = System1D(n_bins=8 , chem_data=chem_data)
+    chem_data=SpeciesRegistry(id="A")
+    bio = System1D(n_bins=8, species_data=chem_data)
     assert bio.get_chem_data() == chem_data
 
 
 
 def test_assert_valid_bin():
-    chem_data = ChemData(names=["A", "B"])
-    bio = System1D(n_bins=3, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B"])
+    bio = System1D(n_bins=3, species_data=chem_data)
     with pytest.raises(Exception):
         bio.assert_valid_bin(-1)
 
@@ -103,8 +103,8 @@ def test_assert_valid_bin():
 
 
 def test_check_mass_conservation():
-    chem_data = ChemData(names=["A", "B"])
-    bio = System1D(n_bins=3, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B"])
+    bio = System1D(n_bins=3, species_data=chem_data)
     bio.set_all_uniform_concentrations([1., 20.])
 
     assert bio.check_mass_conservation(expected=3., chem_label="A") # 1 * 3
@@ -126,8 +126,8 @@ def test_replace_system():
 ########  SPATIAL ELEMENTS  ################
 
 def test_set_dimensions():
-    chem_data = ChemData(names=["A"])
-    bio = System1D(n_bins=4, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A"])
+    bio = System1D(n_bins=4, species_data=chem_data)
     bio.set_dimensions(21.)
     assert np.allclose(bio.system_length, 21.)
     assert np.allclose(bio.global_Dx, 7.)
@@ -138,8 +138,8 @@ def test_set_dimensions():
 
 
 def test_x_coord():
-    chem_data = ChemData(names=["A"])
-    sys = System1D(n_bins=4, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A"])
+    sys = System1D(n_bins=4, species_data=chem_data)
 
     with pytest.raises(Exception):
         sys.x_coord(0)      # must first call set_dimensions()
@@ -152,9 +152,9 @@ def test_x_coord():
 
 
 def test_bin_to_system_coord():
-    chem_data = ChemData(names=["A"])
+    chem_data = SpeciesRegistry(id=["A"])
 
-    sys = System1D(n_bins=5, chem_data=chem_data)
+    sys = System1D(n_bins=5, species_data=chem_data)
     assert np.allclose(sys.bin_to_system_coord(0), 0.)
 
     assert np.allclose(sys.bin_to_system_coord(4), 1.)
@@ -162,7 +162,7 @@ def test_bin_to_system_coord():
     assert np.allclose(sys.bin_to_system_coord(2), .5)
     assert np.allclose(sys.bin_to_system_coord(3), .75)
 
-    sys = System1D(n_bins=6, chem_data=chem_data)
+    sys = System1D(n_bins=6, species_data=chem_data)
     assert np.allclose(sys.bin_to_system_coord(0), 0.)
     assert np.allclose(sys.bin_to_system_coord(5), 1.)
     assert np.allclose(sys.bin_to_system_coord(2), .4)
@@ -171,16 +171,16 @@ def test_bin_to_system_coord():
 
 
 def test_system_to_bin_coord():
-    chem_data = ChemData(names=["A"])
+    chem_data = SpeciesRegistry(id=["A"])
 
-    sys = System1D(n_bins=5, chem_data=chem_data)
+    sys = System1D(n_bins=5, species_data=chem_data)
     assert sys.system_to_bin_coord(0.) == 0
     assert sys.system_to_bin_coord(1.) == 4
     assert sys.system_to_bin_coord(.25) == 1
     assert sys.system_to_bin_coord(.5) == 2
     assert sys.system_to_bin_coord(.75) == 3
 
-    sys = System1D(n_bins=6, chem_data=chem_data)
+    sys = System1D(n_bins=6, species_data=chem_data)
     assert sys.system_to_bin_coord(0.) == 0
     assert sys.system_to_bin_coord(1.) == 5
     assert sys.system_to_bin_coord(.5) == 2
@@ -192,8 +192,8 @@ def test_system_to_bin_coord():
 ##################  CHANGE RESOLUTIONS  ##################
 
 def test_increase_spacial_resolution():
-    chem_data = ChemData(names=["A", "B"])
-    bio = System1D(n_bins=3, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B"])
+    bio = System1D(n_bins=3, species_data=chem_data)
     bio.set_species_conc(chem_index=0, conc_list=[11., 12., 13.])
     bio.set_species_conc(chem_index=1, conc_list=[5., 15., 25.])
 
@@ -205,21 +205,21 @@ def test_increase_spacial_resolution():
 
 
 def test_double_spacial_resolution_linear_inter():
-    chem_data = ChemData(names=["A"])
-    bio = System1D(n_bins=2, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A"])
+    bio = System1D(n_bins=2, species_data=chem_data)
     bio.set_species_conc(chem_index=0, conc_list=[1., 2.])
     bio.double_spatial_resolution_linear()
     assert np.allclose(bio.system, [[1., 1.5, 2.]])
 
-    chem_data = ChemData(names=["A", "B"])
-    bio = System1D(n_bins=3, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B"])
+    bio = System1D(n_bins=3, species_data=chem_data)
     bio.set_species_conc(chem_index=0, conc_list=[11., 12., 13.])
     bio.set_species_conc(chem_index=1, conc_list=[5., 15., 25.])
     bio.double_spatial_resolution_linear()
     assert np.allclose(bio.system, [[11.,11.5,12.,12.5,13.],
                                     [ 5.,10. ,15.,20. ,25.]])
 
-    bio = System1D(n_bins=1, chem_data=chem_data)
+    bio = System1D(n_bins=1, species_data=chem_data)
     bio.set_species_conc(chem_index=0, conc_list=[3.14])
     with pytest.raises(Exception):
         bio.double_spatial_resolution_linear()
@@ -227,8 +227,8 @@ def test_double_spacial_resolution_linear_inter():
 
 
 def test_decrease_spacial_resolution():
-    chem_data = ChemData(names=["A", "B"])
-    bio = System1D(n_bins=6, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B"])
+    bio = System1D(n_bins=6, species_data=chem_data)
     bio.set_species_conc(chem_index=0, conc_list=[10., 20., 30., 40., 50., 60.])
     bio.set_species_conc(chem_index=1, conc_list=[2., 8., 5., 15., 4., 2.])
     original_state = bio.system
@@ -253,8 +253,8 @@ def test_decrease_spacial_resolution():
 
 
 def test_smooth_spatial_resolution():
-    chem_data = ChemData(names=["A", "B"])
-    bio = System1D(n_bins=3, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B"])
+    bio = System1D(n_bins=3, species_data=chem_data)
     bio.set_species_conc(chem_label="A", conc_list=[10., 20., 30.])
     bio.set_species_conc(chem_label="B", conc_list=[2., 8., 4.])
 
@@ -268,8 +268,8 @@ def test_smooth_spatial_resolution():
 
 
 def test_varying_spacial_resolution():
-    chem_data = ChemData(names=["A", "B"])
-    bio = System1D(n_bins=3, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B"])
+    bio = System1D(n_bins=3, species_data=chem_data)
     bio.set_species_conc(chem_label="A", conc_list=[11., 12., 13.])
     bio.set_species_conc(chem_label="B", conc_list=[5., 15., 25.])
 
@@ -286,17 +286,17 @@ def test_varying_spacial_resolution():
 ##################  SET/MODIFY CONCENTRATIONS  ##################
 
 def test_set_uniform_concentration():
-    chem_data = ChemData(names=["A"])
-    bio = System1D(n_bins=5, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A"])
+    bio = System1D(n_bins=5, species_data=chem_data)
 
     bio.set_uniform_concentration(chem_index=0, conc=0.3)
     expected = np.full(5, 0.3, dtype=float)
     assert np.allclose(bio.lookup_species(0), expected)
 
     # New test
-    bio = System1D(n_bins=5, chem_data=chem_data)
-    chem_data = ChemData(names=["A", "B", "C"])
-    bio = System1D(n_bins=15, chem_data=chem_data)
+    bio = System1D(n_bins=5, species_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B", "C"])
+    bio = System1D(n_bins=15, species_data=chem_data)
     bio.set_uniform_concentration(chem_label="A", conc=10.)
     bio.set_uniform_concentration(chem_label="B", conc=11.)
     bio.set_uniform_concentration(chem_label="C", conc=12.)
@@ -308,8 +308,8 @@ def test_set_uniform_concentration():
 
 
 def test_set_all_uniform_concentrations():
-    chem_data = ChemData(names=["A", "B"])
-    bio = System1D(n_bins=5, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B"])
+    bio = System1D(n_bins=5, species_data=chem_data)
 
     bio.set_all_uniform_concentrations(conc_list=[3., 7.])
     assert np.allclose(bio.lookup_species(chem_label="A"), np.full(5, 3., dtype=float))
@@ -320,8 +320,8 @@ def test_set_all_uniform_concentrations():
 
 
 def test_set_bin_conc():
-    chem_data = ChemData(names=["A", "B"])
-    bio = System1D(n_bins=5, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B"])
+    bio = System1D(n_bins=5, species_data=chem_data)
 
     bio.set_bin_conc(bin_address=2, conc=3.14, chem_label="A")
     assert np.allclose(bio.lookup_species(chem_label="A"), [0, 0, 3.14, 0, 0])
@@ -333,8 +333,8 @@ def test_set_bin_conc():
 
 
 def test_set_species_conc():
-    chem_data = ChemData(names=["A"])
-    bio = System1D(n_bins=4, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A"])
+    bio = System1D(n_bins=4, species_data=chem_data)
     bio.set_species_conc(conc_list=[1., 2., 3., 4.], chem_index=0)
     assert np.allclose(bio.lookup_species(chem_label="A"), [1., 2., 3., 4.])
 
@@ -368,8 +368,8 @@ def test_set_species_conc():
 
 
 def test_inject_conc_to_bin():
-    chem_data = ChemData(names=["A"])
-    bio = System1D(n_bins=5, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A"])
+    bio = System1D(n_bins=5, species_data=chem_data)
 
     with pytest.raises(Exception):
         # cell_index out of bounds
@@ -384,8 +384,8 @@ def test_inject_conc_to_bin():
 
 
 def test_inject_gradient():
-    chem_data = ChemData(names=["A", "B"])
-    bio = System1D(n_bins=8, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B"])
+    bio = System1D(n_bins=8, species_data=chem_data)
 
     with pytest.raises(Exception):
         bio.inject_gradient("B", conc_left = 10., conc_right = 20.)     # Non-existent chemical species
@@ -399,7 +399,7 @@ def test_inject_gradient():
     bio.inject_gradient("A", conc_left = 18., conc_right = 11.)
     assert np.allclose(bio.lookup_species(chem_label="A"), [29., 29., 29., 29., 29., 29., 29., 29.])
 
-    bio = System1D(n_bins=1, chem_data=chem_data)
+    bio = System1D(n_bins=1, species_data=chem_data)
     with pytest.raises(Exception):
         bio.inject_gradient("A", conc_left = 11., conc_right = 18.)     # Too few bins in system
 
@@ -412,8 +412,8 @@ def test_inject_gradient():
 
 
 def test_inject_sine_conc():
-    chem_data = ChemData(names=["A"])
-    bio = System1D(n_bins=8, chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A"])
+    bio = System1D(n_bins=8, species_data=chem_data)
 
     bio.inject_sine_conc(chem_label="A", amplitude=5, bias=20, number_cycles=1, phase=0)
     assert np.allclose(bio.lookup_species(chem_label="A"),
@@ -486,9 +486,9 @@ def test_inject_sine_conc():
 
 
 def test_inject_bell_curve():
-    chem_data = ChemData(names="A")
+    chem_data = SpeciesRegistry(id="A")
 
-    bio = System1D(n_bins=10, chem_data=chem_data)
+    bio = System1D(n_bins=10, species_data=chem_data)
 
     with pytest.raises(Exception):
         bio.inject_bell_curve(chem_label="A", bias=-100)      # Negative bias
@@ -501,19 +501,19 @@ def test_inject_bell_curve():
                        [0.01028186, 0.09231148, 0.47878856, 1.43461641, 2.48331496, 2.48331496,
                         1.43461641, 0.47878856, 0.09231148, 0.01028186])
 
-    bio = System1D(n_bins=10, chem_data=chem_data)
+    bio = System1D(n_bins=10, species_data=chem_data)
     bio.inject_bell_curve(chem_label="A", center=0.5, sd=0.05, amplitude=2., bias=10)
     assert np.allclose(bio.lookup_species(chem_label="A"),
                        [10., 10., 10.00000317, 10.06169116, 18.60769844, 18.60769844,
                          10.06169116, 10.00000317, 10., 10.])
 
-    bio = System1D(n_bins=10, chem_data=chem_data)
+    bio = System1D(n_bins=10, species_data=chem_data)
     bio.inject_bell_curve(chem_label="A", center=0.5, sd=0.05, amplitude=2., bias=10, clip=(1,8))
     assert np.allclose(bio.lookup_species(chem_label="A"),
                        [0, 10., 10.00000317, 10.06169116, 18.60769844, 18.60769844,
                          10.06169116, 10.00000317, 10., 0])
 
-    bio = System1D(n_bins=20, chem_data=chem_data)
+    bio = System1D(n_bins=20, species_data=chem_data)
     bio.inject_bell_curve(chem_label="A", center=0.2, sd=0.05, amplitude=2., bias=10)
     assert np.allclose(bio.lookup_species(chem_label="A"),
                        [10.00535321, 10.20730806, 12.65097387, 21.19391452, 25.60794776, 17.18616024,

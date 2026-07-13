@@ -18,13 +18,13 @@ class BioSim2D:
     TODO: reorganize by splitting, as done for BioSim1D
     """
 
-    def __init__(self, x_bins :int, y_bins :int, chem_data=None, reaction_handler=None):
+    def __init__(self, x_bins :int, y_bins :int, species_data=None, reaction_handler=None):
         """
         :param x_bins:          The bin size in the x-coordinates.  Notice that this is the number of COLUMNS in the data matrix
         :param y_bins:          The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
 
         [At least one of the 2 following arguments must be provided]
-        :param chem_data:       [OPTIONAL] Object of class "ChemData";
+        :param species_data:    [OPTIONAL] Object of class "SpeciesRegistry";
                                     if not specified, it will get extracted
                                     from the "UniformCompartment" class (if passed to the next argument)
         :param reaction_handler:[OPTIONAL] Object of class "UniformCompartment";
@@ -37,7 +37,7 @@ class BioSim2D:
 
         self.n_species = 1      # The number of (non-water) chemical species    TODO: phase out?
 
-        self.chem_data = None   # Object of type "ChemData", with info on the individual chemicals and their reactions
+        self.species_data = None   # Object of type "SpeciesRegistry", with info on the individual chemicals and their reactions
 
         self.reactions = None   # Object of type "Reactions", with info on all the reactions
 
@@ -64,7 +64,7 @@ class BioSim2D:
 
         self.system_time = None              # Global time of the system, from initialization on
 
-        self._initialize_system(x_bins=x_bins, y_bins=y_bins, chem_data=chem_data, reaction_handler=reaction_handler)
+        self._initialize_system(x_bins=x_bins, y_bins=y_bins, chem_data=species_data, reaction_handler=reaction_handler)
 
         self.conc_history = HistoryBinConcentration(active=False)
 
@@ -83,7 +83,7 @@ class BioSim2D:
 
         :param x_bins:      The bin size in the x-coordinates.  Notice that this is the number of COLUMNS in the data matrix
         :param y_bins:      The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
-        :param chem_data:   (OPTIONAL) Object of class "ChemData";
+        :param chem_data:   (OPTIONAL) Object of class "SpeciesRegistry";
                                 if not specified, it will get extracted from the "Reactions" class
         :param reaction_handler:   (OPTIONAL) Object of class "Reactions";
                                 if not specified, it'll get instantiated here
@@ -100,21 +100,21 @@ class BioSim2D:
             "BioSim2D() instantiation: at least one of the arguments `chem_data` or `reaction_handler` must be set"
 
         if chem_data:
-            self.chem_data = chem_data
+            self.species_data = chem_data
         else:
-            self.chem_data = reaction_handler.chem_data
+            self.species_data = reaction_handler.species_data
 
         if reaction_handler:
             self.reaction_dynamics = reaction_handler
         else:
-            self.reaction_dynamics = UniformCompartment(chem_data=self.chem_data)
+            self.reaction_dynamics = UniformCompartment(species_data=self.species_data)
 
         self.reactions = self.reaction_dynamics.get_reactions()     # TODO: Maybe use self.get_reactions()
 
         self.n_bins_x = x_bins
         self.n_bins_y = y_bins
 
-        self.n_species = self.chem_data.number_of_chemicals()
+        self.n_species = self.species_data.number_of_species()
 
         assert self.n_species >= 1, \
             "BioSim2D() instantiation: At least 1 chemical species must be declared prior to instantiating class"
@@ -158,9 +158,9 @@ class BioSim2D:
     def get_chem_data(self):
         """
 
-        :return:    An Object of type "ChemData"
+        :return:    An Object of type "SpeciesRegistry"
         """
-        return self.chem_data
+        return self.species_data
 
 
 
@@ -191,10 +191,10 @@ class BioSim2D:
 
         if chem_label is not None:
             assert chem_index is None, "system_snapshot_xy(): cannot pass both arguments `chem_label` and `chem_index`"
-            chem_index = self.chem_data.get_index(chem_label)
+            chem_index = self.species_data.get_species_index(chem_label)
         else:
             assert chem_index is not None, "system_snapshot_xy(): must pass one of the arguments `chem_label` or `chem_index`"
-            self.chem_data.assert_valid_chem_index(chem_index)
+            self.species_data.assert_valid_species_index(chem_index)
 
         matrix = self.system[chem_index].T    # A 2-D Numpy array with the chemical data in XY dimensions (notice the transpose)
 
@@ -239,9 +239,9 @@ class BioSim2D:
         :return:                A concentration value at the indicated bin, for the requested species
         """
         if species_label is not None:
-            species_index = self.chem_data.get_index(species_label)
+            species_index = self.species_data.get_species_index(species_label)
 
-        self.chem_data.assert_valid_chem_index(species_index)
+        self.species_data.assert_valid_species_index(species_index)
 
         xbin, ybin = bin_address
 
@@ -263,7 +263,7 @@ class BioSim2D:
 
         print(f"SYSTEM STATE at Time t = {self.system_time:.8g}:")
         for species_index in range(self.n_species):
-            chem_name = self.chem_data.get_label(species_index)
+            chem_name = self.species_data.get_species_id(species_index)
             if chem_name is None:
                 print(f"Species {species_index}:")      # Use the index, if the name isn't available
             else:
@@ -288,9 +288,9 @@ class BioSim2D:
                                     the size of the array is (n_bins_y x n_bins_x)
         """
         if species_name is not None:
-            species_index = self.chem_data.get_index(species_name)
+            species_index = self.species_data.get_species_index(species_name)
         else:
-            self.chem_data.assert_valid_chem_index(species_index)
+            self.species_data.assert_valid_species_index(species_index)
 
         species_conc = self.system[species_index]
 
@@ -342,7 +342,7 @@ class BioSim2D:
             bins = [bins]
 
         if chem_labels is None:
-            chem_labels = self.chem_data.get_all_labels()
+            chem_labels = self.species_data.get_all_species_ids()
         elif type(chem_labels) != list:
             chem_labels = [chem_labels]
 
@@ -421,7 +421,7 @@ class BioSim2D:
         assert conc >= 0., \
             f"set_bin_conc(): The concentration must be a positive number or zero (the provided value was {conc})"
 
-        species_index = self.chem_data.get_index(chem_label)
+        species_index = self.species_data.get_species_index(chem_label)
         self.system[species_index, bin_x, bin_y] = conc
 
 
@@ -493,11 +493,11 @@ class BioSim2D:
         """
         if species_name is not None:
             # If the chemical is being identified by name, look up its index
-            species_index = self.chem_data.get_index(species_name)
+            species_index = self.species_data.get_species_index(species_name)
         elif species_index is None:
             raise Exception("BioSim2D.set_species_conc(): must provide a `species_name` or `species_index`")
         else:
-            self.chem_data.assert_valid_chem_index(species_index)
+            self.species_data.assert_valid_species_index(species_index)
 
         assert (type(conc_data) == list) or (type(conc_data) == tuple) or (type(conc_data) == np.ndarray), \
                     f"BioSim2D.set_species_conc(): the argument `conc_list` must be a list, tuple or Numpy array; " \
@@ -732,7 +732,7 @@ class BioSim2D:
         """
         assert self.system is not None, \
                 "BioSim2D.diffuse_step_single_species(): Must first initialize the system"
-        assert not self.chem_data.missing_diffusion_rate(), \
+        assert not self.species_data.has_missing_values(field="diffusion_rate"), \
                 "BioSim2D.diffuse_step_single_species(): Must first set the diffusion rates"
         assert self.sealed == True, \
                 "BioSim2D.diffuse_step_single_species(): For now, there's no provision for exchange with the outside"
@@ -742,7 +742,8 @@ class BioSim2D:
         if self.n_bins_x and self.n_bins_y == 1:
             return increment_matrix                                 # There's nothing to do in the case of just 1 bin!
 
-        diff = self.chem_data.get_diffusion_rate(chem_index=species_index)     # The diffusion rate of the specified single species
+        species_id = self.species_data.get_species_id(species_index)
+        diff = self.species_data.get_value(species_id=species_id, field="diffusion_rate")     # The diffusion rate of the specified single species
 
         #assert not self.is_excessive(time_step, diff, delta_x), \  # TODO: implement
             #f"Excessive large time_step ({time_step}). Should be < {self.max_time_step(diff, delta_x)}"
@@ -1055,7 +1056,7 @@ class BioSim2D:
         :return:            A Plotly "Figure" object
         """
         if chem_labels is None:
-            chem_labels = self.chem_data.get_all_labels()
+            chem_labels = self.species_data.get_all_species_ids()
 
         # Get the concentration data for all the requested chemicals
         data = [self.system_snapshot(chem_label=chem, cartesian=False)
@@ -1071,7 +1072,7 @@ class BioSim2D:
             title = f"{title_prefix}.  {title}"
 
         if colors is None:  # Attempt to make use of the previously-registered colors, if available
-            colors = self.chem_data.assign_colors(chem_labels)
+            colors = self.species_data.assign_colors(chem_labels)
 
         return PlotlyHelper.heatmap_grid(array_list=data, labels=chem_labels, title=title,
                                          height=height, colors=colors, z_name="Conc.", max_n_cols=4,
@@ -1107,8 +1108,8 @@ class BioSim2D:
         self.assert_valid_bin(bin_address)
 
         if title is None:
-            if self.chem_data.number_of_chemicals() == 1:
-                chem_label = f"chemical `{self.chem_data.get_label(0)}`"    # The label of the only chemical in the system
+            if self.species_data.number_of_species() == 1:
+                chem_label = f"chemical `{self.species_data.get_species_id(0)}`"    # The label of the only chemical in the system
             else:
                 chem_label = "all chemicals"
 
@@ -1119,7 +1120,7 @@ class BioSim2D:
             raise Exception(df)
 
         if colors is None:  # Attempt to make sure of the previously-registered colors, if available
-            colors = self.chem_data.assign_colors(self.conc_history.restrict_chemicals)
+            colors = self.species_data.assign_colors(self.conc_history.restrict_chemicals)
 
         return PlotlyHelper.plot_pandas(df, x_var="SYSTEM TIME", y_label="Concentration",
                                         colors=colors, legend_header="Chemical", title=title,
@@ -1135,7 +1136,7 @@ class System2D:
     """
     The foundational structure of 2D systems,
     including bins, system state (concentrations and system time),
-    and the underlying "ChemData" object.
+    and the underlying "SpeciesRegistry" object.
 
     This base class does NOT know about membranes or reactions;
     nor does it handle any simulation.
@@ -1145,7 +1146,7 @@ class System2D:
         """
         :param x_bins:      The bin size in the x-coordinates.  Notice that this is the number of COLUMNS in the data matrix
         :param y_bins:      The bin size in the y-coordinates.  Notice that this is the number of ROWS in the data matrix
-        :param chem_data:   Object of class "ChemData"
+        :param chem_data:   Object of class "SpeciesRegistry"
         """
         # TODO: NOT YET IN USE
         pass

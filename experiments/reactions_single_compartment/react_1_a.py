@@ -22,8 +22,8 @@
 # ### TAGS :   "quick-start", "uniform compartment"
 
 # %%
-LAST_REVISED = "Mar. 17, 2026"
-LIFE123_VERSION = "1.0.0rc7"         # Library version this experiment is based on
+LAST_REVISED = "July 13, 2026"
+LIFE123_VERSION = "1.0.0rc8"     # Library version this experiment is based on
 
 # %%
 #import set_path            # Using MyBinder?  Uncomment this before running the next cell!
@@ -53,6 +53,9 @@ uc = life123.UniformCompartment()
 uc.add_reaction(reactants="A", products="B", kF=3., kR=2.)
 
 uc.describe_reactions()
+
+# %%
+uc.get_species_data().as_dataframe()   # Show all the species and their data
 
 # %%
 # Set the initial concentrations of all the chemicals

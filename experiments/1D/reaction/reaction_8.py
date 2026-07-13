@@ -37,7 +37,7 @@ LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData, BioSim1D
+from life123 import SpeciesRegistry, BioSim1D
 
 from life123 import GraphicLog, HtmlLog as log
 
@@ -57,8 +57,8 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = ChemData(names=["A", "B", "C", "D", "E"])     # NOTE: Diffusion not applicable (just 1 bin)
-bio = BioSim1D(n_bins=1, chem_data=chem_data)  
+chem_data = SpeciesRegistry(id=["A", "B", "C", "D", "E"])     # NOTE: Diffusion not applicable (just 1 bin)
+bio = BioSim1D(n_bins=1, species_data=chem_data)
 
 # %%
 # Specify the reactions

@@ -33,7 +33,7 @@ LIFE123_VERSION = "1.0.0rc7"       # Library version this experiment is based on
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import BioSim1D, ChemData, check_version
+from life123 import BioSim1D, SpeciesRegistry, check_version
 
 # %%
 check_version(LIFE123_VERSION)
@@ -42,11 +42,11 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Initialize the system
-chem_data = ChemData(diffusion_rates=10.)    # Name and label "A" automatically assigned to the only chemical
+chem_data = SpeciesRegistry(n_species=1, diffusion_rate=10.)    # Name and label "A" automatically assigned to the only chemical
 chem_data.all_chemicals()
 
 # %%
-bio = BioSim1D(n_bins=500, chem_data=chem_data)
+bio = BioSim1D(n_bins=500, species_data=chem_data)
 
 # %%
 # Set up the initial bell-shape concentration, with the very narrow peak close to the left end of the system,

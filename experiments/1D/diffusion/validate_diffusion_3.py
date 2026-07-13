@@ -35,7 +35,7 @@ LIFE123_VERSION = "1.0.0rc3"       # Library version this experiment is based on
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import BioSim1D, ChemData, CollectionArray, Numerical, check_version
+from life123 import BioSim1D, SpeciesRegistry, CollectionArray, Numerical, check_version
 
 import numpy as np
 
@@ -52,7 +52,7 @@ n_bins = 5000
 delta_x = 2       # Note that the number of bins also define the fraction of the sine wave cycle in each bin
 
 # %%
-chem_data = ChemData(diffusion_rates=diffusion_rate, names="A")
+chem_data = SpeciesRegistry(diffusion_rate=diffusion_rate, id="A")
 
 # %%
 
@@ -64,7 +64,7 @@ algorithm = None   # "Explicit, with 3+1 stencil"
 
 # %%
 # Initialize the system
-bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+bio = BioSim1D(n_bins=n_bins, species_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
 bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=12, bias=40)
@@ -139,7 +139,7 @@ algorithm = "5_1_explicit"   # "Explicit, with 5+1 stencil"
 
 # %%
 # Initialize the system
-bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+bio = BioSim1D(n_bins=n_bins, species_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
 bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=12, bias=40)

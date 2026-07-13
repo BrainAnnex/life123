@@ -6,6 +6,7 @@ import numpy as np
 import plotly.graph_objects as pgo
 from life123.numerical import Numerical
 from life123.visualization.plotly_helper import PlotlyHelper
+from typing import Tuple
 
 
 
@@ -19,71 +20,39 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def half_time_unimolecular_irreversible(kF) -> float:
+    def exact_advance_unimolecular_reversible(kF, kR, A0, P0, t, incremental=False) -> float:
         """
-        Return the time taken for the reactant concentration in an irreversible unimolecular reaction
-        to decrease by half (halfway to the asymptotic state, which happens to be zero)
-
-        :param kF:  Forward reaction rate constant
-        :return:    Reaction time taken for reactant concentration to decrease by half
-        """
-        return 0.6931471805599 / kF     # ln 2 / kF
-
-
-
-    @staticmethod
-    def half_time_relaxation_unimolecular_reversible(kF, kR) -> float:
-        """
-        Return the time taken for the reactant concentration in a reversible unimolecular reaction
-        to decrease halfway to its asymptotic equilibrium state
+        Exactly advance the concentrations
+        in the reversible elementary Reaction A <-> P,
+        from time 0 to time t,
+        with the specified parameters.
 
         :param kF:  Forward reaction rate constant
         :param kR:  Reverse reaction rate constant
-        :return:    Reaction time taken for reactant concentration
-                        to decrease halfway to its asymptotic equilibrium state
+        :param A0:  Initial concentration of the reactant A
+        :param P0:  Initial concentration of the product P
+        :param t:   The end time of the reaction that started at time zero
+        :param incremental: [OPTIONAL] If True, the changes in concentrations is returned,
+                                rather than the final one.  Default: False
+
+        :return:    The concentrations of P at time t (if `incremental` is False)
+                        or its concentration change during the time interval (if `incremental` is True)
         """
-        # TODO: maybe simply combine with half_time_unimolecular_irreversible, with kR=0
-        return 0.6931471805599 / (kF + kR)      # ln 2 / (kF + kR)
+        TOT = A0 + P0
 
+        # Formula is:  A(t) = (A0 - [(kR TOT) / (kF + kR)]) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
+        # In python:          (A0 - (kR * TOT) / (kF + kR)) * math.exp(-(kF + kR) * t) + kR * TOT / (kF + kR)
 
-    @staticmethod
-    def relaxation_time_unimolecular_reversible(kF, kR) -> float:
-        """
-        This is the same as the half-time of relaxation, within a factor of ln 2
+        sum_rates = kF + kR
+        ratio = (kR * TOT) / sum_rates
 
-        :param kF:  Forward reaction rate constant
-        :param kR:  Reverse reaction rate constant
-        :return:    A quantity named "relaxation time"
-        """
-        # TODO: is this method needed?
-        return 1. / (kF + kR)
+        A_t = (A0 - ratio) * math.exp(-sum_rates * t) + ratio
+        P_t = TOT - A_t     # From mass conservation
 
+        if incremental:
+            return P_t - P0
 
-
-    @staticmethod
-    def half_time_to_equilibrium_irreversible_synthesis(kF, A0, B0) -> float:
-        """
-        Return the time taken for the reactant concentration
-        in a synthesis reaction A + B -> P
-        to decrease halfway to their asymptotic equilibrium state.
-        The time taken for 50% of the limiting reactant to be consumed
-
-        :param kF:  Forward reaction rate constant
-        :return:    Reaction time taken for reactant concentration
-                        to decrease halfway to its asymptotic equilibrium state
-        """
-        #TODO: test
-        #equil_concs = ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=A0, b=1, B0=B0, p=1, P0=P0)
-
-        delta_conc = A0 - B0
-        if np.allclose(delta_conc, 0):
-            return 1 / (kF * A0)
-
-        if delta_conc > 0:      # When A0 > B0
-            return math.log((2 * A0 - B0) / A0) / (kF * delta_conc)
-        else:
-            return - math.log((2 * B0 - A0) / B0) / (kF * delta_conc)   #TODO: test
-
+        return P_t
 
 
     @staticmethod
@@ -122,37 +91,174 @@ class ReactionKinetics:
 
 
     @staticmethod
-    def exact_advance_unimolecular_reversible(kF, kR, A0, P0, t, incremental=False) -> float:
+    def exact_advance_synthesis_reversible(kF, kR, A0, B0, P0, t, incremental=False) -> float:
         """
         Exactly advance the concentrations
-        in the reversible elementary Reaction A <-> P,
+        in the reversible elementary Reaction A + B <-> P,
         from time 0 to time t,
         with the specified parameters.
 
         :param kF:  Forward reaction rate constant
         :param kR:  Reverse reaction rate constant
-        :param A0:  Initial concentration of the reactant A
+        :param A0:  Initial concentration of the 1st reactant A
+        :param B0:  Initial concentration of the 2nd reactant B
         :param P0:  Initial concentration of the product P
         :param t:   The end time of the reaction that started at time zero
-        :param incremental: [OPTIONAL] If True, the changes in concentrations is returned,
-                                rather than the final one.  Default: False
+        :param incremental: [OPTIONAL] If True, the changes in concentration of P is returned,
+                                rather than the final ones.  Default: False
 
-        :return:    The concentrations of P at time t (if `incremental` is False)
+        :return:   The concentration of P at time t (if `incremental` is False)
                         or its concentration change during the time interval (if `incremental` is True)
         """
-        TOT = A0 + P0
+        if np.allclose(kR, 0):
+            '''
+            Note - the case when KR=0 and A0=B0 cannot be passed to the general solver below,
+                   because in such as case:
+                        T = A0 + P0     # A collapse of the general cases of AP_tot and BP_tot
+                        alpha = kF
+                        beta = 2 * kF * T
+                        gamma = kF * T**2 
+            In this scenario:
+                - beta**2 + 4 * alpha * gamma = - [2 kF T]**2 + 4 kF * (kF * T**2) 
+                                              = - 4 kF**2 T**2 + 4 kF**2 T**2 
+                                              = 0  
+            and the general solution cannot be used, because in it we divide by the square root of that term!       
+            '''
+            #print("****** Switching to IR-reversible version")
+            return  ReactionKinetics.exact_advance_synthesis_irreversible(kF=kF, A0=A0, B0=B0, P0=P0, t=t, incremental=incremental)
 
-        # Formula is:  A(t) = (A0 - [(kR TOT) / (kF + kR)]) Exp[-(kF + kR) t] + kR TOT / (kF + kR)
-        # In python:          (A0 - (kR * TOT) / (kF + kR)) * math.exp(-(kF + kR) * t) + kR * TOT / (kF + kR)
 
-        sum_rates = kF + kR
-        ratio = (kR * TOT) / sum_rates
+        AP_tot = A0 + P0        # Quantity conserved thru the rxn, from the stoichiometry
+        BP_tot = B0 + P0        # Quantity conserved thru the rxn, from the stoichiometry
 
-        A_t = (A0 - ratio) * math.exp(-sum_rates * t) + ratio
-        P_t = TOT - A_t     # From mass conservation
+        alpha = kF
+        beta = kF * (AP_tot + BP_tot) + kR
+        gamma = kF * AP_tot * BP_tot
+        '''
+        The ODE to solve for P(t) is:
+            P'(t) = kF A(t) B(t) - kR P(t)      # Forward rate minus reverse rate
+            
+        The stoichiometry dictates that the drop in each reagent equals the increase in the product:
+            A(t) = A0 - (P(t) - P0)
+            B(t) = B0 - (P(t) - P0)
+            
+        which can be re-arranged to:
+            P'(t) = kF [A0 - P(t) + P0] [B0 - P(t) + P0] - kR P(t)
+            P'(t) = kF [AC_tot - P(t)] [BC_tot - P(t)] - kR P(t)
+            P'(t) = kF [AC_tot * BC_tot - AC_tot * P(t) - P(t) * BC_tot + P(t)**2] - kR P(t)
+            P'(t) = kF * P(t)**2 
+                    - kF * AC_tot * P(t) - kF * BC_tot * P(t) - kR P(t) 
+                    + kF * AC_tot * BC_tot 
+            P'(t) = kF * P(t)**2 
+                    - (kF * AC_tot + kF * BC_tot + kR) * P(t) 
+                    +  kF * AC_tot * BC_tot 
+            P'(t) = alpha [P(t)]**2 - beta P(t) + gamma
+        
+        The following is based on the answer by Mathematica v.7 to:
+            DSolve[{p'[t] == alpha (p[t])**2 - beta p[t] + gamma, p[0] == P0}, p[t], t]
+            Simplify[%]
+        '''
+        term = - beta**2 + 4 * alpha * gamma
+        #print(f"term = {term}")
+
+        if np.allclose(term, 0):
+            # The term = 0 must be intercepted because we later divide by the square root of that term
+            # TODO: can this scenario ever occur when kR > 0  ?
+            raise Exception("exact_advance_synthesis_reversible(): No provision for this case yet, when beta**2 = 4 * alpha * gamma")
+        else:
+            sqrt_term = cmath.sqrt(term)            # Note: `term` could be negative; hence, the complex square root
+
+            arctan_arg = (beta - 2 * alpha * P0) / sqrt_term    # This will be the argument to pass to the arctan() function, below
+            arctan_value = np.arctan(arctan_arg)
+            #print(f"arctan_value = {arctan_value}")
+
+            # Note that every variable so far is a constant, NOT dependent on time
+
+            tan_arg = (0.5 * sqrt_term * t) - arctan_value     # This will be the argument to pass to the tan() function, below
+
+            result = (beta + sqrt_term * np.tan(tan_arg) ) / (2*alpha)
+
+            P_t = result.real             # Drop the imaginary components (which ought to be very close to zero)
+
 
         if incremental:
             return P_t - P0
+
+        return P_t
+
+
+
+    @staticmethod
+    def exact_advance_synthesis_irreversible(kF, A0, B0, P0, t, incremental=False) -> float:
+        """
+        Exactly advance the concentrations
+        in the irreversible elementary Reaction A + B -> P,
+        from time 0 to time t,
+        with the specified parameters.
+
+        :param kF:  Forward reaction rate constant
+        :param A0:  Initial concentration of the 1st reactant A
+        :param B0:  Initial concentration of the 2nd reactant B
+        :param P0:  Initial concentration of the product P
+        :param t:   The end time of the reaction that started at time zero
+        :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
+                                rather than the final ones.  Default: False
+        :return:    The concentration of P at time t (if `incremental` is False)
+                        or its concentration change during the time interval (if `incremental` is True)
+        """
+        # Adapted from "Athel Cornish-Bowden, Fundamentals of Enzyme Kinetics, 4th edn", section 1.2.3
+        # Note: the above author assumes P0 = 0, and overlooks the case A0 = B0 (which requires special treatment)
+        '''
+        Start with the ODE:
+            d P(t) / dt = kF * A(t) * B(t) = kF * (A0 - (P(t)-P0)) * (B0 - (P(t)-P0))
+                     
+        Special case - when A0 = B0, the ODE becomes:
+            d P(t) / dt = kF * A(t) * A(t) = kF * ( A0 - (P(t)-P0) )**2
+            which can, for example, be plugged into Mathematica as:
+            DSolve[{ p'[t] == kF (A0 + P0 - p[t])^2 , p[0] == P0 }, p[t], t]
+        '''
+        alpha =  P0 + A0
+
+        if np.allclose(A0, B0):
+            # When A0 = B0, the ODE has a special solution:
+            #   P(t) = (P0 + alpha A0 kF t) / (1 + A0 kF t)
+            prod = A0 * kF * t
+            P_t = (P0 + alpha * prod) / (1 + prod)  # Concentration of `P` at time t
+
+        else:
+            # When A0 != B0, the solution P(t) of the ODE must satisfy:
+            #   (A0 * (P0+B0 - P(t))) / (B0 * (P0+A0 - P(t))) = e ^ (B0-A0)*kF*t
+            #   [see "Athel Cornish-Bowden, Fundamentals of Enzyme Kinetics, 4th edn", section 1.2.3]
+            #   which gets solved for P(t) below
+            #   Note: when A0 = B0, the above equation doesn't hold (at, at any rate, turns into a trivial 1 = 1)
+            beta =   P0 + B0
+            try:
+                # Evaluate the exponential on the right-hand size
+                eps = math.exp((B0-A0)* kF * t)
+            except OverflowError:
+                # Overflow occurs if B0 > A0 and t is very large;
+                # in such a case, `A` is the limiting reagent, and fully converts to `P`
+                if incremental:
+                    return A0
+                return alpha    # P0 + A0
+
+            ''' 
+            With the above variable assignments, and writing P for P(t), the earlier equation can be re-stated as:
+                (A0 * (beta - P)) / (B0 * (alpha - P)) = eps 
+                           
+            i.e.:
+                (A0 * (beta - P)) = eps * (B0 * (alpha - P))
+                A0 * beta - A0 * P = eps * (B0 * alpha - B0 * P)
+                A0 * beta - A0 * P = B0 * alpha * eps - B0 * P * eps
+                B0 * P * eps - A0 * P = B0 * alpha * eps - A0 * beta
+                (B0 * eps - A0) * P   = B0 * alpha * eps - A0 * beta
+            '''
+            #print(f"alpha: {alpha} , beta: {beta} , eps: {eps}")
+            P_t = (B0 * alpha * eps - A0 * beta) / (B0 * eps - A0)    # Concentration of `P` at time t
+
+
+        if incremental:
+            return P_t-P0
 
         return P_t
 
@@ -272,179 +378,91 @@ class ReactionKinetics:
 
 
 
+    #####################################################################################################
+
+    '''                                 ~   HALF-TIME RELAXATION   ~                                  '''
+
+    def ________HALF_TIME_RELAXATION________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
+
+
     @staticmethod
-    def exact_advance_synthesis_irreversible(kF, A0, B0, P0, t, incremental=False) -> float:
+    def half_time_unimolecular_irreversible(kF) -> float:
         """
-        Exactly advance the concentrations
-        in the irreversible elementary Reaction A + B -> P,
-        from time 0 to time t,
-        with the specified parameters.
+        Return the time taken for the reactant concentration in an irreversible unimolecular reaction
+        to decrease by half (halfway to the asymptotic state, which happens to be zero)
 
         :param kF:  Forward reaction rate constant
-        :param A0:  Initial concentration of the 1st reactant A
-        :param B0:  Initial concentration of the 2nd reactant B
-        :param P0:  Initial concentration of the product P
-        :param t:   The end time of the reaction that started at time zero
-        :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
-                                rather than the final ones.  Default: False
-        :return:    The concentration of P at time t (if `incremental` is False)
-                        or its concentration change during the time interval (if `incremental` is True)
+        :return:    Reaction time taken for reactant concentration to decrease by half
         """
-        # Adapted from "Athel Cornish-Bowden, Fundamentals of Enzyme Kinetics, 4th edn", section 1.2.3
-        # Note: the above author assumes P0 = 0, and overlooks the case A0 = B0 (which requires special treatment)
-        '''
-        Start with the ODE:
-            d P(t) / dt = kF * A(t) * B(t) = kF * (A0 - (P(t)-P0)) * (B0 - (P(t)-P0))
-                     
-        Special case - when A0 = B0, the ODE becomes:
-            d P(t) / dt = kF * A(t) * A(t) = kF * ( A0 - (P(t)-P0) )**2
-            which can, for example, be plugged into Mathematica as:
-            DSolve[{ p'[t] == kF (A0 + P0 - p[t])^2 , p[0] == P0 }, p[t], t]
-        '''
-        alpha =  P0 + A0
-
-        if np.allclose(A0, B0):
-            # When A0 = B0, the ODE has a special solution:
-            #   P(t) = (P0 + alpha A0 kF t) / (1 + A0 kF t)
-            prod = A0 * kF * t
-            P_t = (P0 + alpha * prod) / (1 + prod)  # Concentration of `P` at time t
-
-        else:
-            # When A0 != B0, the solution P(t) of the ODE must satisfy:
-            #   (A0 * (P0+B0 - P(t))) / (B0 * (P0+A0 - P(t))) = e ^ (B0-A0)*kF*t
-            #   [see "Athel Cornish-Bowden, Fundamentals of Enzyme Kinetics, 4th edn", section 1.2.3]
-            #   which gets solved for P(t) below
-            #   Note: when A0 = B0, the above equation doesn't hold (at, at any rate, turns into a trivial 1 = 1)
-            beta =   P0 + B0
-            try:
-                # Evaluate the exponential on the right-hand size
-                eps = math.exp((B0-A0)* kF * t)
-            except OverflowError:
-                # Overflow occurs if B0 > A0 and t is very large;
-                # in such a case, `A` is the limiting reagent, and fully converts to `P`
-                if incremental:
-                    return A0
-                return alpha    # P0 + A0
-
-            ''' 
-            With the above variable assignments, and writing P for P(t), the earlier equation can be re-stated as:
-                (A0 * (beta - P)) / (B0 * (alpha - P)) = eps 
-                           
-            i.e.:
-                (A0 * (beta - P)) = eps * (B0 * (alpha - P))
-                A0 * beta - A0 * P = eps * (B0 * alpha - B0 * P)
-                A0 * beta - A0 * P = B0 * alpha * eps - B0 * P * eps
-                B0 * P * eps - A0 * P = B0 * alpha * eps - A0 * beta
-                (B0 * eps - A0) * P   = B0 * alpha * eps - A0 * beta
-            '''
-            #print(f"alpha: {alpha} , beta: {beta} , eps: {eps}")
-            P_t = (B0 * alpha * eps - A0 * beta) / (B0 * eps - A0)    # Concentration of `P` at time t
-
-
-        if incremental:
-            return P_t-P0
-
-        return P_t
+        return 0.6931471805599 / kF     # ln 2 / kF
 
 
 
     @staticmethod
-    def exact_advance_synthesis_reversible(kF, kR, A0, B0, P0, t, incremental=False) -> float:
+    def half_time_relaxation_unimolecular_reversible(kF, kR) -> float:
         """
-        Exactly advance the concentrations
-        in the reversible elementary Reaction A + B <-> P,
-        from time 0 to time t,
-        with the specified parameters.
+        Return the time taken for the reactant concentration in a reversible unimolecular reaction
+        to decrease halfway to its asymptotic equilibrium state
 
         :param kF:  Forward reaction rate constant
         :param kR:  Reverse reaction rate constant
-        :param A0:  Initial concentration of the 1st reactant A
-        :param B0:  Initial concentration of the 2nd reactant B
-        :param P0:  Initial concentration of the product P
-        :param t:   The end time of the reaction that started at time zero
-        :param incremental: [OPTIONAL] If True, the changes in concentrations are returned,
-                                rather than the final ones.  Default: False
-
-        :return:   The concentration of P at time t (if `incremental` is False)
-                        or its concentration change during the time interval (if `incremental` is True)
+        :return:    Reaction time taken for reactant concentration
+                        to decrease halfway to its asymptotic equilibrium state
         """
-        if np.allclose(kR, 0):
-            '''
-            Note - the case when KR=0 and A0=B0 cannot be passed to the general solver below,
-                   because in such as case:
-                        T = A0 + P0     # A collapse of the general cases of AP_tot and BP_tot
-                        alpha = kF
-                        beta = 2 * kF * T
-                        gamma = kF * T**2 
-            In this scenario:
-                - beta**2 + 4 * alpha * gamma = - [2 kF T]**2 + 4 kF * (kF * T**2) 
-                                              = - 4 kF**2 T**2 + 4 kF**2 T**2 
-                                              = 0  
-            and the general solution cannot be used, because in it we divide by the square root of that term!       
-            '''
-            #print("****** Switching to IR-reversible version")
-            return  ReactionKinetics.exact_advance_synthesis_irreversible(kF=kF, A0=A0, B0=B0, P0=P0, t=t, incremental=incremental)
+        # TODO: maybe simply combine with half_time_unimolecular_irreversible, with kR=0
+        return 0.6931471805599 / (kF + kR)      # ln 2 / (kF + kR)
 
 
-        AP_tot = A0 + P0        # Quantity conserved thru the rxn, from the stoichiometry
-        BP_tot = B0 + P0        # Quantity conserved thru the rxn, from the stoichiometry
+    @staticmethod
+    def relaxation_time_unimolecular_reversible(kF, kR) -> float:
+        """
+        This is the same as the half-time of relaxation, within a factor of ln 2
 
-        alpha = kF
-        beta = kF * (AP_tot + BP_tot) + kR
-        gamma = kF * AP_tot * BP_tot
-        '''
-        The ODE to solve for P(t) is:
-            P'(t) = kF A(t) B(t) - kR P(t)      # Forward rate minus reverse rate
-            
-        The stoichiometry dictates that the drop in each reagent equals the increase in the product:
-            A(t) = A0 - (P(t) - P0)
-            B(t) = B0 - (P(t) - P0)
-            
-        which can be re-arranged to:
-            P'(t) = kF [A0 - P(t) + P0] [B0 - P(t) + P0] - kR P(t)
-            P'(t) = kF [AC_tot - P(t)] [BC_tot - P(t)] - kR P(t)
-            P'(t) = kF [AC_tot * BC_tot - AC_tot * P(t) - P(t) * BC_tot + P(t)**2] - kR P(t)
-            P'(t) = kF * P(t)**2 
-                    - kF * AC_tot * P(t) - kF * BC_tot * P(t) - kR P(t) 
-                    + kF * AC_tot * BC_tot 
-            P'(t) = kF * P(t)**2 
-                    - (kF * AC_tot + kF * BC_tot + kR) * P(t) 
-                    +  kF * AC_tot * BC_tot 
-            P'(t) = alpha [P(t)]**2 - beta P(t) + gamma
-        
-        The following is based on the answer by Mathematica v.7 to:
-            DSolve[{p'[t] == alpha (p[t])**2 - beta p[t] + gamma, p[0] == P0}, p[t], t]
-            Simplify[%]
-        '''
-        term = - beta**2 + 4 * alpha * gamma
-        #print(f"term = {term}")
+        :param kF:  Forward reaction rate constant
+        :param kR:  Reverse reaction rate constant
+        :return:    A quantity named "relaxation time"
+        """
+        # TODO: is this method needed?
+        return 1. / (kF + kR)
 
-        if np.allclose(term, 0):
-            # The term = 0 must be intercepted because we later divide by the square root of that term
-            # TODO: can this scenario ever occur when kR > 0  ?
-            raise Exception("exact_advance_synthesis_reversible(): No provision for this case yet, when beta**2 = 4 * alpha * gamma")
+
+
+    @staticmethod
+    def half_time_to_equilibrium_irreversible_synthesis(kF, A0, B0) -> float:
+        """
+        Return the time taken for the reactant concentration
+        in a synthesis reaction A + B -> P
+        to decrease halfway to their asymptotic equilibrium state.
+        The time taken for 50% of the limiting reactant to be consumed
+
+        :param kF:  Forward reaction rate constant
+        :return:    Reaction time taken for reactant concentration
+                        to decrease halfway to its asymptotic equilibrium state
+        """
+        #TODO: test
+        #equil_concs = ReactionKinetics.compute_equilibrium_conc_first_order(kF=kF, kR=kR, a=1, A0=A0, b=1, B0=B0, p=1, P0=P0)
+
+        delta_conc = A0 - B0
+        if np.allclose(delta_conc, 0):
+            return 1 / (kF * A0)
+
+        if delta_conc > 0:      # When A0 > B0
+            return math.log((2 * A0 - B0) / A0) / (kF * delta_conc)
         else:
-            sqrt_term = cmath.sqrt(term)            # Note: `term` could be negative; hence, the complex square root
-
-            arctan_arg = (beta - 2 * alpha * P0) / sqrt_term    # This will be the argument to pass to the arctan() function, below
-            arctan_value = np.arctan(arctan_arg)
-            #print(f"arctan_value = {arctan_value}")
-
-            # Note that every variable so far is a constant, NOT dependent on time
-
-            tan_arg = (0.5 * sqrt_term * t) - arctan_value     # This will be the argument to pass to the tan() function, below
-
-            result = (beta + sqrt_term * np.tan(tan_arg) ) / (2*alpha)
-
-            P_t = result.real             # Drop the imaginary components (which ought to be very close to zero)
+            return - math.log((2 * B0 - A0) / B0) / (kF * delta_conc)   #TODO: test
 
 
-        if incremental:
-            return P_t - P0
-
-        return P_t
 
 
+    #####################################################################################################
+
+    '''                                       ~   OTHER   ~                                           '''
+
+    def ________OTHER________(DIVIDER):
+        pass        # Used to get a better structure view in IDEs
+    #####################################################################################################
 
     @staticmethod
     def estimate_rate_constants_simple(t :np.ndarray,
@@ -841,6 +859,119 @@ class ReactionKinetics:
 
 
 
+    @classmethod
+    def compute_reaction_quotient(cls, reactant_data :[str|Tuple[int, str]], product_data :[str|Tuple[int, str]],
+                                  conc :dict, explain=False) -> np.double | Tuple[np.double, str]:
+        """
+        Compute the "Reaction Quotient" Q (aka "Mass–action Ratio"),
+        for the reaction with the specified parameters,
+        given the concentrations of chemicals involved in the reaction.
+
+        EXAMPLE: use reactant_data=[(2, "A"), (1, "B")] and product_data=["C"] ,
+                 for a reaction of the form 2 A + B <-> C ,
+                 alongside a dictionary with the concentrations (activities) of A, B and C;
+                 the result will be given by the formula:  [C] / ( [A]^2 [B])    , where ^2 represents squaring
+
+        Note: in a heterogeneous mixture, solids, pure liquids and solvents have an activity that has a fixed value of 1,
+              and should be omitted from the parameters passed to this function.
+              We're using the term "concentrations" instead of "chemical activities";
+              concentrations approximate the activities of ideal dilute solutions
+
+        :param reactant_data:   List whose elements can be either STRINGS with the labels of the reactants,
+                                    or PAIRS of the form (stoichiometry coefficient, label) of the reactants.
+
+        :param product_data:    List whose elements can be either STRINGS with the labels of the products of the reactions,
+                                    or PAIRS of the form (stoichiometry coefficient, label) of the products.
+
+        :param conc:            Dictionary with the concentrations (activities) of the species involved in the reaction.
+                                The keys are the chemical labels
+                                    EXAMPLE: {'A': 23.9, 'B': 36.1}
+        :param explain:         If True, it also returns the math formula being used for the computation
+                                    EXAMPLES:   "([C][D]) / ([A][B])"
+                                                "[B] /  [A]^2 "
+
+        :return:                If explain is False, return a value for the "Reaction Quotient" (aka "Mass–action Ratio");
+                                    if True, return a pair with that quotient and a string with the math formula that was used.
+                                    Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
+        """
+        # TODO: could be tidier in avoiding unnecessary blanks in the explanations
+        numerator = np.double(1)    # The product of all the concentrations of the reaction products (adjusted for reaction order)
+        denominator = np.double(1)  # The product of all the concentrations of the reactants (also adjusted for reaction order)
+
+        numerator_text = ""      # First part of the textual explanation
+        denominator_text = ""    # Second part of the textual explanation
+
+
+        # Compute the numerator of the "Reaction Quotient"
+        for term in product_data:
+            # Loop over the reaction products
+            if type(term) == str:
+                stoich_coeff = 1
+                p = term
+            else:
+                (stoich_coeff, p) = term
+                assert type(stoich_coeff) == int, f"compute_reaction_quotient(): the argument `product_data` " \
+                                                  f"must be a list of pairs (integer and string).  `{stoich_coeff}` is not an integer"
+                assert type(p) == str, f"compute_reaction_quotient(): the argument `product_data` " \
+                                       f"must be a list of pairs (integer and string).  {p} is not a string"
+
+            species_name = p
+            # TODO: Maybe turn the several next lines into a helper function
+            species_conc = conc.get(species_name)
+            assert species_conc is not None, f"compute_reaction_quotient(): unable to proceed because the " \
+                                             f"concentration of product `{species_name}` was not provided"
+
+            numerator *= (species_conc ** stoich_coeff)
+            if explain:
+                if stoich_coeff > 1:
+                    numerator_text += f" [{species_name}]^{stoich_coeff} "
+                else:
+                    numerator_text += f"[{species_name}]"
+
+        if explain and len(product_data) > 1:
+            numerator_text = f"({numerator_text})"  # In case of multiple terms, enclose them in parenthesis
+
+
+        # Compute the denominator of the "Reaction Quotient"
+        for term in reactant_data:
+            # Loop over the reactants
+            if type(term) == str:
+                stoich_coeff = 1
+                r = term
+            else:
+                (stoich_coeff, r) = term
+                assert type(stoich_coeff) == int, f"compute_reaction_quotient(): the argument `reactant_data` " \
+                                                  f"must be a list of pairs (integer and string).  `{stoich_coeff}` is not an integer"
+                assert type(r) == str, f"compute_reaction_quotient(): the argument `reactant_data` " \
+                                       f"must be a list of pairs (integer and string).  {r} is not a string"
+
+            species_name =  r
+            # TODO: Maybe turn the several next lines into a helper function
+            species_conc = conc.get(species_name)
+            assert species_conc is not None, f"compute_reaction_quotient(): unable to proceed because the " \
+                                             f"concentration of reactant `{species_name}` was not provided"
+
+            denominator *= (species_conc ** stoich_coeff)
+            if explain:
+                if stoich_coeff > 1:
+                    denominator_text += f" [{species_name}]^{stoich_coeff} "
+                else:
+                    denominator_text += f"[{species_name}]"
+
+        if explain and len(reactant_data) > 1:
+            denominator_text = f"({denominator_text})"  # In case of multiple terms, enclose them in parenthesis
+
+
+        with np.errstate(divide='ignore', invalid='ignore'):
+            # It might be np.inf (if just the denominator is zero) or np.nan (if both are zero)
+            quotient = numerator / denominator
+
+        if explain:
+            formula = f"{numerator_text} / {denominator_text}"
+            return (quotient, formula)
+
+        return quotient
+
 
 
 
@@ -1217,7 +1348,7 @@ class VariableTimeSteps:
         # restrict our consideration to only the dynamically involved ones
         # CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
         #          the reactions are simulated
-        #if self.chem_data.number_of_active_chemicals() < n_chems:
+        #if self.species_data.number_of_active_chemicals() < n_chems:
         if len(indexes_of_active_chemicals) < n_chems:
             delta_conc = delta_conc[indexes_of_active_chemicals]
             #print(f"\nadjust_timestep(): restricting adaptive time step analysis to {n_chems} chemicals only; their delta_conc is {delta_conc}")

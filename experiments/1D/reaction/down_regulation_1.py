@@ -42,7 +42,7 @@ LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData, UniformCompartment, BioSim1D, GraphicLog, check_version
+from life123 import SpeciesRegistry, UniformCompartment, BioSim1D, GraphicLog, check_version
 
 # %%
 check_version(LIFE123_VERSION)
@@ -60,9 +60,9 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system.  NOTE: Diffusion not applicable (just 1 bin)
-chem_data = ChemData(names=["A", "B", "Y"], plot_colors=['red', 'darkorange', 'green'])
+chem_data = SpeciesRegistry(id=["A", "B", "Y"], plot_color=['red', 'darkorange', 'green'])
 
-uc = UniformCompartment(chem_data=chem_data)
+uc = UniformCompartment(species_data=chem_data)
 
 
 # Reaction A + 2 B <-> Y , with 1st-order kinetics for all chemical species

@@ -44,7 +44,7 @@ LIFE123_VERSION = "1.0.0rc7"       # Library version this experiment is based on
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import BioSim1D, ChemData, ReactionRegistry, ReactionEnzyme, PlotlyHelper, check_version
+from life123 import BioSim1D, SpeciesRegistry, ReactionRegistry, ReactionEnzyme, check_version
 
 # %%
 check_version(LIFE123_VERSION)
@@ -59,11 +59,11 @@ check_version(LIFE123_VERSION)
 # The enzyme `E`, typically a large molecule, is given a relatively sall diffusion rate (not too important,
 # because of our initial condition later, of `E` already uniformly diffused)
 # We'll let the simulator estimate a diffusion rate constant for `EU` (so, passing None for now)
-chem_data = ChemData(          names=["U", "L",  "E", "EU", "P",  "UP"], 
-                     diffusion_rates=[200., 250., 80.,  0, 120.,   90.],        # The diffusion rate of `U` will later be increased in scenario 2
-                     plot_colors=["red", "green", "violet", "darkturquoise", "pink", "black"]) 
+chem_data = SpeciesRegistry(id=["U", "L",  "E", "EU", "P",  "UP"],
+                            diffusion_rate=[200., 250., 80.,  0, 120.,   90.],        # The diffusion rate of `U` will later be increased in scenario 2
+                            plot_color=["red", "green", "violet", "darkturquoise", "pink", "black"])
 
-rxns = ReactionRegistry(chem_data=chem_data)
+rxns = ReactionRegistry(species_data=chem_data)
 
 # Enzymatic reaction A + E -> B + E
 r = ReactionEnzyme(substrate="U", product="L", enzyme="E", 
@@ -90,7 +90,7 @@ chem_data.all_chemicals()
 # ### Initialize the 1D System, including Membranes
 
 # %%
-bio = BioSim1D(n_bins=30, chem_data=chem_data, reactions=rxns)
+bio = BioSim1D(n_bins=30, species_data=chem_data, reactions=rxns)
 
 # %%
 bio.membranes().set_membranes(membranes=[ (11, 21) ])
@@ -270,7 +270,7 @@ bio.plot_history_single_bin(title_prefix=["Time evolution several bins to the ri
 # %%
 # Initial conditioned just like before, with same reaction, membrane layout and concentrations
 
-bio = BioSim1D(n_bins=30, chem_data=chem_data, reactions=rxns)
+bio = BioSim1D(n_bins=30, species_data=chem_data, reactions=rxns)
 
 bio.membranes().set_membranes(membranes=[ (11, 21) ])
 

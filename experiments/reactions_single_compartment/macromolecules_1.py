@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -15,59 +15,73 @@
 
 # %% [markdown]
 # ## Macromolecules : Binding Affinity and Fractional Occupancy
-#   
-#
-# LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
+
+# %% [markdown]
+# ### TAGS : "basic"
 
 # %%
-import set_path      # Importing this module will add the project's home directory to sys.path
+LAST_REVISED = "July 13, 2026"
+LIFE123_VERSION = "1.0.0rc8"     # Library version this experiment is based on
 
-# %% tags=[]
-from life123 import ChemData
-from life123 import UniformCompartment
-from life123 import CollectionTabular
+# %%
+#import set_path            # Using MyBinder?  Uncomment this before running the next cell!
+                            # Importing this module will add the project's home directory to sys.path
+
+# %%
+#import sys, os
+#os.getcwd()
+#sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
+# NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
+
+from life123 import check_version, SpeciesRegistry, MacroMolecules, UniformCompartment, CollectionTabular
 
 import numpy as np
 
 import plotly.express as px
 
 # %%
+check_version(LIFE123_VERSION)    # To check compatibility
+
+# %%
+
+# %%
+
+# %%
 # Initialize the system
-chem = ChemData(names=["A", "B", "C"])
+sr = SpeciesRegistry(id=["A", "B", "C", "M1", "M2"])
 
 
 # %% [markdown]
 # ## Explore methods to manage the data structure for macromolecules
 
 # %%
-chem.add_macromolecules("M1")
-chem.get_macromolecules()
+mm = MacroMolecules(species_registry=sr)
 
 # %%
-chem.set_binding_site_affinity("M1", site_number=3,  ligand="A", Kd=1.0)
-chem.set_binding_site_affinity("M1", site_number=8,  ligand="B", Kd=3.2)
-chem.set_binding_site_affinity("M1", site_number=15, ligand="A", Kd=10.0)
+mm.set_binding_site_affinity("M1", site_number=3,  ligand="A", Kd=1.0)
+mm.set_binding_site_affinity("M1", site_number=8,  ligand="B", Kd=3.2)
+mm.set_binding_site_affinity("M1", site_number=15, ligand="A", Kd=10.0)
 
-chem.set_binding_site_affinity("M2", site_number=1, ligand="C", Kd=5.6)    # "M2" will get automatically added
-chem.set_binding_site_affinity("M2", site_number=2, ligand="A", Kd=0.01)
-
-# %%
-chem.show_binding_affinities()        # Review the values we have given for the dissociation constants
+mm.set_binding_site_affinity("M2", site_number=1, ligand="C", Kd=5.6) 
+mm.set_binding_site_affinity("M2", site_number=2, ligand="A", Kd=0.01)
 
 # %%
-chem.get_binding_sites("M1")
+mm.show_binding_affinities()        # Review the values we have given for the dissociation constants
 
 # %%
-chem.get_binding_sites_and_ligands("M1")
+mm.get_binding_sites("M1")
 
 # %%
-chem.get_binding_sites("M2")
+mm.get_binding_sites_and_ligands("M1")
 
 # %%
-chem.get_binding_sites_and_ligands("M2")
+mm.get_binding_sites("M2")
 
 # %%
-aff = chem.get_binding_site_affinity(macromolecule="M2", site_number=1)   # A "NamedTuple" gets returned
+mm.get_binding_sites_and_ligands("M2")
+
+# %%
+aff = mm.get_binding_site_affinity(macromolecule="M2", site_number=1)   # A "NamedTuple" gets returned
 aff
 
 # %%
@@ -78,45 +92,51 @@ aff.Kd
 
 # %%
 
+# %%
+
 # %% [markdown]
 # ## Start setting up the dynamical system
 
 # %%
-dynamics = UniformCompartment(chem_data=chem)
+uc = UniformCompartment(species_data=sr, macromolecules=mm)
 
 # %%
-dynamics.set_macromolecules()      # By default, set counts to 1 for all the registered macromolecules
+uc.set_macromolecules()      # By default, set counts to 1 for all the species that have binding-site data
 
 # %%
-dynamics.describe_state()
+uc.describe_state()
 
 # %% [markdown]
 # ### Inspect some class attributes (not to be directly modified by the end user!)
 
 # %%
-dynamics.macro_system
+uc.macro_system
 
 # %%
-dynamics.macro_system_state
+uc.macro_system_state
+
+# %%
 
 # %% [markdown]
 # ### Set the initial concentrations of all the ligands
 
 # %%
-dynamics.set_conc(conc={"A": 10., "B": 0., "C": 0.56})
-dynamics.describe_state()
+uc.set_conc(conc={"A": 10., "B": 0., "C": 0.56})
+uc.describe_state()
+
+# %%
 
 # %% [markdown]
 # ### Determine and adjust the fractional occupancy of the various sites on the macromolecules, based on the current ligand concentrations
 
 # %%
-dynamics.update_occupancy()
+uc.update_occupancy()
 
 # %%
-dynamics.describe_state()
+uc.describe_state()
 
 # %%
-dynamics.chem_data.show_binding_affinities()        # Review the values we had given for the dissociation constants
+uc.macromolecules.show_binding_affinities()        # Review the values we had given for the dissociation constants
 
 # %% [markdown]
 # #### Notes:
@@ -136,13 +156,13 @@ dynamics.chem_data.show_binding_affinities()        # Review the values we had g
 # ### Adjust the concentration of one ligand, [A], and update all the fractional occupancies accordingly
 
 # %%
-dynamics.set_single_conc(conc=1000., species_name="A", snapshot=False)
+uc.set_single_conc(conc=1000., species_name="A", snapshot=False)
 
 # %%
-dynamics.update_occupancy()
+uc.update_occupancy()
 
 # %%
-dynamics.describe_state()
+uc.describe_state()
 
 # %% [markdown]
 # #### Note how all the various binding sites for ligand A, across all macromolecules, now have a different value for the fractional occupancy (very close to 1 because of the large value of [A] relative to each of the dissociation constants for A.)
@@ -172,11 +192,11 @@ print(log_values)
 # %%
 # Set [A] to each of the above values in turn, and determine/store the applicable fractional occupancies (for the sites where A binds)
 for A_conc in log_values:
-    dynamics.set_single_conc(conc=A_conc, species_name="A", snapshot=False)
-    dynamics.update_occupancy()
-    history.store(A_conc, {"M1 site 3": dynamics.get_occupancy(macromolecule="M1", site_number=3), 
-                           "M1 site 15": dynamics.get_occupancy(macromolecule="M1", site_number=15), 
-                           "M2 site 2": dynamics.get_occupancy(macromolecule="M2", site_number=2)})
+    uc.set_single_conc(conc=A_conc, species_name="A", snapshot=False)
+    uc.update_occupancy()
+    history.store(A_conc, {"M1 site 3":  uc.get_occupancy(macromolecule="M1", site_number=3), 
+                           "M1 site 15": uc.get_occupancy(macromolecule="M1", site_number=15), 
+                           "M2 site 2":  uc.get_occupancy(macromolecule="M2", site_number=2)})
 
 # %%
 df = history.get_dataframe()

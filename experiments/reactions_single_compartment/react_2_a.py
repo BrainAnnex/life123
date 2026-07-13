@@ -106,7 +106,7 @@ uc.find_equilibrium_conc(rxn_index=0)    # This is an EXACT equilibrium solution
 # More precisely, it's because the **reaction quotient Q**, at the current initial concentrations, is larger than our **equilibrium constant K**, which is 1.5 :
 
 # %%
-ThermoDynamics.compute_reaction_quotient(reactant_data=["A"], product_data=["B"],
+ReactionKinetics.compute_reaction_quotient(reactant_data=["A"], product_data=["B"],
                                          conc={"A": 10., "B": 50.})
 
 # %% [markdown]
@@ -196,7 +196,7 @@ uc.get_history()         # Revisited from earlier
 # Notice that we lack a rate for the last time value, in the above table, because no reaction simulation starting at that time has been performed
 
 # %%
-p1 = uc.plot_history(chemicals="A", colors="darkturquoise")   # The plot of [A] from the system history
+p1 = uc.plot_history(species="A", colors="darkturquoise")   # The plot of [A] from the system history
 
 # %%
 p2 = PlotlyHelper.plot_pandas(df=rates_df, x_var="SYSTEM TIME", fields="A_dot", colors="brown")   # The plot of A_dot, from rates_df

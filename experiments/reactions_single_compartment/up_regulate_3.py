@@ -34,7 +34,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData as chem
+from life123 import SpeciesRegistry
 from life123 import UniformCompartment
 
 from life123 import GraphicLog
@@ -53,15 +53,15 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = chem(names=["U", "X", "S"])
+chem_data = SpeciesRegistry(id=["U", "X", "S"])
 
 # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
 chem_data.add_reaction(reactants=[(2, "S", 1)], products="U",
-                       forward_rate=8., reverse_rate=2.)
+                       kF=8., kR=2.)
 
 # Reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
 chem_data.add_reaction(reactants="S", products="X",
-                       forward_rate=6., reverse_rate=3.)
+                       kF=6., kR=3.)
 
 chem_data.describe_reactions()
 
@@ -72,7 +72,7 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)
+dynamics = UniformCompartment(species_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100.})
 dynamics.describe_state()
 
@@ -84,7 +84,7 @@ dynamics.describe_state()
 # # 1. Take the initial system to equilibrium
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="fast")
+dynamics = UniformCompartment(species_data=chem_data, preset="fast")
 dynamics.set_conc(conc={"U": 50., "X": 100.})
 #dynamics.describe_state()
 

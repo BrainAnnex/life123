@@ -20,13 +20,18 @@ Includes diffusion, reactions, diffusion/reaction, membranes and compartments.
 
 [WEBSITE](https://life123.science/)
 
+[QUICK-START](https://life123.science/one_click_live_demo)
+
 [Follow our blog/discussions](https://github.com/BrainAnnex/life123/discussions)
+
+---
 
 ## Try it Out Live on a hosted JupyterLab!
 **TRY IT OUT LIVE** (no registration nor install!)  
 Click on
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/BrainAnnex/life123/main)
 
+Say Cancel when asked to include "jupyterlab-dash" in the build.  
 Then explore the notebooks under the `experiments` folder.
 
 Note that several notebooks create **HTML log files**, by the same name as the notebook (eg,
@@ -46,6 +51,8 @@ make sure to download the changed notebooks!  For instruction on creating your o
 (Note: if you want to simply VIEW the notebooks rather than run them, you may simply follow the  
 links in the [Experiments Page](https://life123.science/experiments) )
 
+--- 
+
 ## Components
 
 *Experiments:*
@@ -54,8 +61,6 @@ See the [Life123 List of Experiments](https://life123.science/experiments)
 *Libraries:*
 See the [Life123 Guide](https://life123.science/guide)
 
-*Unit Testing (pytest):*
-* "tests" folder (top-level)
 
 ## How to Use
 See this [short video](https://www.youtube.com/watch?v=FOhQgPZaEsA)

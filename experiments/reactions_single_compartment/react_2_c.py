@@ -39,10 +39,10 @@ LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import check_version, ChemData, UniformCompartment
+from life123 import check_version, UniformCompartment
 
 import numpy as np
-from life123 import ReactionKinetics, ReactionRegistry, PlotlyHelper
+from life123 import ReactionRegistry, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)
@@ -177,15 +177,15 @@ dynamics_exact.plot_history(colors=['darkturquoise', 'green'], show_intervals=Tr
 
 # %%
 # A streamlined version of the diagram seen in Part 1
-fig_variable = dynamics_variable.plot_history(chemicals='A', colors='darkturquoise', title="VARIABLE time steps", show=True)     
+fig_variable = dynamics_variable.plot_history(species='A', colors='darkturquoise', title="VARIABLE time steps", show=True)
 
 # %%
 # A streamlined version of the diagram seen in Part 2
-fig_fixed = dynamics_fixed.plot_history(chemicals='A', colors='blue', title="FIXED time steps", show=True)
+fig_fixed = dynamics_fixed.plot_history(species='A', colors='blue', title="FIXED time steps", show=True)
 
 # %%
 # A streamlined version of the diagram seen in Part 3
-fig_exact = dynamics_exact.plot_history(chemicals='A', colors='red', title="EXACT solution (at fixed time steps)", show=True)
+fig_exact = dynamics_exact.plot_history(species='A', colors='red', title="EXACT solution (at fixed time steps)", show=True)
 
 # %%
 PlotlyHelper.combine_plots(fig_list=[fig_fixed, fig_variable, fig_exact],

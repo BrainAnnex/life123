@@ -40,7 +40,7 @@ LIFE123_VERSION = "1.0.0rc3"       # Library version this experiment is based on
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import BioSim1D, ChemData, CollectionArray, Numerical, check_version
+from life123 import BioSim1D, SpeciesRegistry, CollectionArray, Numerical, check_version
 
 import numpy as np
 
@@ -53,7 +53,7 @@ check_version(LIFE123_VERSION)
 # We'll be considering just 1 chemical species, "A"
 diffusion_rate = 10.
 
-chem_data = ChemData(diffusion_rates=diffusion_rate, names="A")
+chem_data = SpeciesRegistry(diffusion_rate=diffusion_rate, id="A")
 
 # %%
 
@@ -71,7 +71,7 @@ algorithm = None  # "Explicit, with 3+1 stencil"
 
 # %%
 # Initialize the system
-bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+bio = BioSim1D(n_bins=n_bins, species_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
 bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)
@@ -159,7 +159,7 @@ n_bins = 100          # Reducing the spatial resolution
 
 # %%
 # Initialize the system
-bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+bio = BioSim1D(n_bins=n_bins, species_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
 bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)
@@ -219,7 +219,7 @@ n_bins = 900          # Increasing the spatial resolution (from the baseline of 
 
 # %%
 # Initialize the system
-bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+bio = BioSim1D(n_bins=n_bins, species_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
 bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)
@@ -280,7 +280,7 @@ delta_t = 0.02        # Reducing the time resolution (from baselin 0.01)
 
 # %%
 # Initialize the system
-bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+bio = BioSim1D(n_bins=n_bins, species_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
 bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)
@@ -340,7 +340,7 @@ delta_t = 0.005        # Increasing the time resolution (from baselin 0.01)
 
 # %%
 # Initialize the system
-bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+bio = BioSim1D(n_bins=n_bins, species_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
 bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)
@@ -401,7 +401,7 @@ delta_t = 0.01        # Reducing the baseline time resolution
 
 # %%
 # Initialize the system
-bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+bio = BioSim1D(n_bins=n_bins, species_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
 bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)
@@ -460,7 +460,7 @@ Numerical.compare_vectors(lhs, rhs, trim_edges=2)  # Euclidean distance, ignorin
 
 # %%
 # Initialize the system
-bio = BioSim1D(n_bins=n_bins, chem_data=chem_data)
+bio = BioSim1D(n_bins=n_bins, species_data=chem_data)
 
 # Initialize the concentrations to 2 superposed sine waves
 bio.inject_sine_conc(chem_label="A", number_cycles=1, amplitude=10, bias=50)

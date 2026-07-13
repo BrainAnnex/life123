@@ -1,11 +1,13 @@
-# classes: "ReactionCommon", "ReactionOneStep", "ReactionUnimolecular",
-#          "ReactionSynthesis", "ReactionDecomposition", "ReactionEnzyme",
+# classes: "ReactionCommon", "ReactionElementary", "ReactionUnimolecular",
+#          "ReactionSynthesis", "ReactionDecomposition",
+#          "ReactionEnzyme",
 #          and "ReactionGeneric"
 
 from typing import Union, Set, Tuple
 import numpy as np
 from life123.thermodynamics import ThermoDynamics
 from life123.reaction_kinetics import ReactionKinetics
+from life123.units import show_standard_units, convert, K, C
 
 
 
@@ -55,29 +57,80 @@ class ReactionCommon:
 
 
 
+    def describe(self, *args, **kwargs):
+        # Return as a string, a user-friendly plain-text form of the reaction
+        raise NotImplementedError("Subclasses must implement this")
+
+
+    def extract_reactants(self, *args, **kwargs):
+        raise NotImplementedError("Subclasses must implement this")
+
+    def extract_products(self, *args, **kwargs):
+        raise NotImplementedError("Subclasses must implement this")
+
+
+    def extract_reactant_labels(self, *args, **kwargs):
+        # Return the list of the labels of ALL the reactants of this reaction
+        raise NotImplementedError("Subclasses must implement this")
+
+    def extract_product_labels(self, *args, **kwargs):
+        # Return the list of the labels of ALL the products of this reaction
+        raise NotImplementedError("Subclasses must implement this")
+
+
+    def extract_reactants_formula(self, *args, **kwargs):
+        #         Return a string with a user-friendly form of the left (reactants) side of the reaction formula
+        raise NotImplementedError("Subclasses must implement this")
+
+    def extract_products_formula(self, *args, **kwargs):
+        #         Return a string with a user-friendly form of the left (reactants) side of the reaction formula
+        raise NotImplementedError("Subclasses must implement this")
+
+
+    def extract_chemicals_in_reaction(self, *args, **kwargs):
+        # Return a SET of the labels of ALL the chemicals appearing in this reaction
+        raise NotImplementedError("Subclasses must implement this")
+
+
+    def step_simulation(self, *args, **kwargs):
+        # Simulate the reaction over a specified time interval,
+        # using either the exact analytical solution, if available,
+        # or the "Forward Euler" approximation method
+        raise NotImplementedError("Subclasses must implement this")
+
+
+
 
     def reaction_details(self, rxn_properties :dict) -> str:
         """
-        Return a string with some details about the parameters of this reaction
+        Return a string with some details about the parameters of this reaction,
+        contained in the passed dictionary
 
         :param rxn_properties:  A dictionary with numerical properties of interest for the reaction
-                                    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': -1005.13, 'K': 1.5}
+                                    EXAMPLE: {'kF': 3.0, 'kR': 2.0, 'delta_G': 1.2345, 'K': 1.5}
 
         :return:                A string with some details about the parameters of this reaction
-                                    EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13 / Temp = 25 C)"
+                                    EXAMPLE: "  (kF = 3 | kR = 2 | delta_G = 1.2345 kJ/mol | Temp = 25 C)"
         """
-        details = []
-        #rxn_properties = self.extract_rxn_properties()
+        details = []    # Running list of strings with each of the individual details
+
         for k,v in rxn_properties.items():
-            details.append(f"{k} = {v:,.5g}")          # EXAMPLE: "kF = 3"
+            single_detail = f"{k} = {v:,.5g}"       # EXAMPLES: "kF = 3"
+                                                    #           "delta_G = 1.2345"
+            units = show_standard_units(k)
+            if units is not None:
+                single_detail += " " + units        # EXAMPLE: "delta_G = 1.2345 kJ/mol"
+
+            details.append(single_detail)
+
 
         description = ""
 
         if self.temp:
-            details.append(f"Temp = {self.temp - 273.15:,.4g} C")          # EXAMPLE: "Temp = 25 C"
+            details.append(f"Temp = {convert(self.temp, from_unit=K, to_unit=C):,.4g} C")          # EXAMPLE: "Temp = 25 C"
 
         if details:
-            description = "  (" + ' / '.join(details) + ")"   # EXAMPLE: "  (kF = 3 / kR = 2 / Delta_G = -1,005.13)"
+            description = "  (" + ' | '.join(details) + ")"   # EXAMPLE: "  (kF = 3 | kR = 2 | delta_G = 1.2345 kJ/mol)"
 
         return description
 
@@ -127,13 +180,14 @@ class ReactionElementary(ReactionCommon):
     def __init__(self, reversible=True, kF=None, kR=None,
                  delta_H=None, delta_S=None, delta_G=None, **kwargs):
         """
-        :param reversible:
-        :param kF:
-        :param kR:
-        :param delta_H:
-        :param delta_S:
-        :param delta_G:
-        :param kwargs:
+        :param reversible:  [OPTIONAL] Boolean indicating whether the reaction is reversible.  Default: True
+        :param kF:          [OPTIONAL] Forward reaction rate constant
+        :param kR:          [OPTIONAL] Reverse reaction rate constant
+        :param delta_H:     [OPTIONAL] Change in Enthalpy (from reactants to products), in kJ/mol
+        :param delta_S:     [OPTIONAL] Change in Entropy (from reactants to products), in Joules/(mol·K)
+        :param delta_G:     [OPTIONAL] Change in Free Energy (from reactants to products), in kJ/mol
+
+        :param kwargs:      Other named arguments to pass thru to the parent class
         """
 
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
@@ -375,7 +429,8 @@ class ReactionUnimolecular(ReactionElementary):
         """
         Return the list of ALL the reactant labels in this reaction
 
-        :return:    A list of ALL the reactant labels in this reaction
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
         return [self.reactant]
 
@@ -402,9 +457,10 @@ class ReactionUnimolecular(ReactionElementary):
 
     def extract_product_labels(self) -> [str]:
         """
-        Return the list of the labels ALL the products of this reaction
+        Return the list of the labels of ALL the products of this reaction
 
-        :return:
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
         return [self.product]
 
@@ -456,7 +512,7 @@ class ReactionUnimolecular(ReactionElementary):
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        return ThermoDynamics.compute_reaction_quotient(reactant_data=[(1, self.reactant)], product_data=[(1, self.product)],
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=[(1, self.reactant)], product_data=[(1, self.product)],
                                                         conc=conc, explain=explain)
 
 
@@ -480,8 +536,8 @@ class ReactionUnimolecular(ReactionElementary):
 
     def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> (dict, float):
         """
-        Simulate the unimolecular reaction R <-> P, over the specified time interval,
-        using either the exact analytical solution, or the "Forward Euler" approximation method
+        Simulate the unimolecular reaction of the type R <-> P, over the specified time interval,
+        using either the exact analytical solution, or the "Forward Euler" approximation method.
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
                                 concentrations won't vary significantly during this span
@@ -521,6 +577,7 @@ class ReactionUnimolecular(ReactionElementary):
                 delta_p = ReactionKinetics.exact_advance_unimolecular_irreversible(kF=self.kF,
                                                                                    A0=R0, P0=P0, t=delta_time, incremental=True)
 
+            # Work out the stoichiometry for all the species
             increment_dict_single_rxn = {r: -delta_p, p: delta_p}
             return (increment_dict_single_rxn, rxn_rate)
 
@@ -642,8 +699,12 @@ class ReactionSynthesis(ReactionElementary):
         """
         Return the list of ALL the reactant labels in this reaction
 
-        :return:    The list of ALL the reactant labels in this reaction
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
+        if self.reactant_1 == self.reactant_2:
+            return [self.reactant_1]
+
         return [self.reactant_1, self.reactant_2]
 
 
@@ -675,9 +736,10 @@ class ReactionSynthesis(ReactionElementary):
 
     def extract_product_labels(self) -> [str]:
         """
-        Return the list of the labels ALL the products of this reaction
+        Return the list of the labels of ALL the products of this reaction
 
-        :return:
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
         return [self.product]
 
@@ -729,7 +791,7 @@ class ReactionSynthesis(ReactionElementary):
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        return ThermoDynamics.compute_reaction_quotient(reactant_data=[(1, self.reactant_1) , (1, self.reactant_2)],
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=[(1, self.reactant_1) , (1, self.reactant_2)],
                                                         product_data= [(1, self.product)],
                                                         conc=conc, explain=explain)
 
@@ -756,23 +818,26 @@ class ReactionSynthesis(ReactionElementary):
 
     def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> (dict, float):
         """
-        Simulate the synthesis reaction A + B <-> C, over the specified time interval,
-        using the "Forward Euler" method
+        Simulate the synthesis reaction of the type A + B <-> P, over the specified time interval,
+        using either the exact analytical solution, or the "Forward Euler" approximation method.
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
                                 concentrations won't vary significantly during this span
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
                                 for all the chemicals involved in this reaction
-                                EXAMPLE:  {"A": 1.5, "B": 31.6, "C": 19.9}
+                                EXAMPLE:  {"A": 1.5, "B": 31.6, "P": 19.9}
         :param exact:       [OPTIONAL] If True, use the exact analytical solution;
                                 if False (default), use the "Forward Euler" approximation method
 
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
                                 - increment_dict_single_rxn is the mapping of chemical labels to their concentration CHANGES
                                                             during this step
+                                                            EXAMPLE:  {"A": -1.3, "B": -1.3, "P": 1.3}
+                                                                      (meaning the reactants [A] and [B] decrease by 1.3,
+                                                                       while the product [P] increases by the same amount)
                                 - rxn_rate                  is the reaction rate ("velocity") for this reaction
-                                                            (rate of change of the product)
-                                EXAMPLE of increment_dict_single_rxn: "A": -1.3, "B": 2.9, "C": -1.6
+                                                            (rate of change of the product), at the START of the simulation step
+                                                            EXAMPLE: 3.5
         """
         increment_dict_single_rxn = {}      # The keys are the chemical labels,
                                             # and the values are their respective concentration changes as a result of this reaction
@@ -780,17 +845,25 @@ class ReactionSynthesis(ReactionElementary):
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
         rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
 
-        if exact and self.reversible:   # TODO: take care of the ir-reversible case
-            A0 = conc_dict[self.reactant_1]    # TODO: Look into whether this approach will work for 2A -> C
+        if exact:
+            A0 = conc_dict[self.reactant_1]    # TODO: Look into whether this approach will work for 2A -> P
             B0 = conc_dict[self.reactant_2]
-            C0 = conc_dict[self.product]
+            P0 = conc_dict[self.product]
 
-            increment_triplet = ReactionKinetics.exact_advance_synthesis_reversible(kF=self.kF, kR=self.kR,
-                                                                                    A0=A0, B0=B0, P0=C0, t=delta_time, incremental=True)
+            if self.reversible:
+                delta_p = ReactionKinetics.exact_advance_synthesis_reversible(kF=self.kF, kR=self.kR,
+                                                                              A0=A0, B0=B0, P0=P0, t=delta_time,
+                                                                              incremental=True)
+            else:
+                delta_p = ReactionKinetics.exact_advance_synthesis_irreversible(kF=self.kF,
+                                                                                A0=A0, B0=B0, P0=P0, t=delta_time,
+                                                                                incremental=True)
 
-            increment_dict_single_rxn = {self.reactant_1: increment_triplet[0], self.reactant_2: increment_triplet[1],
-                                         self.product: increment_triplet[2]}
+            # Work out the stoichiometry for all the species
+            increment_dict_single_rxn = {self.reactant_1: -delta_p, self.reactant_2: -delta_p,
+                                         self.product: delta_p}
             return (increment_dict_single_rxn, rxn_rate)
+
 
 
         # If we get thus far, exact=False
@@ -933,7 +1006,8 @@ class ReactionDecomposition(ReactionElementary):
         """
         Return the list of ALL the reactant labels in this reaction
 
-        :return:
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
         return [self.reactant]
 
@@ -960,10 +1034,14 @@ class ReactionDecomposition(ReactionElementary):
 
     def extract_product_labels(self) -> [str]:
         """
-        Return the list of the labels ALL the products of this reaction
+        Return the list of the labels of ALL the products of this reaction
 
-        :return:
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
+        if self.product_1 == self.product_2:
+            return [self.product_1]
+
         return [self.product_1, self.product_2]
 
 
@@ -1020,7 +1098,7 @@ class ReactionDecomposition(ReactionElementary):
                                 if True, return a pair with that quotient and a string with the math formula that was used.
                                 Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
         """
-        return ThermoDynamics.compute_reaction_quotient(reactant_data=[(1, self.reactant)],
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=[(1, self.reactant)],
                                                         product_data=[(1, self.product_1) , (1, self.product_2)],
                                                         conc=conc, explain=explain)
 
@@ -1047,21 +1125,26 @@ class ReactionDecomposition(ReactionElementary):
 
     def step_simulation(self, delta_time, conc_dict :dict, exact=False) -> (dict, float):
         """
-        Simulate the decomposition reaction A <-> B + C, over the specified time interval,
-        using the "Forward Euler" method
+        Simulate the decomposition reaction of the type R <-> P + Q, over the specified time interval,
+        using either the exact analytical solution, or the "Forward Euler" approximation method.
 
         :param delta_time:  The time duration of this individual reaction step - assumed to be small enough that the
                                 concentrations won't vary significantly during this span
         :param conc_dict:   A dict mapping chemical labels to their concentrations,
                                 for all the chemicals involved in this reaction
-                                EXAMPLE:  {"A": 1.5, "B": 31.6, "C": 19.9}
+                                EXAMPLE:  {"R": 1.5, "P": 31.6, "Q": 19.9}
+        :param exact:       [OPTIONAL] If True, use the exact analytical solution;
+                                if False (default), use the "Forward Euler" approximation method
 
         :return:            The pair (increment_dict_single_rxn, rxn_rate)
                                 - increment_dict_single_rxn is the mapping of chemical labels to their concentration CHANGES
                                                             during this step
+                                                            EXAMPLE:  {"R": -1.3, "P": 1.3, "Q": 1.3}
+                                                                      (meaning the reactant [R] decreases by 1.3,
+                                                                       while the products [P] and [Q] increase by the same amount)
                                 - rxn_rate                  is the reaction rate ("velocity") for this reaction
-                                                            (rate of change of either of the products)
-                                EXAMPLE of increment_dict_single_rxn: "A": -1.3, "B": 2.9, "C": -1.6
+                                                            (rate of change of the product), at the START of the simulation step
+                                                            EXAMPLE: 3.5
         """
         increment_dict_single_rxn = {}      # The keys are the chemical labels,
                                             # and the values are their respective concentration changes as a result of this reaction
@@ -1069,6 +1152,33 @@ class ReactionDecomposition(ReactionElementary):
         # Compute the reaction rate ("velocity"), at the current system chemical concentrations, for this reaction
         rxn_rate = self.determine_reaction_rate(conc_dict=conc_dict)
 
+        if exact:
+            # We'll model the decomposition reaction R <-> P + Q
+            # as a synthesis reaction P + Q <-> R (written as A + B <-> C)  with kF and kR switched around
+
+            A0 = conc_dict[self.product_1]  # TODO: Look into whether this approach will work for 2R -> P
+            B0 = conc_dict[self.product_2]
+            C0 = conc_dict[self.reactant]
+
+            if self.reversible:
+                delta_c = ReactionKinetics.exact_advance_synthesis_reversible(kF=self.kR, kR=self.kF,
+                                                                              A0=A0, B0=B0, P0=C0, t=delta_time,
+                                                                              incremental=True)
+            else:
+                delta_c = ReactionKinetics.exact_advance_synthesis_irreversible(kF=self.kR,
+                                                                                A0=A0, B0=B0, P0=C0, t=delta_time,
+                                                                                incremental=True)
+
+            # Work out the stoichiometry for all the species
+            increment_dict_single_rxn = {self.reactant: delta_c,
+                                         self.product_1: -delta_c, self.product_2: -delta_c}
+            return (increment_dict_single_rxn, rxn_rate)
+
+
+
+        # If we get thus far, exact=False
+
+        # In the "forward Euler" approximation, the following rate is taken to remain unvaried during the entire (small) time step
         delta_rxn = rxn_rate * delta_time      # forward reaction - reverse reaction
 
 
@@ -1250,7 +1360,8 @@ class ReactionEnzyme(ReactionCommon):
         Return the list of ALL the reactant labels in this reaction,
         (including the enzyme)
 
-        :return:
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
         return [self.substrate, self.enzyme]
 
@@ -1291,7 +1402,8 @@ class ReactionEnzyme(ReactionCommon):
         Return the list of the labels of ALL the products of this reaction,
         (including the enzyme)
 
-        :return:
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
         return [self.product, self.enzyme]
 
@@ -1611,12 +1723,14 @@ class ReactionGeneric(ReactionCommon):
                                 If not a list, it will first get turned into one
         :param kF:          [OPTIONAL] Forward reaction rate constant
         :param kR:          [OPTIONAL] Reverse reaction rate constant
-        :param delta_H:     [OPTIONAL] Change in Enthalpy (from reactants to products)
-        :param delta_S:     [OPTIONAL] Change in Entropy (from reactants to products)
-        :param delta_G:     [OPTIONAL] Change in Free Energy (from reactants to products), in Joules
+        :param delta_H:     [OPTIONAL] Change in Enthalpy (from reactants to products), in kJ/mol
+        :param delta_S:     [OPTIONAL] Change in Entropy (from reactants to products), in Joules/(mol·K)
+        :param delta_G:     [OPTIONAL] Change in Free Energy (from reactants to products), in kJ/mol
         :param kinetic_rate_function:  [OPTIONAL] Note - the current default will be removed in later versions
                                         EXAMPLES:  ReactionKinetics.compute_rate_mass_action_kinetics  (the generalized "standard rate law")
                                                    ReactionKinetics.compute_rate_first_order (reaction is first order in all reactants and products)
+
+        :param kwargs:      Other named arguments to pass thru to the parent class
         """
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 
@@ -1791,16 +1905,6 @@ class ReactionGeneric(ReactionCommon):
         self.macro_enzyme = (macromolecule, site_number)
 
 
-    '''
-    def extract_catalyst(self) -> Union[str, None]:
-        """
-
-        :return:
-        """
-        #TODO: deprecate?
-        return self.catalyst
-    '''
-
 
 
 
@@ -1883,11 +1987,12 @@ class ReactionGeneric(ReactionCommon):
     def extract_reactant_labels(self) -> [str]:
         """
         Return the list of the labels of ALL the reactant in this reaction,
-        (including any catalysts, if applicable),
-        in the order in which they appear when the reaction was first defined
+        (including any catalysts, if applicable).
 
-        :return:    List of chemical labels
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
+        # TODO: investigate if there's a chance of repeat
         reactants = self.extract_reactants()
         reactant_names = [self.extract_chem_label(r) for r in reactants]
 
@@ -1897,11 +2002,12 @@ class ReactionGeneric(ReactionCommon):
     def extract_product_labels(self) -> [str]:
         """
         Return the list of the labels of ALL the reaction products,
-        (including any catalysts, if applicable),
-        in the order in which they appear when the reaction was first defined
+        (including any catalysts, if applicable)
 
-        :return:    List of chemical labels
+        :return:    A list of unique chemical labels,
+                        in the order they appeared in when this reaction was first defined
         """
+        # TODO: investigate if there's a chance of repeat
         products = self.extract_products()
         product_names = [self.extract_chem_label(r) for r in products]
 
@@ -2000,7 +2106,7 @@ class ReactionGeneric(ReactionCommon):
         product_data = [(self.extract_stoichiometry(p), self.extract_chem_label(p) )
                                for p in self.products]
 
-        return ThermoDynamics.compute_reaction_quotient(reactant_data=reactant_data,
+        return ReactionKinetics.compute_reaction_quotient(reactant_data=reactant_data,
                                                         product_data=product_data,
                                                         conc=conc, explain=explain)
 

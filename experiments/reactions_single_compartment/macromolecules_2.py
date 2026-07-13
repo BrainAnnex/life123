@@ -35,7 +35,7 @@ LIFE123_VERSION = "1.0.0.rc.0"      # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import ChemData
+from life123 import SpeciesRegistry
 from life123 import UniformCompartment
 
 import plotly.express as px
@@ -47,7 +47,7 @@ import plotly.express as px
 
 # %%
 # Initialize the system
-chem1 = ChemData(names=["A", "B"])
+chem1 = SpeciesRegistry(id=["A", "B"])
 
 # Reaction A <-> B , without catalysis (slow forward rate, relative to what we'll see in Part 2)
 chem1.add_reaction(reactants="A", products="B",
@@ -58,7 +58,7 @@ chem1.describe_reactions()
 
 # %%
 # Set the initial concentrations of all the chemicals
-dynamics1 = UniformCompartment(chem_data=chem1, preset="fast")
+dynamics1 = UniformCompartment(species_data=chem1, preset="fast")
 
 dynamics1.set_conc(conc={"A": 100., "B": 20.},
                   snapshot=True)
@@ -96,7 +96,7 @@ dynamics1.is_in_equilibrium()
 
 # %%
 # Initialize the system
-chem2 = ChemData(names=["A", "B", "L"])
+chem2 = SpeciesRegistry(id=["A", "B", "L"])
 
 chem2.add_macromolecules("M1")
 
@@ -135,7 +135,7 @@ chem2.describe_reactions()
 # %%
 # Set the initial concentrations of all the chemicals, including the macromolecule
 
-dynamics2 = UniformCompartment(chem_data=chem2, preset="fast")
+dynamics2 = UniformCompartment(species_data=chem2, preset="fast")
 dynamics2.set_conc(conc={"A": 100., "B": 20.},
                   snapshot=True)      # The macromolecule ligand L is absent
 

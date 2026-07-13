@@ -21,9 +21,9 @@
 # Adaptive variable time resolution is used, with extensive diagnostics, 
 # and finally compared to a new run using fixed time intervals, with the same initial data.
 #
-# In part2, some diagnostic insight is explored.  
+# In **part2**, some diagnostic insight is explored.  
 #
-# In part3, two identical runs ("adaptive variable steps" vs. "fixed small steps") are compared. 
+# In **part3**, two identical runs ("adaptive variable steps" vs. "fixed small steps") are compared. 
 
 # %% [markdown]
 # ## Bathtub analogy:
@@ -38,6 +38,9 @@
 
 # %% [markdown]
 # ![2 Coupled Reactions](../../docs/2_coupled_reactions.png)
+
+# %% [markdown]
+# ### TAGS : "chemistry", "under-the-hood", "numerical", "uniform compartment"
 
 # %%
 LAST_REVISED = "Mar. 17, 2026"
@@ -237,12 +240,12 @@ df2
 
 # %%
 # Earlier run (using variable time steps)
-fig1 = dynamics.plot_history(chemicals='B', colors='orange', title="Adaptive variable-step run", 
+fig1 = dynamics.plot_history(species='B', colors='orange', title="Adaptive variable-step run",
                              show=True)
 
 # %%
 # Latest run (high-precision result from fine fixed-resolution run)
-fig2 = dynamics2.plot_history(chemicals='B', colors=['violet'], title="Fine fixed-step run", 
+fig2 = dynamics2.plot_history(species='B', colors=['violet'], title="Fine fixed-step run",
                               show=True)
 
 # %%

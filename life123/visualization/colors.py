@@ -1237,8 +1237,8 @@ class Colors:
     @classmethod
     def assign_default_colors(cls, n :int) -> [int]:
         """
-        Return a list of n colors, specified by their standard plotly names;
-        meant for situations when 1 or more default colors are needed for line plots.
+        Return a list of n colors, specified by their standard Plotly names;
+        meant for situations when 1 or more default colors are needed for visualizations.
 
         The choice of default colors is hardwired in this function.
 
@@ -1246,6 +1246,9 @@ class Colors:
         :return:    A list of n standard (CSS) color names
         """
         # TODO: provide multiple, user-selectable, harmonious assortments of default colors
+        # TODO: accept a list of colors to avoid
+        # TODO: provide a more complete solution that also manages styles ("solid", "dashed", etc)
+        #       upon "running out of colors"
 
         default_colors = ['darkturquoise', 'orange', 'green', 'brown', 'red', 'gray', 'blue',
                           'purple', 'cyan', 'darkorange', 'navy',

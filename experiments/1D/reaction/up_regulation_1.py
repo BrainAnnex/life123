@@ -37,7 +37,7 @@ LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import check_version, ChemData, BioSim1D, GraphicLog
+from life123 import check_version, SpeciesRegistry, BioSim1D, GraphicLog
 
 # %%
 # Initialize the HTML logging
@@ -50,9 +50,9 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system.  NOTE: Diffusion not applicable (just 1 bin)
-chem_data = ChemData(names=["A", "X", "B"], plot_colors=['red', 'darkorange', 'green']) 
+chem_data = SpeciesRegistry(id=["A", "X", "B"], plot_color=['red', 'darkorange', 'green'])
 
-bio = BioSim1D(n_bins=1, chem_data=chem_data)
+bio = BioSim1D(n_bins=1, species_data=chem_data)
 
 bio.set_uniform_concentration(chem_label="A", conc=5.)     # Scarce
 bio.set_uniform_concentration(chem_label="X", conc=100.)   # Plentiful

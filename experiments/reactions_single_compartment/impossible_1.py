@@ -33,7 +33,7 @@ import set_path      # Importing this module will add the project's home directo
 # %% tags=[]
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData as chem
+from life123 import SpeciesRegistry as chem
 from life123 import UniformCompartment
 
 import plotly.express as px
@@ -93,7 +93,7 @@ initial_conc = {"A": 100.}
 initial_conc
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)
+dynamics = UniformCompartment(species_data=chem_data)
 dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 

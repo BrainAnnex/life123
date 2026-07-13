@@ -1,8 +1,7 @@
-from life123.visualization.py_graph_visual import PyGraphVisual, PyGraphVisual_OLD
-from life123.visualization.graphic_log import GraphicLog, DisplayNetwork
-from life123.html_log import HtmlLog as log
+from life123.visualization.py_graph_visual import PyGraphVisual
+from life123.visualization.graphic_log import DisplayNetwork
 from life123.reactions import ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionEnzyme, ReactionGeneric
-from life123.chem_data import ChemData
+from life123.species_registry import SpeciesRegistry
 
 
 
@@ -16,11 +15,11 @@ class ReactionRegistry:
     all make use of ALL the registered reactions  (i.e. no "pick and choose" some of the reactions.)
     """
 
-    def __init__(self, chem_data=None):
+    def __init__(self, species_data=None):
 
         """
-        :param chem_data:   [OPTIONAL] Object of type "ChemData"; if not passed, it will get instantiated automatically -
-                                and then it can be obtained by means of the method get_chem_data()
+        :param species_data:    [OPTIONAL] Object of type "SpeciesRegistry"; if not passed, it will get instantiated automatically -
+                                    and then it can be obtained by means of the method get_chem_data()
         """
 
         # TODO: consider adding to argument   "=labels=None"
@@ -32,16 +31,16 @@ class ReactionRegistry:
             "ReactionRegistry() instantiation: cannot specify both the arguments `chem_data` and `labels`"
 
         if labels is not None:
-            chem_data = ChemData(labels=labels)
+            chem_data = SpeciesRegistry(labels=labels)
         """
 
         #assert chem_data is not None, \
             #"ReactionRegistry() instantiation: the arguments `chem_data` must be provided, and cannot be None"
 
-        if chem_data is None:
-            self.chem_data = ChemData()
+        if species_data is None:
+            self.species_data = SpeciesRegistry()
         else:
-            self.chem_data = chem_data
+            self.species_data = species_data
 
         self.reaction_list = []     # List of objects of the various individual reaction classes,
                                     # such as "ReactionGeneric" and "ReactionEnzyme"
@@ -52,7 +51,7 @@ class ReactionRegistry:
                                         # CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
                                         #          the reactions are simulated.  TODO: it might better belong to UniformCompartment
 
-        #self.active_enzymes = set()     # Set of the labels of the enzymes (catalysts) involved
+        #self.active_enzymes = set()    # Set of the labels of the enzymes (catalysts) involved
                                         # in any of the registered reactions
                                         # CAUTION: the concept of "active enzyme" might change in future versions, where only SOME of
                                         #          the reactions are simulated.  TODO: it might better belong to UniformCompartment
@@ -81,6 +80,7 @@ class ReactionRegistry:
 
     def get_all_reactions(self):
         """
+        Return the list of all the reactions that have been registered
 
         :return:    A list of various types of reaction objects,
                         such as ReactionUnimolecular, ReactionSynthesis, etc.
@@ -112,23 +112,25 @@ class ReactionRegistry:
         :return:        None
         """
         assert self.number_of_reactions() > 0, \
-            f"ChemData.assert_valid_rxn_index(): there are no reactions defined yet.  Use add_reaction() to add them first"
+            f"assert_valid_rxn_index(): there are no reactions defined yet.  Use add_reaction() to add them first"
 
         assert (type(index) == int), \
-            f"ChemData.assert_valid_rxn_index(): the requested reaction index must be an integer; " \
+            f"assert_valid_rxn_index(): the requested reaction index must be an integer; " \
             f"the provided value ({index}) is of type {type(index)}"
 
         assert 0 <= index < self.number_of_reactions(), \
-            f"ChemData.assert_valid_rxn_index(): the requested reaction index is not the expected range [0 to {self.number_of_reactions() - 1}], inclusive; " \
+            f"assert_valid_rxn_index(): the requested reaction index is not the expected range [0 to {self.number_of_reactions() - 1}], inclusive; " \
             f"the value passed was: {index} (there is no reaction whose index is {index})"
 
 
 
-    def get_chem_data(self):
+    def get_species_data(self) -> SpeciesRegistry:
         """
-        :return:    Object of type "ChemData"
+        Return the "SpeciesRegistry" object being used
+
+        :return:    Object of type "SpeciesRegistry"
         """
-        return self.chem_data
+        return self.species_data
 
 
 
@@ -159,18 +161,6 @@ class ReactionRegistry:
         return rxn.extract_reactants()
 
 
-    def get_reactant_species(self, i :int) -> [(int, str)]:
-        """
-        Return a list of the reactant species of the i-th reaction.
-
-        :param i:   The index (0-based) to identify the reaction of interest
-        :return:    A list of chem labels
-        """
-        rxn = self.get_reaction(i)
-        reactant_complexes = rxn.extract_reactants()
-        return [c[1] for c in reactant_complexes]
-
-
     def get_reactants_formula(self, i :int) -> str:
         """
         Return a string with a user-friendly form of the left (reactants) side of the reaction formula
@@ -193,18 +183,6 @@ class ReactionRegistry:
         """
         rxn = self.get_reaction(i)
         return rxn.extract_products()
-
-
-    def get_product_species(self, i :int) -> [(int, str)]:
-        """
-        Return a list of the product species of the i-th reaction.
-
-        :param i:   The index (0-based) to identify the reaction of interest
-        :return:    A list of chem labels
-        """
-        rxn = self.get_reaction(i)
-        product_complexes = rxn.extract_products()
-        return [c[1] for c in product_complexes]
 
 
     def get_products_formula(self, i :int) -> str:
@@ -255,7 +233,7 @@ class ReactionRegistry:
 
         name_set = rxn.extract_chemicals_in_reaction()
 
-        index_set = {self.chem_data.get_index(name) for name in name_set}
+        index_set = {self.species_data.get_species_index(name) for name in name_set}
 
         return index_set
 
@@ -280,15 +258,14 @@ class ReactionRegistry:
         Return a list of all the reactions that the given chemical species
         is involved in
 
-        :param chem_label:
-        :param side:        Either "left" or "right"
-        :return:            List of varius types of "Reaction" objects
+        :param chem_label:  To identify a particular chemical
+        :param side:        Either "reagent" or "product"
+        :return:            List of various types of "Reaction" objects
         """
-        # TODO: test
-        assert side == "left" or side == "right"
+        assert side == "reagent" or side == "product"
         rxns_found_in = []
         for rxn in self.reaction_list:
-            if side == "left":
+            if side == "reagent":
                 if chem_label in rxn.extract_reactant_labels():
                     rxns_found_in.append(rxn)
             else:
@@ -297,7 +274,6 @@ class ReactionRegistry:
 
 
         return rxns_found_in
-
 
 
 
@@ -557,34 +533,34 @@ class ReactionRegistry:
 
         #if catalyst:
             # Register the catalyst, if not already registered
-            #self.chem_data.add_chemical(name=catalyst, skip_duplicates=True)
+            #self.species_data.add_species(id=catalyst, skip_duplicates=True)
 
         # Register any newly-encountered reactant not already registered
         rxn_reactants = rxn.extract_reactant_labels()
         for label in rxn_reactants:
-            self.chem_data.add_chemical(name=label, skip_duplicates=True)
+            self.species_data.add_species(id=label, skip_duplicates=True)
 
         # Register any newly-encountered reaction product not already registered
         rxn_products = rxn.extract_product_labels()
         for label in rxn_products:
-            self.chem_data.add_chemical(name=label, skip_duplicates=True)
+            self.species_data.add_species(id=label, skip_duplicates=True)
 
         # Register any newly-encountered reaction intermediates not already registered
         rxn_intermediate = rxn.extract_intermediate()
         if rxn_intermediate:
-            new_index = self.chem_data.add_chemical(name=rxn_intermediate, skip_duplicates=True)
+            new_index = self.species_data.add_species(id=rxn_intermediate, skip_duplicates=True)
             if new_index is not None:
                 print(f"register_reaction() INFO: a reaction intermediates (`{rxn_intermediate}`), not explicitly registered, was automatically added to the chemical registry")
 
-            if self.chem_data.get_diffusion_rate(chem_label=rxn_intermediate) is None:
+            if self.species_data.get_value(species_id=rxn_intermediate, field="diffusion_rate") is None:
                 # Attempt to estimate the diffusion rate constant of the reaction intermediate
-                D_enzyme = self.chem_data.get_diffusion_rate(chem_label=rxn_intermediate)
-                D_substrate = self.chem_data.get_diffusion_rate(chem_label=rxn.substrate)
-                # TODO: this might best belong elsewhere
+                D_enzyme = self.species_data.get_value(species_id=rxn_intermediate, field="diffusion_rate")
+                D_substrate = self.species_data.get_value(species_id=rxn.substrate, field="diffusion_rate")
+                # TODO: this might best belong elsewhere; also, review its validity
                 if (D_enzyme is not None) and (D_substrate is not None):
                     D_ES_rough_estimate = min(D_enzyme, D_substrate) * 0.9
                     print(f"register_reaction() INFO: diffusion rate for the reaction intermediates (`{rxn_intermediate}`), not yet specified, roughly estimated as {D_ES_rough_estimate}")
-                    self.chem_data.set_diffusion_rate(chem_label=rxn_intermediate, diff_rate=D_ES_rough_estimate)
+                    self.species_data.set_value(species_id=rxn_intermediate, field="diffusion_rate", value=D_ES_rough_estimate)
 
 
         involved_chemicals = set(rxn_reactants) | set(rxn_products)  # Union of sets
@@ -650,7 +626,7 @@ class ReactionRegistry:
 
     '''                             ~   TO DESCRIBE THE REACTIONS  ~                                  '''
 
-    def ________DESCRIBE_RXNS________(DIVIDER):
+    def ________DESCRIBE_REACTIONS________(DIVIDER):
         pass        # Used to get a better structure view in IDEs
     #####################################################################################################
 
@@ -678,16 +654,16 @@ class ReactionRegistry:
 
         chem_labels = self.labels_of_active_chemicals(sort_by_index=True)   # Set of chem labels, sorted by chemical index
 
-        if self.chem_data.color_dict != {}:   # If plot colors were registered, show them alongside the chem labels
-            chem_labels_with_colors = []
-            for label in chem_labels:
-                color = self.chem_data.get_plot_color(label)
-                if color:
-                    chem_labels_with_colors.append(f'"{label}" ({color})')
-                else:
-                    chem_labels_with_colors.append(f'"{label}"')
+        # If plot colors were registered, show them alongside the chem labels
+        chem_labels_with_colors = []
+        for label in chem_labels:
+            color = self.species_data.get_value(species_id=label, field="plot_color")
+            if color:
+                chem_labels_with_colors.append(f'"{label}" ({color})')
+            else:
+                chem_labels_with_colors.append(f'"{label}"')
 
-            chem_labels = "{" + ", ".join(chem_labels_with_colors) + "}"
+        chem_labels = "{" + ", ".join(chem_labels_with_colors) + "}"
 
 
         #if self.active_enzymes == set():    # If no enzymes were involved in any reaction
@@ -698,11 +674,7 @@ class ReactionRegistry:
 
             print(f"Enzymes involved in the above reactions: ")
             for enz in self.names_of_enzymes():
-                enzyme_color = self.chem_data.get_plot_color(enz)
-                if enzyme_color:
-                    print(f'  "{enz}" ({enzyme_color})')
-                else:
-                    print(f'  "{enz}"')
+                pass
         '''
 
 
@@ -765,7 +737,7 @@ class ReactionRegistry:
         if not sort_by_index:
             return list(self.active_chemicals)
 
-        return sorted(self.active_chemicals, key=self.chem_data.get_index)
+        return sorted(self.active_chemicals, key=self.species_data.get_species_index)
 
 
 
@@ -795,20 +767,10 @@ class ReactionRegistry:
         CAUTION: the concept of "active chemical" might change in future versions, where only SOME of
                  the reactions are simulated
         """
-        index_list = list(map(self.chem_data.get_index, self.active_chemicals))
+        index_list = list(map(self.species_data.get_species_index, self.active_chemicals))
         return sorted(index_list)
 
 
-
-    '''
-    def names_of_enzymes(self) -> Set[str]:
-        """
-        Return the set of the names of the enzymes (catalysts) involved
-        in any of the registered reactions
-        (regardless of whether they might participate in a non-enzymatic role in OTHER reactions)
-        """
-        return self.active_enzymes
-    '''
 
 
 
@@ -826,6 +788,9 @@ class ReactionRegistry:
         Prepare and return a data structure with chemical-reaction data in a network format,
         ready to be passed to the front end, for network-diagram visualization with the Cytoscape.js library
         (in the graph module "vue_cytoscape")
+
+        A "bipartite" graph ("Petri net") representation is used for reaction, where the reaction itself - as well as the reactants
+        and products - are all turned into graph vertices.
 
         4 parts are generated, and assembled together as a dictionary with 4 keys: 'nodes', 'edges', 'color_mapping', 'caption_mapping'
 
@@ -847,6 +812,8 @@ class ReactionRegistry:
 
         :return:    A dictionary with 4 keys: 'nodes', 'edges', 'color_mapping', 'caption_mapping'
         """
+        # TODO: manage shapes; e.g., use rectangles for reactions
+
         graph = PyGraphVisual()     # Object to facilitate data preparation for graph visualization
 
         # Note: the graph nodes representing Chemicals will be given an id such as "C-123" and a label "Chemical";
@@ -869,11 +836,11 @@ class ReactionRegistry:
             products = rxn.extract_products()
             for term in products:
                 species_name = rxn.extract_chem_label(term)
-                chemical_id = f"C-{self.chem_data.get_index(species_name)}"      # Example: "C-12"
+                chemical_id = f"C-{self.species_data.get_species_index(species_name)}"      # Example: "C-12"
 
                 # Add each product to the graph as a node (if not already present)
                 properties={'name': species_name}
-                if diff := self.chem_data.get_diffusion_rate(chem_label=species_name):
+                if diff := self.species_data.get_value(species_id=species_name, field="diffusion_rate"):
                     properties['diff_rate'] = diff
                 graph.add_node( node_id=chemical_id, labels="Chemical",
                                 properties=properties)
@@ -887,11 +854,11 @@ class ReactionRegistry:
             reactants = rxn.extract_reactants()
             for term in reactants:
                 species_name = rxn.extract_chem_label(term)
-                chemical_id = f"C-{self.chem_data.get_index(species_name)}"      # Example: "C-34"
+                chemical_id = f"C-{self.species_data.get_species_index(species_name)}"      # Example: "C-34"
 
                 # Add each reactant to the graph as a node (if not already present)
                 properties={'name': species_name}
-                if diff := self.chem_data.get_diffusion_rate(chem_label=species_name):
+                if diff := self.species_data.get_value(species_id=species_name, field="diffusion_rate"):
                     properties['diff_rate'] = diff
                 graph.add_node(node_id=chemical_id, labels="Chemical",
                                properties=properties)

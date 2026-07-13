@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from typing import Tuple
+from life123.units import standardize_units
 
 
 class ThermoDynamics:
@@ -11,215 +11,139 @@ class ThermoDynamics:
 
     This class does NOT get instantiated.
 
-            "K"       (equilibrium constant - from either kinetic or thermodynamic data;
-                       if both present, they must match up!)
+    UNITS internally used (same as the DEFAULT units for the function calls):
+        Temperature:    degree K
+        Energy:         kJ              <- NOTE the divergence from SI units, for familiarity of convention
+        Molar energy:   kJ/mol
+        Molar entropy:  Joules/(mol·K)  <- NOTE : Joules, NOT kJ, for the entropy!
+
+    USING ALTERNATE UNITS:
+        We're *beginning* to phase in the units.py module.
+        Some - but not yet all - functions now accept arguments such as temp=(25, C)
+
+    ENTITIES:
+            "K"       (equilibrium constant - from thermodynamic data)
             "delta_H" (change in Enthalpy: Enthalpy of Products - Enthalpy of Reactants)
             "delta_S" (change in Entropy)
             "delta_G" (change in Gibbs Free Energy)
+
+            No correction is made for the temperature dependency of delta_H
 
             Note - at constant temperature T :
                 Delta_G = Delta_H - T * Delta_S
                 Equilibrium constant = exp(-Delta_G / RT)
     """
 
-    # Class Attribute
-    R = 8.31446261815324    # Ideal gas constant, in units of Joules / (Kelvin * Mole)
+    # Class Attributes
+    R_SI_units = 8.31446261815324   # Ideal gas constant, in units of Joules / (Kelvin * mol)
+    R = 0.00831446261815324         #  Ideal gas constant, in units of kJ mol−1 K−1
 
 
 
     @classmethod
-    def K_from_delta_G(cls, delta_G, temp) -> float:
+    def equilibrium_constant_from_gibbs_energy(cls, delta_G :float, temp :float|tuple) -> float:
         """
-        Compute a reaction's equilibrium constant from the thermodynamic data
+        Compute a reaction's equilibrium constant from its change in Gibbs Free Energy,
+        at the specified temperature
 
-        :param delta_G: Change in Gibbs Free Energy (from reactants to products), in Joules
-        :param temp:    System's temperature, in degree Kelvins
+        :param delta_G: Change in Gibbs Free Energy (from reactants to products), in kJ/mol
+        :param temp:    In degrees Kelvin, or in pair format such as (25, C)
         :return:        The reaction's equilibrium constant
         """
+        temp = standardize_units(temp, dimension="temperature")
         return math.exp(- delta_G / (cls.R * temp))
 
 
 
     @classmethod
-    def delta_G_from_K(cls, K, temp) -> float:
+    def gibbs_energy_from_equilibrium_constant(cls, K :float, temp :float|tuple) -> float:
         """
         Compute a reaction's change in its Gibbs Free Energy from its equilibrium constant,
         at the specified temperature
 
         :param K:       The reaction's equilibrium constant
-        :param temp:    System's temperature, in degree Kelvins
+        :param temp:    In degrees Kelvin, or in pair format such as (25, C)
         :return:        The reaction's change in Gibbs Free Energy (from reactants to products),
-                            in Joules
+                            in kJ/mol
         """
+        temp = standardize_units(temp, dimension="temperature")
         return -cls.R * temp * math.log(K)      # Natural log
 
 
 
     @classmethod
-    def delta_G_from_enthalpy(cls, delta_H, delta_S, temp) -> float:
+    def gibbs_energy_from_enthalpy_entropy(cls, delta_H, delta_S, temp) -> float:
         """
-        Compute the change in Gibbs Free Energy, from Enthalpy and Entropy changes
+        Compute the change in Gibbs Free Energy, from Enthalpy and Entropy changes,
+        at the specified temperature
 
-        :param delta_H: The reaction's change in Enthalpy (from reactants to products)
-        :param delta_S: The reaction's change in Entropy (from reactants to products)
+        :param delta_H: The reaction's change in Enthalpy (from reactants to products),
+                            in kJ/mol           NOTE it's KILO-Joules
+        :param delta_S: The reaction's change in Entropy (from reactants to products),
+                            in Joules/(mol·K)   NOTE it's Joules, NOT kJ
         :param temp:    System's temperature, in degree Kelvins
-        :return:        The reaction's change in Free Energy (from reactants to products)
+        :return:        The reaction's change in Free Energy (from reactants to products),
+                            in kJ/mol
         """
-        return delta_H - temp * delta_S
+        delta_S_internal = delta_S/1000     # Convert to kJ/(mol·K)
+        return delta_H - temp * delta_S_internal
 
 
     @classmethod
-    def delta_H_from_gibbs(cls, delta_G, delta_S, temp) -> float:
+    def enthalpy_from_gibbs_energy(cls, delta_G, delta_S, temp) -> float:
         """
-        Compute the change in Enthalpy, from changes in Gibbs Free Energy and in Entropy
+        Compute the change in Enthalpy, from changes in Gibbs Free Energy and in Entropy,
+        at the specified temperature
 
-        :param delta_G: The reaction's change in Gibbs Free Energy (from reactants to products)
-        :param delta_S: The reaction's change in Entropy (from reactants to products)
+        :param delta_G: The reaction's change in Gibbs Free Energy (from reactants to products),
+                            in kJ/mol           NOTE it's KILO-Joules
+        :param delta_S: The reaction's change in Entropy (from reactants to products),
+                            in Joules/(mol·K)   NOTE it's Joules, NOT kJ
         :param temp:    System's temperature, in degree Kelvins
-        :return:        The reaction's change in Enthalpy (from reactants to products)
+        :return:        The reaction's change in Enthalpy (from reactants to products),
+                            in kJ/mol
         """
-        return delta_G + temp * delta_S
+        delta_S_internal = delta_S/1000     # Convert to kJ/(mol·K)
+        return delta_G + temp * delta_S_internal
 
 
     @classmethod
-    def delta_S_from_gibbs(cls, delta_G, delta_H, temp) -> float:
+    def entropy_from_gibbs_energy(cls, delta_G, delta_H, temp) -> float:
         """
-        Compute the change in Entropy, from  changes in the Gibbs Free Energy and in Enthalpy
+        Compute the change in Entropy, from  changes in the Gibbs Free Energy and in Enthalpy,
+        at the specified temperature
 
-        :param delta_G: The reaction's change in Gibbs Free Energy (from reactants to products)
-        :param delta_H: The reaction's change in Enthalpy (from reactants to products)
+        :param delta_G: The reaction's change in Gibbs Free Energy (from reactants to products),
+                            in kJ/mol           NOTE it's KILO-Joules
+        :param delta_H: The reaction's change in Enthalpy (from reactants to products),
+                            in kJ/mol           NOTE it's KILO-Joules
         :param temp:    System's temperature, in degree Kelvins
-        :return:        The reaction's change in Entropy (from reactants to products)
+        :return:        The reaction's change in Entropy (from reactants to products),
+                            in J mol-1 K-1      NOTE it's Joules, NOT kJ
         """
-        return (delta_H - delta_G) / temp
-
-
-
-    @classmethod
-    def compute_reaction_quotient(cls, reactant_data :[str|Tuple[int, str]], product_data :[str|Tuple[int, str]],
-                                  conc :dict, explain=False) -> np.double | Tuple[np.double, str]:
-        """
-        Compute the "Reaction Quotient" Q (aka "Mass–action Ratio"),
-        for the reaction with the specified parameters,
-        given the concentrations of chemicals involved in the reaction.
-
-        EXAMPLE: use reactant_data=[(2, "A")] and product_data=[(1, "B")] ,
-                 for a reaction of the form 2 A <-> B , 
-                 alongside a dictionary with the concentrations (activities) of A and B
-
-        Note: in a heterogeneous mixture, solids, pure liquids and solvents have an activity that has a fixed value of 1,
-              and should be omitted from the parameters passed to this function.
-              We're using the term "concentrations" instead of "chemical activities";
-              concentrations approximate the activities of ideal dilute solutions
-
-        :param reactant_data:   List of either STRINGS with the labels of the reactants,
-                                    or PAIRS of the form (stoichiometry coefficient, label) of the reactants.
-                                    If the stoichiometry coefficient isn't specified, it's taken to be 1
-        :param product_data:    List of either STRINGS with the labels of the products of the reactions,
-                                    or PAIRS of the form (stoichiometry coefficient, label) of the products.
-                                    If the stoichiometry coefficient isn't specified, it's taken to be 1
-        :param conc:            Dictionary with the concentrations (activities) of the species involved in the reaction.
-                                The keys are the chemical labels
-                                    EXAMPLE: {'A': 23.9, 'B': 36.1}
-        :param explain:         If True, it also returns the math formula being used for the computation
-                                    EXAMPLES:   "([C][D]) / ([A][B])"
-                                                "[B] /  [A]^2 "
-
-        :return:                If explain is False, return a value for the "Reaction Quotient" (aka "Mass–action Ratio");
-                                    if True, return a pair with that quotient and a string with the math formula that was used.
-                                    Note that the reaction quotient is a Numpy scalar that might be np.inf or np.nan
-        """
-        # TODO: could be tidier in avoiding unnecessary blanks in the explanations
-        numerator = np.double(1)    # The product of all the concentrations of the reaction products (adjusted for reaction order)
-        denominator = np.double(1)  # The product of all the concentrations of the reactants (also adjusted for reaction order)
-
-        numerator_text = ""      # First part of the textual explanation
-        denominator_text = ""    # Second part of the textual explanation
-
-
-        # Compute the numerator of the "Reaction Quotient"
-        for term in product_data:
-            # Loop over the reaction products
-            if type(term) == str:
-                stoich_coeff = 1
-                p = term
-            else:
-                (stoich_coeff, p) = term
-                assert type(stoich_coeff) == int, f"compute_reaction_quotient(): the argument `product_data` " \
-                                                  f"must be a list of pairs (integer and string).  `{stoich_coeff}` is not an integer"
-                assert type(p) == str, f"compute_reaction_quotient(): the argument `product_data` " \
-                                       f"must be a list of pairs (integer and string).  {p} is not a string"
-
-            species_name = p
-            # TODO: Maybe turn the several next lines into a helper function
-            species_conc = conc.get(species_name)
-            assert species_conc is not None, f"compute_reaction_quotient(): unable to proceed because the " \
-                                             f"concentration of product `{species_name}` was not provided"
-
-            numerator *= (species_conc ** stoich_coeff)
-            if explain:
-                if stoich_coeff > 1:
-                    numerator_text += f" [{species_name}]^{stoich_coeff} "
-                else:
-                    numerator_text += f"[{species_name}]"
-
-        if explain and len(product_data) > 1:
-            numerator_text = f"({numerator_text})"  # In case of multiple terms, enclose them in parenthesis
-
-
-        # Compute the denominator of the "Reaction Quotient"
-        for term in reactant_data:
-            # Loop over the reactants
-            if type(term) == str:
-                stoich_coeff = 1
-                r = term
-            else:
-                (stoich_coeff, r) = term
-                assert type(stoich_coeff) == int, f"compute_reaction_quotient(): the argument `reactant_data` " \
-                                                  f"must be a list of pairs (integer and string).  `{stoich_coeff}` is not an integer"
-                assert type(r) == str, f"compute_reaction_quotient(): the argument `reactant_data` " \
-                                       f"must be a list of pairs (integer and string).  {r} is not a string"
-
-            species_name =  r
-            # TODO: Maybe turn the several next lines into a helper function
-            species_conc = conc.get(species_name)
-            assert species_conc is not None, f"compute_reaction_quotient(): unable to proceed because the " \
-                                             f"concentration of reactant `{species_name}` was not provided"
-
-            denominator *= (species_conc ** stoich_coeff)
-            if explain:
-                if stoich_coeff > 1:
-                    denominator_text += f" [{species_name}]^{stoich_coeff} "
-                else:
-                    denominator_text += f"[{species_name}]"
-
-        if explain and len(reactant_data) > 1:
-            denominator_text = f"({denominator_text})"  # In case of multiple terms, enclose them in parenthesis
-
-
-        with np.errstate(divide='ignore', invalid='ignore'):
-            # It might be np.inf (if just the denominator is zero) or np.nan (if both are zero)
-            quotient = numerator / denominator
-
-        if explain:
-            formula = f"{numerator_text} / {denominator_text}"
-            return (quotient, formula)
-
-        return quotient
+        delta_S_internal = (delta_H - delta_G) / temp
+        return delta_S_internal * 1000
 
 
 
     @classmethod
     def extract_thermodynamic_data(cls, temp, K=None, delta_H=None, delta_S=None, delta_G=None) -> dict:
         """
+        Given the system temperature, and any combination of thermodynamic data,
+        verify the consistency of the given data,
+        derive whatever is missing and can be derived
 
-        :param temp:                System's temperature, in degree Kelvins
-        :param K:       [OPTIONAL]  The reaction's equilibrium constant
-        :param delta_H: [OPTIONAL]  The reaction's change in Enthalpy (from reactants to products)
-        :param delta_S: [OPTIONAL]  The reaction's change in Entropy (from reactants to products)
-        :param delta_G: [OPTIONAL]  The reaction's change in Gibbs Free Energy (from reactants to products)
+        :param temp:    System's temperature, in degree Kelvins
+        :param K:       [OPTIONAL] The reaction's equilibrium constant
+        :param delta_H: [OPTIONAL] The reaction's change in Enthalpy (from reactants to products),
+                            in kJ/mol           NOTE it's KILO-Joules
+        :param delta_S: [OPTIONAL] The reaction's change in Entropy (from reactants to products),
+                            in J mol-1 K-1      NOTE it's Joules, NOT kJ
+        :param delta_G: [OPTIONAL] The reaction's change in Gibbs Free Energy (from reactants to products),
+                            in kJ/mol           NOTE it's KILO-Joules
 
-        :return:        A dict with the 4 keys  "K", "delta_H", "delta_S", "delta_G"
+        :return:        A dict with the 4 keys  "K", "delta_H", "delta_S", "delta_G";
+                            any value that wasn't passed, or derivable from the others, will be None
         """
         #print(f"In extract_thermodynamic_data(): temp={temp}, K={K}, delta_H={delta_H}, delta_S={delta_S}, delta_G={delta_G}")
 
@@ -229,7 +153,7 @@ class ThermoDynamics:
 
         if (K is not None):
             # If the temperature is set, compute the change in Gibbs Free Energy
-            delta_G_derived = cls.delta_G_from_K(K = K, temp = temp)
+            delta_G_derived = cls.gibbs_energy_from_equilibrium_constant(K = K, temp = temp)
             if delta_G is None:
                 delta_G = delta_G_derived
             else:   # If already present (passed as argument), make sure that the two match!
@@ -242,7 +166,7 @@ class ThermoDynamics:
             # If all the thermodynamic data (possibly except delta_G) is available...
 
             # Compute the change in Gibbs Free Energy from delta_H and delta_S, at the current temperature
-            delta_G_derived = cls.delta_G_from_enthalpy(delta_H = delta_H, delta_S = delta_S, temp = temp)
+            delta_G_derived = cls.gibbs_energy_from_enthalpy_entropy(delta_H = delta_H, delta_S = delta_S, temp = temp)
 
             if delta_G is None:
                 delta_G = delta_G_derived
@@ -256,13 +180,34 @@ class ThermoDynamics:
             if K is None:
                 # Compute the equilibrium constant (from the thermodynamic data)
                 # Note: no need to do it if K is present, because we ALREADY checked for consistency
-                K = ThermoDynamics.K_from_delta_G(delta_G = delta_G, temp = temp)
+                K = ThermoDynamics.equilibrium_constant_from_gibbs_energy(delta_G = delta_G, temp = temp)
 
             # If either Enthalpy or Entropy is missing, but the other one is known, compute the missing one
             if (delta_H is None) and (delta_S is not None):
-                delta_H = ThermoDynamics.delta_H_from_gibbs(delta_G=delta_G, delta_S=delta_S, temp=temp)
+                delta_H = ThermoDynamics.enthalpy_from_gibbs_energy(delta_G=delta_G, delta_S=delta_S, temp=temp)
             elif (delta_H is not None) and (delta_S is None):
-                delta_S = ThermoDynamics.delta_S_from_gibbs(delta_G=delta_G, delta_H=delta_H, temp=temp)
+                delta_S = ThermoDynamics.entropy_from_gibbs_energy(delta_G=delta_G, delta_H=delta_H, temp=temp)
 
 
         return {"K": K, "delta_H": delta_H, "delta_S": delta_S, "delta_G": delta_G}
+
+
+
+    @classmethod
+    def relative_population_states(cls, delta_molar_energy :float|tuple, temp :float|tuple):
+        """
+        In the presence of two states with respective energies εi and εj (given our knowledge of εj-εi),
+        use the Boltzmann distribution to determine the ratio of the populations of those state, Ni/Nj
+
+        EXAMPLE: the second state is 6 kJ/mol lower than the first state;
+                 at temp=25 C, the ratio of the populations of the 1st state and the 2nd one is
+                    relative_population_states(delta_molar_energy=-6, temp=25)
+
+        :param delta_molar_energy:  Molar energy change from state 1 to state 2 (e.g. E2 - E1)
+                                        In kJ/mol, or in pair format such as (5000, J_PER_MOL)
+        :param temp:                In degrees Kelvin, or in pair format such as (25, C)
+        :return:                    Ratio of the populations of the first state over that of the second one
+        """
+        delta_molar_energy = standardize_units(delta_molar_energy, dimension="molar energy")
+        temp = standardize_units(temp, dimension="temperature")
+        return math.exp( delta_molar_energy / (cls.R * temp) )

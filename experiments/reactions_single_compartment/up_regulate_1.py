@@ -35,7 +35,7 @@ LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData as chem
+from life123 import SpeciesRegistry
 from life123 import UniformCompartment
 
 from life123 import GraphicLog
@@ -54,10 +54,10 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = chem(names=["A", "X", "B"], plot_colors=['red', 'darkorange', 'green'])
+chem_data = SpeciesRegistry(id=["A", "X", "B"], plot_color=['red', 'darkorange', 'green'])
 
 # %%
-uc = UniformCompartment(chem_data=chem_data, preset="fast", enable_diagnostics=True)     # We'll use diagnostics to explain the adaptive steps taken during the simulation
+uc = UniformCompartment(species_data=chem_data, preset="fast", enable_diagnostics=True)     # We'll use diagnostics to explain the adaptive steps taken during the simulation
 
 # %%
 # Reaction A + X <-> 2B , with 1st-order kinetics for all species

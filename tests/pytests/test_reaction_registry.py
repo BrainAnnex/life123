@@ -1,14 +1,14 @@
 import pytest
 import numpy as np
-from life123 import ChemData, ReactionRegistry, ReactionKinetics, \
+from life123 import SpeciesRegistry, ReactionRegistry, ReactionKinetics, \
                 ReactionUnimolecular, ReactionSynthesis, ReactionDecomposition, ReactionGeneric
 from tests.utilities.comparisons import *
 
 
 
 def test_constructor_ReactionRegistry():
-    chem_data = ChemData()
-    rxns = ReactionRegistry(chem_data=chem_data)
+    chem_data = SpeciesRegistry()
+    rxns = ReactionRegistry(species_data=chem_data)
 
     assert rxns.reaction_list == []
 
@@ -17,8 +17,8 @@ def test_constructor_ReactionRegistry():
 
 
 def test_number_of_reactions():
-    chem_data = ChemData(names=["A", "B", "C"])
-    rxns = ReactionRegistry(chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B", "C"])
+    rxns = ReactionRegistry(species_data=chem_data)
 
     assert rxns.number_of_reactions() == 0
 
@@ -31,7 +31,7 @@ def test_number_of_reactions():
 
 
 def test_active_reaction_indices():
-    chem_data = ChemData(names=["A", "B", "C"])
+    chem_data = SpeciesRegistry(id=["A", "B", "C"])
     rxns = ReactionRegistry(chem_data)
 
     assert rxns.active_reaction_indices() == []
@@ -53,49 +53,11 @@ def test_get_reaction():
 def test_get_reactants():
     pass   # TODO
 
-
-
-def test_get_reactant_species():
-    rxns = ReactionRegistry()
-
-    rxns.add_reaction(reactants="A", products="B")
-    assert rxns.get_reactant_species(0) == ["A"]
-
-    rxns.add_reaction(reactants=[(2, "F")], products="X")
-    assert rxns.get_reactant_species(0) == ["A"]
-    assert rxns.get_reactant_species(1) == ["F"]
-
-    rxns.add_reaction(reactants=["B", (2, "H")], products=[(2, "C"), "L"])
-    assert rxns.get_reactant_species(0) == ["A"]
-    assert rxns.get_reactant_species(1) == ["F"]
-    assert rxns.get_reactant_species(2) == ["B", "H"]
-
-
 def test_get_reactants_formula():
     pass   # TODO
 
-
 def test_get_products():
     pass   # TODO
-
-
-
-def test_get_product_species():
-    rxns = ReactionRegistry()
-
-    rxns.add_reaction(reactants="A", products="B")
-    assert rxns.get_product_species(0) == ["B"]
-
-    rxns.add_reaction(reactants=[(2, "F")], products="X")
-    assert rxns.get_product_species(0) == ["B"]
-    assert rxns.get_product_species(1) == ["X"]
-
-    rxns.add_reaction(reactants=["B", (2, "H")], products=[(2, "C"), "L"])
-    assert rxns.get_product_species(0) == ["B"]
-    assert rxns.get_product_species(1) == ["X"]
-    assert rxns.get_product_species(2) == ["C", "L"]
-
-
 
 def test_get_products_formula():
     pass   # TODO
@@ -109,7 +71,7 @@ def test_get_reverse_rate():
 
 
 def test_get_chemicals_in_reaction():
-    chem_data = ChemData(names=["A", "B"])
+    chem_data = SpeciesRegistry(id=["A", "B"])
     rxns = ReactionRegistry(chem_data)
 
     with pytest.raises(Exception):
@@ -121,7 +83,7 @@ def test_get_chemicals_in_reaction():
     with pytest.raises(Exception):
         rxns.get_chemicals_in_reaction(1)   # There is no reaction 1
 
-    chem_data.add_chemical("C")
+    chem_data.add_species("C")
 
     rxns.add_reaction(reactants=["B"], products=[(2, "C")])  # Reaction 1 : B <-> 2C
     assert rxns.get_chemicals_in_reaction(0) == {0, 1}
@@ -132,7 +94,7 @@ def test_get_chemicals_in_reaction():
     assert rxns.get_chemicals_in_reaction(1) == {1, 2}
     assert rxns.get_chemicals_in_reaction(2) == {0, 2}
 
-    chem_data.add_chemical("D")
+    chem_data.add_species("D")
     rxns.add_reaction(reactants=["A", "B"], products="D")    # Reaction 3 : A + B <-> D
     assert rxns.get_chemicals_in_reaction(0) == {0, 1}
     assert rxns.get_chemicals_in_reaction(1) == {1, 2}
@@ -142,7 +104,7 @@ def test_get_chemicals_in_reaction():
 
 
 def test_get_chemicals_indexes_in_reaction():
-    chem_data = ChemData(names=["A", "B"])
+    chem_data = SpeciesRegistry(id=["A", "B"])
     rxns = ReactionRegistry(chem_data)
 
     with pytest.raises(Exception):
@@ -154,7 +116,7 @@ def test_get_chemicals_indexes_in_reaction():
     with pytest.raises(Exception):
         rxns.get_chemicals_indexes_in_reaction(1)   # There is no reaction 1
 
-    chem_data.add_chemical("C")
+    chem_data.add_species("C")
 
     rxns.add_reaction(reactants=["B"], products=[(2, "C")])  # Reaction 1 : B <-> 2C
     assert rxns.get_chemicals_indexes_in_reaction(0) == [0, 1]
@@ -165,7 +127,7 @@ def test_get_chemicals_indexes_in_reaction():
     assert rxns.get_chemicals_indexes_in_reaction(1) == [1, 2]
     assert rxns.get_chemicals_indexes_in_reaction(2) == [0, 2]
 
-    chem_data.add_chemical("D")
+    chem_data.add_species("D")
     rxns.add_reaction(reactants=["A", "B"], products="D")    # Reaction 3 : A + B <-> D
     assert rxns.get_chemicals_indexes_in_reaction(0) == [0, 1]
     assert rxns.get_chemicals_indexes_in_reaction(1) == [1, 2]
@@ -175,12 +137,47 @@ def test_get_chemicals_indexes_in_reaction():
 
 
 def test_get_reactions_participating_in():
-    pass   # TODO
+    rxns = ReactionRegistry()
+
+    result = rxns.get_reactions_participating_in(chem_label="A", side="reagent")
+    assert result == []
+
+    rxns.add_reaction(reactants="A", products="B")
+
+    result = rxns.get_reactions_participating_in(chem_label="A", side="reagent")
+    assert len(result) == 1
+    assert type(result[0]).__name__ == "ReactionUnimolecular"
+
+    result = rxns.get_reactions_participating_in(chem_label="A", side="product")
+    assert result == []
+
+    result = rxns.get_reactions_participating_in(chem_label="B", side="product")
+    assert len(result) == 1
+    assert type(result[0]).__name__ == "ReactionUnimolecular"
+
+
+    rxns.add_reaction(reactants=["A", "C"], products="P")
+
+    result = rxns.get_reactions_participating_in(chem_label="A", side="reagent")
+    assert len(result) == 2
+    assert type(result[0]).__name__ == "ReactionUnimolecular"
+    assert type(result[1]).__name__ == "ReactionSynthesis"
+
+    result = rxns.get_reactions_participating_in(chem_label="C", side="reagent")
+    assert len(result) == 1
+    assert type(result[0]).__name__ == "ReactionSynthesis"
+
+    result = rxns.get_reactions_participating_in(chem_label="C", side="product")
+    assert result == []
+
+    result = rxns.get_reactions_participating_in(chem_label="P", side="product")
+    assert len(result) == 1
+    assert type(result[0]).__name__ == "ReactionSynthesis"
 
 
 
 def test_add_reaction():
-    chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
+    chem_data = SpeciesRegistry(id=["A", "B", "C", "D", "E", "F"])
     rxns = ReactionRegistry(chem_data)
 
     # Reactants and the products can't be the same
@@ -271,7 +268,7 @@ def test_add_reaction():
     assert r.product == "C"
     assert r.delta_H is None
     assert r.delta_S is None
-    assert np.allclose(r.delta_G, 277.7928942715384)   # - RT log(K)
+    assert np.allclose(r.delta_G, 0.2777928942715384)   # - RT log(K)
 
     assert rxns.active_chemicals == {"A", "B", "C", "D"}
     #assert rxns.active_enzymes == set()
@@ -291,7 +288,7 @@ def test_add_reaction():
     assert r.products == [(3, "C"), (1, "D")]
     assert r.delta_H is None
     assert r.delta_S is None
-    assert np.allclose(r.delta_G, -2676.321364705849)   # - RT log(K)
+    assert np.allclose(r.delta_G, -2.676321364705849)   # - RT log(K)
 
     assert rxns.active_chemicals == {"A", "B", "C", "D"}
     #assert rxns.active_enzymes == set()
@@ -299,16 +296,16 @@ def test_add_reaction():
 
     # Check the descriptions we has so far
     rxn_info = rxns.multiple_reactions_describe()
-    assert rxn_info[0] == '0: A <-> B  Elementary Unimolecular reaction  (kF = 3 / kR = 2 / K = 1.5)'
-    assert rxn_info[1] == '1: 2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.2857) | Kinetic rate function : `compute_rate_mass_action_kinetics()`'
-    assert rxn_info[2] == '2: 2 D  <-> C  Elementary Synthesis reaction  (kF = 11 / kR = 13 / delta_G = 277.79 / K = 0.84615 / Temp = -73.15 C)'
-    assert rxn_info[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2,676.3 / K = 5 / Temp = -73.15 C) | Kinetic rate function : `compute_rate_mass_action_kinetics()`'
+    assert rxn_info[0] == '0: A <-> B  Elementary Unimolecular reaction  (kF = 3 | kR = 2 | K = 1.5)'
+    assert rxn_info[1] == '1: 2 B <-> 5 C  (kF = 9 | kR = 7 | K = 1.2857) | Kinetic rate function : `compute_rate_mass_action_kinetics()`'
+    assert rxn_info[2] == '2: 2 D  <-> C  Elementary Synthesis reaction  (kF = 11 | kR = 13 | delta_G = 0.27779 kJ/mol | K = 0.84615 | Temp = -73.15 C)'
+    assert rxn_info[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 | kR = 1 | delta_G = -2.6763 kJ/mol | K = 5 | Temp = -73.15 C) | Kinetic rate function : `compute_rate_mass_action_kinetics()`'
 
 
     # Add another reaction (reaction index 4), this time with thermodynamic data;
     # the reverse reaction rate will get computed from the thermodynamic data
     rxns.add_reaction(reactants=["A"], products=[(2, "B")], kF=10.,
-                      delta_H= 5., delta_S= 0.4, temp=200)      # A <-> 2 B     ('ReactionDecomposition')
+                      delta_H=0.005, delta_S=0.4, temp=200)      # A <-> 2 B     ('ReactionDecomposition')
     assert rxns.number_of_reactions() == 5
 
     r = rxns.get_reaction(4)
@@ -316,9 +313,9 @@ def test_add_reaction():
     assert r.reactant == "A"
     assert r.product_1 == "B"
     assert r.product_2 == "B"
-    assert r.delta_H == 5.
-    assert r.delta_S == 0.4
-    assert np.allclose(r.delta_G, -75.0)            # 5 - 200 * 0.4
+    assert np.allclose(r.delta_H, 0.005)
+    assert np.allclose(r.delta_S, 0.4)
+    assert np.allclose(r.delta_G, -0.075)           # In kJ/mol :  0.005 - 200 * 0.4/1000
     assert np.allclose(r.K , 1.0461347154679432)    # exp(75/(8.3144598 * 200))
     assert np.allclose(r.kF , 10.)
     assert np.allclose(r.kR , 9.558998331803693)    # 10. / 1.0461347154679432
@@ -337,7 +334,7 @@ def test_add_reaction():
 
 
 def test_add_elementary_reaction():
-    chem_data = ChemData(names=["A", "B", "C"])
+    chem_data = SpeciesRegistry(id=["A", "B", "C"])
     rxns = ReactionRegistry(chem_data)
 
     i = rxns.add_elementary_reaction(reactants="A", products="B")
@@ -358,7 +355,7 @@ def test_add_elementary_reaction():
 
 
 def test_register_reaction():
-    chem_data = ChemData()
+    chem_data = SpeciesRegistry()
     rxns = ReactionRegistry(chem_data)
 
     r_uni_AB = ReactionUnimolecular(reactant="A", product="B",
@@ -376,12 +373,12 @@ def test_register_reaction():
     assert np.allclose(r.K , 11./13.)
     assert r.delta_H is None
     assert r.delta_S is None
-    assert np.allclose(r.delta_G, 277.7928942715384)   # - RT log(K)
+    assert np.allclose(r.delta_G, 0.2777928942715384)   # - RT log(K)   , in kJ/mol
     assert rxns.active_chemicals == {"A", "B"}
 
 
     r_uni_CD = ReactionUnimolecular(reactant="C", product="D",
-                                    kF=10., delta_H= 5., delta_S= 0.4, temp=200)
+                                    kF=10., delta_H=0.005, delta_S=0.4, temp=200)
     rxns.register_reaction(r_uni_CD)
 
     assert rxns.number_of_reactions() == 2
@@ -392,9 +389,9 @@ def test_register_reaction():
     assert r.reactant == "C"
     assert r.product == "D"
     assert np.allclose(r.kF, 10.)                   # The given value
-    assert r.delta_H == 5.                          # The given value
-    assert r.delta_S == 0.4                         # The given value
-    assert np.allclose(r.delta_G, -75.0)            # 5 - 200 * 0.4
+    assert np.allclose(r.delta_H, 0.005)
+    assert np.allclose(r.delta_S, 0.4)
+    assert np.allclose(r.delta_G, -0.075)           # In kJ/mol :  0.005 - 200 * 0.4/1000
     assert np.allclose(r.K , 1.0461347154679432)    # exp(75/(8.3144598 * 200))
     assert np.allclose(r.kR, 9.558998331803693)     # 10. / 1.0461347154679432
     assert rxns.active_chemicals == {"A", "B", "C", "D"}
@@ -503,7 +500,7 @@ def test_single_reaction_describe():
 
 
 def test_labels_of_active_chemicals():
-    chem_data = ChemData(names=['A', 'B', 'C', 'X', 'Y'])
+    chem_data = SpeciesRegistry(id=['A', 'B', 'C', 'X', 'Y'])
     rxns = ReactionRegistry(chem_data)
 
     assert rxns.labels_of_active_chemicals() == []   # No reactions yet
@@ -527,7 +524,7 @@ def test_labels_of_active_chemicals():
 
 
 def test_indexes_of_active_chemicals():
-    chem_data = ChemData(names=['Y', 'X', 'C', 'B', 'A'])
+    chem_data = SpeciesRegistry(id=['Y', 'X', 'C', 'B', 'A'])
     rxns = ReactionRegistry(chem_data)
 
     assert rxns.indexes_of_active_chemicals() == []                 # No reactions yet
@@ -547,7 +544,7 @@ def test_indexes_of_active_chemicals():
 
 
 def test__parse_reaction_term():
-    rxn = ReactionRegistry(chem_data=ChemData())     # Won't actually use the reactants/products
+    rxn = ReactionRegistry(species_data=SpeciesRegistry())     # Won't actually use the reactants/products
 
     with pytest.raises(Exception):
         rxn._parse_reaction_term(5)    # The argument is not a string nor a tuple nor a list
@@ -579,7 +576,7 @@ def test__parse_reaction_term():
 
 def test_prepare_graph_network():
     # Set up an A <-> B reaction
-    chem_data = ChemData(names=["A", "B"])
+    chem_data = SpeciesRegistry(id=["A", "B"])
     rxns = ReactionRegistry(chem_data)
 
     rxns.add_reaction(reactants="A", products="B", kF=3., kR=2., temp=298.15)
@@ -588,7 +585,7 @@ def test_prepare_graph_network():
 
     expected_nodes = [{'name': 'A', 'id': 'C-0', '_node_labels': ['Chemical']},
                       {'name': 'B', 'id': 'C-1', '_node_labels': ['Chemical']},
-                      {'name': 'RXN', 'kF': '3', 'kR': '2', 'delta_G': '-1,005.13', 'K': '1.5', 'id': 'RXN-0',
+                      {'name': 'RXN', 'kF': '3', 'kR': '2', 'delta_G': '-1.00513', 'K': '1.5', 'id': 'RXN-0',
                        '_node_labels': ['Reaction'], 'formula': 'A <-> B'}
                       ]     # Note: 'diff_rate': None   is NOT included
 

@@ -40,7 +40,7 @@ LIFE123_VERSION = "1.0.0rc6"       # Library version this experiment is based on
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import BioSim1D, ChemData, check_version
+from life123 import BioSim1D, SpeciesRegistry, check_version
 
 # %%
 check_version(LIFE123_VERSION)
@@ -49,8 +49,8 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Initialize the system with a uniform concentration (of the only species)
-chem_data = ChemData(names="A", diffusion_rates=3.)
-bio = BioSim1D(n_bins=200, chem_data=chem_data)
+chem_data = SpeciesRegistry(id="A", diffusion_rate=3.)
+bio = BioSim1D(n_bins=200, species_data=chem_data)
 
 bio.set_uniform_concentration(chem_label="A", conc=150.)
 

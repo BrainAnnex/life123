@@ -34,7 +34,7 @@ LIFE123_VERSION = "1.0.0rc3"       # Library version this experiment is based on
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import BioSim1D, ChemData, CollectionArray, Numerical, check_version
+from life123 import BioSim1D, SpeciesRegistry, CollectionArray, Numerical, check_version
 
 import numpy as np
 
@@ -47,11 +47,11 @@ check_version(LIFE123_VERSION)
 # We'll be considering just 1 chemical species, "A"
 diffusion_rate = 10.
 
-chem_data = ChemData(diffusion_rates=[diffusion_rate], names=["A"])
+chem_data = SpeciesRegistry(id="A", diffusion_rate=diffusion_rate)
 
 # %%
 # Initialize the system with just a few bins
-bio = BioSim1D(n_bins=10, chem_data=chem_data)
+bio = BioSim1D(n_bins=10, species_data=chem_data)
 
 # %%
 # Initialize the concentrations to a sine wave with 1 cycle over the system

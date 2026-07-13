@@ -2,7 +2,7 @@
 
 import pathlib
 from life123 import HtmlLog as log
-from life123 import GraphicLog, ChemData, UniformCompartment
+from life123 import GraphicLog, SpeciesRegistry, UniformCompartment
 
 COMPONENT_NAME = "vue_cytoscape_2"           # *** CHANGE AS NEEDED ***
 
@@ -26,10 +26,10 @@ log.write(f'Reaction Network Diagram, using the Vue module "{COMPONENT_NAME}"',
 
 
 # Instantiate the simulator and specify the chemicals
-chem_data = ChemData(names=["A", "B", "C", "D", "E"],
-                     diffusion_rates=[0.1, 0.2, 0.3, 0.4, 0.5])
+chem_data = SpeciesRegistry(id=["A", "B", "C", "D", "E"],
+                            diffusion_rate=[0.1, 0.2, 0.3, 0.4, 0.5])
 
-dynamics = UniformCompartment(chem_data=chem_data)
+dynamics = UniformCompartment(species_data=chem_data)
 
 
 # Reaction A + 2B <-> C , with 2nd-order kinetics in B

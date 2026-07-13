@@ -52,7 +52,7 @@ LIFE123_VERSION = "1.0.0rc6"         # Library version this experiment is based 
 import ipynbname
 import pandas as pd
 
-from life123 import check_version, ChemData, UniformCompartment, GraphicLog, PlotlyHelper
+from life123 import check_version, SpeciesRegistry, UniformCompartment, GraphicLog, PlotlyHelper
 
 # %%
 check_version(LIFE123_VERSION)    # To check compatibility
@@ -75,7 +75,7 @@ GraphicLog.config(filename=log_file,
 # # Revisit Part 1 of experiment `enzyme_1_a`, but WITHOUT making use of native support for enzymatic reactions
 
 # %%
-chem_data = ChemData(names=["P", "ES"], plot_colors=["green", "red"])
+chem_data = SpeciesRegistry(id=["P", "ES"], plot_color=["green", "red"])
 
 # %%
 # Our Enzyme
@@ -93,7 +93,7 @@ chem_data.all_chemicals()
 
 # %%
 # Here we use the "slower" preset for the variable steps, a very conservative option prioritizing accuracy over speed
-uc = UniformCompartment(chem_data=chem_data, preset="slower")
+uc = UniformCompartment(species_data=chem_data, preset="slower")
 
 # %% [markdown]
 # ### Here's where we start to diverge from experiment `enzyme_1_a` ...

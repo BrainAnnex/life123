@@ -36,7 +36,7 @@ LIFE123_VERSION = "1.0.0.beta.39"   # Library version this experiment is based o
 
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData as chem
+from life123 import SpeciesRegistry
 from life123 import UniformCompartment
 
 from life123 import GraphicLog
@@ -55,7 +55,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = chem()
+chem_data = SpeciesRegistry()
 
 # Reaction 2 S <-> U , with 1st-order kinetics for all species (mostly forward)
 chem_data.add_reaction(reactants=[(2, "S", 1)], products="U",
@@ -74,7 +74,7 @@ chem_data.plot_reaction_network("vue_cytoscape_2")
 # ### Set the initial concentrations of all the chemicals
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)
+dynamics = UniformCompartment(species_data=chem_data)
 dynamics.set_conc(conc={"U": 50., "X": 100.})
 dynamics.describe_state()
 

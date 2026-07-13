@@ -154,11 +154,11 @@ uc_exact.plot_step_sizes(show_intervals=True)        #  To see the sizes of the 
 # #### To avoid clutter, we'll just plot [A], as obtained from the approx solution and the exact analytical solution
 
 # %%
-fig_approx = uc_approx.plot_history(chemicals='A', colors='red', title="Approx solution", show=True)     
+fig_approx = uc_approx.plot_history(species='A', colors='red', title="Approx solution", show=True)
 # Repeat a portion of the diagram seen in Part 1
 
 # %%
-fig_exact = uc_exact.plot_history(chemicals='A', colors='green', title="EXACT solution", show=True)     
+fig_exact = uc_exact.plot_history(species='A', colors='green', title="EXACT solution", show=True)
 # Repeat a portion of the diagram seen in Part 2
 
 # %%

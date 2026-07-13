@@ -47,7 +47,7 @@ LIFE123_VERSION = "1.0.0rc3"        # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
-from life123 import ChemData, BioSim1D, check_version
+from life123 import SpeciesRegistry, BioSim1D, check_version
 
 # %%
 check_version(LIFE123_VERSION)
@@ -58,10 +58,10 @@ check_version(LIFE123_VERSION)
 # ## Simulate a 2-bin system, with 1 chemical
 
 # %%
-chem_data = ChemData(diffusion_rates=10.)
+chem_data = SpeciesRegistry(n_species=1, diffusion_rate=10.)
 
 # %%
-bio = BioSim1D(n_bins=2, chem_data=chem_data)
+bio = BioSim1D(n_bins=2, species_data=chem_data)
 bio.inject_conc_to_bin(bin_address=0, delta_conc=100., chem_index=0)
 bio.describe_state()
 
@@ -84,7 +84,7 @@ bio.describe_state()
 # ## Start over with a 3-bin system
 
 # %%
-bio = BioSim1D(n_bins=3, chem_data=chem_data)
+bio = BioSim1D(n_bins=3, species_data=chem_data)
 bio.inject_conc_to_bin(bin_address=1, delta_conc=100., chem_index=0)
 bio.describe_state()
 
@@ -107,7 +107,7 @@ bio.describe_state()
 # ## Start over again with a new 3-bin system
 
 # %%
-bio = BioSim1D(n_bins=3, chem_data=chem_data)
+bio = BioSim1D(n_bins=3, species_data=chem_data)
 bio.inject_conc_to_bin(bin_address=1, delta_conc=100., chem_index=0)
 bio.describe_state()
 
@@ -127,7 +127,7 @@ bio.describe_state()
 # ## Start over again with a new 3-bin system : same as the last round, but this time use a delta_x = 10 (rather than the default 1)
 
 # %%
-bio = BioSim1D(n_bins=3, chem_data=chem_data)
+bio = BioSim1D(n_bins=3, species_data=chem_data)
 bio.inject_conc_to_bin(bin_address=1, delta_conc=100., chem_index=0)
 bio.describe_state()
 

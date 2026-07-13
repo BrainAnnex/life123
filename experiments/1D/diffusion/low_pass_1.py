@@ -38,7 +38,7 @@ LIFE123_VERSION = "1.0.0rc3"       # Library version this experiment is based on
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import BioSim1D, ChemData, check_version
+from life123 import BioSim1D, SpeciesRegistry, check_version
 
 # %%
 check_version(LIFE123_VERSION)
@@ -48,8 +48,8 @@ check_version(LIFE123_VERSION)
 # %%
 # Initialize the system.  We use a RELATIVELY LARGE NUMBER OF BINS, 
 # to captures the many changes in the high-frequency component
-chem_data = ChemData(names="A", diffusion_rates=0.5)
-bio = BioSim1D(n_bins=500, chem_data=chem_data)
+chem_data = SpeciesRegistry(id="A", diffusion_rate=0.5)
+bio = BioSim1D(n_bins=500, species_data=chem_data)
 
 # %%
 

@@ -24,8 +24,8 @@
 # ### TAGS :  "diffusion 1D", "quick-start"
 
 # %%
-LAST_REVISED = "Aug. 15, 2025"
-LIFE123_VERSION = "1.0.0rc6"        # Library version this experiment is based on
+LAST_REVISED = "July 13, 2026"
+LIFE123_VERSION = "1.0.0rc8"      # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -36,7 +36,7 @@ LIFE123_VERSION = "1.0.0rc6"        # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path
 
-from life123 import BioSim1D, ChemData, check_version
+from life123 import BioSim1D, SpeciesRegistry, check_version
 
 # %%
 check_version(LIFE123_VERSION)
@@ -48,9 +48,9 @@ check_version(LIFE123_VERSION)
 # with a single non-zero bin concentration of the single chemical `A`, near the left edge of the system
 
 # %%
-chem_data = ChemData(names="A", diffusion_rates=0.1)     # If you want to assign a default color, pass arg:  plot_colors=["SOME_COLOR_NAME"]
+chem_data = SpeciesRegistry(id="A", diffusion_rate=0.1)     # If you want to assign a default color, pass arg:  plot_color=["SOME_COLOR_NAME"]
 
-bio = BioSim1D(n_bins=10, chem_data=chem_data)
+bio = BioSim1D(n_bins=10, species_data=chem_data)
 
 # %%
 bio.inject_conc_to_bin(bin_address=2, chem_label="A", delta_conc=10.)
@@ -61,7 +61,7 @@ bio.describe_state()
 bio.system_snapshot()
 
 # %%
-bio.visualize_system(title_prefix="Diffusion")   # Line curve view
+bio.visualize_system(title_prefix="Diffusion", smoothed=False)   # Line curve view
 
 # %%
 bio.system
@@ -100,7 +100,7 @@ print(status)
 bio.describe_state(concise=True)
 
 # %%
-bio.visualize_system(title_prefix="Diffusion")   # Line curve view
+bio.visualize_system(title_prefix="Diffusion")   # Line curve view; by default, smoothed
 
 # %%
 bio.system_heatmaps(title_prefix="Diffusion")

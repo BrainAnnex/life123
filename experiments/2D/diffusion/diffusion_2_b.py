@@ -32,7 +32,7 @@ LIFE123_VERSION = "1.0.0rc2"        # Library version this experiment is based o
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import BioSim2D, ChemData, check_version
+from life123 import BioSim2D, SpeciesRegistry, check_version
 
 # %%
 check_version(LIFE123_VERSION)
@@ -41,9 +41,9 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Prepare the initial system, with two concentration pulses, at almost-opposite ends of the system, with the same diffusion rate coefficient
-chem_data = ChemData(names=["A", "B"], diffusion_rates=[0.05, 0.05])
+chem_data = SpeciesRegistry(id=["A", "B"], diffusion_rate=[0.05, 0.05])
 
-bio = BioSim2D(x_bins=7, y_bins=10, chem_data=chem_data)  # 3 more rows, compared to experiment `diffusion_2_a` 
+bio = BioSim2D(x_bins=7, y_bins=10, species_data=chem_data)  # 3 more rows, compared to experiment `diffusion_2_a`
 
 bio.set_bin_conc(bin_address = (1,1), chem_label="A", conc=10.)
 bio.set_bin_conc(bin_address = (5,5), chem_label="B", conc=10.)

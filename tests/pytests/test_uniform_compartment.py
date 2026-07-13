@@ -1,52 +1,53 @@
 import pytest
 import numpy as np
-from life123 import ChemData, UniformCompartment, ReactionRegistry, \
+from life123 import SpeciesRegistry, UniformCompartment, ReactionRegistry, \
                     ReactionUnimolecular, ReactionSynthesis, ReactionGeneric, ReactionKinetics
+from life123.species_registry import MacroMolecules
 
 
 
 def test_constructor():
     names = ["A", "B", "C"]
-    chem_data = ChemData(names=names)
+    chem_data = SpeciesRegistry(id=names)
 
     with pytest.raises(Exception):
-        UniformCompartment(chem_data=chem_data, names=names)
+        UniformCompartment(species_data=chem_data, names=names)
 
-    rxns = ReactionRegistry(chem_data=chem_data)
+    rxns = ReactionRegistry(species_data=chem_data)
 
     with pytest.raises(Exception):
         UniformCompartment(reactions=rxns, names=names)
 
-    alt_chem_data = ChemData()
+    alt_chem_data = SpeciesRegistry()
     with pytest.raises(Exception):
-        UniformCompartment(reactions=rxns, chem_data=alt_chem_data) # inconsistent
+        UniformCompartment(reactions=rxns, species_data=alt_chem_data) # inconsistent
 
 
     uc = UniformCompartment(reactions=rxns)
     assert uc.reaction_data == rxns
-    assert uc.chem_data == chem_data
-    assert uc.chem_data.get_all_labels() == names
+    assert uc.species_data == chem_data
+    assert uc.species_data.get_all_species_ids() == names
 
-    uc = UniformCompartment(chem_data=chem_data)
-    assert uc.chem_data == chem_data
-    assert uc.chem_data.get_all_labels() == names
+    uc = UniformCompartment(species_data=chem_data)
+    assert uc.species_data == chem_data
+    assert uc.species_data.get_all_species_ids() == names
     assert uc.reaction_data.number_of_reactions() == 0
 
     uc = UniformCompartment(names=names)
-    assert uc.chem_data.get_all_labels() == names
+    assert uc.species_data.get_all_species_ids() == names
     assert uc.reaction_data.number_of_reactions() == 0
 
-    uc = UniformCompartment(reactions=rxns, chem_data=chem_data)
+    uc = UniformCompartment(reactions=rxns, species_data=chem_data)
     assert uc.reaction_data == rxns
-    assert uc.chem_data == chem_data
-    assert uc.chem_data.get_all_labels() == names
+    assert uc.species_data == chem_data
+    assert uc.species_data.get_all_species_ids() == names
 
 
 
 def test_set_conc():
     #TODO: test the snapshot argument
-    chem_data = ChemData(names=["A", "B", "C"])
-    uc = UniformCompartment(chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B", "C"])
+    uc = UniformCompartment(species_data=chem_data)
 
     with pytest.raises(Exception):
         uc.set_conc(conc=[1, 2, 3, 4])         # Wrong number of entries
@@ -65,7 +66,7 @@ def test_set_conc():
     assert np.allclose(uc.system, [10., 100., 30.])
 
 
-    uc = UniformCompartment(chem_data=chem_data)
+    uc = UniformCompartment(species_data=chem_data)
     uc.set_conc(conc={"C": 3})
     assert np.allclose(uc.system, [0., 0., 3.])
 
@@ -78,8 +79,8 @@ def test_set_conc():
 
 
 def test_get_system_conc():
-    chem_data = ChemData(names=["A", "B", "C"])
-    uc = UniformCompartment(chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B", "C"])
+    uc = UniformCompartment(species_data=chem_data)
     uc.set_conc(conc=(10., 20., 30.))
 
     result = uc.get_system_conc()
@@ -88,8 +89,8 @@ def test_get_system_conc():
 
 
 def test_get_chem_conc():
-    chem_data = ChemData(names=["A", "B"])
-    uc = UniformCompartment(chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B"])
+    uc = UniformCompartment(species_data=chem_data)
     uc.set_conc(conc=(10., 20.))
 
     assert np.allclose(uc.get_chem_conc("A"), 10.)
@@ -100,8 +101,8 @@ def test_get_chem_conc():
 
 
 def test_get_conc_dict():
-    chem_data = ChemData(names=["A", "B", "C", "D"])
-    rxn = UniformCompartment(chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B", "C", "D"])
+    rxn = UniformCompartment(species_data=chem_data)
     rxn.set_conc(conc=(100, 200, 300, 400))
 
     result = rxn.get_conc_dict()
@@ -152,8 +153,8 @@ def test_specify_steps():
 def test_single_compartment_react():
 
     # Test based on experiment "cycles_1"
-    chem_data = ChemData(names=["A", "B", "C", "E_high", "E_low"])
-    rxns = ReactionRegistry(chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B", "C", "E_high", "E_low"])
+    rxns = ReactionRegistry(species_data=chem_data)
 
     # Unimolecular reaction A <-> B, mostly in forward direction (favored energetically)
     rxns.add_reaction(reactants="A", products="B",
@@ -431,9 +432,9 @@ def test_single_compartment_react_variable_steps_1():
     # Based on experiment "variable_steps_1"
 
     # Initialize the system
-    chem_data = ChemData(names=["U", "X", "S"])
+    chem_data = SpeciesRegistry(id=["U", "X", "S"])
 
-    rxns = ReactionRegistry(chem_data=chem_data)
+    rxns = ReactionRegistry(species_data=chem_data)
 
     # Reaction 2 S <-> U , HYPOTHETICALLY with 1st-order kinetics for all species (mostly forward)
     r = ReactionGeneric(reactants=[(2, "S")], products="U", kF=8., kR=2.)
@@ -441,7 +442,7 @@ def test_single_compartment_react_variable_steps_1():
 
     rxns.register_reaction(r)
 
-    uc = UniformCompartment(chem_data=chem_data, preset=None, reactions=rxns)
+    uc = UniformCompartment(species_data=chem_data, preset=None, reactions=rxns)
 
     # Elementary unimolecular reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
     uc.add_reaction(reactants="S", products="X", kF=6., kR=3.)
@@ -477,9 +478,9 @@ def test_single_compartment_correct_neg_conc():
     # Based on "Run 3" of experiment "negative_concentrations_1
 
     # Initialize the system
-    chem_data = ChemData(names=["U", "X", "S"])
+    chem_data = SpeciesRegistry(id=["U", "X", "S"])
 
-    rxns = ReactionRegistry(chem_data=chem_data)
+    rxns = ReactionRegistry(species_data=chem_data)
 
     # Reaction 2 S <-> U , HYPOTHETICALLY with 1st-order kinetics for all species (mostly forward)
     r = ReactionGeneric(reactants=[(2, "S")], products="U", kF=8., kR=2.)
@@ -487,7 +488,7 @@ def test_single_compartment_correct_neg_conc():
 
     rxns.register_reaction(r)
 
-    uc = UniformCompartment(chem_data=chem_data, reactions=rxns)
+    uc = UniformCompartment(species_data=chem_data, reactions=rxns)
 
     # Unimolecular elementary reaction S <-> X , with 1st-order kinetics for all species (mostly forward)
     uc.add_reaction(reactants="S", products="X", kF=6., kR=3.)
@@ -522,8 +523,8 @@ def test_single_compartment_correct_neg_conc():
 
 
 def test__fetch_concs_for_rnx():
-    chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
-    uc = UniformCompartment(chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B", "C", "D", "E", "F"])
+    uc = UniformCompartment(species_data=chem_data)
     rxns = uc.get_reactions()
 
     uc.set_conc({"A": 12, "B": 1, "C": 31, "D": 19, "E": 2, "F": 3})
@@ -553,8 +554,8 @@ def test__fetch_concs_for_rnx():
 
 
 def test_is_in_equilibrium():
-    chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
-    uc = UniformCompartment(chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B", "C", "D", "E", "F"])
+    uc = UniformCompartment(species_data=chem_data)
 
     # Reaction 0 : A <-> B
     uc.add_reaction(reactants=["A"], products=["B"], kF=3., kR=2.)
@@ -590,8 +591,8 @@ def test_is_in_equilibrium():
 
 
 def test_reaction_in_equilibrium():
-    chem_data = ChemData(names=["A", "B", "C", "D", "E", "F"])
-    uc = UniformCompartment(chem_data=chem_data)
+    chem_data = SpeciesRegistry(id=["A", "B", "C", "D", "E", "F"])
+    uc = UniformCompartment(species_data=chem_data)
 
     # Reaction 0 : A <-> B
     uc.add_reaction(reactants=["A"], products=["B"], kF=3., kR=2.)
@@ -681,54 +682,83 @@ def test_set_temp():
 
 
 def test_set_macromolecules():
-    chem = ChemData(names=["A", "B"])
-    chem.add_macromolecules(["M1", "M2"])
-    chem.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
-    chem.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
-    chem.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
-    chem.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
+    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+    mm = MacroMolecules(sr)
 
-    rxn = UniformCompartment(chem_data=chem)
-    rxn.set_macromolecules()    # By default, set counts to 1 for all the registered macromolecules
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=3)
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=5)
+    mm.set_binding_site_affinity(macromolecule="M2", site_number=1, ligand="B", Kd=11)
+    mm.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="B", Kd=102)
 
-    assert rxn.macro_system == {"M1": 1, "M2": 1}
-    assert len(rxn.macro_system_state) == 2
-    assert rxn.macro_system_state["M1"] == {1: ("A", 0.), 2: ("B", 0.)}
-    assert rxn.macro_system_state["M2"] == {1: ("B", 0.), 3: ("B", 0.)}
+    uc = UniformCompartment(species_data=sr, macromolecules=mm)
+    uc.set_macromolecules()    # By default, set counts to 1 for all the registered macromolecules
+
+    assert uc.macro_system == {"M1": 1, "M2": 1}
+    assert len(uc.macro_system_state) == 2
+    assert uc.macro_system_state["M1"] == {1: ("A", 0.), 2: ("B", 0.)}
+    assert uc.macro_system_state["M2"] == {1: ("B", 0.), 3: ("B", 0.)}
 
 
     # Over-write the previous settings
-    rxn.set_macromolecules({"M2": 4})
+    uc.set_macromolecules({"M2": 4})
 
-    assert rxn.macro_system == {"M2": 4}
-    assert len(rxn.macro_system_state) == 1
-    assert rxn.macro_system_state["M2"] == {1: ("B", 0.), 3: ("B", 0.)}
+    assert uc.macro_system == {"M2": 4}
+    assert len(uc.macro_system_state) == 1
+    assert uc.macro_system_state["M2"] == {1: ("B", 0.), 3: ("B", 0.)}
 
 
     with pytest.raises(Exception):
-        rxn.set_macromolecules({"M999": 2})        # Unknown macromolecule
+        uc.set_macromolecules({"M999": 2})        # Unknown macromolecule
 
-    chem.add_macromolecules("M999")
+    sr.add_species("M999")
 
     # Over-write the previous settings
-    rxn.set_macromolecules({"M999": 2})
-    assert rxn.macro_system == {"M999": 2}
-    assert len(rxn.macro_system_state) == 1
-    assert rxn.macro_system_state["M999"] == {}     # No binding sites were registered
+    uc.set_macromolecules({"M999": 2})
+    assert uc.macro_system == {"M999": 2}
+    assert len(uc.macro_system_state) == 1
+    assert uc.macro_system_state["M999"] == {}     # No binding sites were registered
 
-    chem.set_binding_site_affinity(macromolecule="M999", site_number=12, ligand="A", Kd=4.5)
-    assert rxn.macro_system_state["M999"] == {}     # The system state has not been updated yet
+    mm.set_binding_site_affinity(macromolecule="M999", site_number=12, ligand="A", Kd=4.5)
+    assert uc.macro_system_state["M999"] == {}     # The system state has not been updated yet
     # Over-write the previous settings
-    rxn.set_macromolecules({"M999": 2})
-    assert rxn.macro_system_state["M999"] == {12: ("A", 0.)}
+    uc.set_macromolecules({"M999": 2})
+    assert uc.macro_system_state["M999"] == {12: ("A", 0.)}
+
+
+
+def test_get_occupancy():
+    sr = SpeciesRegistry(id=["A", "B", "C", "M1", "M2"])
+    mm = MacroMolecules(sr)
+
+    uc = UniformCompartment(species_data=sr, macromolecules=mm)
+
+    with pytest.raises(Exception):
+        # The system state for macromolecules has not been set yet
+        uc.get_occupancy(macromolecule="M1", site_number=1)
+
+    with pytest.raises(Exception):
+        # No occupancy data yet set for macromolecule `Unknown`
+        uc.get_occupancy(macromolecule="Unknown", site_number=1)
+
+    with pytest.raises(Exception):
+        # No occupancy data yet set for site number 1 of macromolecule `M1`
+        uc.get_occupancy(macromolecule="M1", site_number=1)
+
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="C", Kd=23.5)
+    uc.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
+
+    assert uc.macro_system == {"M1": 1}
+    assert uc.macro_system_state == {"M1": {1: ("C", 0.5)} }
+
+    assert uc.get_occupancy(macromolecule="M1", site_number=1) == 0.5
 
 
 
 def test_set_occupancy():
-    chem_data = ChemData(names=["A", "B"])
-    chem_data.add_macromolecules(["M1", "M2"])
+    sr = SpeciesRegistry(id=["A", "B", "M1", "M2"])
+    mm = MacroMolecules(sr)
 
-    rxn = UniformCompartment(chem_data=chem_data)
+    rxn = UniformCompartment(species_data=sr, macromolecules=mm)
 
     with pytest.raises(Exception):
         # Occupancy out of range
@@ -746,7 +776,7 @@ def test_set_occupancy():
         # No binding sites are defined on macromolecule M1
         rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
 
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="B", Kd=6.)
+    mm.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="B", Kd=6.)
     rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
 
     assert rxn.macro_system == {"M1": 1}
@@ -756,39 +786,9 @@ def test_set_occupancy():
 
 
 
-def test_get_occupancy():
-    chem_data = ChemData(names=["A", "B", "C"])
-    chem_data.add_macromolecules(["M1", "M2"])
-
-    rxn = UniformCompartment(chem_data=chem_data)
-
-    with pytest.raises(Exception):
-        # The system state for macromolecules has not been set yet
-        rxn.get_occupancy(macromolecule="M1", site_number=1)
-
-    rxn.set_macromolecules()
-
-    with pytest.raises(Exception):
-        # No occupancy data yet set for macromolecule `Unknown`
-        rxn.get_occupancy(macromolecule="Unknown", site_number=1)
-
-    with pytest.raises(Exception):
-        # No occupancy data yet set for site number 1 of macromolecule `M1`
-        rxn.get_occupancy(macromolecule="M1", site_number=1)
-
-    chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="C", Kd=23.5)
-    rxn.set_occupancy(macromolecule="M1", site_number=1, fractional_occupancy=0.5)
-
-    assert rxn.macro_system == {"M1": 1, "M2": 1}
-    assert rxn.macro_system_state == {"M1": {1: ("C", 0.5)}, "M2": {} }
-
-    assert rxn.get_occupancy(macromolecule="M1", site_number=1) == 0.5
-
-
-
 def test_update_occupancy():
-    chem_data = ChemData(names=["A", "B", "C"])
-    chem_data.add_macromolecules(["M1", "M2"])
+    sr = SpeciesRegistry(id=["A", "B", "C", "M1", "M2"])
+    chem_data = MacroMolecules(sr)
 
     chem_data.set_binding_site_affinity(macromolecule="M1", site_number=1, ligand="A", Kd=10)
     chem_data.set_binding_site_affinity(macromolecule="M1", site_number=2, ligand="B", Kd=20)
@@ -799,12 +799,12 @@ def test_update_occupancy():
     chem_data.set_binding_site_affinity(macromolecule="M2", site_number=3, ligand="C", Kd=300)
 
 
-    rxn = UniformCompartment(chem_data=chem_data)
+    rxn = UniformCompartment(species_data=sr, macromolecules=chem_data)
 
     rxn.set_macromolecules()
     assert rxn.macro_system == {"M1": 1, "M2": 1}
 
-    rxn.set_conc([10, 20, 30])      # Set the concentrations, respectively, of A, B and C
+    rxn.set_conc({"A": 10, "B": 20, "C": 30})
 
     assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=1) , 0.)
     assert np.allclose(rxn.get_occupancy(macromolecule="M1", site_number=2) , 0.)

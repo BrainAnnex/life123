@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.15.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -20,23 +20,23 @@
 # #### where `E_High` and `E_Low` are, respectively, the high- and low- energy molecules that drive the cycle (for example, think of ATP/ADP).   
 # Comparisons are made between results obtained with 3 different time resolutions.
 #
-# All 1st-order kinetics.    
+# All 1st-order kinetics <- *This is just an exploration of the software; not meant to be realistic!*  
 #
 # LAST REVISED: June 23, 2024 (using v. 1.0 beta36)
 
 # %%
 import set_path      # Importing this module will add the project's home directory to sys.path
 
-# %% tags=[]
+# %%
 from experiments.get_notebook_info import get_notebook_basename
 
-from life123 import ChemData
+from life123 import SpeciesRegistry
 from life123 import UniformCompartment
 from life123 import Numerical as num
 
 from life123 import GraphicLog
 
-# %% tags=[]
+# %%
 # Initialize the HTML logging
 log_file = get_notebook_basename() + ".log.htm"    # Use the notebook base filename for the log file
 
@@ -50,7 +50,7 @@ GraphicLog.config(filename=log_file,
 
 # %%
 # Initialize the system
-chem_data = ChemData(names=["A", "B", "C", "E_high", "E_low"])
+chem_data = SpeciesRegistry(id=["A", "B", "C", "E_high", "E_low"])
 
 # Reaction A <-> B, mostly in forward direction (favored energetically)
 # Note: all reactions in this experiment have 1st-order kinetics for all species
@@ -82,20 +82,20 @@ initial_conc
 
 # %%
 
-# %% [markdown] tags=[] jp-MarkdownHeadingCollapsed=true tags=[] jp-MarkdownHeadingCollapsed=true jp-MarkdownHeadingCollapsed=true tags=[] jp-MarkdownHeadingCollapsed=true jp-MarkdownHeadingCollapsed=true tags=[] jp-MarkdownHeadingCollapsed=true tags=[]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # # Run # 1 : FIXED time resolution, with COARSE time steps - broken up in 3 time intervals    
 # (trial and error, not shown, reveals that increasing any of the time steps below, leads to "excessive time step" errors;  
 # note: fixed time resolution is generelly NOT recommended, except for double-checks and error analysis)
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)
+dynamics = UniformCompartment(species_data=chem_data)
 dynamics.set_conc(conc=initial_conc, snapshot=True)
 dynamics.describe_state()
 
 # %%
 dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ### We'll split the simulation in three segments (apparent from the graphs of the runs, further down):  
 # Time [0-0.03] fast changes   
 # Time [0.03-5.] medium changes   
@@ -121,14 +121,14 @@ dynamics.get_history()
 # %%
 dynamics.explain_time_advance()
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+dynamics.plot_history(species=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_history(chemicals=["A", "B", "C"])
+dynamics.plot_history(species=["A", "B", "C"])
 
 # %% [markdown]
 # ### The plots has 4 distinctive intersections; locate them and save them for later comparisons across repeated runs:
@@ -163,7 +163,7 @@ dynamics.is_in_equilibrium()
 
 # %%
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # # _NOTE: Everything below, to the end, is JUST A REPEAT of the same experiment, with different time steps, for accuracy comparisons_
 
 # %%
@@ -172,7 +172,7 @@ dynamics.is_in_equilibrium()
 # # Run # 2. VARIABLE time resolution
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data, preset="mid_inclusive")   # Note: OVER-WRITING the "dynamics" object  # heavy_brakes
+dynamics = UniformCompartment(species_data=chem_data, preset="mid_inclusive")   # Note: OVER-WRITING the "dynamics" object  # heavy_brakes
 dynamics.set_conc(conc=initial_conc, snapshot=True) 
 dynamics.describe_state()
 
@@ -188,21 +188,21 @@ dynamics.enable_diagnostics()       # To save diagnostic information about the c
 dynamics.single_compartment_react(initial_step=0.0001, target_end_time=8.0,
                                   variable_steps=True, explain_variable_steps=None)
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ### Notice we created 1,911 data points, a good deal less than in run #1
 
 # %%
 dynamics.get_history()
 
 # %%
-dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+dynamics.plot_history(species=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_history(chemicals=["A", "B", "C"])
+dynamics.plot_history(species=["A", "B", "C"])
 
 # %%
 # Show the timestepe taken (vertical dashed lines) in a small section of the plot
-dynamics.plot_history(chemicals=["A", "B", "C"], show_intervals=True, range_x=[2.5, 3.5])
+dynamics.plot_history(species=["A", "B", "C"], show_intervals=True, range_x=[2.5, 3.5])
 
 # %%
 dynamics.explain_time_advance()  # Notice a lot of timestep adjustments, as needed
@@ -236,14 +236,14 @@ run2
 # # Run # 3. FIXED time resolution, using FINER fixed resolution than in run #1 
 
 # %%
-dynamics = UniformCompartment(chem_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
+dynamics = UniformCompartment(species_data=chem_data)   # Note: OVER-WRITING the "dynamics" object
 dynamics.set_conc(conc=initial_conc, snapshot=True) 
 dynamics.describe_state()
 
 # %%
 dynamics.enable_diagnostics()       # To save diagnostic information about the call to single_compartment_react()
 
-# %% tags=[]
+# %%
 dynamics.single_compartment_react(initial_step=0.0004, target_end_time=0.03, variable_steps=False)
 
 # %%
@@ -261,14 +261,14 @@ dynamics.get_history()
 # %%
 dynamics.explain_time_advance()
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ## Plots of changes of concentration with time
 
 # %%
-dynamics.plot_history(chemicals=["E_high", "E_low"], colors=["red", "grey"])
+dynamics.plot_history(species=["E_high", "E_low"], colors=["red", "grey"])
 
 # %%
-dynamics.plot_history(chemicals=["A", "B", "C"])
+dynamics.plot_history(species=["A", "B", "C"])
 
 # %% [markdown]
 # ### Yet again, the two plots have 4 distinctive intersections among them; locate and save them:

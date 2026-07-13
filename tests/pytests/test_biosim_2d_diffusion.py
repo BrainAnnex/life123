@@ -4,7 +4,7 @@
 
 import numpy as np
 from life123 import BioSim2D
-from life123 import ChemData as chem
+from life123 import SpeciesRegistry
 from life123 import Numerical as num
 
 
@@ -51,8 +51,8 @@ def test_diffuse_1():
     initial_concs = np.array([[50, 80, 20], [10, 60, 0], [30, 15, 100]])
 
     # Initialize the system
-    chem_data = chem(diffusion_rates=[diff])    # Just 1 chemical species
-    bio = BioSim2D(x_bins=3, y_bins=3, chem_data=chem_data)
+    chem_data = SpeciesRegistry(n_species=1, diffusion_rate=[diff])    # Just 1 species
+    bio = BioSim2D(x_bins=3, y_bins=3, species_data=chem_data)
     bio.set_species_conc(species_index=0, conc_data=initial_concs)
     #bio.describe_state()
 
@@ -70,8 +70,8 @@ def test_diffuse_1():
     snapshot_of_system_state = bio.system.copy()
 
     # Now, re-initialize the system, and do both steps with a single function call
-    chem_data = chem(diffusion_rates=[diff])    # Just 1 chemical species
-    bio = BioSim2D(x_bins=3, y_bins=3, chem_data=chem_data)
+    chem_data = SpeciesRegistry(n_species=1, diffusion_rate=[diff])    # Just 1 chemical species
+    bio = BioSim2D(x_bins=3, y_bins=3, species_data=chem_data)
     bio.set_species_conc(species_index=0, conc_data=initial_concs)
     #bio.describe_state()
 
@@ -84,14 +84,14 @@ def test_diffuse_1():
 def test_diffuse_2():
     delta_t = 0.01
     delta_s = 2
-    diff = (10., 4.)    # 2 chemical species
+    diff = (10., 4.)    # 2 species
 
     initial_concs_0 = np.array([[50, 80, 34.4, 20], [5.34, 10, 60, 0], [30, 15, 100, 9.24], [40, 45.3, 64.4, 80], [30, 9.4, 39.4, 10.5]])
     initial_concs_1 = np.array([[35, 110, 1.5, 13], [53, 60, 6.7, 40], [54, 3.5, 0, 19.8], [120, 25.3, 87, 11.5], [10, 19, 79.14, 50.8]])
 
     # Initialize the system
-    chem_data = chem(diffusion_rates=diff)
-    bio = BioSim2D(x_bins=5, y_bins=4, chem_data=chem_data)
+    chem_data = SpeciesRegistry(n_species=2, diffusion_rate=diff)
+    bio = BioSim2D(x_bins=5, y_bins=4, species_data=chem_data)
     bio.set_species_conc(species_index=0, conc_data=initial_concs_0)
     bio.set_species_conc(species_index=1, conc_data=initial_concs_1)
     #bio.describe_state()
@@ -107,8 +107,8 @@ def test_diffuse_2():
 
 
     # Now, re-initialize the system, and do all diffusion steps with a single function call
-    chem_data = chem(diffusion_rates=diff)
-    bio = BioSim2D(x_bins=5, y_bins=4, chem_data=chem_data)
+    chem_data = SpeciesRegistry(n_species=2, diffusion_rate=diff)
+    bio = BioSim2D(x_bins=5, y_bins=4, species_data=chem_data)
     bio.set_species_conc(species_index=0, conc_data=initial_concs_0)
     bio.set_species_conc(species_index=1, conc_data=initial_concs_1)
     #bio.describe_state()
@@ -124,11 +124,11 @@ def test_diffuse_2():
 def test_diffuse_step_1():
     delta_t = 0.01
     delta_s = 3
-    diff_rates = [8., 6.]    # 2 chemical species
+    diff_rates = [8., 6.]    # 2 species
 
     # Initialize the system
-    chem_data = chem(diffusion_rates=diff_rates)
-    bio = BioSim2D(x_bins=5, y_bins=4, chem_data=chem_data)
+    chem_data = SpeciesRegistry(n_species=2, diffusion_rate=diff_rates)
+    bio = BioSim2D(x_bins=5, y_bins=4, species_data=chem_data)
 
     initial_concs_0 = np.array([[50, 80, 34.4, 20], [5.34, 10, 60, 0], [30, 15, 100, 9.24], [40, 45.3, 64.4, 80], [30, 9.4, 39.4, 10.5]])
     initial_concs_1 = np.array([[30, 110, 1.5, 20], [53, 60, 6.7, 40], [54, 3.5, 0, 19.8], [120, 25.3, 87, 11.5], [10, 19, 79.14, 50.8]])
@@ -174,8 +174,8 @@ def test_diffuse_step_single_species_1():
     diff = 10.
 
     # Initialize the system
-    chem_data = chem(diffusion_rates=[diff])    # Just 1 chemical species
-    bio = BioSim2D(x_bins=3, y_bins=3, chem_data=chem_data)
+    chem_data = SpeciesRegistry(n_species=1, diffusion_rate=[diff])    # Just 1 chemical species
+    bio = BioSim2D(x_bins=3, y_bins=3, species_data=chem_data)
     initial_concs = np.array([[50, 80, 20], [10, 60, 0], [30, 15, 100]])
     bio.set_species_conc(species_index=0, conc_data=initial_concs)
     #bio.describe_state()
@@ -196,8 +196,8 @@ def test_diffuse_step_single_species_2():
     diff = 8.
 
     # Initialize the system
-    chem_data = chem(diffusion_rates=[diff])    # Just 1 chemical species
-    bio = BioSim2D(x_bins=5, y_bins=4, chem_data=chem_data)
+    chem_data = SpeciesRegistry(n_species=1, diffusion_rate=[diff])    # Just 1 chemical species
+    bio = BioSim2D(x_bins=5, y_bins=4, species_data=chem_data)
     initial_concs = np.array([[50, 80, 34.4, 20], [5.34, 10, 60, 0], [30, 15, 100, 9.24], [40, 45.3, 64.4, 80], [30, 9.4, 39.4, 10.5]])
     bio.set_species_conc(species_index=0, conc_data=initial_concs)
     #bio.describe_state()

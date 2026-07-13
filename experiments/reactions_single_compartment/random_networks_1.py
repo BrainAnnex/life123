@@ -16,16 +16,14 @@
 # ## Random Reaction Networks
 #
 # #### Early implementation of random networks of reactions that are **thermodynamically possible**,
-# #### and **biologically plausible**.
-#     
-# Kinetic parameters NOT yet implemented.
+# #### and **biologically plausible**
 
 # %% [markdown]
 # ### TAGS :   "uniform compartment"
 
 # %%
-LAST_REVISED = "Mar. 21, 2026"
-LIFE123_VERSION = "1.0.0rc7"         # Library version this experiment is based on
+LAST_REVISED = "July 13, 2026"
+LIFE123_VERSION = "1.0.0rc8"         # Library version this experiment is based on
 
 # %%
 #import set_path            # Using MyBinder?  Uncomment this before running the next cell!
@@ -49,19 +47,20 @@ check_version(LIFE123_VERSION)    # To check compatibility
 # Initialize the HTML logging (for the graphics)
 log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
                                             # IN CASE OF PROBLEMS, set manually to any desired name
+log_file
 
 # %%
 
 # %%
 
 # %% [markdown]
-# ## Set up Random Network (no thermodynamic nor kinetic data)
+# ## Set up Random Network
 
 # %%
-net = RandomReactionNetwork(n_species=4, n_rxns=6, seed=59238125)
+net = RandomReactionNetwork(n_species=4, n_rxns=7, seed=47242315, thermodynamic_ruggedness=0.2)
 
 # %%
-net.chem_data.get_all_labels()
+net.species_data.get_all_species_ids()
 
 # %% [markdown]
 # #### The above chemical labels were auto-generated
@@ -69,13 +68,42 @@ net.chem_data.get_all_labels()
 # %%
 
 # %%
-rxns = net.get_reactions()          # Object of type "ReactionRegistry"
+rxns = net.get_reaction_data()          # Object of type "ReactionRegistry"
 
 # %%
 rxns.number_of_reactions()
 
 # %%
 rxns.describe_reactions()
+
+# %% [markdown]
+# ## NOTE ON UNITS: _delta_H_ and _delta_G_ are in **kJ/mol**  ;  _delta_S_ are in **J/(mol·K)**
+
+# %%
+
+# %% [markdown]
+# #### Investigate the random values that were assigned to the reactions (in a manner to be consistent with thermodynamics, for example across groups of reactions):
+
+# %%
+H_list = [rxn.delta_H
+              for rxn in net.get_reaction_data().get_all_reactions()]
+H_list   # kJ/mol
+
+# %%
+S_list = [rxn.delta_S
+              for rxn in net.get_reaction_data().get_all_reactions()]
+S_list   # J/(mol·K)
+
+# %%
+G_list = [rxn.delta_G
+              for rxn in net.get_reaction_data().get_all_reactions()]
+G_list   # kJ/mol
+
+# %%
+# Verify G_list
+[H_list[i] - (25+273.15) * S_list[i] / 1000 for i in range(len(H_list))]
+
+# %%
 
 # %%
 
@@ -90,9 +118,6 @@ uc = UniformCompartment(reactions=rxns)
 uc.plot_reaction_network(log_file=log_file)
 
 # %%
-IFrame(log_file, width=1200, height=600)         # You may also open the log file in a browser
-
-# %% [markdown]
-# ### Note: this is an early implementation.  Kinetic parameters aren't yet implemented
+IFrame(log_file, width=1200, height=700)         # You may also open the log file in a browser
 
 # %%

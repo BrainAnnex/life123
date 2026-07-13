@@ -39,7 +39,7 @@ LIFE123_VERSION = "1.0.0rc6"       # Library version this experiment is based on
 #sys.path.append("C:/some_path/my_env_or_install")   # CHANGE to the folder containing your venv or libraries installation!
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
-from life123 import BioSim1D, ChemData, ReactionRegistry, PlotlyHelper, check_version
+from life123 import BioSim1D, SpeciesRegistry, ReactionRegistry, PlotlyHelper, check_version
 
 # %%
 check_version(LIFE123_VERSION)
@@ -51,10 +51,10 @@ check_version(LIFE123_VERSION)
 
 # %%
 # Initialize the chemical data
-chem_data = ChemData(names=["A", "B", "C"], diffusion_rates=[100., 80., 120.],  
-                     plot_colors=["red", "turquoise", "green"]) 
+chem_data = SpeciesRegistry(id=["A", "B", "C"], diffusion_rate=[100., 80., 120.],
+                     plot_color=["red", "turquoise", "green"])
 
-rxns = ReactionRegistry(chem_data=chem_data)
+rxns = ReactionRegistry(species_data=chem_data)
 
 # Reaction A + B <-> C , with 1st-order kinetics for each species; note that it's mostly in the forward direction
 rxns.add_reaction(reactants=["A", "B"], products="C", kF=0.1, kR=0.02)
@@ -68,7 +68,7 @@ rxns.describe_reactions()
 # # PART 1 - JUST DIFFUSION, no reactions
 
 # %%
-bio1 = BioSim1D(n_bins=50, chem_data=chem_data, reactions=rxns)
+bio1 = BioSim1D(n_bins=50, species_data=chem_data, reactions=rxns)
 
 # %%
 # Set up the initial bell-shape concentration of `A`, with the very narrow peak close to one end of the system,
@@ -169,7 +169,7 @@ bio1.plot_history_single_bin(title_prefix="Diffusion only.  Faraway bin.",
 
 # %%
 # Set up just like before
-bio2 = BioSim1D(n_bins=50, chem_data=chem_data, reactions=rxns)
+bio2 = BioSim1D(n_bins=50, species_data=chem_data, reactions=rxns)
 bio2.inject_bell_curve(chem_label="A", center=0.2, sd=0.06, amplitude=15.25, bias=0.)
 bio2.set_uniform_concentration(chem_label="B", conc=100.)
 

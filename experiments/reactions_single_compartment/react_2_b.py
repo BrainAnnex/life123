@@ -25,8 +25,8 @@
 # ### TAGS :  "basic", "under-the-hood", "uniform compartment"
 
 # %%
-LAST_REVISED = "Mar. 17, 2026"
-LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based on
+LAST_REVISED = "July 13, 2026"
+LIFE123_VERSION = "1.0.0rc8"     # Library version this experiment is based on
 
 # %%
 #import set_path                    # Using MyBinder?  Uncomment this before running the next cell!
@@ -37,6 +37,7 @@ LIFE123_VERSION = "1.0.0rc7"        # Library version this experiment is based o
 # NOTE: If any of the imports below can't find a module, uncomment the lines above, or try:  import set_path   
 
 import ipynbname
+from IPython.display import IFrame
 
 from life123 import check_version, UniformCompartment, PlotlyHelper
 
@@ -47,6 +48,7 @@ check_version(LIFE123_VERSION)
 # Initialize the HTML logging (for the graphics)
 log_file = ipynbname.name() + ".log.htm"    # Use the notebook base filename for the log file
                                             # IN CASE OF PROBLEMS, set manually to any desired name
+log_file
 
 # %%
 
@@ -71,6 +73,9 @@ uc.describe_reactions()
 # %%
 # Send a plot of the network of reactions to the HTML log file
 uc.plot_reaction_network(log_file=log_file)
+
+# %%
+IFrame(log_file, width=1200, height=600)         # You may also open the log file in a browser
 
 # %%
 
@@ -121,7 +126,7 @@ uc.is_in_equilibrium()
 # ### Plots of changes of concentration with time
 
 # %%
-uc.plot_history(colors=['darkturquoise', 'green'], show_intervals=True)
+uc.plot_history(show_intervals=True)
 
 # %% [markdown]
 # ## Note how the left-hand side of this plot is much smoother than it was in experiment `react_2_a`, where no adaptive time steps were used!
@@ -320,7 +325,7 @@ p2
 # Let's create a combined plot like we had in experiment `react_2_a`:
 
 # %%
-p1 = uc.plot_history(chemicals="A", colors='darkturquoise')   # The plot of [A] vs. time that we saw earlier
+p1 = uc.plot_history(species="A")   # The plot of [A] vs. time that we saw earlier
 
 # %%
 PlotlyHelper.combine_plots([p1, p2],
