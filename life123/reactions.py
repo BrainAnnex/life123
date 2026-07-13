@@ -172,13 +172,14 @@ class ReactionElementary(ReactionCommon):
     def __init__(self, reversible=True, kF=None, kR=None,
                  delta_H=None, delta_S=None, delta_G=None, **kwargs):
         """
-        :param reversible:
-        :param kF:
-        :param kR:
-        :param delta_H:
-        :param delta_S:
-        :param delta_G:
-        :param kwargs:
+        :param reversible:  [OPTIONAL] Boolean indicating whether the reaction is reversible.  Default: True
+        :param kF:          [OPTIONAL] Forward reaction rate constant
+        :param kR:          [OPTIONAL] Reverse reaction rate constant
+        :param delta_H:     [OPTIONAL] Change in Enthalpy (from reactants to products), in kJ/mol
+        :param delta_S:     [OPTIONAL] Change in Entropy (from reactants to products), in Joules/(mol·K)
+        :param delta_G:     [OPTIONAL] Change in Free Energy (from reactants to products), in kJ/mol
+
+        :param kwargs:      Other named arguments to pass thru to the parent class
         """
 
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
@@ -1714,12 +1715,14 @@ class ReactionGeneric(ReactionCommon):
                                 If not a list, it will first get turned into one
         :param kF:          [OPTIONAL] Forward reaction rate constant
         :param kR:          [OPTIONAL] Reverse reaction rate constant
-        :param delta_H:     [OPTIONAL] Change in Enthalpy (from reactants to products)
-        :param delta_S:     [OPTIONAL] Change in Entropy (from reactants to products)
-        :param delta_G:     [OPTIONAL] Change in Free Energy (from reactants to products), in Joules
+        :param delta_H:     [OPTIONAL] Change in Enthalpy (from reactants to products), in kJ/mol
+        :param delta_S:     [OPTIONAL] Change in Entropy (from reactants to products), in Joules/(mol·K)
+        :param delta_G:     [OPTIONAL] Change in Free Energy (from reactants to products), in kJ/mol
         :param kinetic_rate_function:  [OPTIONAL] Note - the current default will be removed in later versions
                                         EXAMPLES:  ReactionKinetics.compute_rate_mass_action_kinetics  (the generalized "standard rate law")
                                                    ReactionKinetics.compute_rate_first_order (reaction is first order in all reactants and products)
+
+        :param kwargs:      Other named arguments to pass thru to the parent class
         """
         super().__init__(**kwargs)          # Invoke the constructor of its parent class
 

@@ -194,10 +194,10 @@ def test_describe_ReactionUnimolecular():
     assert rxn.describe(concise=False) == "R <-> P  Elementary Unimolecular reaction  (kF = 10 / kR = 2 / delta_H = -3,000 / K = 5)"
     '''
     rxn = ReactionUnimolecular(reactant="R", product="P",
-                               kF=10, delta_H=500, delta_S=-3, delta_G=None, temp=100)
+                               kF=10, delta_H=0.5, delta_S=-3, delta_G=None, temp=100)
     assert rxn.describe(concise=True) == "R <-> P"
     assert rxn.describe(concise=False) == \
-        "R <-> P  Elementary Unimolecular reaction  (kF = 10 / kR = 26.174 / delta_H = 500 / delta_S = -3 / delta_G = 800 / K = 0.38206 / Temp = -173.1 C)"
+        "R <-> P  Elementary Unimolecular reaction  (kF = 10 / kR = 26.174 / delta_H = 0.5 / delta_S = -3 / delta_G = 0.8 / K = 0.38206 / Temp = -173.1 C)"
 
 
 
@@ -695,7 +695,7 @@ def test_constructor_ReactionGeneric():
     assert rxn.extract_products() == [(1, "C")]
     assert rxn.delta_H is None
     assert rxn.delta_S is None
-    assert np.allclose(rxn.delta_G, 277.7928942715384)   # - RT log(K)
+    assert np.allclose(rxn.delta_G, 0.2777928942715384)   # - RT log(K)  , in kJ/mol
 
 
     # Add a multi-term reaction
@@ -708,20 +708,20 @@ def test_constructor_ReactionGeneric():
     assert rxn.extract_products() == [(3, "C"), (1, "D")]
     assert rxn.delta_H is None
     assert rxn.delta_S is None
-    assert np.allclose(rxn.delta_G, -2676.321364705849)   # - RT log(K)
+    assert np.allclose(rxn.delta_G, -2.676321364705849)   # - RT log(K) , in kJ/mol
 
 
     # Add a reaction with thermodynamic data;
     # the reverse reaction rate will get computed from the thermodynamic data
     rxn = ReactionGeneric(reactants=["A"], products=[(2, "B")], kF=10.,
-                          delta_H= 5., delta_S= 0.4, temp=200)
+                          delta_H= 0.005, delta_S= 0.4, temp=200)
 
     assert rxn.extract_reactants() == [(1, "A")]
     assert rxn.extract_products() == [(2, "B")]
-    assert rxn.delta_H == 5.
-    assert rxn.delta_S == 0.4
-    assert np.allclose(rxn.delta_G, -75.0)         # 5 - 200 * 0.4
-    assert np.allclose(rxn.K, 1.0461347154679432)  # exp(75/(8.3144598 * 200))
+    assert np.allclose(rxn.delta_H, 0.005)
+    assert np.allclose(rxn.delta_S, 0.4)
+    assert np.allclose(rxn.delta_G, -0.075)           # In kJ/mol :  0.005 - 200 * 0.4/1000
+    assert np.allclose(rxn.K , 1.0461347154679432)    # exp(75/(8.3144598 * 200))
     assert np.allclose(rxn.extract_forward_rate() , 10.)
     assert np.allclose(rxn.extract_reverse_rate() , 9.558998331803693) # 10. / 1.0461347154679432
 
@@ -809,12 +809,12 @@ def test_describe():
     rxn = ReactionGeneric(reactants=[(2, "D")], products=[(1, "C")], kF=11., kR=13., temp=200)
     rxn.kinetic_rate_function = None    # TODO: this will become the default
     assert rxn.describe(concise=True) == "2 D <-> C"
-    assert rxn.describe(concise=False) == "2 D <-> C  (kF = 11 / kR = 13 / delta_G = 277.79 / K = 0.84615 / Temp = -73.15 C) | No kinetic rate function provided"
+    assert rxn.describe(concise=False) == "2 D <-> C  (kF = 11 / kR = 13 / delta_G = 0.27779 / K = 0.84615 / Temp = -73.15 C) | No kinetic rate function provided"
 
     rxn = ReactionGeneric(reactants=["A", (2, "B")], products=[(3, "C"), "D"], kF=5., kR=1., temp=200)
     rxn.kinetic_rate_function = None    # TODO: this will become the default
     assert rxn.describe(concise=True) == "A + 2 B <-> 3 C + D"
-    assert rxn.describe(concise=False) == "A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2,676.3 / K = 5 / Temp = -73.15 C) | No kinetic rate function provided"
+    assert rxn.describe(concise=False) == "A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2.6763 / K = 5 / Temp = -73.15 C) | No kinetic rate function provided"
 
 
 
@@ -826,7 +826,7 @@ def test_extract_rxn_properties_ReactionGeneric():
     assert np.allclose(result["kF"] , 3.)
     assert np.allclose(result["kR"] , 2.)
     assert np.allclose(result["K"] , 1.5)
-    assert np.allclose(result["delta_G"] , -1005.1305052750387)
+    assert np.allclose(result["delta_G"] , -1.0051305052750387)
 
 
 

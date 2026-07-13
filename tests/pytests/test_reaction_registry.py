@@ -268,7 +268,7 @@ def test_add_reaction():
     assert r.product == "C"
     assert r.delta_H is None
     assert r.delta_S is None
-    assert np.allclose(r.delta_G, 277.7928942715384)   # - RT log(K)
+    assert np.allclose(r.delta_G, 0.2777928942715384)   # - RT log(K)
 
     assert rxns.active_chemicals == {"A", "B", "C", "D"}
     #assert rxns.active_enzymes == set()
@@ -288,7 +288,7 @@ def test_add_reaction():
     assert r.products == [(3, "C"), (1, "D")]
     assert r.delta_H is None
     assert r.delta_S is None
-    assert np.allclose(r.delta_G, -2676.321364705849)   # - RT log(K)
+    assert np.allclose(r.delta_G, -2.676321364705849)   # - RT log(K)
 
     assert rxns.active_chemicals == {"A", "B", "C", "D"}
     #assert rxns.active_enzymes == set()
@@ -298,14 +298,14 @@ def test_add_reaction():
     rxn_info = rxns.multiple_reactions_describe()
     assert rxn_info[0] == '0: A <-> B  Elementary Unimolecular reaction  (kF = 3 / kR = 2 / K = 1.5)'
     assert rxn_info[1] == '1: 2 B <-> 5 C  (kF = 9 / kR = 7 / K = 1.2857) | Kinetic rate function : `compute_rate_mass_action_kinetics()`'
-    assert rxn_info[2] == '2: 2 D  <-> C  Elementary Synthesis reaction  (kF = 11 / kR = 13 / delta_G = 277.79 / K = 0.84615 / Temp = -73.15 C)'
-    assert rxn_info[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2,676.3 / K = 5 / Temp = -73.15 C) | Kinetic rate function : `compute_rate_mass_action_kinetics()`'
+    assert rxn_info[2] == '2: 2 D  <-> C  Elementary Synthesis reaction  (kF = 11 / kR = 13 / delta_G = 0.27779 / K = 0.84615 / Temp = -73.15 C)'
+    assert rxn_info[3] == '3: A + 2 B <-> 3 C + D  (kF = 5 / kR = 1 / delta_G = -2.6763 / K = 5 / Temp = -73.15 C) | Kinetic rate function : `compute_rate_mass_action_kinetics()`'
 
 
     # Add another reaction (reaction index 4), this time with thermodynamic data;
     # the reverse reaction rate will get computed from the thermodynamic data
     rxns.add_reaction(reactants=["A"], products=[(2, "B")], kF=10.,
-                      delta_H= 5., delta_S= 0.4, temp=200)      # A <-> 2 B     ('ReactionDecomposition')
+                      delta_H=0.005, delta_S=0.4, temp=200)      # A <-> 2 B     ('ReactionDecomposition')
     assert rxns.number_of_reactions() == 5
 
     r = rxns.get_reaction(4)
@@ -313,9 +313,9 @@ def test_add_reaction():
     assert r.reactant == "A"
     assert r.product_1 == "B"
     assert r.product_2 == "B"
-    assert r.delta_H == 5.
-    assert r.delta_S == 0.4
-    assert np.allclose(r.delta_G, -75.0)            # 5 - 200 * 0.4
+    assert np.allclose(r.delta_H, 0.005)
+    assert np.allclose(r.delta_S, 0.4)
+    assert np.allclose(r.delta_G, -0.075)           # In kJ/mol :  0.005 - 200 * 0.4/1000
     assert np.allclose(r.K , 1.0461347154679432)    # exp(75/(8.3144598 * 200))
     assert np.allclose(r.kF , 10.)
     assert np.allclose(r.kR , 9.558998331803693)    # 10. / 1.0461347154679432
@@ -373,12 +373,12 @@ def test_register_reaction():
     assert np.allclose(r.K , 11./13.)
     assert r.delta_H is None
     assert r.delta_S is None
-    assert np.allclose(r.delta_G, 277.7928942715384)   # - RT log(K)
+    assert np.allclose(r.delta_G, 0.2777928942715384)   # - RT log(K)   , in kJ/mol
     assert rxns.active_chemicals == {"A", "B"}
 
 
     r_uni_CD = ReactionUnimolecular(reactant="C", product="D",
-                                    kF=10., delta_H= 5., delta_S= 0.4, temp=200)
+                                    kF=10., delta_H=0.005, delta_S=0.4, temp=200)
     rxns.register_reaction(r_uni_CD)
 
     assert rxns.number_of_reactions() == 2
@@ -389,9 +389,9 @@ def test_register_reaction():
     assert r.reactant == "C"
     assert r.product == "D"
     assert np.allclose(r.kF, 10.)                   # The given value
-    assert r.delta_H == 5.                          # The given value
-    assert r.delta_S == 0.4                         # The given value
-    assert np.allclose(r.delta_G, -75.0)            # 5 - 200 * 0.4
+    assert np.allclose(r.delta_H, 0.005)
+    assert np.allclose(r.delta_S, 0.4)
+    assert np.allclose(r.delta_G, -0.075)           # In kJ/mol :  0.005 - 200 * 0.4/1000
     assert np.allclose(r.K , 1.0461347154679432)    # exp(75/(8.3144598 * 200))
     assert np.allclose(r.kR, 9.558998331803693)     # 10. / 1.0461347154679432
     assert rxns.active_chemicals == {"A", "B", "C", "D"}
@@ -585,7 +585,7 @@ def test_prepare_graph_network():
 
     expected_nodes = [{'name': 'A', 'id': 'C-0', '_node_labels': ['Chemical']},
                       {'name': 'B', 'id': 'C-1', '_node_labels': ['Chemical']},
-                      {'name': 'RXN', 'kF': '3', 'kR': '2', 'delta_G': '-1,005.13', 'K': '1.5', 'id': 'RXN-0',
+                      {'name': 'RXN', 'kF': '3', 'kR': '2', 'delta_G': '-1.00513', 'K': '1.5', 'id': 'RXN-0',
                        '_node_labels': ['Reaction'], 'formula': 'A <-> B'}
                       ]     # Note: 'diff_rate': None   is NOT included
 

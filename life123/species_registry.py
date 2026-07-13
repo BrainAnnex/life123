@@ -8,7 +8,8 @@ import pandas as pd
 
 
 
-@dataclass(slots=True)    # (slots=True) has the effect of prohibiting non-listed fields, and of making the class more efficient
+@dataclass(slots=True)      # (slots=True) has the effect of prohibiting non-listed fields,
+                            #       and of making the class more efficient
 class Species:
     """
     EXAMPLE:
